@@ -1,30 +1,35 @@
 <template>
   <div>
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-2">
-        <h2 class="text-2xl font-bold text-gray-900">Palette Colors</h2>
+    <!-- Actions Bar -->
+    <div class="flex items-center justify-end gap-3 mb-6">
+      <div class="flex items-center gap-2 mr-auto">
+        <label class="text-sm text-gray-600">Palette Name:</label>
+        <input
+          v-model="paletteName"
+          @input="updatePaletteName"
+          type="text"
+          placeholder="My Palette"
+          class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+        />
       </div>
-      <div class="flex gap-3">
-        <button
-          @click="triggerFileInput"
-          class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-          Import Palette
-        </button>
-        <button
-          @click="clearPalette"
-          class="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-          Clear Palette
-        </button>
-      </div>
+      <button
+        @click="triggerFileInput"
+        class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        Import Palette
+      </button>
+      <button
+        @click="clearPalette"
+        class="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+        Clear Palette
+      </button>
       <input
         ref="fileInput"
         type="file"
@@ -35,18 +40,19 @@
     </div>
 
     <!-- Color Cards Grid -->
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8 relative">
       <!-- Existing Color Cards -->
       <div
         v-for="(color, index) in palette.colors"
         :key="index"
+        :ref="el => { if (el) cardRefs[index] = el }"
         class="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow"
       >
         <!-- Color Swatch -->
         <div
           class="w-full h-32 cursor-pointer"
           :style="{ backgroundColor: color.hex }"
-          @click="openColorPicker(index)"
+          @click="openColorPicker(index, $event)"
         >
         </div>
         
@@ -97,8 +103,9 @@
 
       <!-- Add New Color Card -->
       <div
+        ref="addCardRef"
         class="bg-gray-50 rounded-lg shadow-md border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-gray-100 transition-all cursor-pointer overflow-hidden"
-        @click="openColorPicker(null)"
+        @click="openColorPicker(null, $event)"
       >
         <!-- Color Picker Placeholder -->
         <div class="w-full h-32 flex items-center justify-center relative">
@@ -122,13 +129,6 @@
             @keyup.enter="addColor"
             @click.stop
           />
-          <button
-            @click.stop="toggleEyedropper"
-            class="w-full mt-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
-          >
-            <span class="material-symbols-outlined eyedropper-icon">colorize</span>
-            Use Eyedropper
-          </button>
         </div>
       </div>
     </div>
@@ -218,13 +218,191 @@
       </p>
     </div>
 
-    <!-- Hidden Color Input for Native Picker -->
-    <input
-      ref="colorPickerInput"
-      type="color"
-      class="hidden"
-      @input="handleColorPickerChange"
-    />
+    <!-- Floating Color Picker -->
+    <div
+      v-if="showColorPicker"
+      ref="colorPickerContainerRef"
+      class="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-4"
+      :style="colorPickerStyle"
+    >
+      <div class="w-64">
+        <!-- Gradient/Hue Selector -->
+        <div class="relative mb-4">
+          <canvas
+            ref="gradientCanvas"
+            width="256"
+            height="200"
+            class="w-full h-48 rounded-lg cursor-crosshair border border-gray-300"
+            @mousedown="startGradientDrag"
+            @click="handleGradientClick"
+          ></canvas>
+          <!-- Selector indicator -->
+          <div
+            class="absolute w-4 h-4 border-2 border-white rounded-full shadow-lg pointer-events-none"
+            :style="selectorStyle"
+          ></div>
+        </div>
+        
+        <!-- Hue Slider -->
+        <div class="mb-4">
+          <label class="block text-xs font-medium text-gray-700 mb-1">Hue</label>
+          <div class="relative h-8">
+            <canvas
+              ref="hueCanvas"
+              width="256"
+              height="32"
+              class="w-full h-8 rounded cursor-pointer border border-gray-300"
+              @click="handleHueClick"
+            ></canvas>
+            <div
+              class="absolute top-0 h-8 w-1 border border-gray-800 pointer-events-none"
+              :style="{ left: `${huePosition}%` }"
+            ></div>
+          </div>
+        </div>
+        
+        <!-- RGB Inputs -->
+        <div class="grid grid-cols-3 gap-2 mb-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">R</label>
+            <input
+              v-model.number="rgbValues.r"
+              @input="updateFromRGB"
+              type="number"
+              min="0"
+              max="255"
+              class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">G</label>
+            <input
+              v-model.number="rgbValues.g"
+              @input="updateFromRGB"
+              type="number"
+              min="0"
+              max="255"
+              class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">B</label>
+            <input
+              v-model.number="rgbValues.b"
+              @input="updateFromRGB"
+              type="number"
+              min="0"
+              max="255"
+              class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
+        </div>
+        
+        <!-- Hex Input -->
+        <div class="mb-4">
+          <label class="block text-xs font-medium text-gray-700 mb-1">Hex</label>
+          <input
+            v-model="hexInput"
+            @input="updateFromHex"
+            type="text"
+            class="w-full px-2 py-1 text-sm border border-gray-300 rounded font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            placeholder="#000000"
+          />
+        </div>
+        
+        <!-- CMYK Inputs -->
+        <div class="grid grid-cols-4 gap-2 mb-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">C</label>
+            <input
+              v-model.number="cmykValues.c"
+              @input="updateFromCMYK"
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">M</label>
+            <input
+              v-model.number="cmykValues.m"
+              @input="updateFromCMYK"
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Y</label>
+            <input
+              v-model.number="cmykValues.y"
+              @input="updateFromCMYK"
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">K</label>
+            <input
+              v-model.number="cmykValues.k"
+              @input="updateFromCMYK"
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
+        </div>
+        
+        <!-- Color Preview -->
+        <div class="mb-4 flex items-center gap-3">
+          <div
+            class="w-16 h-16 rounded-lg border-2 border-gray-300"
+            :style="{ backgroundColor: currentHex }"
+          ></div>
+          <div class="flex-1">
+            <div class="text-sm font-mono font-semibold text-gray-900">{{ currentHex }}</div>
+            <div class="text-xs text-gray-500">RGB({{ rgbValues.r }}, {{ rgbValues.g }}, {{ rgbValues.b }})</div>
+            <div class="text-xs text-gray-500">CMYK({{ Math.round(cmykValues.c) }}, {{ Math.round(cmykValues.m) }}, {{ Math.round(cmykValues.y) }}, {{ Math.round(cmykValues.k) }})</div>
+          </div>
+        </div>
+        
+        <!-- Eyedropper Button -->
+        <div class="mb-4">
+          <button
+            @click="toggleEyedropper"
+            class="w-full px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+          >
+            <span class="material-symbols-outlined eyedropper-icon">colorize</span>
+            Use Eyedropper
+          </button>
+        </div>
+        
+        <!-- Buttons -->
+        <div class="flex gap-2">
+          <button
+            @click="applyColor"
+            class="flex-1 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Apply
+          </button>
+          <button
+            @click="closeColorPicker"
+            class="flex-1 px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Navigation -->
     <div class="flex justify-end mt-8">
@@ -240,7 +418,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue';
 import axios from 'axios';
 
 const props = defineProps({
@@ -258,6 +436,32 @@ const fileInput = ref(null);
 const colorPickerInput = ref(null);
 const currentColorIndex = ref(null);
 const isEyedropperActive = ref(false);
+const paletteName = ref(props.palette.name || 'My Palette');
+const showColorPicker = ref(false);
+const colorPickerStyle = ref({});
+const cardRefs = ref({});
+const addCardRef = ref(null);
+const colorPickerContainerRef = ref(null);
+const gradientCanvas = ref(null);
+const hueCanvas = ref(null);
+const currentHex = ref('#000000');
+const hexInput = ref('#000000');
+const rgbValues = ref({ r: 0, g: 0, b: 0 });
+const huePosition = ref(0);
+const selectorStyle = ref({ left: '0%', top: '0%' });
+const isDragging = ref(false);
+const currentHue = ref(0);
+const currentSaturation = ref(100);
+const currentLightness = ref(50);
+const cmykValues = ref({ c: 0, m: 0, y: 0, k: 100 });
+
+const updatePaletteName = () => {
+  const newPalette = {
+    ...props.palette,
+    name: paletteName.value || 'My Palette',
+  };
+  emit('update-palette', newPalette);
+};
 
 // Separate suggestions into neutrals and colors
 const neutralSuggestions = computed(() => {
@@ -393,21 +597,23 @@ const handleFileImport = (event) => {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
-      const importedPalette = JSON.parse(e.target.result);
-      if (importedPalette.colors && Array.isArray(importedPalette.colors)) {
-        const newPalette = {
-          ...props.palette,
-          colors: importedPalette.colors.map((c) => ({
-            hex: typeof c === 'string' ? c : c.hex,
-            name: c.name || '',
-            role: c.role || null,
-          })),
-        };
-        emit('update-palette', newPalette);
-        fetchSuggestions();
-      } else {
-        alert('Invalid palette file format');
-      }
+        const importedPalette = JSON.parse(e.target.result);
+        if (importedPalette.colors && Array.isArray(importedPalette.colors)) {
+          const newPalette = {
+            ...props.palette,
+            name: importedPalette.name || props.palette.name || 'My Palette',
+            colors: importedPalette.colors.map((c) => ({
+              hex: typeof c === 'string' ? c : c.hex,
+              name: c.name || '',
+              role: c.role || null,
+            })),
+          };
+          paletteName.value = newPalette.name;
+          emit('update-palette', newPalette);
+          fetchSuggestions();
+        } else {
+          alert('Invalid palette file format');
+        }
     } catch (error) {
       alert('Error reading palette file');
       console.error(error);
@@ -417,19 +623,368 @@ const handleFileImport = (event) => {
   event.target.value = ''; // Reset file input
 };
 
-const openColorPicker = (index) => {
-  currentColorIndex.value = index;
-  if (index !== null && props.palette.colors[index]) {
-    colorPickerInput.value.value = props.palette.colors[index].hex;
+const openColorPicker = (index, event) => {
+  // Stop event propagation to prevent immediate closing
+  if (event) {
+    event.stopPropagation();
   }
-  colorPickerInput.value?.click();
+  
+  currentColorIndex.value = index;
+  
+  // Get the clicked card element
+  let cardElement = null;
+  if (index !== null) {
+    cardElement = cardRefs.value[index];
+  } else {
+    cardElement = addCardRef.value;
+  }
+  
+  if (!cardElement) return;
+  
+  // Get card position
+  const rect = cardElement.getBoundingClientRect();
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+  
+  // Calculate position - place it to the right of the card
+  const cardWidth = rect.width;
+  const gap = 16; // gap-4 = 16px
+  const pickerWidth = 280; // Width of color picker
+  
+  let left = rect.right + scrollLeft + gap;
+  let top = rect.top + scrollTop;
+  
+  // If there's not enough space on the right, show on the left
+  if (left + pickerWidth > window.innerWidth + scrollLeft) {
+    left = rect.left + scrollLeft - pickerWidth - gap;
+  }
+  
+  // Ensure it doesn't go off-screen
+  left = Math.max(16, Math.min(left, window.innerWidth + scrollLeft - pickerWidth - 16));
+  top = Math.max(16, Math.min(top, window.innerHeight + scrollTop - 400));
+  
+  colorPickerStyle.value = {
+    left: `${left}px`,
+    top: `${top}px`,
+    width: `${pickerWidth}px`,
+  };
+  
+  // Set initial color value
+  let initialHex = '#000000';
+  if (index !== null && props.palette.colors[index]) {
+    initialHex = props.palette.colors[index].hex;
+  }
+  
+  showColorPicker.value = true;
+  
+  // Wait for DOM to render, then initialize
+  setTimeout(() => {
+    setColorFromHex(initialHex);
+    drawGradientCanvas();
+    drawHueCanvas();
+  }, 0);
 };
 
-const handleColorPickerChange = (event) => {
-  let hex = event.target.value.toUpperCase();
+const closeColorPicker = () => {
+  showColorPicker.value = false;
+  currentColorIndex.value = null;
+};
+
+// Color conversion utilities
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : { r: 0, g: 0, b: 0 };
+};
+
+const rgbToCmyk = (r, g, b) => {
+  r /= 255;
+  g /= 255;
+  b /= 255;
   
-  // Ensure color is fully opaque (remove any alpha channel if present)
-  // Hex colors from color picker are always 6-digit without alpha, but ensure uppercase
+  const k = 1 - Math.max(r, g, b);
+  if (k === 1) {
+    return { c: 0, m: 0, y: 0, k: 100 };
+  }
+  
+  const c = ((1 - r - k) / (1 - k)) * 100;
+  const m = ((1 - g - k) / (1 - k)) * 100;
+  const y = ((1 - b - k) / (1 - k)) * 100;
+  
+  return {
+    c: Math.max(0, Math.min(100, c)),
+    m: Math.max(0, Math.min(100, m)),
+    y: Math.max(0, Math.min(100, y)),
+    k: Math.max(0, Math.min(100, k * 100))
+  };
+};
+
+const cmykToRgb = (c, m, y, k) => {
+  c /= 100;
+  m /= 100;
+  y /= 100;
+  k /= 100;
+  
+  const r = Math.round(255 * (1 - c) * (1 - k));
+  const g = Math.round(255 * (1 - m) * (1 - k));
+  const b = Math.round(255 * (1 - y) * (1 - k));
+  
+  return {
+    r: Math.max(0, Math.min(255, r)),
+    g: Math.max(0, Math.min(255, g)),
+    b: Math.max(0, Math.min(255, b))
+  };
+};
+
+const rgbToHex = (r, g, b) => {
+  return '#' + [r, g, b].map(x => {
+    const hex = Math.round(x).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('').toUpperCase();
+};
+
+const rgbToHsl = (r, g, b) => {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 };
+};
+
+const hslToRgb = (h, s, l) => {
+  h /= 360;
+  s /= 100;
+  l /= 100;
+  let r, g, b;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return {
+    r: Math.round(r * 255),
+    g: Math.round(g * 255),
+    b: Math.round(b * 255)
+  };
+};
+
+const setColorFromHex = (hex) => {
+  currentHex.value = hex.toUpperCase();
+  hexInput.value = hex.toUpperCase();
+  const rgb = hexToRgb(hex);
+  rgbValues.value = { ...rgb };
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  const cmyk = rgbToCmyk(rgb.r, rgb.g, rgb.b);
+  currentHue.value = hsl.h;
+  currentSaturation.value = hsl.s;
+  currentLightness.value = hsl.l;
+  cmykValues.value = { ...cmyk };
+  huePosition.value = (hsl.h / 360) * 100;
+  selectorStyle.value = {
+    left: `${hsl.s}%`,
+    top: `${100 - hsl.l}%`,
+  };
+};
+
+const updateFromHSL = () => {
+  const rgb = hslToRgb(currentHue.value, currentSaturation.value, currentLightness.value);
+  rgbValues.value = rgb;
+  const cmyk = rgbToCmyk(rgb.r, rgb.g, rgb.b);
+  cmykValues.value = { ...cmyk };
+  currentHex.value = rgbToHex(rgb.r, rgb.g, rgb.b);
+  hexInput.value = currentHex.value;
+};
+
+const updateFromRGB = () => {
+  const rgb = rgbValues.value;
+  const cmyk = rgbToCmyk(rgb.r, rgb.g, rgb.b);
+  cmykValues.value = { ...cmyk };
+  currentHex.value = rgbToHex(rgb.r, rgb.g, rgb.b);
+  hexInput.value = currentHex.value;
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  currentHue.value = hsl.h;
+  currentSaturation.value = hsl.s;
+  currentLightness.value = hsl.l;
+  huePosition.value = (hsl.h / 360) * 100;
+  selectorStyle.value = {
+    left: `${hsl.s}%`,
+    top: `${100 - hsl.l}%`,
+  };
+  drawGradientCanvas();
+};
+
+const updateFromCMYK = () => {
+  const cmyk = cmykValues.value;
+  const rgb = cmykToRgb(cmyk.c, cmyk.m, cmyk.y, cmyk.k);
+  rgbValues.value = rgb;
+  currentHex.value = rgbToHex(rgb.r, rgb.g, rgb.b);
+  hexInput.value = currentHex.value;
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  currentHue.value = hsl.h;
+  currentSaturation.value = hsl.s;
+  currentLightness.value = hsl.l;
+  huePosition.value = (hsl.h / 360) * 100;
+  selectorStyle.value = {
+    left: `${hsl.s}%`,
+    top: `${100 - hsl.l}%`,
+  };
+  drawGradientCanvas();
+};
+
+const updateFromHex = () => {
+  let hex = hexInput.value.trim();
+  if (!hex.startsWith('#')) {
+    hex = '#' + hex;
+    hexInput.value = hex;
+  }
+  if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex)) {
+    // Normalize 3-digit hex
+    if (hex.length === 4) {
+      hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+    }
+    setColorFromHex(hex);
+    drawGradientCanvas();
+    drawHueCanvas();
+  }
+};
+
+const drawGradientCanvas = () => {
+  const canvas = gradientCanvas.value;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+  
+  // Create saturation/lightness gradient
+  const hue = currentHue.value;
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      const s = (x / width) * 100;
+      const l = 100 - (y / height) * 100;
+      const rgb = hslToRgb(hue, s, l);
+      ctx.fillStyle = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+};
+
+const drawHueCanvas = () => {
+  const canvas = hueCanvas.value;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+  
+  // Create hue gradient
+  for (let x = 0; x < width; x++) {
+    const hue = (x / width) * 360;
+    const rgb = hslToRgb(hue, 100, 50);
+    ctx.fillStyle = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+    ctx.fillRect(x, 0, 1, height);
+  }
+};
+
+const handleGradientClick = (event) => {
+  const canvas = gradientCanvas.value;
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const width = canvas.width;
+  const height = canvas.height;
+  
+  currentSaturation.value = (x / width) * 100;
+  currentLightness.value = 100 - (y / height) * 100;
+  
+  selectorStyle.value = {
+    left: `${(x / width) * 100}%`,
+    top: `${(y / height) * 100}%`,
+  };
+  
+  updateFromHSL();
+  drawGradientCanvas();
+};
+
+const handleHueClick = (event) => {
+  const canvas = hueCanvas.value;
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const width = canvas.width;
+  
+  currentHue.value = (x / width) * 360;
+  huePosition.value = (x / width) * 100;
+  
+  updateFromHSL();
+  drawGradientCanvas();
+};
+
+const startGradientDrag = (event) => {
+  isDragging.value = true;
+  handleGradientClick(event);
+  document.addEventListener('mousemove', handleGradientDrag);
+  document.addEventListener('mouseup', endGradientDrag);
+};
+
+const handleGradientDrag = (event) => {
+  if (isDragging.value && gradientCanvas.value) {
+    const canvas = gradientCanvas.value;
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.max(0, Math.min(canvas.width, event.clientX - rect.left));
+    const y = Math.max(0, Math.min(canvas.height, event.clientY - rect.top));
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    currentSaturation.value = (x / width) * 100;
+    currentLightness.value = 100 - (y / height) * 100;
+    
+    selectorStyle.value = {
+      left: `${(x / width) * 100}%`,
+      top: `${(y / height) * 100}%`,
+    };
+    
+    updateFromHSL();
+    drawGradientCanvas();
+  }
+};
+
+const endGradientDrag = () => {
+  isDragging.value = false;
+  document.removeEventListener('mousemove', handleGradientDrag);
+  document.removeEventListener('mouseup', endGradientDrag);
+};
+
+const applyColor = () => {
+  const hex = currentHex.value;
   if (currentColorIndex.value !== null) {
     // Update existing color
     const newPalette = {
@@ -448,7 +1003,7 @@ const handleColorPickerChange = (event) => {
     emit('update-palette', newPalette);
     fetchSuggestions();
   }
-  currentColorIndex.value = null;
+  closeColorPicker();
 };
 
 const toggleEyedropper = () => {
@@ -459,16 +1014,16 @@ const toggleEyedropper = () => {
       .then((result) => {
         // Ensure color is fully opaque (uppercase hex without alpha)
         let hex = result.sRGBHex.toUpperCase();
-        const newPalette = {
-          ...props.palette,
-          colors: [...props.palette.colors, { hex, name: '', role: null }],
-        };
-        emit('update-palette', newPalette);
-        fetchSuggestions();
+        setColorFromHex(hex);
+        drawGradientCanvas();
+        drawHueCanvas();
       })
       .catch((error) => {
         console.error('Eyedropper error:', error);
-        alert('Eyedropper feature is not available in your browser');
+        // Don't show alert if user cancelled
+        if (error.name !== 'AbortError') {
+          alert('Eyedropper feature is not available in your browser');
+        }
       });
   } else {
     alert('Eyedropper API is not supported in your browser. Please use Chrome or Edge.');
@@ -485,6 +1040,32 @@ const copyToClipboard = async (text) => {
 };
 
 watch(() => props.palette.colors, fetchSuggestions, { immediate: true });
+
+watch(() => props.palette.name, (newName) => {
+  if (newName !== paletteName.value) {
+    paletteName.value = newName || 'My Palette';
+  }
+});
+
+// Handle click outside to close color picker
+const handleClickOutside = (event) => {
+  if (showColorPicker.value && colorPickerContainerRef.value) {
+    // Check if click is outside the color picker container
+    if (!colorPickerContainerRef.value.contains(event.target)) {
+      closeColorPicker();
+    }
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside);
+  document.removeEventListener('mousemove', handleGradientDrag);
+  document.removeEventListener('mouseup', endGradientDrag);
+});
 </script>
 
 <style scoped>

@@ -1,7 +1,7 @@
 {
   "name": "color-palette-workbench-backend",
   "version": "1.0.0",
-  "description": "Backend API for Color Palette Workbench",
+  "description": "Backend API for Palette Builder",
   "author": "",
   "private": true,
   "license": "MIT",

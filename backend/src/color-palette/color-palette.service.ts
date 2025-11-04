@@ -16,6 +16,7 @@ export class ColorPaletteService {
       name: dto.name,
       colors: dto.colors,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     const result = await this.elasticsearchService.index({
@@ -26,6 +27,37 @@ export class ColorPaletteService {
     return {
       id: result._id,
       ...palette,
+    };
+  }
+
+  async updatePalette(id: string, dto: CreatePaletteDto) {
+    // Get existing palette to preserve createdAt
+    const existing = await this.elasticsearchService.get({
+      index: 'color-palettes',
+      id,
+    });
+
+    const palette = {
+      name: dto.name,
+      colors: dto.colors,
+      createdAt: (existing._source as any).createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await this.elasticsearchService.update({
+      index: 'color-palettes',
+      id,
+      doc: palette,
+    });
+
+    const result = await this.elasticsearchService.get({
+      index: 'color-palettes',
+      id,
+    });
+
+    return {
+      id: result._id,
+      ...(result._source as any),
     };
   }
 
@@ -64,12 +96,12 @@ export class ColorPaletteService {
     const contrastResults = this.colorTheoryService.testContrast(colors);
     const suggestions = this.colorTheoryService.generateSuggestions(colors);
 
-    // Find problematic colors
+    // Find problematic colors with palette context for better fixes
     const problematicColors = analysis
       .map((a, index) => ({
         color: colors[index],
         analysis: a,
-        fixes: this.colorTheoryService.suggestFixes(a),
+        fixes: this.colorTheoryService.suggestFixes(a, analysis),
       }))
       .filter((item) => item.analysis.isTooDark || item.analysis.isTooBright || item.analysis.isTooVibrant);
 
@@ -84,6 +116,14 @@ export class ColorPaletteService {
 
   async getSuggestions(colors: string[], regenerateType?: string) {
     return this.colorTheoryService.generateSuggestions(colors, regenerateType);
+  }
+
+  async suggestContrastFix(color1: string, color2: string, targetRatio?: number) {
+    return this.colorTheoryService.suggestContrastFix(color1, color2, targetRatio);
+  }
+
+  async suggestStrategicColors(colors: string[], contrastResults: any[], maxSuggestions?: number) {
+    return this.colorTheoryService.suggestStrategicColors(colors, contrastResults, maxSuggestions);
   }
 }
 

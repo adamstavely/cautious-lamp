@@ -1,4 +1,4 @@
-# Color Palette Workbench 🎨
+# Palette Builder 🎨
 
 The only tool that instantly diagnoses your color palette's flaws and provides one-click fixes in just 60 seconds.
 

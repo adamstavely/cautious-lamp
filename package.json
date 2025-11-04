@@ -1,7 +1,7 @@
 {
   "name": "color-palette-workbench",
   "version": "1.0.0",
-  "description": "Color Palette Workbench - Diagnose and fix color palette flaws",
+  "description": "Palette Builder - Diagnose and fix color palette flaws",
   "private": true,
   "workspaces": [
     "backend",

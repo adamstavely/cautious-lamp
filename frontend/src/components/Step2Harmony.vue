@@ -4,7 +4,6 @@
     <!-- Main Content Area -->
     <div class="flex-1">
       <div class="mb-6">
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">Analyze Harmony</h2>
         <p class="text-gray-600">
           Review color relationships, harmony patterns, and palette metrics.
         </p>
@@ -286,6 +285,7 @@ const loading = ref(false);
 const analysis = ref(null);
 const harmonyCheckCollapsed = ref(false);
 const dismissedIssues = ref([]);
+const recentlyFixed = ref(new Set()); // Track colors that were recently fixed to prevent loops
 
 const metrics = computed(() => {
   if (!props.palette.colors || props.palette.colors.length === 0) {
@@ -299,24 +299,13 @@ const metrics = computed(() => {
 
   const colors = props.palette.colors.map((c) => c.hex);
   
-  // Calculate average HSL values
-  let totalHue = 0;
-  let totalSaturation = 0;
-  let totalLightness = 0;
-  let colorCount = 0;
-
-  colors.forEach((hex) => {
+  // Calculate HSL values for all colors
+  const hslValues = colors.map((hex) => {
     const rgb = hexToRgb(hex);
-    if (rgb) {
-      const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-      totalHue += hsl.h;
-      totalSaturation += hsl.s;
-      totalLightness += hsl.l;
-      colorCount++;
-    }
-  });
+    return rgb ? rgbToHsl(rgb.r, rgb.g, rgb.b) : null;
+  }).filter(hsl => hsl !== null);
 
-  if (colorCount === 0) {
+  if (hslValues.length === 0) {
     return {
       coolWarm: 50,
       mutedVibrant: 50,
@@ -325,44 +314,60 @@ const metrics = computed(() => {
     };
   }
 
-  const avgHue = totalHue / colorCount;
-  const avgSaturation = totalSaturation / colorCount;
-  const avgLightness = totalLightness / colorCount;
+  // Calculate average saturation and lightness (straightforward)
+  const avgSaturation = hslValues.reduce((sum, hsl) => sum + hsl.s, 0) / hslValues.length;
+  const avgLightness = hslValues.reduce((sum, hsl) => sum + hsl.l, 0) / hslValues.length;
 
-  // Cool-Warm: Based on hue where 0-100 scale: 0 = cool (blue), 100 = warm (red/orange)
-  // Blue is around 240°, warm colors are around 0-60°
-  // Map: 0° (red) = 100, 120° (green) = 50, 240° (blue) = 0
+  // Calculate average hue using circular mean (convert to Cartesian, average, convert back)
+  // This properly handles the circular nature of hue (0° = 360°)
+  const hueRadians = hslValues.map(hsl => (hsl.h * Math.PI) / 180);
+  const avgSin = hueRadians.reduce((sum, h) => sum + Math.sin(h), 0) / hueRadians.length;
+  const avgCos = hueRadians.reduce((sum, h) => sum + Math.cos(h), 0) / hueRadians.length;
+  let avgHueRad = Math.atan2(avgSin, avgCos);
+  if (avgHueRad < 0) avgHueRad += 2 * Math.PI;
+  const avgHue = (avgHueRad * 180) / Math.PI;
+
+  // Cool-Warm: Map hue to 0-100 scale where 0 = cool (blue), 100 = warm (red/orange)
+  // Warm colors: 0-60° (red, orange, yellow)
+  // Cool colors: 180-240° (cyan, blue)
+  // The mapping should be: red (0°) = 100, yellow (60°) = 100, green (120°) = 50, cyan (180°) = 0, blue (240°) = 0, magenta (300°) = 50, back to red (360°)
   let coolWarm;
-  if (avgHue <= 120) {
-    // Warm to neutral: 0° (red) = 100, 60° (yellow) = 100, 120° (green) = 50
-    coolWarm = 100 - (avgHue / 120) * 50;
-  } else {
-    // Neutral to cool: 120° (green) = 50, 240° (blue) = 0, 360° (red) = 100
+  if (avgHue <= 60) {
+    // Warm: 0-60° maps to 100
+    coolWarm = 100;
+  } else if (avgHue <= 120) {
+    // Warm to neutral: 60-120° maps from 100 to 50
+    coolWarm = 100 - ((avgHue - 60) / 60) * 50;
+  } else if (avgHue <= 240) {
+    // Neutral to cool: 120-240° maps from 50 to 0
     coolWarm = 50 - ((avgHue - 120) / 120) * 50;
-    if (avgHue > 240) {
-      // Beyond blue, wrapping back to warm
-      coolWarm = ((avgHue - 240) / 120) * 100;
-    }
+  } else {
+    // Cool to warm: 240-360° maps from 0 to 100
+    coolWarm = ((avgHue - 240) / 120) * 100;
   }
   coolWarm = Math.max(0, Math.min(100, coolWarm));
 
-  // Muted-Vibrant: Based on saturation
-  const mutedVibrant = avgSaturation;
+  // Muted-Vibrant: Based on saturation (0-100 scale)
+  const mutedVibrant = Math.max(0, Math.min(100, avgSaturation));
 
-  // Dark-Light: Based on lightness
-  const darkLight = avgLightness;
+  // Dark-Light: Based on lightness (0-100 scale)
+  const darkLight = Math.max(0, Math.min(100, avgLightness));
 
-  // Mono-Diverse: Based on hue variance
-  const hueVariances = colors.map((hex) => {
-    const rgb = hexToRgb(hex);
-    if (rgb) {
-      const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-      return Math.abs(hsl.h - avgHue);
-    }
-    return 0;
+  // Mono-Diverse: Based on hue variance (circular variance)
+  // Calculate circular variance by finding the average distance from mean hue
+  const hueVariances = hslValues.map((hsl) => {
+    const hueRad = (hsl.h * Math.PI) / 180;
+    const avgHueRad = (avgHue * Math.PI) / 180;
+    // Calculate circular distance (min distance around the circle)
+    let diff = Math.abs(hueRad - avgHueRad);
+    if (diff > Math.PI) diff = 2 * Math.PI - diff;
+    return diff;
   });
-  const avgHueVariance = hueVariances.reduce((a, b) => a + b, 0) / hueVariances.length;
-  const monoDiverse = Math.min(100, (avgHueVariance / 60) * 100);
+  const avgHueVarianceRad = hueVariances.reduce((a, b) => a + b, 0) / hueVariances.length;
+  // Convert to degrees and normalize to 0-100 scale
+  // Maximum variance would be 180° (half circle), so divide by 180
+  const avgHueVarianceDeg = (avgHueVarianceRad * 180) / Math.PI;
+  const monoDiverse = Math.min(100, (avgHueVarianceDeg / 180) * 100);
 
   return {
     coolWarm: Math.round(coolWarm),
@@ -426,6 +431,19 @@ const analyzePalette = async () => {
     const response = await axios.post('http://localhost:3000/api/palettes/analyze', {
       colors: props.palette.colors.map((c) => ({ hex: c.hex })),
     });
+    
+    // Filter out colors that were recently fixed to prevent loops
+    if (recentlyFixed.value.size > 0) {
+      response.data.problematicColors = response.data.problematicColors?.filter(
+        (item) => !recentlyFixed.value.has(item.color)
+      ) || [];
+      
+      // Clear recently fixed after a delay to allow natural changes
+      setTimeout(() => {
+        recentlyFixed.value.clear();
+      }, 2000);
+    }
+    
     analysis.value = response.data;
     dismissedIssues.value = [];
   } catch (error) {
@@ -437,6 +455,10 @@ const analyzePalette = async () => {
 };
 
 const applyFix = (oldColor, newColor) => {
+  // Mark this color as recently fixed to prevent re-flagging
+  recentlyFixed.value.add(oldColor);
+  recentlyFixed.value.add(newColor);
+  
   const newPalette = {
     ...props.palette,
     colors: props.palette.colors.map((c) =>
@@ -444,7 +466,11 @@ const applyFix = (oldColor, newColor) => {
     ),
   };
   emit('update-palette', newPalette);
-  analyzePalette();
+  
+  // Use setTimeout to debounce the analysis and let the fix settle
+  setTimeout(() => {
+    analyzePalette();
+  }, 100);
 };
 
 const applyAllFixes = () => {
@@ -453,13 +479,21 @@ const applyAllFixes = () => {
   let newPalette = { ...props.palette };
   analysis.value.problematicColors.forEach((item) => {
     if (item.fixes && item.fixes.length > 0) {
+      // Mark colors as recently fixed to prevent re-flagging
+      recentlyFixed.value.add(item.color);
+      recentlyFixed.value.add(item.fixes[0]);
+      
       newPalette.colors = newPalette.colors.map((c) =>
         c.hex === item.color ? { ...c, hex: item.fixes[0] } : c
       );
     }
   });
   emit('update-palette', newPalette);
-  analyzePalette();
+  
+  // Use setTimeout to debounce the analysis and let fixes settle
+  setTimeout(() => {
+    analyzePalette();
+  }, 100);
 };
 
 const dismissIssue = (index) => {
@@ -511,5 +545,15 @@ onMounted(() => {
   analyzePalette();
 });
 
-watch(() => props.palette.colors, analyzePalette, { deep: true });
+// Debounce the watcher to prevent rapid re-analysis
+let analyzeTimeout = null;
+watch(() => props.palette.colors, () => {
+  // Skip if colors were recently fixed (already handled in applyFix)
+  if (recentlyFixed.value.size > 0) return;
+  
+  if (analyzeTimeout) clearTimeout(analyzeTimeout);
+  analyzeTimeout = setTimeout(() => {
+    analyzePalette();
+  }, 500);
+}, { deep: true });
 </script>
