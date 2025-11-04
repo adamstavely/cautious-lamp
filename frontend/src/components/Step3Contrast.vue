@@ -222,86 +222,44 @@
             <tbody class="bg-white divide-y divide-gray-200">
               <tr v-for="(result, index) in filteredAndSortedResults" :key="index">
                 <td class="px-6 py-4">
-                  <div class="space-y-2">
-                    <!-- Text Color 1 on Background Color 2 -->
-                    <div class="flex items-center gap-2">
-                      <div
-                        class="flex-1 px-4 py-3 rounded border border-gray-300"
-                        :style="{
-                          backgroundColor: result.color2,
-                          color: result.color1,
-                        }"
-                      >
-                        <div class="flex items-center justify-between">
-                          <span class="text-sm font-medium">Sample Text</span>
-                          <div class="flex items-center gap-2">
-                            <span
-                              v-if="result.passesAALarge"
-                              class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded"
-                              title="Passes AA Large Text (3:1)"
-                            >
-                              AA Large
-                            </span>
-                            <span
-                              v-if="result.passesAA"
-                              class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded"
-                              title="Passes AA Standard (4.5:1)"
-                            >
-                              AA
-                            </span>
-                            <span
-                              v-if="result.passesAAA"
-                              class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded"
-                              title="Passes AAA Standard (7:1)"
-                            >
-                              AAA
-                            </span>
-                          </div>
+                  <!-- Text Color 1 on Background Color 2 -->
+                  <div class="flex items-center gap-2">
+                    <div
+                      class="flex-1 px-4 py-3 rounded border border-gray-300"
+                      :style="{
+                        backgroundColor: result.color2,
+                        color: result.color1,
+                      }"
+                    >
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Sample Text</span>
+                        <div class="flex items-center gap-2">
+                          <span
+                            v-if="result.passesAALarge"
+                            class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded"
+                            title="Passes AA Large Text (3:1)"
+                          >
+                            AA Large
+                          </span>
+                          <span
+                            v-if="result.passesAA"
+                            class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded"
+                            title="Passes AA Standard (4.5:1)"
+                          >
+                            AA
+                          </span>
+                          <span
+                            v-if="result.passesAAA"
+                            class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded"
+                            title="Passes AAA Standard (7:1)"
+                          >
+                            AAA
+                          </span>
                         </div>
-                      </div>
-                      <div class="text-xs text-gray-500 font-mono whitespace-nowrap">
-                        {{ result.color1 }} on {{ result.color2 }}
                       </div>
                     </div>
-                    <!-- Text Color 2 on Background Color 1 -->
-                    <div class="flex items-center gap-2">
-                      <div
-                        class="flex-1 px-4 py-3 rounded border border-gray-300"
-                        :style="{
-                          backgroundColor: result.color1,
-                          color: result.color2,
-                        }"
-                      >
-                        <div class="flex items-center justify-between">
-                          <span class="text-sm font-medium">Sample Text</span>
-                          <div class="flex items-center gap-2">
-                            <span
-                              v-if="result.passesAALarge"
-                              class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded"
-                              title="Passes AA Large Text (3:1)"
-                            >
-                              AA Large
-                            </span>
-                            <span
-                              v-if="result.passesAA"
-                              class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded"
-                              title="Passes AA Standard (4.5:1)"
-                            >
-                              AA
-                            </span>
-                            <span
-                              v-if="result.passesAAA"
-                              class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded"
-                              title="Passes AAA Standard (7:1)"
-                            >
-                              AAA
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="text-xs text-gray-500 font-mono whitespace-nowrap">
-                        {{ result.color2 }} on {{ result.color1 }}
-                      </div>
+                    <div class="text-xs text-gray-500 font-mono whitespace-nowrap">
+                      {{ result.color1 }} on {{ result.color2 }}
                     </div>
                   </div>
                 </td>

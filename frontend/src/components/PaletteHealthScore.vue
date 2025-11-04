@@ -1,17 +1,18 @@
 <template>
-  <!-- Health Score Widget (not sticky, inline) -->
-  <button
-    @click="showModal = true"
-    class="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-2 hover:shadow-md transition-shadow flex items-center gap-3"
-  >
-    <div class="flex items-center justify-center w-10 h-10 rounded-full" :class="healthScoreClass">
-      <span class="text-lg font-bold text-white">{{ healthScore }}</span>
-    </div>
-    <div class="text-left">
-      <div class="text-xs font-medium text-gray-600">Health Score</div>
-      <div class="text-xs text-gray-500">{{ metCriteria }}/{{ totalCriteria }} criteria met</div>
-    </div>
-  </button>
+  <div>
+    <!-- Health Score Widget (not sticky, inline) -->
+    <button
+      @click="showModal = true"
+      class="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-2 hover:shadow-md transition-shadow flex items-center gap-3"
+    >
+      <div class="flex items-center justify-center w-10 h-10 rounded-full" :class="healthScoreClass">
+        <span class="text-lg font-bold text-white">{{ healthScore }}</span>
+      </div>
+      <div class="text-left">
+        <div class="text-xs font-medium text-gray-600">Health Score</div>
+        <div class="text-xs text-gray-500">{{ metCriteria }}/{{ totalCriteria }} criteria met</div>
+      </div>
+    </button>
 
   <!-- Health Score Modal -->
   <div
@@ -65,7 +66,7 @@
             <div class="flex-1">
               <div class="font-semibold text-gray-900">Add 3+ colors</div>
               <div class="text-sm text-gray-600 mt-0.5">
-                {{ palette.colors.length }} color{{ palette.colors.length !== 1 ? 's' : '' }} added
+                {{ (palette?.colors || []).length }} color{{ (palette?.colors || []).length !== 1 ? 's' : '' }} added
               </div>
             </div>
           </div>
@@ -128,11 +129,11 @@
             </div>
           </div>
 
-          <!-- Criterion 4: Contrast Coverage -->
+          <!-- Criterion 4: Every Color Has Accessible Pairing -->
           <div class="flex items-start gap-3">
             <div class="flex-shrink-0 mt-0.5">
               <svg
-                v-if="healthMetrics.hasFiftyPercentContrast"
+                v-if="healthMetrics.everyColorHasAccessiblePairing"
                 class="w-5 h-5 text-green-600"
                 fill="currentColor"
                 viewBox="0 0 20 20"
@@ -150,9 +151,17 @@
               </svg>
             </div>
             <div class="flex-1">
-              <div class="font-semibold text-gray-900">Achieve 50% contrast coverage</div>
+              <div class="font-semibold text-gray-900">Every color has at least 1 accessible pairing</div>
               <div class="text-sm text-gray-600 mt-0.5">
-                {{ healthMetrics.contrastCoverage }}% of color pairs meet WCAG AA standards
+                <span v-if="(palette?.colors || []).length < 2">
+                  Requires at least 2 colors
+                </span>
+                <span v-else-if="healthMetrics.everyColorHasAccessiblePairing">
+                  All colors have accessible pairings
+                </span>
+                <span v-else>
+                  {{ healthMetrics.colorsWithoutPairing.length }} color{{ healthMetrics.colorsWithoutPairing.length !== 1 ? 's' : '' }} without accessible pairings
+                </span>
               </div>
             </div>
           </div>
@@ -207,25 +216,51 @@ const contrastResults = ref([]);
 
 // Calculate health metrics
 const healthMetrics = computed(() => {
-  const colors = props.palette.colors || [];
+  const colors = props.palette?.colors || [];
   const colorCount = colors.length;
   
   // Check for neutrals
   const hasLightNeutral = colors.some((c) => {
+    if (!c || !c.hex) return false;
     const hsl = hexToHsl(c.hex);
     return hsl.s < 20 && hsl.l > 70;
   });
   
   const hasDarkNeutral = colors.some((c) => {
+    if (!c || !c.hex) return false;
     const hsl = hexToHsl(c.hex);
-    return hsl.s < 20 && hsl.l < 30;
+    // Use a more lenient threshold for dark neutrals: low saturation (< 30) and very dark (< 30 lightness)
+    // Also check luminance as a fallback for very dark colors that might have slightly higher saturation
+    const rgb = hexToRgb(c.hex);
+    if (!rgb) return false;
+    // WCAG luminance calculation
+    const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((val) => {
+      val = val / 255;
+      return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+    });
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return (hsl.s < 30 && hsl.l < 30) || (luminance < 0.2 && hsl.s < 35);
   });
   
-  // Calculate contrast coverage
+  // Check if every color has at least 1 accessible pairing
+  const colorHexes = colors.filter((c) => c && c.hex).map((c) => c.hex.toLowerCase());
+  const passingPairs = contrastResults.value.filter((r) => r && r.passesAA);
+  const colorsWithAccessiblePairing = new Set();
+  
+  // Track which colors have at least one accessible pairing
+  passingPairs.forEach((pair) => {
+    if (pair.color1) colorsWithAccessiblePairing.add(pair.color1.toLowerCase());
+    if (pair.color2) colorsWithAccessiblePairing.add(pair.color2.toLowerCase());
+  });
+  
+  // Every color needs at least 1 accessible pairing (requires at least 2 colors)
+  const everyColorHasAccessiblePairing = colorCount >= 2 && colorHexes.length > 0 && colorHexes.every((hex) => colorsWithAccessiblePairing.has(hex));
+  const colorsWithoutPairing = colorCount >= 2 ? colorHexes.filter((hex) => !colorsWithAccessiblePairing.has(hex)) : [];
+  
+  // Calculate contrast coverage for display
   const totalPairs = contrastResults.value.length;
-  const passingAA = contrastResults.value.filter((r) => r.passesAA).length;
+  const passingAA = passingPairs.length;
   const contrastCoverage = totalPairs > 0 ? Math.round((passingAA / totalPairs) * 100) : 0;
-  const hasFiftyPercentContrast = contrastCoverage >= 50;
   
   // Count passing pairings
   const passingPairings = passingAA;
@@ -236,7 +271,8 @@ const healthMetrics = computed(() => {
     hasLightNeutral,
     hasDarkNeutral,
     contrastCoverage,
-    hasFiftyPercentContrast,
+    everyColorHasAccessiblePairing,
+    colorsWithoutPairing,
     passingPairings,
     hasFourPlusPairings,
   };
@@ -248,13 +284,18 @@ const metCriteria = computed(() => {
   if (healthMetrics.value.hasThreePlusColors) count++;
   if (healthMetrics.value.hasLightNeutral) count++;
   if (healthMetrics.value.hasDarkNeutral) count++;
-  if (healthMetrics.value.hasFiftyPercentContrast) count++;
+  if (healthMetrics.value.everyColorHasAccessiblePairing) count++;
   if (healthMetrics.value.hasFourPlusPairings) count++;
   return count;
 });
 
 const healthScore = computed(() => {
-  return Math.round((metCriteria.value / totalCriteria) * 100);
+  try {
+    return Math.round((metCriteria.value / totalCriteria) * 100);
+  } catch (error) {
+    console.error('Error calculating health score:', error);
+    return 0;
+  }
 });
 
 const healthScoreClass = computed(() => {
@@ -320,14 +361,14 @@ const hexToHsl = (hex) => {
 
 // Fetch contrast results when palette changes
 const fetchContrastResults = async () => {
-  if (props.palette.colors.length < 2) {
+  if (!props.palette?.colors || props.palette.colors.length < 2) {
     contrastResults.value = [];
     return;
   }
 
   try {
     const response = await axios.post('http://localhost:3000/api/palettes/analyze', {
-      colors: props.palette.colors.map((c) => ({ hex: c.hex })),
+      colors: props.palette.colors.map((c) => ({ hex: c?.hex || '' })).filter((c) => c.hex),
     });
     contrastResults.value = response.data.contrastResults || [];
   } catch (error) {
@@ -336,6 +377,6 @@ const fetchContrastResults = async () => {
   }
 };
 
-watch(() => props.palette.colors, fetchContrastResults, { immediate: true, deep: true });
+watch(() => props.palette?.colors, fetchContrastResults, { immediate: true, deep: true });
 </script>
 

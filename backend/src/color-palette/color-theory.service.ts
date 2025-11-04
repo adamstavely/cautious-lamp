@@ -194,6 +194,23 @@ export class ColorTheoryService {
       }));
     }
     
+    // Detect palette type and distribution
+    const lightCount = analyses.filter((a) => a.luminance > 0.7).length;
+    const darkCount = analyses.filter((a) => a.luminance < 0.2).length;
+    const lightThreshold = colors.length * 0.6;
+    const darkThreshold = colors.length * 0.6;
+    
+    const paletteType =
+      lightCount > lightThreshold
+        ? 'light'
+        : darkCount > darkThreshold
+        ? 'dark'
+        : 'mixed';
+    
+    // Check if palette has balanced distribution (intentional light/dark extremes)
+    const hasBalancedDistribution =
+      lightCount >= 3 && darkCount >= 1 && darkCount <= 2;
+    
     // Calculate palette averages for relative comparison
     const avgLuminance = analyses.reduce((sum, a) => sum + a.luminance, 0) / analyses.length;
     const avgSaturation = analyses.reduce((sum, a) => sum + a.hsl.s, 0) / analyses.length;
@@ -210,9 +227,67 @@ export class ColorTheoryService {
     
     // Mark colors as problematic relative to palette, not just absolute values
     return analyses.map((analysis) => {
-      const isTooDarkAbsolute = analysis.luminance < 0.15;
-      const isTooBrightAbsolute = analysis.luminance > 0.85;
-      const isTooVibrantAbsolute = analysis.hsl.s > 85;
+      // FIRST: Check if this is an intentional extreme color that should NEVER be flagged
+      // Dark colors in light/mixed palettes (with mostly light colors) are needed for contrast
+      // Consider a palette "light-dominant" if it has >= 50% light colors OR lightCount >= 3
+      const isLightDominant = lightCount >= Math.max(3, colors.length * 0.5);
+      const isIntentionalDark = isLightDominant && analysis.luminance < 0.2 && darkCount <= 2;
+      const isIntentionalLight = paletteType === 'dark' && analysis.luminance > 0.7 && lightCount <= 2;
+      const isVeryLightInLightPalette = isLightDominant && analysis.luminance > 0.9;
+      
+      // Base absolute checks
+      let isTooDarkAbsolute = analysis.luminance < 0.15;
+      let isTooBrightAbsolute = analysis.luminance > 0.85;
+      
+      // Adjust thresholds based on palette type
+      const maxLuminance = paletteType === 'light' ? 0.95 : 0.85;
+      const minLuminance = paletteType === 'dark' ? 0.05 : 0.15;
+      
+      // NEVER flag intentional extreme colors
+      if (isIntentionalDark) {
+        isTooDarkAbsolute = false; // Dark colors in light palettes are intentional
+      }
+      if (isIntentionalLight) {
+        isTooBrightAbsolute = false; // Light colors in dark palettes are intentional
+      }
+      if (isVeryLightInLightPalette) {
+        isTooBrightAbsolute = false; // Very light colors in light palettes are intentional
+      }
+      
+      // Override absolute checks for balanced palettes (additional safety)
+      if (hasBalancedDistribution) {
+        // In balanced palettes, allow extremes (they're intentional)
+        if (analysis.luminance < 0.2 && darkCount <= 2) {
+          isTooDarkAbsolute = false; // Allow 1-2 dark colors in light/mixed palettes
+        }
+        if (analysis.luminance > 0.9 && lightCount >= 3) {
+          isTooBrightAbsolute = false; // Allow very light colors in balanced palettes
+        }
+      }
+      
+      // Also explicitly allow dark colors in light-dominant palettes (regardless of balanced distribution)
+      if (isLightDominant && analysis.luminance < 0.2 && darkCount <= 2) {
+        isTooDarkAbsolute = false;
+      }
+      
+      // Also explicitly allow very light colors in light-dominant palettes
+      if (isLightDominant && analysis.luminance > 0.9) {
+        isTooBrightAbsolute = false;
+      }
+      
+      // Check saturation WITH lightness context
+      // High saturation is only problematic if lightness is mid-range
+      // High saturation + high lightness = pastel (OK)
+      // High saturation + low lightness = dark vibrant (OK)
+      // High saturation + mid lightness = jarring (problematic)
+      let isTooVibrantAbsolute = false;
+      if (analysis.hsl.s > 85) {
+        const lightness = analysis.hsl.l;
+        // Only flag if in mid-range lightness (40-70%) where high saturation is jarring
+        // Pastels (high saturation + high lightness) are fine
+        // Dark vibrant colors (high saturation + low lightness) are fine
+        isTooVibrantAbsolute = lightness >= 40 && lightness <= 70;
+      }
       
       // Relative to palette: flag if significantly different from average
       // Be more conservative with thresholds to avoid false positives and loops
@@ -223,26 +298,67 @@ export class ColorTheoryService {
       // 1. The difference is meaningful (absolute threshold)
       // 2. The color is a clear outlier (std dev threshold)
       // This prevents flagging colors that are only slightly different
-      const isTooDarkRelative = analysis.luminance < avgLuminance 
+      let isTooDarkRelative = analysis.luminance < avgLuminance 
         && luminanceStdDev > 0.05  // Only if there's meaningful variance in palette
         && analysis.luminance < avgLuminance - (luminanceStdDev * 1.5)
         && luminanceDiff > 0.2;  // Must be at least 0.2 difference
       
-      const isTooBrightRelative = analysis.luminance > avgLuminance 
+      let isTooBrightRelative = analysis.luminance > avgLuminance 
         && luminanceStdDev > 0.05  // Only if there's meaningful variance in palette
         && analysis.luminance > avgLuminance + (luminanceStdDev * 1.5)
         && luminanceDiff > 0.2;  // Must be at least 0.2 difference
       
-      const isTooVibrantRelative = analysis.hsl.s > avgSaturation 
+      let isTooVibrantRelative = analysis.hsl.s > avgSaturation 
         && saturationStdDev > 5  // Only if there's meaningful variance in palette
         && analysis.hsl.s > avgSaturation + (saturationStdDev * 1.5)
-        && saturationDiff > 30;  // Must be at least 30% saturation difference
+        && saturationDiff > 30  // Must be at least 30% saturation difference
+        && analysis.hsl.l >= 40 && analysis.hsl.l <= 70; // Only flag if in mid-range lightness (same as absolute check)
+      
+      // ALWAYS skip relative checks for intentional extreme colors (these are never problematic)
+      if (isIntentionalDark) {
+        isTooDarkRelative = false;
+        console.log(`[Harmony] Skipping relative dark check for ${analysis.hex} - intentional dark in light palette (luminance: ${analysis.luminance.toFixed(3)}, darkCount: ${darkCount})`);
+      }
+      if (isIntentionalLight) {
+        isTooBrightRelative = false;
+      }
+      if (isVeryLightInLightPalette) {
+        isTooBrightRelative = false;
+      }
+      
+      // Additional safety: Skip relative checks for intentional extremes in balanced palettes
+      if (hasBalancedDistribution) {
+        const hasIntentionalDarkInBalanced = isLightDominant && darkCount <= 2;
+        const hasIntentionalLightInBalanced = paletteType === 'dark' && lightCount <= 2;
+        
+        if (hasIntentionalDarkInBalanced && analysis.luminance < 0.2) {
+          isTooDarkRelative = false;
+        }
+        if (hasIntentionalLightInBalanced && analysis.luminance > 0.7) {
+          isTooBrightRelative = false;
+        }
+      }
+      
+      // Also explicitly skip relative checks for dark colors in light-dominant palettes
+      if (isLightDominant && analysis.luminance < 0.2 && darkCount <= 2) {
+        isTooDarkRelative = false;
+        console.log(`[Harmony] Skipping relative dark check for ${analysis.hex} - intentional dark in light-dominant palette (luminance: ${analysis.luminance.toFixed(3)}, darkCount: ${darkCount}, lightCount: ${lightCount})`);
+      }
+      
+      // Also explicitly skip relative checks for very light colors in light-dominant palettes
+      if (isLightDominant && analysis.luminance > 0.9) {
+        isTooBrightRelative = false;
+      }
       
       // Combine absolute and relative checks
+      // IMPORTANT: If this is an intentional extreme color, NEVER flag it as problematic
+      const finalIsTooDark = isIntentionalDark ? false : (isTooDarkAbsolute || isTooDarkRelative);
+      const finalIsTooBright = (isIntentionalLight || isVeryLightInLightPalette) ? false : (isTooBrightAbsolute || isTooBrightRelative);
+      
       return {
         ...analysis,
-        isTooDark: isTooDarkAbsolute || isTooDarkRelative,
-        isTooBright: isTooBrightAbsolute || isTooBrightRelative,
+        isTooDark: finalIsTooDark,
+        isTooBright: finalIsTooBright,
         isTooVibrant: isTooVibrantAbsolute || isTooVibrantRelative,
       };
     });
@@ -250,25 +366,47 @@ export class ColorTheoryService {
 
   /**
    * Test contrast between all color pairs
+   * Uses permutations (both directions) rather than combinations
+   * Tests A on B AND B on A as separate pairs
+   * This ensures every color (including dark neutrals) is tested as text on all other colors
    */
   testContrast(colors: string[]): ContrastResult[] {
     const results: ContrastResult[] = [];
-    const rgbColors = colors.map((hex) => this.hexToRgb(hex));
+    
+    // Filter out any invalid colors and ensure we have valid colors
+    const validColors = colors.filter((hex) => hex && typeof hex === 'string' && hex.trim().length > 0);
+    
+    if (validColors.length < 2) {
+      return results; // Need at least 2 colors to test contrast
+    }
+    
+    const rgbColors = validColors.map((hex) => this.hexToRgb(hex));
 
-    for (let i = 0; i < colors.length; i++) {
-      for (let j = i + 1; j < colors.length; j++) {
-        const ratio = this.calculateContrast(rgbColors[i], rgbColors[j]);
-        results.push({
-          color1: colors[i],
-          color2: colors[j],
-          ratio: Math.round(ratio * 100) / 100,
-          passesAA: ratio >= 4.5,
-          passesAAA: ratio >= 7,
-          passesAALarge: ratio >= 3,
-          passesAAALarge: ratio >= 4.5,
-        });
+    // Test all palette color permutations (both directions)
+    // This includes dark neutral as text on all other colors
+    // For n colors, this generates n × (n-1) pairs (permutations, not combinations)
+    let pairCount = 0;
+    for (let i = 0; i < validColors.length; i++) {
+      for (let j = 0; j < validColors.length; j++) {
+        // Skip self-pairs (color on itself)
+        if (i !== j) {
+          const ratio = this.calculateContrast(rgbColors[i], rgbColors[j]);
+          results.push({
+            color1: validColors[i], // Text color
+            color2: validColors[j], // Background color
+            ratio: Math.round(ratio * 100) / 100,
+            passesAA: ratio >= 4.5,
+            passesAAA: ratio >= 7,
+            passesAALarge: ratio >= 3,
+            passesAAALarge: ratio >= 4.5,
+          });
+          pairCount++;
+        }
       }
     }
+
+    // Debug logging to verify permutation count
+    console.log(`[testContrast] Generated ${pairCount} pairs from ${validColors.length} colors (expected: ${validColors.length} × ${validColors.length - 1} = ${validColors.length * (validColors.length - 1)})`);
 
     return results;
   }
@@ -302,7 +440,7 @@ export class ColorTheoryService {
 
     // Check if we have dark neutrals
     const hasDarkNeutral = analyses.some(
-      (a) => a.hsl.s < 20 && a.hsl.l < 30,
+      (a) => (a.hsl.s < 30 && a.hsl.l < 30) || (a.luminance < 0.2 && a.hsl.s < 35),
     );
     if (!hasDarkNeutral && (!regenerateType || regenerateType === 'dark-neutral')) {
       const baseLightness = 15;
@@ -651,7 +789,7 @@ export class ColorTheoryService {
 
     // Check what neutrals we have
     const hasLightNeutral = analyses.some((a) => a.hsl.s < 20 && a.hsl.l > 70);
-    const hasDarkNeutral = analyses.some((a) => a.hsl.s < 20 && a.hsl.l < 30);
+    const hasDarkNeutral = analyses.some((a) => (a.hsl.s < 30 && a.hsl.l < 30) || (a.luminance < 0.2 && a.hsl.s < 35));
 
     // Suggest light neutral if missing (but only if it would fix multiple pairs)
     if (!hasLightNeutral && suggestions.length < maxSuggestions) {

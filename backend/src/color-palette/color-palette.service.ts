@@ -96,14 +96,66 @@ export class ColorPaletteService {
     const contrastResults = this.colorTheoryService.testContrast(colors);
     const suggestions = this.colorTheoryService.generateSuggestions(colors);
 
+    // Detect palette type to identify intentional extreme colors
+    const lightCount = analysis.filter((a) => a.luminance > 0.7).length;
+    const darkCount = analysis.filter((a) => a.luminance < 0.2).length;
+    const paletteType =
+      lightCount > colors.length * 0.6
+        ? 'light'
+        : darkCount > colors.length * 0.6
+        ? 'dark'
+        : 'mixed';
+    
+    // Consider a palette "light-dominant" if it has >= 50% light colors OR lightCount >= 3
+    // This helps identify palettes that are essentially light but fall just below the 60% threshold
+    const isLightDominant = lightCount >= Math.max(3, colors.length * 0.5);
+    
+    console.log(`[Service] Palette analysis: ${colors.length} colors, ${lightCount} light, ${darkCount} dark, type=${paletteType}, lightDominant=${isLightDominant}`);
+
     // Find problematic colors with palette context for better fixes
+    // EXCLUDE intentional dark colors in light-dominant palettes (they're needed for contrast)
     const problematicColors = analysis
-      .map((a, index) => ({
-        color: colors[index],
-        analysis: a,
-        fixes: this.colorTheoryService.suggestFixes(a, analysis),
-      }))
-      .filter((item) => item.analysis.isTooDark || item.analysis.isTooBright || item.analysis.isTooVibrant);
+      .map((a, index) => {
+        const item = {
+          color: colors[index],
+          analysis: a,
+          fixes: this.colorTheoryService.suggestFixes(a, analysis),
+        };
+        
+        // Debug: Log every color being checked
+        const isIntentionalDark = isLightDominant && a.luminance < 0.2 && darkCount <= 2;
+        console.log(`[Service] Checking ${item.color}: luminance=${a.luminance.toFixed(3)}, isIntentionalDark=${isIntentionalDark}, isTooDark=${a.isTooDark}, isTooBright=${a.isTooBright}, isTooVibrant=${a.isTooVibrant}`);
+        
+        return item;
+      })
+      .filter((item) => {
+        // Never flag intentional dark colors in light-dominant palettes
+        const isIntentionalDark = isLightDominant && item.analysis.luminance < 0.2 && darkCount <= 2;
+        if (isIntentionalDark) {
+          console.log(`[Service] Excluding ${item.color} from problematic colors - intentional dark in light-dominant palette (luminance: ${item.analysis.luminance.toFixed(3)}, darkCount: ${darkCount}, isLightDominant: ${isLightDominant})`);
+          return false;
+        }
+        
+        // Also check: if the analysis says isTooDark=false but the color is dark and in a light-dominant palette, exclude it anyway
+        // This is a safety check in case the analysis logic didn't catch it
+        if (isLightDominant && item.analysis.luminance < 0.2 && darkCount <= 2) {
+          console.log(`[Service] Safety check: Excluding ${item.color} - dark color in light-dominant palette`);
+          return false;
+        }
+        
+        const hasIssues = item.analysis.isTooDark || item.analysis.isTooBright || item.analysis.isTooVibrant;
+        if (hasIssues) {
+          console.log(`[Service] Flagging ${item.color} as problematic: isTooDark=${item.analysis.isTooDark}, isTooBright=${item.analysis.isTooBright}, isTooVibrant=${item.analysis.isTooVibrant}`);
+        }
+        return hasIssues;
+      });
+    
+    console.log(`[Service] Final problematic colors count: ${problematicColors.length}`);
+    if (problematicColors.length > 0) {
+      problematicColors.forEach(pc => {
+        console.log(`[Service] Problematic color: ${pc.color} - isTooDark=${pc.analysis.isTooDark}, isTooBright=${pc.analysis.isTooBright}, isTooVibrant=${pc.analysis.isTooVibrant}`);
+      });
+    }
 
     return {
       analysis,

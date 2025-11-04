@@ -156,13 +156,17 @@
             </div>
 
             <button
-              @click="analyzePalette"
-              class="w-full mt-4 px-3 py-2 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+              @click.stop="analyzePalette"
+              :disabled="loading"
+              class="w-full mt-4 px-3 py-2 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-if="loading" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Run Check Again
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {{ loading ? 'Running Check...' : 'Run Check Again' }}
             </button>
           </div>
 
@@ -174,13 +178,17 @@
               <span class="text-sm font-medium">All colors are balanced!</span>
             </div>
             <button
-              @click="analyzePalette"
-              class="w-full mt-3 px-3 py-2 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+              @click.stop="analyzePalette"
+              :disabled="loading"
+              class="w-full mt-3 px-3 py-2 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-if="loading" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Run Check Again
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {{ loading ? 'Running Check...' : 'Run Check Again' }}
             </button>
           </div>
         </div>
@@ -188,8 +196,13 @@
 
       <!-- Palette Metrics Section -->
       <div>
-        <h4 class="text-sm font-semibold text-gray-900 mb-4">Palette Metrics</h4>
-        <div class="space-y-4">
+        <div class="flex items-center gap-2 mb-4">
+          <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <h4 class="text-sm font-semibold text-gray-900">Palette Metrics</h4>
+        </div>
+        <div class="space-y-4 mb-4">
           <!-- Cool-Warm -->
           <div>
             <div class="flex justify-between mb-2">
@@ -246,6 +259,9 @@
             </div>
           </div>
         </div>
+        <p class="text-xs text-gray-500">
+          These metrics show your palette's overall character and can guide you toward colors that balance or enhance certain qualities. Neutral colors are excluded from this analysis.
+        </p>
       </div>
     </div>
     </div>
@@ -424,13 +440,20 @@ const rgbToHsl = (r, g, b) => {
 };
 
 const analyzePalette = async () => {
-  if (props.palette.colors.length === 0) return;
+  if (props.palette.colors.length === 0) {
+    console.warn('Cannot analyze: palette is empty');
+    return;
+  }
 
+  console.log('Running harmony check for palette:', props.palette.colors.map((c) => c.hex));
   loading.value = true;
   try {
     const response = await axios.post('http://localhost:3000/api/palettes/analyze', {
       colors: props.palette.colors.map((c) => ({ hex: c.hex })),
     });
+    
+    console.log('Harmony check response:', response.data);
+    console.log('Problematic colors found:', response.data.problematicColors?.length || 0);
     
     // Filter out colors that were recently fixed to prevent loops
     if (recentlyFixed.value.size > 0) {
