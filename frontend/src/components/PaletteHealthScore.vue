@@ -1,6 +1,6 @@
 <template>
   <div>
-    <!-- Health Score Widget (not sticky, inline) -->
+    <!-- Palette Quality Score Widget (not sticky, inline) -->
     <button
       @click="showModal = true"
       class="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-2 hover:shadow-md transition-shadow flex items-center gap-3"
@@ -9,12 +9,12 @@
         <span class="text-lg font-bold text-white">{{ healthScore }}</span>
       </div>
       <div class="text-left">
-        <div class="text-xs font-medium text-gray-600">Health Score</div>
+        <div class="text-xs font-medium text-gray-600">Palette Quality Score</div>
         <div class="text-xs text-gray-500">{{ metCriteria }}/{{ totalCriteria }} criteria met</div>
       </div>
     </button>
 
-  <!-- Health Score Modal -->
+  <!-- Palette Quality Score Modal -->
   <div
     v-if="showModal"
     class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
@@ -24,9 +24,9 @@
       <!-- Header -->
       <div class="flex items-center justify-between p-6 border-b border-gray-200">
         <div>
-          <h2 class="text-xl font-bold text-gray-900">Palette Health Score</h2>
+          <h2 class="text-xl font-bold text-gray-900">Palette Quality Score</h2>
           <p class="text-sm text-gray-600 mt-1">
-            Your health score measures how complete and accessible your color palette is.
+            Your palette quality score measures how complete and accessible your color palette is.
           </p>
         </div>
         <button
@@ -198,6 +198,7 @@
       </div>
     </div>
   </div>
+  </div>
 </template>
 
 <script setup>
@@ -293,7 +294,7 @@ const healthScore = computed(() => {
   try {
     return Math.round((metCriteria.value / totalCriteria) * 100);
   } catch (error) {
-    console.error('Error calculating health score:', error);
+    console.error('Error calculating palette quality score:', error);
     return 0;
   }
 });
