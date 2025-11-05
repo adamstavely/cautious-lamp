@@ -427,10 +427,16 @@
                   Export as SVG
                 </button>
                 <button
-                  @click="exportToFigma"
+                  @click="exportToAdobe"
                   class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
                 >
-                  Export to Figma
+                  Export to Adobe
+                </button>
+                <button
+                  @click="exportToPenpot"
+                  class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                >
+                  Export to Penpot
                 </button>
               </div>
             </div>
@@ -817,22 +823,22 @@ const importPaletteColors = async () => {
   }
 };
 
-// Export to Figma (JSON format)
-const exportToFigma = () => {
+// Export to Adobe XD (CSS format compatible with Adobe XD)
+const exportToAdobe = () => {
   const gradientData = {
-    type: 'GRADIENT_LINEAR',
-    gradientStops: colorStops.value.map((stop) => ({
-      position: stop.position / 100,
-      color: {
-        r: hexToRgb(stop.color).r / 255,
-        g: hexToRgb(stop.color).g / 255,
-        b: hexToRgb(stop.color).b / 255,
-        a: stop.opacity / 100,
-      },
+    css: cssGradient.value,
+    type: gradientType.value,
+    stops: colorStops.value.map((stop) => ({
+      color: stop.color,
+      position: stop.position,
+      opacity: stop.opacity / 100,
     })),
-    gradientTransform: gradientType.value === 'linear' 
-      ? [[Math.cos(linearAngle.value * Math.PI / 180), Math.sin(linearAngle.value * Math.PI / 180), 0], [0, 1, 0]]
-      : [[1, 0, 0], [0, 1, 0]],
+    settings: {
+      angle: gradientType.value === 'linear' ? linearAngle.value : undefined,
+      position: gradientType.value === 'radial' ? radialPosition.value : undefined,
+      shape: gradientType.value === 'radial' ? radialShape.value : undefined,
+      size: gradientType.value === 'radial' ? radialSize.value : undefined,
+    },
   };
   
   const json = JSON.stringify(gradientData, null, 2);
@@ -840,7 +846,46 @@ const exportToFigma = () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'gradient-figma.json';
+  a.download = 'gradient-adobe.json';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// Export to Penpot (Penpot JSON format)
+const exportToPenpot = () => {
+  const gradientData = {
+    type: 'gradient',
+    gradientType: gradientType.value === 'linear' ? 'linear' : gradientType.value === 'radial' ? 'radial' : 'linear',
+    stops: colorStops.value.map((stop) => ({
+      offset: stop.position / 100,
+      color: {
+        r: hexToRgb(stop.color).r / 255,
+        g: hexToRgb(stop.color).g / 255,
+        b: hexToRgb(stop.color).b / 255,
+        a: stop.opacity / 100,
+      },
+    })),
+    transform: gradientType.value === 'linear' 
+      ? {
+          sx: Math.cos(linearAngle.value * Math.PI / 180),
+          sy: Math.sin(linearAngle.value * Math.PI / 180),
+          tx: 0,
+          ty: 0,
+        }
+      : {
+          sx: 1,
+          sy: 1,
+          tx: 0,
+          ty: 0,
+        },
+  };
+  
+  const json = JSON.stringify(gradientData, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'gradient-penpot.json';
   a.click();
   URL.revokeObjectURL(url);
 };
