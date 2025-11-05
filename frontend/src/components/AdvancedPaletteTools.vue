@@ -125,7 +125,7 @@
           :style="{
             left: getColumn500Position() + '%',
             width: (100 / (colorScales[0]?.shades.length || 1)) + '%',
-            top: '-1.75rem',
+            top: '2rem',
             bottom: '0',
             backgroundColor: 'rgba(79, 70, 229, 0.1)',
             borderRadius: '0.5rem'
@@ -141,14 +141,14 @@
           </div>
           <div class="relative mb-8">
             <!-- Title above the 500 column - only show on first scale -->
-            <div v-if="scaleIndex === 0 && scale.shades.some(s => s.weight === 500)" class="absolute -top-7 left-0 right-0 flex">
+            <div v-if="scaleIndex === 0 && scale.shades.some(s => s.weight === 500)" class="absolute left-0 right-0 flex z-10" style="bottom: calc(100% - 1px);">
               <div
                 v-for="(shade, shadeIndex) in scale.shades"
                 :key="shadeIndex"
                 class="flex-1 relative"
               >
-                <div v-if="shade.weight === 500" class="absolute left-0 right-0 -translate-y-full">
-                  <div class="bg-indigo-600 text-white text-xs font-semibold py-1 rounded text-center w-full">
+                <div v-if="shade.weight === 500" class="w-full">
+                  <div class="bg-indigo-600 text-white text-xs font-semibold py-1 rounded-b-none rounded-t text-center w-full">
                     This color is in your palette
                   </div>
                 </div>
