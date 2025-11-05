@@ -27,24 +27,35 @@
         <div class="lg:col-span-2 space-y-6">
           <!-- Gradient Preview -->
           <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Preview</h2>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold text-gray-900">Preview</h2>
+              <div v-if="animationEnabled" class="flex items-center gap-2 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
+                <span class="material-symbols-outlined text-sm animate-spin">sync</span>
+                Animating
+              </div>
+            </div>
             <div
               class="w-full h-64 rounded-lg shadow-inner mb-4 transition-all"
-              :style="{ background: cssGradient }"
+              :class="{ 'animate-gradient': animationEnabled }"
+              :style="{ 
+                backgroundImage: animationEnabled ? animatedGradient : cssGradientWithBlend,
+                backgroundBlendMode: animationEnabled ? 'normal' : cssBlendModes,
+                ...animationStyle
+              }"
             ></div>
             
             <!-- Preview on Different Backgrounds -->
             <div class="grid grid-cols-3 gap-2 mb-4">
               <div class="bg-white rounded p-2 border border-gray-200">
-                <div class="h-16 rounded" :style="{ background: cssGradient }"></div>
+                <div class="h-16 rounded" :style="{ backgroundImage: cssGradientWithBlend, backgroundBlendMode: cssBlendModes }"></div>
                 <p class="text-xs text-gray-600 mt-1 text-center">White</p>
               </div>
               <div class="bg-gray-900 rounded p-2 border border-gray-200">
-                <div class="h-16 rounded" :style="{ background: cssGradient }"></div>
+                <div class="h-16 rounded" :style="{ backgroundImage: cssGradientWithBlend, backgroundBlendMode: cssBlendModes }"></div>
                 <p class="text-xs text-gray-600 mt-1 text-center text-white">Dark</p>
               </div>
               <div class="bg-gray-200 rounded p-2 border border-gray-200">
-                <div class="h-16 rounded" :style="{ background: cssGradient }"></div>
+                <div class="h-16 rounded" :style="{ backgroundImage: cssGradientWithBlend, backgroundBlendMode: cssBlendModes }"></div>
                 <p class="text-xs text-gray-600 mt-1 text-center">Gray</p>
               </div>
             </div>
@@ -80,7 +91,7 @@
                     {{ contrastRatio >= 7 ? '✓ AAA' : '✗ AAA' }}
                   </span>
                 </div>
-                <div class="flex-1 p-2 rounded border-2" :style="{ background: cssGradient, borderColor: accessibilityTextColor }">
+                <div class="flex-1 p-2 rounded border-2" :style="{ backgroundImage: cssGradientWithBlend, backgroundBlendMode: cssBlendModes, borderColor: accessibilityTextColor }">
                   <p class="text-sm font-semibold text-center" :style="{ color: accessibilityTextColor }">
                     Sample
                   </p>
@@ -246,7 +257,17 @@
         <div class="space-y-6">
           <!-- Gradient Type & Settings -->
           <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Settings</h2>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold text-gray-900">Settings</h2>
+              <button
+                @click="showExportModal = true"
+                class="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                title="Export gradient"
+              >
+                <span class="material-symbols-outlined text-xl">download</span>
+                <span class="text-sm font-medium">Export</span>
+              </button>
+            </div>
             
             <!-- Gradient Type -->
             <div class="mb-4">
@@ -376,69 +397,215 @@
                 />
               </div>
             </div>
-          </div>
 
-          <!-- Export -->
-          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-gray-900">Export</h2>
-            </div>
-            
-            <!-- Export Format Selector -->
+            <!-- Blend Mode -->
             <div class="mb-4">
-              <label class="block text-xs font-medium text-gray-700 mb-2">Code Format</label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Blend Mode (Current Layer)</label>
               <select
-                v-model="exportFormat"
+                v-model="blendMode"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
               >
-                <option value="css">CSS</option>
-                <option value="css-vars">CSS Variables</option>
-                <option value="tailwind">Tailwind Config</option>
-                <option value="scss">SCSS Variables</option>
-                <option value="json">JSON</option>
-                <option value="react">React (styled-components)</option>
-                <option value="vue">Vue (style binding)</option>
+                <option value="normal">Normal</option>
+                <option value="multiply">Multiply</option>
+                <option value="screen">Screen</option>
+                <option value="overlay">Overlay</option>
+                <option value="darken">Darken</option>
+                <option value="lighten">Lighten</option>
+                <option value="color-dodge">Color Dodge</option>
+                <option value="color-burn">Color Burn</option>
+                <option value="hard-light">Hard Light</option>
+                <option value="soft-light">Soft Light</option>
+                <option value="difference">Difference</option>
+                <option value="exclusion">Exclusion</option>
               </select>
-              <div class="mt-2 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <code class="text-xs font-mono text-gray-800 whitespace-pre-wrap break-all">{{ formattedExportCode }}</code>
-              </div>
-              <button
-                @click="copyFormattedCode"
-                class="w-full mt-2 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                Copy {{ exportFormat.toUpperCase() }}
-              </button>
             </div>
 
-            <!-- File Export Options -->
-            <div class="pt-4 border-t border-gray-200">
-              <label class="block text-xs font-medium text-gray-700 mb-2">File Format</label>
-              <div class="space-y-2">
+            <!-- Layers -->
+            <div class="mb-4 pt-4 border-t border-gray-200">
+              <div class="flex items-center justify-between mb-2">
+                <label class="block text-sm font-medium text-gray-700">Layers</label>
                 <button
-                  @click="exportAsImage"
-                  class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+                  @click="addLayer"
+                  class="px-3 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                 >
-                  Export as Image
-                </button>
-                <button
-                  @click="exportAsSVG"
-                  class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                >
-                  Export as SVG
-                </button>
-                <button
-                  @click="exportToAdobe"
-                  class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                >
-                  Export to Adobe
-                </button>
-                <button
-                  @click="exportToPenpot"
-                  class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                >
-                  Export to Penpot
+                  + Add Layer
                 </button>
               </div>
+              <div class="space-y-2 max-h-48 overflow-y-auto">
+                <div
+                  v-for="(layer, index) in layers"
+                  :key="layer.id"
+                  class="flex items-center gap-2 p-2 rounded border"
+                  :class="currentLayerIndex === index ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'"
+                >
+                  <input
+                    type="checkbox"
+                    v-model="layer.enabled"
+                    class="rounded"
+                    @click.stop
+                  />
+                  <button
+                    @click="currentLayerIndex = index"
+                    class="flex-1 text-left text-sm px-2 py-1 rounded hover:bg-gray-100"
+                  >
+                    Layer {{ index + 1 }}
+                  </button>
+                  <button
+                    v-if="layers.length > 1"
+                    @click="removeLayer(index)"
+                    class="p-1 text-red-600 hover:bg-red-50 rounded"
+                    title="Remove layer"
+                  >
+                    <span class="material-symbols-outlined text-sm">delete</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Animation -->
+            <div class="pt-4 border-t border-gray-200">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-lg text-gray-600">animation</span>
+                  <label class="block text-sm font-medium text-gray-700">Animation</label>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    v-model="animationEnabled"
+                    class="sr-only peer"
+                  />
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+              </div>
+              <p v-if="animationEnabled" class="text-xs text-green-600 mb-3 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">check_circle</span>
+                Animation is active - watch the preview above
+              </p>
+              <div v-if="animationEnabled" class="space-y-3 mt-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Animation Type</label>
+                  <select
+                    v-model="animationType"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="position">Position (scrolls gradient)</option>
+                    <option value="angle">Angle (rotates gradient)</option>
+                    <option value="color">Color (cycles hues)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Duration: {{ animationDuration }}s</label>
+                  <input
+                    v-model.number="animationDuration"
+                    type="range"
+                    min="0.5"
+                    max="10"
+                    step="0.5"
+                    class="w-full"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Direction</label>
+                  <select
+                    v-model="animationDirection"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="reverse">Reverse</option>
+                    <option value="alternate">Alternate</option>
+                    <option value="alternate-reverse">Alternate Reverse</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div
+      v-if="showExportModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      @click="showExportModal = false"
+    >
+      <div
+        class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+        @click.stop
+      >
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-2xl text-indigo-600">download</span>
+            <h2 class="text-xl font-semibold text-gray-900">Export Gradient</h2>
+          </div>
+          <button
+            @click="showExportModal = false"
+            class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+        
+        <div class="p-6 space-y-6">
+          <!-- Export Format Selector -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Code Format</label>
+            <select
+              v-model="exportFormat"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="css">CSS</option>
+              <option value="css-vars">CSS Variables</option>
+              <option value="tailwind">Tailwind Config</option>
+              <option value="scss">SCSS Variables</option>
+              <option value="json">JSON</option>
+              <option value="react">React (styled-components)</option>
+              <option value="vue">Vue (style binding)</option>
+            </select>
+            <div class="mt-3 bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <code class="text-xs font-mono text-gray-800 whitespace-pre-wrap break-all">{{ formattedExportCode }}</code>
+            </div>
+            <button
+              @click="copyFormattedCode"
+              class="w-full mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+            >
+              Copy {{ exportFormat.toUpperCase() }}
+            </button>
+          </div>
+
+          <!-- File Export Options -->
+          <div class="pt-4 border-t border-gray-200">
+            <label class="block text-sm font-medium text-gray-700 mb-3">File Format</label>
+            <div class="grid grid-cols-2 gap-3">
+              <button
+                @click="exportAsImage"
+                class="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+              >
+                <span class="material-symbols-outlined text-lg">image</span>
+                Export as Image
+              </button>
+              <button
+                @click="exportAsSVG"
+                class="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+              >
+                <span class="material-symbols-outlined text-lg">code</span>
+                Export as SVG
+              </button>
+              <button
+                @click="exportToAdobe"
+                class="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+              >
+                <span class="material-symbols-outlined text-lg">file_download</span>
+                Export to Adobe
+              </button>
+              <button
+                @click="exportToPenpot"
+                class="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+              >
+                <span class="material-symbols-outlined text-lg">file_download</span>
+                Export to Penpot
+              </button>
             </div>
           </div>
         </div>
@@ -458,7 +625,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import ColorPicker from '../components/ColorPicker.vue';
 import axios from 'axios';
 
@@ -469,6 +636,32 @@ const radialShape = ref('ellipse');
 const radialSize = ref('farthest-corner');
 const conicPosition = ref({ x: '50%', y: '50%' });
 const conicAngle = ref(0);
+const blendMode = ref('normal');
+const layers = ref([
+  {
+    id: 1,
+    type: 'linear',
+    linearAngle: 90,
+    radialPosition: { x: '50%', y: '50%' },
+    radialShape: 'ellipse',
+    radialSize: 'farthest-corner',
+    conicPosition: { x: '50%', y: '50%' },
+    conicAngle: 0,
+    colorStops: [
+      { id: 1, color: '#3b82f6', position: 0, opacity: 100 },
+      { id: 2, color: '#8b5cf6', position: 100, opacity: 100 },
+    ],
+    blendMode: 'normal',
+    opacity: 100,
+    enabled: true,
+  },
+]);
+const currentLayerIndex = ref(0);
+const animationEnabled = ref(false);
+const animationDuration = ref(3);
+const animationDirection = ref('alternate');
+const animationIterationCount = ref('infinite');
+const animationType = ref('position'); // 'position', 'color', 'angle'
 
 const colorStops = ref([
   { id: 1, color: '#3b82f6', position: 0, opacity: 100 },
@@ -486,6 +679,7 @@ const showAccessibilityCheck = ref(false);
 const accessibilityTextColor = ref('#000000');
 const availablePalettes = ref([]);
 const selectedPaletteId = ref('');
+const showExportModal = ref(false);
 
 const gradientTypes = [
   { label: 'Linear', value: 'linear' },
@@ -519,25 +713,229 @@ const hexToRgba = (hex, opacity) => {
   return `rgba(${r}, ${g}, ${b}, ${opacity / 100})`;
 };
 
-const cssGradient = computed(() => {
-  const stops = colorStops.value
-    .map((stop) => {
-      const color = stop.opacity === 100 ? stop.color : hexToRgba(stop.color, stop.opacity);
-      return `${color} ${stop.position}%`;
-    })
-    .join(', ');
-
-  switch (gradientType.value) {
-    case 'linear':
-      return `linear-gradient(${linearAngle.value}deg, ${stops})`;
-    case 'radial':
-      return `radial-gradient(${radialShape.value} ${radialSize.value} at ${radialPosition.value.x} ${radialPosition.value.y}, ${stops})`;
-    case 'conic':
-      return `conic-gradient(from ${conicAngle.value}deg at ${conicPosition.value.x} ${conicPosition.value.y}, ${stops})`;
-    default:
-      return `linear-gradient(90deg, ${stops})`;
+// Sync current layer with main controls
+const syncCurrentLayer = () => {
+  if (layers.value[currentLayerIndex.value]) {
+    const layer = layers.value[currentLayerIndex.value];
+    gradientType.value = layer.type;
+    linearAngle.value = layer.linearAngle;
+    radialPosition.value = { ...layer.radialPosition };
+    radialShape.value = layer.radialShape;
+    radialSize.value = layer.radialSize;
+    conicPosition.value = { ...layer.conicPosition };
+    conicAngle.value = layer.conicAngle;
+    colorStops.value = layer.colorStops.map(s => ({ ...s }));
+    blendMode.value = layer.blendMode;
   }
+};
+
+// Update current layer from main controls
+const updateCurrentLayer = () => {
+  if (layers.value[currentLayerIndex.value]) {
+    layers.value[currentLayerIndex.value] = {
+      ...layers.value[currentLayerIndex.value],
+      type: gradientType.value,
+      linearAngle: linearAngle.value,
+      radialPosition: { ...radialPosition.value },
+      radialShape: radialShape.value,
+      radialSize: radialSize.value,
+      conicPosition: { ...conicPosition.value },
+      conicAngle: conicAngle.value,
+      colorStops: colorStops.value.map(s => ({ ...s })),
+      blendMode: blendMode.value,
+    };
+  }
+};
+
+// Watch for changes to sync layers
+watch([gradientType, linearAngle, radialPosition, radialShape, radialSize, conicPosition, conicAngle, blendMode], () => {
+  updateCurrentLayer();
 });
+
+watch(colorStops, () => {
+  updateCurrentLayer();
+}, { deep: true });
+
+watch(currentLayerIndex, () => {
+  syncCurrentLayer();
+});
+
+const cssGradient = computed(() => {
+  const enabledLayers = layers.value.filter(layer => layer.enabled);
+  
+  if (enabledLayers.length === 0) return '';
+  
+  const gradientStrings = enabledLayers.map(layer => {
+    const stops = layer.colorStops
+      .map((stop) => {
+        const color = stop.opacity === 100 ? stop.color : hexToRgba(stop.color, stop.opacity);
+        return `${color} ${stop.position}%`;
+      })
+      .join(', ');
+    
+    let gradient = '';
+    switch (layer.type) {
+      case 'linear':
+        gradient = `linear-gradient(${layer.linearAngle}deg, ${stops})`;
+        break;
+      case 'radial':
+        gradient = `radial-gradient(${layer.radialShape} ${layer.radialSize} at ${layer.radialPosition.x} ${layer.radialPosition.y}, ${stops})`;
+        break;
+      case 'conic':
+        gradient = `conic-gradient(from ${layer.conicAngle}deg at ${layer.conicPosition.x} ${layer.conicPosition.y}, ${stops})`;
+        break;
+      default:
+        gradient = `linear-gradient(90deg, ${stops})`;
+    }
+    
+    return gradient;
+  });
+  
+  return gradientStrings.join(', ');
+});
+
+const cssGradientWithBlend = computed(() => {
+  const enabledLayers = layers.value.filter(layer => layer.enabled);
+  
+  if (enabledLayers.length === 0) return '';
+  
+  // For multiple layers with blend modes, we need to use background-image with multiple gradients
+  const backgrounds = enabledLayers.map((layer) => {
+    const stops = layer.colorStops
+      .map((stop) => {
+        const color = stop.opacity === 100 ? stop.color : hexToRgba(stop.color, stop.opacity);
+        return `${color} ${stop.position}%`;
+      })
+      .join(', ');
+    
+    let gradient = '';
+    switch (layer.type) {
+      case 'linear':
+        gradient = `linear-gradient(${layer.linearAngle}deg, ${stops})`;
+        break;
+      case 'radial':
+        gradient = `radial-gradient(${layer.radialShape} ${layer.radialSize} at ${layer.radialPosition.x} ${layer.radialPosition.y}, ${stops})`;
+        break;
+      case 'conic':
+        gradient = `conic-gradient(from ${layer.conicAngle}deg at ${layer.conicPosition.x} ${layer.conicPosition.y}, ${stops})`;
+        break;
+      default:
+        gradient = `linear-gradient(90deg, ${stops})`;
+    }
+    
+    return gradient;
+  });
+  
+  return backgrounds.join(', ');
+});
+
+const cssBlendModes = computed(() => {
+  const enabledLayers = layers.value.filter(layer => layer.enabled);
+  return enabledLayers.map(layer => layer.blendMode || 'normal').join(', ');
+});
+
+const animatedGradient = computed(() => {
+  if (!animationEnabled.value) return cssGradientWithBlend.value;
+  
+  const currentLayer = layers.value[currentLayerIndex.value];
+  if (!currentLayer || currentLayer.colorStops.length < 2) return cssGradientWithBlend.value;
+  
+  // For color animation, use normal gradient - filter handles it
+  if (animationType.value === 'color') {
+    return cssGradientWithBlend.value;
+  }
+  
+  // For position and angle animations, create a wider gradient
+  if (animationType.value === 'position' || animationType.value === 'angle') {
+    if (currentLayer.type === 'linear') {
+      const angle = currentLayer.linearAngle;
+      // Create stops that extend beyond 100% for seamless scrolling
+      const firstStop = currentLayer.colorStops[0];
+      const lastStop = currentLayer.colorStops[currentLayer.colorStops.length - 1];
+      
+      const stops = currentLayer.colorStops
+        .map((stop) => {
+          const color = stop.opacity === 100 ? stop.color : hexToRgba(stop.color, stop.opacity);
+          return `${color} ${stop.position * 0.5}%`;
+        })
+        .concat(
+          currentLayer.colorStops.map((stop) => {
+            const color = stop.opacity === 100 ? stop.color : hexToRgba(stop.color, stop.opacity);
+            return `${color} ${stop.position * 0.5 + 50}%`;
+          })
+        )
+        .join(', ');
+      
+      return `linear-gradient(${angle}deg, ${stops})`;
+    }
+  }
+  
+  return cssGradientWithBlend.value;
+});
+
+const animationStyle = computed(() => {
+  if (!animationEnabled.value) return {};
+  
+  const currentLayer = layers.value[currentLayerIndex.value];
+  if (!currentLayer) return {};
+  
+  const style = {};
+  
+  if (animationType.value === 'color') {
+    // Color animation uses filter
+    style.animation = `gradient-color ${animationDuration.value}s ${animationDirection.value} ${animationIterationCount.value}`;
+  } else if (animationType.value === 'position' || animationType.value === 'angle') {
+    if (currentLayer.type === 'linear') {
+      // Position and angle animations use background-position
+      style.backgroundSize = '200% 200%';
+      style.backgroundRepeat = 'no-repeat';
+      style.animation = `gradient-${animationType.value} ${animationDuration.value}s ${animationDirection.value} ${animationIterationCount.value}`;
+      style.backgroundPosition = '0% 50%'; // Initial position
+    }
+  }
+  
+  // Debug: log when animation is enabled
+  if (animationEnabled.value) {
+    console.log('Animation style:', style);
+    console.log('Animation type:', animationType.value);
+    console.log('Duration:', animationDuration.value);
+  }
+  
+  return style;
+});
+
+const addLayer = () => {
+  const newLayer = {
+    id: Date.now(),
+    type: 'linear',
+    linearAngle: 90,
+    radialPosition: { x: '50%', y: '50%' },
+    radialShape: 'ellipse',
+    radialSize: 'farthest-corner',
+    conicPosition: { x: '50%', y: '50%' },
+    conicAngle: 0,
+    colorStops: [
+      { id: Date.now() + 1, color: '#6366f1', position: 0, opacity: 100 },
+      { id: Date.now() + 2, color: '#8b5cf6', position: 100, opacity: 100 },
+    ],
+    blendMode: 'normal',
+    opacity: 100,
+    enabled: true,
+  };
+  layers.value.push(newLayer);
+  currentLayerIndex.value = layers.value.length - 1;
+  syncCurrentLayer();
+};
+
+const removeLayer = (index) => {
+  if (layers.value.length > 1) {
+    layers.value.splice(index, 1);
+    if (currentLayerIndex.value >= layers.value.length) {
+      currentLayerIndex.value = layers.value.length - 1;
+    }
+    syncCurrentLayer();
+  }
+};
 
 const addColorStop = () => {
   const newPosition = colorStops.value.length > 0
@@ -571,46 +969,44 @@ const removeColorStop = (index) => {
 };
 
 const formattedExportCode = computed(() => {
-  const gradient = cssGradient.value;
+  const gradient = cssGradientWithBlend.value;
+  const blendModes = cssBlendModes.value;
   
   switch (exportFormat.value) {
     case 'css':
+      if (layers.value.length > 1) {
+        return `background-image: ${gradient};\nbackground-blend-mode: ${blendModes};`;
+      }
       return `background: ${gradient};\nbackground-image: ${gradient};`;
       
     case 'css-vars':
-      return `:root {\n  --gradient-primary: ${gradient};\n}\n\n.my-element {\n  background: var(--gradient-primary);\n}`;
+      return `:root {\n  --gradient-primary: ${gradient};\n${layers.value.length > 1 ? `  --gradient-blend-mode: ${blendModes};\n` : ''}}\n\n.my-element {\n  background-image: var(--gradient-primary);${layers.value.length > 1 ? '\n  background-blend-mode: var(--gradient-blend-mode);' : ''}\n}`;
       
     case 'tailwind':
       return `// tailwind.config.js\nmodule.exports = {\n  theme: {\n    extend: {\n      backgroundImage: {\n        'gradient-primary': '${gradient}',\n      },\n    },\n  },\n}`;
       
     case 'scss':
-      return `$gradient-primary: ${gradient};\n\n.my-element {\n  background: $gradient-primary;\n}`;
+      return `$gradient-primary: ${gradient};\n\n.my-element {\n  background-image: $gradient-primary;\n}`;
       
     case 'json':
       return JSON.stringify({
-        type: gradientType.value,
+        layers: layers.value,
         css: gradient,
-        stops: colorStops.value.map(s => ({
-          color: s.color,
-          position: s.position,
-          opacity: s.opacity,
-        })),
-        settings: {
-          linearAngle: linearAngle.value,
-          radialPosition: radialPosition.value,
-          radialShape: radialShape.value,
-          radialSize: radialSize.value,
-          conicPosition: conicPosition.value,
-          conicAngle: conicAngle.value,
-        },
+        blendMode: layers.value.length > 1 ? blendModes : undefined,
+        animation: animationEnabled.value ? {
+          type: animationType.value,
+          duration: animationDuration.value,
+          direction: animationDirection.value,
+          iterationCount: animationIterationCount.value,
+        } : undefined,
       }, null, 2);
       
     case 'react':
-      return `import styled from 'styled-components';\n\nconst GradientComponent = styled.div\`\n  background: ${gradient};\n\`;`;
+      return `import styled from 'styled-components';\n\nconst GradientComponent = styled.div\`\n  background-image: ${gradient};\n${layers.value.length > 1 ? `  background-blend-mode: ${blendModes};\n` : ''}\`;`;
       
     case 'vue':
       // Vue component code - using style binding
-      return 'const gradient = \'' + gradient + '\';\n\n// Use in template:\n// <div :style="{ background: gradient }">Your content</div>';
+      return `const gradient = '${gradient}';\n${layers.value.length > 1 ? `const blendMode = '${blendModes}';\n` : ''}\n// Use in template:\n// <div :style="{ backgroundImage: gradient${layers.value.length > 1 ? ', backgroundBlendMode: blendMode' : ''} }">Your content</div>`;
       
     default:
       return gradient;
@@ -769,19 +1165,72 @@ const calculateLuminance = (rgb) => {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 };
 
+// Sample color at a specific position in the gradient
+const sampleGradientColor = (position) => {
+  const currentLayer = layers.value[currentLayerIndex.value];
+  if (!currentLayer || !currentLayer.colorStops || currentLayer.colorStops.length === 0) {
+    return { r: 0, g: 0, b: 0 };
+  }
+  
+  const layerStops = currentLayer.colorStops;
+  if (layerStops.length === 1) return hexToRgb(layerStops[0].color);
+  
+  // Find the two stops that bracket this position
+  const sortedStops = [...layerStops].sort((a, b) => a.position - b.position);
+  
+  if (position <= sortedStops[0].position) {
+    return hexToRgb(sortedStops[0].color);
+  }
+  if (position >= sortedStops[sortedStops.length - 1].position) {
+    return hexToRgb(sortedStops[sortedStops.length - 1].color);
+  }
+  
+  // Find the two stops that bracket this position
+  for (let i = 0; i < sortedStops.length - 1; i++) {
+    if (position >= sortedStops[i].position && position <= sortedStops[i + 1].position) {
+      const stop1 = sortedStops[i];
+      const stop2 = sortedStops[i + 1];
+      const range = stop2.position - stop1.position;
+      const factor = range > 0 ? (position - stop1.position) / range : 0;
+      
+      const rgb1 = hexToRgb(stop1.color);
+      const rgb2 = hexToRgb(stop2.color);
+      
+      // Interpolate between the two colors
+      const r = Math.round(rgb1.r + (rgb2.r - rgb1.r) * factor);
+      const g = Math.round(rgb1.g + (rgb2.g - rgb1.g) * factor);
+      const b = Math.round(rgb1.b + (rgb2.b - rgb1.b) * factor);
+      
+      return { r, g, b };
+    }
+  }
+  
+  return hexToRgb(sortedStops[0].color);
+};
+
 const contrastRatio = computed(() => {
   const textRgb = hexToRgb(accessibilityTextColor.value);
   const textLuminance = calculateLuminance(textRgb);
   
-  // Calculate average luminance of gradient (simplified - uses first stop)
-  // For more accuracy, we'd need to sample multiple points
-  const gradientRgb = hexToRgb(colorStops.value[0]?.color || '#000000');
-  const gradientLuminance = calculateLuminance(gradientRgb);
+  // Sample multiple points across the gradient (at 0%, 25%, 50%, 75%, 100%)
+  const samplePositions = [0, 25, 50, 75, 100];
+  const sampleLuminances = samplePositions.map(pos => {
+    const gradientRgb = sampleGradientColor(pos);
+    return calculateLuminance(gradientRgb);
+  });
   
-  const lighter = Math.max(textLuminance, gradientLuminance);
-  const darker = Math.min(textLuminance, gradientLuminance);
+  // Calculate average luminance
+  const avgGradientLuminance = sampleLuminances.reduce((sum, lum) => sum + lum, 0) / sampleLuminances.length;
   
-  return (lighter + 0.05) / (darker + 0.05);
+  // Use the worst case contrast ratio for accessibility
+  const contrastRatios = sampleLuminances.map(lum => {
+    const lighter = Math.max(textLuminance, lum);
+    const darker = Math.min(textLuminance, lum);
+    return (lighter + 0.05) / (darker + 0.05);
+  });
+  
+  // Return the minimum contrast ratio (worst case)
+  return Math.min(...contrastRatios);
 });
 
 // Fetch palettes from backend
@@ -1020,6 +1469,52 @@ const openAccessibilityColorPicker = (event) => {
 };
 
 onMounted(() => {
+  syncCurrentLayer();
   updateGradient();
 });
 </script>
+
+<style scoped>
+/* Scoped styles for component */
+</style>
+
+<style>
+/* Global keyframes for animations */
+@keyframes gradient-angle {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes gradient-position {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes gradient-color {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+  }
+}
+
+/* Ensure animations work properly */
+.animate-gradient {
+  animation-play-state: running !important;
+}
+</style>
