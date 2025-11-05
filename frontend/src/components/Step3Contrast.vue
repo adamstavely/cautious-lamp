@@ -134,23 +134,45 @@
     <div v-else>
       <!-- Summary -->
       <div v-if="contrastResults.length > 0" class="mb-8">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <span class="material-symbols-outlined text-xl text-indigo-600">compare_arrows</span>
+            Contrast Pairs
+          </h3>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <button
+            @click="filter = 'all'"
+            class="bg-blue-50 p-4 rounded-lg border-2 transition-all hover:bg-blue-100 cursor-pointer"
+            :class="filter === 'all' ? 'border-blue-500 shadow-md' : 'border-blue-200'"
+          >
             <div class="text-2xl font-bold text-blue-900">{{ totalPairs }}</div>
             <div class="text-sm text-blue-700">Total Pairs</div>
-          </div>
-          <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+          </button>
+          <button
+            @click="filter = 'passing'"
+            class="bg-green-50 p-4 rounded-lg border-2 transition-all hover:bg-green-100 cursor-pointer"
+            :class="filter === 'passing' ? 'border-green-500 shadow-md' : 'border-green-200'"
+          >
             <div class="text-2xl font-bold text-green-900">{{ passingAA }}</div>
             <div class="text-sm text-green-700">Pass AA</div>
-          </div>
-          <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+          </button>
+          <button
+            @click="filter = 'passingAAA'"
+            class="bg-green-50 p-4 rounded-lg border-2 transition-all hover:bg-green-100 cursor-pointer"
+            :class="filter === 'passingAAA' ? 'border-green-500 shadow-md' : 'border-green-200'"
+          >
             <div class="text-2xl font-bold text-green-900">{{ passingAAA }}</div>
             <div class="text-sm text-green-700">Pass AAA</div>
-          </div>
-          <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+          </button>
+          <button
+            @click="filter = 'failing'"
+            class="bg-red-50 p-4 rounded-lg border-2 transition-all hover:bg-red-100 cursor-pointer"
+            :class="filter === 'failing' ? 'border-red-500 shadow-md' : 'border-red-200'"
+          >
             <div class="text-2xl font-bold text-red-900">{{ failing }}</div>
             <div class="text-sm text-red-700">Failing</div>
-          </div>
+          </button>
         </div>
 
         <!-- Strategic Color Suggestions -->
@@ -260,50 +282,39 @@
             </div>
           </div>
         </div>
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-2">
-            <label class="text-sm text-gray-600">Filter:</label>
-            <select
-              v-model="filter"
-              class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="all">All Pairs</option>
-              <option value="passing">Passing Only</option>
-              <option value="failing">Failing Only</option>
-            </select>
-          </div>
-          <div class="flex items-center gap-2">
-            <label class="text-sm text-gray-600">Sort:</label>
-            <select
-              v-model="sortBy"
-              class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="ratio">Ratio (Low to High)</option>
-              <option value="ratio-desc">Ratio (High to Low)</option>
-              <option value="passing">Passing First</option>
-              <option value="failing">Failing First</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Versatility Insights -->
-        <div v-if="versatileColors.length > 0" class="mb-6 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-          <h4 class="text-sm font-semibold text-indigo-900 mb-2">Most Versatile Colors</h4>
-          <p class="text-xs text-indigo-700 mb-3">
-            These colors work well with many others in your palette:
-          </p>
-          <div class="flex flex-wrap gap-2">
-            <div
-              v-for="(color, index) in versatileColors.slice(0, 3)"
-              :key="index"
-              class="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-indigo-300"
-            >
+        <div class="flex items-center justify-between mb-4 gap-4">
+          <!-- Versatility Insights -->
+          <div v-if="versatileColors.length > 0" class="flex-1 flex items-center gap-4">
+            <h4 class="text-sm font-semibold text-gray-900">Most Versatile Colors:</h4>
+            <div class="flex flex-wrap gap-2">
               <div
-                class="w-6 h-6 rounded border border-gray-300"
-                :style="{ backgroundColor: color.hex }"
-              ></div>
-              <span class="text-xs font-mono text-indigo-900">{{ color.hex }}</span>
-              <span class="text-xs text-indigo-600">({{ color.count }} pairs)</span>
+                v-for="(color, index) in versatileColors.slice(0, 3)"
+                :key="index"
+                class="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-gray-200"
+              >
+                <div
+                  class="w-6 h-6 rounded border border-gray-300"
+                  :style="{ backgroundColor: color.hex }"
+                ></div>
+                <span class="text-xs font-mono text-gray-900">{{ color.hex }}</span>
+                <span class="text-xs text-gray-600">({{ color.count }} pairs)</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Filter and Sort Controls -->
+          <div class="flex items-center gap-4 flex-shrink-0">
+            <div class="flex items-center gap-2">
+              <label class="text-sm text-gray-600">Sort:</label>
+              <select
+                v-model="sortBy"
+                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="ratio">Ratio (Low to High)</option>
+                <option value="ratio-desc">Ratio (High to Low)</option>
+                <option value="passing">Passing First</option>
+                <option value="failing">Failing First</option>
+              </select>
             </div>
           </div>
         </div>
@@ -539,6 +550,8 @@ const filteredAndSortedResults = computed(() => {
   // Apply filter
   if (filter.value === 'passing') {
     filtered = filtered.filter((r) => r.passesAA);
+  } else if (filter.value === 'passingAAA') {
+    filtered = filtered.filter((r) => r.passesAAA);
   } else if (filter.value === 'failing') {
     filtered = filtered.filter((r) => !r.passesAA);
   }
