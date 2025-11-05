@@ -8,7 +8,15 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      component: () => import('./views/Home.vue'),
+    },
+    {
+      path: '/palette-builder',
       component: () => import('./views/Wizard.vue'),
+    },
+    {
+      path: '/gradient-generator',
+      component: () => import('./views/GradientGenerator.vue'),
     },
   ],
 });
