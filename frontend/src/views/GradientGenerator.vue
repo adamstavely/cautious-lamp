@@ -288,7 +288,7 @@
               <div class="flex items-start justify-between mb-3">
                 <div class="flex-1">
                   <div class="flex items-center gap-2 mb-1">
-                    <span class="material-symbols-outlined text-lg text-gray-600">layers</span>
+                    <span class="material-symbols-outlined text-lg text-indigo-600">layers</span>
                     <label class="block text-sm font-medium text-gray-700">Layers</label>
                   </div>
                   <p class="text-xs text-gray-500">Stack multiple gradients with blend modes</p>
@@ -440,7 +440,10 @@
                     v-for="direction in linearDirections"
                     :key="direction.value"
                     @click="linearAngle = direction.angle"
-                    class="px-3 py-1 text-xs rounded border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
+                    class="px-3 py-1 text-xs rounded-lg border-2 transition-all"
+                    :class="linearAngle === direction.angle
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'"
                   >
                     {{ direction.label }}
                   </button>
@@ -550,7 +553,7 @@
             <!-- Global Animation Settings -->
             <div class="pt-1">
               <div class="flex items-center gap-2 mb-3">
-                <span class="material-symbols-outlined text-lg text-gray-600">animation</span>
+                <span class="material-symbols-outlined text-lg text-indigo-600">animation</span>
                 <div>
                   <label class="block text-sm font-medium text-gray-700">Animation</label>
                   <p class="text-xs text-gray-500 mt-0.5">Animates the current active layer</p>
