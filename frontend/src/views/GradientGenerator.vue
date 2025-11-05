@@ -278,14 +278,16 @@
                   step="1"
                   class="flex-1"
                 />
-                <input
-                  v-model.number="linearAngle"
-                  type="number"
-                  min="0"
-                  max="360"
-                  class="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-                <span class="text-sm text-gray-600">°</span>
+                <div class="flex items-center gap-1">
+                  <input
+                    v-model.number="linearAngle"
+                    type="number"
+                    min="0"
+                    max="360"
+                    class="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                  <span class="text-base text-gray-600">°</span>
+                </div>
               </div>
               <div class="mt-2 flex flex-wrap gap-2">
                 <button
@@ -384,7 +386,7 @@
             
             <!-- Export Format Selector -->
             <div class="mb-4">
-              <label class="block text-xs font-medium text-gray-700 mb-2">Export Format</label>
+              <label class="block text-xs font-medium text-gray-700 mb-2">Code Format</label>
               <select
                 v-model="exportFormat"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
@@ -410,7 +412,7 @@
 
             <!-- File Export Options -->
             <div class="pt-4 border-t border-gray-200">
-              <label class="block text-xs font-medium text-gray-700 mb-2">Export Files</label>
+              <label class="block text-xs font-medium text-gray-700 mb-2">File Format</label>
               <div class="space-y-2">
                 <button
                   @click="exportAsImage"
