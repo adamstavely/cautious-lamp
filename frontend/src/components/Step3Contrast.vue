@@ -523,9 +523,8 @@ const contrastSuggestions = ref({});
 const suggestionsLoading = ref({});
 const strategicSuggestions = ref([]);
 const loadingStrategic = ref(false);
-const selectedBlindnessType = ref('normal');
+const selectedBlindnessType = ref('protanopia');
 const colorBlindnessTypes = [
-  { value: 'normal', label: 'Normal' },
   { value: 'protanopia', label: 'Protanopia' },
   { value: 'deuteranopia', label: 'Deuteranopia' },
   { value: 'tritanopia', label: 'Tritanopia' },
