@@ -200,6 +200,40 @@
               </div>
             </div>
           </div>
+
+          <!-- Criterion 6: Semantic Colors -->
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 mt-0.5">
+              <svg
+                v-if="healthMetrics.hasAllSemanticColors"
+                class="w-5 h-5 text-green-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+              <svg
+                v-else
+                class="w-5 h-5 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <div class="font-semibold text-gray-900">Define 4 semantic colors</div>
+              <div class="text-sm text-gray-600 mt-0.5">
+                <span v-if="healthMetrics.hasAllSemanticColors">
+                  Success, Error, Warning, and Info colors defined
+                </span>
+                <span v-else>
+                  {{ missingSemanticColors }} semantic color{{ missingSemanticColors !== 1 ? 's' : '' }} missing
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -215,6 +249,12 @@ const props = defineProps({
   palette: {
     type: Object,
     required: true,
+  },
+  generatedData: {
+    type: Object,
+    default: () => ({
+      semanticSuggestions: {},
+    }),
   },
 });
 
@@ -273,6 +313,18 @@ const healthMetrics = computed(() => {
   const passingPairings = passingAA;
   const hasFourPlusPairings = passingPairings >= 4;
   
+  // Check for semantic colors (success, error, warning, info)
+  const semanticRoles = ['success', 'error', 'warning', 'info'];
+  const semanticColorsInPalette = colors.filter((c) => semanticRoles.includes(c.role));
+  const semanticSuggestions = props.generatedData?.semanticSuggestions || {};
+  const hasAllSemanticColors = semanticRoles.every((role) => {
+    // Check if role exists in palette colors
+    const inPalette = semanticColorsInPalette.some((c) => c.role === role);
+    // Or check if role exists in generated suggestions
+    const inSuggestions = semanticSuggestions[role] !== undefined;
+    return inPalette || inSuggestions;
+  });
+  
   return {
     hasThreePlusColors: colorCount >= 3,
     hasLightNeutral,
@@ -282,10 +334,11 @@ const healthMetrics = computed(() => {
     colorsWithoutPairing,
     passingPairings,
     hasFourPlusPairings,
+    hasAllSemanticColors,
   };
 });
 
-const totalCriteria = 5;
+const totalCriteria = 6;
 const metCriteria = computed(() => {
   let count = 0;
   if (healthMetrics.value.hasThreePlusColors) count++;
@@ -293,7 +346,19 @@ const metCriteria = computed(() => {
   if (healthMetrics.value.hasDarkNeutral) count++;
   if (healthMetrics.value.everyColorHasAccessiblePairing) count++;
   if (healthMetrics.value.hasFourPlusPairings) count++;
+  if (healthMetrics.value.hasAllSemanticColors) count++;
   return count;
+});
+
+const missingSemanticColors = computed(() => {
+  const semanticRoles = ['success', 'error', 'warning', 'info'];
+  const colors = props.palette?.colors || [];
+  const semanticColorsInPalette = colors.filter((c) => semanticRoles.includes(c.role));
+  const semanticSuggestions = props.generatedData?.semanticSuggestions || {};
+  const definedRoles = semanticRoles.filter((role) => {
+    return semanticColorsInPalette.some((c) => c.role === role) || semanticSuggestions[role] !== undefined;
+  });
+  return 4 - definedRoles.length;
 });
 
 const healthScore = computed(() => {

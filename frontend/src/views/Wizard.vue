@@ -94,7 +94,7 @@
                 {{ steps[currentStep].fullTitle }}
               </p>
             </div>
-            <PaletteHealthScore :palette="palette" />
+            <PaletteHealthScore :palette="palette" :generated-data="generatedData" />
           </div>
         </div>
         
@@ -105,6 +105,7 @@
             v-if="currentStep === 0"
             :palette="palette"
             @update-palette="updatePalette"
+            @update-generated-data="handleGeneratedData"
             @next="nextStep"
           />
 
@@ -130,6 +131,7 @@
           <Step4Roles
             v-if="currentStep === 3"
             :palette="palette"
+            :generated-data="generatedData"
             @update-palette="updatePalette"
             @back="prevStep"
             @next="nextStep"
@@ -139,6 +141,7 @@
           <Step5Use
             v-if="currentStep === 4"
             :palette="palette"
+            :generated-data="generatedData"
             @back="prevStep"
             @export="exportPalette"
             @update-palette="updatePalette"
@@ -172,8 +175,19 @@ const palette = ref({
   colors: [],
 });
 
+const generatedData = ref({
+  variants: [],
+  colorScales: [],
+  darkModeColors: [],
+  semanticSuggestions: {},
+});
+
 const updatePalette = (newPalette) => {
   palette.value = { ...palette.value, ...newPalette };
+};
+
+const handleGeneratedData = (data) => {
+  generatedData.value = { ...generatedData.value, ...data };
 };
 
 const nextStep = () => {

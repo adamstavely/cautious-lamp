@@ -22,13 +22,14 @@
               <div>• Hero = your main brand color</div>
               <div>• Accents = highlights and CTAs</div>
               <div>• Neutrals = backgrounds and text</div>
+              <div>• Semantic = success, error, warning, info</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Three Column Grid Layout -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Four Column Grid Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         <!-- Hero Colors Section -->
         <div class="lg:col-span-1">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Hero Colors</h3>
@@ -144,6 +145,46 @@
             </div>
           </div>
         </div>
+
+        <!-- Semantic Colors Section -->
+        <div class="lg:col-span-1">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Semantic Colors</h3>
+          <div
+            class="min-h-[200px] p-3 rounded-lg transition-colors border-2 border-dashed"
+            :class="isDraggingOver === 'semantic' ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'"
+            @dragover.prevent="handleDragOver($event, 'semantic')"
+            @drop.prevent="handleDrop($event, 'semantic')"
+            @dragenter.prevent="isDraggingOver = 'semantic'"
+            @dragleave="handleDragLeave"
+          >
+            <div class="flex flex-wrap gap-3 justify-center">
+              <div
+                v-for="(color, index) in semanticColors"
+                :key="`semantic-${index}-${color.hex}`"
+                class="flex flex-col items-center"
+              >
+                <div
+                  class="w-20 h-20 rounded-full shadow-md border-2 border-white flex flex-col items-center justify-center cursor-move draggable-color"
+                  :style="{ backgroundColor: color.hex, opacity: draggedColor === color ? 0.5 : 1 }"
+                  draggable="true"
+                  @dragstart="handleDragStart($event, color, 'semantic', index)"
+                  @dragend="handleDragEnd"
+                >
+                  <div class="text-xs font-semibold mb-0.5 pointer-events-none" :style="getTextColor(color.hex)">
+                    {{ getSemanticLabel(color.role || color.type) }}
+                  </div>
+                  <div class="font-mono text-xs pointer-events-none" :style="getTextColor(color.hex)">{{ color.hex }}</div>
+                </div>
+              </div>
+              <div
+                v-if="semanticColors.length === 0"
+                class="w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 bg-white text-xs text-center px-2"
+              >
+                Drop Semantic
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -172,6 +213,12 @@ const props = defineProps({
   palette: {
     type: Object,
     required: true,
+  },
+  generatedData: {
+    type: Object,
+    default: () => ({
+      semanticSuggestions: {},
+    }),
   },
 });
 
@@ -294,6 +341,30 @@ const neutralColors = computed(() => {
   return props.palette.colors.filter(c => c.role === 'neutral-light' || c.role === 'neutral-dark');
 });
 
+const semanticColors = computed(() => {
+  // Get semantic colors from palette
+  const paletteSemanticColors = props.palette.colors.filter(c => 
+    c.role === 'success' || c.role === 'error' || c.role === 'warning' || c.role === 'info'
+  );
+  
+  // Get semantic suggestions from generatedData that aren't in palette yet
+  const semanticSuggestions = props.generatedData?.semanticSuggestions || {};
+  const generatedSemanticColors = Object.values(semanticSuggestions).map(suggestion => ({
+    hex: suggestion.hex,
+    name: suggestion.name,
+    type: suggestion.type,
+    role: suggestion.type, // Use type as role
+  }));
+  
+  // Combine and deduplicate by hex
+  const allSemanticColors = [...paletteSemanticColors, ...generatedSemanticColors];
+  const uniqueSemanticColors = allSemanticColors.filter((color, index, self) =>
+    index === self.findIndex(c => c.hex.toLowerCase() === color.hex.toLowerCase())
+  );
+  
+  return uniqueSemanticColors;
+});
+
 // Determine text color based on background lightness
 const getTextColor = (hex) => {
   const rgb = hexToRgb(hex);
@@ -309,6 +380,15 @@ const getTextColor = (hex) => {
 const getNeutralLabel = (role) => {
   if (role === 'neutral-dark') return 'Dark Neutral';
   return 'Light Neutral';
+};
+
+const getSemanticLabel = (roleOrType) => {
+  const type = roleOrType || '';
+  if (type === 'success') return 'Success';
+  if (type === 'error') return 'Error';
+  if (type === 'warning') return 'Warning';
+  if (type === 'info') return 'Info';
+  return 'Semantic';
 };
 
 // Drag and Drop Handlers
@@ -366,6 +446,21 @@ const handleDrop = (event, targetRole) => {
     } else {
       newRole = 'neutral-light';
     }
+  } else if (targetRole === 'semantic') {
+    // Preserve semantic type if it exists, otherwise use the original role or default to 'info'
+    const semanticType = draggedColor.value.type || draggedColor.value.role;
+    if (semanticType === 'success' || semanticType === 'error' || semanticType === 'warning' || semanticType === 'info') {
+      newRole = semanticType;
+    } else {
+      // If dragging from another section, check if it's a semantic suggestion
+      const semanticSuggestions = props.generatedData?.semanticSuggestions || {};
+      const matchingSuggestion = Object.values(semanticSuggestions).find(s => s.hex.toLowerCase() === draggedColor.value.hex.toLowerCase());
+      if (matchingSuggestion) {
+        newRole = matchingSuggestion.type;
+      } else {
+        newRole = draggedColor.value.role || 'info';
+      }
+    }
   } else {
     newRole = draggedColor.value.role || 'accent';
   }
@@ -382,13 +477,31 @@ const handleDrop = (event, targetRole) => {
 
 // Update role for a color
 const updateRole = (color, newRole) => {
-  const newPalette = {
-    ...props.palette,
-    colors: props.palette.colors.map((c) =>
-      c === color ? { ...c, role: newRole } : c
-    ),
-  };
-  emit('update-palette', newPalette);
+  // Check if color is in palette
+  const colorInPalette = props.palette.colors.find(c => c.hex.toLowerCase() === color.hex.toLowerCase());
+  
+  if (colorInPalette) {
+    // Update existing color's role
+    const newPalette = {
+      ...props.palette,
+      colors: props.palette.colors.map((c) =>
+        c.hex.toLowerCase() === color.hex.toLowerCase() ? { ...c, role: newRole } : c
+      ),
+    };
+    emit('update-palette', newPalette);
+  } else {
+    // Add semantic color to palette with the new role
+    const newColor = {
+      hex: color.hex,
+      name: color.name || color.type || 'Semantic Color',
+      role: newRole,
+    };
+    const newPalette = {
+      ...props.palette,
+      colors: [...props.palette.colors, newColor],
+    };
+    emit('update-palette', newPalette);
+  }
 };
 
 const handleNext = () => {

@@ -7,10 +7,8 @@
         Color Variants
       </h3>
       <p class="text-sm text-gray-600 mb-4">Generate tints, shades, and dark variants for each color</p>
-      <div v-if="paletteDebug" class="mb-2 text-xs text-gray-500">
-        Debug: Palette exists: {{ paletteDebug.exists }}, Colors: {{ paletteDebug.colorsLength }}
-      </div>
       <button
+        v-if="variants.length === 0"
         @click.prevent="generateVariants"
         class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
       >
@@ -109,6 +107,7 @@
       </h3>
       <p class="text-sm text-gray-600 mb-4">Generate complete color scales (50-900) for all colors in your palette, similar to Tailwind CSS</p>
       <button
+        v-if="colorScales.length === 0"
         @click.prevent="generateColorScale"
         :disabled="!palette?.colors || palette.colors.length === 0"
         class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
@@ -184,6 +183,7 @@
       </h3>
       <p class="text-sm text-gray-600 mb-4">Generate dark mode variants optimized for dark backgrounds</p>
       <button
+        v-if="darkModeColors.length === 0"
         @click.prevent="generateDarkModePalette"
         class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
       >
@@ -229,7 +229,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['update-palette']);
+const emit = defineEmits(['update-palette', 'update-generated-data']);
 
 // Debug computed to check palette state
 const paletteDebug = computed(() => {
@@ -318,6 +318,14 @@ const generateVariants = () => {
     
     // Set variants using a new array to trigger reactivity
     variants.value = newVariants;
+    
+    // Emit generated data for PDF export
+    emit('update-generated-data', {
+      variants: newVariants,
+      colorScales: colorScales.value,
+      darkModeColors: darkModeColors.value,
+      semanticSuggestions: semanticSuggestions.value,
+    });
     
     console.log('After assignment, variants.value:', variants.value.length);
     console.log('variants ref:', variants);
@@ -599,6 +607,14 @@ const generateSemanticSuggestion = (type) => {
       type: semanticType.type,
     },
   };
+  
+  // Emit generated data for PDF export
+  emit('update-generated-data', {
+    variants: variants.value,
+    colorScales: colorScales.value,
+    darkModeColors: darkModeColors.value,
+    semanticSuggestions: semanticSuggestions.value,
+  });
 };
 
 const addSemanticSuggestion = (type) => {
@@ -662,6 +678,14 @@ const generateDarkModePalette = () => {
     
     // Set dark mode colors using a new array to trigger reactivity
     darkModeColors.value = newDarkModeColors;
+    
+    // Emit generated data for PDF export
+    emit('update-generated-data', {
+      variants: variants.value,
+      colorScales: colorScales.value,
+      darkModeColors: newDarkModeColors,
+      semanticSuggestions: semanticSuggestions.value,
+    });
     
     console.log('After assignment, darkModeColors.value:', darkModeColors.value.length);
   } catch (error) {
@@ -746,6 +770,14 @@ const generateColorScale = () => {
       baseColor,
       shades,
     });
+  });
+  
+  // Emit generated data for PDF export
+  emit('update-generated-data', {
+    variants: variants.value,
+    colorScales: colorScales.value,
+    darkModeColors: darkModeColors.value,
+    semanticSuggestions: semanticSuggestions.value,
   });
 };
 

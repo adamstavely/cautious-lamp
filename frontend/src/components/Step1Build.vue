@@ -241,6 +241,7 @@
     <AdvancedPaletteTools
       :palette="palette"
       @update-palette="updatePalette"
+      @update-generated-data="handleGeneratedData"
     />
 
     <!-- Instructions -->
@@ -461,12 +462,17 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['update-palette', 'next']);
+const emit = defineEmits(['update-palette', 'next', 'update-generated-data']);
 
 const colorInput = ref('');
 const suggestions = ref([]);
 const fileInput = ref(null);
 const colorPickerInput = ref(null);
+
+// Handle generated data from AdvancedPaletteTools
+const handleGeneratedData = (data) => {
+  emit('update-generated-data', data);
+};
 const currentColorIndex = ref(null);
 const isEyedropperActive = ref(false);
 const paletteName = ref(props.palette.name || 'My Palette');

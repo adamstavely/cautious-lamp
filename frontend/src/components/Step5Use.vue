@@ -279,6 +279,15 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  generatedData: {
+    type: Object,
+    default: () => ({
+      variants: [],
+      colorScales: [],
+      darkModeColors: [],
+      semanticSuggestions: {},
+    }),
+  },
 });
 
 const emit = defineEmits(['back', 'export', 'update-palette']);
@@ -719,6 +728,230 @@ const exportBrandGuidelines = async () => {
 
     xPos += swatchSize + swatchGap;
   });
+
+  // Add Semantic Colors Section if available
+  const semanticColors = Object.values(props.generatedData.semanticSuggestions || {});
+  if (semanticColors.length > 0) {
+    doc.addPage();
+    yPos = margin;
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Semantic Colors', margin, yPos);
+    yPos += 15;
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    const semanticDesc = 'These colors are designed for specific semantic purposes (success, error, warning, info) and harmonize with your palette.';
+    doc.text(doc.splitTextToSize(semanticDesc, pageWidth - margin * 2), margin, yPos);
+    yPos += 15;
+
+    xPos = margin;
+    rowStartY = yPos;
+    semanticColors.forEach((color, index) => {
+      if (index > 0 && index % cols === 0) {
+        yPos = rowStartY + swatchSize + 20;
+        rowStartY = yPos;
+        xPos = margin;
+      }
+
+      if (yPos + swatchSize + 25 > pageHeight - margin) {
+        doc.addPage();
+        yPos = margin;
+        rowStartY = yPos;
+        xPos = margin;
+      }
+
+      const rgb = hexToRgb(color.hex);
+      if (rgb) {
+        doc.setFillColor(rgb.r, rgb.g, rgb.b);
+        doc.rect(xPos, yPos, swatchSize, swatchSize, 'F');
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(xPos, yPos, swatchSize, swatchSize, 'S');
+      }
+
+      doc.setFontSize(8);
+      doc.setFont('courier', 'normal');
+      doc.setTextColor(0, 0, 0);
+      doc.text(color.hex, xPos + swatchSize / 2, yPos + swatchSize + 5, { align: 'center' });
+
+      if (color.name) {
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text(color.name, xPos + swatchSize / 2, yPos + swatchSize + 9, { align: 'center' });
+      }
+
+      xPos += swatchSize + swatchGap;
+    });
+  }
+
+  // Add Color Variants Section if available
+  if (props.generatedData.variants && props.generatedData.variants.length > 0) {
+    doc.addPage();
+    yPos = margin;
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Color Variants', margin, yPos);
+    yPos += 15;
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    const variantsDesc = 'These are tints and shades generated from your palette colors for additional design flexibility.';
+    doc.text(doc.splitTextToSize(variantsDesc, pageWidth - margin * 2), margin, yPos);
+    yPos += 15;
+
+    xPos = margin;
+    rowStartY = yPos;
+    props.generatedData.variants.forEach((variant, index) => {
+      if (index > 0 && index % cols === 0) {
+        yPos = rowStartY + swatchSize + 20;
+        rowStartY = yPos;
+        xPos = margin;
+      }
+
+      if (yPos + swatchSize + 25 > pageHeight - margin) {
+        doc.addPage();
+        yPos = margin;
+        rowStartY = yPos;
+        xPos = margin;
+      }
+
+      const rgb = hexToRgb(variant.hex);
+      if (rgb) {
+        doc.setFillColor(rgb.r, rgb.g, rgb.b);
+        doc.rect(xPos, yPos, swatchSize, swatchSize, 'F');
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(xPos, yPos, swatchSize, swatchSize, 'S');
+      }
+
+      doc.setFontSize(8);
+      doc.setFont('courier', 'normal');
+      doc.setTextColor(0, 0, 0);
+      doc.text(variant.hex, xPos + swatchSize / 2, yPos + swatchSize + 5, { align: 'center' });
+
+      if (variant.type) {
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text(variant.type, xPos + swatchSize / 2, yPos + swatchSize + 9, { align: 'center' });
+      }
+
+      xPos += swatchSize + swatchGap;
+    });
+  }
+
+  // Add Color Scales Section if available
+  if (props.generatedData.colorScales && props.generatedData.colorScales.length > 0) {
+    props.generatedData.colorScales.forEach((scale, scaleIndex) => {
+      doc.addPage();
+      yPos = margin;
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Color Scale: ${scale.baseColor.name || scale.baseColor.hex}`, margin, yPos);
+      yPos += 15;
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      const scaleDesc = 'A complete color scale from lightest (50) to darkest (900), similar to Tailwind CSS.';
+      doc.text(doc.splitTextToSize(scaleDesc, pageWidth - margin * 2), margin, yPos);
+      yPos += 20;
+
+      // Display scales in a row
+      const scaleSwatchSize = 15;
+      const scaleGap = 5;
+      xPos = margin;
+      scale.shades.forEach((shade) => {
+        if (xPos + scaleSwatchSize > pageWidth - margin) {
+          yPos += scaleSwatchSize + 25;
+          xPos = margin;
+        }
+
+        if (yPos + scaleSwatchSize + 25 > pageHeight - margin) {
+          doc.addPage();
+          yPos = margin;
+          xPos = margin;
+        }
+
+        const rgb = hexToRgb(shade.hex);
+        if (rgb) {
+          doc.setFillColor(rgb.r, rgb.g, rgb.b);
+          doc.rect(xPos, yPos, scaleSwatchSize, scaleSwatchSize, 'F');
+          doc.setDrawColor(200, 200, 200);
+          doc.rect(xPos, yPos, scaleSwatchSize, scaleSwatchSize, 'S');
+        }
+
+        doc.setFontSize(7);
+        doc.setFont('courier', 'normal');
+        doc.setTextColor(0, 0, 0);
+        doc.text(shade.weight.toString(), xPos + scaleSwatchSize / 2, yPos + scaleSwatchSize + 4, { align: 'center' });
+
+        xPos += scaleSwatchSize + scaleGap;
+      });
+    });
+  }
+
+  // Add Dark Mode Colors Section if available
+  if (props.generatedData.darkModeColors && props.generatedData.darkModeColors.length > 0) {
+    doc.addPage();
+    yPos = margin;
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Dark Mode Colors', margin, yPos);
+    yPos += 15;
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    const darkModeDesc = 'These colors are optimized for dark backgrounds and maintain harmony with your palette.';
+    doc.text(doc.splitTextToSize(darkModeDesc, pageWidth - margin * 2), margin, yPos);
+    yPos += 15;
+
+    xPos = margin;
+    rowStartY = yPos;
+    props.generatedData.darkModeColors.forEach((color, index) => {
+      if (index > 0 && index % cols === 0) {
+        yPos = rowStartY + swatchSize + 20;
+        rowStartY = yPos;
+        xPos = margin;
+      }
+
+      if (yPos + swatchSize + 25 > pageHeight - margin) {
+        doc.addPage();
+        yPos = margin;
+        rowStartY = yPos;
+        xPos = margin;
+      }
+
+      const rgb = hexToRgb(color.hex);
+      if (rgb) {
+        doc.setFillColor(rgb.r, rgb.g, rgb.b);
+        doc.rect(xPos, yPos, swatchSize, swatchSize, 'F');
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(xPos, yPos, swatchSize, swatchSize, 'S');
+      }
+
+      doc.setFontSize(8);
+      doc.setFont('courier', 'normal');
+      doc.setTextColor(0, 0, 0);
+      doc.text(color.hex, xPos + swatchSize / 2, yPos + swatchSize + 5, { align: 'center' });
+
+      if (color.name) {
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text(color.name, xPos + swatchSize / 2, yPos + swatchSize + 9, { align: 'center' });
+      }
+
+      xPos += swatchSize + swatchGap;
+    });
+  }
 
   doc.addPage();
 
