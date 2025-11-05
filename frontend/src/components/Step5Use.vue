@@ -123,7 +123,19 @@
             </svg>
           </button>
 
-          <!-- SVG Export -->
+          <!-- Brand Guidelines PDF -->
+          <button
+            @click="exportBrandGuidelines"
+            class="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-indigo-300 transition-all group"
+          >
+            <div class="flex-1 text-left">
+              <div class="font-semibold text-gray-900 mb-1">Brand Guidelines PDF</div>
+              <div class="text-sm text-gray-600">Complete brand guidelines with usage rules, logo placement, and typography</div>
+            </div>
+            <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+          </button>
           <button
             @click="exportSVG"
             class="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-indigo-300 transition-all group"
@@ -612,6 +624,285 @@ const exportPDF = async () => {
 
   // Save the PDF
   doc.save(`${props.palette.name || 'palette'}.pdf`);
+};
+
+// Brand Guidelines PDF Generator
+const exportBrandGuidelines = async () => {
+  // Fetch contrast results from backend
+  let contrastResults = [];
+  try {
+    const response = await axios.post('http://localhost:3000/api/palettes/analyze', {
+      colors: props.palette.colors.map((c) => ({ hex: c.hex })),
+    });
+    contrastResults = response.data.contrastResults || [];
+  } catch (error) {
+    console.error('Error fetching contrast results:', error);
+  }
+
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  let yPos = margin;
+
+  // Title Page
+  doc.setFontSize(28);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Brand Guidelines', pageWidth / 2, yPos, { align: 'center' });
+  yPos += 15;
+
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text(props.palette.name || 'Color Palette', pageWidth / 2, yPos, { align: 'center' });
+  yPos += 20;
+
+  doc.setFontSize(12);
+  doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, yPos, { align: 'center' });
+  doc.addPage();
+
+  // Color Palette Section
+  yPos = margin;
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
+  doc.text('Color Palette', margin, yPos);
+  yPos += 15;
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  const paletteDesc = 'These colors form the foundation of your brand identity. Use them consistently across all brand materials.';
+  doc.text(doc.splitTextToSize(paletteDesc, pageWidth - margin * 2), margin, yPos);
+  yPos += 15;
+
+  // Color swatches
+  const swatchSize = 25;
+  const swatchGap = 10;
+  const cols = 5;
+  let xPos = margin;
+  let rowStartY = yPos;
+
+  props.palette.colors.forEach((color, index) => {
+    if (index > 0 && index % cols === 0) {
+      yPos = rowStartY + swatchSize + 20;
+      rowStartY = yPos;
+      xPos = margin;
+    }
+
+    if (yPos + swatchSize + 25 > pageHeight - margin) {
+      doc.addPage();
+      yPos = margin;
+      rowStartY = yPos;
+      xPos = margin;
+    }
+
+    const rgb = hexToRgb(color.hex);
+    if (rgb) {
+      doc.setFillColor(rgb.r, rgb.g, rgb.b);
+      doc.rect(xPos, yPos, swatchSize, swatchSize, 'F');
+      doc.setDrawColor(200, 200, 200);
+      doc.rect(xPos, yPos, swatchSize, swatchSize, 'S');
+    }
+
+    doc.setFontSize(8);
+    doc.setFont('courier', 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text(color.hex, xPos + swatchSize / 2, yPos + swatchSize + 5, { align: 'center' });
+
+    if (color.name) {
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.text(color.name, xPos + swatchSize / 2, yPos + swatchSize + 9, { align: 'center' });
+    }
+
+    xPos += swatchSize + swatchGap;
+  });
+
+  doc.addPage();
+
+  // Usage Rules Section
+  yPos = margin;
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
+  doc.text('Usage Rules', margin, yPos);
+  yPos += 15;
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+
+  const rules = [
+    {
+      title: 'Do\'s',
+      items: [
+        'Use colors consistently across all brand materials',
+        'Maintain proper contrast ratios for accessibility (WCAG AA minimum)',
+        'Use hero colors for primary actions and important elements',
+        'Use accent colors sparingly to draw attention',
+        'Test color combinations for readability before finalizing',
+        'Use neutral colors for backgrounds and text when appropriate',
+      ],
+    },
+    {
+      title: 'Don\'ts',
+      items: [
+        'Don\'t use colors in ways that reduce readability',
+        'Don\'t mix color roles (e.g., using accent colors as backgrounds)',
+        'Don\'t modify colors without updating the palette',
+        'Don\'t use colors that don\'t meet WCAG AA contrast standards',
+        'Don\'t use too many colors at once - stick to your palette',
+        'Don\'t use colors that clash with your brand identity',
+      ],
+    },
+  ];
+
+  rules.forEach((rule, ruleIndex) => {
+    if (yPos + 60 > pageHeight - margin) {
+      doc.addPage();
+      yPos = margin;
+    }
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(rule.title, margin, yPos);
+    yPos += 10;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    rule.items.forEach((item) => {
+      if (yPos + 10 > pageHeight - margin) {
+        doc.addPage();
+        yPos = margin;
+      }
+      doc.text(`• ${item}`, margin + 5, yPos);
+      yPos += 7;
+    });
+    yPos += 5;
+  });
+
+  doc.addPage();
+
+  // Logo Placement Guidelines
+  yPos = margin;
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
+  doc.text('Logo Placement Guidelines', margin, yPos);
+  yPos += 15;
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  const logoGuidelines = [
+    'Maintain clear space around your logo - minimum 2x the logo height',
+    'Place logos on backgrounds with sufficient contrast',
+    'Use your brand colors for logo placement backgrounds when possible',
+    'Avoid placing logos on busy or cluttered backgrounds',
+    'Ensure logo is readable on both light and dark backgrounds',
+    'When using colored backgrounds, ensure logo meets contrast requirements',
+  ];
+
+  logoGuidelines.forEach((guideline) => {
+    if (yPos + 10 > pageHeight - margin) {
+      doc.addPage();
+      yPos = margin;
+    }
+    doc.text(`• ${guideline}`, margin, yPos);
+    yPos += 8;
+  });
+
+  doc.addPage();
+
+  // Typography Pairing Suggestions
+  yPos = margin;
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
+  doc.text('Typography Pairing Suggestions', margin, yPos);
+  yPos += 15;
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  const typographyIntro = 'These font pairings work well with your color palette. Choose fonts that complement your brand personality.';
+  doc.text(doc.splitTextToSize(typographyIntro, pageWidth - margin * 2), margin, yPos);
+  yPos += 15;
+
+  // Get primary colors for typography suggestions
+  const heroColors = props.palette.colors.filter(c => c.role === 'hero');
+  const primaryColor = heroColors.length > 0 ? heroColors[0] : props.palette.colors[0];
+
+  const typographyPairings = [
+    {
+      heading: 'Modern & Clean',
+      body: 'Inter / Roboto',
+      description: 'Perfect for tech brands and modern websites',
+      use: 'Body text on light backgrounds using dark neutrals',
+    },
+    {
+      heading: 'Classic & Professional',
+      body: 'Merriweather / Open Sans',
+      description: 'Ideal for corporate and professional brands',
+      use: 'Headings and body text with your hero colors',
+    },
+    {
+      heading: 'Bold & Playful',
+      body: 'Montserrat / Lato',
+      description: 'Great for creative and energetic brands',
+      use: 'Accent colors work well with bold typography',
+    },
+    {
+      heading: 'Elegant & Refined',
+      body: 'Playfair Display / Source Sans Pro',
+      description: 'Perfect for luxury and premium brands',
+      use: 'Use with neutral backgrounds and hero color accents',
+    },
+  ];
+
+  typographyPairings.forEach((pairing, index) => {
+    if (yPos + 40 > pageHeight - margin) {
+      doc.addPage();
+      yPos = margin;
+    }
+
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(pairing.heading, margin, yPos);
+    yPos += 8;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    doc.text(`Fonts: ${pairing.body}`, margin + 5, yPos);
+    yPos += 6;
+
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(doc.splitTextToSize(pairing.description, pageWidth - margin * 2 - 10), margin + 5, yPos);
+    yPos += 8;
+
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Best use: ${pairing.use}`, margin + 5, yPos);
+    yPos += 12;
+  });
+
+  // Add footer on all pages
+  const totalPages = doc.internal.pages.length - 1;
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150, 150, 150);
+    doc.text(`Brand Guidelines - ${props.palette.name || 'Color Palette'} - Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+  }
+
+  // Save the PDF
+  doc.save(`${props.palette.name || 'brand'}-guidelines.pdf`);
 };
 
 // Calculate palette metrics

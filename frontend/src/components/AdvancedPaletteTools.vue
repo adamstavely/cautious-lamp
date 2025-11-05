@@ -101,6 +101,81 @@
       </div>
     </div>
 
+    <!-- Color Scale Generator -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-xl text-indigo-600">format_color_fill</span>
+        Color Scale Generator
+      </h3>
+      <p class="text-sm text-gray-600 mb-4">Generate complete color scales (50-900) for all colors in your palette, similar to Tailwind CSS</p>
+      <button
+        @click.prevent="generateColorScale"
+        :disabled="!palette?.colors || palette.colors.length === 0"
+        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+      >
+        Generate Color Scales
+      </button>
+      
+      <div v-if="colorScales.length > 0" class="mt-4 relative">
+        <p class="text-sm text-gray-600 mb-2">{{ colorScales.length }} color scale(s) generated</p>
+        <!-- Transparent blue background for the 500 column - spans full height -->
+        <div 
+          v-if="colorScales.length > 0 && colorScales[0].shades.some(s => s.weight === 500)"
+          class="absolute pointer-events-none"
+          :style="{
+            left: getColumn500Position() + '%',
+            width: (100 / (colorScales[0]?.shades.length || 1)) + '%',
+            top: '-1.75rem',
+            bottom: '0',
+            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            borderRadius: '0.5rem'
+          }"
+        ></div>
+        <div
+          v-for="(scale, scaleIndex) in colorScales"
+          :key="scaleIndex"
+          class="mb-6 relative"
+        >
+          <div class="mb-2">
+            <div class="text-sm font-semibold text-gray-900">{{ scale.baseColor.name || scale.baseColor.hex }}</div>
+          </div>
+          <div class="relative mb-8">
+            <!-- Title above the 500 column - only show on first scale -->
+            <div v-if="scaleIndex === 0 && scale.shades.some(s => s.weight === 500)" class="absolute -top-7 left-0 right-0 flex">
+              <div
+                v-for="(shade, shadeIndex) in scale.shades"
+                :key="shadeIndex"
+                class="flex-1 relative"
+              >
+                <div v-if="shade.weight === 500" class="absolute left-0 right-0 -translate-y-full">
+                  <div class="bg-indigo-600 text-white text-xs font-semibold py-1 rounded text-center w-full">
+                    This color is in your palette
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flex rounded-lg border border-gray-200 overflow-hidden">
+              <div
+                v-for="(shade, shadeIndex) in scale.shades"
+                :key="shadeIndex"
+                class="flex-1 h-16 flex flex-col items-center justify-center cursor-pointer hover:opacity-90 transition-opacity relative"
+                :style="{ 
+                  backgroundColor: shade.hex,
+                  boxShadow: isShadeInPalette(shade.hex) ? 'inset 0 0 0 3px #4f46e5' : 'none'
+                }"
+                @click="addSingleShade(shade)"
+                :title="`${shade.weight}: ${shade.hex}`"
+              >
+                <div class="text-xs font-semibold" :style="getTextColor(shade.hex)">{{ shade.weight }}</div>
+                <div class="text-xs font-mono mt-1" :style="getTextColor(shade.hex)">{{ shade.hex }}</div>
+                <div v-if="isShadeInPalette(shade.hex)" class="absolute top-1 right-1 w-3 h-3 bg-indigo-600 rounded-full border-2 border-white shadow-md"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Dark Mode Generator -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -178,6 +253,7 @@ const semanticTypes = [
   { type: 'info', label: 'Info', color: '#3b82f6', icon: 'info', targetHue: 210 },
 ];
 const darkModeColors = ref([]);
+const colorScales = ref([]);
 
 // Generate color variants (tints, shades, dark variants)
 const generateVariants = () => {
@@ -592,6 +668,156 @@ const generateDarkModePalette = () => {
     console.error('Error generating dark mode palette:', error);
     alert('Error generating dark mode palette: ' + error.message);
   }
+};
+
+// Color scale generator (50-900 shades) - generates for all colors
+const generateColorScale = () => {
+  if (!props.palette?.colors || props.palette.colors.length === 0) {
+    alert('Please add colors to your palette first');
+    return;
+  }
+  
+  // Clear existing scales
+  colorScales.value = [];
+  
+  // Generate scale for each color in the palette
+  props.palette.colors.forEach((baseColor) => {
+    const rgb = hexToRgb(baseColor.hex);
+    if (!rgb) {
+      console.warn(`Invalid color format for ${baseColor.hex}`);
+      return;
+    }
+    
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    
+    // Generate scale from 50 (lightest) to 900 (darkest)
+    // Similar to Tailwind CSS color scales
+    const scaleWeights = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900];
+    const shades = [];
+    
+    scaleWeights.forEach((weight) => {
+      let targetLightness;
+      
+      // Map weight to lightness (0-100)
+      // 50 = very light (95%), 500 = base color, 900 = very dark (10%)
+      if (weight === 500) {
+        // Base color - use exact original hex, don't convert
+        shades.push({
+          weight,
+          hex: baseColor.hex,
+          name: `${baseColor.name || 'Color'} ${weight}`,
+        });
+        return; // Skip the conversion for weight 500
+      } else if (weight < 500) {
+        // Lighter shades (50-400)
+        const ratio = weight / 500;
+        targetLightness = hsl.l + (95 - hsl.l) * (1 - ratio);
+      } else {
+        // Darker shades (600-900)
+        const ratio = (weight - 500) / 400;
+        targetLightness = hsl.l - (hsl.l - 10) * ratio;
+      }
+      
+      // Clamp lightness between 5% and 95%
+      targetLightness = Math.max(5, Math.min(95, targetLightness));
+      
+      // Adjust saturation slightly for very light/dark shades
+      let targetSaturation = hsl.s;
+      if (weight <= 200) {
+        // Light shades - reduce saturation slightly
+        targetSaturation = hsl.s * 0.7;
+      } else if (weight >= 800) {
+        // Dark shades - reduce saturation slightly
+        targetSaturation = hsl.s * 0.8;
+      }
+      
+      const shadeRgb = hslToRgb(hsl.h, targetSaturation, targetLightness);
+      const shadeHex = rgbToHex(shadeRgb.r, shadeRgb.g, shadeRgb.b);
+      
+      shades.push({
+        weight,
+        hex: shadeHex,
+        name: `${baseColor.name || 'Color'} ${weight}`,
+      });
+    });
+    
+    // Add to color scales array
+    colorScales.value.push({
+      baseColor,
+      shades,
+    });
+  });
+};
+
+const addColorScale = (scaleIndex) => {
+  const scale = colorScales.value[scaleIndex];
+  if (!scale) return;
+  
+  const newColors = scale.shades.map(shade => ({
+    hex: shade.hex,
+    name: shade.name,
+    role: null,
+  }));
+  
+  const newPalette = {
+    ...props.palette,
+    colors: [...props.palette.colors, ...newColors],
+  };
+  
+  emit('update-palette', newPalette);
+};
+
+const addSingleShade = (shade) => {
+  // Check if shade is already in palette
+  const shadeInPalette = isShadeInPalette(shade.hex);
+  
+  if (shadeInPalette) {
+    // Remove from palette
+    const newPalette = {
+      ...props.palette,
+      colors: props.palette.colors.filter(color => color.hex.toLowerCase() !== shade.hex.toLowerCase()),
+    };
+    emit('update-palette', newPalette);
+  } else {
+    // Add to palette
+    const newPalette = {
+      ...props.palette,
+      colors: [...props.palette.colors, {
+        hex: shade.hex,
+        name: shade.name,
+        role: null,
+      }],
+    };
+    emit('update-palette', newPalette);
+  }
+};
+
+const getTextColor = (hex) => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return { color: '#000000' };
+  
+  // Calculate relative luminance
+  const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((val) => {
+    val = val / 255;
+    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+  });
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  
+  return { color: luminance > 0.5 ? '#000000' : '#FFFFFF' };
+};
+
+const isShadeInPalette = (shadeHex) => {
+  if (!props.palette?.colors) return false;
+  return props.palette.colors.some(color => color.hex.toLowerCase() === shadeHex.toLowerCase());
+};
+
+const getColumn500Position = () => {
+  if (!colorScales.value || colorScales.value.length === 0) return 0;
+  const firstScale = colorScales.value[0];
+  const column500Index = firstScale.shades.findIndex(shade => shade.weight === 500);
+  if (column500Index === -1) return 0;
+  const totalColumns = firstScale.shades.length;
+  return (column500Index / totalColumns) * 100;
 };
 
 const addDarkModeColors = () => {
