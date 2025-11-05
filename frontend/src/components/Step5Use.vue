@@ -11,94 +11,104 @@
       </div>
     </div>
 
-    <!-- Usage Examples -->
-    <div class="mb-8">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-xl text-indigo-600">preview</span>
-        Usage Examples
-      </h3>
-      <p class="text-sm text-gray-600 mb-4">
-        See how your palette looks in real UI components. Preview buttons, cards, and headers using your colors.
-      </p>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Button Examples -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Left Column: Color Swatches & Usage Examples -->
+      <div class="lg:col-span-2 space-y-8">
+        <!-- Color Swatches -->
         <div>
-          <h4 class="text-sm font-medium text-gray-700 mb-3">Buttons</h4>
-          <div class="space-y-2">
-            <button
-              v-for="(color, index) in (palette?.colors || []).slice(0, 3)"
-              :key="`btn-${color.hex}-${index}`"
-              class="w-full px-4 py-2 rounded-lg text-white font-medium text-sm transition-all hover:opacity-90"
-              :style="{ backgroundColor: color.hex }"
-            >
-              {{ color.name || 'Button' }}
-            </button>
-          </div>
-        </div>
-        
-        <!-- Card Examples -->
-        <div>
-          <h4 class="text-sm font-medium text-gray-700 mb-3">Cards</h4>
-          <div class="space-y-2">
+          <h3 class="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+            <span class="material-symbols-outlined text-xl text-indigo-600">palette</span>
+            Color Swatches
+          </h3>
+          <div class="grid grid-cols-4 gap-4">
             <div
-              v-for="(color, index) in (palette?.colors || []).slice(0, 2)"
-              :key="`card-${color.hex}-${index}`"
-              class="p-4 rounded-lg border border-gray-200"
-              :style="{ borderTopColor: color.hex, borderTopWidth: '4px' }"
+              v-for="(color, index) in palette.colors"
+              :key="index"
+              class="flex flex-col"
             >
-              <div class="font-semibold text-gray-900 mb-1">Card Title</div>
-              <div class="text-sm text-gray-600">Card content using {{ color.name || color.hex }}</div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Header Examples -->
-        <div>
-          <h4 class="text-sm font-medium text-gray-700 mb-3">Headers</h4>
-          <div class="space-y-2">
-            <div
-              v-for="(color, index) in (palette?.colors || []).slice(0, 2)"
-              :key="`header-${color.hex}-${index}`"
-              class="p-4 rounded-lg text-white"
-              :style="{ backgroundColor: color.hex }"
-            >
-              <div class="font-bold text-lg mb-1">Header</div>
-              <div class="text-sm opacity-90">Using {{ color.name || color.hex }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-      <!-- Your Palette Section -->
-      <div>
-        <h3 class="text-xl font-semibold text-gray-900 mb-6">Color Swatches</h3>
-        <div class="grid grid-cols-4 gap-4">
-          <div
-            v-for="(color, index) in palette.colors"
-            :key="index"
-            class="flex flex-col"
-          >
-            <div
-              class="w-full h-24 rounded-lg shadow-md mb-2 flex items-center justify-center"
-              :style="{ backgroundColor: color.hex }"
-            >
-              <div class="font-mono text-xs font-semibold" :style="getTextColor(color.hex)">
-                {{ color.hex }}
+              <div
+                class="w-full h-24 rounded-lg shadow-md mb-2 flex items-center justify-center"
+                :style="{ backgroundColor: color.hex }"
+              >
+                <div class="font-mono text-xs font-semibold" :style="getTextColor(color.hex)">
+                  {{ color.hex }}
+                </div>
+              </div>
+              <div class="text-xs text-gray-600 text-center capitalize">
+                {{ getRoleLabel(color.role) }}
               </div>
             </div>
-            <div class="text-xs text-gray-600 text-center capitalize">
-              {{ getRoleLabel(color.role) }}
+          </div>
+        </div>
+
+        <!-- Usage Examples -->
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-xl text-indigo-600">preview</span>
+            Usage Examples
+          </h3>
+          <p class="text-sm text-gray-600 mb-4">
+            See how your palette looks in real UI components. Preview buttons, cards, and headers using your colors.
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Button Examples -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Buttons</h4>
+              <div class="space-y-2">
+                <button
+                  v-for="(color, index) in (palette?.colors || []).slice(0, 3)"
+                  :key="`btn-${color.hex}-${index}`"
+                  class="w-full px-4 py-2 rounded-lg text-white font-medium text-sm transition-all hover:opacity-90"
+                  :style="{ backgroundColor: color.hex }"
+                >
+                  {{ color.name || 'Button' }}
+                </button>
+              </div>
+            </div>
+            
+            <!-- Card Examples -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Cards</h4>
+              <div class="space-y-2">
+                <div
+                  v-for="(color, index) in (palette?.colors || []).slice(0, 2)"
+                  :key="`card-${color.hex}-${index}`"
+                  class="p-4 rounded-lg border border-gray-200"
+                  :style="{ borderTopColor: color.hex, borderTopWidth: '4px' }"
+                >
+                  <div class="font-semibold text-gray-900 mb-1">Card Title</div>
+                  <div class="text-sm text-gray-600">Card content using {{ color.name || color.hex }}</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Header Examples -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Headers</h4>
+              <div class="space-y-2">
+                <div
+                  v-for="(color, index) in (palette?.colors || []).slice(0, 2)"
+                  :key="`header-${color.hex}-${index}`"
+                  class="p-4 rounded-lg text-white"
+                  :style="{ backgroundColor: color.hex }"
+                >
+                  <div class="font-bold text-lg mb-1">Header</div>
+                  <div class="text-sm opacity-90">Using {{ color.name || color.hex }}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Export Options Section -->
-      <div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">Export Options</h2>
-        <div class="space-y-3">
+      <!-- Right Column: Export Options Sidebar -->
+      <div class="lg:col-span-1">
+        <div class="sticky top-8">
+          <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <span class="material-symbols-outlined text-xl text-indigo-600">download</span>
+            Export Options
+          </h2>
+          <div class="space-y-3">
           <!-- PDF Report -->
           <button
             @click="exportPDF"
@@ -224,6 +234,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
           </button>
+        </div>
         </div>
       </div>
     </div>
@@ -1074,12 +1085,26 @@ const exportAdobeASE = () => {
 };
 
 const complete = async () => {
-  await savePalette();
-  emit('export', props.palette);
+  try {
+    console.log('Complete button clicked');
+    await savePalette();
+    console.log('Palette saved, emitting export event');
+    emit('export', props.palette);
+  } catch (error) {
+    console.error('Error in complete function:', error);
+    alert('Error completing palette. Please try again.');
+  }
 };
 
 const savePalette = async () => {
   try {
+    console.log('Saving palette:', props.palette);
+    
+    if (!props.palette.colors || props.palette.colors.length === 0) {
+      alert('Please add colors to your palette before saving.');
+      throw new Error('No colors in palette');
+    }
+    
     const paletteData = {
       name: props.palette.name || 'My Color Palette',
       colors: props.palette.colors.map((c) => ({
@@ -1089,14 +1114,20 @@ const savePalette = async () => {
       })),
     };
 
+    console.log('Palette data to save:', paletteData);
+
     let response;
     if (props.palette.id) {
       // Update existing palette
+      console.log('Updating existing palette:', props.palette.id);
       response = await axios.put(`http://localhost:3000/api/palettes/${props.palette.id}`, paletteData);
     } else {
       // Create new palette
+      console.log('Creating new palette');
       response = await axios.post('http://localhost:3000/api/palettes', paletteData);
     }
+
+    console.log('Save response:', response.data);
 
     // Update the palette with the response data (includes id and updatedAt)
     const updatedPalette = {
@@ -1107,11 +1138,15 @@ const savePalette = async () => {
       createdAt: response.data.createdAt,
     };
     
+    console.log('Updated palette:', updatedPalette);
     emit('update-palette', updatedPalette);
     alert('Palette saved successfully!');
+    
+    return updatedPalette;
   } catch (error) {
     console.error('Error saving palette:', error);
-    alert('Error saving palette. Please try again.');
+    alert(`Error saving palette: ${error.message || 'Please try again.'}`);
+    throw error;
   }
 };
 </script>

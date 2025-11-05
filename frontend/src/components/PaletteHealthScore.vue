@@ -3,13 +3,14 @@
     <!-- Palette Quality Score Widget (not sticky, inline) -->
     <button
       @click="showModal = true"
-      class="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-2 hover:shadow-md transition-shadow flex items-center gap-3"
+      class="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 hover:shadow-md transition-shadow flex items-center gap-3 w-full"
     >
-      <div class="flex items-center justify-center w-10 h-10 rounded-full" :class="healthScoreClass">
-        <span class="text-lg font-bold text-white">{{ healthScore }}</span>
-      </div>
-      <div class="text-left">
-        <div class="text-xs font-medium text-gray-600">Palette Quality Score</div>
+      <div class="text-left flex-1">
+        <div class="text-xs font-medium text-gray-600 flex items-center gap-2 mb-1">
+          <span class="material-symbols-outlined text-sm text-indigo-600">show_chart</span>
+          <span>Palette Quality Score</span>
+          <span class="ml-auto text-sm font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{{ healthScore }}</span>
+        </div>
         <div class="text-xs text-gray-500">{{ metCriteria }}/{{ totalCriteria }} criteria met</div>
       </div>
     </button>
@@ -22,12 +23,17 @@
   >
     <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 relative">
       <!-- Header -->
-      <div class="flex items-center justify-between p-6 border-b border-gray-200">
-        <div>
-          <h2 class="text-xl font-bold text-gray-900">Palette Quality Score</h2>
-          <p class="text-sm text-gray-600 mt-1">
-            Your palette quality score measures how complete and accessible your color palette is.
-          </p>
+      <div class="flex items-start justify-between p-6 border-b border-gray-200">
+        <div class="flex items-start gap-3 flex-1">
+          <div class="flex-1">
+            <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <span class="material-symbols-outlined text-xl text-indigo-600">show_chart</span>
+              Palette Quality Score
+            </h2>
+            <p class="text-sm text-gray-600 mt-1">
+              Your palette quality score measures how complete and accessible your color palette is.
+            </p>
+          </div>
         </div>
         <button
           @click="showModal = false"
@@ -299,12 +305,20 @@ const healthScore = computed(() => {
   }
 });
 
-const healthScoreClass = computed(() => {
+const healthScoreBorderClass = computed(() => {
   const score = healthScore.value;
-  if (score >= 80) return 'bg-green-500';
-  if (score >= 60) return 'bg-yellow-500';
-  if (score >= 40) return 'bg-orange-500';
-  return 'bg-red-500';
+  if (score >= 80) return 'border-green-500 bg-green-50';
+  if (score >= 60) return 'border-yellow-500 bg-yellow-50';
+  if (score >= 40) return 'border-orange-500 bg-orange-50';
+  return 'border-red-500 bg-red-50';
+});
+
+const healthScoreTextClass = computed(() => {
+  const score = healthScore.value;
+  if (score >= 80) return 'text-green-700';
+  if (score >= 60) return 'text-yellow-700';
+  if (score >= 40) return 'text-orange-700';
+  return 'text-red-700';
 });
 
 // Helper functions
