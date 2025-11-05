@@ -50,12 +50,13 @@
 
     <!-- Insights Sidebar -->
     <div class="w-96 bg-gray-50 rounded-lg p-6 border border-gray-200">
-      <h3 class="text-lg font-semibold text-gray-900 mb-6">INSIGHTS</h3>
-
       <!-- Harmony Check Section -->
       <div class="mb-8">
         <div class="flex items-center justify-between mb-3">
-          <h4 class="text-sm font-semibold text-gray-900">Harmony Check</h4>
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-xl text-indigo-600">palette</span>
+            <h4 class="text-sm font-semibold text-gray-900">Harmony Check</h4>
+          </div>
           <button
             @click="toggleHarmonyCheckCollapse"
             class="text-xs text-gray-600 hover:text-gray-900"
@@ -194,12 +195,24 @@
         </div>
       </div>
 
-      <!-- Palette Metrics Section -->
-      <div>
+      <!-- Harmony Diagram Section -->
+      <div class="mb-8">
         <div class="flex items-center gap-2 mb-4">
-          <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
+          <span class="material-symbols-outlined text-xl text-indigo-600">hub</span>
+          <h4 class="text-sm font-semibold text-gray-900">Harmony Diagram</h4>
+        </div>
+        <div class="relative w-full" style="aspect-ratio: 1">
+          <canvas ref="harmonyCanvas" class="w-full h-full rounded-lg border border-gray-200"></canvas>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">
+          Visual representation of color relationships in your palette.
+        </p>
+      </div>
+
+      <!-- Palette Metrics Section -->
+      <div class="mb-8">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="material-symbols-outlined text-xl text-indigo-600">bar_chart</span>
           <h4 class="text-sm font-semibold text-gray-900">Palette Metrics</h4>
         </div>
         <div class="space-y-4 mb-4">
@@ -302,6 +315,7 @@ const analysis = ref(null);
 const harmonyCheckCollapsed = ref(false);
 const dismissedIssues = ref([]);
 const recentlyFixed = ref(new Set()); // Track colors that were recently fixed to prevent loops
+const harmonyCanvas = ref(null);
 
 const metrics = computed(() => {
   if (!props.palette.colors || props.palette.colors.length === 0) {
@@ -564,8 +578,245 @@ const removeColor = (index) => {
   analyzePalette();
 };
 
+const drawHarmonyDiagram = () => {
+  const canvas = harmonyCanvas.value;
+  if (!canvas || !canvas.parentElement) return;
+  
+  const size = canvas.parentElement.clientWidth;
+  canvas.width = size;
+  canvas.height = size;
+  
+  const ctx = canvas.getContext('2d');
+  
+  // Clear canvas with white background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, size, size);
+  
+  if (!props.palette || !props.palette.colors || props.palette.colors.length === 0) return;
+  
+  // Filter valid colors and calculate HSL values
+  const nodes = [];
+  props.palette.colors.forEach((color) => {
+    const rgb = hexToRgb(color.hex);
+    if (!rgb) return;
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    nodes.push({ color, hsl, rgb });
+  });
+  
+  if (nodes.length === 0) return;
+  
+  // Simple force-directed layout initialization
+  const centerX = size / 2;
+  const centerY = size / 2;
+  const radius = size / 2 - 60;
+  
+  // Initialize positions in a circle, then adjust based on relationships
+  const positions = nodes.map((node, index) => {
+    const angle = (index / nodes.length) * 2 * Math.PI - Math.PI / 2;
+    const x = centerX + Math.cos(angle) * radius * 0.6;
+    const y = centerY + Math.sin(angle) * radius * 0.6;
+    return { x, y, ...node };
+  });
+  
+  // Calculate connections (edges) between harmoniously related colors
+  const edges = [];
+  for (let i = 0; i < positions.length; i++) {
+    for (let j = i + 1; j < positions.length; j++) {
+      const node1 = positions[i];
+      const node2 = positions[j];
+      
+      // Calculate hue difference (circular)
+      const hueDiff = Math.abs(node1.hsl.h - node2.hsl.h);
+      const normalizedHueDiff = Math.min(hueDiff, 360 - hueDiff);
+      
+      // Connect colors that are harmoniously related
+      const isAnalogous = normalizedHueDiff < 30;
+      const isComplementary = normalizedHueDiff > 150 && normalizedHueDiff < 210;
+      const isTriadic = (normalizedHueDiff > 110 && normalizedHueDiff < 130) || 
+                       (normalizedHueDiff > 230 && normalizedHueDiff < 250);
+      
+      if (isAnalogous || isComplementary || isTriadic) {
+        let type = 'analogous';
+        let color = '#3b82f6'; // Blue
+        if (isComplementary) {
+          type = 'complementary';
+          color = '#10b981'; // Green
+        } else if (isTriadic) {
+          type = 'triadic';
+          color = '#f59e0b'; // Orange
+        }
+        
+        edges.push({
+          from: i,
+          to: j,
+          type,
+          color,
+          strength: 1 - (normalizedHueDiff / 180) // Stronger for closer hues
+        });
+      }
+    }
+  }
+  
+  // Simple force-directed layout simulation
+  // Attract connected nodes, repel all nodes
+  const iterations = 50;
+  const k = Math.sqrt((size * size) / nodes.length); // Optimal distance
+  const repulsionStrength = k * 0.5;
+  const attractionStrength = k * 0.1;
+  
+  for (let iter = 0; iter < iterations; iter++) {
+    const forces = positions.map(() => ({ x: 0, y: 0 }));
+    
+    // Repulsion: push all nodes apart
+    for (let i = 0; i < positions.length; i++) {
+      for (let j = i + 1; j < positions.length; j++) {
+        const dx = positions[j].x - positions[i].x;
+        const dy = positions[j].y - positions[i].y;
+        const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+        
+        const force = repulsionStrength / distance;
+        const fx = (dx / distance) * force;
+        const fy = (dy / distance) * force;
+        
+        forces[i].x -= fx;
+        forces[i].y -= fy;
+        forces[j].x += fx;
+        forces[j].y += fy;
+      }
+    }
+    
+    // Attraction: pull connected nodes together
+    edges.forEach(edge => {
+      const from = positions[edge.from];
+      const to = positions[edge.to];
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+      
+      const force = attractionStrength * edge.strength * distance / k;
+      const fx = (dx / distance) * force;
+      const fy = (dy / distance) * force;
+      
+      forces[edge.from].x += fx;
+      forces[edge.from].y += fy;
+      forces[edge.to].x -= fx;
+      forces[edge.to].y -= fy;
+    });
+    
+    // Apply forces with damping
+    const damping = 0.1;
+    positions.forEach((pos, i) => {
+      pos.x += forces[i].x * damping;
+      pos.y += forces[i].y * damping;
+      
+      // Keep within bounds
+      const distFromCenter = Math.sqrt(
+        Math.pow(pos.x - centerX, 2) + Math.pow(pos.y - centerY, 2)
+      );
+      if (distFromCenter > radius) {
+        const angle = Math.atan2(pos.y - centerY, pos.x - centerX);
+        pos.x = centerX + Math.cos(angle) * radius;
+        pos.y = centerY + Math.sin(angle) * radius;
+      }
+    });
+  }
+  
+  // Draw edges (connections) first, behind nodes
+  edges.forEach(edge => {
+    const from = positions[edge.from];
+    const to = positions[edge.to];
+    
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.strokeStyle = edge.color;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.6;
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+  });
+  
+  // Draw nodes (color circles)
+  const circleRadius = 18;
+  positions.forEach((pos) => {
+    // Draw color circle
+    ctx.fillStyle = pos.color.hex;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, circleRadius, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    // Draw white border for contrast
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    // Draw outer border
+    ctx.strokeStyle = '#374151';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+  
+  // Draw labels above circles
+  const labelSpacing = circleRadius + 12;
+  positions.forEach((pos) => {
+    const labelText = pos.color.name || pos.color.hex;
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    
+    // Measure text
+    const metrics = ctx.measureText(labelText);
+    const textWidth = metrics.width;
+    const textHeight = 16;
+    const padding = 5;
+    const borderRadius = 4;
+    
+    const labelY = pos.y - labelSpacing;
+    const labelX = pos.x;
+    const rectX = labelX - textWidth / 2 - padding;
+    const rectY = labelY - textHeight - padding;
+    const rectWidth = textWidth + padding * 2;
+    const rectHeight = textHeight + padding * 2;
+    
+    // Draw rounded rectangle background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.beginPath();
+    ctx.moveTo(rectX + borderRadius, rectY);
+    ctx.lineTo(rectX + rectWidth - borderRadius, rectY);
+    ctx.quadraticCurveTo(rectX + rectWidth, rectY, rectX + rectWidth, rectY + borderRadius);
+    ctx.lineTo(rectX + rectWidth, rectY + rectHeight - borderRadius);
+    ctx.quadraticCurveTo(rectX + rectWidth, rectY + rectHeight, rectX + rectWidth - borderRadius, rectY + rectHeight);
+    ctx.lineTo(rectX + borderRadius, rectY + rectHeight);
+    ctx.quadraticCurveTo(rectX, rectY + rectHeight, rectX, rectY + rectHeight - borderRadius);
+    ctx.lineTo(rectX, rectY + borderRadius);
+    ctx.quadraticCurveTo(rectX, rectY, rectX + borderRadius, rectY);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Draw border around label
+    ctx.strokeStyle = '#d1d5db';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // Draw text
+    ctx.fillStyle = '#111827';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText(labelText, labelX, labelY);
+  });
+};
+
 onMounted(() => {
   analyzePalette();
+  setTimeout(() => {
+    drawHarmonyDiagram();
+  }, 100);
+  
+  // Redraw on window resize
+  window.addEventListener('resize', () => {
+    setTimeout(() => {
+      drawHarmonyDiagram();
+    }, 100);
+  });
 });
 
 // Debounce the watcher to prevent rapid re-analysis
@@ -577,6 +828,7 @@ watch(() => props.palette.colors, () => {
   if (analyzeTimeout) clearTimeout(analyzeTimeout);
   analyzeTimeout = setTimeout(() => {
     analyzePalette();
+    drawHarmonyDiagram();
   }, 500);
 }, { deep: true });
 </script>

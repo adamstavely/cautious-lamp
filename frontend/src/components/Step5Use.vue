@@ -11,6 +11,65 @@
       </div>
     </div>
 
+    <!-- Usage Examples -->
+    <div class="mb-8">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-xl text-indigo-600">preview</span>
+        Usage Examples
+      </h3>
+      <p class="text-sm text-gray-600 mb-4">
+        See how your palette looks in real UI components. Preview buttons, cards, and headers using your colors.
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Button Examples -->
+        <div>
+          <h4 class="text-sm font-medium text-gray-700 mb-3">Buttons</h4>
+          <div class="space-y-2">
+            <button
+              v-for="(color, index) in (palette?.colors || []).slice(0, 3)"
+              :key="`btn-${color.hex}-${index}`"
+              class="w-full px-4 py-2 rounded-lg text-white font-medium text-sm transition-all hover:opacity-90"
+              :style="{ backgroundColor: color.hex }"
+            >
+              {{ color.name || 'Button' }}
+            </button>
+          </div>
+        </div>
+        
+        <!-- Card Examples -->
+        <div>
+          <h4 class="text-sm font-medium text-gray-700 mb-3">Cards</h4>
+          <div class="space-y-2">
+            <div
+              v-for="(color, index) in (palette?.colors || []).slice(0, 2)"
+              :key="`card-${color.hex}-${index}`"
+              class="p-4 rounded-lg border border-gray-200"
+              :style="{ borderTopColor: color.hex, borderTopWidth: '4px' }"
+            >
+              <div class="font-semibold text-gray-900 mb-1">Card Title</div>
+              <div class="text-sm text-gray-600">Card content using {{ color.name || color.hex }}</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Header Examples -->
+        <div>
+          <h4 class="text-sm font-medium text-gray-700 mb-3">Headers</h4>
+          <div class="space-y-2">
+            <div
+              v-for="(color, index) in (palette?.colors || []).slice(0, 2)"
+              :key="`header-${color.hex}-${index}`"
+              class="p-4 rounded-lg text-white"
+              :style="{ backgroundColor: color.hex }"
+            >
+              <div class="font-bold text-lg mb-1">Header</div>
+              <div class="text-sm opacity-90">Using {{ color.name || color.hex }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
       <!-- Your Palette Section -->
       <div>

@@ -44,10 +44,26 @@
       <!-- Existing Color Cards -->
       <div
         v-for="(color, index) in palette.colors"
-        :key="index"
+        :key="`color-${index}`"
         :ref="el => { if (el) cardRefs[index] = el }"
-        class="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow"
+        @dragover.prevent="handleDragOver(index, $event)"
+        @drop="handleDrop(index, $event)"
+        class="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow relative"
+        :class="{ 'opacity-50': draggedIndex === index, 'border-indigo-400': dragOverIndex === index }"
       >
+        <!-- Drag Handle -->
+        <div
+          draggable="true"
+          @dragstart="handleDragStart(index, $event)"
+          @dragend="handleDragEnd"
+          class="absolute top-2 right-2 cursor-move p-1 bg-white bg-opacity-80 rounded hover:bg-opacity-100 z-10"
+          title="Drag to reorder"
+        >
+          <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+          </svg>
+        </div>
+        
         <!-- Color Swatch -->
         <div
           class="w-full h-32 cursor-pointer"
@@ -58,6 +74,16 @@
         
         <!-- Color Info -->
         <div class="p-4">
+          <!-- Color Name -->
+          <input
+            :value="color.name || ''"
+            @input="updateColorName(index, $event.target.value)"
+            @click.stop
+            type="text"
+            placeholder="Color name..."
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white mb-2"
+          />
+          
           <!-- Hex Code -->
           <div class="flex items-center justify-between mb-3">
             <div class="font-mono text-sm font-semibold text-gray-900">{{ color.hex }}</div>
@@ -210,6 +236,12 @@
         </div>
       </div>
     </div>
+
+    <!-- Advanced Palette Tools -->
+    <AdvancedPaletteTools
+      :palette="palette"
+      @update-palette="updatePalette"
+    />
 
     <!-- Instructions -->
     <div class="mt-8 pt-6 border-t border-gray-200">
@@ -420,6 +452,7 @@
 <script setup>
 import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue';
 import axios from 'axios';
+import AdvancedPaletteTools from './AdvancedPaletteTools.vue';
 
 const props = defineProps({
   palette: {
@@ -450,6 +483,8 @@ const rgbValues = ref({ r: 0, g: 0, b: 0 });
 const huePosition = ref(0);
 const selectorStyle = ref({ left: '0%', top: '0%' });
 const isDragging = ref(false);
+const draggedIndex = ref(null);
+const dragOverIndex = ref(null);
 const currentHue = ref(0);
 const currentSaturation = ref(100);
 const currentLightness = ref(50);
@@ -460,6 +495,10 @@ const updatePaletteName = () => {
     ...props.palette,
     name: paletteName.value || 'My Palette',
   };
+  emit('update-palette', newPalette);
+};
+
+const updatePalette = (newPalette) => {
   emit('update-palette', newPalette);
 };
 
@@ -542,6 +581,52 @@ const updateRole = (index, role) => {
     ),
   };
   emit('update-palette', newPalette);
+};
+
+const updateColorName = (index, name) => {
+  const newPalette = {
+    ...props.palette,
+    colors: props.palette.colors.map((c, i) =>
+      i === index ? { ...c, name: name || '' } : c
+    ),
+  };
+  emit('update-palette', newPalette);
+};
+
+// Drag and drop handlers
+const handleDragStart = (index, event) => {
+  draggedIndex.value = index;
+  isDragging.value = true;
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/html', event.target);
+};
+
+const handleDragOver = (index, event) => {
+  event.preventDefault();
+  dragOverIndex.value = index;
+};
+
+const handleDrop = (index, event) => {
+  event.preventDefault();
+  if (draggedIndex.value !== null && draggedIndex.value !== index) {
+    const colors = [...props.palette.colors];
+    const draggedColor = colors[draggedIndex.value];
+    colors.splice(draggedIndex.value, 1);
+    colors.splice(index, 0, draggedColor);
+    
+    const newPalette = {
+      ...props.palette,
+      colors,
+    };
+    emit('update-palette', newPalette);
+  }
+  dragOverIndex.value = null;
+};
+
+const handleDragEnd = () => {
+  draggedIndex.value = null;
+  dragOverIndex.value = null;
+  isDragging.value = false;
 };
 
 const isValidHex = (hex) => {

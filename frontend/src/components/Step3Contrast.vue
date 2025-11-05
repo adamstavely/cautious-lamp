@@ -26,6 +26,106 @@
       </div>
     </div>
 
+    <!-- Color Blindness Simulation -->
+    <div v-if="palette.colors && palette.colors.length > 0" class="mb-8">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-xl text-indigo-600">visibility</span>
+        Color Blindness Simulation
+      </h3>
+      <p class="text-sm text-gray-600 mb-4">
+        Preview how your palette appears to users with different types of color blindness. This helps ensure your color choices remain distinguishable for all users.
+      </p>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <button
+          v-for="type in colorBlindnessTypes"
+          :key="type.value"
+          @click="selectedBlindnessType = type.value"
+          class="px-3 py-2 rounded-lg border-2 transition-all text-sm"
+          :class="selectedBlindnessType === type.value
+            ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+            : 'border-gray-200 hover:border-gray-300 text-gray-700'"
+        >
+          {{ type.label }}
+        </button>
+      </div>
+      
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div
+          v-for="(color, index) in palette.colors"
+          :key="`cb-${color.hex}-${index}`"
+          class="text-center"
+        >
+          <div
+            class="w-full h-16 rounded-lg shadow-md mb-2 border border-gray-200"
+            :style="{ backgroundColor: simulateColorBlindness(color.hex, selectedBlindnessType) }"
+          ></div>
+          <div class="text-xs text-gray-600 font-mono">{{ color.hex }}</div>
+          <div v-if="color.name" class="text-xs text-gray-500">{{ color.name }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Readability Testing -->
+    <div v-if="palette.colors && palette.colors.length > 0" class="mb-8">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-xl text-indigo-600">text_fields</span>
+        Readability Testing
+      </h3>
+      <p class="text-sm text-gray-600 mb-4">
+        Test text readability with different font sizes and weights on each palette color to ensure optimal contrast.
+      </p>
+      <div class="mb-4 grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Font Size</label>
+          <select v-model="readabilityFontSize" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="12">12px (Small)</option>
+            <option value="14">14px (Normal)</option>
+            <option value="16">16px (Large)</option>
+            <option value="18">18px (Extra Large)</option>
+            <option value="24">24px (Heading)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Font Weight</label>
+          <select v-model="readabilityFontWeight" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="400">Regular (400)</option>
+            <option value="500">Medium (500)</option>
+            <option value="600">Semi-Bold (600)</option>
+            <option value="700">Bold (700)</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="space-y-4">
+        <div
+          v-for="(color, index) in palette.colors"
+          :key="`readability-${color.hex}-${index}`"
+          class="p-4 rounded-lg border border-gray-200"
+          :style="{ backgroundColor: color.hex }"
+        >
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-gray-700">{{ color.name || color.hex }}</span>
+            <span
+              class="text-xs px-2 py-1 rounded"
+              :class="getReadabilityClass(color.hex)"
+            >
+              {{ getReadabilityStatus(color.hex) }}
+            </span>
+          </div>
+          <p
+            class="text-gray-900"
+            :style="{
+              fontSize: `${readabilityFontSize}px`,
+              fontWeight: readabilityFontWeight,
+              color: getBestTextColor(color.hex),
+            }"
+          >
+            The quick brown fox jumps over the lazy dog. Readability test for {{ color.name || color.hex }}.
+          </p>
+        </div>
+      </div>
+    </div>
+
     <div v-if="loading" class="text-center py-8">
       <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       <p class="mt-2 text-gray-600">Testing contrast...</p>
@@ -412,6 +512,15 @@ const contrastSuggestions = ref({});
 const suggestionsLoading = ref({});
 const strategicSuggestions = ref([]);
 const loadingStrategic = ref(false);
+const selectedBlindnessType = ref('normal');
+const colorBlindnessTypes = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'protanopia', label: 'Protanopia' },
+  { value: 'deuteranopia', label: 'Deuteranopia' },
+  { value: 'tritanopia', label: 'Tritanopia' },
+];
+const readabilityFontSize = ref(14);
+const readabilityFontWeight = ref(400);
 
 const totalPairs = computed(() => contrastResults.value.length);
 const passingAA = computed(() =>
@@ -726,7 +835,102 @@ onMounted(() => {
   testContrast();
 });
 
-// Watch for palette changes and retest contrast
+// Color blindness simulation utilities
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : null;
+};
+
+const rgbToHex = (r, g, b) => {
+  return '#' + [r, g, b].map((x) => {
+    const hex = x.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('');
+};
+
+const simulateColorBlindness = (hex, type) => {
+  if (type === 'normal') return hex;
+  
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  
+  // Simplified color blindness simulation matrices
+  switch (type) {
+    case 'protanopia':
+      return rgbToHex(
+        Math.round(rgb.r * 0.567 + rgb.g * 0.433),
+        Math.round(rgb.r * 0.558 + rgb.g * 0.442),
+        Math.round(rgb.r * 0 + rgb.g * 0.242 + rgb.b * 0.758)
+      );
+    case 'deuteranopia':
+      return rgbToHex(
+        Math.round(rgb.r * 0.625 + rgb.g * 0.375),
+        Math.round(rgb.r * 0.7 + rgb.g * 0.3),
+        Math.round(rgb.r * 0 + rgb.g * 0.3 + rgb.b * 0.7)
+      );
+    case 'tritanopia':
+      return rgbToHex(
+        Math.round(rgb.r * 0.95 + rgb.g * 0.05),
+        Math.round(rgb.r * 0 + rgb.g * 0.433 + rgb.b * 0.567),
+        Math.round(rgb.r * 0 + rgb.g * 0.475 + rgb.b * 0.525)
+      );
+    default:
+      return hex;
+  }
+};
+
+// Readability testing utilities
+const calculateLuminance = (hex) => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return 0;
+  
+  const [r, g, b] = [rgb.r / 255, rgb.g / 255, rgb.b / 255].map((val) => {
+    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+  });
+  
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+const calculateContrast = (color1, color2) => {
+  const lum1 = calculateLuminance(color1);
+  const lum2 = calculateLuminance(color2);
+  const lighter = Math.max(lum1, lum2);
+  const darker = Math.min(lum1, lum2);
+  return (lighter + 0.05) / (darker + 0.05);
+};
+
+const getReadabilityStatus = (bgColor) => {
+  const whiteContrast = calculateContrast(bgColor, '#ffffff');
+  const blackContrast = calculateContrast(bgColor, '#000000');
+  const bestContrast = Math.max(whiteContrast, blackContrast);
+  
+  if (bestContrast >= 7) return 'AAA';
+  if (bestContrast >= 4.5) return 'AA';
+  return 'Fail';
+};
+
+const getReadabilityClass = (bgColor) => {
+  const whiteContrast = calculateContrast(bgColor, '#ffffff');
+  const blackContrast = calculateContrast(bgColor, '#000000');
+  const bestContrast = Math.max(whiteContrast, blackContrast);
+  
+  if (bestContrast >= 7) return 'bg-green-100 text-green-800';
+  if (bestContrast >= 4.5) return 'bg-yellow-100 text-yellow-800';
+  return 'bg-red-100 text-red-800';
+};
+
+const getBestTextColor = (bgColor) => {
+  const whiteContrast = calculateContrast(bgColor, '#ffffff');
+  const blackContrast = calculateContrast(bgColor, '#000000');
+  return whiteContrast >= blackContrast ? '#ffffff' : '#000000';
+};
+
 let contrastTestTimeout = null;
 let isApplyingChange = false; // Flag to prevent loops
 
