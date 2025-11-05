@@ -388,7 +388,7 @@
             </div>
 
             <!-- Current Layer Settings -->
-            <div class="mb-6 pb-6 border-b border-gray-200">
+            <div class="mb-4 pb-4 border-b border-gray-200">
               <div class="flex items-center gap-2 mb-4">
                 <span class="material-symbols-outlined text-lg text-indigo-600">tune</span>
                 <h3 class="text-base font-semibold text-gray-900">Current Layer Settings</h3>
@@ -524,7 +524,7 @@
               </div>
 
               <!-- Blend Mode -->
-              <div class="mb-4">
+              <div class="mb-2">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Blend Mode</label>
                 <select
                   v-model="blendMode"
@@ -548,7 +548,7 @@
             </div>
 
             <!-- Global Animation Settings -->
-            <div class="pt-4">
+            <div class="pt-1">
               <div class="flex items-center gap-2 mb-3">
                 <span class="material-symbols-outlined text-lg text-gray-600">animation</span>
                 <div>
