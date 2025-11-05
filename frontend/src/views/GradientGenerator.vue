@@ -258,7 +258,12 @@
           <!-- Gradient Type & Settings -->
           <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-gray-900">Settings</h2>
+              <div>
+                <h2 class="text-lg font-semibold text-gray-900">Settings</h2>
+                <p v-if="layers.length > 1" class="text-xs text-gray-500 mt-0.5">
+                  Editing: <span class="font-medium text-indigo-600">Layer {{ currentLayerIndex + 1 }}</span>
+                </p>
+              </div>
               <button
                 @click="showExportModal = true"
                 class="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
@@ -422,43 +427,102 @@
 
             <!-- Layers -->
             <div class="mb-4 pt-4 border-t border-gray-200">
-              <div class="flex items-center justify-between mb-2">
-                <label class="block text-sm font-medium text-gray-700">Layers</label>
+              <div class="flex items-start justify-between mb-3">
+                <div class="flex-1">
+                  <label class="block text-sm font-medium text-gray-700">Layers</label>
+                  <p class="text-xs text-gray-500 mt-0.5">Stack multiple gradients with blend modes</p>
+                </div>
                 <button
                   @click="addLayer"
-                  class="px-3 py-1 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1 flex-shrink-0 ml-3"
                 >
-                  + Add Layer
+                  <span class="material-symbols-outlined text-sm">add</span>
+                  Add Layer
                 </button>
               </div>
-              <div class="space-y-2 max-h-48 overflow-y-auto">
+              <div class="space-y-2 max-h-64 overflow-y-auto">
                 <div
                   v-for="(layer, index) in layers"
                   :key="layer.id"
-                  class="flex items-center gap-2 p-2 rounded border"
-                  :class="currentLayerIndex === index ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'"
+                  class="group relative rounded-lg border-2 transition-all"
+                  :class="currentLayerIndex === index 
+                    ? 'border-indigo-500 bg-indigo-50 shadow-sm' 
+                    : 'border-gray-200 hover:border-gray-300 bg-white'"
                 >
-                  <input
-                    type="checkbox"
-                    v-model="layer.enabled"
-                    class="rounded"
-                    @click.stop
-                  />
-                  <button
-                    @click="currentLayerIndex = index"
-                    class="flex-1 text-left text-sm px-2 py-1 rounded hover:bg-gray-100"
-                  >
-                    Layer {{ index + 1 }}
-                  </button>
-                  <button
-                    v-if="layers.length > 1"
-                    @click="removeLayer(index)"
-                    class="p-1 text-red-600 hover:bg-red-50 rounded"
-                    title="Remove layer"
-                  >
-                    <span class="material-symbols-outlined text-sm">delete</span>
-                  </button>
+                  <!-- Layer Header -->
+                  <div class="flex items-center gap-2 p-2">
+                    <input
+                      type="checkbox"
+                      v-model="layer.enabled"
+                      class="rounded"
+                      @click.stop
+                      title="Toggle layer visibility"
+                    />
+                    <div class="flex-1 flex items-center gap-2 min-w-0">
+                      <!-- Layer Preview Swatch -->
+                      <div 
+                        class="w-8 h-8 rounded border border-gray-300 flex-shrink-0"
+                        :style="getLayerPreview(layer)"
+                        title="Layer preview"
+                      ></div>
+                      <!-- Layer Info -->
+                      <div class="flex-1 min-w-0">
+                        <button
+                          @click="currentLayerIndex = index"
+                          class="text-left text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors w-full"
+                        >
+                          Layer {{ index + 1 }}
+                        </button>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                          <span class="capitalize">{{ layer.type }}</span>
+                          <span>•</span>
+                          <span class="capitalize">{{ layer.blendMode }}</span>
+                          <span v-if="layer.colorStops.length > 0">•</span>
+                          <span v-if="layer.colorStops.length > 0">{{ layer.colorStops.length }} stops</span>
+                        </div>
+                      </div>
+                      <!-- Layer Actions -->
+                      <div class="flex items-center gap-1">
+                        <button
+                          v-if="index > 0"
+                          @click="moveLayer(index, index - 1)"
+                          class="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                          title="Move up"
+                        >
+                          <span class="material-symbols-outlined text-sm">arrow_upward</span>
+                        </button>
+                        <button
+                          v-if="index < layers.length - 1"
+                          @click="moveLayer(index, index + 1)"
+                          class="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                          title="Move down"
+                        >
+                          <span class="material-symbols-outlined text-sm">arrow_downward</span>
+                        </button>
+                        <button
+                          v-if="layers.length > 1"
+                          @click="removeLayer(index)"
+                          class="p-1 text-red-400 hover:text-red-600 rounded transition-colors"
+                          title="Delete layer"
+                        >
+                          <span class="material-symbols-outlined text-sm">delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Active Layer Indicator -->
+                  <div v-if="currentLayerIndex === index" class="absolute top-0 right-0 w-0 h-0 border-l-[12px] border-l-transparent border-t-[12px] border-t-indigo-500 rounded-tr-lg"></div>
+                  <div v-if="currentLayerIndex === index" class="absolute top-0.5 right-0.5">
+                    <span class="material-symbols-outlined text-white text-xs">edit</span>
+                  </div>
                 </div>
+              </div>
+              <div v-if="layers.length > 1" class="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                <p class="text-xs text-blue-700 flex items-start gap-1.5">
+                  <span class="material-symbols-outlined text-sm mt-0.5">info</span>
+                  <span>Layers are stacked from bottom (Layer 1) to top. Click a layer to edit it. Use blend modes to combine layers.</span>
+                </p>
               </div>
             </div>
 
@@ -935,6 +999,51 @@ const removeLayer = (index) => {
     }
     syncCurrentLayer();
   }
+};
+
+const moveLayer = (fromIndex, toIndex) => {
+  if (fromIndex === toIndex) return;
+  
+  const layer = layers.value.splice(fromIndex, 1)[0];
+  layers.value.splice(toIndex, 0, layer);
+  
+  // Update current layer index
+  if (currentLayerIndex.value === fromIndex) {
+    currentLayerIndex.value = toIndex;
+  } else if (currentLayerIndex.value === toIndex) {
+    currentLayerIndex.value = fromIndex;
+  }
+};
+
+// Get preview gradient for a layer
+const getLayerPreview = (layer) => {
+  if (!layer || !layer.colorStops || layer.colorStops.length === 0) {
+    return { background: 'linear-gradient(90deg, #e5e7eb, #e5e7eb)' };
+  }
+  
+  const stops = layer.colorStops
+    .map((stop) => {
+      const color = stop.opacity === 100 ? stop.color : hexToRgba(stop.color, stop.opacity);
+      return `${color} ${stop.position}%`;
+    })
+    .join(', ');
+  
+  let gradient = '';
+  switch (layer.type) {
+    case 'linear':
+      gradient = `linear-gradient(${layer.linearAngle}deg, ${stops})`;
+      break;
+    case 'radial':
+      gradient = `radial-gradient(${layer.radialShape} ${layer.radialSize} at ${layer.radialPosition.x} ${layer.radialPosition.y}, ${stops})`;
+      break;
+    case 'conic':
+      gradient = `conic-gradient(from ${layer.conicAngle}deg at ${layer.conicPosition.x} ${layer.conicPosition.y}, ${stops})`;
+      break;
+    default:
+      gradient = `linear-gradient(90deg, ${stops})`;
+  }
+  
+  return { background: gradient };
 };
 
 const addColorStop = () => {
