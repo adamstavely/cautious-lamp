@@ -28,7 +28,10 @@
           <!-- Gradient Preview -->
           <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-gray-900">Preview</h2>
+              <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <span class="material-symbols-outlined text-xl text-indigo-600">preview</span>
+                Preview
+              </h2>
               <div v-if="animationEnabled" class="flex items-center gap-2 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
                 <span class="material-symbols-outlined text-sm animate-spin">sync</span>
                 Animating
@@ -103,7 +106,10 @@
           <!-- Color Stops -->
           <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-gray-900">Color Stops</h2>
+              <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <span class="material-symbols-outlined text-xl text-indigo-600">palette</span>
+                Color Stops
+              </h2>
               <div class="flex items-center gap-2">
                 <button
                   @click="fetchPalettes"
@@ -259,7 +265,10 @@
           <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="flex items-center justify-between mb-4">
               <div>
-                <h2 class="text-lg font-semibold text-gray-900">Settings</h2>
+                <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-xl text-indigo-600">settings</span>
+                  Settings
+                </h2>
                 <p v-if="layers.length > 1" class="text-xs text-gray-500 mt-0.5">
                   Editing: <span class="font-medium text-indigo-600">Layer {{ currentLayerIndex + 1 }}</span>
                 </p>
