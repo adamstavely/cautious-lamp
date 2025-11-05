@@ -41,7 +41,7 @@
     <!-- Semantic Color Validation -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-xl text-indigo-600">check_circle</span>
+        <span class="material-symbols-outlined text-xl text-indigo-600">label</span>
         Semantic Color Validation
       </h3>
       <div class="grid grid-cols-4 gap-4">

@@ -3,15 +3,15 @@
     <!-- Palette Quality Score Widget (not sticky, inline) -->
     <button
       @click="showModal = true"
-      class="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 hover:shadow-md transition-shadow flex items-center gap-3 w-full"
+      class="bg-white rounded-lg shadow-sm border-2 border-indigo-500 px-4 py-3 hover:shadow-md transition-shadow flex items-center gap-3 w-full"
     >
-      <div class="text-left flex-1">
-        <div class="text-xs font-medium text-gray-600 flex items-center gap-2 mb-1">
-          <span class="material-symbols-outlined text-sm text-indigo-600">show_chart</span>
-          <span>Palette Quality Score</span>
-          <span class="ml-auto text-sm font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{{ healthScore }}</span>
+      <div class="text-left flex-1 self-center">
+        <div class="text-xs font-medium text-gray-600 flex items-center gap-2">
+          <span class="material-symbols-outlined text-sm text-indigo-600 flex-shrink-0">show_chart</span>
+          <span class="flex-1">Palette Quality Score</span>
+          <span class="text-sm font-semibold text-indigo-700 bg-indigo-50 px-2 py-1 rounded flex items-center justify-center h-6">{{ healthScore }}</span>
         </div>
-        <div class="text-xs text-gray-500">{{ metCriteria }}/{{ totalCriteria }} criteria met</div>
+        <div class="text-xs text-gray-500 mt-0.5">{{ metCriteria }}/{{ totalCriteria }} criteria met</div>
       </div>
     </button>
 
