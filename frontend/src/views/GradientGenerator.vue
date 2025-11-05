@@ -273,164 +273,16 @@
                 <span class="text-sm font-medium">Export</span>
               </button>
             </div>
-            
-            <!-- Gradient Type -->
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Gradient Type</label>
-              <div class="grid grid-cols-3 gap-2">
-                <button
-                  v-for="type in gradientTypes"
-                  :key="type.value"
-                  @click="gradientType = type.value"
-                  class="px-4 py-2 rounded-lg border-2 transition-all"
-                  :class="gradientType === type.value
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-gray-200 hover:border-gray-300 text-gray-700'"
-                >
-                  {{ type.label }}
-                </button>
-              </div>
-            </div>
 
-            <!-- Linear Gradient Settings -->
-            <div v-if="gradientType === 'linear'" class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Angle</label>
-              <div class="flex items-center gap-4">
-                <input
-                  v-model.number="linearAngle"
-                  type="range"
-                  min="0"
-                  max="360"
-                  step="1"
-                  class="flex-1"
-                />
-                <div class="flex items-center gap-1">
-                  <input
-                    v-model.number="linearAngle"
-                    type="number"
-                    min="0"
-                    max="360"
-                    class="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                  <span class="text-base text-gray-600">°</span>
-                </div>
-              </div>
-              <div class="mt-2 flex flex-wrap gap-2">
-                <button
-                  v-for="direction in linearDirections"
-                  :key="direction.value"
-                  @click="linearAngle = direction.angle"
-                  class="px-3 py-1 text-xs rounded border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
-                >
-                  {{ direction.label }}
-                </button>
-              </div>
-            </div>
-
-            <!-- Radial Gradient Settings -->
-            <div v-if="gradientType === 'radial'" class="mb-4 grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Position X</label>
-                <input
-                  v-model="radialPosition.x"
-                  type="text"
-                  placeholder="50%"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Position Y</label>
-                <input
-                  v-model="radialPosition.y"
-                  type="text"
-                  placeholder="50%"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Shape</label>
-                <select
-                  v-model="radialShape"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  <option value="ellipse">Ellipse</option>
-                  <option value="circle">Circle</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Size</label>
-                <select
-                  v-model="radialSize"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                >
-                  <option value="farthest-corner">Farthest Corner</option>
-                  <option value="farthest-side">Farthest Side</option>
-                  <option value="closest-corner">Closest Corner</option>
-                  <option value="closest-side">Closest Side</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Conic Gradient Settings -->
-            <div v-if="gradientType === 'conic'" class="mb-4 grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Position X</label>
-                <input
-                  v-model="conicPosition.x"
-                  type="text"
-                  placeholder="50%"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Position Y</label>
-                <input
-                  v-model="conicPosition.y"
-                  type="text"
-                  placeholder="50%"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Angle</label>
-                <input
-                  v-model.number="conicAngle"
-                  type="number"
-                  min="0"
-                  max="360"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-            </div>
-
-            <!-- Blend Mode -->
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Blend Mode (Current Layer)</label>
-              <select
-                v-model="blendMode"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              >
-                <option value="normal">Normal</option>
-                <option value="multiply">Multiply</option>
-                <option value="screen">Screen</option>
-                <option value="overlay">Overlay</option>
-                <option value="darken">Darken</option>
-                <option value="lighten">Lighten</option>
-                <option value="color-dodge">Color Dodge</option>
-                <option value="color-burn">Color Burn</option>
-                <option value="hard-light">Hard Light</option>
-                <option value="soft-light">Soft Light</option>
-                <option value="difference">Difference</option>
-                <option value="exclusion">Exclusion</option>
-              </select>
-            </div>
-
-            <!-- Layers -->
-            <div class="mb-4 pt-4 border-t border-gray-200">
+            <!-- Layers Management -->
+            <div class="mb-6 pb-6 border-b border-gray-200">
               <div class="flex items-start justify-between mb-3">
                 <div class="flex-1">
-                  <label class="block text-sm font-medium text-gray-700">Layers</label>
-                  <p class="text-xs text-gray-500 mt-0.5">Stack multiple gradients with blend modes</p>
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="material-symbols-outlined text-lg text-gray-600">layers</span>
+                    <label class="block text-sm font-medium text-gray-700">Layers</label>
+                  </div>
+                  <p class="text-xs text-gray-500">Stack multiple gradients with blend modes</p>
                 </div>
                 <button
                   @click="addLayer"
@@ -526,13 +378,177 @@
               </div>
             </div>
 
-            <!-- Animation -->
-            <div class="pt-4 border-t border-gray-200">
-              <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-lg text-gray-600">animation</span>
-                  <label class="block text-sm font-medium text-gray-700">Animation</label>
+            <!-- Current Layer Settings -->
+            <div class="mb-6 pb-6 border-b border-gray-200">
+              <div class="flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-lg text-indigo-600">tune</span>
+                <h3 class="text-base font-semibold text-gray-900">Current Layer Settings</h3>
+              </div>
+              
+              <!-- Gradient Type -->
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Gradient Type</label>
+                <div class="grid grid-cols-3 gap-2">
+                  <button
+                    v-for="type in gradientTypes"
+                    :key="type.value"
+                    @click="gradientType = type.value"
+                    class="px-4 py-2 rounded-lg border-2 transition-all"
+                    :class="gradientType === type.value
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'"
+                  >
+                    {{ type.label }}
+                  </button>
                 </div>
+              </div>
+
+              <!-- Linear Gradient Settings -->
+              <div v-if="gradientType === 'linear'" class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Angle</label>
+                <div class="flex items-center gap-4">
+                  <input
+                    v-model.number="linearAngle"
+                    type="range"
+                    min="0"
+                    max="360"
+                    step="1"
+                    class="flex-1"
+                  />
+                  <div class="flex items-center gap-1">
+                    <input
+                      v-model.number="linearAngle"
+                      type="number"
+                      min="0"
+                      max="360"
+                      class="w-14 px-2 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                    <span class="text-base text-gray-600">°</span>
+                  </div>
+                </div>
+                <div class="mt-2 grid grid-cols-3 gap-2">
+                  <button
+                    v-for="direction in linearDirections"
+                    :key="direction.value"
+                    @click="linearAngle = direction.angle"
+                    class="px-3 py-1 text-xs rounded border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
+                  >
+                    {{ direction.label }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Radial Gradient Settings -->
+              <div v-if="gradientType === 'radial'" class="mb-4 grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Position X</label>
+                  <input
+                    v-model="radialPosition.x"
+                    type="text"
+                    placeholder="50%"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Position Y</label>
+                  <input
+                    v-model="radialPosition.y"
+                    type="text"
+                    placeholder="50%"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Shape</label>
+                  <select
+                    v-model="radialShape"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="ellipse">Ellipse</option>
+                    <option value="circle">Circle</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Size</label>
+                  <select
+                    v-model="radialSize"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  >
+                    <option value="farthest-corner">Farthest Corner</option>
+                    <option value="farthest-side">Farthest Side</option>
+                    <option value="closest-corner">Closest Corner</option>
+                    <option value="closest-side">Closest Side</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Conic Gradient Settings -->
+              <div v-if="gradientType === 'conic'" class="mb-4 grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Position X</label>
+                  <input
+                    v-model="conicPosition.x"
+                    type="text"
+                    placeholder="50%"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Position Y</label>
+                  <input
+                    v-model="conicPosition.y"
+                    type="text"
+                    placeholder="50%"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Angle</label>
+                  <input
+                    v-model.number="conicAngle"
+                    type="number"
+                    min="0"
+                    max="360"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+              </div>
+
+              <!-- Blend Mode -->
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Blend Mode</label>
+                <select
+                  v-model="blendMode"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                >
+                  <option value="normal">Normal</option>
+                  <option value="multiply">Multiply</option>
+                  <option value="screen">Screen</option>
+                  <option value="overlay">Overlay</option>
+                  <option value="darken">Darken</option>
+                  <option value="lighten">Lighten</option>
+                  <option value="color-dodge">Color Dodge</option>
+                  <option value="color-burn">Color Burn</option>
+                  <option value="hard-light">Hard Light</option>
+                  <option value="soft-light">Soft Light</option>
+                  <option value="difference">Difference</option>
+                  <option value="exclusion">Exclusion</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">How this layer blends with layers below</p>
+              </div>
+            </div>
+
+            <!-- Global Animation Settings -->
+            <div class="pt-4">
+              <div class="flex items-center gap-2 mb-3">
+                <span class="material-symbols-outlined text-lg text-gray-600">animation</span>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Animation</label>
+                  <p class="text-xs text-gray-500 mt-0.5">Animates the current active layer</p>
+                </div>
+              </div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-sm text-gray-700">Enable Animation</span>
                 <label class="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
