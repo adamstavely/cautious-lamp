@@ -5,25 +5,67 @@
     
     <!-- Main Content Area -->
     <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-y-auto"
+      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
       :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
     >
       <!-- Breadcrumbs -->
       <Breadcrumbs />
       
-      <div class="min-h-screen pb-16">
+      <div class="h-full overflow-y-auto">
         <div class="p-8">
-          <div class="max-w-4xl mx-auto">
-          <!-- Header -->
-          <div class="mb-8">
-            <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-              <span class="material-symbols-outlined text-indigo-600">format_line_spacing</span>
-              Font Scale
-            </h1>
-            <p class="text-gray-600 dark:text-gray-400">
-              Create a harmonious typography scale based on a base font size using a mathematical ratio.
-            </p>
+          <!-- Hero Section -->
+          <div class="max-w-7xl mx-auto mb-16">
+            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
+              <!-- Background texture/grain effect -->
+              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
+              
+              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+                <div class="flex-1">
+                  <div class="flex items-center gap-4 mb-4">
+                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
+                      Font Scale
+                    </h1>
+                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
+                      Production Ready
+                    </span>
+                  </div>
+                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
+                    Create harmonious typography scales using mathematical ratios. Generate consistent heading and body text sizes for your design system.
+                  </p>
+                  <div class="flex items-center gap-4 text-sm text-white/70">
+                    <span class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-base">label</span>
+                      Typography Tool
+                    </span>
+                    <span class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-base">update</span>
+                      Updated Jan 15, 2024
+                    </span>
+                  </div>
+                </div>
+                <div class="hidden md:block flex-shrink-0">
+                  <div class="w-64 h-64 relative">
+                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
+                      <defs>
+                        <linearGradient id="fontScaleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <!-- Stylized font scale icon -->
+                      <line x1="40" y1="40" x2="40" y2="160" stroke="url(#fontScaleGradient)" stroke-width="4" opacity="0.6"/>
+                      <text x="50" y="50" font-family="Arial" font-size="24" font-weight="bold" fill="url(#fontScaleGradient)" opacity="0.8">H1</text>
+                      <text x="50" y="80" font-family="Arial" font-size="18" font-weight="bold" fill="url(#fontScaleGradient)" opacity="0.7">H2</text>
+                      <text x="50" y="110" font-family="Arial" font-size="14" fill="url(#fontScaleGradient)" opacity="0.6">Body</text>
+                      <text x="50" y="140" font-family="Arial" font-size="12" fill="url(#fontScaleGradient)" opacity="0.5">Small</text>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+
+          <div class="max-w-6xl mx-auto">
 
           <!-- Base Font Size Input -->
           <div class="mb-6 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -37,30 +79,34 @@
             />
           </div>
           
-          <!-- Typography Scale Display -->
-          <div class="space-y-4 mb-6">
-            <div v-for="(size, name) in computedTypographyScale" :key="name" class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-              <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
-                {{ name === 'h1' ? 'Heading 1' : name === 'h2' ? 'Heading 2' : name === 'h3' ? 'Heading 3' : name === 'h4' ? 'Heading 4' : name === 'h5' ? 'Heading 5' : name === 'h6' ? 'Heading 6' : name === 'body' ? 'Body Text' : 'Small Text' }}
+          <!-- Two Column Layout -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left Column: Individual Size Displays -->
+            <div class="space-y-4">
+              <div v-for="(size, name) in computedTypographyScale" :key="name" class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  {{ name === 'h1' ? 'Heading 1' : name === 'h2' ? 'Heading 2' : name === 'h3' ? 'Heading 3' : name === 'h4' ? 'Heading 4' : name === 'h5' ? 'Heading 5' : name === 'h6' ? 'Heading 6' : name === 'body' ? 'Body Text' : 'Small Text' }}
+                </div>
+                <div class="text-gray-900 dark:text-white" :style="{ fontSize: size + 'px', fontFamily: 'system-ui, sans-serif', lineHeight: lineHeight, letterSpacing: letterSpacing + 'px', fontWeight: name.startsWith('h') ? 'bold' : 'normal' }">
+                  {{ name === 'body' ? 'The quick brown fox jumps over the lazy dog.' : name === 'small' ? 'Small text example' : name.toUpperCase() + ' Heading Example' }}
+                </div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">{{ size }}px</div>
               </div>
-              <div class="text-gray-900 dark:text-white" :style="{ fontSize: size + 'px', fontFamily: 'system-ui, sans-serif', lineHeight: lineHeight, letterSpacing: letterSpacing + 'px', fontWeight: name.startsWith('h') ? 'bold' : 'normal' }">
-                {{ name === 'body' ? 'The quick brown fox jumps over the lazy dog.' : name === 'small' ? 'Small text example' : name.toUpperCase() + ' Heading Example' }}
+            </div>
+            
+            <!-- Right Column: Complete Scale Preview -->
+            <div class="bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <h4 class="font-semibold text-gray-900 dark:text-white mb-4">Complete Scale Preview</h4>
+              <div class="space-y-2" :style="{ fontFamily: 'system-ui, sans-serif' }">
+                <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.h1 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 1</div>
+                <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.h2 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 2</div>
+                <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.h3 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 3</div>
+                <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.h4 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 4</div>
+                <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.body + 'px', lineHeight: lineHeight }">Body text with normal weight</div>
+                <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.small + 'px', lineHeight: lineHeight }">Small text</div>
               </div>
-              <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">{{ size }}px</div>
             </div>
           </div>
-          
-          <!-- Complete Scale Preview -->
-          <div class="bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <h4 class="font-semibold text-gray-900 dark:text-white mb-4">Complete Scale Preview</h4>
-            <div class="space-y-2" :style="{ fontFamily: 'system-ui, sans-serif' }">
-              <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.h1 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 1</div>
-              <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.h2 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 2</div>
-              <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.h3 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 3</div>
-              <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.h4 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 4</div>
-              <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.body + 'px', lineHeight: lineHeight }">Body text with normal weight</div>
-              <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.small + 'px', lineHeight: lineHeight }">Small text</div>
-            </div>
           </div>
         </div>
       </div>
@@ -132,4 +178,10 @@ onBeforeUnmount(() => {
   }
 });
 </script>
+
+<style scoped>
+.texture-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+</style>
 

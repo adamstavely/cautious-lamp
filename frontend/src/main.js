@@ -142,6 +142,26 @@ const router = createRouter({
       component: () => import('./views/Patterns.vue'),
     },
     {
+      path: '/patterns/navigation',
+      component: () => import('./views/PatternNavigation.vue'),
+    },
+    {
+      path: '/patterns/data-display',
+      component: () => import('./views/PatternDetail.vue'),
+    },
+    {
+      path: '/patterns/layout',
+      component: () => import('./views/PatternDetail.vue'),
+    },
+    {
+      path: '/patterns/forms',
+      component: () => import('./views/PatternDetail.vue'),
+    },
+    {
+      path: '/patterns/feedback',
+      component: () => import('./views/PatternDetail.vue'),
+    },
+    {
       path: '/tools/gradient-generator',
       component: () => import('./views/GradientGenerator.vue'),
     },

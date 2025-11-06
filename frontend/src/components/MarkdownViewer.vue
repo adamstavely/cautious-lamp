@@ -1,7 +1,7 @@
 <template>
   <div class="markdown-viewer-container h-full flex">
     <!-- Main Content Area -->
-    <div class="markdown-viewer flex-1 h-full overflow-y-auto p-8" :class="isDarkMode ? 'dark' : ''">
+    <div class="markdown-viewer flex-1 h-full overflow-y-auto p-8 bg-white dark:bg-slate-900" :class="isDarkMode ? 'dark' : ''">
       <div v-if="loading" class="flex items-center justify-center h-full">
         <div class="text-center">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
@@ -169,10 +169,25 @@ const getFilePath = (docPath) => {
     '/patterns': '/docs/patterns.md',
     '/patterns/navigation': '/docs/patterns/navigation.md',
     '/patterns/data-display': '/docs/patterns/data-display.md',
+    '/patterns/layout': '/docs/patterns/layout.md',
+    '/patterns/forms': '/docs/patterns/forms.md',
+    '/patterns/feedback': '/docs/patterns/feedback.md',
     '/': '/docs/index.md'
   };
   
-  return pathMap[docPath] || `/docs${docPath}.md`;
+  // If path is in the map, use it
+  if (pathMap[docPath]) {
+    return pathMap[docPath];
+  }
+  
+  // Otherwise, try to construct the path dynamically
+  // Handle pattern paths: /patterns/xyz -> /docs/patterns/xyz.md
+  if (docPath.startsWith('/patterns/')) {
+    return `/docs${docPath}.md`;
+  }
+  
+  // Default fallback
+  return `/docs${docPath}.md`;
 };
 
 const getGitHubEditUrl = (docPath) => {

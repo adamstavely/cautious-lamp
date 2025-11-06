@@ -171,10 +171,16 @@
             v-for="item in fonts"
             :key="item.link"
             :to="item.link"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group"
-            :class="isDarkMode 
-              ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+            :class="[
+              isActive(item.link)
+                ? (isDarkMode 
+                  ? 'text-indigo-400 bg-indigo-900/20' 
+                  : 'text-indigo-600 bg-indigo-50')
+                : (isDarkMode
+                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+            ]"
           >
             <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
             <span class="font-medium">{{ item.text }}</span>

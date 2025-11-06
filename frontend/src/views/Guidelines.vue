@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900 relative flex">
+  <div class="w-full h-full dark:bg-slate-900 relative flex">
     <!-- Drawer -->
     <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" @navigate-doc="handleDocNavigation" />
     
@@ -9,39 +9,12 @@
       :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
     >
       <!-- VitePress Content - shown when a doc link is clicked -->
-      <div v-if="currentDocLink" class="h-full w-full relative bg-white dark:bg-slate-900">
+      <div v-if="currentDocLink" class="h-full w-full relative">
         <!-- Breadcrumbs -->
-        <div class="px-8 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <nav class="flex items-center gap-2 text-sm">
-            <button
-              @click="currentDocLink = null"
-              class="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-            >
-              Guidelines
-            </button>
-            <span class="text-gray-400 dark:text-gray-500">/</span>
-            <span 
-              v-for="(crumb, index) in breadcrumbs" 
-              :key="index"
-              class="flex items-center gap-2"
-            >
-              <button
-                v-if="index < breadcrumbs.length - 1"
-                @click="navigateToBreadcrumb(crumb.path)"
-                class="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              >
-                {{ crumb.label }}
-              </button>
-              <span
-                v-else
-                class="text-gray-900 dark:text-gray-100 font-medium"
-              >
-                {{ crumb.label }}
-              </span>
-              <span v-if="index < breadcrumbs.length - 1" class="text-gray-400 dark:text-gray-500">/</span>
-            </span>
-          </nav>
-        </div>
+        <Breadcrumbs 
+          :custom-path="`/guidelines${currentDocLink}`"
+          :on-navigate="handleBreadcrumbNavigate"
+        />
         <MarkdownViewer :doc-path="currentDocLink" />
       </div>
       
@@ -192,71 +165,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import MarkdownViewer from '../components/MarkdownViewer.vue';
+import Breadcrumbs from '../components/Breadcrumbs.vue';
 
 const route = useRoute();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
 const currentDocLink = ref(null);
 
-const breadcrumbs = computed(() => {
-  if (!currentDocLink.value) return [];
-  
-  const path = currentDocLink.value;
-  const crumbs = [];
-  
-  // Map paths to labels
-  const pathLabels = {
-    '/colors': 'Colors',
-    '/typography': 'Typography',
-    '/spacing': 'Spacing',
-    '/shadows': 'Shadows',
-    '/ai/overview': 'AI Overview',
-    '/ai/patterns': 'AI Patterns',
-    '/ai/components': 'AI Components',
-    '/hcd/principles': 'HCD Principles',
-    '/hcd/research': 'User Research',
-    '/hcd/accessibility': 'Accessibility',
-    '/patterns': 'Layout Patterns',
-    '/patterns/navigation': 'Navigation',
-    '/patterns/data-display': 'Data Display',
-    '/': 'Getting Started'
-  };
-  
-  // Split path and build breadcrumbs
-  const parts = path.split('/').filter(p => p);
-  
-  if (parts.length === 0) {
-    crumbs.push({ label: 'Getting Started', path: '/' });
-  } else {
-    // Add section (first part)
-    if (parts[0] === 'ai') {
-      crumbs.push({ label: 'Artificial Intelligence', path: '/ai/overview' });
-    } else if (parts[0] === 'hcd') {
-      crumbs.push({ label: 'Human-Centered Design', path: '/hcd/principles' });
-    } else if (parts[0] === 'patterns') {
-      crumbs.push({ label: 'Patterns', path: '/patterns' });
-    } else {
-      crumbs.push({ label: 'Foundations', path: '/' });
-    }
-    
-    // Add current page
-    const fullPath = '/' + parts.join('/');
-    const label = pathLabels[fullPath] || parts[parts.length - 1].charAt(0).toUpperCase() + parts[parts.length - 1].slice(1);
-    crumbs.push({ label, path: fullPath });
-  }
-  
-  return crumbs;
-});
-
-const navigateToBreadcrumb = (path) => {
-  if (path === '/') {
+const handleBreadcrumbNavigate = (path) => {
+  // Handle navigation from breadcrumbs
+  if (path === '/guidelines' || path === '/') {
     currentDocLink.value = null;
-  } else {
-    currentDocLink.value = path;
+  } else if (path.startsWith('/guidelines/')) {
+    currentDocLink.value = path.replace('/guidelines', '');
   }
 };
 
