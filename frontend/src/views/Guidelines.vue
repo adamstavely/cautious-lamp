@@ -1,14 +1,52 @@
 <template>
   <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900 relative flex">
     <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
+    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" @navigate-doc="handleDocNavigation" />
     
     <!-- Main Content Area - shifts when drawer is open -->
     <div 
       class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
       :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
     >
-      <div class="h-full p-8 overflow-hidden">
+      <!-- VitePress Content - shown when a doc link is clicked -->
+      <div v-if="currentDocLink" class="h-full w-full relative bg-white dark:bg-slate-900">
+        <!-- Breadcrumbs -->
+        <div class="px-8 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <nav class="flex items-center gap-2 text-sm">
+            <button
+              @click="currentDocLink = null"
+              class="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            >
+              Guidelines
+            </button>
+            <span class="text-gray-400 dark:text-gray-500">/</span>
+            <span 
+              v-for="(crumb, index) in breadcrumbs" 
+              :key="index"
+              class="flex items-center gap-2"
+            >
+              <button
+                v-if="index < breadcrumbs.length - 1"
+                @click="navigateToBreadcrumb(crumb.path)"
+                class="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                {{ crumb.label }}
+              </button>
+              <span
+                v-else
+                class="text-gray-900 dark:text-gray-100 font-medium"
+              >
+                {{ crumb.label }}
+              </span>
+              <span v-if="index < breadcrumbs.length - 1" class="text-gray-400 dark:text-gray-500">/</span>
+            </span>
+          </nav>
+        </div>
+        <MarkdownViewer :doc-path="currentDocLink" />
+      </div>
+      
+      <!-- Overview Content - shown by default -->
+      <div v-else class="h-full p-8 overflow-hidden">
         <!-- Hero Section -->
         <div class="max-w-7xl mx-auto mb-16">
           <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
@@ -18,7 +56,7 @@
             <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
               <div class="flex-1">
                 <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Design System Guidelines
+                  Guidelines
                 </h1>
                 <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
                   Welcome to our comprehensive library of design system guidelines, which our team is producing in collaboration with design experts from around the world. Design System Guidelines enables designers and developers of all skill sets to build and use design systems with purpose.
@@ -154,13 +192,81 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import MarkdownViewer from '../components/MarkdownViewer.vue';
 
 const route = useRoute();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
+const currentDocLink = ref(null);
+
+const breadcrumbs = computed(() => {
+  if (!currentDocLink.value) return [];
+  
+  const path = currentDocLink.value;
+  const crumbs = [];
+  
+  // Map paths to labels
+  const pathLabels = {
+    '/colors': 'Colors',
+    '/typography': 'Typography',
+    '/spacing': 'Spacing',
+    '/shadows': 'Shadows',
+    '/ai/overview': 'AI Overview',
+    '/ai/patterns': 'AI Patterns',
+    '/ai/components': 'AI Components',
+    '/hcd/principles': 'HCD Principles',
+    '/hcd/research': 'User Research',
+    '/hcd/accessibility': 'Accessibility',
+    '/patterns': 'Layout Patterns',
+    '/patterns/navigation': 'Navigation',
+    '/patterns/data-display': 'Data Display',
+    '/': 'Getting Started'
+  };
+  
+  // Split path and build breadcrumbs
+  const parts = path.split('/').filter(p => p);
+  
+  if (parts.length === 0) {
+    crumbs.push({ label: 'Getting Started', path: '/' });
+  } else {
+    // Add section (first part)
+    if (parts[0] === 'ai') {
+      crumbs.push({ label: 'Artificial Intelligence', path: '/ai/overview' });
+    } else if (parts[0] === 'hcd') {
+      crumbs.push({ label: 'Human-Centered Design', path: '/hcd/principles' });
+    } else if (parts[0] === 'patterns') {
+      crumbs.push({ label: 'Patterns', path: '/patterns' });
+    } else {
+      crumbs.push({ label: 'Foundations', path: '/' });
+    }
+    
+    // Add current page
+    const fullPath = '/' + parts.join('/');
+    const label = pathLabels[fullPath] || parts[parts.length - 1].charAt(0).toUpperCase() + parts[parts.length - 1].slice(1);
+    crumbs.push({ label, path: fullPath });
+  }
+  
+  return crumbs;
+});
+
+const navigateToBreadcrumb = (path) => {
+  if (path === '/') {
+    currentDocLink.value = null;
+  } else {
+    currentDocLink.value = path;
+  }
+};
+
+const handleDocNavigation = (link) => {
+  currentDocLink.value = link;
+  // Open drawer if closed
+  if (!drawerOpen.value) {
+    drawerOpen.value = true;
+  }
+};
 
 const openDrawer = () => {
   drawerOpen.value = true;

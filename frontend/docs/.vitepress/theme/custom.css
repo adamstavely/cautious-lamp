@@ -33,6 +33,36 @@ body[data-embedded="true"] .content {
 body[data-embedded="true"] .VPPage {
   padding-left: 0 !important;
   margin-left: 0 !important;
+  padding: 2rem !important;
+}
+
+/* Ensure markdown content is visible and properly styled */
+body[data-embedded="true"] .VPContent .content,
+body[data-embedded="true"] .VPDoc .content,
+body[data-embedded="true"] .content-wrapper {
+  padding: 2rem !important;
+  max-width: 100% !important;
+}
+
+/* Ensure markdown elements render correctly */
+body[data-embedded="true"] .VPContent h1,
+body[data-embedded="true"] .VPContent h2,
+body[data-embedded="true"] .VPContent h3,
+body[data-embedded="true"] .VPContent h4,
+body[data-embedded="true"] .VPContent h5,
+body[data-embedded="true"] .VPContent h6 {
+  display: block !important;
+  visibility: visible !important;
+}
+
+body[data-embedded="true"] .VPContent p,
+body[data-embedded="true"] .VPContent ul,
+body[data-embedded="true"] .VPContent ol,
+body[data-embedded="true"] .VPContent li,
+body[data-embedded="true"] .VPContent code,
+body[data-embedded="true"] .VPContent pre {
+  display: block !important;
+  visibility: visible !important;
 }
 
 /* Also target by iframe detection */

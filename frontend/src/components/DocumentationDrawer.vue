@@ -36,19 +36,18 @@
           </button>
         </div>
         <nav class="space-y-1">
-          <a
+          <button
             v-for="item in foundations"
             :key="item.link"
-            :href="getDocUrl(item.link)"
-            target="_blank"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group"
+            @click="navigateToDoc(item.link)"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
             :class="isDarkMode 
               ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
               : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'"
           >
             <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
             <span class="font-medium">{{ item.text }}</span>
-          </a>
+          </button>
         </nav>
       </div>
       
@@ -56,19 +55,18 @@
       <div v-if="showMainSections" class="mb-8">
         <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">Artificial Intelligence</h3>
         <nav class="space-y-1">
-          <a
+          <button
             v-for="item in artificialIntelligence"
             :key="item.link"
-            :href="getDocUrl(item.link)"
-            target="_blank"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group"
+            @click="navigateToDoc(item.link)"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
             :class="isDarkMode 
               ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
               : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'"
           >
             <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
             <span class="font-medium">{{ item.text }}</span>
-          </a>
+          </button>
         </nav>
       </div>
       
@@ -76,19 +74,18 @@
       <div v-if="showMainSections" class="mb-8">
         <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">Human-Centered Design</h3>
         <nav class="space-y-1">
-          <a
+          <button
             v-for="item in humanCenteredDesign"
             :key="item.link"
-            :href="getDocUrl(item.link)"
-            target="_blank"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group"
+            @click="navigateToDoc(item.link)"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
             :class="isDarkMode 
               ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
               : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'"
           >
             <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
             <span class="font-medium">{{ item.text }}</span>
-          </a>
+          </button>
         </nav>
       </div>
       
@@ -106,19 +103,18 @@
           </button>
         </div>
         <nav class="space-y-1">
-          <a
+          <button
             v-for="item in patterns"
             :key="item.link"
-            :href="getDocUrl(item.link)"
-            target="_blank"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group"
+            @click="navigateToDoc(item.link)"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
             :class="isDarkMode 
               ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
               : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'"
           >
             <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
             <span class="font-medium">{{ item.text }}</span>
-          </a>
+          </button>
         </nav>
       </div>
       
@@ -156,7 +152,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
-import { useRoute, RouterLink } from 'vue-router';
+import { useRoute, useRouter, RouterLink } from 'vue-router';
 
 const props = defineProps({
   isOpen: {
@@ -165,9 +161,10 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close', 'toggle']);
+const emit = defineEmits(['close', 'toggle', 'navigate-doc']);
 
 const route = useRoute();
+const router = useRouter();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 
 const close = () => {
@@ -176,6 +173,14 @@ const close = () => {
 
 const toggle = () => {
   emit('toggle');
+};
+
+const navigateToDoc = (link) => {
+  emit('navigate-doc', link);
+  // Navigate to guidelines page if not already there
+  if (route.path !== '/guidelines') {
+    router.push('/guidelines');
+  }
 };
 
 const getDocUrl = (link) => {

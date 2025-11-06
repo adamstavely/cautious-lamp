@@ -1,0 +1,3 @@
+# AI Patterns
+
+Coming soon...
