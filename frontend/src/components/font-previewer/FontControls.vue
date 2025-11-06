@@ -3,11 +3,6 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-0">
       <!-- Search and Filters Section -->
       <div class="mb-6 bg-white rounded-lg shadow-md border border-gray-200 p-4">
-        <div class="flex items-center justify-end mb-4">
-          <div class="text-sm text-gray-500 whitespace-nowrap">
-            {{ fontCount }} font families
-          </div>
-        </div>
         <div class="flex flex-col lg:flex-row gap-4">
           <!-- Search Bar -->
           <div class="flex-1">

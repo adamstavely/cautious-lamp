@@ -14,7 +14,7 @@
       <div class="h-full overflow-y-auto">
         <div class="p-8">
           <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-16">
+          <div class="max-w-7xl mx-auto mb-0">
             <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
               <!-- Background texture/grain effect -->
               <div class="absolute inset-0 opacity-10 texture-pattern"></div>
@@ -36,6 +36,10 @@
                     <span class="flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">label</span>
                       Google Fonts
+                    </span>
+                    <span class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-base">library_books</span>
+                      15 font families
                     </span>
                     <span class="flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">update</span>
