@@ -149,60 +149,109 @@
             <!-- Icons Grid -->
             <div 
               v-if="selectedSet" 
-              class="rounded-lg border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
+              class="flex gap-6"
             >
-              <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  {{ getSelectedSet()?.name }} Icons
-                </h3>
-                <div class="flex items-center gap-2">
-                  <button
-                    @click="viewMode = 'grid'"
-                    class="p-2 rounded-lg transition-colors"
-                    :class="viewMode === 'grid' 
-                      ? (isDarkMode 
-                        ? 'bg-indigo-900/30 text-indigo-400' 
-                        : 'bg-indigo-100 text-indigo-600')
-                      : (isDarkMode
-                        ? 'text-gray-400 hover:bg-slate-700' 
-                        : 'text-gray-400 hover:bg-gray-100')"
-                  >
-                    <span class="material-symbols-outlined">grid_view</span>
-                  </button>
-                  <button
-                    @click="viewMode = 'list'"
-                    class="p-2 rounded-lg transition-colors"
-                    :class="viewMode === 'list' 
-                      ? (isDarkMode 
-                        ? 'bg-indigo-900/30 text-indigo-400' 
-                        : 'bg-indigo-100 text-indigo-600')
-                      : (isDarkMode
-                        ? 'text-gray-400 hover:bg-slate-700' 
-                        : 'text-gray-400 hover:bg-gray-100')"
-                  >
-                    <span class="material-symbols-outlined">view_list</span>
-                  </button>
+              <!-- Main Icons Area -->
+              <div 
+                class="flex-1 rounded-lg border p-6"
+                :class="isDarkMode 
+                  ? 'bg-slate-900 border-gray-700' 
+                  : 'bg-white border-gray-200'"
+              >
+                <div class="flex items-center justify-between mb-6">
+                  <div class="flex items-center gap-4">
+                    <h3 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      {{ getSelectedSet()?.name }} Icons
+                    </h3>
+                    <div v-if="selectedIcons.length > 0" class="flex items-center gap-2">
+                      <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        {{ selectedIcons.length }} selected
+                      </span>
+                      <button
+                        @click="copySelectedIcons"
+                        class="px-3 py-1 text-sm rounded-lg transition-colors"
+                        :class="isDarkMode 
+                          ? 'bg-indigo-500 hover:bg-indigo-400 text-white' 
+                          : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
+                      >
+                        Copy Selected
+                      </button>
+                      <button
+                        @click="downloadSelectedIcons"
+                        class="px-3 py-1 text-sm rounded-lg transition-colors"
+                        :class="isDarkMode 
+                          ? 'bg-indigo-500 hover:bg-indigo-400 text-white' 
+                          : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
+                      >
+                        Download Selected
+                      </button>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button
+                      @click="viewMode = 'grid'"
+                      class="p-2 rounded-lg transition-colors"
+                      :class="viewMode === 'grid' 
+                        ? (isDarkMode 
+                          ? 'bg-indigo-900/30 text-indigo-400' 
+                          : 'bg-indigo-100 text-indigo-600')
+                        : (isDarkMode
+                          ? 'text-gray-400 hover:bg-slate-700' 
+                          : 'text-gray-400 hover:bg-gray-100')"
+                    >
+                      <span class="material-symbols-outlined">grid_view</span>
+                    </button>
+                    <button
+                      @click="viewMode = 'list'"
+                      class="p-2 rounded-lg transition-colors"
+                      :class="viewMode === 'list' 
+                        ? (isDarkMode 
+                          ? 'bg-indigo-900/30 text-indigo-400' 
+                          : 'bg-indigo-100 text-indigo-600')
+                        : (isDarkMode
+                          ? 'text-gray-400 hover:bg-slate-700' 
+                          : 'text-gray-400 hover:bg-gray-100')"
+                    >
+                      <span class="material-symbols-outlined">view_list</span>
+                    </button>
+                  </div>
+                </div>
+
+              <div v-if="loadingLucide && selectedSet === 'lucide'" class="flex items-center justify-center py-12">
+                <div class="text-center">
+                  <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                  <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading Lucide icons...</p>
                 </div>
               </div>
-
-              <div v-if="viewMode === 'grid'" class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+              
+              <div v-else-if="viewMode === 'grid'" class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
                 <div
                   v-for="icon in filteredIcons"
                   :key="icon.id"
-                  class="group relative rounded-lg p-4 transition-colors cursor-pointer border border-transparent"
-                  :class="isDarkMode 
-                    ? 'bg-slate-700 hover:bg-indigo-900/20 hover:border-indigo-700' 
-                    : 'bg-gray-50 hover:bg-indigo-50 hover:border-indigo-300'"
-                  @click="selectIcon(icon)"
+                  class="group relative rounded-lg p-4 transition-colors cursor-pointer border-2"
+                  :class="isIconSelected(icon.id)
+                    ? (isDarkMode 
+                      ? 'bg-indigo-900/30 border-indigo-500' 
+                      : 'bg-indigo-50 border-indigo-500')
+                    : (isDarkMode 
+                      ? 'bg-slate-700 border-transparent hover:bg-indigo-900/20 hover:border-indigo-700' 
+                      : 'bg-gray-50 border-transparent hover:bg-indigo-50 hover:border-indigo-300')"
+                  @click="toggleIconSelection(icon)"
                 >
                   <div class="flex flex-col items-center gap-2">
-                    <div class="text-2xl" :class="isDarkMode ? 'text-white' : 'text-gray-900'" v-html="icon.svg"></div>
+                    <div 
+                      class="text-2xl transition-all" 
+                      :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+                      :style="{ 
+                        color: iconColor,
+                        fontSize: `${iconSize}px`,
+                        filter: `drop-shadow(0 0 ${absoluteStrokeWidth ? iconStrokeWidth : iconStrokeWidth / 24}px currentColor)`
+                      }"
+                      v-html="getCustomizedIcon(icon)"
+                    ></div>
                     <span class="text-xs text-center truncate w-full" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ icon.name }}</span>
                   </div>
-                  <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                     <button
                       @click.stop="copyIcon(icon)"
                       class="p-1 rounded shadow-lg transition-colors"
@@ -213,6 +262,23 @@
                     >
                       <span class="material-symbols-outlined text-sm">content_copy</span>
                     </button>
+                    <button
+                      @click.stop="downloadIcon(icon)"
+                      class="p-1 rounded shadow-lg transition-colors"
+                      :class="isDarkMode 
+                        ? 'bg-slate-800 text-gray-400 hover:text-indigo-400' 
+                        : 'bg-white text-gray-600 hover:text-indigo-600'"
+                      title="Download icon"
+                    >
+                      <span class="material-symbols-outlined text-sm">download</span>
+                    </button>
+                  </div>
+                  <div v-if="isIconSelected(icon.id)" class="absolute top-2 left-2">
+                    <div class="w-5 h-5 rounded-full flex items-center justify-center"
+                      :class="isDarkMode ? 'bg-indigo-500' : 'bg-indigo-600'"
+                    >
+                      <span class="material-symbols-outlined text-white text-xs">check</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -221,29 +287,232 @@
                 <div
                   v-for="icon in filteredIcons"
                   :key="icon.id"
-                  class="flex items-center justify-between p-4 rounded-lg transition-colors cursor-pointer"
-                  :class="isDarkMode 
-                    ? 'bg-slate-700 hover:bg-indigo-900/20' 
-                    : 'bg-gray-50 hover:bg-indigo-50'"
-                  @click="selectIcon(icon)"
+                  class="flex items-center justify-between p-4 rounded-lg transition-colors cursor-pointer border-2"
+                  :class="isIconSelected(icon.id)
+                    ? (isDarkMode 
+                      ? 'bg-indigo-900/30 border-indigo-500' 
+                      : 'bg-indigo-50 border-indigo-500')
+                    : (isDarkMode 
+                      ? 'bg-slate-700 border-transparent hover:bg-indigo-900/20' 
+                      : 'bg-gray-50 border-transparent hover:bg-indigo-50')"
+                  @click="toggleIconSelection(icon)"
                 >
                   <div class="flex items-center gap-4">
-                    <div class="text-xl" :class="isDarkMode ? 'text-white' : 'text-gray-900'" v-html="icon.svg"></div>
+                    <div 
+                      class="text-xl transition-all" 
+                      :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+                      :style="{ 
+                        color: iconColor,
+                        fontSize: `${iconSize}px`
+                      }"
+                      v-html="getCustomizedIcon(icon)"
+                    ></div>
                     <div>
                       <div class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ icon.name }}</div>
                       <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ icon.category }}</div>
                     </div>
                   </div>
-                  <button
-                    @click.stop="copyIcon(icon)"
-                    class="p-2 rounded-lg transition-colors"
-                    :class="isDarkMode 
-                      ? 'text-gray-400 hover:text-indigo-400 hover:bg-slate-800' 
-                      : 'text-gray-400 hover:text-indigo-600 hover:bg-white'"
-                    title="Copy icon"
-                  >
-                    <span class="material-symbols-outlined text-lg">content_copy</span>
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <div v-if="isIconSelected(icon.id)" class="w-5 h-5 rounded-full flex items-center justify-center"
+                      :class="isDarkMode ? 'bg-indigo-500' : 'bg-indigo-600'"
+                    >
+                      <span class="material-symbols-outlined text-white text-xs">check</span>
+                    </div>
+                    <button
+                      @click.stop="copyIcon(icon)"
+                      class="p-2 rounded-lg transition-colors"
+                      :class="isDarkMode 
+                        ? 'text-gray-400 hover:text-indigo-400 hover:bg-slate-800' 
+                        : 'text-gray-400 hover:text-indigo-600 hover:bg-white'"
+                      title="Copy icon"
+                    >
+                      <span class="material-symbols-outlined text-lg">content_copy</span>
+                    </button>
+                    <button
+                      @click.stop="downloadIcon(icon)"
+                      class="p-2 rounded-lg transition-colors"
+                      :class="isDarkMode 
+                        ? 'text-gray-400 hover:text-indigo-400 hover:bg-slate-800' 
+                        : 'text-gray-400 hover:text-indigo-600 hover:bg-white'"
+                      title="Download icon"
+                    >
+                      <span class="material-symbols-outlined text-lg">download</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              </div>
+
+              <!-- Right Sidebar: Customizer & Categories -->
+              <div 
+                class="w-80 flex-shrink-0 rounded-lg border p-6 h-fit sticky top-8"
+                :class="isDarkMode 
+                  ? 'bg-slate-900 border-gray-700' 
+                  : 'bg-white border-gray-200'"
+              >
+                <!-- Customizer -->
+                <div class="mb-6">
+                  <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Customizer</h3>
+                    <button
+                      @click="resetCustomizer"
+                      class="p-1 rounded-lg transition-colors"
+                      :class="isDarkMode 
+                        ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' 
+                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
+                      title="Reset customizer"
+                    >
+                      <span class="material-symbols-outlined text-lg">refresh</span>
+                    </button>
+                  </div>
+                  
+                  <!-- Color -->
+                  <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Color</label>
+                    <div class="flex items-center gap-3">
+                      <button
+                        @click="openColorPicker('icon', $event)"
+                        class="w-10 h-10 rounded-full border-2 cursor-pointer transition-colors"
+                        :class="isDarkMode 
+                          ? 'border-gray-600 hover:border-indigo-400' 
+                          : 'border-gray-300 hover:border-indigo-500'"
+                        :style="{ backgroundColor: iconColor }"
+                        title="Pick color"
+                      ></button>
+                      <span class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">current</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Stroke Width -->
+                  <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Stroke width
+                    </label>
+                    <div class="flex items-center gap-3">
+                      <input
+                        v-model.number="iconStrokeWidth"
+                        type="range"
+                        min="1"
+                        max="5"
+                        step="0.5"
+                        class="flex-1 h-2 rounded-lg appearance-none cursor-pointer"
+                        :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-200'"
+                      />
+                      <span class="text-sm font-mono w-12 text-right" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        {{ iconStrokeWidth }}px
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <!-- Size -->
+                  <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Size
+                    </label>
+                    <div class="flex items-center gap-3">
+                      <input
+                        v-model.number="iconSize"
+                        type="range"
+                        min="16"
+                        max="48"
+                        step="2"
+                        class="flex-1 h-2 rounded-lg appearance-none cursor-pointer"
+                        :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-200'"
+                      />
+                      <span class="text-sm font-mono w-12 text-right" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        {{ iconSize }}px
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <!-- Absolute Stroke Width -->
+                  <div class="mb-4">
+                    <label class="flex items-center justify-between cursor-pointer">
+                      <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        Absolute Stroke width
+                      </span>
+                      <button
+                        @click="absoluteStrokeWidth = !absoluteStrokeWidth"
+                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                        :class="absoluteStrokeWidth 
+                          ? (isDarkMode ? 'bg-indigo-500' : 'bg-indigo-600')
+                          : (isDarkMode ? 'bg-gray-600' : 'bg-gray-300')"
+                      >
+                        <span
+                          class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                          :class="absoluteStrokeWidth ? 'translate-x-6' : 'translate-x-1'"
+                        ></span>
+                      </button>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Include External Libs -->
+                <div class="mb-6">
+                  <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    Include external libs
+                  </h3>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input
+                      v-model="includeLab"
+                      type="checkbox"
+                      class="w-4 h-4 rounded"
+                      :class="isDarkMode 
+                        ? 'accent-indigo-500' 
+                        : 'accent-indigo-600'"
+                    />
+                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Lab</span>
+                  </label>
+                </div>
+
+                <!-- View Filter -->
+                <div class="mb-6">
+                  <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">View</h3>
+                  <div class="flex gap-2">
+                    <button
+                      @click="viewFilter = 'all'"
+                      class="px-3 py-1 text-sm rounded transition-colors"
+                      :class="viewFilter === 'all'
+                        ? (isDarkMode 
+                          ? 'bg-red-900/30 text-red-300' 
+                          : 'bg-red-100 text-red-700')
+                        : (isDarkMode
+                          ? 'text-gray-400 hover:text-gray-300' 
+                          : 'text-gray-600 hover:text-gray-900')"
+                    >
+                      All
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Categories -->
+                <div>
+                  <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Categories</h3>
+                  <div class="space-y-1">
+                    <button
+                      v-for="category in categoriesWithCounts"
+                      :key="category.name"
+                      @click="selectedCategory = selectedCategory === category.name ? null : category.name"
+                      class="w-full flex items-center justify-between px-2 py-1.5 rounded text-sm transition-colors text-left relative"
+                      :class="selectedCategory === category.name
+                        ? (isDarkMode 
+                          ? 'bg-indigo-900/30 text-indigo-300' 
+                          : 'bg-indigo-50 text-indigo-700')
+                        : (isDarkMode
+                          ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-800' 
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50')"
+                    >
+                      <span class="absolute left-0 top-0 bottom-0 w-0.5 rounded-r" 
+                        :class="selectedCategory === category.name 
+                          ? (isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600')
+                          : ''"
+                      ></span>
+                      <span class="pl-2">{{ category.name }}</span>
+                      <span class="text-xs font-medium" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                        {{ category.count }}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -391,13 +660,25 @@
         </div>
       </div>
     </div>
+
+    <!-- Color Picker -->
+    <ColorPicker
+      :show="showColorPicker"
+      :initial-color="pickerColor"
+      :position="pickerPosition"
+      @update:show="showColorPicker = $event"
+      @apply="handleColorPickerApply"
+      @cancel="showColorPicker = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, h, createApp, watch } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import ColorPicker from '../components/ColorPicker.vue';
+import * as LucideIcons from 'lucide-vue-next';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
@@ -410,6 +691,127 @@ const newSetSource = ref('custom');
 const selectedFiles = ref([]);
 const isDragging = ref(false);
 const fileInput = ref(null);
+const loadingLucide = ref(false);
+
+// Customizer state
+const iconColor = ref(isDarkMode.value ? '#ffffff' : '#000000');
+const iconStrokeWidth = ref(2);
+const iconSize = ref(24);
+const absoluteStrokeWidth = ref(false);
+const includeLab = ref(false);
+const viewFilter = ref('all');
+const selectedCategory = ref(null);
+const selectedIcons = ref([]);
+const showColorPicker = ref(false);
+const pickerColor = ref('#000000');
+const pickerPosition = ref({ left: 0, top: 0 });
+const currentPickerType = ref('icon');
+
+// Load Lucide icons dynamically
+const loadLucideIcons = async () => {
+  loadingLucide.value = true;
+  try {
+    // Curated list of popular Lucide icons
+    const lucideIconList = [
+      'Home', 'Search', 'Heart', 'Star', 'User', 'Settings', 'Menu', 'X', 'Check', 'Plus', 'Minus',
+      'Edit', 'Trash', 'Download', 'Upload', 'Share', 'Copy', 'Save', 'File', 'Folder', 'Image',
+      'Video', 'Music', 'Mail', 'Phone', 'Message', 'Bell', 'Calendar', 'Clock', 'Map', 'Globe',
+      'Link', 'ExternalLink', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ChevronLeft',
+      'ChevronRight', 'ChevronUp', 'ChevronDown', 'Filter', 'Sort', 'Grid', 'List', 'Eye',
+      'EyeOff', 'Lock', 'Unlock', 'Key', 'Shield', 'AlertCircle', 'AlertTriangle', 'Info',
+      'CheckCircle', 'XCircle', 'HelpCircle', 'Zap', 'Sun', 'Moon', 'Cloud', 'CloudRain', 'Wind',
+      'Activity', 'BarChart', 'LineChart', 'PieChart', 'TrendingUp', 'TrendingDown', 'DollarSign',
+      'CreditCard', 'ShoppingCart', 'Package', 'Tag', 'Tags', 'Bookmark', 'Book', 'BookOpen',
+      'FileText', 'FileCode', 'Code', 'Terminal', 'Database', 'Server', 'Wifi', 'Bluetooth',
+      'Camera', 'Mic', 'Volume', 'VolumeX', 'Play', 'Pause', 'SkipForward', 'SkipBack',
+      'Github', 'Twitter', 'Facebook', 'Instagram', 'Linkedin', 'Youtube', 'Discord', 'Slack',
+      'Monitor', 'Laptop', 'Smartphone', 'Tablet', 'Watch', 'Headphones', 'Speaker', 'Printer',
+      'Scan', 'QrCode', 'Barcode', 'Fingerprint', 'Wand', 'Sparkles', 'Palette', 'Paintbrush',
+      'Brush', 'Eraser', 'Crop', 'RotateCw', 'RotateCcw', 'FlipHorizontal', 'FlipVertical',
+      'ZoomIn', 'ZoomOut', 'Target', 'Layers', 'Layout', 'Sidebar', 'Panel', 'Columns', 'Rows',
+      'Bold', 'Italic', 'Underline', 'Strikethrough', 'Heading', 'Paragraph', 'Quote',
+      'Circle', 'Square', 'Triangle', 'Hexagon', 'Diamond', 'Smile', 'ThumbsUp', 'ThumbsDown',
+      'Flag', 'Award', 'Trophy', 'Gift', 'Coffee', 'Pizza', 'Burger', 'Apple', 'Banana'
+    ];
+
+    const lucideIcons = [];
+    const categories = {
+      'Navigation': ['Home', 'Search', 'Menu', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ChevronLeft', 'ChevronRight', 'ChevronUp', 'ChevronDown', 'ChevronsLeft', 'ChevronsRight', 'ChevronsUp', 'ChevronsDown'],
+      'Actions': ['Plus', 'Minus', 'X', 'Check', 'Edit', 'Trash', 'Copy', 'Save', 'Download', 'Upload', 'Share', 'Heart', 'Star', 'Bookmark', 'Flag'],
+      'Media': ['Play', 'Pause', 'SkipForward', 'SkipBack', 'Repeat', 'Shuffle', 'Volume', 'VolumeX', 'Mic', 'Camera', 'Image', 'Video', 'Music'],
+      'Communication': ['Mail', 'Phone', 'Message', 'Bell', 'Send', 'Reply', 'Forward', 'Archive', 'Inbox', 'Outbox'],
+      'Files': ['File', 'Folder', 'FileText', 'FileCode', 'Save', 'Download', 'Upload', 'Archive', 'FolderOpen', 'FolderPlus'],
+      'Settings': ['Settings', 'User', 'Users', 'Shield', 'Lock', 'Unlock', 'Key', 'Cog', 'Sliders', 'Filter'],
+      'Shapes': ['Circle', 'Square', 'Triangle', 'Hexagon', 'Pentagon', 'Diamond', 'Star', 'Heart'],
+      'Charts': ['BarChart', 'LineChart', 'PieChart', 'TrendingUp', 'TrendingDown', 'Activity', 'Gauge'],
+      'Weather': ['Sun', 'Moon', 'Cloud', 'CloudRain', 'CloudSnow', 'Wind', 'Droplet', 'Umbrella'],
+      'Food': ['Coffee', 'Pizza', 'Burger', 'IceCream', 'Apple', 'Banana', 'Cherry', 'Grape'],
+      'Objects': ['Box', 'Package', 'Gift', 'ShoppingCart', 'CreditCard', 'Wallet', 'Key', 'Lock'],
+      'Arrows': ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'MoveUp', 'MoveDown', 'MoveLeft', 'MoveRight'],
+      'Status': ['CheckCircle', 'XCircle', 'AlertCircle', 'Info', 'HelpCircle', 'Zap', 'AlertTriangle'],
+      'Social': ['Github', 'Twitter', 'Facebook', 'Instagram', 'Linkedin', 'Youtube', 'Discord', 'Slack'],
+      'Devices': ['Monitor', 'Laptop', 'Smartphone', 'Tablet', 'Watch', 'Headphones', 'Speaker', 'Printer'],
+      'Editing': ['Edit', 'Crop', 'RotateCw', 'RotateCcw', 'FlipHorizontal', 'FlipVertical', 'ZoomIn', 'ZoomOut'],
+      'Layout': ['Grid', 'List', 'Columns', 'Rows', 'Sidebar', 'Layout', 'Layers', 'Panel'],
+      'Text': ['Bold', 'Italic', 'Underline', 'Strikethrough', 'Heading', 'Paragraph', 'List', 'ListOrdered'],
+      'Misc': ['Zap', 'Sparkles', 'Wand', 'Palette', 'Paintbrush', 'Brush', 'Eraser', 'Target']
+    };
+
+    // Load icons dynamically
+    for (const iconName of lucideIconList) {
+      try {
+        const IconComponent = LucideIcons[iconName];
+        if (IconComponent && typeof IconComponent === 'function') {
+          // Create SVG string from icon using renderToString approach
+          const tempDiv = document.createElement('div');
+          const app = createApp({
+            render: () => h(IconComponent, { size: 24, strokeWidth: 2 })
+          });
+          app.mount(tempDiv);
+          
+          await new Promise(resolve => setTimeout(resolve, 0)); // Wait for render
+          
+          const svgElement = tempDiv.querySelector('svg');
+          if (svgElement) {
+            svgElement.setAttribute('stroke', 'currentColor');
+            svgElement.setAttribute('fill', 'none');
+            svgElement.setAttribute('viewBox', '0 0 24 24');
+            
+            // Find category
+            let category = 'Misc';
+            for (const [cat, icons] of Object.entries(categories)) {
+              if (icons.includes(iconName)) {
+                category = cat;
+                break;
+              }
+            }
+            
+            lucideIcons.push({
+              id: `lucide-${iconName.toLowerCase()}`,
+              name: iconName.toLowerCase(),
+              category: category,
+              svg: svgElement.outerHTML
+            });
+          }
+          app.unmount();
+        }
+      } catch (error) {
+        console.warn(`Failed to load icon ${iconName}:`, error);
+      }
+    }
+
+    // Update Lucide icon set
+    const lucideSet = iconSets.value.find(set => set.id === 'lucide');
+    if (lucideSet) {
+      lucideSet.icons = lucideIcons;
+      lucideSet.iconCount = lucideIcons.length;
+    }
+  } catch (error) {
+    console.error('Error loading Lucide icons:', error);
+  } finally {
+    loadingLucide.value = false;
+  }
+};
 
 const iconSets = ref([
   {
@@ -431,12 +833,8 @@ const iconSets = ref([
     source: 'Lucide',
     sourceIcon: 'auto_awesome',
     description: 'Beautiful & consistent icon toolkit',
-    iconCount: 1000,
-    icons: [
-      { id: 'lucide-home', name: 'home', category: 'Navigation', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>' },
-      { id: 'lucide-search', name: 'search', category: 'Action', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>' },
-      { id: 'lucide-heart', name: 'heart', category: 'Action', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' },
-    ]
+    iconCount: 0,
+    icons: []
   }
 ]);
 
@@ -454,6 +852,13 @@ const filteredIcons = computed(() => {
   const set = getSelectedSet();
   if (!set) return [];
   let icons = set.icons || [];
+  
+  // Filter by category
+  if (selectedCategory.value) {
+    icons = icons.filter(icon => icon.category === selectedCategory.value);
+  }
+  
+  // Filter by search query
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
     icons = icons.filter(icon =>
@@ -461,26 +866,194 @@ const filteredIcons = computed(() => {
       icon.category.toLowerCase().includes(query)
     );
   }
+  
   return icons;
 });
 
-const getSelectedSet = () => {
-  return iconSets.value.find(set => set.id === selectedSet.value);
+// Categories with counts
+const categoriesWithCounts = computed(() => {
+  const set = getSelectedSet();
+  if (!set) return [];
+  
+  const categoryMap = {};
+  set.icons?.forEach(icon => {
+    const cat = icon.category || 'Misc';
+    categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+  });
+  
+  return Object.entries(categoryMap)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+});
+
+// Get customized icon SVG
+const getCustomizedIcon = (icon) => {
+  if (!icon.svg) return '';
+  
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(icon.svg, 'image/svg+xml');
+  const svgElement = doc.querySelector('svg');
+  
+  if (!svgElement) return icon.svg;
+  
+  // Check if icon uses fill or stroke
+  const hasFill = svgElement.getAttribute('fill') && svgElement.getAttribute('fill') !== 'none';
+  const hasStroke = svgElement.getAttribute('stroke') && svgElement.getAttribute('stroke') !== 'none';
+  
+  // Apply customizations
+  if (hasFill) {
+    svgElement.setAttribute('fill', iconColor.value);
+  } else if (hasStroke) {
+    svgElement.setAttribute('stroke', iconColor.value);
+    svgElement.setAttribute('fill', 'none');
+    
+    const strokeWidth = absoluteStrokeWidth.value 
+      ? iconStrokeWidth.value 
+      : (iconStrokeWidth.value / 24) * iconSize.value;
+    
+    svgElement.setAttribute('stroke-width', strokeWidth.toString());
+  } else {
+    // Default to stroke for Lucide icons
+    svgElement.setAttribute('stroke', iconColor.value);
+    svgElement.setAttribute('fill', 'none');
+    
+    const strokeWidth = absoluteStrokeWidth.value 
+      ? iconStrokeWidth.value 
+      : (iconStrokeWidth.value / 24) * iconSize.value;
+    
+    svgElement.setAttribute('stroke-width', strokeWidth.toString());
+  }
+  
+  svgElement.setAttribute('width', `${iconSize.value}`);
+  svgElement.setAttribute('height', `${iconSize.value}`);
+  
+  return svgElement.outerHTML;
 };
 
-const selectIcon = (icon) => {
-  // Handle icon selection
-  console.log('Selected icon:', icon);
+// Icon selection
+const toggleIconSelection = (icon) => {
+  const index = selectedIcons.value.findIndex(i => i.id === icon.id);
+  if (index > -1) {
+    selectedIcons.value.splice(index, 1);
+  } else {
+    selectedIcons.value.push(icon);
+  }
 };
 
+const isIconSelected = (iconId) => {
+  return selectedIcons.value.some(i => i.id === iconId);
+};
+
+// Copy/Download functions
 const copyIcon = async (icon) => {
   try {
-    await navigator.clipboard.writeText(icon.svg);
-    // Show success message
+    const customizedSvg = getCustomizedIcon(icon);
+    await navigator.clipboard.writeText(customizedSvg);
+    // Could add toast notification here
     alert('Icon copied to clipboard!');
   } catch (err) {
     console.error('Failed to copy icon:', err);
   }
+};
+
+const downloadIcon = (icon) => {
+  const customizedSvg = getCustomizedIcon(icon);
+  const blob = new Blob([customizedSvg], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${icon.name}.svg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+const copySelectedIcons = async () => {
+  if (selectedIcons.value.length === 0) return;
+  
+  try {
+    const svgs = selectedIcons.value.map(icon => getCustomizedIcon(icon)).join('\n\n');
+    await navigator.clipboard.writeText(svgs);
+    alert(`${selectedIcons.value.length} icons copied to clipboard!`);
+  } catch (err) {
+    console.error('Failed to copy icons:', err);
+  }
+};
+
+const downloadSelectedIcons = () => {
+  if (selectedIcons.value.length === 0) return;
+  
+  selectedIcons.value.forEach((icon, index) => {
+    setTimeout(() => {
+      downloadIcon(icon);
+    }, index * 100); // Stagger downloads
+  });
+};
+
+// Reset customizer
+const resetCustomizer = () => {
+  iconColor.value = isDarkMode.value ? '#ffffff' : '#000000';
+  iconStrokeWidth.value = 2;
+  iconSize.value = 24;
+  absoluteStrokeWidth.value = false;
+};
+
+// Color picker
+const openColorPicker = (type, event) => {
+  if (event) {
+    event.stopPropagation();
+    const rect = event.target.getBoundingClientRect();
+    
+    const pickerWidth = 300;
+    const pickerHeight = 550;
+    const padding = 16;
+    
+    // Calculate position relative to viewport
+    let left = rect.right + padding;
+    let top = rect.top;
+    
+    // Check if picker would go off right edge
+    if (left + pickerWidth > window.innerWidth) {
+      left = rect.left - pickerWidth - padding;
+    }
+    
+    // Check if picker would go off left edge
+    if (left < padding) {
+      left = padding;
+    }
+    
+    // Check if picker would go off bottom edge
+    if (top + pickerHeight > window.innerHeight - padding) {
+      top = window.innerHeight - pickerHeight - padding;
+    }
+    
+    // Check if picker would go off top edge
+    if (top < padding) {
+      top = padding;
+    }
+    
+    // Ensure picker stays within viewport
+    left = Math.max(padding, Math.min(left, window.innerWidth - pickerWidth - padding));
+    top = Math.max(padding, Math.min(top, window.innerHeight - pickerHeight - padding));
+    
+    pickerPosition.value = { left, top };
+  }
+  
+  currentPickerType.value = type;
+  pickerColor.value = iconColor.value;
+  showColorPicker.value = true;
+};
+
+const handleColorPickerApply = (color) => {
+  if (currentPickerType.value === 'icon') {
+    iconColor.value = color;
+  }
+  showColorPicker.value = false;
+};
+
+const getSelectedSet = () => {
+  return iconSets.value.find(set => set.id === selectedSet.value);
 };
 
 const handleDrop = (e) => {
@@ -539,7 +1112,26 @@ const toggleDrawer = () => {
 let darkModeObserver = null;
 let darkModeInterval = null;
 
+watch(selectedSet, () => {
+  selectedIcons.value = [];
+  selectedCategory.value = null;
+});
+
+watch(selectedCategory, () => {
+  selectedIcons.value = [];
+});
+
+watch(isDarkMode, (newValue) => {
+  // Update icon color to match theme
+  if (iconColor.value === '#000000' || iconColor.value === '#ffffff') {
+    iconColor.value = newValue ? '#ffffff' : '#000000';
+  }
+});
+
 onMounted(() => {
+  // Load Lucide icons on mount
+  loadLucideIcons();
+  
   darkModeObserver = new MutationObserver(() => {
     isDarkMode.value = document.documentElement.classList.contains('dark');
   });
@@ -570,6 +1162,89 @@ onBeforeUnmount(() => {
 <style scoped>
 .texture-pattern {
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Custom range slider styles for brand blue */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  background: #e0e7ff; /* indigo-100 */
+  border-radius: 9999px;
+  height: 8px;
+}
+
+html.dark input[type="range"]::-webkit-slider-runnable-track {
+  background: #6366f1; /* indigo-500 */
+}
+
+input[type="range"]::-moz-range-track {
+  background: #e0e7ff; /* indigo-100 */
+  border-radius: 9999px;
+  height: 8px;
+}
+
+html.dark input[type="range"]::-moz-range-track {
+  background: #6366f1; /* indigo-500 */
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: #4f46e5; /* indigo-600 - brand blue */
+  border: 2px solid #fff;
+  border-radius: 50%;
+  height: 16px;
+  width: 16px;
+  margin-top: -4px;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+html.dark input[type="range"]::-webkit-slider-thumb {
+  background-color: #6366f1; /* indigo-500 - brand blue for dark mode */
+  border-color: #1e293b;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background-color: #4338ca; /* indigo-700 */
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.3);
+}
+
+html.dark input[type="range"]::-webkit-slider-thumb:hover {
+  background-color: #818cf8; /* indigo-400 */
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+}
+
+input[type="range"]::-moz-range-thumb {
+  background-color: #4f46e5; /* indigo-600 - brand blue */
+  border: 2px solid #fff;
+  border-radius: 50%;
+  height: 16px;
+  width: 16px;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+html.dark input[type="range"]::-moz-range-thumb {
+  background-color: #6366f1; /* indigo-500 - brand blue for dark mode */
+  border-color: #1e293b;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background-color: #4338ca; /* indigo-700 */
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.3);
+}
+
+html.dark input[type="range"]::-moz-range-thumb:hover {
+  background-color: #818cf8; /* indigo-400 */
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
 }
 </style>
 
