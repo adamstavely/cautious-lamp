@@ -187,6 +187,76 @@
           </router-link>
         </nav>
       </div>
+      
+      <!-- Tools - only show when on tools route -->
+      <div v-if="showTools" class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tools</h3>
+          <button
+            @click="toggle"
+            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
+            title="Close drawer"
+          >
+            <span class="material-symbols-outlined">left_panel_close</span>
+          </button>
+        </div>
+        <nav class="space-y-1">
+          <router-link
+            v-for="item in tools"
+            :key="item.link"
+            :to="item.link"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+            :class="[
+              isActive(item.link)
+                ? (isDarkMode 
+                  ? 'text-indigo-400 bg-indigo-900/20' 
+                  : 'text-indigo-600 bg-indigo-50')
+                : (isDarkMode
+                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+            ]"
+          >
+            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+            <span class="font-medium">{{ item.text }}</span>
+          </router-link>
+        </nav>
+      </div>
+      
+      <!-- Design Assets - only show when on design assets route -->
+      <div v-if="showDesignAssets" class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Design Assets</h3>
+          <button
+            @click="toggle"
+            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
+            title="Close drawer"
+          >
+            <span class="material-symbols-outlined">left_panel_close</span>
+          </button>
+        </div>
+        <nav class="space-y-1">
+          <router-link
+            v-for="item in designAssets"
+            :key="item.link"
+            :to="item.link"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+            :class="[
+              isActive(item.link)
+                ? (isDarkMode 
+                  ? 'text-indigo-400 bg-indigo-900/20' 
+                  : 'text-indigo-600 bg-indigo-50')
+                : (isDarkMode
+                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+            ]"
+          >
+            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+            <span class="font-medium">{{ item.text }}</span>
+          </router-link>
+        </nav>
+      </div>
     </div>
   </div>
 </template>
@@ -263,6 +333,21 @@ const fonts = [
   { text: 'Font Subsetting', link: '/fonts/subsetting', icon: 'content_cut' }
 ];
 
+const tools = [
+  { text: 'Overview', link: '/tools', icon: 'build' },
+  { text: 'Gradient Generator', link: '/tools/gradient-generator', icon: 'gradient' },
+  { text: 'Palette Builder', link: '/palette-builder', icon: 'palette' }
+];
+
+const designAssets = [
+  { text: 'Overview', link: '/design-assets', icon: 'collections' },
+  { text: 'Icon Library', link: '/design-assets/icons', icon: 'star' },
+  { text: 'Images', link: '/design-assets/images', icon: 'image' },
+  { text: 'Logos', link: '/design-assets/logos', icon: 'account_circle' },
+  { text: 'Illustrations', link: '/design-assets/illustrations', icon: 'draw' },
+  { text: 'Patterns', link: '/design-assets/patterns', icon: 'pattern' }
+];
+
 const componentItems = [
   { text: 'Overview', link: '/components', icon: 'widgets' },
   { text: 'Component Status', link: '/components/status', icon: 'check_circle' },
@@ -281,12 +366,20 @@ const showFonts = computed(() => {
   return route.path === '/fonts' || route.path.startsWith('/fonts/');
 });
 
+const showTools = computed(() => {
+  return route.path === '/tools' || route.path.startsWith('/tools/') || route.path === '/palette-builder';
+});
+
+const showDesignAssets = computed(() => {
+  return route.path === '/design-assets' || route.path.startsWith('/design-assets/');
+});
+
 const showComponents = computed(() => {
   return route.path === '/components' || route.path.startsWith('/components/');
 });
 
 const showMainSections = computed(() => {
-  return !showPatterns.value && !showFonts.value && !showComponents.value;
+  return !showPatterns.value && !showFonts.value && !showComponents.value && !showTools.value && !showDesignAssets.value;
 });
 
 const isActive = (path) => {

@@ -174,6 +174,10 @@ const router = createRouter({
       component: () => import('./views/DesignAssets.vue'),
     },
     {
+      path: '/design-assets/icons',
+      component: () => import('./views/IconLibrary.vue'),
+    },
+    {
       path: '/guidelines',
       component: () => import('./views/Guidelines.vue'),
     },

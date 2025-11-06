@@ -1,5 +1,5 @@
 <template>
-  <aside class="sticky top-0 h-screen text-white flex flex-col flex-shrink-0 w-24 transition-colors z-50 bg-gradient-to-b from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-950 dark:via-indigo-900 dark:to-indigo-800"
+  <aside class="sticky top-0 h-screen text-white flex flex-col flex-shrink-0 w-24 transition-colors z-50 bg-indigo-800 dark:bg-indigo-900"
   >
     <!-- Navigation Items -->
     <nav class="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-4">

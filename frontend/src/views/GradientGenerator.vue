@@ -1,34 +1,81 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
-    <!-- Breadcrumbs -->
-    <Breadcrumbs />
+  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900 relative flex">
+    <!-- Drawer -->
+    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
     
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <h1 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
-          <span class="material-symbols-outlined text-4xl text-indigo-600">gradient</span>
-          Gradient Generator
-        </h1>
-        <p class="mt-2 text-gray-600">
-          Create beautiful gradients for your UI designs with custom stops, angles, and color interpolation.
-        </p>
-      </div>
-    </header>
+    <!-- Main Content Area -->
+    <div 
+      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
+      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
+    >
+      <!-- Breadcrumbs -->
+      <Breadcrumbs />
+      
+      <div class="h-full overflow-y-auto">
+        <div class="p-8">
+          <!-- Hero Section -->
+          <div class="max-w-7xl mx-auto mb-8">
+            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
+              <!-- Background texture/grain effect -->
+              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
+              
+              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+                <div class="flex-1">
+                  <div class="flex items-center gap-4 mb-4">
+                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
+                      Gradient Generator
+                    </h1>
+                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
+                      Production Ready
+                    </span>
+                  </div>
+                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
+                    Create beautiful gradients for your UI designs with custom stops, angles, and color interpolation.
+                  </p>
+                  <div class="flex items-center gap-4 text-sm text-white/70">
+                    <span class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-base">label</span>
+                      Design Tool
+                    </span>
+                    <span class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-base">update</span>
+                      Updated Jan 15, 2024
+                    </span>
+                  </div>
+                </div>
+                <div class="hidden md:block flex-shrink-0">
+                  <div class="w-64 h-64 relative">
+                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
+                      <defs>
+                        <linearGradient id="gradientGeneratorGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <!-- Stylized gradient icon -->
+                      <rect x="20" y="20" width="160" height="160" rx="8" fill="url(#gradientGeneratorGradient)" opacity="0.3"/>
+                      <rect x="40" y="40" width="120" height="120" rx="4" fill="url(#gradientGeneratorGradient)" opacity="0.5"/>
+                      <rect x="60" y="60" width="80" height="80" rx="4" fill="url(#gradientGeneratorGradient)" opacity="0.7"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div class="grid lg:grid-cols-3 gap-6">
+          <!-- Main Content -->
+          <div class="max-w-7xl mx-auto">
+            <div class="grid lg:grid-cols-3 gap-6">
         <!-- Main Gradient Editor -->
         <div class="lg:col-span-2 space-y-6">
           <!-- Gradient Preview -->
-          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <span class="material-symbols-outlined text-xl text-indigo-600">preview</span>
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-xl text-indigo-600 dark:text-indigo-400">preview</span>
                 Preview
               </h2>
-              <div v-if="animationEnabled" class="flex items-center gap-2 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
+              <div v-if="animationEnabled" class="flex items-center gap-2 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-medium">
                 <span class="material-symbols-outlined text-sm animate-spin">sync</span>
                 Animating
               </div>
@@ -45,52 +92,52 @@
             
             <!-- Preview on Different Backgrounds -->
             <div class="grid grid-cols-3 gap-2 mb-4">
-              <div class="bg-white rounded p-2 border border-gray-200">
+              <div class="bg-white dark:bg-slate-700 rounded p-2 border border-gray-200 dark:border-gray-600">
                 <div class="h-16 rounded" :style="{ backgroundImage: cssGradientWithBlend, backgroundBlendMode: cssBlendModes }"></div>
-                <p class="text-xs text-gray-600 mt-1 text-center">White</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">White</p>
               </div>
-              <div class="bg-gray-900 rounded p-2 border border-gray-200">
+              <div class="bg-gray-900 dark:bg-slate-900 rounded p-2 border border-gray-200 dark:border-gray-600">
                 <div class="h-16 rounded" :style="{ backgroundImage: cssGradientWithBlend, backgroundBlendMode: cssBlendModes }"></div>
-                <p class="text-xs text-gray-600 mt-1 text-center text-white">Dark</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center text-white">Dark</p>
               </div>
-              <div class="bg-gray-200 rounded p-2 border border-gray-200">
+              <div class="bg-gray-200 dark:bg-slate-600 rounded p-2 border border-gray-200 dark:border-gray-600">
                 <div class="h-16 rounded" :style="{ backgroundImage: cssGradientWithBlend, backgroundBlendMode: cssBlendModes }"></div>
-                <p class="text-xs text-gray-600 mt-1 text-center">Gray</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mt-1 text-center">Gray</p>
               </div>
             </div>
 
             <!-- Accessibility Check -->
-            <div class="pt-4 border-t border-gray-200">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Accessibility Check</label>
+            <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Accessibility Check</label>
               <div class="flex items-center gap-3">
                 <div class="flex items-center gap-2">
-                  <label class="text-xs text-gray-600">Text Color:</label>
+                  <label class="text-xs text-gray-600 dark:text-gray-400">Text Color:</label>
                   <button
                     @click="openAccessibilityColorPicker($event)"
-                    class="w-8 h-8 rounded border-2 border-gray-300 cursor-pointer hover:border-indigo-500 transition-colors flex-shrink-0"
+                    class="w-8 h-8 rounded border-2 border-gray-300 dark:border-gray-600 cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors flex-shrink-0"
                     :style="{ backgroundColor: accessibilityTextColor }"
                     title="Pick text color"
                   ></button>
                   <input
                     v-model="accessibilityTextColor"
                     type="text"
-                    class="w-20 px-2 py-1 border border-gray-300 rounded text-xs font-mono"
+                    class="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs font-mono bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                     placeholder="#000000"
                   />
                 </div>
                 <div class="flex items-center gap-3 text-xs">
-                  <span class="font-semibold text-gray-700">Ratio:</span>
-                  <span :class="contrastRatio >= 4.5 ? 'text-green-600 font-semibold' : contrastRatio >= 3 ? 'text-yellow-600 font-semibold' : 'text-red-600 font-semibold'">
+                  <span class="font-semibold text-gray-700 dark:text-gray-300">Ratio:</span>
+                  <span :class="contrastRatio >= 4.5 ? 'text-green-600 dark:text-green-400 font-semibold' : contrastRatio >= 3 ? 'text-yellow-600 dark:text-yellow-400 font-semibold' : 'text-red-600 dark:text-red-400 font-semibold'">
                     {{ contrastRatio.toFixed(2) }}:1
                   </span>
-                  <span :class="contrastRatio >= 4.5 ? 'text-green-600' : 'text-red-600'">
+                  <span :class="contrastRatio >= 4.5 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
                     {{ contrastRatio >= 4.5 ? '✓ AA' : '✗ AA' }}
                   </span>
-                  <span :class="contrastRatio >= 7 ? 'text-green-600' : 'text-red-600'">
+                  <span :class="contrastRatio >= 7 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
                     {{ contrastRatio >= 7 ? '✓ AAA' : '✗ AAA' }}
                   </span>
                 </div>
-                <div class="flex-1 p-2 rounded border-2" :style="{ backgroundImage: cssGradientWithBlend, backgroundBlendMode: cssBlendModes, borderColor: accessibilityTextColor }">
+                <div class="flex-1 p-2 rounded border-2 border-gray-200 dark:border-gray-600" :style="{ backgroundImage: cssGradientWithBlend, backgroundBlendMode: cssBlendModes, borderColor: accessibilityTextColor }">
                   <p class="text-sm font-semibold text-center" :style="{ color: accessibilityTextColor }">
                     Sample
                   </p>
@@ -100,16 +147,16 @@
           </div>
 
           <!-- Color Stops -->
-          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <span class="material-symbols-outlined text-xl text-indigo-600">palette</span>
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <span class="material-symbols-outlined text-xl text-indigo-600 dark:text-indigo-400">palette</span>
                 Color Stops
               </h2>
               <div class="flex items-center gap-2">
                 <button
                   @click="fetchPalettes"
-                  class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                  class="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium"
                 >
                   Load from Palette Builder
                 </button>
@@ -127,7 +174,7 @@
             <div v-if="availablePalettes.length > 0" class="mb-4 space-y-2">
               <select
                 v-model="selectedPaletteId"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
               >
                 <option value="">Select a palette...</option>
                 <option v-for="palette in availablePalettes" :key="palette.id" :value="palette.id">
@@ -147,7 +194,7 @@
               <div
                 v-for="(stop, index) in colorStops"
                 :key="stop.id"
-                class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                class="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-gray-300 dark:hover:border-gray-500 transition-colors bg-gray-50 dark:bg-slate-700/50"
                 :class="{ 'cursor-move': !isDragging, 'cursor-grabbing': isDragging }"
                 @dragover.prevent="handleDragOver(index, $event)"
                 @drop="handleDrop(index, $event)"
@@ -160,13 +207,13 @@
                   @dragend="handleDragEnd"
                   title="Drag to reorder"
                 >
-                  <span class="material-symbols-outlined text-gray-400 hover:text-gray-600">drag_indicator</span>
+                  <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400">drag_indicator</span>
                 </div>
 
                 <!-- Color Swatch Button -->
                 <button
                   @click="openColorPicker(index, $event)"
-                  class="w-12 h-12 rounded border-2 border-gray-300 cursor-pointer hover:border-indigo-500 transition-colors flex-shrink-0"
+                  class="w-12 h-12 rounded border-2 border-gray-300 dark:border-gray-600 cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors flex-shrink-0"
                   :style="{ backgroundColor: stop.color }"
                   title="Pick color"
                   @mousedown.stop
@@ -178,7 +225,7 @@
                   type="text"
                   @input="updateGradient"
                   placeholder="#000000"
-                  class="w-24 px-2 py-1 border border-gray-300 rounded text-sm font-mono flex-shrink-0"
+                  class="w-24 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono flex-shrink-0 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   @mousedown.stop
                   @click.stop
                 />
@@ -186,7 +233,7 @@
                 <!-- Position Slider -->
                 <div class="flex-1">
                   <div class="flex items-center gap-2 mb-1">
-                    <span class="text-xs text-gray-600 w-12">Position</span>
+                    <span class="text-xs text-gray-600 dark:text-gray-400 w-12">Position</span>
                     <input
                       v-model.number="stop.position"
                       type="range"
@@ -207,13 +254,13 @@
                       @input="updateGradient"
                       @mousedown.stop
                       @click.stop
-                      class="w-16 px-2 py-1 border border-gray-300 rounded text-sm flex-shrink-0"
+                      class="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm flex-shrink-0 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                     />
-                    <span class="text-xs text-gray-600 w-8">%</span>
+                    <span class="text-xs text-gray-600 dark:text-gray-400 w-8">%</span>
                   </div>
                   <!-- Opacity Slider -->
                   <div class="flex items-center gap-2">
-                    <span class="text-xs text-gray-600 w-12">Opacity</span>
+                    <span class="text-xs text-gray-600 dark:text-gray-400 w-12">Opacity</span>
                     <input
                       v-model.number="stop.opacity"
                       type="range"
@@ -234,9 +281,9 @@
                       @input="updateGradient"
                       @mousedown.stop
                       @click.stop
-                      class="w-16 px-2 py-1 border border-gray-300 rounded text-sm flex-shrink-0"
+                      class="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm flex-shrink-0 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                     />
-                    <span class="text-xs text-gray-600 w-8">%</span>
+                    <span class="text-xs text-gray-600 dark:text-gray-400 w-8">%</span>
                   </div>
                 </div>
 
@@ -244,7 +291,7 @@
                 <button
                   v-if="colorStops.length > 2"
                   @click="removeColorStop(index)"
-                  class="p-2 text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                  class="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors flex-shrink-0"
                   title="Remove stop"
                   @mousedown.stop
                 >
@@ -258,20 +305,20 @@
         <!-- Sidebar -->
         <div class="space-y-6">
           <!-- Gradient Type & Settings -->
-          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div class="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div class="flex items-center justify-between mb-4">
               <div>
-                <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-xl text-indigo-600">settings</span>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <span class="material-symbols-outlined text-xl text-indigo-600 dark:text-indigo-400">settings</span>
                   Settings
                 </h2>
-                <p v-if="layers.length > 1" class="text-xs text-gray-500 mt-0.5">
-                  Editing: <span class="font-medium text-indigo-600">Layer {{ currentLayerIndex + 1 }}</span>
+                <p v-if="layers.length > 1" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Editing: <span class="font-medium text-indigo-600 dark:text-indigo-400">Layer {{ currentLayerIndex + 1 }}</span>
                 </p>
               </div>
               <button
                 @click="showExportModal = true"
-                class="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                class="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
                 title="Export gradient"
               >
                 <span class="material-symbols-outlined text-xl">download</span>
@@ -280,14 +327,14 @@
             </div>
 
             <!-- Layers Management -->
-            <div class="mb-6 pb-6 border-b border-gray-200">
+            <div class="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
               <div class="flex items-start justify-between mb-3">
                 <div class="flex-1">
                   <div class="flex items-center gap-2 mb-1">
-                    <span class="material-symbols-outlined text-lg text-indigo-600">layers</span>
-                    <label class="block text-sm font-medium text-gray-700">Layers</label>
+                    <span class="material-symbols-outlined text-lg text-indigo-600 dark:text-indigo-400">layers</span>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Layers</label>
                   </div>
-                  <p class="text-xs text-gray-500">Stack multiple gradients with blend modes</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Stack multiple gradients with blend modes</p>
                 </div>
                 <button
                   @click="addLayer"
@@ -303,8 +350,8 @@
                   :key="layer.id"
                   class="group relative rounded-lg border-2 transition-all"
                   :class="currentLayerIndex === index 
-                    ? 'border-indigo-500 bg-indigo-50 shadow-sm' 
-                    : 'border-gray-200 hover:border-gray-300 bg-white'"
+                    ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 shadow-sm' 
+                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-slate-700'"
                 >
                   <!-- Layer Header -->
                   <div class="flex items-center gap-2 p-2">
@@ -318,7 +365,7 @@
                     <div class="flex-1 flex items-center gap-2 min-w-0">
                       <!-- Layer Preview Swatch -->
                       <div 
-                        class="w-8 h-8 rounded border border-gray-300 flex-shrink-0"
+                        class="w-8 h-8 rounded border border-gray-300 dark:border-gray-600 flex-shrink-0"
                         :style="getLayerPreview(layer)"
                         title="Layer preview"
                       ></div>
@@ -326,11 +373,11 @@
                       <div class="flex-1 min-w-0">
                         <button
                           @click="currentLayerIndex = index"
-                          class="text-left text-sm font-medium text-gray-900 hover:text-indigo-600 transition-colors w-full"
+                          class="text-left text-sm font-medium text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-full"
                         >
                           Layer {{ index + 1 }}
                         </button>
-                        <div class="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           <span class="capitalize">{{ layer.type }}</span>
                           <span>•</span>
                           <span class="capitalize">{{ layer.blendMode }}</span>
@@ -343,7 +390,7 @@
                         <button
                           v-if="index > 0"
                           @click="moveLayer(index, index - 1)"
-                          class="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                          class="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 rounded transition-colors"
                           title="Move up"
                         >
                           <span class="material-symbols-outlined text-sm">arrow_upward</span>
@@ -351,7 +398,7 @@
                         <button
                           v-if="index < layers.length - 1"
                           @click="moveLayer(index, index + 1)"
-                          class="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                          class="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 rounded transition-colors"
                           title="Move down"
                         >
                           <span class="material-symbols-outlined text-sm">arrow_downward</span>
@@ -359,7 +406,7 @@
                         <button
                           v-if="layers.length > 1"
                           @click="removeLayer(index)"
-                          class="p-1 text-red-400 hover:text-red-600 rounded transition-colors"
+                          class="p-1 text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors"
                           title="Delete layer"
                         >
                           <span class="material-symbols-outlined text-sm">delete</span>
@@ -369,14 +416,14 @@
                   </div>
                   
                   <!-- Active Layer Indicator -->
-                  <div v-if="currentLayerIndex === index" class="absolute top-0 right-0 w-0 h-0 border-l-[12px] border-l-transparent border-t-[12px] border-t-indigo-500 rounded-tr-lg"></div>
+                  <div v-if="currentLayerIndex === index" class="absolute top-0 right-0 w-0 h-0 border-l-[12px] border-l-transparent border-t-[12px] border-t-indigo-500 dark:border-t-indigo-400 rounded-tr-lg"></div>
                   <div v-if="currentLayerIndex === index" class="absolute top-0.5 right-0.5">
                     <span class="material-symbols-outlined text-white text-xs">edit</span>
                   </div>
                 </div>
               </div>
-              <div v-if="layers.length > 1" class="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
-                <p class="text-xs text-blue-700 flex items-start gap-1.5">
+              <div v-if="layers.length > 1" class="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p class="text-xs text-blue-700 dark:text-blue-300 flex items-start gap-1.5">
                   <span class="material-symbols-outlined text-sm mt-0.5">info</span>
                   <span>Layers are stacked from bottom (Layer 1) to top. Click a layer to edit it. Use blend modes to combine layers.</span>
                 </p>
@@ -384,15 +431,15 @@
             </div>
 
             <!-- Current Layer Settings -->
-            <div class="mb-4 pb-4 border-b border-gray-200">
+            <div class="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
               <div class="flex items-center gap-2 mb-4">
-                <span class="material-symbols-outlined text-lg text-indigo-600">tune</span>
-                <h3 class="text-base font-semibold text-gray-900">Current Layer Settings</h3>
+                <span class="material-symbols-outlined text-lg text-indigo-600 dark:text-indigo-400">tune</span>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Current Layer Settings</h3>
               </div>
               
               <!-- Gradient Type -->
               <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Gradient Type</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Gradient Type</label>
                 <div class="grid grid-cols-3 gap-2">
                   <button
                     v-for="type in gradientTypes"
@@ -400,8 +447,8 @@
                     @click="gradientType = type.value"
                     class="px-4 py-2 rounded-lg border-2 transition-all"
                     :class="gradientType === type.value
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'"
+                      ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700'"
                   >
                     {{ type.label }}
                   </button>
@@ -410,7 +457,7 @@
 
               <!-- Linear Gradient Settings -->
               <div v-if="gradientType === 'linear'" class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Angle</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Angle</label>
                 <div class="flex items-center gap-4">
                   <input
                     v-model.number="linearAngle"
@@ -426,9 +473,9 @@
                       type="number"
                       min="0"
                       max="360"
-                      class="w-14 px-2 py-2 border border-gray-300 rounded-lg text-sm"
+                      class="w-14 px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                     />
-                    <span class="text-base text-gray-600">°</span>
+                    <span class="text-base text-gray-600 dark:text-gray-400">°</span>
                   </div>
                 </div>
                 <div class="mt-2 grid grid-cols-3 gap-2">
@@ -438,8 +485,8 @@
                     @click="linearAngle = direction.angle"
                     class="px-3 py-1 text-xs rounded-lg border-2 transition-all"
                     :class="linearAngle === direction.angle
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'"
+                      ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700'"
                   >
                     {{ direction.label }}
                   </button>
@@ -449,38 +496,38 @@
               <!-- Radial Gradient Settings -->
               <div v-if="gradientType === 'radial'" class="mb-4 grid grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Position X</label>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Position X</label>
                   <input
                     v-model="radialPosition.x"
                     type="text"
                     placeholder="50%"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Position Y</label>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Position Y</label>
                   <input
                     v-model="radialPosition.y"
                     type="text"
                     placeholder="50%"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Shape</label>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Shape</label>
                   <select
                     v-model="radialShape"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   >
                     <option value="ellipse">Ellipse</option>
                     <option value="circle">Circle</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Size</label>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Size</label>
                   <select
                     v-model="radialSize"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   >
                     <option value="farthest-corner">Farthest Corner</option>
                     <option value="farthest-side">Farthest Side</option>
@@ -493,41 +540,41 @@
               <!-- Conic Gradient Settings -->
               <div v-if="gradientType === 'conic'" class="mb-4 grid grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Position X</label>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Position X</label>
                   <input
                     v-model="conicPosition.x"
                     type="text"
                     placeholder="50%"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Position Y</label>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Position Y</label>
                   <input
                     v-model="conicPosition.y"
                     type="text"
                     placeholder="50%"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Angle</label>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Angle</label>
                   <input
                     v-model.number="conicAngle"
                     type="number"
                     min="0"
                     max="360"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
 
               <!-- Blend Mode -->
               <div class="mb-2">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Blend Mode</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Blend Mode</label>
                 <select
                   v-model="blendMode"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                 >
                   <option value="normal">Normal</option>
                   <option value="multiply">Multiply</option>
@@ -542,40 +589,40 @@
                   <option value="difference">Difference</option>
                   <option value="exclusion">Exclusion</option>
                 </select>
-                <p class="text-xs text-gray-500 mt-1">How this layer blends with layers below</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">How this layer blends with layers below</p>
               </div>
             </div>
 
             <!-- Global Animation Settings -->
             <div class="pt-1">
               <div class="flex items-center gap-2 mb-3">
-                <span class="material-symbols-outlined text-lg text-indigo-600">animation</span>
+                <span class="material-symbols-outlined text-lg text-indigo-600 dark:text-indigo-400">animation</span>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700">Animation</label>
-                  <p class="text-xs text-gray-500 mt-0.5">Animates the current active layer</p>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Animation</label>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Animates the current active layer</p>
                 </div>
               </div>
               <div class="flex items-center justify-between mb-3">
-                <span class="text-sm text-gray-700">Enable Animation</span>
+                <span class="text-sm text-gray-700 dark:text-gray-300">Enable Animation</span>
                 <label class="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
                     v-model="animationEnabled"
                     class="sr-only peer"
                   />
-                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  <div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                 </label>
               </div>
-              <p v-if="animationEnabled" class="text-xs text-green-600 mb-3 flex items-center gap-1">
+              <p v-if="animationEnabled" class="text-xs text-green-600 dark:text-green-400 mb-3 flex items-center gap-1">
                 <span class="material-symbols-outlined text-sm">check_circle</span>
                 Animation is active - watch the preview above
               </p>
               <div v-if="animationEnabled" class="space-y-3 mt-3">
                 <div>
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Animation Type</label>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Animation Type</label>
                   <select
                     v-model="animationType"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   >
                     <option value="position">Position (scrolls gradient)</option>
                     <option value="angle">Angle (rotates gradient)</option>
@@ -583,7 +630,7 @@
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Duration: {{ animationDuration }}s</label>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Duration: {{ animationDuration }}s</label>
                   <input
                     v-model.number="animationDuration"
                     type="range"
@@ -594,10 +641,10 @@
                   />
                 </div>
                 <div>
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Direction</label>
+                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Direction</label>
                   <select
                     v-model="animationDirection"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   >
                     <option value="normal">Normal</option>
                     <option value="reverse">Reverse</option>
@@ -610,26 +657,29 @@
           </div>
         </div>
       </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Export Modal -->
     <div
       v-if="showExportModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50"
       @click="showExportModal = false"
     >
       <div
-        class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+        class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
         @click.stop
       >
-        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div class="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-2xl text-indigo-600">download</span>
-            <h2 class="text-xl font-semibold text-gray-900">Export Gradient</h2>
+            <span class="material-symbols-outlined text-2xl text-indigo-600 dark:text-indigo-400">download</span>
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Export Gradient</h2>
           </div>
           <button
             @click="showExportModal = false"
-            class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+            class="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
           >
             <span class="material-symbols-outlined text-xl">close</span>
           </button>
@@ -638,10 +688,10 @@
         <div class="p-6 space-y-6">
           <!-- Export Format Selector -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Code Format</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Code Format</label>
             <select
               v-model="exportFormat"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
             >
               <option value="css">CSS</option>
               <option value="css-vars">CSS Variables</option>
@@ -651,8 +701,8 @@
               <option value="react">React (styled-components)</option>
               <option value="vue">Vue (style binding)</option>
             </select>
-            <div class="mt-3 bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <code class="text-xs font-mono text-gray-800 whitespace-pre-wrap break-all">{{ formattedExportCode }}</code>
+            <div class="mt-3 bg-gray-50 dark:bg-slate-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+              <code class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all">{{ formattedExportCode }}</code>
             </div>
             <button
               @click="copyFormattedCode"
@@ -663,8 +713,8 @@
           </div>
 
           <!-- File Export Options -->
-          <div class="pt-4 border-t border-gray-200">
-            <label class="block text-sm font-medium text-gray-700 mb-3">File Format</label>
+          <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">File Format</label>
             <div class="grid grid-cols-2 gap-3">
               <button
                 @click="exportAsImage"
@@ -675,21 +725,21 @@
               </button>
               <button
                 @click="exportAsSVG"
-                class="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                class="px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium flex items-center justify-center gap-2"
               >
                 <span class="material-symbols-outlined text-lg">code</span>
                 Export as SVG
               </button>
               <button
                 @click="exportToAdobe"
-                class="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                class="px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium flex items-center justify-center gap-2"
               >
                 <span class="material-symbols-outlined text-lg">file_download</span>
                 Export to Adobe
               </button>
               <button
                 @click="exportToPenpot"
-                class="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                class="px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium flex items-center justify-center gap-2"
               >
                 <span class="material-symbols-outlined text-lg">file_download</span>
                 Export to Penpot
@@ -713,10 +763,25 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import ColorPicker from '../components/ColorPicker.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import axios from 'axios';
+
+const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const drawerOpen = ref(false);
+
+const closeDrawer = () => {
+  drawerOpen.value = false;
+};
+
+const toggleDrawer = () => {
+  drawerOpen.value = !drawerOpen.value;
+};
+
+let darkModeObserver = null;
+let darkModeInterval = null;
 
 const gradientType = ref('linear');
 const linearAngle = ref(90);
@@ -1605,11 +1670,39 @@ const openAccessibilityColorPicker = (event) => {
 onMounted(() => {
   syncCurrentLayer();
   updateGradient();
+  
+  darkModeObserver = new MutationObserver(() => {
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+  });
+  
+  darkModeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class']
+  });
+  
+  const checkDarkMode = () => {
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+  };
+  
+  checkDarkMode();
+  darkModeInterval = setInterval(checkDarkMode, 100);
+});
+
+onBeforeUnmount(() => {
+  if (darkModeObserver) {
+    darkModeObserver.disconnect();
+  }
+  if (darkModeInterval) {
+    clearInterval(darkModeInterval);
+  }
 });
 </script>
 
 <style scoped>
 /* Scoped styles for component */
+.texture-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
 </style>
 
 <style>
