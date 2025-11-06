@@ -223,6 +223,41 @@
         </nav>
       </div>
       
+      <!-- Review - only show when on review route -->
+      <div v-if="showReview" class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Review</h3>
+          <button
+            @click="toggle"
+            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
+            title="Close drawer"
+          >
+            <span class="material-symbols-outlined">left_panel_close</span>
+          </button>
+        </div>
+        <nav class="space-y-1">
+          <router-link
+            v-for="item in reviewItems"
+            :key="item.link"
+            :to="item.link"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+            :class="[
+              isActive(item.link)
+                ? (isDarkMode 
+                  ? 'text-indigo-400 bg-indigo-900/20' 
+                  : 'text-indigo-600 bg-indigo-50')
+                : (isDarkMode
+                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+            ]"
+          >
+            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+            <span class="font-medium">{{ item.text }}</span>
+          </router-link>
+        </nav>
+      </div>
+      
       <!-- Design Assets - only show when on design assets route -->
       <div v-if="showDesignAssets" class="mb-8">
         <div class="flex items-center justify-between mb-4">
@@ -333,9 +368,17 @@ const fonts = [
   { text: 'Font Subsetting', link: '/fonts/subsetting', icon: 'content_cut' }
 ];
 
+const reviewItems = [
+  { text: 'Overview', link: '/review', icon: 'rate_review' },
+  { text: 'My Requested Reviews', link: '/review/my-requests', icon: 'view_module' },
+  { text: 'Admin', link: '/admin', icon: 'admin_panel_settings' }
+];
+
 const tools = [
   { text: 'Overview', link: '/tools', icon: 'build' },
   { text: 'Gradient Generator', link: '/tools/gradient-generator', icon: 'gradient' },
+  { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'text_fields' },
+  { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'search' },
   { text: 'Palette Builder', link: '/palette-builder', icon: 'palette' }
 ];
 
@@ -358,6 +401,10 @@ const componentItems = [
   { text: 'Data Display', link: '/components/data-display', icon: 'table_chart' }
 ];
 
+const showReview = computed(() => {
+  return route.path === '/review' || route.path.startsWith('/review/') || route.path === '/admin';
+});
+
 const showPatterns = computed(() => {
   return route.path === '/patterns' || route.path.startsWith('/patterns/');
 });
@@ -379,7 +426,7 @@ const showComponents = computed(() => {
 });
 
 const showMainSections = computed(() => {
-  return !showPatterns.value && !showFonts.value && !showComponents.value && !showTools.value && !showDesignAssets.value;
+  return !showPatterns.value && !showFonts.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value;
 });
 
 const isActive = (path) => {

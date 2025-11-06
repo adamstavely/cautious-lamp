@@ -170,6 +170,14 @@ const router = createRouter({
       component: () => import('./views/GradientGenerator.vue'),
     },
     {
+      path: '/tools/lorem-ipsum',
+      component: () => import('./views/LoremIpsumGenerator.vue'),
+    },
+    {
+      path: '/tools/seo-tagging',
+      component: () => import('./views/SEOTaggingGenerator.vue'),
+    },
+    {
       path: '/tools',
       component: () => import('./views/Tools.vue'),
     },

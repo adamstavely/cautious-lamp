@@ -81,7 +81,27 @@
               </h3>
             </router-link>
 
-            <!-- Tool Card 3: Color Contrast -->
+            <!-- Tool Card 3: Lorem Ipsum Generator -->
+            <router-link to="/tools/lorem-ipsum" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+                <span class="material-symbols-outlined text-5xl">text_fields</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Lorem Ipsum Generator
+              </h3>
+            </router-link>
+
+            <!-- Tool Card 4: SEO Tagging Generator -->
+            <router-link to="/tools/seo-tagging" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+                <span class="material-symbols-outlined text-5xl">search</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                SEO Tagging Generator
+              </h3>
+            </router-link>
+
+            <!-- Tool Card 5: Color Contrast -->
             <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">contrast</span>
@@ -89,29 +109,6 @@
               <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                 Color Contrast
               </h3>
-            </a>
-
-            <!-- Tool Card 4: Token Export -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
-                <span class="material-symbols-outlined text-5xl">download</span>
-              </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                Token Export
-              </h3>
-            </a>
-
-            <!-- Tool Card 5: More Tools -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all relative">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
-                <span class="material-symbols-outlined text-5xl">apps</span>
-              </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                More Tools
-              </h3>
-              <span class="material-symbols-outlined absolute top-4 right-4 text-gray-400 dark:text-gray-500 text-xl">
-                chevron_right
-              </span>
             </a>
           </div>
         </div>
@@ -136,6 +133,14 @@
               <router-link to="/palette-builder" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
                 <h3 class="text-white font-semibold text-xl mb-2">Palette Builder</h3>
                 <p class="text-white/80 text-sm">Build comprehensive color palettes with advanced tools for harmony, contrast, and accessibility.</p>
+              </router-link>
+              <router-link to="/tools/lorem-ipsum" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">Lorem Ipsum Generator</h3>
+                <p class="text-white/80 text-sm">Generate placeholder text for your designs with customizable paragraphs, words, sentences, or lists.</p>
+              </router-link>
+              <router-link to="/tools/seo-tagging" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">SEO Tagging Generator</h3>
+                <p class="text-white/80 text-sm">Generate SEO meta tags, Open Graph tags, and structured data for optimal search engine optimization.</p>
               </router-link>
               <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
                 <h3 class="text-white font-semibold text-xl mb-2">Color Contrast Checker</h3>

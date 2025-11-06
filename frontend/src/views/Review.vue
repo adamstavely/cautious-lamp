@@ -47,7 +47,7 @@
 
         <!-- Review Actions Section -->
         <div class="max-w-7xl mx-auto mb-16">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- Request Review Button -->
             <button 
               @click="openRequestReviewModal"
@@ -61,6 +61,20 @@
               </h3>
               <p class="text-gray-600 dark:text-gray-400 text-sm">Upload your design files and request feedback from your team.</p>
             </button>
+
+            <!-- My Requested Reviews Button -->
+            <router-link 
+              to="/review/my-requests" 
+              class="group rounded-2xl p-8 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all flex flex-col items-center text-center"
+            >
+              <div class="w-16 h-16 mb-4 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <span class="material-symbols-outlined text-6xl">rate_review</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-xl mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                My Requested Reviews
+              </h3>
+              <p class="text-gray-600 dark:text-gray-400 text-sm">View all the reviews you've requested as the designer.</p>
+            </router-link>
 
             <!-- Admin Button -->
             <router-link 
@@ -76,11 +90,6 @@
               <p class="text-gray-600 dark:text-gray-400 text-sm">Manage reviews, users, and system settings.</p>
             </router-link>
           </div>
-        </div>
-
-        <!-- My Requested Reviews Component -->
-        <div class="max-w-7xl mx-auto mb-16">
-          <component v-if="mounted && UploadPageComponent" :is="UploadPageComponent" ref="uploadPageRef" />
         </div>
 
         <!-- Review Interface Section -->
