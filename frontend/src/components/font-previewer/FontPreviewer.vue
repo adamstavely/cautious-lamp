@@ -4,24 +4,6 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div class="flex items-center justify-end gap-2 mb-4">
         <button 
-          @click="showTypographyScale = true" 
-          class="px-3 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          Font Scale
-        </button>
-        <button 
-          @click="showFontStackBuilder = true" 
-          class="px-3 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          Font Stack
-        </button>
-        <button 
-          @click="showFontSubsetting = true" 
-          class="px-3 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          Font Subsetting
-        </button>
-        <button 
           v-if="favorites.length > 0 || comparisonFonts.length > 0" 
           @click="showExportModal = true" 
           class="px-3 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
@@ -468,56 +450,6 @@
       </div>
     </div>
 
-    <!-- Typography Scale Modal -->
-    <div v-if="showTypographyScale" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" @click="showTypographyScale = false">
-      <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto relative" @click.stop>
-        <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <span class="material-symbols-outlined text-indigo-600">format_line_spacing</span>
-            Font Scale
-          </h3>
-          <button @click="showTypographyScale = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
-          </button>
-        </div>
-        
-        <div class="p-6">
-          <div class="mb-4">
-            <label class="text-sm text-gray-600 mb-2 block">Base Font Size (px)</label>
-            <input 
-              v-model.number="fontSize" 
-              type="number" 
-              min="12" 
-              max="72"
-              class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-            />
-          </div>
-          
-          <div class="space-y-4">
-            <div v-for="(size, name) in computedTypographyScale" :key="name" class="p-4 border border-gray-200 rounded-lg">
-              <div class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">{{ name === 'h1' ? 'Heading 1' : name === 'h2' ? 'Heading 2' : name === 'h3' ? 'Heading 3' : name === 'h4' ? 'Heading 4' : name === 'h5' ? 'Heading 5' : name === 'h6' ? 'Heading 6' : name === 'body' ? 'Body Text' : 'Small Text' }}</div>
-              <div class="text-gray-900" :style="{ fontSize: size + 'px', fontFamily: 'system-ui, sans-serif', lineHeight: lineHeight, letterSpacing: letterSpacing + 'px', fontWeight: name.startsWith('h') ? 'bold' : 'normal' }">
-                {{ name === 'body' ? 'The quick brown fox jumps over the lazy dog.' : name === 'small' ? 'Small text example' : name.toUpperCase() + ' Heading Example' }}
-              </div>
-              <div class="text-xs text-gray-500 mt-1">{{ size }}px</div>
-            </div>
-          </div>
-          
-          <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h4 class="font-semibold text-gray-900 mb-2">Complete Scale Preview</h4>
-            <div class="space-y-2" :style="{ fontFamily: 'system-ui, sans-serif' }">
-              <div :style="{ fontSize: computedTypographyScale.h1 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 1</div>
-              <div :style="{ fontSize: computedTypographyScale.h2 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 2</div>
-              <div :style="{ fontSize: computedTypographyScale.h3 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 3</div>
-              <div :style="{ fontSize: computedTypographyScale.h4 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 4</div>
-              <div :style="{ fontSize: computedTypographyScale.body + 'px', lineHeight: lineHeight }">Body text with normal weight</div>
-              <div :style="{ fontSize: computedTypographyScale.small + 'px', lineHeight: lineHeight }">Small text</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Line Length Calculator Modal -->
     <div v-if="showLineLengthCalc" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" @click="showLineLengthCalc = false">
       <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 relative" @click.stop>
@@ -566,119 +498,6 @@
               <p>• Too short: frequent line breaks interrupt reading flow</p>
               <p>• Too long: eyes struggle to find the next line</p>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Font Stack Builder Modal -->
-    <div v-if="showFontStackBuilder" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" @click="showFontStackBuilder = false">
-      <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative" @click.stop>
-        <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <span class="material-symbols-outlined text-indigo-600">layers</span>
-            Font Stack
-          </h3>
-          <button @click="showFontStackBuilder = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
-          </button>
-        </div>
-        
-        <div class="p-6">
-          <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p class="text-sm text-gray-700">
-              <strong>What is a font stack?</strong> A font stack is a list of fonts in CSS that browsers try to use in order. If the first font isn't available, the browser falls back to the next font in the list. This ensures your text is always readable, even if the primary font fails to load. The builder helps you create an optimal CSS <code class="px-1 py-0.5 bg-blue-100 rounded text-xs font-mono">font-family</code> declaration with appropriate fallback fonts.
-            </p>
-          </div>
-          
-          <div class="mb-6">
-            <label class="text-sm text-gray-600 mb-2 block">Select Primary Font</label>
-            <select 
-              v-model="selectedFontForStack"
-              @change="fontStack = buildFontStack(selectedFontForStack)"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-            >
-              <option value="">Choose a font...</option>
-              <option v-for="font in fontData" :key="font.name" :value="font.name">{{ font.name }}</option>
-            </select>
-          </div>
-          
-          <div v-if="selectedFontForStack" class="space-y-4">
-            <div v-if="getSelectedFontForStack()?.pairsWellWith && getSelectedFontForStack().pairsWellWith.length > 0" class="mb-4">
-              <h4 class="font-semibold text-gray-900 mb-2">Pairs Well With</h4>
-              <div class="flex flex-wrap gap-2">
-                <button 
-                  v-for="pair in getSelectedFontForStack().pairsWellWith" 
-                  :key="pair" 
-                  @click="addToFontStack(pair)"
-                  class="px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors cursor-pointer"
-                  title="Click to add to font stack"
-                >
-                  {{ pair }}
-                </button>
-              </div>
-            </div>
-            
-            <div class="p-4 bg-gray-50 rounded-lg">
-              <div class="flex items-center justify-between mb-2">
-                <div class="text-sm text-gray-600">Font Stack</div>
-                <button @click="resetFontStack" class="text-xs text-indigo-600 hover:text-indigo-700 transition-colors">
-                  Reset to Default
-                </button>
-              </div>
-              <div class="flex flex-wrap gap-2 items-center">
-                <div 
-                  v-for="(fontName, index) in fontStack" 
-                  :key="`${fontName}-${index}`"
-                  class="px-3 py-1 bg-white border border-gray-300 rounded-lg flex items-center gap-2 group"
-                >
-                  <span class="text-sm font-mono text-gray-900">{{ fontName }}</span>
-                  <button 
-                    v-if="index > 0"
-                    @click="removeFromFontStack(index)"
-                    class="text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
-                    title="Remove from stack"
-                  >
-                    <span class="material-symbols-outlined text-sm">close</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <label class="text-sm text-gray-600 mb-2 block">Manually Add Font</label>
-              <div class="flex gap-2">
-                <input 
-                  v-model="newFontInStack"
-                  type="text"
-                  placeholder="Type font name (e.g., Arial, Georgia)..."
-                  class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  @keyup.enter="addToFontStack(newFontInStack)"
-                />
-                <button 
-                  @click="addToFontStack(newFontInStack)"
-                  class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-            
-            <div class="p-4 border border-gray-200 rounded-lg">
-              <div class="text-sm text-gray-600 mb-2">Preview</div>
-              <div class="text-gray-900 leading-relaxed" :style="{ fontFamily: fontStack.join(', ') }">
-                The quick brown fox jumps over the lazy dog. This demonstrates how the font stack falls back to system fonts if the primary font fails to load.
-              </div>
-            </div>
-            
-            <div class="p-4 bg-gray-900 text-green-400 rounded-lg font-mono text-sm">
-              <div class="mb-2">CSS:</div>
-              <div>font-family: {{ fontStack.map(f => `'${f}'`).join(', ') }};</div>
-            </div>
-            
-            <button @click="copyFontStack" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-              Copy CSS
-            </button>
           </div>
         </div>
       </div>
@@ -1291,80 +1110,6 @@
       </div>
     </div>
 
-    <!-- Font Subsetting Modal -->
-    <div v-if="showFontSubsetting" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" @click="showFontSubsetting = false">
-      <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative" @click.stop>
-        <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <span class="material-symbols-outlined text-indigo-600">font_download</span>
-            Font Subsetting
-          </h3>
-          <button @click="showFontSubsetting = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
-          </button>
-        </div>
-        
-        <div class="p-6">
-          <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p class="text-sm text-gray-700">
-              <strong>What is font subsetting?</strong> Font subsetting allows you to include only the character sets you need, reducing file size and improving load times. Select the character sets your project requires to generate an optimized Google Fonts URL.
-            </p>
-          </div>
-          
-          <div class="mb-6">
-            <label class="text-sm text-gray-600 mb-2 block">Select Font</label>
-            <select 
-              v-model="selectedFontForSubsetting"
-              @change="selectedSubsets = []; selectedWeightForSubsetting = ''"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-            >
-              <option value="">Choose a font...</option>
-              <option v-for="font in fontData" :key="font.name" :value="font.name">{{ font.name }}</option>
-            </select>
-          </div>
-          
-          <div v-if="selectedFontForSubsetting" class="mb-6">
-            <label class="text-sm text-gray-600 mb-2 block">Select Weight</label>
-            <select 
-              v-model="selectedWeightForSubsetting"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-            >
-              <option value="">Choose a weight...</option>
-              <option v-for="weight in getAvailableWeightsForSubsetting()" :key="weight" :value="weight">
-                {{ getWeightName(weight) }} ({{ weight }})
-              </option>
-            </select>
-          </div>
-          
-          <div v-if="selectedFontForSubsetting" class="space-y-4">
-            <div>
-              <h4 class="font-semibold text-gray-900 mb-2">Select Character Sets to Include</h4>
-              <p class="text-xs text-gray-500 mb-3">Choose which character sets to include in your font subset. Only options supported by this font are shown.</p>
-              <div v-if="getAvailableSubsetsForFont().length === 0" class="text-sm text-gray-500 italic">
-                No character sets available for this font.
-              </div>
-              <div v-else class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <label v-for="subset in getAvailableSubsetsForFont()" :key="subset.value" class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                  <input type="checkbox" :value="subset.value" v-model="selectedSubsets" class="rounded" />
-                  <span class="text-sm text-gray-700 capitalize">{{ subset.label }}</span>
-                </label>
-              </div>
-            </div>
-            
-            <div v-if="selectedSubsets.length > 0 && selectedWeightForSubsetting" class="p-4 bg-gray-50 rounded-lg">
-              <div class="text-sm text-gray-600 mb-2">Google Fonts URL</div>
-              <div class="text-xs font-mono text-gray-900 break-all mb-3">
-                https://fonts.googleapis.com/css2?family={{ selectedFontForSubsetting.replace(/\s/g, '+') }}:wght@{{ selectedWeightForSubsetting }}&subset={{ selectedSubsets.join(',') }}
-              </div>
-              <button @click="copySubsetURL" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                Copy URL
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Usage Examples Modal -->
     <div v-if="showUsageExamples" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" @click="showUsageExamples = false">
       <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative" @click.stop>
@@ -1564,9 +1309,7 @@ const showCSSGenerator = ref(false)
 const showCollectionsModal = ref(false)
 const showFontInfoModal = ref(false)
 const showTypographyPresets = ref(false)
-const showTypographyScale = ref(false)
 const showLineLengthCalc = ref(false)
-const showFontStackBuilder = ref(false)
 const showABTesting = ref(false)
 const showTypographyHierarchy = ref(false)
 const showResponsivePreview = ref(false)
@@ -1575,7 +1318,6 @@ const showFontPlaylists = ref(false)
 const showCustomTags = ref(false)
 const showPerformanceMetrics = ref(false)
 const showVariableFont = ref(false)
-const showFontSubsetting = ref(false)
 const showUsageExamples = ref(false)
 const showLicenseChecker = ref(false)
 const showAnalyticsDashboard = ref(false)

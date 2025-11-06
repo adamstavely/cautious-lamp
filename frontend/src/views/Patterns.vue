@@ -5,10 +5,10 @@
     
     <!-- Main Content Area - shifts when drawer is open -->
     <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-y-auto"
+      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
       :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
     >
-      <div class="min-h-screen p-8 pb-16">
+      <div class="h-full p-8 overflow-hidden">
         <!-- Hero Section -->
         <div class="max-w-7xl mx-auto mb-16">
           <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">

@@ -86,6 +86,22 @@ const router = createRouter({
       component: () => import('./views/Fonts.vue'),
     },
     {
+      path: '/fonts/library',
+      component: () => import('./views/FontLibrary.vue'),
+    },
+    {
+      path: '/fonts/scale',
+      component: () => import('./views/FontScale.vue'),
+    },
+    {
+      path: '/fonts/stack',
+      component: () => import('./views/FontStack.vue'),
+    },
+    {
+      path: '/fonts/subsetting',
+      component: () => import('./views/FontSubsetting.vue'),
+    },
+    {
       path: '/font/:fontName',
       component: () => import('./components/font-previewer/FontDetail.vue'),
     },

@@ -1,123 +1,146 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
-    <!-- Hero Section -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-      <div class="text-center">
-        <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-          Design System
-          <span class="block text-indigo-600 mt-2">Super App</span>
-        </h1>
-        <p class="text-xl text-gray-600 max-w-3xl mx-auto mb-12">
-          Build, manage, and scale your design system with AI-augmented tools for colors, components, tokens, and patterns.
-        </p>
-        
-        <!-- Quick Actions -->
-        <div class="flex flex-wrap justify-center gap-4 mb-16">
-          <router-link
-            to="/palette-builder"
-            class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-lg hover:shadow-xl"
-          >
-            <span class="material-symbols-outlined">palette</span>
-            <span>Build Color Palette</span>
-          </router-link>
-          <router-link
-            to="/tools/gradient-generator"
-            class="inline-flex items-center gap-2 px-6 py-3 bg-white text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors font-medium border-2 border-indigo-600 shadow-lg hover:shadow-xl"
-          >
-            <span class="material-symbols-outlined">gradient</span>
-            <span>Create Gradients</span>
-          </router-link>
+  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900 relative flex">
+    <!-- Main Content Area -->
+    <div 
+      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
+      :style="'margin-left: 48px;'"
+    >
+      <div class="h-full p-8 overflow-hidden">
+        <!-- Hero Section -->
+        <div class="max-w-7xl mx-auto mb-16">
+          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
+            <!-- Background texture/grain effect -->
+            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
+            
+            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+              <div class="flex-1">
+                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
+                  Design System
+                  <span class="block text-indigo-400 mt-2">Super App</span>
+                </h1>
+                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
+                  Build, manage, and scale your design system with AI-augmented tools for colors, components, tokens, patterns, and typography. Everything you need in one powerful platform.
+                </p>
+              </div>
+              <div class="hidden md:block flex-shrink-0">
+                <div class="w-64 h-64 relative">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
+                    <defs>
+                      <linearGradient id="homeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <!-- Stylized design system icon -->
+                    <rect x="40" y="40" width="50" height="50" rx="8" fill="url(#homeGradient)" opacity="0.3"/>
+                    <rect x="110" y="40" width="50" height="50" rx="8" fill="url(#homeGradient)" opacity="0.5"/>
+                    <rect x="40" y="110" width="50" height="50" rx="8" fill="url(#homeGradient)" opacity="0.4"/>
+                    <rect x="110" y="110" width="50" height="50" rx="8" fill="url(#homeGradient)" opacity="0.6"/>
+                    <circle cx="65" cy="65" r="8" fill="white" opacity="0.8"/>
+                    <circle cx="135" cy="65" r="8" fill="white" opacity="0.8"/>
+                    <circle cx="65" cy="135" r="8" fill="white" opacity="0.8"/>
+                    <circle cx="135" cy="135" r="8" fill="white" opacity="0.8"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <!-- Feature Cards -->
-      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-16">
-        <!-- Tokens -->
-        <router-link
-          to="/tokens"
-          class="group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-transparent hover:border-indigo-500"
-        >
-          <div class="p-6">
-            <div class="flex items-center justify-center w-14 h-14 bg-indigo-100 rounded-lg mb-4 group-hover:bg-indigo-500 transition-colors">
-              <span class="material-symbols-outlined text-3xl text-indigo-600 group-hover:text-white transition-colors">
-                style
-              </span>
-            </div>
-            <h3 class="text-lg font-bold text-gray-900 mb-2">Design Tokens</h3>
-            <p class="text-sm text-gray-600">
-              Manage colors, spacing, typography, and more
-            </p>
+        <!-- Browse Sections Section -->
+        <div class="max-w-7xl mx-auto mb-16">
+          <div class="flex items-center justify-between mb-8">
+            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
+              Explore sections
+            </h2>
+            <button class="px-6 py-2 rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-sm font-medium">
+              View all
+            </button>
           </div>
-        </router-link>
+          
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <!-- Guidelines -->
+            <router-link to="/guidelines" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+                <span class="material-symbols-outlined text-5xl">menu_book</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Guidelines
+              </h3>
+            </router-link>
 
-        <!-- Components -->
-        <router-link
-          to="/components"
-          class="group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-transparent hover:border-indigo-500"
-        >
-          <div class="p-6">
-            <div class="flex items-center justify-center w-14 h-14 bg-indigo-100 rounded-lg mb-4 group-hover:bg-indigo-500 transition-colors">
-              <span class="material-symbols-outlined text-3xl text-indigo-600 group-hover:text-white transition-colors">
-                widgets
+            <!-- Components -->
+            <router-link to="/components" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+                <span class="material-symbols-outlined text-5xl">widgets</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Components
+              </h3>
+            </router-link>
+
+            <!-- Tokens -->
+            <router-link to="/tokens" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+                <span class="material-symbols-outlined text-5xl">style</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Tokens
+              </h3>
+            </router-link>
+
+            <!-- Patterns -->
+            <router-link to="/patterns" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+                <span class="material-symbols-outlined text-5xl">pattern</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Patterns
+              </h3>
+            </router-link>
+
+            <!-- Fonts -->
+            <router-link to="/fonts" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all relative">
+              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+                <span class="material-symbols-outlined text-5xl">text_fields</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Fonts
+              </h3>
+              <span class="material-symbols-outlined absolute top-4 right-4 text-gray-400 dark:text-gray-500 text-xl">
+                chevron_right
               </span>
-            </div>
-            <h3 class="text-lg font-bold text-gray-900 mb-2">Components</h3>
-            <p class="text-sm text-gray-600">
-              Browse and manage your component library
-            </p>
+            </router-link>
           </div>
-        </router-link>
-
-        <!-- Patterns -->
-        <router-link
-          to="/patterns"
-          class="group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-transparent hover:border-indigo-500"
-        >
-          <div class="p-6">
-            <div class="flex items-center justify-center w-14 h-14 bg-indigo-100 rounded-lg mb-4 group-hover:bg-indigo-500 transition-colors">
-              <span class="material-symbols-outlined text-3xl text-indigo-600 group-hover:text-white transition-colors">
-                pattern
-              </span>
-            </div>
-            <h3 class="text-lg font-bold text-gray-900 mb-2">Patterns</h3>
-            <p class="text-sm text-gray-600">
-              Explore design patterns and UI patterns
-            </p>
-          </div>
-        </router-link>
-
-        <!-- Fonts -->
-        <router-link
-          to="/fonts"
-          class="group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-transparent hover:border-indigo-500"
-        >
-          <div class="p-6">
-            <div class="flex items-center justify-center w-14 h-14 bg-indigo-100 rounded-lg mb-4 group-hover:bg-indigo-500 transition-colors">
-              <span class="material-symbols-outlined text-3xl text-indigo-600 group-hover:text-white transition-colors">
-                text_fields
-              </span>
-            </div>
-            <h3 class="text-lg font-bold text-gray-900 mb-2">Typography</h3>
-            <p class="text-sm text-gray-600">
-              Manage fonts and typography scales
-            </p>
-          </div>
-        </router-link>
-      </div>
-
-      <!-- Stats Section -->
-      <div class="mt-20 grid md:grid-cols-3 gap-8">
-        <div class="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/80">
-          <div class="text-3xl font-bold text-indigo-600 mb-2">AI-Augmented</div>
-          <p class="text-gray-600">Smart suggestions and automated workflows</p>
         </div>
-        <div class="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/80">
-          <div class="text-3xl font-bold text-indigo-600 mb-2">All-in-One</div>
-          <p class="text-gray-600">Complete design system management platform</p>
-        </div>
-        <div class="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/80">
-          <div class="text-3xl font-bold text-indigo-600 mb-2">Scalable</div>
-          <p class="text-gray-600">Grow your design system with confidence</p>
+
+        <!-- Featured Tools Section -->
+        <div class="max-w-7xl mx-auto">
+          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-950 dark:via-indigo-900 dark:to-indigo-800">
+            <div class="flex items-center justify-between mb-8">
+              <h2 class="text-4xl md:text-5xl font-bold text-white">
+                Powerful tools
+              </h2>
+              <button class="px-6 py-2 rounded-full border border-white/30 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+                View all tools
+              </button>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+              <router-link to="/palette-builder" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">Palette Builder</h3>
+                <p class="text-white/80 text-sm">Create and manage color palettes with AI-powered suggestions and accessibility analysis.</p>
+              </router-link>
+              <router-link to="/tools/gradient-generator" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">Gradient Generator</h3>
+                <p class="text-white/80 text-sm">Create stunning CSS gradients with an intuitive visual editor and multiple gradient types.</p>
+              </router-link>
+              <router-link to="/fonts/library" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">Font Library</h3>
+                <p class="text-white/80 text-sm">Browse and preview hundreds of Google Fonts with advanced filtering and comparison tools.</p>
+              </router-link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -125,4 +148,43 @@
 </template>
 
 <script setup>
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+
+const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+
+let darkModeObserver = null;
+let darkModeInterval = null;
+
+onMounted(() => {
+  darkModeObserver = new MutationObserver(() => {
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+  });
+  
+  darkModeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class']
+  });
+  
+  const checkDarkMode = () => {
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+  };
+  
+  checkDarkMode();
+  darkModeInterval = setInterval(checkDarkMode, 100);
+});
+
+onBeforeUnmount(() => {
+  if (darkModeObserver) {
+    darkModeObserver.disconnect();
+  }
+  if (darkModeInterval) {
+    clearInterval(darkModeInterval);
+  }
+});
 </script>
+
+<style scoped>
+.texture-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+</style>

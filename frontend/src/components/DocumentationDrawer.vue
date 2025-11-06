@@ -121,13 +121,42 @@
           </a>
         </nav>
       </div>
+      
+      <!-- Fonts - only show when on fonts route -->
+      <div v-if="showFonts" class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fonts</h3>
+          <button
+            @click="toggle"
+            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
+            title="Close drawer"
+          >
+            <span class="material-symbols-outlined">left_panel_close</span>
+          </button>
+        </div>
+        <nav class="space-y-1">
+          <router-link
+            v-for="item in fonts"
+            :key="item.link"
+            :to="item.link"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group"
+            :class="isDarkMode 
+              ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'"
+          >
+            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+            <span class="font-medium">{{ item.text }}</span>
+          </router-link>
+        </nav>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, RouterLink } from 'vue-router';
 
 const props = defineProps({
   isOpen: {
@@ -181,12 +210,23 @@ const patterns = [
   { text: 'Data Display', link: '/patterns/data-display', icon: 'table_chart' }
 ];
 
+const fonts = [
+  { text: 'Font Library', link: '/fonts/library', icon: 'library_books' },
+  { text: 'Font Scale', link: '/fonts/scale', icon: 'format_size' },
+  { text: 'Font Stack', link: '/fonts/stack', icon: 'layers' },
+  { text: 'Font Subsetting', link: '/fonts/subsetting', icon: 'content_cut' }
+];
+
 const showPatterns = computed(() => {
   return route.path === '/patterns' || route.path.startsWith('/patterns/');
 });
 
+const showFonts = computed(() => {
+  return route.path === '/fonts' || route.path.startsWith('/fonts/');
+});
+
 const showMainSections = computed(() => {
-  return !showPatterns.value;
+  return !showPatterns.value && !showFonts.value;
 });
 
 // Watch for dark mode changes and Escape key

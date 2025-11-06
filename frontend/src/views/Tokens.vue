@@ -1,8 +1,14 @@
 <template>
   <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900 relative flex">
+    <!-- Drawer -->
+    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
+    
     <!-- Main Content Area -->
-    <div class="flex-1 h-full transition-all duration-300 relative overflow-y-auto" style="margin-left: 48px;">
-      <div class="min-h-screen p-8 pb-16">
+    <div 
+      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
+      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
+    >
+      <div class="h-full p-8 overflow-hidden">
         <!-- Hero Section -->
         <div class="max-w-7xl mx-auto mb-16">
           <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
@@ -143,8 +149,18 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
+import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const drawerOpen = ref(false);
+
+const closeDrawer = () => {
+  drawerOpen.value = false;
+};
+
+const toggleDrawer = () => {
+  drawerOpen.value = !drawerOpen.value;
+};
 
 let darkModeObserver = null;
 let darkModeInterval = null;

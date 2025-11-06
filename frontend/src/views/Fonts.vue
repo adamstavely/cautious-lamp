@@ -1,8 +1,14 @@
 <template>
   <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900 relative flex">
+    <!-- Drawer -->
+    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
+    
     <!-- Main Content Area -->
-    <div class="flex-1 h-full transition-all duration-300 relative overflow-y-auto" style="margin-left: 48px;">
-      <div class="min-h-screen p-8 pb-16">
+    <div 
+      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
+      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
+    >
+      <div class="h-full p-8 overflow-hidden">
         <!-- Hero Section -->
         <div class="max-w-7xl mx-auto mb-16">
           <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
@@ -42,9 +48,90 @@
           </div>
         </div>
 
-        <!-- Font Previewer Section -->
+        <!-- Browse Font Tools Section -->
+        <div class="max-w-7xl mx-auto mb-16">
+          <div class="flex items-center justify-between mb-8">
+            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
+              Font tools
+            </h2>
+            <button class="px-6 py-2 rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-sm font-medium">
+              View all tools
+            </button>
+          </div>
+          
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <!-- Font Tool Card 1: Font Library -->
+            <router-link to="/fonts/library" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+                <span class="material-symbols-outlined text-5xl">library_books</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Font Library
+              </h3>
+            </router-link>
+
+            <!-- Font Tool Card 2: Font Scale -->
+            <router-link to="/fonts/scale" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+                <span class="material-symbols-outlined text-5xl">format_line_spacing</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Font Scale
+              </h3>
+            </router-link>
+
+            <!-- Font Tool Card 3: Font Stack -->
+            <router-link to="/fonts/stack" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+                <span class="material-symbols-outlined text-5xl">layers</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Font Stack
+              </h3>
+            </router-link>
+
+            <!-- Font Tool Card 4: Font Subsetting -->
+            <router-link to="/fonts/subsetting" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all relative">
+              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+                <span class="material-symbols-outlined text-5xl">font_download</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Font Subsetting
+              </h3>
+              <span class="material-symbols-outlined absolute top-4 right-4 text-gray-400 dark:text-gray-500 text-xl">
+                chevron_right
+              </span>
+            </router-link>
+          </div>
+        </div>
+
+        <!-- Featured Typography Section -->
         <div class="max-w-7xl mx-auto">
-          <FontPreviewer />
+          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-950 dark:via-indigo-900 dark:to-indigo-800">
+            <div class="flex items-center justify-between mb-8">
+              <h2 class="text-4xl md:text-5xl font-bold text-white">
+                Typography tools
+              </h2>
+              <button class="px-6 py-2 rounded-full border border-white/30 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+                View all tools
+              </button>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+              <router-link to="/fonts/library" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">Font Library</h3>
+                <p class="text-white/80 text-sm">Browse and preview hundreds of Google Fonts. Test readability, compare typefaces, and find the perfect font for your project.</p>
+              </router-link>
+              <router-link to="/fonts/scale" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">Font Scale</h3>
+                <p class="text-white/80 text-sm">Create harmonious typography scales using mathematical ratios. Generate consistent heading and body text sizes for your design system.</p>
+              </router-link>
+              <router-link to="/fonts/stack" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">Font Stack Builder</h3>
+                <p class="text-white/80 text-sm">Build optimal font stacks with fallback fonts. Ensure your text is always readable, even if the primary font fails to load.</p>
+              </router-link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -53,9 +140,19 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
-import FontPreviewer from '../components/font-previewer/FontPreviewer.vue';
+import { RouterLink } from 'vue-router';
+import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const drawerOpen = ref(false);
+
+const closeDrawer = () => {
+  drawerOpen.value = false;
+};
+
+const toggleDrawer = () => {
+  drawerOpen.value = !drawerOpen.value;
+};
 
 let darkModeObserver = null;
 let darkModeInterval = null;
