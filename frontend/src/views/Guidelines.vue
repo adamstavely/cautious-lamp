@@ -9,13 +9,15 @@
       :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
     >
       <!-- VitePress Content - shown when a doc link is clicked -->
-      <div v-if="currentDocLink" class="h-full w-full relative">
+      <div v-if="currentDocLink" class="h-full w-full relative flex flex-col">
         <!-- Breadcrumbs -->
         <Breadcrumbs 
           :custom-path="`/guidelines${currentDocLink}`"
           :on-navigate="handleBreadcrumbNavigate"
         />
-        <MarkdownViewer :doc-path="currentDocLink" />
+        <div class="flex-1 overflow-hidden">
+          <MarkdownViewer :doc-path="currentDocLink" />
+        </div>
       </div>
       
       <!-- Overview Content - shown by default -->

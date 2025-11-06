@@ -182,6 +182,14 @@ const router = createRouter({
       component: () => import('./views/ColorScaleGenerator.vue'),
     },
     {
+      path: '/tools/color-converter',
+      component: () => import('./views/ColorConverter.vue'),
+    },
+    {
+      path: '/tools/color-contrast',
+      component: () => import('./views/ColorContrastChecker.vue'),
+    },
+    {
       path: '/tools',
       component: () => import('./views/Tools.vue'),
     },

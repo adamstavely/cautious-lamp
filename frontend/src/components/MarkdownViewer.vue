@@ -40,7 +40,7 @@
     <!-- Right Sidebar - Table of Contents -->
     <aside 
       v-if="toc.length > 0 && !loading && !error"
-      class="toc-sidebar w-64 flex-shrink-0 border-l border-gray-200 dark:border-gray-700 p-6 overflow-y-auto"
+      class="toc-sidebar w-64 flex-shrink-0 border-l border-gray-200 dark:border-gray-700 p-6 h-full overflow-y-auto"
       :class="isDarkMode ? 'bg-slate-900' : 'bg-white'"
     >
       <div class="sticky top-6">
@@ -356,9 +356,7 @@ onBeforeUnmount(() => {
 }
 
 .toc-sidebar {
-  max-height: calc(100vh - 4rem);
-  position: sticky;
-  top: 0;
+  height: 100%;
 }
 
 /* Prose styles for markdown content */

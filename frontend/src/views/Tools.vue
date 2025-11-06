@@ -171,9 +171,30 @@
               </h3>
             </router-link>
 
-            <!-- Tool Card 6: Color Contrast -->
-            <a 
-              href="#" 
+            <!-- Tool Card 6: Color Converter -->
+            <router-link 
+              to="/tools/color-converter" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">swap_horiz</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Color Converter
+              </h3>
+            </router-link>
+
+            <!-- Tool Card 7: Color Contrast -->
+            <router-link 
+              to="/tools/color-contrast" 
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
@@ -190,7 +211,7 @@
               >
                 Color Contrast
               </h3>
-            </a>
+            </router-link>
           </div>
         </div>
 
@@ -227,10 +248,10 @@
                 <h3 class="text-white font-semibold text-xl mb-2">Color Scale Generator</h3>
                 <p class="text-white/80 text-sm">Generate accessible color scales using Adobe's Leonardo Color with sequential, diverging, and qualitative options.</p>
               </router-link>
-              <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+              <router-link to="/tools/color-contrast" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
                 <h3 class="text-white font-semibold text-xl mb-2">Color Contrast Checker</h3>
                 <p class="text-white/80 text-sm">Ensure your color combinations meet WCAG accessibility standards for text readability.</p>
-              </div>
+              </router-link>
             </div>
           </div>
         </div>
