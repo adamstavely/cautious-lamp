@@ -130,6 +130,10 @@ const router = createRouter({
       component: () => import('./views/ComponentStatus.vue'),
     },
     {
+      path: '/components/buttons',
+      component: () => import('./views/ComponentButton.vue'),
+    },
+    {
       path: '/tokens',
       component: () => import('./views/Tokens.vue'),
     },

@@ -68,47 +68,47 @@
             </router-link>
 
             <!-- Component Card 2: Buttons -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+            <router-link to="/components/buttons" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">smart_button</span>
               </div>
               <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                 Buttons
               </h3>
-            </a>
+            </router-link>
 
             <!-- Component Card 3: Forms -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+            <router-link to="/components/forms" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">description</span>
               </div>
               <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                 Forms
               </h3>
-            </a>
+            </router-link>
 
             <!-- Component Card 4: Cards -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+            <router-link to="/components/cards" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">view_module</span>
               </div>
               <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                 Cards
               </h3>
-            </a>
+            </router-link>
 
             <!-- Component Card 5: Navigation -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+            <router-link to="/components/navigation" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">navigation</span>
               </div>
               <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                 Navigation
               </h3>
-            </a>
+            </router-link>
 
             <!-- Component Card 6: Data Display -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all relative">
+            <router-link to="/components/data-display" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all relative">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">table_chart</span>
               </div>
@@ -118,7 +118,7 @@
               <span class="material-symbols-outlined absolute top-4 right-4 text-gray-400 dark:text-gray-500 text-xl">
                 chevron_right
               </span>
-            </a>
+            </router-link>
           </div>
         </div>
 

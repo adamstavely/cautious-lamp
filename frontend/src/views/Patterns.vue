@@ -70,47 +70,47 @@
           
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <!-- Pattern Card 1: Layout -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+            <router-link to="/patterns/layout" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">view_quilt</span>
               </div>
               <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                 Layout
               </h3>
-            </a>
+            </router-link>
 
             <!-- Pattern Card 2: Navigation -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+            <router-link to="/patterns/navigation" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">navigation</span>
               </div>
               <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                 Navigation
               </h3>
-            </a>
+            </router-link>
 
             <!-- Pattern Card 3: Data Display -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+            <router-link to="/patterns/data-display" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">table_chart</span>
               </div>
               <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                 Data Display
               </h3>
-            </a>
+            </router-link>
 
             <!-- Pattern Card 4: Forms -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+            <router-link to="/patterns/forms" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">description</span>
               </div>
               <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                 Forms
               </h3>
-            </a>
+            </router-link>
 
             <!-- Pattern Card 5: Feedback -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all relative">
+            <router-link to="/patterns/feedback" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all relative">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">feedback</span>
               </div>
@@ -120,7 +120,7 @@
               <span class="material-symbols-outlined absolute top-4 right-4 text-gray-400 dark:text-gray-500 text-xl">
                 chevron_right
               </span>
-            </a>
+            </router-link>
           </div>
         </div>
 
@@ -159,6 +159,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { RouterLink } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
