@@ -4,7 +4,7 @@
     <div>
       <label class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-3">Upload Type</label>
       <div class="flex gap-4">
-        <label class="flex items-center">
+        <label class="flex items-center gap-2">
           <input
             type="radio"
             v-model="uploadType"
@@ -14,7 +14,7 @@
           />
           <span class="text-sm text-gray-900 dark:text-gray-300">Upload File</span>
         </label>
-        <label class="flex items-center">
+        <label class="flex items-center gap-2">
           <input
             type="radio"
             v-model="uploadType"
@@ -129,7 +129,7 @@
     
     <!-- Password Protection -->
     <div>
-      <label class="flex items-center mb-3">
+      <label class="flex items-center gap-2 mb-3">
         <input
           type="checkbox"
           v-model="passwordProtected"
@@ -190,7 +190,7 @@
     <div>
       <label class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-3">Review Path</label>
       <div class="flex flex-col gap-3">
-        <label class="flex items-center">
+        <label class="flex items-center gap-2">
           <input
             type="radio"
             v-model="reviewPath"
@@ -199,7 +199,7 @@
           />
           <span class="text-sm text-gray-900 dark:text-gray-300">Client Review</span>
         </label>
-        <label class="flex items-center">
+        <label class="flex items-center gap-2">
           <input
             type="radio"
             v-model="reviewPath"
@@ -215,7 +215,7 @@
     <div>
       <label class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-3">Sharing</label>
       <div class="flex flex-col gap-3">
-        <label class="flex items-center">
+        <label class="flex items-center gap-2">
           <input
             type="radio"
             v-model="sharingType"
@@ -224,7 +224,7 @@
           />
           <span class="text-sm text-gray-900 dark:text-gray-300">Anyone with link</span>
         </label>
-        <label class="flex items-center">
+        <label class="flex items-center gap-2">
           <input
             type="radio"
             v-model="sharingType"

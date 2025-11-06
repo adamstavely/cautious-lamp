@@ -110,6 +110,10 @@ const router = createRouter({
       component: () => import('./views/Review.vue'),
     },
     {
+      path: '/review/my-requests',
+      component: () => import('./views/ReviewKanban.vue'),
+    },
+    {
       path: '/review/:id',
       component: () => import('./views/ReviewPage.vue'),
     },

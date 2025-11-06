@@ -1,8 +1,8 @@
 <template>
   <div class="space-y-6 bg-transparent" v-if="currentUserRole === 'designer'">
     <!-- Two Column Layout -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Demo Review Links - Left Pane -->
+    <div>
+      <!-- Demo Review Links -->
       <div :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
         <div :class="isDarkMode ? 'border-slate-700' : 'border-gray-200'" class="border-b px-8 py-6">
           <div class="flex items-center justify-between">
@@ -150,75 +150,6 @@
                     </button>
                   </template>
                 </v-tooltip>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Recent Activity - Right Pane -->
-      <div :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
-        <div :class="isDarkMode ? 'border-slate-700' : 'border-gray-200'" class="border-b px-8 py-6">
-          <div class="flex items-center gap-3">
-            <svg :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h2 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-2xl font-bold">Recent Activity</h2>
-          </div>
-          <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="text-sm mt-1">Latest updates on your outstanding reviews</p>
-        </div>
-        <div class="p-8">
-          <div v-if="recentActivity.length === 0" class="text-center py-12">
-            <svg :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="mb-2">No recent activity</p>
-            <p :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" class="text-sm">Activity will appear here once you have review requests</p>
-          </div>
-          <div v-else class="space-y-4">
-            <div
-              v-for="activity in recentActivity"
-              :key="activity.id"
-              @click="goToReview(activity.reviewId)"
-              class="p-4 border rounded-lg cursor-pointer transition-colors"
-              :class="isDarkMode 
-                ? 'border-slate-700 hover:bg-slate-700' 
-                : 'border-gray-200 hover:bg-gray-50'"
-            >
-              <div class="flex items-start gap-3">
-                <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" :class="getActivityIconBg(activity.type, activity.action)">
-                  <svg v-if="activity.type === 'comment'" class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                  <svg v-else-if="activity.action === 'uploaded' || activity.action === 'created_from_url'" class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <span v-else-if="activity.action === 'version_uploaded'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">difference</span>
-                  <span v-else-if="activity.action === 'approved'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">approval</span>
-                  <span v-else-if="activity.action === 'completed'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">done_all</span>
-                  <span v-else-if="activity.action === 'rejected'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">source_notes</span>
-                  <span v-else-if="activity.action === 'moved_to_review'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">graph_1</span>
-                  <svg v-else-if="activity.type === 'workflow'" class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <svg v-else class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 mb-1">
-                    <h4 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-sm font-semibold truncate">{{ activity.reviewName }}</h4>
-                    <v-chip
-                      :color="getWorkflowColor(activity.workflowState)"
-                      size="x-small"
-                      class="font-medium"
-                    >
-                      {{ getWorkflowLabel(activity.workflowState) }}
-                    </v-chip>
-                  </div>
-                  <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="text-sm mb-1">{{ activity.description }}</p>
-                  <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-xs">{{ formatRelativeTime(activity.timestamp) }}</p>
-                </div>
               </div>
             </div>
           </div>
@@ -431,9 +362,9 @@
   />
 
   <!-- Upload Design Modal -->
-  <v-dialog :model-value="showUploadDesignModal" @update:model-value="(val) => showUploadDesignModal = val" persistent max-width="800">
-    <v-card :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" style="background-color: var(--v-theme-surface) !important;">
-      <v-card-title :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="d-flex align-center justify-space-between px-6 pt-10 pb-4" style="font-family: inherit; font-weight: 600; background-color: var(--v-theme-surface) !important;">
+  <v-dialog :model-value="showUploadDesignModal" @update:model-value="(val) => showUploadDesignModal = val" persistent max-width="800" :scrim="isDarkMode ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)'">
+    <v-card :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" :style="isDarkMode ? 'background-color: #1e293b !important; opacity: 1 !important;' : 'background-color: #ffffff !important; opacity: 1 !important;'">
+      <v-card-title :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="d-flex align-center justify-space-between px-6 pt-10 pb-4" :style="isDarkMode ? 'background-color: #1e293b !important; opacity: 1 !important;' : 'background-color: #ffffff !important; opacity: 1 !important; font-family: inherit; font-weight: 600;'">
         <div class="d-flex align-center">
           <svg :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" class="w-7 h-7 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -447,7 +378,7 @@
         </button>
       </v-card-title>
       <v-divider />
-      <v-card-text :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="pt-0 px-6" style="background-color: var(--v-theme-surface) !important;">
+      <v-card-text :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="pt-0 px-6" :style="isDarkMode ? 'background-color: #1e293b !important; opacity: 1 !important;' : 'background-color: #ffffff !important; opacity: 1 !important;'">
         <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="text-sm mb-6">Upload design files or link to a website under development for client review</p>
         <FileUpload @uploaded="handleUpload" />
         <div
@@ -539,9 +470,6 @@ watch(() => [currentUser.value, currentUserEmail.value], () => {
     }
   }
 }, { immediate: true });
-
-// Recent activity for designer
-const recentActivity = ref([]);
 
 // Recently viewed links for clients
 const recentlyViewedLinks = ref([]);
@@ -1238,4 +1166,25 @@ onBeforeUnmount(() => {
     clearInterval(darkModeInterval);
   }
 });
+
+// Expose the modal ref so parent components can trigger it
+defineExpose({
+  showUploadDesignModal
+});
 </script>
+
+<style scoped>
+/* Ensure modal is fully opaque and visible */
+:deep(.v-overlay__scrim) {
+  opacity: 1 !important;
+}
+
+:deep(.v-card) {
+  opacity: 1 !important;
+  background-color: inherit !important;
+}
+
+:deep(.v-dialog .v-card) {
+  opacity: 1 !important;
+}
+</style>

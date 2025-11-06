@@ -45,71 +45,42 @@
           </div>
         </div>
 
-        <!-- Review Features Section -->
+        <!-- Review Actions Section -->
         <div class="max-w-7xl mx-auto mb-16">
-          <div class="flex items-center justify-between mb-8">
-            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Review features
-            </h2>
-            <button class="px-6 py-2 rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-sm font-medium">
-              View all features
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Request Review Button -->
+            <button 
+              @click="openRequestReviewModal"
+              class="group rounded-2xl p-8 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all flex flex-col items-center text-center"
+            >
+              <div class="w-16 h-16 mb-4 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <span class="material-symbols-outlined text-6xl">add_circle</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-xl mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Request Review
+              </h3>
+              <p class="text-gray-600 dark:text-gray-400 text-sm">Upload your design files and request feedback from your team.</p>
             </button>
+
+            <!-- Admin Button -->
+            <router-link 
+              to="/admin" 
+              class="group rounded-2xl p-8 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all flex flex-col items-center text-center"
+            >
+              <div class="w-16 h-16 mb-4 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <span class="material-symbols-outlined text-6xl">admin_panel_settings</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-xl mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Admin
+              </h3>
+              <p class="text-gray-600 dark:text-gray-400 text-sm">Manage reviews, users, and system settings.</p>
+            </router-link>
           </div>
-          
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <!-- Feature Card 1: Upload -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
-                <span class="material-symbols-outlined text-5xl">upload</span>
-              </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                Upload
-              </h3>
-            </a>
+        </div>
 
-            <!-- Feature Card 2: Comments -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
-                <span class="material-symbols-outlined text-5xl">comment</span>
-              </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                Comments
-              </h3>
-            </a>
-
-            <!-- Feature Card 3: Approvals -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
-                <span class="material-symbols-outlined text-5xl">check_circle</span>
-              </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                Approvals
-              </h3>
-            </a>
-
-            <!-- Feature Card 4: Versions -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
-                <span class="material-symbols-outlined text-5xl">history</span>
-              </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                Versions
-              </h3>
-            </a>
-
-            <!-- Feature Card 5: Teams -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all relative">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
-                <span class="material-symbols-outlined text-5xl">groups</span>
-              </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                Teams
-              </h3>
-              <span class="material-symbols-outlined absolute top-4 right-4 text-gray-400 dark:text-gray-500 text-xl">
-                chevron_right
-              </span>
-            </a>
-          </div>
+        <!-- My Requested Reviews Component -->
+        <div class="max-w-7xl mx-auto mb-16">
+          <component v-if="mounted && UploadPageComponent" :is="UploadPageComponent" ref="uploadPageRef" />
         </div>
 
         <!-- Review Interface Section -->
@@ -140,37 +111,21 @@
             </div>
           </div>
         </div>
-
-        <!-- Review Interface Component -->
-        <div class="max-w-7xl mx-auto mt-16">
-          <div v-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
-            <p class="text-red-800 dark:text-red-200 font-semibold">Error loading review interface:</p>
-            <p class="text-red-600 dark:text-red-300 text-sm mt-2">{{ error }}</p>
-            <pre class="text-xs mt-2 overflow-auto text-gray-800 dark:text-gray-200">{{ errorStack }}</pre>
-          </div>
-          
-          <component v-else-if="mounted && UploadPageComponent" :is="UploadPageComponent" />
-          
-          <div v-else class="text-center py-12 bg-white dark:bg-slate-800 rounded-lg shadow">
-            <p class="text-gray-500 dark:text-gray-400">Loading review interface...</p>
-          </div>
-        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, onErrorCaptured } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { RouterLink } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-
-const UploadPageComponent = ref(null);
-const mounted = ref(false);
-const error = ref(null);
-const errorStack = ref(null);
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
+const UploadPageComponent = ref(null);
+const uploadPageRef = ref(null);
+const mounted = ref(false);
 
 const closeDrawer = () => {
   drawerOpen.value = false;
@@ -178,6 +133,12 @@ const closeDrawer = () => {
 
 const toggleDrawer = () => {
   drawerOpen.value = !drawerOpen.value;
+};
+
+const openRequestReviewModal = () => {
+  if (uploadPageRef.value && uploadPageRef.value.showUploadDesignModal !== undefined) {
+    uploadPageRef.value.showUploadDesignModal = true;
+  }
 };
 
 let darkModeObserver = null;
@@ -205,8 +166,6 @@ onMounted(async () => {
     UploadPageComponent.value = module.default;
     mounted.value = true;
   } catch (err) {
-    error.value = err.message;
-    errorStack.value = err.stack;
     console.error('Error loading UploadPage component:', err);
   }
 });
@@ -218,13 +177,6 @@ onBeforeUnmount(() => {
   if (darkModeInterval) {
     clearInterval(darkModeInterval);
   }
-});
-
-onErrorCaptured((err) => {
-  error.value = err.message;
-  errorStack.value = err.stack;
-  console.error('Error in Review page:', err);
-  return false;
 });
 </script>
 

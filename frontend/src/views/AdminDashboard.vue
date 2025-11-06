@@ -1,18 +1,72 @@
 <template>
-  <div class="space-y-6">
-    <div class="bg-white dark:bg-slate-800 rounded-lg shadow-lg">
-      <div class="border-b border-gray-200 dark:border-slate-700 px-8 py-6">
-        <div class="flex items-center gap-3">
-          <svg class="w-7 h-7 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-          <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Admin Dashboard</h2>
-        </div>
-        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">Manage review links, teams, and batch operations</p>
-      </div>
+  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900 relative flex">
+    <!-- Drawer -->
+    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
+    
+    <!-- Main Content Area -->
+    <div 
+      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
+      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
+    >
+      <!-- Breadcrumbs -->
+      <Breadcrumbs />
       
-      <!-- Tabs -->
-      <v-tabs v-model="activeTab" bg-color="transparent" class="px-8">
+      <div class="h-full overflow-y-auto">
+        <div class="p-8">
+          <!-- Hero Section -->
+          <div class="max-w-7xl mx-auto mb-8">
+            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
+              <!-- Background texture/grain effect -->
+              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
+              
+              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+                <div class="flex-1">
+                  <div class="flex items-center gap-4 mb-4">
+                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
+                      Admin Dashboard
+                    </h1>
+                  </div>
+                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
+                    Manage review links, teams, and batch operations. Control access, extend expiration dates, and oversee all review activities.
+                  </p>
+                  <div class="flex items-center gap-4 text-sm text-white/70">
+                    <span class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-base">admin_panel_settings</span>
+                      Admin Controls
+                    </span>
+                    <span class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-base">update</span>
+                      Updated {{ new Date().toLocaleDateString() }}
+                    </span>
+                  </div>
+                </div>
+                <div class="hidden md:block flex-shrink-0">
+                  <div class="w-64 h-64 relative">
+                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
+                      <defs>
+                        <linearGradient id="adminGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                        </linearGradient>
+                      </defs>
+                      <!-- Stylized admin icon -->
+                      <rect x="60" y="40" width="80" height="120" rx="8" fill="url(#adminGradient)" opacity="0.3"/>
+                      <circle cx="100" cy="80" r="20" fill="url(#adminGradient)" opacity="0.5"/>
+                      <rect x="70" y="110" width="60" height="8" rx="4" fill="white" opacity="0.6"/>
+                      <rect x="70" y="130" width="60" height="8" rx="4" fill="white" opacity="0.6"/>
+                      <rect x="70" y="150" width="40" height="8" rx="4" fill="white" opacity="0.6"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin Content -->
+          <div class="max-w-7xl mx-auto">
+            <div class="bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700">
+              <!-- Tabs -->
+              <v-tabs v-model="activeTab" bg-color="transparent" class="px-8">
         <v-tab value="links">
           <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -291,7 +345,11 @@
             </div>
           </div>
         </v-window-item>
-      </v-window>
+        </v-window>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Modals -->
@@ -376,9 +434,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import axios from 'axios';
 import { mockAPI, isMockMode, mockReviews, getCurrentUser, getFilteredReviews } from '../mockData.js';
+import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import Breadcrumbs from '../components/Breadcrumbs.vue';
 import PromptModal from '../components/review-ui/PromptModal.vue';
 import ConfirmModal from '../components/review-ui/ConfirmModal.vue';
 import AlertModal from '../components/review-ui/AlertModal.vue';
@@ -386,12 +446,23 @@ import DatePickerModal from '../components/review-ui/DatePickerModal.vue';
 import TeamEditModal from '../components/review-ui/TeamEditModal.vue';
 import TeamMembersModal from '../components/review-ui/TeamMembersModal.vue';
 
+const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const drawerOpen = ref(false);
 const links = ref([]);
 const selectedIds = ref([]);
 const teams = ref([]);
 const activeTab = ref('links');
 
-// Teams modal states
+const closeDrawer = () => {
+  drawerOpen.value = false;
+};
+
+const toggleDrawer = () => {
+  drawerOpen.value = !drawerOpen.value;
+};
+
+let darkModeObserver = null;
+let darkModeInterval = null;
 const showCreateTeamModal = ref(false);
 const showEditTeamModal = ref(false);
 const showMembersModal = ref(false);
@@ -779,7 +850,43 @@ const handleDeleteTeam = async () => {
 };
 
 onMounted(() => {
+  // Set up dark mode observer
+  darkModeObserver = new MutationObserver(() => {
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+  });
+  
+  darkModeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class']
+  });
+  
+  // Also check periodically as a fallback
+  const checkDarkMode = () => {
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+  };
+  
+  // Check immediately
+  checkDarkMode();
+  
+  // Check every 100ms as fallback
+  darkModeInterval = setInterval(checkDarkMode, 100);
+  
   loadLinks();
   loadTeams();
 });
+
+onBeforeUnmount(() => {
+  if (darkModeObserver) {
+    darkModeObserver.disconnect();
+  }
+  if (darkModeInterval) {
+    clearInterval(darkModeInterval);
+  }
+});
 </script>
+
+<style scoped>
+.texture-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+</style>
