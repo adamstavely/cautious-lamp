@@ -377,7 +377,6 @@
           </svg>
         </button>
       </v-card-title>
-      <v-divider />
       <v-card-text :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="pt-0 px-6" :style="isDarkMode ? 'background-color: #1e293b !important; opacity: 1 !important;' : 'background-color: #ffffff !important; opacity: 1 !important;'">
         <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="text-sm mb-6">Upload design files or link to a website under development for client review</p>
         <FileUpload @uploaded="handleUpload" />

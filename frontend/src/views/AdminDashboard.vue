@@ -1,5 +1,10 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
+  <div 
+    class="w-full h-full relative flex"
+    :class="isDarkMode 
+      ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
+      : 'bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50'"
+  >
     <!-- Drawer -->
     <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
     
@@ -15,7 +20,12 @@
         <div class="p-8">
           <!-- Hero Section -->
           <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
+            <div 
+              class="rounded-3xl p-12 md:p-16 relative overflow-hidden"
+              :class="isDarkMode 
+                ? 'bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700' 
+                : 'bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600'"
+            >
               <!-- Background texture/grain effect -->
               <div class="absolute inset-0 opacity-10 texture-pattern"></div>
               
@@ -64,17 +74,34 @@
 
           <!-- Admin Content -->
           <div class="max-w-7xl mx-auto">
-            <div class="bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700">
+            <div 
+              class="rounded-lg shadow-lg border"
+              :class="isDarkMode 
+                ? 'bg-slate-800 border-slate-700' 
+                : 'bg-white border-gray-200'"
+            >
               <!-- Tabs -->
               <v-tabs v-model="activeTab" bg-color="transparent" class="px-8">
         <v-tab value="links">
-          <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg 
+            class="w-5 h-5 mr-2" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
           </svg>
           Review Links
         </v-tab>
         <v-tab value="teams">
-          <svg class="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg 
+            class="w-5 h-5 mr-2" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
           Teams
@@ -103,7 +130,10 @@
             <div class="d-flex align-center justify-center">
               <span
                 v-if="item.hasPassword"
-                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-700"
+                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border"
+                :class="isDarkMode 
+                  ? 'bg-red-900/30 text-red-300 border-red-700' 
+                  : 'bg-red-100 text-red-800 border-red-200'"
               >
                 <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
@@ -112,7 +142,10 @@
               </span>
               <span
                 v-else
-                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-700"
+                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border"
+                :class="isDarkMode 
+                  ? 'bg-green-900/30 text-green-300 border-green-700' 
+                  : 'bg-green-100 text-green-800 border-green-200'"
               >
                 <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
@@ -125,13 +158,19 @@
             <div class="d-flex align-center justify-center">
               <span
                 v-if="item.extended"
-                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-700"
+                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border"
+                :class="isDarkMode 
+                  ? 'bg-blue-900/30 text-blue-300 border-blue-700' 
+                  : 'bg-blue-100 text-blue-800 border-blue-200'"
               >
                 Yes
               </span>
               <span
                 v-else
-                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-600"
+                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border"
+                :class="isDarkMode 
+                  ? 'bg-slate-700 text-gray-200 border-slate-600' 
+                  : 'bg-gray-100 text-gray-800 border-gray-200'"
               >
                 No
               </span>
@@ -143,7 +182,10 @@
                 <template #activator="{ props }">
                   <button
                     @click="copyReviewUrl(item)"
-                    class="p-2 rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                    class="p-2 rounded-lg transition-colors"
+                    :class="isDarkMode 
+                      ? 'text-indigo-400 hover:bg-indigo-900/20 hover:text-indigo-300' 
+                      : 'text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700'"
                     v-bind="props"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,7 +211,10 @@
                 <template #activator="{ props }">
                   <button
                     @click="extend(item.id)"
-                    class="p-2 rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                    class="p-2 rounded-lg transition-colors"
+                    :class="isDarkMode 
+                      ? 'text-indigo-400 hover:bg-indigo-900/20 hover:text-indigo-300' 
+                      : 'text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700'"
                     v-bind="props"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,7 +227,10 @@
                 <template #activator="{ props }">
                   <button
                     @click="openOverrideDialog(item.id)"
-                    class="p-2 rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                    class="p-2 rounded-lg transition-colors"
+                    :class="isDarkMode 
+                      ? 'text-indigo-400 hover:bg-indigo-900/20 hover:text-indigo-300' 
+                      : 'text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700'"
                     v-bind="props"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -195,7 +243,10 @@
                 <template #activator="{ props }">
                   <button
                     @click="openPasswordDialog(item.id)"
-                    class="p-2 rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                    class="p-2 rounded-lg transition-colors"
+                    :class="isDarkMode 
+                      ? 'text-indigo-400 hover:bg-indigo-900/20 hover:text-indigo-300' 
+                      : 'text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700'"
                     v-bind="props"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,7 +259,10 @@
                 <template #activator="{ props }">
                   <button
                     @click="openDeleteConfirm(item.id)"
-                    class="p-2 rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                    class="p-2 rounded-lg transition-colors"
+                    :class="isDarkMode 
+                      ? 'text-indigo-400 hover:bg-indigo-900/20 hover:text-indigo-300' 
+                      : 'text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700'"
                     v-bind="props"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -245,10 +299,13 @@
         <v-window-item value="teams">
           <div class="p-8">
             <div class="flex items-center justify-between mb-6">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Teams</h3>
+              <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'">Teams</h3>
               <button
                 @click="showCreateTeamModal = true"
-                class="px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white font-medium rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-colors flex items-center gap-2"
+                class="px-4 py-2 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                :class="isDarkMode 
+                  ? 'bg-indigo-500 hover:bg-indigo-400' 
+                  : 'bg-indigo-600 hover:bg-indigo-700'"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -258,28 +315,40 @@
             </div>
             
             <div v-if="teams.length === 0" class="text-center py-12">
-              <svg class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg 
+                class="w-16 h-16 mx-auto mb-4" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
+              >
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              <p class="text-gray-500 dark:text-gray-400 mb-2">No teams yet</p>
-              <p class="text-sm text-gray-400 dark:text-gray-500">Create your first team to start collaborating</p>
+              <p class="mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">No teams yet</p>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Create your first team to start collaborating</p>
             </div>
             
             <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div
                 v-for="team in teams"
                 :key="team.id"
-                class="bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 p-6 hover:shadow-md transition-shadow flex flex-col"
+                class="rounded-lg border p-6 hover:shadow-md transition-shadow flex flex-col"
+                :class="isDarkMode 
+                  ? 'bg-slate-700 border-slate-600' 
+                  : 'bg-gray-50 border-gray-200'"
               >
                 <div class="flex items-start justify-between mb-4">
                   <div class="flex-1">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">{{ team.name }}</h3>
-                    <p class="text-sm text-gray-600 dark:text-gray-300">{{ team.description || 'No description' }}</p>
+                    <h3 class="text-lg font-semibold mb-1" :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'">{{ team.name }}</h3>
+                    <p class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'">{{ team.description || 'No description' }}</p>
                   </div>
                   <div class="flex items-center gap-2">
                     <button
                       @click="editTeam(team)"
-                      class="p-2 text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                      class="p-2 transition-colors"
+                      :class="isDarkMode 
+                        ? 'text-gray-500 hover:text-indigo-400' 
+                        : 'text-gray-400 hover:text-indigo-600'"
                       title="Edit Team"
                     >
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -288,7 +357,10 @@
                     </button>
                     <button
                       @click="confirmDeleteTeam(team)"
-                      class="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                      class="p-2 transition-colors"
+                      :class="isDarkMode 
+                        ? 'text-gray-500 hover:text-red-400' 
+                        : 'text-gray-400 hover:text-red-600'"
                       title="Delete Team"
                     >
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -300,18 +372,18 @@
                 
                 <div class="flex flex-col flex-1 space-y-3">
                   <div class="flex items-center justify-between text-sm">
-                    <span class="text-gray-600 dark:text-gray-300">Members</span>
-                    <span class="font-medium text-gray-900 dark:text-gray-100">{{ team.members.length }}</span>
+                    <span :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'">Members</span>
+                    <span class="font-medium" :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'">{{ team.members.length }}</span>
                   </div>
                   <div class="flex items-center justify-between text-sm">
-                    <span class="text-gray-600 dark:text-gray-300">Reviews</span>
-                    <span class="font-medium text-gray-900 dark:text-gray-100">{{ team.reviews?.length || 0 }}</span>
+                    <span :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'">Reviews</span>
+                    <span class="font-medium" :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'">{{ team.reviews?.length || 0 }}</span>
                   </div>
                   
                   <!-- Team Members Preview -->
                   <div class="mt-4">
                     <div class="flex items-center gap-2 mb-2">
-                      <span class="text-xs font-medium text-gray-500 dark:text-gray-300">Members:</span>
+                      <span class="text-xs font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-500'">Members:</span>
                     </div>
                     <div class="flex flex-wrap gap-2">
                       <span
@@ -319,15 +391,22 @@
                         :key="member.email"
                         class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium"
                         :class="member.role === 'Art Director' 
-                          ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200' 
-                          : 'bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200'"
+                          ? (isDarkMode 
+                            ? 'bg-purple-900 text-purple-200' 
+                            : 'bg-purple-100 text-purple-800')
+                          : (isDarkMode 
+                            ? 'bg-indigo-900 text-indigo-200' 
+                            : 'bg-indigo-100 text-indigo-800')"
                       >
                         {{ member.name || member.email }}
                         <span class="text-xs opacity-75">({{ member.role || 'Designer' }})</span>
                       </span>
                       <span
                         v-if="team.members.length > 5"
-                        class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-gray-300"
+                        class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium"
+                        :class="isDarkMode 
+                          ? 'bg-slate-600 text-gray-300' 
+                          : 'bg-gray-100 text-gray-600'"
                       >
                         +{{ team.members.length - 5 }} more
                       </span>
@@ -336,7 +415,10 @@
                   
                   <button
                     @click="manageTeamMembers(team)"
-                    class="w-full mt-auto px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-colors shadow-sm"
+                    class="w-full mt-auto px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors shadow-sm"
+                    :class="isDarkMode 
+                      ? 'bg-indigo-500 hover:bg-indigo-400' 
+                      : 'bg-indigo-600 hover:bg-indigo-700'"
                   >
                     Manage Members
                   </button>

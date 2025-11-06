@@ -146,11 +146,16 @@
         </div>
       </div>
     </div>
+    
+    <!-- Hidden UploadPage component for modal access -->
+    <div v-if="mounted && UploadPageComponent" style="display: none;">
+      <component :is="UploadPageComponent" ref="uploadPageRef" />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { RouterLink } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 
@@ -168,9 +173,22 @@ const toggleDrawer = () => {
   drawerOpen.value = !drawerOpen.value;
 };
 
-const openRequestReviewModal = () => {
+const openRequestReviewModal = async () => {
+  if (!mounted.value || !UploadPageComponent.value) {
+    console.warn('UploadPage component not loaded yet');
+    return;
+  }
+  
+  // Wait for next tick to ensure component is fully rendered
+  await nextTick();
+  
   if (uploadPageRef.value && uploadPageRef.value.showUploadDesignModal !== undefined) {
     uploadPageRef.value.showUploadDesignModal = true;
+  } else {
+    console.warn('UploadPage ref not available or showUploadDesignModal not exposed', {
+      hasRef: !!uploadPageRef.value,
+      refValue: uploadPageRef.value
+    });
   }
 };
 

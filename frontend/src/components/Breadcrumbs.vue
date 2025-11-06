@@ -1,10 +1,10 @@
 <template>
   <nav 
     v-if="crumbs.length > 0" 
-    class="px-8 pt-6 pb-4 border-b bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50"
+    class="px-8 pt-6 pb-4 border-b"
     :class="isDarkMode 
-      ? 'border-gray-700 bg-slate-900' 
-      : 'border-gray-200'"
+      ? 'border-gray-700 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
+      : 'border-gray-200 bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50'"
   >
     <div class="flex items-center gap-2 text-sm">
       <router-link
