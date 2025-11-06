@@ -15,3 +15,14 @@ body {
   min-height: 100vh;
 }
 
+/* Ensure Vuetify components respect light mode */
+:root:not(.dark) {
+  --v-theme-surface: #ffffff;
+  --v-theme-background: #ffffff;
+}
+
+.dark {
+  --v-theme-surface: #1e293b;
+  --v-theme-background: #0f172a;
+}
+

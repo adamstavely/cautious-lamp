@@ -1,0 +1,130 @@
+[
+  {
+    "name": "Roboto",
+    "url": "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap",
+    "tags": ["sans-serif"],
+    "supports": ["latin", "cyrillic"],
+    "weights": ["300", "400", "500", "700"],
+    "pairsWellWith": ["Open Sans", "Lato", "Source Sans Pro"],
+    "popularity": 98,
+    "description": "Google's signature font family designed for optimal readability"
+  },
+  {
+    "name": "Open Sans",
+    "url": "https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap",
+    "tags": ["sans-serif"],
+    "supports": ["latin"],
+    "weights": ["300", "400", "600", "700"],
+    "pairsWellWith": ["Roboto", "Lato", "Source Sans Pro"],
+    "popularity": 92,
+    "description": "Humanist sans-serif typeface optimized for print, web, and mobile interfaces"
+  },
+  {
+    "name": "Lato",
+    "url": "https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap",
+    "tags": ["sans-serif"],
+    "supports": ["latin"],
+    "weights": ["300", "400", "700", "900"],
+    "pairsWellWith": ["Roboto", "Open Sans", "Montserrat"],
+    "popularity": 88,
+    "description": "A sans-serif typeface family designed for clarity and warmth"
+  },
+  {
+    "name": "Montserrat",
+    "url": "https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap",
+    "tags": ["sans-serif"],
+    "supports": ["latin"],
+    "weights": ["300", "400", "500", "600", "700", "800"],
+    "pairsWellWith": ["Open Sans", "Lato", "Source Sans Pro"]
+  },
+  {
+    "name": "Source Sans Pro",
+    "url": "https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap",
+    "tags": ["sans-serif"],
+    "supports": ["latin"],
+    "weights": ["300", "400", "600", "700"],
+    "pairsWellWith": ["Roboto", "Open Sans", "Lato"]
+  },
+  {
+    "name": "Playfair Display",
+    "url": "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&display=swap",
+    "tags": ["serif", "display"],
+    "supports": ["latin"],
+    "weights": ["400", "500", "600", "700", "800", "900"],
+    "pairsWellWith": ["Open Sans", "Source Sans Pro", "Lato"]
+  },
+  {
+    "name": "Merriweather",
+    "url": "https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&display=swap",
+    "tags": ["serif"],
+    "supports": ["latin"],
+    "weights": ["300", "400", "700", "900"],
+    "pairsWellWith": ["Open Sans", "Lato", "Source Sans Pro"]
+  },
+  {
+    "name": "Lora",
+    "url": "https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap",
+    "tags": ["serif"],
+    "supports": ["latin"],
+    "weights": ["400", "500", "600", "700"],
+    "pairsWellWith": ["Open Sans", "Source Sans Pro", "Lato"]
+  },
+  {
+    "name": "Roboto Mono",
+    "url": "https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;700&display=swap",
+    "tags": ["monospace"],
+    "supports": ["latin", "cyrillic"],
+    "weights": ["300", "400", "500", "700"],
+    "pairsWellWith": ["Roboto", "Open Sans", "Source Sans Pro"]
+  },
+  {
+    "name": "Source Code Pro",
+    "url": "https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@300;400;500;600;700&display=swap",
+    "tags": ["monospace"],
+    "supports": ["latin"],
+    "weights": ["300", "400", "500", "600", "700"],
+    "pairsWellWith": ["Roboto", "Source Sans Pro", "Open Sans"]
+  },
+  {
+    "name": "Oswald",
+    "url": "https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&display=swap",
+    "tags": ["display", "sans-serif"],
+    "supports": ["latin"],
+    "weights": ["300", "400", "500", "600", "700"],
+    "pairsWellWith": ["Open Sans", "Source Sans Pro", "Lato"]
+  },
+  {
+    "name": "Raleway",
+    "url": "https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800;900&display=swap",
+    "tags": ["sans-serif", "display"],
+    "supports": ["latin"],
+    "weights": ["300", "400", "500", "600", "700", "800", "900"],
+    "pairsWellWith": ["Open Sans", "Lato", "Source Sans Pro"]
+  },
+  {
+    "name": "Poppins",
+    "url": "https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap",
+    "tags": ["sans-serif"],
+    "supports": ["latin"],
+    "weights": ["300", "400", "500", "600", "700", "800", "900"],
+    "pairsWellWith": ["Open Sans", "Lato", "Source Sans Pro"]
+  },
+  {
+    "name": "Nunito",
+    "url": "https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800;900&display=swap",
+    "tags": ["sans-serif"],
+    "supports": ["latin"],
+    "weights": ["300", "400", "500", "600", "700", "800", "900"],
+    "pairsWellWith": ["Open Sans", "Lato", "Source Sans Pro"]
+  },
+  {
+    "name": "Inter",
+    "url": "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap",
+    "tags": ["sans-serif"],
+    "supports": ["latin", "cyrillic"],
+    "weights": ["300", "400", "500", "600", "700", "800", "900"],
+    "pairsWellWith": ["Roboto", "Open Sans", "Source Sans Pro"],
+    "popularity": 95,
+    "description": "A highly legible sans-serif typeface designed for computer screens"
+  }
+]

@@ -9,10 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mdi/font": "^7.4.47",
+    "@pdftron/webviewer": "^11.8.0",
     "axios": "^1.6.0",
     "jspdf": "^3.0.3",
     "vue": "^3.3.4",
-    "vue-router": "^4.2.5"
+    "vue-router": "^4.2.5",
+    "vuetify": "^3.10.9"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.4.0",
