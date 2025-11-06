@@ -12,9 +12,11 @@
     "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
+    "@adobe/leonardo-contrast-colors": "^1.0.0",
     "@mdi/font": "^7.4.47",
     "@pdftron/webviewer": "^11.8.0",
     "axios": "^1.6.0",
+    "chroma-js": "^3.1.2",
     "jspdf": "^3.0.3",
     "marked": "^16.4.1",
     "vue": "^3.3.4",

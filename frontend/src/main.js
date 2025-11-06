@@ -178,6 +178,10 @@ const router = createRouter({
       component: () => import('./views/SEOTaggingGenerator.vue'),
     },
     {
+      path: '/tools/color-scale',
+      component: () => import('./views/ColorScaleGenerator.vue'),
+    },
+    {
       path: '/tools',
       component: () => import('./views/Tools.vue'),
     },

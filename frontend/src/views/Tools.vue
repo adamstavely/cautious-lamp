@@ -150,7 +150,28 @@
               </h3>
             </router-link>
 
-            <!-- Tool Card 5: Color Contrast -->
+            <!-- Tool Card 5: Color Scale Generator -->
+            <router-link 
+              to="/tools/color-scale" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">format_color_fill</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Color Scale Generator
+              </h3>
+            </router-link>
+
+            <!-- Tool Card 6: Color Contrast -->
             <a 
               href="#" 
               class="group rounded-2xl p-6 border transition-all"
@@ -201,6 +222,10 @@
               <router-link to="/tools/seo-tagging" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
                 <h3 class="text-white font-semibold text-xl mb-2">SEO Tagging Generator</h3>
                 <p class="text-white/80 text-sm">Generate SEO meta tags, Open Graph tags, and structured data for optimal search engine optimization.</p>
+              </router-link>
+              <router-link to="/tools/color-scale" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">Color Scale Generator</h3>
+                <p class="text-white/80 text-sm">Generate accessible color scales using Adobe's Leonardo Color with sequential, diverging, and qualitative options.</p>
               </router-link>
               <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
                 <h3 class="text-white font-semibold text-xl mb-2">Color Contrast Checker</h3>
