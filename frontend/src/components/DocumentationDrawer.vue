@@ -118,6 +118,41 @@
         </nav>
       </div>
       
+      <!-- Components - only show when on components route -->
+      <div v-if="showComponents" class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Components</h3>
+          <button
+            @click="toggle"
+            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
+            title="Close drawer"
+          >
+            <span class="material-symbols-outlined">left_panel_close</span>
+          </button>
+        </div>
+        <nav class="space-y-1">
+          <router-link
+            v-for="item in componentItems"
+            :key="item.link"
+            :to="item.link"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+            :class="[
+              isActive(item.link)
+                ? (isDarkMode 
+                  ? 'text-indigo-400 bg-indigo-900/20' 
+                  : 'text-indigo-600 bg-indigo-50')
+                : (isDarkMode
+                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+            ]"
+          >
+            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+            <span class="font-medium">{{ item.text }}</span>
+          </router-link>
+        </nav>
+      </div>
+      
       <!-- Fonts - only show when on fonts route -->
       <div v-if="showFonts" class="mb-8">
         <div class="flex items-center justify-between mb-4">
@@ -222,6 +257,16 @@ const fonts = [
   { text: 'Font Subsetting', link: '/fonts/subsetting', icon: 'content_cut' }
 ];
 
+const componentItems = [
+  { text: 'Overview', link: '/components', icon: 'widgets' },
+  { text: 'Component Status', link: '/components/status', icon: 'check_circle' },
+  { text: 'Buttons', link: '/components/buttons', icon: 'smart_button' },
+  { text: 'Forms', link: '/components/forms', icon: 'description' },
+  { text: 'Cards', link: '/components/cards', icon: 'view_module' },
+  { text: 'Navigation', link: '/components/navigation', icon: 'navigation' },
+  { text: 'Data Display', link: '/components/data-display', icon: 'table_chart' }
+];
+
 const showPatterns = computed(() => {
   return route.path === '/patterns' || route.path.startsWith('/patterns/');
 });
@@ -230,9 +275,17 @@ const showFonts = computed(() => {
   return route.path === '/fonts' || route.path.startsWith('/fonts/');
 });
 
-const showMainSections = computed(() => {
-  return !showPatterns.value && !showFonts.value;
+const showComponents = computed(() => {
+  return route.path === '/components' || route.path.startsWith('/components/');
 });
+
+const showMainSections = computed(() => {
+  return !showPatterns.value && !showFonts.value && !showComponents.value;
+});
+
+const isActive = (path) => {
+  return route.path === path || route.path.startsWith(path + '/');
+};
 
 // Watch for dark mode changes and Escape key
 let darkModeObserver = null;

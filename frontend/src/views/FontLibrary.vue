@@ -8,10 +8,15 @@
       class="flex-1 h-full transition-all duration-300 relative overflow-y-auto"
       :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
     >
-      <div class="min-h-screen p-8 pb-16">
-        <!-- Font Previewer Section -->
+      <!-- Breadcrumbs -->
+      <Breadcrumbs />
+      
+      <div class="min-h-screen pb-16">
+        <div class="p-8">
+          <!-- Font Previewer Section -->
         <div class="max-w-7xl mx-auto">
           <FontPreviewer />
+          </div>
         </div>
       </div>
     </div>
@@ -22,6 +27,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import FontPreviewer from '../components/font-previewer/FontPreviewer.vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import Breadcrumbs from '../components/Breadcrumbs.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);

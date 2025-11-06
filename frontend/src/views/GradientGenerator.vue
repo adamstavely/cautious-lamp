@@ -1,15 +1,11 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
+    <!-- Breadcrumbs -->
+    <Breadcrumbs />
+    
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <router-link
-          to="/"
-          class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-        >
-          <span class="material-symbols-outlined mr-2">arrow_back</span>
-          <span>Back to Home</span>
-        </router-link>
         <h1 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
           <span class="material-symbols-outlined text-4xl text-indigo-600">gradient</span>
           Gradient Generator
@@ -719,6 +715,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import ColorPicker from '../components/ColorPicker.vue';
+import Breadcrumbs from '../components/Breadcrumbs.vue';
 import axios from 'axios';
 
 const gradientType = ref('linear');

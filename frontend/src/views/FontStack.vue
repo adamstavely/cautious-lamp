@@ -8,8 +8,12 @@
       class="flex-1 h-full transition-all duration-300 relative overflow-y-auto"
       :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
     >
-      <div class="min-h-screen p-8 pb-16">
-        <div class="max-w-3xl mx-auto">
+      <!-- Breadcrumbs -->
+      <Breadcrumbs />
+      
+      <div class="min-h-screen pb-16">
+        <div class="p-8">
+          <div class="max-w-3xl mx-auto">
           <!-- Header -->
           <div class="mb-8">
             <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
@@ -136,6 +140,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import Breadcrumbs from '../components/Breadcrumbs.vue';
 import fontData from '../assets/fonts.json';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));

@@ -57,7 +57,17 @@
           </div>
           
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <!-- Component Card 1: Buttons -->
+            <!-- Component Card 1: Component Status -->
+            <router-link to="/components/status" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
+              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+                <span class="material-symbols-outlined text-5xl">check_circle</span>
+              </div>
+              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Component Status
+              </h3>
+            </router-link>
+
+            <!-- Component Card 2: Buttons -->
             <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">smart_button</span>
@@ -67,7 +77,7 @@
               </h3>
             </a>
 
-            <!-- Component Card 2: Forms -->
+            <!-- Component Card 3: Forms -->
             <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">description</span>
@@ -77,7 +87,7 @@
               </h3>
             </a>
 
-            <!-- Component Card 3: Cards -->
+            <!-- Component Card 4: Cards -->
             <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">view_module</span>
@@ -87,7 +97,7 @@
               </h3>
             </a>
 
-            <!-- Component Card 4: Navigation -->
+            <!-- Component Card 5: Navigation -->
             <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">navigation</span>
@@ -97,7 +107,7 @@
               </h3>
             </a>
 
-            <!-- Component Card 5: Data Display -->
+            <!-- Component Card 6: Data Display -->
             <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all relative">
               <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
                 <span class="material-symbols-outlined text-5xl">table_chart</span>
@@ -147,6 +157,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { RouterLink } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));

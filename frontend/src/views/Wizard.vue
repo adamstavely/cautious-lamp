@@ -1,15 +1,11 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
+    <!-- Breadcrumbs -->
+    <Breadcrumbs />
+    
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <router-link
-          to="/"
-          class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-        >
-          <span class="material-symbols-outlined mr-2">arrow_back</span>
-          <span>Back to Home</span>
-        </router-link>
         <h1 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
           <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
@@ -160,6 +156,7 @@ import Step3Contrast from '../components/Step3Contrast.vue';
 import Step4Roles from '../components/Step4Roles.vue';
 import Step5Use from '../components/Step5Use.vue';
 import PaletteHealthScore from '../components/PaletteHealthScore.vue';
+import Breadcrumbs from '../components/Breadcrumbs.vue';
 
 const currentStep = ref(0);
 const steps = [
