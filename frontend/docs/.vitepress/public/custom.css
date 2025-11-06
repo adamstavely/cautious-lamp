@@ -1,0 +1,35 @@
+/* Hide VitePress sidebar and navigation when embedded in iframe */
+/* This CSS will be injected into VitePress pages */
+
+/* Check if we're in an iframe or have embedded parameter */
+body[data-embedded="true"],
+html:has(iframe) body {
+  /* Hide VitePress sidebar */
+  .VPSidebar {
+    display: none !important;
+  }
+  
+  /* Hide VitePress top navigation */
+  .VPNav {
+    display: none !important;
+  }
+  
+  /* Make content full width */
+  .VPContent {
+    padding-left: 0 !important;
+    max-width: 100% !important;
+  }
+  
+  .VPDoc {
+    padding-left: 0 !important;
+  }
+  
+  /* Adjust main content area */
+  main {
+    padding-left: 0 !important;
+  }
+}
+
+/* Alternative approach: hide based on URL parameter */
+/* This will be handled via JavaScript injection */
+

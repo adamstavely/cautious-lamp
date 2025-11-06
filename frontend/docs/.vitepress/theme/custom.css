@@ -1,0 +1,44 @@
+/* Aggressive CSS to hide VitePress sidebar and nav when embedded */
+body[data-embedded="true"] .VPSidebar,
+body[data-embedded="true"] aside.VPSidebar,
+body[data-embedded="true"] [class*="VPSidebar"],
+body[data-embedded="true"] aside[class*="sidebar"],
+body[data-embedded="true"] .sidebar,
+body[data-embedded="true"] nav[class*="sidebar"],
+body[data-embedded="true"] .VPNav,
+body[data-embedded="true"] nav.VPNav,
+body[data-embedded="true"] [class*="VPNav"],
+body[data-embedded="true"] nav[class*="nav"],
+body[data-embedded="true"] .nav {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  overflow: hidden !important;
+}
+
+body[data-embedded="true"] .VPContent,
+body[data-embedded="true"] .VPDoc,
+body[data-embedded="true"] main,
+body[data-embedded="true"] .content {
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+body[data-embedded="true"] .VPPage {
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+/* Also target by iframe detection */
+html:has(iframe) body .VPSidebar,
+html:has(iframe) body .VPNav,
+html:has(iframe) body aside,
+html:has(iframe) body nav[class*="VP"] {
+  display: none !important;
+}

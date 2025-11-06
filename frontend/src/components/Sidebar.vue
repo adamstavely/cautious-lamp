@@ -1,5 +1,5 @@
 <template>
-  <aside class="sticky top-0 h-screen text-white flex flex-col flex-shrink-0 w-24 transition-colors"
+  <aside class="sticky top-0 h-screen text-white flex flex-col flex-shrink-0 w-24 transition-colors z-50"
     :style="isDarkMode ? 'background-color: #6366f1' : 'background-color: #4f46e5'"
   >
     <!-- Navigation Items -->
