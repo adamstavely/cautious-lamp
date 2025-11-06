@@ -153,7 +153,7 @@
                       v-model="tagTypes"
                       type="checkbox"
                       value="meta"
-                      class="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-slate-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                      class="w-4 h-4 text-indigo-600 dark:text-indigo-500 border-gray-300 dark:border-slate-600 rounded focus:ring-indigo-600 dark:focus:ring-indigo-500 accent-indigo-600 dark:accent-indigo-500"
                     />
                     <span class="text-sm text-gray-900 dark:text-gray-300">Meta Tags</span>
                   </label>
@@ -162,7 +162,7 @@
                       v-model="tagTypes"
                       type="checkbox"
                       value="og"
-                      class="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-slate-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                      class="w-4 h-4 text-indigo-600 dark:text-indigo-500 border-gray-300 dark:border-slate-600 rounded focus:ring-indigo-600 dark:focus:ring-indigo-500 accent-indigo-600 dark:accent-indigo-500"
                     />
                     <span class="text-sm text-gray-900 dark:text-gray-300">Open Graph</span>
                   </label>
@@ -171,7 +171,7 @@
                       v-model="tagTypes"
                       type="checkbox"
                       value="twitter"
-                      class="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-slate-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                      class="w-4 h-4 text-indigo-600 dark:text-indigo-500 border-gray-300 dark:border-slate-600 rounded focus:ring-indigo-600 dark:focus:ring-indigo-500 accent-indigo-600 dark:accent-indigo-500"
                     />
                     <span class="text-sm text-gray-900 dark:text-gray-300">Twitter Cards</span>
                   </label>
@@ -180,7 +180,7 @@
                       v-model="tagTypes"
                       type="checkbox"
                       value="jsonld"
-                      class="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-slate-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                      class="w-4 h-4 text-indigo-600 dark:text-indigo-500 border-gray-300 dark:border-slate-600 rounded focus:ring-indigo-600 dark:focus:ring-indigo-500 accent-indigo-600 dark:accent-indigo-500"
                     />
                     <span class="text-sm text-gray-900 dark:text-gray-300">JSON-LD</span>
                   </label>
