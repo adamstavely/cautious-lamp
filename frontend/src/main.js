@@ -122,6 +122,10 @@ const router = createRouter({
       component: () => import('./views/GradientGenerator.vue'),
     },
     {
+      path: '/tools',
+      component: () => import('./views/Tools.vue'),
+    },
+    {
       path: '/design-assets',
       component: () => import('./views/DesignAssets.vue'),
     },

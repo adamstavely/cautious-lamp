@@ -110,12 +110,15 @@ const menuItems = [
   { path: '/fonts', label: 'Fonts', icon: 'text_fields' },
   { path: '/design-assets', label: 'Design Assets', icon: 'collections' },
   { path: '/review', label: 'Review', icon: 'rate_review' },
-  { path: '/tools/gradient-generator', label: 'Tools', icon: 'build' },
+  { path: '/tools', label: 'Tools', icon: 'build' },
 ];
 
 const isActive = (path) => {
   if (path === '/tokens') {
     return route.path === '/tokens' || route.path.startsWith('/palette-builder');
+  }
+  if (path === '/tools') {
+    return route.path === '/tools' || route.path.startsWith('/tools/');
   }
   return route.path === path || route.path.startsWith(path + '/');
 };
