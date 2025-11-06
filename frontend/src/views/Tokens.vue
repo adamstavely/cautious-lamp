@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900 relative flex">
+  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
     <!-- Drawer -->
     <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
     
@@ -53,61 +53,121 @@
             <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
               Browse tokens
             </h2>
-            <button class="px-6 py-2 rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-sm font-medium">
+            <button 
+              class="px-6 py-2 rounded-full border transition-colors text-sm font-medium"
+              :class="isDarkMode 
+                ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' 
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'"
+            >
               View all tokens
             </button>
           </div>
           
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <!-- Token Card 1: Colors -->
-            <router-link to="/palette-builder" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+            <router-link 
+              to="/palette-builder" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
                 <span class="material-symbols-outlined text-5xl">palette</span>
               </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h3 
+                class="font-semibold text-lg transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
                 Colors
               </h3>
             </router-link>
 
             <!-- Token Card 2: Typography -->
-            <router-link to="/fonts" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+            <router-link 
+              to="/fonts" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
                 <span class="material-symbols-outlined text-5xl">text_fields</span>
               </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h3 
+                class="font-semibold text-lg transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
                 Typography
               </h3>
             </router-link>
 
             <!-- Token Card 3: Spacing -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+            <a 
+              href="#" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
                 <span class="material-symbols-outlined text-5xl">space_dashboard</span>
               </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h3 
+                class="font-semibold text-lg transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
                 Spacing
               </h3>
             </a>
 
             <!-- Token Card 4: Shadows -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+            <a 
+              href="#" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
                 <span class="material-symbols-outlined text-5xl">layers</span>
               </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h3 
+                class="font-semibold text-lg transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
                 Shadows
               </h3>
             </a>
 
             <!-- Token Card 5: Borders -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all relative">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+            <a 
+              href="#" 
+              class="group rounded-2xl p-6 border transition-all relative"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
                 <span class="material-symbols-outlined text-5xl">border_style</span>
               </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h3 
+                class="font-semibold text-lg transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
                 Borders
               </h3>
-              <span class="material-symbols-outlined absolute top-4 right-4 text-gray-400 dark:text-gray-500 text-xl">
+              <span class="material-symbols-outlined absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
                 chevron_right
               </span>
             </a>

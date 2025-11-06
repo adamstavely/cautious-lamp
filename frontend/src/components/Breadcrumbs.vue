@@ -1,9 +1,18 @@
 <template>
-  <nav v-if="crumbs.length > 0" class="px-8 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900">
+  <nav 
+    v-if="crumbs.length > 0" 
+    class="px-8 pt-6 pb-4 border-b bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50"
+    :class="isDarkMode 
+      ? 'border-gray-700 bg-slate-900' 
+      : 'border-gray-200'"
+  >
     <div class="flex items-center gap-2 text-sm">
       <router-link
         to="/"
-        class="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+        class="transition-colors"
+        :class="isDarkMode 
+          ? 'text-gray-400 hover:text-indigo-400' 
+          : 'text-gray-500 hover:text-indigo-600'"
       >
         Home
       </router-link>
@@ -12,24 +21,31 @@
         :key="index"
         class="flex items-center gap-2"
       >
-        <span class="text-gray-400 dark:text-gray-500">/</span>
+        <span :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">/</span>
         <button
           v-if="index < crumbs.length - 1 && crumb.path"
           @click="handleClick(crumb.path)"
-          class="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+          class="transition-colors"
+          :class="isDarkMode 
+            ? 'text-gray-400 hover:text-indigo-400' 
+            : 'text-gray-500 hover:text-indigo-600'"
         >
           {{ crumb.label }}
         </button>
         <router-link
           v-else-if="index < crumbs.length - 1 && crumb.path && !onNavigate"
           :to="crumb.path"
-          class="text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+          class="transition-colors"
+          :class="isDarkMode 
+            ? 'text-gray-400 hover:text-indigo-400' 
+            : 'text-gray-500 hover:text-indigo-600'"
         >
           {{ crumb.label }}
         </router-link>
         <span
           v-else
-          class="text-gray-900 dark:text-gray-100 font-medium"
+          class="font-medium"
+          :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'"
         >
           {{ crumb.label }}
         </span>
@@ -39,7 +55,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 const props = defineProps({
@@ -55,6 +71,37 @@ const props = defineProps({
 
 const route = useRoute();
 const router = useRouter();
+const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+
+let darkModeObserver = null;
+let darkModeInterval = null;
+
+onMounted(() => {
+  darkModeObserver = new MutationObserver(() => {
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+  });
+  
+  darkModeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class']
+  });
+  
+  const checkDarkMode = () => {
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+  };
+  
+  checkDarkMode();
+  darkModeInterval = setInterval(checkDarkMode, 100);
+});
+
+onBeforeUnmount(() => {
+  if (darkModeObserver) {
+    darkModeObserver.disconnect();
+  }
+  if (darkModeInterval) {
+    clearInterval(darkModeInterval);
+  }
+});
 
 const crumbs = computed(() => {
   const path = props.customPath || route.path;

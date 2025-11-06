@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full dark:bg-slate-900 relative flex">
+  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
     <!-- Drawer -->
     <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
     

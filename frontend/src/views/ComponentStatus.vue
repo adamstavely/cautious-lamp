@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900 relative flex">
+  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
     <!-- Drawer -->
     <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
     
@@ -51,60 +51,93 @@
         <!-- Status Overview -->
         <div class="max-w-7xl mx-auto mb-16">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+            <div 
+              class="rounded-2xl p-6 border"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
               <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Production Ready</span>
+                <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Production Ready</span>
                 <span class="w-3 h-3 rounded-full bg-green-500"></span>
               </div>
-              <p class="text-3xl font-bold text-gray-900 dark:text-white">24</p>
+              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">24</p>
             </div>
-            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+            <div 
+              class="rounded-2xl p-6 border"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
               <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">In Progress</span>
+                <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">In Progress</span>
                 <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
               </div>
-              <p class="text-3xl font-bold text-gray-900 dark:text-white">8</p>
+              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">8</p>
             </div>
-            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+            <div 
+              class="rounded-2xl p-6 border"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
               <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Planned</span>
+                <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Planned</span>
                 <span class="w-3 h-3 rounded-full bg-blue-500"></span>
               </div>
-              <p class="text-3xl font-bold text-gray-900 dark:text-white">12</p>
+              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">12</p>
             </div>
-            <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+            <div 
+              class="rounded-2xl p-6 border"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
               <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Deprecated</span>
+                <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Deprecated</span>
                 <span class="w-3 h-3 rounded-full bg-red-500"></span>
               </div>
-              <p class="text-3xl font-bold text-gray-900 dark:text-white">2</p>
+              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">2</p>
             </div>
           </div>
         </div>
 
         <!-- Component Status Table -->
         <div class="max-w-7xl mx-auto">
-          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 class="text-2xl font-bold text-gray-900 dark:text-white">All Components</h2>
+          <div 
+            class="rounded-2xl border overflow-hidden"
+            :class="isDarkMode 
+              ? 'bg-slate-900 border-gray-700' 
+              : 'bg-white border-gray-200'"
+          >
+            <div 
+              class="px-6 py-4 border-b"
+              :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
+            >
+              <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">All Components</h2>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full">
-                <thead class="bg-gray-50 dark:bg-slate-900">
+                <thead :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
                   <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Component</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Version</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Documentation</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Updated</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Component</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Version</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Documentation</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Last Updated</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                  <tr v-for="component in components" :key="component.name" class="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                <tbody :class="isDarkMode ? 'divide-y divide-gray-700' : 'divide-y divide-gray-200'">
+                  <tr 
+                    v-for="component in components" 
+                    :key="component.name" 
+                    class="transition-colors"
+                    :class="isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'"
+                  >
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400">{{ component.icon }}</span>
-                        <span class="font-medium text-gray-900 dark:text-white">{{ component.name }}</span>
+                        <span class="material-symbols-outlined" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">{{ component.icon }}</span>
+                        <span class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ component.name }}</span>
                       </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -115,20 +148,24 @@
                         {{ component.status }}
                       </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
                       {{ component.version }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span 
                         class="px-3 py-1 rounded-full text-xs font-medium"
                         :class="component.documentation === 'Complete' 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
-                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'"
+                          ? (isDarkMode 
+                            ? 'bg-green-900/30 text-green-400' 
+                            : 'bg-green-100 text-green-800')
+                          : (isDarkMode
+                            ? 'bg-yellow-900/30 text-yellow-400' 
+                            : 'bg-yellow-100 text-yellow-800')"
                       >
                         {{ component.documentation }}
                       </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
                       {{ component.lastUpdated }}
                     </td>
                   </tr>
@@ -172,15 +209,25 @@ const components = ref([
 const getStatusClass = (status) => {
   switch (status) {
     case 'Production Ready':
-      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+      return isDarkMode.value 
+        ? 'bg-green-900/30 text-green-400' 
+        : 'bg-green-100 text-green-800';
     case 'In Progress':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+      return isDarkMode.value 
+        ? 'bg-yellow-900/30 text-yellow-400' 
+        : 'bg-yellow-100 text-yellow-800';
     case 'Planned':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+      return isDarkMode.value 
+        ? 'bg-blue-900/30 text-blue-400' 
+        : 'bg-blue-100 text-blue-800';
     case 'Deprecated':
-      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+      return isDarkMode.value 
+        ? 'bg-red-900/30 text-red-400' 
+        : 'bg-red-100 text-red-800';
     default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
+      return isDarkMode.value 
+        ? 'bg-gray-900/30 text-gray-400' 
+        : 'bg-gray-100 text-gray-800';
   }
 };
 

@@ -1,13 +1,15 @@
 <template>
   <!-- Drawer - slides in/out from left, positioned next to sidebar -->
   <!-- When closed, show a small toggle button -->
-  <div v-if="!isOpen" class="fixed left-24 top-16 h-[calc(100vh-4rem)] w-12 bg-white dark:bg-slate-800 border-r z-30 flex items-start justify-center pt-4 transition-all duration-300"
-    :class="isDarkMode ? 'border-slate-700' : 'border-gray-200'"
+  <div 
+    v-if="!isOpen" 
+    class="fixed left-24 top-16 h-[calc(100vh-4rem)] w-12 border-r z-30 flex items-start justify-center pt-4 transition-all duration-300"
+    :class="isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'"
   >
     <button
       @click="toggle"
-      class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-      :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
+      class="p-2 rounded-lg transition-colors"
+      :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
       title="Open drawer"
     >
       <span class="material-symbols-outlined">menu</span>
@@ -17,19 +19,19 @@
   <!-- Drawer - when open -->
   <div 
     v-if="isOpen"
-    class="fixed left-24 top-16 h-[calc(100vh-4rem)] w-64 bg-white dark:bg-slate-800 shadow-xl overflow-y-auto z-30 border-r transition-transform duration-300 ease-in-out"
-    :class="isDarkMode ? 'border-slate-700' : 'border-gray-200'"
+    class="fixed left-24 top-16 h-[calc(100vh-4rem)] w-64 shadow-xl overflow-y-auto z-30 border-r transition-transform duration-300 ease-in-out"
+    :class="isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'"
   >
     <!-- Drawer Content -->
     <div class="p-6">
       <!-- Foundations - only show when not on patterns route -->
       <div v-if="showMainSections" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Foundations</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Foundations</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
+            class="p-2 rounded-lg transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -53,7 +55,7 @@
       
       <!-- Artificial Intelligence - only show when not on patterns route -->
       <div v-if="showMainSections" class="mb-8">
-        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">Artificial Intelligence</h3>
+        <h3 class="text-sm font-semibold uppercase tracking-wider mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Artificial Intelligence</h3>
         <nav class="space-y-1">
           <button
             v-for="item in artificialIntelligence"
@@ -72,7 +74,7 @@
       
       <!-- Human-Centered Design - only show when not on patterns route -->
       <div v-if="showMainSections" class="mb-8">
-        <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">Human-Centered Design</h3>
+        <h3 class="text-sm font-semibold uppercase tracking-wider mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Human-Centered Design</h3>
         <nav class="space-y-1">
           <button
             v-for="item in humanCenteredDesign"
@@ -92,11 +94,11 @@
       <!-- Patterns - only show when on patterns route -->
       <div v-if="showPatterns" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Patterns</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Patterns</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
+            class="p-2 rounded-lg transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -121,11 +123,11 @@
       <!-- Components - only show when on components route -->
       <div v-if="showComponents" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Components</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Components</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
+            class="p-2 rounded-lg transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -156,11 +158,11 @@
       <!-- Fonts - only show when on fonts route -->
       <div v-if="showFonts" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fonts</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Fonts</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
+            class="p-2 rounded-lg transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -191,11 +193,11 @@
       <!-- Tools - only show when on tools route -->
       <div v-if="showTools" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tools</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Tools</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
+            class="p-2 rounded-lg transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -226,11 +228,11 @@
       <!-- Review - only show when on review route -->
       <div v-if="showReview" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Review</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Review</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
+            class="p-2 rounded-lg transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -261,11 +263,11 @@
       <!-- Design Assets - only show when on design assets route -->
       <div v-if="showDesignAssets" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Design Assets</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Design Assets</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
+            class="p-2 rounded-lg transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>

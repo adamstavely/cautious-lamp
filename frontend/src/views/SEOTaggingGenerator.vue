@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900 relative flex">
+  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
     <!-- Drawer -->
     <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
     
@@ -63,126 +63,164 @@
 
           <!-- Generator Section -->
           <div class="max-w-7xl mx-auto">
-            <div class="bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 p-8">
+            <div 
+              class="rounded-lg shadow-lg border p-8"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-slate-700' 
+                : 'bg-white border-gray-200'"
+            >
               <!-- Input Form -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <!-- Page Title -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">Page Title</label>
+                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Page Title</label>
                   <input
                     v-model="formData.title"
                     type="text"
                     placeholder="My Awesome Page"
-                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    :class="isDarkMode 
+                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
+                      : 'border-gray-300 bg-white text-gray-900'"
                   />
                 </div>
 
                 <!-- Description -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">Description</label>
+                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Description</label>
                   <input
                     v-model="formData.description"
                     type="text"
                     placeholder="A brief description of the page"
-                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    :class="isDarkMode 
+                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
+                      : 'border-gray-300 bg-white text-gray-900'"
                   />
                 </div>
 
                 <!-- URL -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">URL</label>
+                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">URL</label>
                   <input
                     v-model="formData.url"
                     type="url"
                     placeholder="https://example.com/page"
-                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    :class="isDarkMode 
+                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
+                      : 'border-gray-300 bg-white text-gray-900'"
                   />
                 </div>
 
                 <!-- Image URL -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">Image URL</label>
+                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Image URL</label>
                   <input
                     v-model="formData.image"
                     type="url"
                     placeholder="https://example.com/image.jpg"
-                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    :class="isDarkMode 
+                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
+                      : 'border-gray-300 bg-white text-gray-900'"
                   />
                 </div>
 
                 <!-- Site Name -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">Site Name</label>
+                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Site Name</label>
                   <input
                     v-model="formData.siteName"
                     type="text"
                     placeholder="My Website"
-                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    :class="isDarkMode 
+                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
+                      : 'border-gray-300 bg-white text-gray-900'"
                   />
                 </div>
 
                 <!-- Author -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">Author</label>
+                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Author</label>
                   <input
                     v-model="formData.author"
                     type="text"
                     placeholder="Author Name"
-                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    :class="isDarkMode 
+                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
+                      : 'border-gray-300 bg-white text-gray-900'"
                   />
                 </div>
 
                 <!-- Keywords -->
                 <div class="md:col-span-2">
-                  <label class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">Keywords (comma-separated)</label>
+                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Keywords (comma-separated)</label>
                   <input
                     v-model="formData.keywords"
                     type="text"
                     placeholder="keyword1, keyword2, keyword3"
-                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    :class="isDarkMode 
+                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
+                      : 'border-gray-300 bg-white text-gray-900'"
                   />
                 </div>
               </div>
 
               <!-- Tag Type Selection -->
               <div class="mb-8">
-                <label class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-4">Tag Types</label>
+                <label class="block text-sm font-medium mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Tag Types</label>
                 <div class="flex flex-wrap gap-4">
                   <label class="flex items-center gap-2 cursor-pointer">
                     <input
                       v-model="tagTypes"
                       type="checkbox"
                       value="meta"
-                      class="w-4 h-4 text-indigo-600 dark:text-indigo-500 border-gray-300 dark:border-slate-600 rounded focus:ring-indigo-600 dark:focus:ring-indigo-500 accent-indigo-600 dark:accent-indigo-500"
+                      class="w-4 h-4 rounded focus:ring-indigo-600 accent-indigo-600"
+                      :class="isDarkMode 
+                        ? 'text-indigo-500 border-slate-600 focus:ring-indigo-500 accent-indigo-500' 
+                        : 'text-indigo-600 border-gray-300'"
                     />
-                    <span class="text-sm text-gray-900 dark:text-gray-300">Meta Tags</span>
+                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Meta Tags</span>
                   </label>
                   <label class="flex items-center gap-2 cursor-pointer">
                     <input
                       v-model="tagTypes"
                       type="checkbox"
                       value="og"
-                      class="w-4 h-4 text-indigo-600 dark:text-indigo-500 border-gray-300 dark:border-slate-600 rounded focus:ring-indigo-600 dark:focus:ring-indigo-500 accent-indigo-600 dark:accent-indigo-500"
+                      class="w-4 h-4 rounded focus:ring-indigo-600 accent-indigo-600"
+                      :class="isDarkMode 
+                        ? 'text-indigo-500 border-slate-600 focus:ring-indigo-500 accent-indigo-500' 
+                        : 'text-indigo-600 border-gray-300'"
                     />
-                    <span class="text-sm text-gray-900 dark:text-gray-300">Open Graph</span>
+                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Open Graph</span>
                   </label>
                   <label class="flex items-center gap-2 cursor-pointer">
                     <input
                       v-model="tagTypes"
                       type="checkbox"
                       value="twitter"
-                      class="w-4 h-4 text-indigo-600 dark:text-indigo-500 border-gray-300 dark:border-slate-600 rounded focus:ring-indigo-600 dark:focus:ring-indigo-500 accent-indigo-600 dark:accent-indigo-500"
+                      class="w-4 h-4 rounded focus:ring-indigo-600 accent-indigo-600"
+                      :class="isDarkMode 
+                        ? 'text-indigo-500 border-slate-600 focus:ring-indigo-500 accent-indigo-500' 
+                        : 'text-indigo-600 border-gray-300'"
                     />
-                    <span class="text-sm text-gray-900 dark:text-gray-300">Twitter Cards</span>
+                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Twitter Cards</span>
                   </label>
                   <label class="flex items-center gap-2 cursor-pointer">
                     <input
                       v-model="tagTypes"
                       type="checkbox"
                       value="jsonld"
-                      class="w-4 h-4 text-indigo-600 dark:text-indigo-500 border-gray-300 dark:border-slate-600 rounded focus:ring-indigo-600 dark:focus:ring-indigo-500 accent-indigo-600 dark:accent-indigo-500"
+                      class="w-4 h-4 rounded focus:ring-indigo-600 accent-indigo-600"
+                      :class="isDarkMode 
+                        ? 'text-indigo-500 border-slate-600 focus:ring-indigo-500 accent-indigo-500' 
+                        : 'text-indigo-600 border-gray-300'"
                     />
-                    <span class="text-sm text-gray-900 dark:text-gray-300">JSON-LD</span>
+                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">JSON-LD</span>
                   </label>
                 </div>
               </div>
@@ -191,7 +229,10 @@
               <div class="mb-8">
                 <button
                   @click="generate"
-                  class="px-6 py-2 bg-indigo-600 dark:bg-indigo-500 text-white font-medium rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-colors"
+                  class="px-6 py-2 text-white font-medium rounded-lg transition-colors"
+                  :class="isDarkMode 
+                    ? 'bg-indigo-500 hover:bg-indigo-400' 
+                    : 'bg-indigo-600 hover:bg-indigo-700'"
                 >
                   Generate Tags
                 </button>
@@ -200,10 +241,13 @@
               <!-- Output -->
               <div>
                 <div class="flex items-center justify-between mb-4">
-                  <label class="block text-sm font-medium text-gray-900 dark:text-gray-300">Generated Tags</label>
+                  <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Generated Tags</label>
                   <button
                     @click="copyToClipboard"
-                    class="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors flex items-center gap-2"
+                    class="px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2"
+                    :class="isDarkMode 
+                      ? 'text-indigo-400 hover:text-indigo-300' 
+                      : 'text-indigo-600 hover:text-indigo-700'"
                   >
                     <span class="material-symbols-outlined text-lg">content_copy</span>
                     Copy
@@ -213,7 +257,10 @@
                   v-model="output"
                   readonly
                   rows="20"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm font-mono resize-none"
+                  class="w-full px-4 py-3 border rounded-lg text-sm font-mono resize-none"
+                  :class="isDarkMode 
+                    ? 'border-slate-600 bg-slate-700 text-gray-100' 
+                    : 'border-gray-300 bg-gray-50 text-gray-900'"
                 ></textarea>
               </div>
             </div>

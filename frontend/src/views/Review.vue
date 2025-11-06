@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900 relative flex">
+  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
     <!-- Drawer -->
     <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
     
@@ -51,43 +51,67 @@
             <!-- Request Review Button -->
             <button 
               @click="openRequestReviewModal"
-              class="group rounded-2xl p-8 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all flex flex-col items-center text-center"
+              class="group rounded-2xl p-8 border transition-all flex flex-col items-center text-center"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
-              <div class="w-16 h-16 mb-4 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <div class="w-16 h-16 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
                 <span class="material-symbols-outlined text-6xl">add_circle</span>
               </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-xl mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h3 
+                class="font-semibold text-xl mb-2 transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
                 Request Review
               </h3>
-              <p class="text-gray-600 dark:text-gray-400 text-sm">Upload your design files and request feedback from your team.</p>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Upload your design files and request feedback from your team.</p>
             </button>
 
             <!-- My Requested Reviews Button -->
             <router-link 
               to="/review/my-requests" 
-              class="group rounded-2xl p-8 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all flex flex-col items-center text-center"
+              class="group rounded-2xl p-8 border transition-all flex flex-col items-center text-center"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
-              <div class="w-16 h-16 mb-4 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <div class="w-16 h-16 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
                 <span class="material-symbols-outlined text-6xl">rate_review</span>
               </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-xl mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h3 
+                class="font-semibold text-xl mb-2 transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
                 My Requested Reviews
               </h3>
-              <p class="text-gray-600 dark:text-gray-400 text-sm">View all the reviews you've requested as the designer.</p>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">View all the reviews you've requested as the designer.</p>
             </router-link>
 
             <!-- Admin Button -->
             <router-link 
               to="/admin" 
-              class="group rounded-2xl p-8 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all flex flex-col items-center text-center"
+              class="group rounded-2xl p-8 border transition-all flex flex-col items-center text-center"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
-              <div class="w-16 h-16 mb-4 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <div class="w-16 h-16 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
                 <span class="material-symbols-outlined text-6xl">admin_panel_settings</span>
               </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-xl mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h3 
+                class="font-semibold text-xl mb-2 transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
                 Admin
               </h3>
-              <p class="text-gray-600 dark:text-gray-400 text-sm">Manage reviews, users, and system settings.</p>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Manage reviews, users, and system settings.</p>
             </router-link>
           </div>
         </div>

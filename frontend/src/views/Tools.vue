@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900 relative flex">
+  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
     <!-- Drawer -->
     <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
     
@@ -55,58 +55,118 @@
             <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
               Browse tools
             </h2>
-            <button class="px-6 py-2 rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors text-sm font-medium">
+            <button 
+              class="px-6 py-2 rounded-full border transition-colors text-sm font-medium"
+              :class="isDarkMode 
+                ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' 
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'"
+            >
               View all tools
             </button>
           </div>
           
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <!-- Tool Card 1: Gradient Generator -->
-            <router-link to="/tools/gradient-generator" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+            <router-link 
+              to="/tools/gradient-generator" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
                 <span class="material-symbols-outlined text-5xl">gradient</span>
               </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h3 
+                class="font-semibold text-lg transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
                 Gradient Generator
               </h3>
             </router-link>
 
             <!-- Tool Card 2: Palette Builder -->
-            <router-link to="/palette-builder" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+            <router-link 
+              to="/palette-builder" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
                 <span class="material-symbols-outlined text-5xl">palette</span>
               </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h3 
+                class="font-semibold text-lg transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
                 Palette Builder
               </h3>
             </router-link>
 
             <!-- Tool Card 3: Lorem Ipsum Generator -->
-            <router-link to="/tools/lorem-ipsum" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+            <router-link 
+              to="/tools/lorem-ipsum" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
                 <span class="material-symbols-outlined text-5xl">text_fields</span>
               </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h3 
+                class="font-semibold text-lg transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
                 Lorem Ipsum Generator
               </h3>
             </router-link>
 
             <!-- Tool Card 4: SEO Tagging Generator -->
-            <router-link to="/tools/seo-tagging" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+            <router-link 
+              to="/tools/seo-tagging" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
                 <span class="material-symbols-outlined text-5xl">search</span>
               </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h3 
+                class="font-semibold text-lg transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
                 SEO Tagging Generator
               </h3>
             </router-link>
 
             <!-- Tool Card 5: Color Contrast -->
-            <a href="#" class="group rounded-2xl p-6 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all">
-              <div class="w-12 h-12 mb-4 text-indigo-600 dark:text-indigo-400">
+            <a 
+              href="#" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
                 <span class="material-symbols-outlined text-5xl">contrast</span>
               </div>
-              <h3 class="text-gray-900 dark:text-white font-semibold text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h3 
+                class="font-semibold text-lg transition-colors"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
                 Color Contrast
               </h3>
             </a>

@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900 relative flex">
+  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
     <!-- Drawer -->
     <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
     
@@ -67,9 +67,14 @@
 
           <!-- Upload Section -->
           <div class="max-w-7xl mx-auto mb-8">
-            <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div 
+              class="rounded-lg border p-6"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
               <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Upload Icon Set</h2>
+                <h2 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Upload Icon Set</h2>
                 <button
                   @click="showUploadModal = true"
                   class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
@@ -78,7 +83,7 @@
                   Upload Icons
                 </button>
               </div>
-              <p class="text-sm text-gray-600 dark:text-gray-400">
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Upload icon sets from Material Icons, Lucide, or your own custom SVG collections. Supported formats: SVG files, SVG sprite sheets, and icon font files.
               </p>
             </div>
@@ -87,17 +92,23 @@
           <!-- Icon Sets Section -->
           <div class="max-w-7xl mx-auto mb-8">
             <div class="flex items-center justify-between mb-6">
-              <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Icon Sets</h2>
+              <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Icon Sets</h2>
               <div class="flex items-center gap-4">
                 <input
                   v-model="searchQuery"
                   type="text"
                   placeholder="Search icons..."
-                  class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                  class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  :class="isDarkMode 
+                    ? 'border-gray-600 bg-slate-700 text-white' 
+                    : 'border-gray-300 bg-white text-gray-900'"
                 />
                 <select
                   v-model="selectedSet"
-                  class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                  class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  :class="isDarkMode 
+                    ? 'border-gray-600 bg-slate-700 text-white' 
+                    : 'border-gray-300 bg-white text-gray-900'"
                 >
                   <option value="">All Sets</option>
                   <option v-for="set in iconSets" :key="set.id" :value="set.id">{{ set.name }}</option>
@@ -110,17 +121,25 @@
               <div
                 v-for="set in filteredSets"
                 :key="set.id"
-                class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all cursor-pointer"
+                class="rounded-lg border p-6 transition-all cursor-pointer"
+                :class="isDarkMode 
+                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-400' 
+                  : 'bg-white border-gray-200 hover:border-indigo-500'"
                 @click="selectedSet = set.id"
               >
                 <div class="flex items-center justify-between mb-4">
-                  <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ set.name }}</h3>
-                  <span class="px-2 py-1 text-xs rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
+                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ set.name }}</h3>
+                  <span 
+                    class="px-2 py-1 text-xs rounded-full"
+                    :class="isDarkMode 
+                      ? 'bg-indigo-900/30 text-indigo-300' 
+                      : 'bg-indigo-100 text-indigo-700'"
+                  >
                     {{ set.iconCount }} icons
                   </span>
                 </div>
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ set.description }}</p>
-                <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500">
+                <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ set.description }}</p>
+                <div class="flex items-center gap-2 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
                   <span class="material-symbols-outlined text-base">{{ set.sourceIcon }}</span>
                   {{ set.source }}
                 </div>
@@ -128,23 +147,41 @@
             </div>
 
             <!-- Icons Grid -->
-            <div v-if="selectedSet" class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div 
+              v-if="selectedSet" 
+              class="rounded-lg border p-6"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
               <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+                <h3 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   {{ getSelectedSet()?.name }} Icons
                 </h3>
                 <div class="flex items-center gap-2">
                   <button
                     @click="viewMode = 'grid'"
                     class="p-2 rounded-lg transition-colors"
-                    :class="viewMode === 'grid' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'"
+                    :class="viewMode === 'grid' 
+                      ? (isDarkMode 
+                        ? 'bg-indigo-900/30 text-indigo-400' 
+                        : 'bg-indigo-100 text-indigo-600')
+                      : (isDarkMode
+                        ? 'text-gray-400 hover:bg-slate-700' 
+                        : 'text-gray-400 hover:bg-gray-100')"
                   >
                     <span class="material-symbols-outlined">grid_view</span>
                   </button>
                   <button
                     @click="viewMode = 'list'"
                     class="p-2 rounded-lg transition-colors"
-                    :class="viewMode === 'list' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'"
+                    :class="viewMode === 'list' 
+                      ? (isDarkMode 
+                        ? 'bg-indigo-900/30 text-indigo-400' 
+                        : 'bg-indigo-100 text-indigo-600')
+                      : (isDarkMode
+                        ? 'text-gray-400 hover:bg-slate-700' 
+                        : 'text-gray-400 hover:bg-gray-100')"
                   >
                     <span class="material-symbols-outlined">view_list</span>
                   </button>
@@ -155,17 +192,23 @@
                 <div
                   v-for="icon in filteredIcons"
                   :key="icon.id"
-                  class="group relative bg-gray-50 dark:bg-slate-700 rounded-lg p-4 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer border border-transparent hover:border-indigo-300 dark:hover:border-indigo-700"
+                  class="group relative rounded-lg p-4 transition-colors cursor-pointer border border-transparent"
+                  :class="isDarkMode 
+                    ? 'bg-slate-700 hover:bg-indigo-900/20 hover:border-indigo-700' 
+                    : 'bg-gray-50 hover:bg-indigo-50 hover:border-indigo-300'"
                   @click="selectIcon(icon)"
                 >
                   <div class="flex flex-col items-center gap-2">
-                    <div class="text-gray-900 dark:text-white text-2xl" v-html="icon.svg"></div>
-                    <span class="text-xs text-gray-600 dark:text-gray-400 text-center truncate w-full">{{ icon.name }}</span>
+                    <div class="text-2xl" :class="isDarkMode ? 'text-white' : 'text-gray-900'" v-html="icon.svg"></div>
+                    <span class="text-xs text-center truncate w-full" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ icon.name }}</span>
                   </div>
                   <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       @click.stop="copyIcon(icon)"
-                      class="p-1 rounded bg-white dark:bg-slate-800 shadow-lg text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                      class="p-1 rounded shadow-lg transition-colors"
+                      :class="isDarkMode 
+                        ? 'bg-slate-800 text-gray-400 hover:text-indigo-400' 
+                        : 'bg-white text-gray-600 hover:text-indigo-600'"
                       title="Copy icon"
                     >
                       <span class="material-symbols-outlined text-sm">content_copy</span>
@@ -178,19 +221,25 @@
                 <div
                   v-for="icon in filteredIcons"
                   :key="icon.id"
-                  class="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer"
+                  class="flex items-center justify-between p-4 rounded-lg transition-colors cursor-pointer"
+                  :class="isDarkMode 
+                    ? 'bg-slate-700 hover:bg-indigo-900/20' 
+                    : 'bg-gray-50 hover:bg-indigo-50'"
                   @click="selectIcon(icon)"
                 >
                   <div class="flex items-center gap-4">
-                    <div class="text-gray-900 dark:text-white text-xl" v-html="icon.svg"></div>
+                    <div class="text-xl" :class="isDarkMode ? 'text-white' : 'text-gray-900'" v-html="icon.svg"></div>
                     <div>
-                      <div class="font-medium text-gray-900 dark:text-white">{{ icon.name }}</div>
-                      <div class="text-xs text-gray-500 dark:text-gray-400">{{ icon.category }}</div>
+                      <div class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ icon.name }}</div>
+                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ icon.category }}</div>
                     </div>
                   </div>
                   <button
                     @click.stop="copyIcon(icon)"
-                    class="p-2 rounded-lg text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+                    class="p-2 rounded-lg transition-colors"
+                    :class="isDarkMode 
+                      ? 'text-gray-400 hover:text-indigo-400 hover:bg-slate-800' 
+                      : 'text-gray-400 hover:text-indigo-600 hover:bg-white'"
                     title="Copy icon"
                   >
                     <span class="material-symbols-outlined text-lg">content_copy</span>
@@ -209,13 +258,22 @@
       class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
       @click.self="showUploadModal = false"
     >
-      <div class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+      <div 
+        class="rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        :class="isDarkMode ? 'bg-slate-900' : 'bg-white'"
+      >
+        <div 
+          class="p-6 border-b"
+          :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
+        >
           <div class="flex items-center justify-between">
-            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Upload Icon Set</h3>
+            <h3 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Upload Icon Set</h3>
             <button
               @click="showUploadModal = false"
-              class="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
+              class="p-2 rounded-lg transition-colors"
+              :class="isDarkMode 
+                ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' 
+                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
@@ -223,23 +281,29 @@
         </div>
         <div class="p-6">
           <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
               Icon Set Name
             </label>
             <input
               v-model="newSetName"
               type="text"
               placeholder="e.g., Material Icons, Lucide Icons, Custom Set"
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              :class="isDarkMode 
+                ? 'border-gray-600 bg-slate-700 text-white' 
+                : 'border-gray-300 bg-white text-gray-900'"
             />
           </div>
           <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
               Source Type
             </label>
             <select
               v-model="newSetSource"
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              :class="isDarkMode 
+                ? 'border-gray-600 bg-slate-700 text-white' 
+                : 'border-gray-300 bg-white text-gray-900'"
             >
               <option value="material">Material Icons</option>
               <option value="lucide">Lucide Icons</option>
@@ -247,7 +311,7 @@
             </select>
           </div>
           <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
               Upload Files
             </label>
             <div
@@ -255,7 +319,13 @@
               @dragover.prevent="isDragging = true"
               @dragleave.prevent="isDragging = false"
               class="border-2 border-dashed rounded-lg p-8 text-center transition-colors"
-              :class="isDragging ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-300 dark:border-gray-600'"
+              :class="isDragging 
+                ? (isDarkMode 
+                  ? 'border-indigo-500 bg-indigo-900/20' 
+                  : 'border-indigo-500 bg-indigo-50')
+                : (isDarkMode 
+                  ? 'border-gray-600' 
+                  : 'border-gray-300')"
             >
               <input
                 ref="fileInput"
@@ -265,17 +335,18 @@
                 @change="handleFileSelect"
                 class="hidden"
               />
-              <span class="material-symbols-outlined text-4xl text-gray-400 dark:text-gray-500 mb-2">cloud_upload</span>
-              <p class="text-gray-600 dark:text-gray-400 mb-2">
+              <span class="material-symbols-outlined text-4xl mb-2" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">cloud_upload</span>
+              <p class="mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Drag and drop icon files here, or
                 <button
                   @click="fileInput?.click()"
-                  class="text-indigo-600 dark:text-indigo-400 hover:underline"
+                  class="hover:underline"
+                  :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
                 >
                   browse
                 </button>
               </p>
-              <p class="text-xs text-gray-500 dark:text-gray-500">
+              <p class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
                 Supported formats: SVG files, SVG sprite sheets, icon fonts (WOFF, WOFF2, TTF, EOT)
               </p>
             </div>
@@ -283,12 +354,16 @@
               <div
                 v-for="(file, index) in selectedFiles"
                 :key="index"
-                class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-lg"
+                class="flex items-center justify-between p-3 rounded-lg"
+                :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-50'"
               >
-                <span class="text-sm text-gray-900 dark:text-white">{{ file.name }}</span>
+                <span class="text-sm" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ file.name }}</span>
                 <button
                   @click="removeFile(index)"
-                  class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                  class="transition-colors"
+                  :class="isDarkMode 
+                    ? 'text-red-400 hover:text-red-300' 
+                    : 'text-red-600 hover:text-red-700'"
                 >
                   <span class="material-symbols-outlined text-sm">close</span>
                 </button>
@@ -298,7 +373,10 @@
           <div class="flex justify-end gap-3">
             <button
               @click="showUploadModal = false"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+              class="px-4 py-2 border rounded-lg transition-colors"
+              :class="isDarkMode 
+                ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
+                : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
             >
               Cancel
             </button>

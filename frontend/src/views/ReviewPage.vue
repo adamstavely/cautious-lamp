@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6 min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50" :class="isDarkMode ? 'dark:bg-slate-900' : ''">
+  <div class="p-6 min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
     <div class="flex gap-4" style="min-height: calc(100vh - 200px);">
       <!-- Main Content Area -->
       <div class="flex-1 overflow-y-auto space-y-4">

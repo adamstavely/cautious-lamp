@@ -1,5 +1,5 @@
 <template>
-  <nav class="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm dark:bg-slate-800 dark:border-slate-700 relative">
+  <nav class="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 shadow-sm relative">
     <div class="flex items-center h-16">
       <!-- Left spacer for sidebar -->
       <div class="w-24 flex-shrink-0"></div>
@@ -25,9 +25,9 @@
               <stop offset="100%" style="stop-color:#4338ca;stop-opacity:1" />
             </linearGradient>
             <linearGradient id="caretGradientDark" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" style="stop-color:#1e1b4b;stop-opacity:1" />
-              <stop offset="50%" style="stop-color:#312e81;stop-opacity:1" />
-              <stop offset="100%" style="stop-color:#3730a3;stop-opacity:1" />
+              <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+              <stop offset="50%" style="stop-color:#a5b4fc;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#c7d2fe;stop-opacity:1" />
             </linearGradient>
           </defs>
           <!-- Left caret < (width: 4 units, from x=6 to x=10) -->
@@ -49,7 +49,7 @@
             fill="none"
           />
         </svg>
-            <span class="text-2xl font-bold bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-950 dark:via-indigo-900 dark:to-indigo-800 bg-clip-text text-transparent">Design System</span>
+            <span class="text-2xl font-bold bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-300 dark:via-indigo-400 dark:to-indigo-500 bg-clip-text text-transparent">Design System</span>
       </router-link>
       
       <!-- Center Search Bar -->
@@ -112,7 +112,7 @@
             v-if="showNotifications"
             class="absolute right-0 top-full mt-2 w-96 max-h-[600px] overflow-hidden rounded-lg shadow-xl border z-50"
             :class="isDarkMode 
-              ? 'bg-slate-800 border-slate-700' 
+              ? 'bg-slate-900 border-slate-700' 
               : 'bg-white border-gray-200'"
           >
             <!-- Header -->
@@ -469,4 +469,12 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside);
 });
 </script>
+
+<style>
+/* Ensure dark mode styles apply to TopNav */
+html.dark nav.sticky {
+  background-color: rgb(15 23 42) !important; /* slate-900 */
+  border-color: rgb(51 65 85) !important; /* slate-700 */
+}
+</style>
 

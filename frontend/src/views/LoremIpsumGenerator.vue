@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:bg-slate-900 relative flex">
+  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
     <!-- Drawer -->
     <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
     
@@ -63,12 +63,17 @@
 
           <!-- Generator Section -->
           <div class="max-w-7xl mx-auto">
-            <div class="bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 p-8">
+            <div 
+              class="rounded-lg shadow-lg border p-8"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-slate-700' 
+                : 'bg-white border-gray-200'"
+            >
               <!-- Controls -->
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <!-- Variant Selection -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">Variant</label>
+                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Variant</label>
                   <Dropdown
                     v-model="variant"
                     :options="variantOptions"
@@ -77,7 +82,7 @@
 
                 <!-- Type Selection -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">Type</label>
+                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Type</label>
                   <Dropdown
                     v-model="type"
                     :options="typeOptions"
@@ -86,13 +91,16 @@
 
                 <!-- Count -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">Count</label>
+                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Count</label>
                   <input
                     v-model.number="count"
                     type="number"
                     min="1"
                     max="100"
-                    class="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    :class="isDarkMode 
+                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
+                      : 'border-gray-300 bg-white text-gray-900'"
                   />
                 </div>
 
@@ -100,7 +108,10 @@
                 <div class="flex items-end">
                   <button
                     @click="generate"
-                    class="w-full px-6 py-2 bg-indigo-600 dark:bg-indigo-500 text-white font-medium rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-colors"
+                    class="w-full px-6 py-2 text-white font-medium rounded-lg transition-colors"
+                    :class="isDarkMode 
+                      ? 'bg-indigo-500 hover:bg-indigo-400' 
+                      : 'bg-indigo-600 hover:bg-indigo-700'"
                   >
                     Generate
                   </button>
@@ -110,10 +121,13 @@
               <!-- Output -->
               <div>
                 <div class="flex items-center justify-between mb-4">
-                  <label class="block text-sm font-medium text-gray-900 dark:text-gray-300">Generated Text</label>
+                  <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Generated Text</label>
                   <button
                     @click="copyToClipboard"
-                    class="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors flex items-center gap-2"
+                    class="px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2"
+                    :class="isDarkMode 
+                      ? 'text-indigo-400 hover:text-indigo-300' 
+                      : 'text-indigo-600 hover:text-indigo-700'"
                   >
                     <span class="material-symbols-outlined text-lg">content_copy</span>
                     Copy
@@ -123,7 +137,10 @@
                   v-model="output"
                   readonly
                   rows="12"
-                  class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-gray-100 text-sm font-mono resize-none"
+                  class="w-full px-4 py-3 border rounded-lg text-sm font-mono resize-none"
+                  :class="isDarkMode 
+                    ? 'border-slate-600 bg-slate-700 text-gray-100' 
+                    : 'border-gray-300 bg-gray-50 text-gray-900'"
                 ></textarea>
               </div>
             </div>
