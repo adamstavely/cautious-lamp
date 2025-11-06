@@ -142,6 +142,14 @@ const router = createRouter({
       component: () => import('./views/Tokens.vue'),
     },
     {
+      path: '/tokens/studio',
+      component: () => import('./views/TokenStudio.vue'),
+    },
+    {
+      path: '/tokens/library',
+      component: () => import('./views/StyleLibrary.vue'),
+    },
+    {
       path: '/patterns',
       component: () => import('./views/Patterns.vue'),
     },

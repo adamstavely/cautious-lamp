@@ -294,6 +294,41 @@
           </router-link>
         </nav>
       </div>
+      
+      <!-- Tokens - only show when on tokens route -->
+      <div v-if="showTokens" class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Tokens</h3>
+          <button
+            @click="toggle"
+            class="p-2 rounded-lg transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            title="Close drawer"
+          >
+            <span class="material-symbols-outlined">left_panel_close</span>
+          </button>
+        </div>
+        <nav class="space-y-1">
+          <router-link
+            v-for="item in tokenItems"
+            :key="item.link"
+            :to="item.link"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+            :class="[
+              isActive(item.link)
+                ? (isDarkMode 
+                  ? 'text-indigo-400 bg-indigo-900/20' 
+                  : 'text-indigo-600 bg-indigo-50')
+                : (isDarkMode
+                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+            ]"
+          >
+            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+            <span class="font-medium">{{ item.text }}</span>
+          </router-link>
+        </nav>
+      </div>
     </div>
   </div>
 </template>
@@ -403,6 +438,16 @@ const componentItems = [
   { text: 'Data Display', link: '/components/data-display', icon: 'table_chart' }
 ];
 
+const tokenItems = [
+  { text: 'Overview', link: '/tokens', icon: 'style' },
+  { text: 'Token Studio', link: '/tokens/studio', icon: 'tune' },
+  { text: 'Style Library', link: '/tokens/library', icon: 'library_books' }
+];
+
+const showTokens = computed(() => {
+  return route.path === '/tokens' || route.path.startsWith('/tokens/');
+});
+
 const showReview = computed(() => {
   return route.path === '/review' || route.path.startsWith('/review/') || route.path === '/admin';
 });
@@ -428,7 +473,7 @@ const showComponents = computed(() => {
 });
 
 const showMainSections = computed(() => {
-  return !showPatterns.value && !showFonts.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value;
+  return !showPatterns.value && !showFonts.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value && !showTokens.value;
 });
 
 const isActive = (path) => {
