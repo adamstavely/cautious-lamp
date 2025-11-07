@@ -33,14 +33,15 @@
                         <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
                       </linearGradient>
                     </defs>
-                    <!-- Rocket icon representing getting started -->
-                    <path d="M 100 160 L 110 140 L 100 120 L 90 140 Z" fill="url(#gettingStartedGradient)" opacity="0.6"/>
-                    <rect x="95" y="100" width="10" height="20" rx="2" fill="url(#gettingStartedGradient)" opacity="0.5"/>
-                    <circle cx="100" cy="90" r="8" fill="url(#gettingStartedGradient)" opacity="0.4"/>
-                    <!-- Stars representing journey -->
-                    <path d="M 40 50 L 42 56 L 48 56 L 43 60 L 45 66 L 40 62 L 35 66 L 37 60 L 32 56 L 38 56 Z" fill="url(#gettingStartedGradient)" opacity="0.5"/>
-                    <path d="M 160 70 L 161 73 L 164 73 L 162 75 L 163 78 L 160 76 L 157 78 L 158 75 L 156 73 L 159 73 Z" fill="url(#gettingStartedGradient)" opacity="0.4"/>
-                    <path d="M 50 120 L 51 123 L 54 123 L 52 125 L 53 128 L 50 126 L 47 128 L 48 125 L 46 123 L 49 123 Z" fill="url(#gettingStartedGradient)" opacity="0.3"/>
+                    <!-- Stylized design system icon (moved from homepage) -->
+                    <rect x="40" y="40" width="50" height="50" rx="8" fill="url(#gettingStartedGradient)" opacity="0.3"/>
+                    <rect x="110" y="40" width="50" height="50" rx="8" fill="url(#gettingStartedGradient)" opacity="0.5"/>
+                    <rect x="40" y="110" width="50" height="50" rx="8" fill="url(#gettingStartedGradient)" opacity="0.4"/>
+                    <rect x="110" y="110" width="50" height="50" rx="8" fill="url(#gettingStartedGradient)" opacity="0.6"/>
+                    <circle cx="65" cy="65" r="8" fill="white" opacity="0.8"/>
+                    <circle cx="135" cy="65" r="8" fill="white" opacity="0.8"/>
+                    <circle cx="65" cy="135" r="8" fill="white" opacity="0.8"/>
+                    <circle cx="135" cy="135" r="8" fill="white" opacity="0.8"/>
                   </svg>
                 </div>
               </div>

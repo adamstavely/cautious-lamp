@@ -24,22 +24,34 @@
               </div>
               <div class="hidden md:block flex-shrink-0">
                 <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
                     <defs>
                       <linearGradient id="homeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
                         <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
                       </linearGradient>
                     </defs>
-                    <!-- Stylized design system icon -->
-                    <rect x="40" y="40" width="50" height="50" rx="8" fill="url(#homeGradient)" opacity="0.3"/>
-                    <rect x="110" y="40" width="50" height="50" rx="8" fill="url(#homeGradient)" opacity="0.5"/>
-                    <rect x="40" y="110" width="50" height="50" rx="8" fill="url(#homeGradient)" opacity="0.4"/>
-                    <rect x="110" y="110" width="50" height="50" rx="8" fill="url(#homeGradient)" opacity="0.6"/>
-                    <circle cx="65" cy="65" r="8" fill="white" opacity="0.8"/>
-                    <circle cx="135" cy="65" r="8" fill="white" opacity="0.8"/>
-                    <circle cx="65" cy="135" r="8" fill="white" opacity="0.8"/>
-                    <circle cx="135" cy="135" r="8" fill="white" opacity="0.8"/>
+                    <!-- Elegant layered circles composition -->
+                    <!-- Large background circle -->
+                    <circle cx="100" cy="100" r="70" fill="url(#homeGradient)" opacity="0.2"/>
+                    <!-- Medium circle layer -->
+                    <circle cx="100" cy="100" r="50" fill="url(#homeGradient)" opacity="0.3"/>
+                    <!-- Inner circle layer -->
+                    <circle cx="100" cy="100" r="35" fill="url(#homeGradient)" opacity="0.4"/>
+                    <!-- Top accent circle -->
+                    <circle cx="100" cy="50" r="18" fill="url(#homeGradient)" opacity="0.5"/>
+                    <!-- Bottom accent circle -->
+                    <circle cx="100" cy="150" r="18" fill="url(#homeGradient)" opacity="0.6"/>
+                    <!-- Left accent circle -->
+                    <circle cx="50" cy="100" r="15" fill="url(#homeGradient)" opacity="0.4"/>
+                    <!-- Right accent circle -->
+                    <circle cx="150" cy="100" r="15" fill="url(#homeGradient)" opacity="0.4"/>
+                    <!-- White accent dots -->
+                    <circle cx="100" cy="100" r="5" fill="white" opacity="0.8"/>
+                    <circle cx="100" cy="50" r="4" fill="white" opacity="0.8"/>
+                    <circle cx="100" cy="150" r="4" fill="white" opacity="0.8"/>
+                    <circle cx="50" cy="100" r="3" fill="white" opacity="0.8"/>
+                    <circle cx="150" cy="100" r="3" fill="white" opacity="0.8"/>
                   </svg>
                 </div>
               </div>
