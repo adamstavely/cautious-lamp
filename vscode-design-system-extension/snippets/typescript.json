@@ -1,0 +1,24 @@
+{
+  "Design Token - Color": {
+    "prefix": "ds-color",
+    "body": [
+      "tokens.color.${1:primary}"
+    ],
+    "description": "Design System Color Token"
+  },
+  "Design Token - Spacing": {
+    "prefix": "ds-spacing",
+    "body": [
+      "tokens.spacing.${1:md}"
+    ],
+    "description": "Design System Spacing Token"
+  },
+  "Design Token - Typography": {
+    "prefix": "ds-typography",
+    "body": [
+      "tokens.typography.${1:body}"
+    ],
+    "description": "Design System Typography Token"
+  }
+}
+

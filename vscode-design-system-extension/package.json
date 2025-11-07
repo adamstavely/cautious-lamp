@@ -1,0 +1,160 @@
+{
+  "name": "design-system-extension",
+  "displayName": "Design System",
+  "description": "Design System integration for VS Code - autocomplete, hover info, snippets, and more",
+  "version": "1.0.0",
+  "publisher": "design-system",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Snippets",
+    "Linters"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Design System",
+      "properties": {
+        "designSystem.apiUrl": {
+          "type": "string",
+          "default": "http://localhost:3000/api/v1",
+          "description": "Design System API URL"
+        },
+        "designSystem.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Design System API Key"
+        },
+        "designSystem.enableAutocomplete": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable autocomplete for design tokens and components"
+        },
+        "designSystem.enableHover": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable hover information for tokens and components"
+        },
+        "designSystem.enableColorPreview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show color previews inline"
+        },
+        "designSystem.enableSnippets": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable code snippets"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "designSystem.insertComponent",
+        "title": "Insert Component",
+        "category": "Design System"
+      },
+      {
+        "command": "designSystem.insertToken",
+        "title": "Insert Token",
+        "category": "Design System"
+      },
+      {
+        "command": "designSystem.openComponentDocs",
+        "title": "Open Component Documentation",
+        "category": "Design System"
+      },
+      {
+        "command": "designSystem.replaceWithToken",
+        "title": "Replace with Design Token",
+        "category": "Design System"
+      },
+      {
+        "command": "designSystem.refreshCache",
+        "title": "Refresh Design System Cache",
+        "category": "Design System"
+      },
+      {
+        "command": "designSystem.showOutput",
+        "title": "Show Output",
+        "category": "Design System"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "javascript",
+        "path": "./snippets/javascript.json"
+      },
+      {
+        "language": "typescript",
+        "path": "./snippets/typescript.json"
+      },
+      {
+        "language": "vue",
+        "path": "./snippets/vue.json"
+      },
+      {
+        "language": "javascriptreact",
+        "path": "./snippets/react.json"
+      },
+      {
+        "language": "typescriptreact",
+        "path": "./snippets/react.json"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "designSystem.replaceWithToken",
+          "when": "editorHasSelection && editorTextFocus",
+          "group": "designSystem"
+        },
+        {
+          "command": "designSystem.openComponentDocs",
+          "when": "editorTextFocus",
+          "group": "designSystem"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "designSystem.insertComponent",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "designSystem.insertToken",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "designSystem.openComponentDocs",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "designSystem.replaceWithToken",
+          "when": "editorHasSelection && editorTextFocus"
+        },
+        {
+          "command": "designSystem.refreshCache"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}
+

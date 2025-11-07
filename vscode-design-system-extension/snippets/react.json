@@ -1,0 +1,41 @@
+{
+  "Button Component": {
+    "prefix": "ds-button",
+    "body": [
+      "<Button",
+      "  variant=\"${1|primary,secondary,outline|}\"",
+      "  size=\"${2|sm,md,lg|}\"",
+      "  onClick={${3:handleClick}}",
+      ">",
+      "  ${4:Button Text}",
+      "</Button>"
+    ],
+    "description": "Design System Button Component"
+  },
+  "Input Component": {
+    "prefix": "ds-input",
+    "body": [
+      "<Input",
+      "  value={${1:value}}",
+      "  onChange={${2:handleChange}}",
+      "  label=\"${3:Label}\"",
+      "  placeholder=\"${4:Placeholder}\"",
+      "  type=\"${5|text,email,password,number|}\"",
+      "/>"
+    ],
+    "description": "Design System Input Component"
+  },
+  "Card Component": {
+    "prefix": "ds-card",
+    "body": [
+      "<Card",
+      "  title=\"${1:Card Title}\"",
+      "  ${2:variant=\"${3|default,elevated,outlined|}\"}",
+      ">",
+      "  ${4:Card content}",
+      "</Card>"
+    ],
+    "description": "Design System Card Component"
+  }
+}
+
