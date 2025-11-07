@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ColorPaletteModule } from './color-palette/color-palette.module';
 import { DesignSystemModule } from './design-system/design-system.module';
+import { AuditModule } from './audit/audit.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
@@ -18,6 +19,7 @@ import { ElasticsearchModule } from '@nestjs/elasticsearch';
     }),
     ColorPaletteModule,
     DesignSystemModule,
+    AuditModule,
   ],
 })
 export class AppModule {}

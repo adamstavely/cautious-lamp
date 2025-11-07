@@ -253,6 +253,10 @@ const router = createRouter({
       component: () => import('./views/Governance.vue'),
     },
     {
+      path: '/admin/audit',
+      component: () => import('./views/AuditLogs.vue'),
+    },
+    {
       path: '/tokens',
       component: () => import('./views/Tokens.vue'),
     },
