@@ -144,6 +144,17 @@ export class DesignSystemAPI {
     const response = await this.client.post('/compliance/scan-application', { applicationId, codebase, categories });
     return response.data;
   }
+
+  // AI Assistant
+  async chat(message: string, conversationHistory?: Array<{ role: string; content: string }>): Promise<{
+    response: string;
+    suggestions?: string[];
+    relatedComponents?: string[];
+    relatedTokens?: string[];
+  }> {
+    const response = await this.client.post('/ai/chat', { message, conversationHistory });
+    return response.data;
+  }
 }
 
 export default DesignSystemAPI;

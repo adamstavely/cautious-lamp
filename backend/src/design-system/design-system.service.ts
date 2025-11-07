@@ -922,4 +922,469 @@ export const Modal = ({ open = false, title = '', closeOnBackdrop = true, onClos
       { name: 'Accessibility Attributes', category: 'accessibility', enabled: true }
     ];
   }
+
+  // AI Assistant for Design System Questions
+  async chatWithAI(message: string, conversationHistory?: Array<{ role: string; content: string }>): Promise<{
+    response: string;
+    suggestions?: string[];
+    relatedComponents?: string[];
+    relatedTokens?: string[];
+  }> {
+    // Get design system context
+    const components = this.components;
+    const tokens = this.tokens;
+    const rules = this.getAllAvailableRules();
+    
+    // Build context about the design system
+    const componentNames = components.map(c => c.name).join(', ');
+    const tokenCategories = [...new Set(tokens.map(t => t.category))].join(', ');
+    const ruleCategories = [...new Set(rules.map(r => r.category))].join(', ');
+    
+    // Analyze the user's question to provide relevant context
+    const lowerMessage = message.toLowerCase();
+    
+    // Check if question is about components
+    const componentMatches = components.filter(c => 
+      lowerMessage.includes(c.name.toLowerCase()) || 
+      lowerMessage.includes(c.id.toLowerCase())
+    );
+    
+    // Check if question is about tokens
+    const tokenMatches = tokens.filter(t => 
+      lowerMessage.includes(t.name.toLowerCase()) ||
+      lowerMessage.includes(t.category.toLowerCase()) ||
+      lowerMessage.includes(t.type.toLowerCase())
+    );
+    
+    // Check if question is about rules/compliance
+    const ruleMatches = rules.filter(r => 
+      lowerMessage.includes(r.name.toLowerCase()) ||
+      lowerMessage.includes(r.category.toLowerCase())
+    );
+    
+    // Generate intelligent response based on context
+    let response = '';
+    const suggestions: string[] = [];
+    const relatedComponents: string[] = [];
+    const relatedTokens: string[] = [];
+    
+    // Component-related questions
+    if (componentMatches.length > 0 || lowerMessage.includes('component')) {
+      if (componentMatches.length > 0) {
+        const component = componentMatches[0];
+        response = `I found information about the **${component.name}** component.\n\n`;
+        response += `**Description**: ${component.description}\n`;
+        response += `**Status**: ${component.status}\n`;
+        response += `**Props**: ${component.props.map(p => `${p.name} (${p.type})`).join(', ')}\n\n`;
+        
+        if (component.accessibility) {
+          response += `**Accessibility**: ${component.accessibility.wcag}\n`;
+        }
+        
+        relatedComponents.push(component.id);
+        suggestions.push(`Show me the ${component.name} component code`);
+        suggestions.push(`What are the props for ${component.name}?`);
+      } else {
+        response = `I can help you with components! Our design system has ${components.length} components including: ${componentNames}.\n\n`;
+        response += `What would you like to know about components?`;
+        suggestions.push('List all components');
+        suggestions.push('How do I use the Button component?');
+        suggestions.push('What components are available?');
+      }
+    }
+    // Token-related questions
+    else if (tokenMatches.length > 0 || lowerMessage.includes('token') || lowerMessage.includes('color') || lowerMessage.includes('spacing') || lowerMessage.includes('typography')) {
+      if (tokenMatches.length > 0) {
+        const token = tokenMatches[0];
+        response = `I found the **${token.name}** token.\n\n`;
+        response += `**Value**: ${token.value}\n`;
+        response += `**Type**: ${token.type}\n`;
+        response += `**Category**: ${token.category}\n`;
+        if (token.description) {
+          response += `**Description**: ${token.description}\n`;
+        }
+        
+        relatedTokens.push(token.name);
+        suggestions.push(`Show me all ${token.category} tokens`);
+        suggestions.push(`How do I use ${token.name}?`);
+      } else {
+        response = `I can help you with design tokens! Our design system has tokens in these categories: ${tokenCategories}.\n\n`;
+        response += `What would you like to know about tokens?`;
+        suggestions.push('Show me all color tokens');
+        suggestions.push('What spacing tokens are available?');
+        suggestions.push('How do I use design tokens?');
+      }
+    }
+    // Compliance/rules questions
+    else if (ruleMatches.length > 0 || lowerMessage.includes('rule') || lowerMessage.includes('compliance') || lowerMessage.includes('governance')) {
+      if (ruleMatches.length > 0) {
+        const rule = ruleMatches[0];
+        response = `I found information about the **${rule.name}** rule.\n\n`;
+        response += `**Category**: ${rule.category === 'design-system' ? 'Design System' : rule.category === 'ux-hcd' ? 'UX/HCD Best Practices' : 'Accessibility'}\n`;
+        response += `**Status**: ${rule.enabled ? 'Enabled' : 'Disabled'}\n\n`;
+        response += `This rule checks for compliance with design system standards. Would you like to know more about how to use it or scan your application?`;
+        
+        suggestions.push(`How do I use the ${rule.name} rule?`);
+        suggestions.push(`Scan my application for ${rule.category} compliance`);
+      } else {
+        response = `I can help you with compliance and governance! Our design system has ${rules.length} rules across these categories: ${ruleCategories}.\n\n`;
+        response += `What would you like to know about compliance?`;
+        suggestions.push('What rules are available?');
+        suggestions.push('How do I scan my application?');
+        suggestions.push('What is design system governance?');
+      }
+    }
+    // General questions
+    else {
+      response = `Hi! I'm Eero, your Design System AI Assistant. I can help you with:\n\n`;
+      response += `• **Components** - Find and learn about design system components\n`;
+      response += `• **Design Tokens** - Discover colors, spacing, typography, and more\n`;
+      response += `• **Compliance** - Understand rules and scan applications\n`;
+      response += `• **Best Practices** - Get guidance on UX/HCD and accessibility\n\n`;
+      response += `What would you like to know?`;
+      
+      suggestions.push('What components are available?');
+      suggestions.push('Show me color tokens');
+      suggestions.push('How do I use the Button component?');
+      suggestions.push('What is design system governance?');
+    }
+    
+    // Add general suggestions if none provided
+    if (suggestions.length === 0) {
+      suggestions.push('What components are available?');
+      suggestions.push('Show me design tokens');
+      suggestions.push('How do I use the design system?');
+    }
+    
+    return {
+      response,
+      suggestions: suggestions.slice(0, 4), // Limit to 4 suggestions
+      relatedComponents: relatedComponents.slice(0, 3),
+      relatedTokens: relatedTokens.slice(0, 3)
+    };
+  }
+
+  // Performance Budgets
+  private performanceBudgets = new Map<string, {
+    id: string;
+    name: string;
+    metric: string;
+    threshold: number;
+    unit: string;
+    alertThreshold?: number;
+    enabled: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }>();
+
+  getPerformanceBudgets() {
+    return Array.from(this.performanceBudgets.values());
+  }
+
+  createPerformanceBudget(name: string, metric: string, threshold: number, unit: string, alertThreshold?: number) {
+    const id = `budget_${Date.now()}`;
+    const budget = {
+      id,
+      name,
+      metric,
+      threshold,
+      unit,
+      alertThreshold,
+      enabled: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.performanceBudgets.set(id, budget);
+    return budget;
+  }
+
+  updatePerformanceBudget(id: string, updates: { name?: string; threshold?: number; alertThreshold?: number; enabled?: boolean }) {
+    const budget = this.performanceBudgets.get(id);
+    if (!budget) {
+      throw new Error(`Performance budget ${id} not found`);
+    }
+    Object.assign(budget, updates, { updatedAt: new Date() });
+    this.performanceBudgets.set(id, budget);
+    return budget;
+  }
+
+  deletePerformanceBudget(id: string) {
+    return this.performanceBudgets.delete(id);
+  }
+
+  // Bundle Size Analysis
+  getBundleAnalysis() {
+    // Analyze all components
+    const analysis = this.components.map(component => {
+      const vueCode = component.code.vue || '';
+      const reactCode = component.code.react || '';
+      const vueSize = Buffer.byteLength(vueCode, 'utf8');
+      const reactSize = Buffer.byteLength(reactCode, 'utf8');
+      const totalSize = vueSize + reactSize;
+      
+      // Estimate dependencies size (simplified)
+      const dependencies = component.dependencies || [];
+      const depsSize = dependencies.length * 500; // Rough estimate
+      
+      return {
+        componentId: component.id,
+        componentName: component.name,
+        vueSize,
+        reactSize,
+        totalSize,
+        dependenciesSize: depsSize,
+        totalWithDeps: totalSize + depsSize,
+        dependencies: dependencies,
+        gzippedSize: Math.round(totalSize * 0.3), // Rough estimate
+        status: totalSize > 50000 ? 'warning' : totalSize > 100000 ? 'error' : 'pass'
+      };
+    });
+    
+    return {
+      components: analysis,
+      summary: {
+        totalComponents: analysis.length,
+        totalSize: analysis.reduce((sum, a) => sum + a.totalSize, 0),
+        averageSize: analysis.length > 0 ? Math.round(analysis.reduce((sum, a) => sum + a.totalSize, 0) / analysis.length) : 0,
+        largestComponent: analysis.length > 0 ? analysis.reduce((max, a) => a.totalSize > max.totalSize ? a : max, analysis[0]) : null,
+        smallestComponent: analysis.length > 0 ? analysis.reduce((min, a) => a.totalSize < min.totalSize ? a : min, analysis[0]) : null
+      }
+    };
+  }
+
+  analyzeBundle(componentId?: string, includeDependencies: boolean = true) {
+    if (componentId) {
+      const component = this.components.find(c => c.id === componentId);
+      if (!component) {
+        throw new Error(`Component ${componentId} not found`);
+      }
+      
+      const vueCode = component.code.vue || '';
+      const reactCode = component.code.react || '';
+      const vueSize = Buffer.byteLength(vueCode, 'utf8');
+      const reactSize = Buffer.byteLength(reactCode, 'utf8');
+      const totalSize = vueSize + reactSize;
+      
+      let dependenciesSize = 0;
+      const analyzedDeps: string[] = [];
+      
+      if (includeDependencies && component.dependencies) {
+        component.dependencies.forEach(depId => {
+          const dep = this.components.find(c => c.id === depId);
+          if (dep) {
+            const depVueSize = Buffer.byteLength(dep.code.vue || '', 'utf8');
+            const depReactSize = Buffer.byteLength(dep.code.react || '', 'utf8');
+            dependenciesSize += depVueSize + depReactSize;
+            analyzedDeps.push(depId);
+          }
+        });
+      }
+      
+      return {
+        componentId: component.id,
+        componentName: component.name,
+        vueSize,
+        reactSize,
+        totalSize,
+        dependenciesSize,
+        totalWithDeps: totalSize + dependenciesSize,
+        dependencies: analyzedDeps,
+        gzippedSize: Math.round(totalSize * 0.3),
+        status: totalSize > 50000 ? 'warning' : totalSize > 100000 ? 'error' : 'pass'
+      };
+    }
+    
+    return this.getBundleAnalysis();
+  }
+
+  // Roadmap
+  private roadmapItems = new Map<string, {
+    id: string;
+    title: string;
+    description: string;
+    category: 'feature' | 'improvement' | 'bug-fix' | 'deprecation' | 'integration';
+    priority: 'high' | 'medium' | 'low';
+    status: 'planned' | 'in-progress' | 'completed' | 'cancelled';
+    targetDate?: string;
+    createdAt: Date;
+    updatedAt: Date;
+    votes?: number;
+  }>();
+
+  getRoadmap() {
+    const items = Array.from(this.roadmapItems.values());
+    
+    // Initialize with some default items if empty
+    if (items.length === 0) {
+      const defaultItems = [
+        {
+          id: 'roadmap_1',
+          title: 'Dark Mode Support',
+          description: 'Add comprehensive dark mode support across all components',
+          category: 'feature' as const,
+          priority: 'high' as const,
+          status: 'in-progress' as const,
+          targetDate: '2024-03-01',
+          createdAt: new Date('2024-01-15'),
+          updatedAt: new Date('2024-01-15'),
+          votes: 42
+        },
+        {
+          id: 'roadmap_2',
+          title: 'Component Composition Tool',
+          description: 'Build a visual tool for composing complex components from primitives',
+          category: 'feature' as const,
+          priority: 'high' as const,
+          status: 'planned' as const,
+          targetDate: '2024-04-15',
+          createdAt: new Date('2024-01-10'),
+          updatedAt: new Date('2024-01-10'),
+          votes: 38
+        },
+        {
+          id: 'roadmap_3',
+          title: 'Figma Integration',
+          description: 'Sync design tokens and components with Figma',
+          category: 'integration' as const,
+          priority: 'medium' as const,
+          status: 'planned' as const,
+          targetDate: '2024-05-01',
+          createdAt: new Date('2024-01-08'),
+          updatedAt: new Date('2024-01-08'),
+          votes: 35
+        },
+        {
+          id: 'roadmap_4',
+          title: 'Performance Optimization',
+          description: 'Reduce bundle size and improve load times',
+          category: 'improvement' as const,
+          priority: 'high' as const,
+          status: 'in-progress' as const,
+          targetDate: '2024-02-15',
+          createdAt: new Date('2024-01-05'),
+          updatedAt: new Date('2024-01-05'),
+          votes: 28
+        },
+        {
+          id: 'roadmap_5',
+          title: 'Accessibility Enhancements',
+          description: 'Improve WCAG compliance and add more accessibility features',
+          category: 'improvement' as const,
+          priority: 'high' as const,
+          status: 'planned' as const,
+          targetDate: '2024-03-15',
+          createdAt: new Date('2024-01-12'),
+          updatedAt: new Date('2024-01-12'),
+          votes: 31
+        }
+      ];
+      
+      defaultItems.forEach(item => {
+        this.roadmapItems.set(item.id, item);
+      });
+      
+      return Array.from(this.roadmapItems.values());
+    }
+    
+    return items;
+  }
+
+  createRoadmapItem(data: { title: string; description: string; category: string; priority: string; targetDate?: string; status?: string }) {
+    const id = `roadmap_${Date.now()}`;
+    const item = {
+      id,
+      title: data.title,
+      description: data.description,
+      category: data.category as any,
+      priority: data.priority as any,
+      status: (data.status || 'planned') as any,
+      targetDate: data.targetDate,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      votes: 0
+    };
+    this.roadmapItems.set(id, item);
+    return item;
+  }
+
+  updateRoadmapItem(id: string, updates: { title?: string; description?: string; category?: string; priority?: string; targetDate?: string; status?: string }) {
+    const item = this.roadmapItems.get(id);
+    if (!item) {
+      throw new Error(`Roadmap item ${id} not found`);
+    }
+    Object.assign(item, updates, { updatedAt: new Date() });
+    this.roadmapItems.set(id, item);
+    return item;
+  }
+
+  deleteRoadmapItem(id: string) {
+    return this.roadmapItems.delete(id);
+  }
+
+  // Export rules for ESLint/Prettier integration
+  exportRulesForLinter(format: 'eslint' | 'prettier' | 'json' = 'json') {
+    const allRules = this.getAllAvailableRules();
+    
+    if (format === 'json') {
+      return {
+        rules: allRules.map(rule => ({
+          name: rule.name,
+          category: rule.category,
+          enabled: rule.enabled,
+          description: `Rule: ${rule.name} (${rule.category})`
+        })),
+        version: '1.0.0',
+        exportedAt: new Date().toISOString()
+      };
+    }
+    
+    if (format === 'eslint') {
+      // Convert rules to ESLint-compatible format
+      return {
+        rules: allRules
+          .filter(rule => rule.enabled)
+          .map(rule => ({
+            name: rule.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+            category: rule.category,
+            severity: rule.category === 'accessibility' ? 'error' : 'warn',
+            description: rule.name,
+            // Note: Full ESLint rule implementation would require AST parsing
+            // This is a simplified export format
+            scannerCode: rule.scannerCode || null
+          })),
+        meta: {
+          version: '1.0.0',
+          exportedAt: new Date().toISOString(),
+          note: 'Import this into eslint-plugin-design-system for full functionality'
+        }
+      };
+    }
+    
+    if (format === 'prettier') {
+      // Convert formatting-related rules to Prettier config
+      const formattingRules = allRules.filter(rule => 
+        rule.category === 'design-system' && 
+        (rule.name.includes('Spacing') || rule.name.includes('Typography'))
+      );
+      
+      return {
+        config: {
+          // Prettier config would be generated based on spacing/typography rules
+          tabWidth: 2,
+          useTabs: false,
+          // Additional formatting rules based on design system tokens
+        },
+        rules: formattingRules.map(rule => ({
+          name: rule.name,
+          category: rule.category
+        })),
+        meta: {
+          version: '1.0.0',
+          exportedAt: new Date().toISOString()
+        }
+      };
+    }
+    
+    return { error: 'Invalid format' };
+  }
 }

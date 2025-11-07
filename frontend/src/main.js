@@ -222,6 +222,18 @@ const router = createRouter({
       redirect: '/components',
     },
     {
+      path: '/performance/budgets',
+      component: () => import('./views/PerformanceBudgets.vue'),
+    },
+    {
+      path: '/performance/bundle-analysis',
+      component: () => import('./views/BundleSizeAnalysis.vue'),
+    },
+    {
+      path: '/roadmap',
+      component: () => import('./views/Roadmap.vue'),
+    },
+    {
       path: '/api',
       component: () => import('./views/DesignSystemAPI.vue'),
     },

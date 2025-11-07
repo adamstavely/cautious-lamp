@@ -422,7 +422,10 @@ const tools = [
   { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' },
   { text: 'Code Quality Checks', link: '/code-quality', icon: 'check_circle' },
   { text: 'Vulnerability Scanner', link: '/security', icon: 'security' },
-  { text: 'Design System Governance', link: '/governance', icon: 'admin_panel_settings' }
+  { text: 'Design System Governance', link: '/governance', icon: 'admin_panel_settings' },
+  { text: 'Performance Budgets', link: '/performance/budgets', icon: 'speed' },
+  { text: 'Bundle Size Analysis', link: '/performance/bundle-analysis', icon: 'analytics' },
+  { text: 'Roadmap', link: '/roadmap', icon: 'timeline' }
 ];
 
 const designAssets = [

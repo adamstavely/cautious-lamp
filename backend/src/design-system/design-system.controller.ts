@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query, Param, Headers, Body, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Query, Param, Headers, Body, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { DesignSystemService } from './design-system.service';
 
 @Controller('api/v1')
@@ -163,5 +163,100 @@ export class DesignSystemController {
   ) {
     this.validateRequest(authHeader);
     return await this.designSystemService.scanApplicationCodebase(body.applicationId, body.codebase, body.categories);
+  }
+
+  @Post('ai/chat')
+  async chatWithAI(
+    @Body() body: { message: string; conversationHistory?: Array<{ role: string; content: string }> },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return await this.designSystemService.chatWithAI(body.message, body.conversationHistory);
+  }
+
+  @Get('performance/budgets')
+  getPerformanceBudgets(@Headers('authorization') authHeader?: string) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getPerformanceBudgets();
+  }
+
+  @Post('performance/budgets')
+  createPerformanceBudget(
+    @Body() body: { name: string; metric: string; threshold: number; unit: string; alertThreshold?: number },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.createPerformanceBudget(body.name, body.metric, body.threshold, body.unit, body.alertThreshold);
+  }
+
+  @Put('performance/budgets/:id')
+  updatePerformanceBudget(
+    @Param('id') id: string,
+    @Body() body: { name?: string; threshold?: number; alertThreshold?: number; enabled?: boolean },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.updatePerformanceBudget(id, body);
+  }
+
+  @Delete('performance/budgets/:id')
+  deletePerformanceBudget(@Param('id') id: string, @Headers('authorization') authHeader?: string) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.deletePerformanceBudget(id);
+  }
+
+  @Get('performance/bundle-analysis')
+  getBundleAnalysis(@Headers('authorization') authHeader?: string) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getBundleAnalysis();
+  }
+
+  @Post('performance/bundle-analysis/analyze')
+  analyzeBundle(
+    @Body() body: { componentId?: string; includeDependencies?: boolean },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.analyzeBundle(body.componentId, body.includeDependencies);
+  }
+
+  @Get('roadmap')
+  getRoadmap(@Headers('authorization') authHeader?: string) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getRoadmap();
+  }
+
+  @Post('roadmap/items')
+  createRoadmapItem(
+    @Body() body: { title: string; description: string; category: string; priority: string; targetDate?: string; status?: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.createRoadmapItem(body);
+  }
+
+  @Put('roadmap/items/:id')
+  updateRoadmapItem(
+    @Param('id') id: string,
+    @Body() body: { title?: string; description?: string; category?: string; priority?: string; targetDate?: string; status?: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.updateRoadmapItem(id, body);
+  }
+
+  @Delete('roadmap/items/:id')
+  deleteRoadmapItem(@Param('id') id: string, @Headers('authorization') authHeader?: string) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.deleteRoadmapItem(id);
+  }
+
+  @Get('rules/export')
+  exportRulesForLinter(
+    @Query('format') format: 'eslint' | 'prettier' | 'json' = 'json',
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.exportRulesForLinter(format);
   }
 }
