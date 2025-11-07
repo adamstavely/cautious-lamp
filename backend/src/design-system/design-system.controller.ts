@@ -121,4 +121,47 @@ export class DesignSystemController {
       version: '1.0.0'
     };
   }
+
+  @Post('applications/register')
+  registerApplication(
+    @Body() body: { name: string; repository?: string; version?: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.registerApplication(body.name, body.repository, body.version);
+  }
+
+  @Get('applications')
+  getApplications(@Headers('authorization') authHeader?: string) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getAllApplications();
+  }
+
+  @Post('compliance/scan')
+  scanCompliance(
+    @Body() body: { 
+      applicationId?: string; 
+      scope: 'design-system' | 'applications'; 
+      rules?: Array<{ name: string; scannerCode?: string }> | string[]; 
+      categories?: string[];  // Filter by rule categories (e.g., ['accessibility', 'design-system'])
+      codebase?: any 
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.scanCompliance(body.scope, body.applicationId, body.rules, body.codebase, body.categories);
+  }
+
+  @Post('compliance/scan-application')
+  async scanApplication(
+    @Body() body: { 
+      applicationId: string; 
+      codebase?: any;
+      categories?: string[];  // Filter by rule categories (e.g., ['accessibility', 'design-system'])
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return await this.designSystemService.scanApplicationCodebase(body.applicationId, body.codebase, body.categories);
+  }
 }

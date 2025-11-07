@@ -142,6 +142,62 @@ const router = createRouter({
       component: () => import('./views/ComponentPlayground.vue'),
     },
     {
+      path: '/components/snippets',
+      component: () => import('./views/CodeSnippets.vue'),
+    },
+    {
+      path: '/components/testing',
+      component: () => import('./views/ComponentTesting.vue'),
+    },
+    {
+      path: '/components/documentation',
+      component: () => import('./views/DocumentationGenerator.vue'),
+    },
+    {
+      path: '/components/handoff',
+      component: () => import('./views/HandoffTools.vue'),
+    },
+    {
+      path: '/governance',
+      component: () => import('./views/Governance.vue'),
+    },
+    {
+      path: '/notifications',
+      component: () => import('./views/ChangeNotifications.vue'),
+    },
+    {
+      path: '/ai-suggestions',
+      component: () => import('./views/AISuggestions.vue'),
+    },
+    {
+      path: '/brands',
+      component: () => import('./views/MultiBrand.vue'),
+    },
+    {
+      path: '/theme-builder',
+      component: () => import('./views/ThemeBuilder.vue'),
+    },
+    {
+      path: '/components/composition',
+      component: () => import('./views/ComponentComposition.vue'),
+    },
+    {
+      path: '/components/deprecation',
+      component: () => import('./views/DeprecationManager.vue'),
+    },
+    {
+      path: '/components/migration',
+      component: () => import('./views/MigrationAssistant.vue'),
+    },
+    {
+      path: '/code-quality',
+      component: () => import('./views/CodeQuality.vue'),
+    },
+    {
+      path: '/security',
+      component: () => import('./views/VulnerabilityScanner.vue'),
+    },
+    {
       path: '/components/dependencies',
       component: () => import('./views/ComponentDependencyGraph.vue'),
     },
@@ -156,6 +212,10 @@ const router = createRouter({
     {
       path: '/components/export',
       component: () => import('./views/ComponentLibraryExport.vue'),
+    },
+    {
+      path: '/components/examples',
+      component: () => import('./views/ComponentExamples.vue'),
     },
     {
       path: '/components/versions',
@@ -184,6 +244,10 @@ const router = createRouter({
     {
       path: '/tokens/library',
       component: () => import('./views/StyleLibrary.vue'),
+    },
+    {
+      path: '/tokens/playground',
+      component: () => import('./views/TokenPlayground.vue'),
     },
     {
       path: '/patterns',

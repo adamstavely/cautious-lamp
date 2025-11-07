@@ -416,7 +416,13 @@ const tools = [
   { text: 'Gradient Generator', link: '/tools/gradient-generator', icon: 'gradient' },
   { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'text_fields' },
   { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'search' },
-  { text: 'Palette Builder', link: '/palette-builder', icon: 'palette' }
+  { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'palette' },
+  { text: 'Color Converter', link: '/tools/color-converter', icon: 'swap_horiz' },
+  { text: 'Color Contrast Checker', link: '/tools/color-contrast', icon: 'contrast' },
+  { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' },
+  { text: 'Code Quality Checks', link: '/code-quality', icon: 'check_circle' },
+  { text: 'Vulnerability Scanner', link: '/security', icon: 'security' },
+  { text: 'Design System Governance', link: '/governance', icon: 'admin_panel_settings' }
 ];
 
 const designAssets = [
@@ -432,6 +438,14 @@ const componentItems = [
   { text: 'Overview', link: '/components', icon: 'widgets' },
   { text: 'Component Status', link: '/components/status', icon: 'check_circle' },
   { text: 'Component Playground', link: '/components/playground', icon: 'code' },
+  { text: 'Component Examples', link: '/components/examples', icon: 'preview' },
+  { text: 'Code Snippets', link: '/components/snippets', icon: 'content_copy' },
+  { text: 'Testing Framework', link: '/components/testing', icon: 'bug_report' },
+  { text: 'Documentation Generator', link: '/components/documentation', icon: 'description' },
+  { text: 'Handoff Tools', link: '/components/handoff', icon: 'swap_horiz' },
+  { text: 'Component Composition', link: '/components/composition', icon: 'view_quilt' },
+  { text: 'Deprecation Manager', link: '/components/deprecation', icon: 'archive' },
+  { text: 'Migration Assistant', link: '/components/migration', icon: 'refresh' },
   { text: 'Buttons', link: '/components/buttons', icon: 'smart_button' },
   { text: 'Forms', link: '/components/forms', icon: 'description' },
   { text: 'Cards', link: '/components/cards', icon: 'view_module' },
@@ -442,6 +456,7 @@ const componentItems = [
 const tokenItems = [
   { text: 'Overview', link: '/tokens', icon: 'style' },
   { text: 'Token Studio', link: '/tokens/studio', icon: 'tune' },
+  { text: 'Token Playground', link: '/tokens/playground', icon: 'palette' },
   { text: 'Style Library', link: '/tokens/library', icon: 'library_books' }
 ];
 
@@ -462,7 +477,7 @@ const showFonts = computed(() => {
 });
 
 const showTools = computed(() => {
-  return route.path === '/tools' || route.path.startsWith('/tools/') || route.path === '/palette-builder';
+  return route.path === '/tools' || route.path.startsWith('/tools/') || route.path === '/palette-builder' || route.path === '/governance' || route.path === '/theme-builder' || route.path === '/code-quality' || route.path === '/security';
 });
 
 const showDesignAssets = computed(() => {

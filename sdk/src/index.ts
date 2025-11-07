@@ -112,6 +112,38 @@ export class DesignSystemAPI {
     const response = await this.client.post('/auth/api-keys', { name });
     return response.data;
   }
+
+  // Application management
+  async registerApplication(name: string, repository?: string, version?: string): Promise<{ id: string; name: string; repository?: string; version?: string; registeredAt: Date }> {
+    const response = await this.client.post('/applications/register', { name, repository, version });
+    return response.data;
+  }
+
+  async getApplications(): Promise<{ applications: any[]; count: number }> {
+    const response = await this.client.get('/applications');
+    return response.data;
+  }
+
+  // Compliance scanning
+  async scanCompliance(scope: 'design-system' | 'applications', applicationId?: string, categories?: string[]): Promise<{
+    scope: string;
+    passed: number;
+    warnings: number;
+    failed: number;
+    checks: any[];
+  }> {
+    const response = await this.client.post('/compliance/scan', { scope, applicationId, categories });
+    return response.data;
+  }
+
+  async scanApplicationCodebase(applicationId: string, codebase?: any, categories?: string[]): Promise<{
+    applicationId: string;
+    scannedAt: Date;
+    checks: any[];
+  }> {
+    const response = await this.client.post('/compliance/scan-application', { applicationId, codebase, categories });
+    return response.data;
+  }
 }
 
 export default DesignSystemAPI;

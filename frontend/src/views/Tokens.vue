@@ -210,6 +210,10 @@
                 <h3 class="text-white font-semibold text-xl mb-2">Token Studio</h3>
                 <p class="text-white/80 text-sm">Create and manage design tokens compliant with DTCG spec. Export to any platform using Style Dictionary.</p>
               </router-link>
+              <router-link to="/tokens/playground" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">Token Playground</h3>
+                <p class="text-white/80 text-sm">Visualize and test design token combinations in real-time.</p>
+              </router-link>
               <router-link to="/tokens/library" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
                 <h3 class="text-white font-semibold text-xl mb-2">Style Library</h3>
                 <p class="text-white/80 text-sm">View, edit, download, and manage your saved style dictionaries. All dictionaries are DTCG compliant.</p>

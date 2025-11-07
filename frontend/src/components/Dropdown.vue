@@ -6,7 +6,7 @@
       :class="[
         'w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-left flex items-center justify-between',
         isOpen ? 'ring-2 ring-indigo-500 border-indigo-500' : '',
-        isDarkMode 
+        computedDarkMode 
           ? (isOpen ? 'border-indigo-400 ring-indigo-400 focus:ring-indigo-400 focus:border-indigo-400 bg-slate-700 text-gray-100 border-slate-600' : 'border-slate-600 bg-slate-700 text-gray-100')
           : (isOpen ? 'border-indigo-500 ring-indigo-500 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900 border-gray-300' : 'border-gray-300 bg-white text-gray-900')
       ]"
@@ -28,7 +28,7 @@
       <div
         v-if="isOpen"
         class="absolute z-50 mt-1 w-full border rounded-lg shadow-lg max-h-60 overflow-auto"
-        :class="isDarkMode 
+        :class="computedDarkMode 
           ? 'bg-slate-700 border-slate-600' 
           : 'bg-white border-gray-300'"
       >
@@ -36,13 +36,13 @@
           v-for="option in options"
           :key="option.value"
           @click="selectOption(option)"
-          :class="[
+            :class="[
             'px-4 py-2 cursor-pointer text-sm transition-colors',
             option.value === modelValue
-              ? (isDarkMode 
+              ? (computedDarkMode 
                 ? 'bg-indigo-900/20 text-indigo-400 font-medium' 
                 : 'bg-indigo-50 text-indigo-600 font-medium')
-              : (isDarkMode 
+              : (computedDarkMode 
                 ? 'text-gray-100 hover:bg-slate-600' 
                 : 'text-gray-900 hover:bg-gray-50')
           ]"
@@ -68,6 +68,14 @@ const props = defineProps({
     validator: (options) => {
       return options.every(opt => opt.value !== undefined && opt.label !== undefined);
     }
+  },
+  isDarkMode: {
+    type: Boolean,
+    default: null  // null means auto-detect
+  },
+  label: {
+    type: String,
+    default: ''
   }
 });
 
@@ -76,6 +84,11 @@ const emit = defineEmits(['update:modelValue']);
 const isOpen = ref(false);
 const dropdownRef = ref(null);
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+
+// Use prop if provided, otherwise auto-detect
+const computedDarkMode = computed(() => {
+  return props.isDarkMode !== null ? props.isDarkMode : isDarkMode.value;
+});
 
 const selectedLabel = computed(() => {
   const option = props.options.find(opt => opt.value === props.modelValue);

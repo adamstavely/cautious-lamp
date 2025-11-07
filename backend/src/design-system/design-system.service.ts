@@ -1,4 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ComplianceScannerService, ScannerContext } from './compliance-scanner.service';
+import { ApplicationScannerService, ApplicationScanContext } from './application-scanner.service';
 
 export interface Token {
   name: string;
@@ -37,13 +39,64 @@ export interface ComponentProp {
   description?: string;
 }
 
+export interface Application {
+  id: string;
+  name: string;
+  repository?: string;
+  version?: string;
+  registeredAt: Date;
+  lastScanned?: Date;
+}
+
+export interface ComplianceCheck {
+  id: string;
+  rule: string;
+  status: 'pass' | 'warning' | 'error';
+  message: string;
+  component?: string;
+  application?: string;
+  file?: string;
+  line?: number;
+}
+
 @Injectable()
 export class DesignSystemService {
   private apiKeys = new Map<string, { name: string; createdAt: Date }>();
+  private applications = new Map<string, Application>();
+  private scannerService: ComplianceScannerService;
+  private applicationScanner: ApplicationScannerService;
   
   // Initialize with a default API key for testing
   constructor() {
+    this.scannerService = new ComplianceScannerService();
+    this.applicationScanner = new ApplicationScannerService();
     this.apiKeys.set('test-api-key-123', { name: 'Default Test Key', createdAt: new Date() });
+    
+    // Initialize with sample applications (for demonstration)
+    this.applications.set('app-1', {
+      id: 'app-1',
+      name: 'Marketing Site',
+      repository: 'https://github.com/company/marketing-site',
+      version: '2.1.0',
+      registeredAt: new Date('2024-01-15'),
+      lastScanned: new Date('2024-01-20')
+    });
+    this.applications.set('app-2', {
+      id: 'app-2',
+      name: 'Admin Dashboard',
+      repository: 'https://github.com/company/admin-dashboard',
+      version: '1.5.3',
+      registeredAt: new Date('2024-01-10'),
+      lastScanned: new Date('2024-01-18')
+    });
+    this.applications.set('app-3', {
+      id: 'app-3',
+      name: 'Mobile App',
+      repository: 'https://github.com/company/mobile-app',
+      version: '3.0.1',
+      registeredAt: new Date('2024-01-05'),
+      lastScanned: new Date('2024-01-19')
+    });
   }
 
   validateApiKey(apiKey: string): boolean {
@@ -439,5 +492,434 @@ export const Modal = ({ open = false, title = '', closeOnBackdrop = true, onClos
 
   getComponentsByStatus(status: string): Component[] {
     return this.components.filter(component => component.status === status);
+  }
+
+  registerApplication(name: string, repository?: string, version?: string): Application {
+    const id = `app-${Date.now()}`;
+    const application: Application = {
+      id,
+      name,
+      repository,
+      version,
+      registeredAt: new Date()
+    };
+    this.applications.set(id, application);
+    return application;
+  }
+
+  getAllApplications(): { applications: Application[]; count: number } {
+    return {
+      applications: Array.from(this.applications.values()),
+      count: this.applications.size
+    };
+  }
+
+  scanCompliance(scope: 'design-system' | 'applications', applicationId?: string, rules?: Array<{ name: string; scannerCode?: string }> | string[], codebase?: any, categories?: string[]): {
+    scope: string;
+    passed: number;
+    warnings: number;
+    failed: number;
+    checks: ComplianceCheck[];
+  } {
+    // Handle both old format (string[]) and new format (Array<{name, scannerCode}>)
+    let rulesToScan: string[];
+    let customScanners: Map<string, string> = new Map();
+    
+    if (rules && rules.length > 0) {
+      if (typeof rules[0] === 'string') {
+        // Old format
+        rulesToScan = rules as string[];
+      } else {
+        // New format with scanner code
+        const ruleObjects = rules as Array<{ name: string; scannerCode?: string }>;
+        rulesToScan = ruleObjects.map(r => r.name);
+        ruleObjects.forEach(r => {
+          if (r.scannerCode) {
+            customScanners.set(r.name, r.scannerCode);
+          }
+        });
+      }
+    } else if (categories && categories.length > 0 && scope === 'applications') {
+      // Filter by categories for application scans
+      const allRules = this.getAllAvailableRules();
+      rulesToScan = allRules
+        .filter(rule => categories.includes(rule.category))
+        .map(rule => rule.name);
+    } else {
+      // Default rules
+      rulesToScan = ['Color Contrast WCAG AA', 'Spacing Consistency', 'Typography Scale', 'Component Naming', 'Accessibility Attributes', 'Token Usage'];
+    }
+
+    if (scope === 'design-system') {
+      // Scan design system itself
+      const context: ScannerContext = {
+        components: this.components,
+        tokens: this.tokens
+      };
+
+      // Use custom scanners if provided, otherwise use default scanner service
+      let allChecks: ComplianceCheck[] = [];
+      
+      rulesToScan.forEach(ruleName => {
+        if (customScanners.has(ruleName)) {
+          // Execute custom scanner code
+          try {
+            const scannerCode = customScanners.get(ruleName)!;
+            const scannerFunction = new Function('context', scannerCode);
+            const checks = scannerFunction(context);
+            if (Array.isArray(checks)) {
+              allChecks.push(...checks);
+            }
+          } catch (error) {
+            allChecks.push({
+              id: `error-${ruleName}`,
+              rule: ruleName,
+              status: 'error',
+              message: `Error executing custom scanner: ${error.message}`
+            });
+          }
+        } else {
+          // Use default scanner
+          const checks = this.scannerService.scan([ruleName], context);
+          allChecks.push(...checks);
+        }
+      });
+
+      return {
+        scope: 'design-system',
+        passed: allChecks.filter(c => c.status === 'pass').length,
+        warnings: allChecks.filter(c => c.status === 'warning').length,
+        failed: allChecks.filter(c => c.status === 'error').length,
+        checks: allChecks
+      };
+    } else {
+      // Scan applications using ApplicationScannerService
+      const application = applicationId ? this.applications.get(applicationId) : null;
+      const allChecks: ComplianceCheck[] = [];
+      
+      // Create scan context from codebase parameter or empty
+      const scanContext: ApplicationScanContext = {
+        html: codebase?.html || '',
+        css: codebase?.css || '',
+        javascript: codebase?.javascript || '',
+        components: codebase?.components || [],
+        tokens: this.tokens,
+        applicationName: application?.name || 'Unknown',
+        file: codebase?.file
+      };
+      
+      // Determine which rules to run based on categories or provided rules
+      const allRules = this.getAllAvailableRules();
+      let rulesToRun: Array<{ name: string; category: string; scannerCode?: string }> = [];
+      
+      if (rules && rules.length > 0) {
+        // If specific rules provided, use them (for backward compatibility)
+        if (typeof rules[0] === 'string') {
+          rulesToRun = allRules.filter(rule => (rules as string[]).includes(rule.name));
+        } else {
+          const ruleObjects = rules as Array<{ name: string; scannerCode?: string }>;
+          rulesToRun = allRules.filter(rule => ruleObjects.some(r => r.name === rule.name));
+          ruleObjects.forEach(r => {
+            const existingRule = rulesToRun.find(rt => rt.name === r.name);
+            if (existingRule && r.scannerCode) {
+              existingRule.scannerCode = r.scannerCode;
+            }
+          });
+        }
+      } else if (categories && categories.length > 0) {
+        // Filter by categories
+        rulesToRun = allRules.filter(rule => categories.includes(rule.category));
+      } else {
+        // Run all enabled rules
+        rulesToRun = allRules.filter(rule => rule.enabled !== false);
+      }
+      
+      rulesToRun.forEach((rule: any) => {
+        const ruleName = rule.name;
+        const scannerCode = rule.scannerCode || null;
+        
+        try {
+          if (scannerCode) {
+            // Execute custom scanner code
+            const scannerFunction = new Function('context', scannerCode);
+            const checks = scannerFunction(scanContext);
+            if (Array.isArray(checks)) {
+              allChecks.push(...checks);
+            }
+          } else {
+            // Use ApplicationScannerService methods for default rules
+            switch (ruleName) {
+              case 'Design System Component Usage':
+                allChecks.push(...this.applicationScanner.scanDesignSystemComponentUsage(scanContext));
+                break;
+              case 'Hardcoded Design Tokens':
+                allChecks.push(...this.applicationScanner.scanHardcodedTokens(scanContext));
+                break;
+              case 'Design System Version':
+                allChecks.push(...this.applicationScanner.scanDesignSystemVersion(scanContext));
+                break;
+              case 'Form Label Requirements':
+                allChecks.push(...this.applicationScanner.scanFormLabels(scanContext));
+                break;
+              case 'Error Message Handling':
+                allChecks.push(...this.applicationScanner.scanErrorHandling(scanContext));
+                break;
+              case 'Loading State Indicators':
+                allChecks.push(...this.applicationScanner.scanLoadingStates(scanContext));
+                break;
+              case 'Empty State Handling':
+                allChecks.push(...this.applicationScanner.scanEmptyStates(scanContext));
+                break;
+              case 'Destructive Action Confirmation':
+                allChecks.push(...this.applicationScanner.scanDestructiveActions(scanContext));
+                break;
+              case 'Accessibility Scan (Comprehensive)':
+                // This will be handled asynchronously in scanApplicationCodebase
+                break;
+              case 'Image Alt Text':
+              case 'Heading Hierarchy':
+                allChecks.push(...this.applicationScanner.basicAccessibilityScan(scanContext));
+                break;
+            }
+          }
+        } catch (error) {
+          allChecks.push({
+            id: `error-${ruleName}`,
+            rule: ruleName,
+            status: 'error',
+            message: `Error executing scanner for rule "${ruleName}": ${error.message}`,
+            application: application?.name
+          });
+        }
+      });
+
+      return {
+        scope: 'applications',
+        passed: allChecks.filter(c => c.status === 'pass').length,
+        warnings: allChecks.filter(c => c.status === 'warning').length,
+        failed: allChecks.filter(c => c.status === 'error').length,
+        checks: allChecks
+      };
+    }
+  }
+
+  async scanApplicationCodebase(applicationId: string, codebase?: any, categories?: string[]): Promise<{
+    applicationId: string;
+    scannedAt: Date;
+    checks: ComplianceCheck[];
+  }> {
+    const application = this.applications.get(applicationId);
+    if (!application) {
+      throw new Error(`Application ${applicationId} not found`);
+    }
+
+    // Update last scanned time
+    application.lastScanned = new Date();
+    this.applications.set(applicationId, application);
+
+    // Create scan context from codebase
+    const scanContext: ApplicationScanContext = {
+      html: codebase?.html || '',
+      css: codebase?.css || '',
+      javascript: codebase?.javascript || '',
+      components: codebase?.components || [],
+      tokens: this.tokens,
+      applicationName: application.name,
+      file: codebase?.file
+    };
+
+    // Determine which rules to run based on categories
+    const allRules = this.getAllAvailableRules();
+    let rulesToRun: Array<{ name: string; category: string; scannerCode?: string }> = [];
+    
+    if (categories && categories.length > 0) {
+      // Filter by categories
+      rulesToRun = allRules.filter(rule => categories.includes(rule.category));
+    } else {
+      // Run all enabled rules if no categories specified
+      rulesToRun = allRules.filter(rule => rule.enabled !== false);
+    }
+
+    // Run all application scans
+    const allChecks: ComplianceCheck[] = [];
+    
+    rulesToRun.forEach(rule => {
+      try {
+        if (rule.scannerCode) {
+          // Execute custom scanner code
+          const scannerFunction = new Function('context', rule.scannerCode);
+          const checks = scannerFunction(scanContext);
+          if (Array.isArray(checks)) {
+            allChecks.push(...checks);
+          }
+        } else {
+          // Use ApplicationScannerService methods for default rules
+          switch (rule.name) {
+            case 'Design System Component Usage':
+              allChecks.push(...this.applicationScanner.scanDesignSystemComponentUsage(scanContext));
+              break;
+            case 'Hardcoded Design Tokens':
+              allChecks.push(...this.applicationScanner.scanHardcodedTokens(scanContext));
+              break;
+            case 'Design System Version':
+              allChecks.push(...this.applicationScanner.scanDesignSystemVersion(scanContext));
+              break;
+            case 'Form Label Requirements':
+              allChecks.push(...this.applicationScanner.scanFormLabels(scanContext));
+              break;
+            case 'Error Message Handling':
+              allChecks.push(...this.applicationScanner.scanErrorHandling(scanContext));
+              break;
+            case 'Loading State Indicators':
+              allChecks.push(...this.applicationScanner.scanLoadingStates(scanContext));
+              break;
+            case 'Empty State Handling':
+              allChecks.push(...this.applicationScanner.scanEmptyStates(scanContext));
+              break;
+            case 'Destructive Action Confirmation':
+              allChecks.push(...this.applicationScanner.scanDestructiveActions(scanContext));
+              break;
+            case 'Touch Target Sizes':
+              allChecks.push(...this.applicationScanner.scanTouchTargetSizes(scanContext));
+              break;
+            case 'Success State Indicators':
+              allChecks.push(...this.applicationScanner.scanSuccessStates(scanContext));
+              break;
+            case 'Navigation Consistency':
+              allChecks.push(...this.applicationScanner.scanNavigationConsistency(scanContext));
+              break;
+            case 'Help Text and Tooltips':
+              allChecks.push(...this.applicationScanner.scanHelpText(scanContext));
+              break;
+            case 'Border Radius Consistency':
+              allChecks.push(...this.applicationScanner.scanBorderRadiusConsistency(scanContext));
+              break;
+            case 'Shadow/Elevation Consistency':
+              allChecks.push(...this.applicationScanner.scanShadowConsistency(scanContext));
+              break;
+            case 'Z-index Layer Management':
+              allChecks.push(...this.applicationScanner.scanZIndexManagement(scanContext));
+              break;
+            case 'Icon Usage Consistency':
+              allChecks.push(...this.applicationScanner.scanIconUsage(scanContext));
+              break;
+            case 'Responsive Breakpoint Usage':
+              allChecks.push(...this.applicationScanner.scanResponsiveBreakpoints(scanContext));
+              break;
+            case 'Animation/Transition Consistency':
+              allChecks.push(...this.applicationScanner.scanAnimationConsistency(scanContext));
+              break;
+            case 'Component Variant Usage':
+              allChecks.push(...this.applicationScanner.scanComponentVariantUsage(scanContext));
+              break;
+            case 'Search Functionality':
+              allChecks.push(...this.applicationScanner.scanSearchFunctionality(scanContext));
+              break;
+            case 'Consistent Modal/Dialog Patterns':
+              allChecks.push(...this.applicationScanner.scanModalConsistency(scanContext));
+              break;
+            case 'Consistent Toast/Notification Patterns':
+              allChecks.push(...this.applicationScanner.scanToastConsistency(scanContext));
+              break;
+            case 'Page Load Performance Indicators':
+              allChecks.push(...this.applicationScanner.scanPerformanceIndicators(scanContext));
+              break;
+            case 'Offline State Handling':
+              allChecks.push(...this.applicationScanner.scanOfflineStateHandling(scanContext));
+              break;
+            case 'Content Hierarchy':
+              allChecks.push(...this.applicationScanner.scanContentHierarchy(scanContext));
+              break;
+            case 'Accessibility Scan (Comprehensive)':
+              // This will be handled asynchronously - for now use basic scan
+              allChecks.push(...this.applicationScanner.basicAccessibilityScan(scanContext));
+              break;
+            case 'Image Alt Text':
+            case 'Heading Hierarchy':
+              allChecks.push(...this.applicationScanner.basicAccessibilityScan(scanContext));
+              break;
+          }
+        }
+      } catch (error: any) {
+        allChecks.push({
+          id: `error-${rule.name}`,
+          rule: rule.name,
+          status: 'error',
+          message: `Error executing scanner for rule "${rule.name}": ${error.message}`,
+          application: application.name
+        });
+      }
+    });
+
+    // Run comprehensive accessibility scan if accessibility category is included
+    const hasAccessibilityCategory = !categories || categories.includes('accessibility');
+    const hasAccessibilityRule = rulesToRun.some(rule => rule.category === 'accessibility');
+    
+    if (hasAccessibilityCategory && hasAccessibilityRule) {
+      try {
+        const accessibilityChecks = await this.applicationScanner.scanAccessibility(scanContext);
+        // Filter out duplicates from basic scan
+        const existingIds = new Set(allChecks.map(c => c.id));
+        accessibilityChecks.forEach(check => {
+          if (!existingIds.has(check.id)) {
+            allChecks.push(check);
+          }
+        });
+      } catch (error) {
+        // Already handled by basic scan above
+      }
+    }
+
+    return {
+      applicationId,
+      scannedAt: new Date(),
+      checks: allChecks
+    };
+  }
+
+  // Get all available rules (for filtering by category)
+  getAllAvailableRules(): Array<{ name: string; category: string; enabled: boolean; scannerCode?: string }> {
+    // Return list of all available rules with their categories
+    // In a real implementation, this would come from a database or configuration
+    return [
+      // Design System Compliance Rules
+      { name: 'Design System Component Usage', category: 'design-system', enabled: true },
+      { name: 'Hardcoded Design Tokens', category: 'design-system', enabled: true },
+      { name: 'Design System Version', category: 'design-system', enabled: true },
+      { name: 'Color Contrast WCAG AA', category: 'design-system', enabled: true },
+      { name: 'Spacing Consistency', category: 'design-system', enabled: true },
+      { name: 'Typography Scale', category: 'design-system', enabled: true },
+      { name: 'Component Naming', category: 'design-system', enabled: true },
+      { name: 'Border Radius Consistency', category: 'design-system', enabled: true },
+      { name: 'Shadow/Elevation Consistency', category: 'design-system', enabled: true },
+      { name: 'Z-index Layer Management', category: 'design-system', enabled: true },
+      { name: 'Icon Usage Consistency', category: 'design-system', enabled: true },
+      { name: 'Responsive Breakpoint Usage', category: 'design-system', enabled: true },
+      { name: 'Animation/Transition Consistency', category: 'design-system', enabled: true },
+      { name: 'Component Variant Usage', category: 'design-system', enabled: true },
+      
+      // UX / HCD Best Practices Rules
+      { name: 'Form Label Requirements', category: 'ux-hcd', enabled: true },
+      { name: 'Error Message Handling', category: 'ux-hcd', enabled: true },
+      { name: 'Loading State Indicators', category: 'ux-hcd', enabled: true },
+      { name: 'Empty State Handling', category: 'ux-hcd', enabled: true },
+      { name: 'Destructive Action Confirmation', category: 'ux-hcd', enabled: true },
+      { name: 'Touch Target Sizes', category: 'ux-hcd', enabled: true },
+      { name: 'Success State Indicators', category: 'ux-hcd', enabled: true },
+      { name: 'Navigation Consistency', category: 'ux-hcd', enabled: true },
+      { name: 'Help Text and Tooltips', category: 'ux-hcd', enabled: true },
+      { name: 'Search Functionality', category: 'ux-hcd', enabled: true },
+      { name: 'Consistent Modal/Dialog Patterns', category: 'ux-hcd', enabled: true },
+      { name: 'Consistent Toast/Notification Patterns', category: 'ux-hcd', enabled: true },
+      { name: 'Page Load Performance Indicators', category: 'ux-hcd', enabled: true },
+      { name: 'Offline State Handling', category: 'ux-hcd', enabled: true },
+      { name: 'Content Hierarchy', category: 'ux-hcd', enabled: true },
+      
+      // Accessibility Rules
+      { name: 'Accessibility Scan (Comprehensive)', category: 'accessibility', enabled: true },
+      { name: 'Image Alt Text', category: 'accessibility', enabled: true },
+      { name: 'Heading Hierarchy', category: 'accessibility', enabled: true },
+      { name: 'Accessibility Attributes', category: 'accessibility', enabled: true }
+    ];
   }
 }
