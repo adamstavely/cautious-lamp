@@ -143,7 +143,7 @@ const router = createRouter({
     },
     {
       path: '/components/versions',
-      component: () => import('./views/ComponentVersions.vue'),
+      redirect: '/components',
     },
     {
       path: '/search',

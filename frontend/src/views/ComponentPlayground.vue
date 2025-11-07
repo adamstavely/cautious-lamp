@@ -198,6 +198,7 @@
                 </div>
                 <component-preview 
                   v-else
+                  :key="`${selectedComponent}-${JSON.stringify(propValues)}`"
                   :component="selectedComponent"
                   :props="propValues"
                 />
@@ -260,14 +261,14 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, reactive, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import ComponentPreview from '../components/ComponentPreview.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
 const selectedComponent = ref('');
-const propValues = ref({});
+const propValues = reactive({});
 const codeFormat = ref('vue');
 
 const componentDefinitions = {
@@ -355,8 +356,8 @@ const componentProps = computed(() => {
 const generatedCode = computed(() => {
   if (!selectedComponent.value) return '';
   
-  const props = Object.entries(propValues.value)
-    .filter(([key, value]) => value !== '' && value !== false && value !== null)
+  const props = Object.entries(propValues)
+    .filter(([key, value]) => value !== '' && value !== false && value !== null && value !== undefined)
     .map(([key, value]) => {
       if (typeof value === 'string') {
         return `  ${key}="${value}"`;
@@ -372,8 +373,8 @@ const generatedCode = computed(() => {
   if (codeFormat.value === 'vue') {
     return `<${selectedComponent.value}${props ? '\n' + props + '\n' : ''} />`;
   } else if (codeFormat.value === 'react') {
-    const reactProps = Object.entries(propValues.value)
-      .filter(([key, value]) => value !== '' && value !== false && value !== null)
+    const reactProps = Object.entries(propValues)
+      .filter(([key, value]) => value !== '' && value !== false && value !== null && value !== undefined)
       .map(([key, value]) => {
         if (typeof value === 'string') {
           return `  ${key}="${value}"`;
@@ -388,8 +389,8 @@ const generatedCode = computed(() => {
     return `<${selectedComponent.value.charAt(0).toUpperCase() + selectedComponent.value.slice(1)}${reactProps ? '\n' + reactProps + '\n' : ''} />`;
   } else {
     // HTML
-    const htmlProps = Object.entries(propValues.value)
-      .filter(([key, value]) => value !== '' && value !== false && value !== null)
+    const htmlProps = Object.entries(propValues)
+      .filter(([key, value]) => value !== '' && value !== false && value !== null && value !== undefined)
       .map(([key, value]) => {
         if (typeof value === 'boolean' && value) {
           return ` ${key}`;
@@ -406,37 +407,98 @@ const generatedCode = computed(() => {
 });
 
 const loadComponent = () => {
+  // Clear existing props
+  Object.keys(propValues).forEach(key => {
+    delete propValues[key];
+  });
+  
   if (!selectedComponent.value) {
-    propValues.value = {};
     return;
   }
   
   const def = componentDefinitions[selectedComponent.value];
   if (def) {
-    propValues.value = {};
     def.props.forEach(prop => {
-      propValues.value[prop.name] = prop.default !== undefined ? prop.default : (prop.type === 'checkbox' ? false : '');
+      propValues[prop.name] = prop.default !== undefined ? prop.default : (prop.type === 'checkbox' ? false : '');
     });
   }
 };
 
-const copyCode = async () => {
+const copyCode = async (codeToCopy = null) => {
   try {
-    await navigator.clipboard.writeText(generatedCode.value);
+    const code = codeToCopy || generatedCode.value;
+    await navigator.clipboard.writeText(code);
     // Could add a toast notification here
   } catch (err) {
     console.error('Failed to copy:', err);
   }
 };
 
-const exportAsVue = () => {
-  codeFormat.value = 'vue';
-  copyCode();
+const generateCodeForFormat = (format) => {
+  if (!selectedComponent.value) return '';
+  
+  const props = Object.entries(propValues)
+    .filter(([key, value]) => value !== '' && value !== false && value !== null && value !== undefined)
+    .map(([key, value]) => {
+      if (typeof value === 'string') {
+        return `  ${key}="${value}"`;
+      } else if (typeof value === 'boolean') {
+        return value ? `  :${key}="true"` : '';
+      } else {
+        return `  :${key}="${value}"`;
+      }
+    })
+    .filter(Boolean)
+    .join('\n');
+
+  if (format === 'vue') {
+    return `<${selectedComponent.value}${props ? '\n' + props + '\n' : ''} />`;
+  } else if (format === 'react') {
+    const reactProps = Object.entries(propValues)
+      .filter(([key, value]) => value !== '' && value !== false && value !== null && value !== undefined)
+      .map(([key, value]) => {
+        if (typeof value === 'string') {
+          return `  ${key}="${value}"`;
+        } else if (typeof value === 'boolean') {
+          return value ? `  ${key}={true}` : '';
+        } else {
+          return `  ${key}={${value}}`;
+        }
+      })
+      .filter(Boolean)
+      .join('\n');
+    return `<${selectedComponent.value.charAt(0).toUpperCase() + selectedComponent.value.slice(1)}${reactProps ? '\n' + reactProps + '\n' : ''} />`;
+  } else {
+    // HTML
+    const htmlProps = Object.entries(propValues)
+      .filter(([key, value]) => value !== '' && value !== false && value !== null && value !== undefined)
+      .map(([key, value]) => {
+        if (typeof value === 'boolean' && value) {
+          return ` ${key}`;
+        } else if (typeof value === 'string') {
+          return ` ${key}="${value}"`;
+        } else {
+          return ` ${key}="${value}"`;
+        }
+      })
+      .filter(Boolean)
+      .join('');
+    return `<${selectedComponent.value}${htmlProps}></${selectedComponent.value}>`;
+  }
 };
 
-const exportAsReact = () => {
+const exportAsVue = async () => {
+  codeFormat.value = 'vue';
+  await nextTick();
+  const vueCode = generateCodeForFormat('vue');
+  await copyCode(vueCode);
+};
+
+const exportAsReact = async () => {
   codeFormat.value = 'react';
-  copyCode();
+  await nextTick();
+  const reactCode = generateCodeForFormat('react');
+  await copyCode(reactCode);
 };
 
 const toggleFullscreen = () => {

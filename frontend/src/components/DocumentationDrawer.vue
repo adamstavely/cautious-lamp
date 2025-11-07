@@ -432,7 +432,6 @@ const componentItems = [
   { text: 'Overview', link: '/components', icon: 'widgets' },
   { text: 'Component Status', link: '/components/status', icon: 'check_circle' },
   { text: 'Component Playground', link: '/components/playground', icon: 'code' },
-  { text: 'Component Versions', link: '/components/versions', icon: 'history' },
   { text: 'Buttons', link: '/components/buttons', icon: 'smart_button' },
   { text: 'Forms', link: '/components/forms', icon: 'description' },
   { text: 'Cards', link: '/components/cards', icon: 'view_module' },
