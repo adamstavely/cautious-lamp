@@ -46,7 +46,10 @@
                   API Endpoints
                 </h2>
                 <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Base URL: <code class="px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">https://api.designsystem.com/v1</code>
+                  Base URL: <code class="px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">http://localhost:3000/api/v1</code>
+                </p>
+                <p class="text-xs mt-2" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                  Note: The API requires authentication via API key. Use the Authorization header with Bearer token.
                 </p>
               </div>
             </div>
@@ -191,11 +194,8 @@
                 <div class="border rounded-lg p-4" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
                   <h4 class="font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">CLI Tool</h4>
                   <code class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">npm install -g @designsystem/cli</code>
-                </div>
-                <div class="border rounded-lg p-4" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                  <h4 class="font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Webhooks</h4>
-                  <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Subscribe to design system updates
+                  <p class="text-xs mt-2" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                    Command-line interface for accessing the API
                   </p>
                 </div>
               </div>
@@ -224,20 +224,19 @@
                     JavaScript / Node.js
                   </h4>
                   <div class="bg-slate-950 rounded p-4 overflow-x-auto">
-                    <pre class="text-xs text-gray-300"><code>import { DesignSystemAPI } from '@designsystem/api';
-
-const api = new DesignSystemAPI({
-  apiKey: 'YOUR_API_KEY'
+                    <pre class="text-xs text-gray-300"><code>const api = new DesignSystemAPI({
+  apiKey: 'YOUR_API_KEY',
+  baseURL: 'http://localhost:3000/api/v1' // Optional
 });
 
 // Get all tokens
-const tokens = await api.tokens.getAll();
+const tokens = await api.tokens();
 
 // Get tokens by category
-const colors = await api.tokens.getByCategory('colors');
+const colors = await api.tokensByCategory('colors');
 
 // Get component
-const button = await api.components.get('button');</code></pre>
+const button = await api.component('button');</code></pre>
                   </div>
                 </div>
 
@@ -249,7 +248,7 @@ const button = await api.components.get('button');</code></pre>
                   <div class="bg-slate-950 rounded p-4 overflow-x-auto">
                     <pre class="text-xs text-gray-300"><code>from designsystem import API
 
-api = API(api_key='YOUR_API_KEY')
+api = API(api_key='YOUR_API_KEY', base_url='http://localhost:3000/api/v1')
 
 # Get all tokens
 tokens = api.tokens.get_all()
@@ -262,6 +261,29 @@ button = api.components.get('button')</code></pre>
                   </div>
                 </div>
 
+                <!-- CLI Example -->
+                <div>
+                  <h4 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    CLI Tool
+                  </h4>
+                  <div class="bg-slate-950 rounded p-4 overflow-x-auto">
+                    <pre class="text-xs text-gray-300"><code># Set API key
+ds config set apiKey YOUR_API_KEY
+
+# List all tokens
+ds tokens
+
+# Get a specific token
+ds token color.primary
+
+# List components
+ds components
+
+# Get a component with code
+ds component button --code react</code></pre>
+                  </div>
+                </div>
+
                 <!-- cURL Example -->
                 <div>
                   <h4 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -269,7 +291,7 @@ button = api.components.get('button')</code></pre>
                   </h4>
                   <div class="bg-slate-950 rounded p-4 overflow-x-auto">
                     <pre class="text-xs text-gray-300"><code>curl -X GET \
-  https://api.designsystem.com/v1/tokens \
+  http://localhost:3000/api/v1/tokens \
   -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
                   </div>
                 </div>
