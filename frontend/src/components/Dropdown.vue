@@ -1,5 +1,10 @@
 <template>
-  <div class="relative" ref="dropdownRef">
+  <div 
+    data-ds-component="dropdown"
+    data-ds-path="@design-system/components/dropdown"
+    class="relative" 
+    ref="dropdownRef"
+  >
     <button
       type="button"
       @click="toggleDropdown"

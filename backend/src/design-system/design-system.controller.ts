@@ -578,4 +578,56 @@ export class DesignSystemController {
     this.validateRequest(authHeader);
     return { count: this.notificationService.getUnreadCount(userId) };
   }
+
+  // NASA-TLX endpoint
+  @Post('nasa-tlx')
+  submitNASATLX(
+    @Body() body: {
+      systemName: string;
+      task: string;
+      mentalDemand: number;
+      physicalDemand: number;
+      temporalDemand: number;
+      performance: number;
+      effort: number;
+      frustration: number;
+      user: string;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.submitNASATLX(body);
+  }
+
+  // System Usability Scale endpoint
+  @Post('sus')
+  submitSUS(
+    @Body() body: {
+      systemName: string;
+      q1: number;
+      q2: number;
+      q3: number;
+      q4: number;
+      q5: number;
+      q6: number;
+      q7: number;
+      q8: number;
+      q9: number;
+      q10: number;
+      user: string;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.submitSUS(body);
+  }
+
+  // Component metadata for Loupe Tool
+  @Get('components/metadata')
+  getComponentMetadata(
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getComponentMetadata();
+  }
 }

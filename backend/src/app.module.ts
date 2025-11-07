@@ -5,8 +5,16 @@ import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
   imports: [
-    ElasticsearchModule.register({
-      node: process.env.ELASTICSEARCH_NODE || 'http://localhost:9200',
+    ElasticsearchModule.registerAsync({
+      useFactory: () => {
+        const node = process.env.ELASTICSEARCH_NODE || 'http://localhost:9200';
+        return {
+          node,
+          // Make connection optional - don't fail if Elasticsearch isn't available
+          maxRetries: 0,
+          requestTimeout: 1000,
+        };
+      },
     }),
     ColorPaletteModule,
     DesignSystemModule,

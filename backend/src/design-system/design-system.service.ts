@@ -1,4 +1,6 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Optional } from '@nestjs/common';
+import { ElasticsearchService } from '@nestjs/elasticsearch';
+import { Inject } from '@nestjs/common';
 import { ComplianceScannerService, ScannerContext } from './compliance-scanner.service';
 import { ApplicationScannerService, ApplicationScanContext } from './application-scanner.service';
 
@@ -67,7 +69,9 @@ export class DesignSystemService {
   private applicationScanner: ApplicationScannerService;
   
   // Initialize with a default API key for testing
-  constructor() {
+  constructor(
+    @Optional() @Inject(ElasticsearchService) private readonly elasticsearchService?: ElasticsearchService,
+  ) {
     this.scannerService = new ComplianceScannerService();
     this.applicationScanner = new ApplicationScannerService();
     this.apiKeys.set('test-api-key-123', { name: 'Default Test Key', createdAt: new Date() });
@@ -1458,5 +1462,163 @@ export const Modal = ({ open = false, title = '', closeOnBackdrop = true, onClos
 
   deleteBanner(id: string) {
     return this.infoBanners.delete(id);
+  }
+
+  // NASA-TLX (NASA Task Load Index)
+  async submitNASATLX(data: {
+    systemName: string;
+    task: string;
+    mentalDemand: number;
+    physicalDemand: number;
+    temporalDemand: number;
+    performance: number;
+    effort: number;
+    frustration: number;
+    user: string;
+  }) {
+    const document = {
+      systemName: data.systemName,
+      task: data.task,
+      mentalDemand: data.mentalDemand,
+      physicalDemand: data.physicalDemand,
+      temporalDemand: data.temporalDemand,
+      performance: data.performance,
+      effort: data.effort,
+      frustration: data.frustration,
+      user: data.user,
+      timestamp: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+
+    if (!this.elasticsearchService) {
+      // Return mock response if Elasticsearch is not available
+      return {
+        id: `mock-${Date.now()}`,
+        ...document,
+      };
+    }
+
+    try {
+      const result = await this.elasticsearchService.index({
+        index: 'nasa-tlx',
+        document,
+      });
+
+      return {
+        id: result._id,
+        ...document,
+      };
+    } catch (error) {
+      // Return mock response if Elasticsearch fails
+      return {
+        id: `mock-${Date.now()}`,
+        ...document,
+      };
+    }
+  }
+
+  // System Usability Scale (SUS)
+  async submitSUS(data: {
+    systemName: string;
+    q1: number;
+    q2: number;
+    q3: number;
+    q4: number;
+    q5: number;
+    q6: number;
+    q7: number;
+    q8: number;
+    q9: number;
+    q10: number;
+    user: string;
+  }) {
+    // Calculate SUS score (0-100)
+    // Odd questions: score - 1
+    // Even questions: 5 - score
+    let score = 0;
+    score += (data.q1 - 1) + (5 - data.q2) + (data.q3 - 1) + (5 - data.q4) + (data.q5 - 1);
+    score += (5 - data.q6) + (data.q7 - 1) + (5 - data.q8) + (data.q9 - 1) + (5 - data.q10);
+    score *= 2.5; // Convert to 0-100 scale
+
+    const document = {
+      systemName: data.systemName,
+      q1: data.q1,
+      q2: data.q2,
+      q3: data.q3,
+      q4: data.q4,
+      q5: data.q5,
+      q6: data.q6,
+      q7: data.q7,
+      q8: data.q8,
+      q9: data.q9,
+      q10: data.q10,
+      score: Math.round(score * 10) / 10, // Round to 1 decimal
+      user: data.user,
+      timestamp: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+
+    if (!this.elasticsearchService) {
+      // Return mock response if Elasticsearch is not available
+      return {
+        id: `mock-${Date.now()}`,
+        ...document,
+      };
+    }
+
+    try {
+      const result = await this.elasticsearchService.index({
+        index: 'sus-scores',
+        document,
+      });
+
+      return {
+        id: result._id,
+        ...document,
+      };
+    } catch (error) {
+      // Return mock response if Elasticsearch fails
+      return {
+        id: `mock-${Date.now()}`,
+        ...document,
+      };
+    }
+  }
+
+  // Component metadata for Loupe Tool
+  getComponentMetadata() {
+    const metadata: Record<string, any> = {};
+    
+    // Icon mapping for components
+    const iconMap: Record<string, string> = {
+      'button': 'smart_button',
+      'card': 'view_module',
+      'input': 'input',
+      'select': 'arrow_drop_down',
+      'dropdown': 'arrow_drop_down',
+      'navigation': 'navigation',
+      'sidebar': 'menu',
+      'topnav': 'menu',
+      'breadcrumbs': 'navigate_next',
+      'table': 'table_chart',
+      'modal': 'fullscreen',
+      'tooltip': 'info',
+      'drawer': 'left_panel_close',
+    };
+    
+    this.components.forEach((component) => {
+      metadata[component.id] = {
+        name: component.name,
+        path: `@design-system/components/${component.id}`,
+        icon: iconMap[component.id] || 'widgets',
+        links: {
+          docs: `/components/${component.id === 'button' ? 'buttons' : component.id === 'card' ? 'cards' : component.id === 'input' || component.id === 'select' ? 'forms' : component.id === 'navigation' || component.id === 'sidebar' || component.id === 'topnav' || component.id === 'breadcrumbs' ? 'navigation' : component.id === 'table' ? 'data-display' : 'overlays'}`,
+          github: `https://github.com/your-org/design-system/tree/main/packages/components/src/${component.name}`,
+          figma: `https://www.figma.com/file/your-design-system/components#${component.id}`,
+        },
+      };
+    });
+    
+    return metadata;
   }
 }

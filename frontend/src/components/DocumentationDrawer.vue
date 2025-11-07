@@ -525,6 +525,9 @@ const tools = [
   { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'palette' },
   { text: 'Color Converter', link: '/tools/color-converter', icon: 'swap_horiz' },
   { text: 'Color Contrast Checker', link: '/tools/color-contrast', icon: 'contrast' },
+  { text: 'NASA-TLX', link: '/tools/nasa-tlx', icon: 'psychology' },
+  { text: 'System Usability Scale', link: '/tools/sus', icon: 'psychology' },
+  { text: 'PNG to ICO Converter', link: '/tools/png-to-ico', icon: 'image' },
   { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' },
   { text: 'Code Quality Checks', link: '/code-quality', icon: 'check_circle' },
   { text: 'Vulnerability Scanner', link: '/security', icon: 'security' },
@@ -543,6 +546,7 @@ const designAssets = [
 
 const componentItems = [
   { text: 'Overview', link: '/components', icon: 'widgets' },
+  { text: 'Loupe Tool', link: '/components/loupe', icon: 'search' },
   { text: 'Component Status', link: '/components/status', icon: 'check_circle' },
   { text: 'Component Examples', link: '/components/examples', icon: 'preview' },
   { text: 'Code Snippets', link: '/components/snippets', icon: 'content_copy' },

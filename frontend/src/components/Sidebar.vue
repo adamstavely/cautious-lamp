@@ -1,5 +1,10 @@
 <template>
-  <aside id="navigation" class="sticky top-0 h-screen text-white flex flex-col flex-shrink-0 w-24 transition-colors z-50 bg-indigo-800 dark:bg-indigo-900" aria-label="Main navigation"
+  <aside 
+    id="navigation" 
+    data-ds-component="sidebar"
+    data-ds-path="@design-system/components/sidebar"
+    class="sticky top-0 h-screen text-white flex flex-col flex-shrink-0 w-24 transition-colors z-50 bg-indigo-800 dark:bg-indigo-900" 
+    aria-label="Main navigation"
   >
     <!-- Navigation Items -->
     <nav class="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-4" role="navigation" aria-label="Main navigation">

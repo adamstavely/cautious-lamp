@@ -1,5 +1,11 @@
 <template>
-  <nav class="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 shadow-sm relative" role="navigation" aria-label="Top navigation">
+  <nav 
+    data-ds-component="topnav"
+    data-ds-path="@design-system/components/topnav"
+    class="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 shadow-sm relative" 
+    role="navigation" 
+    aria-label="Top navigation"
+  >
     <div class="flex items-center h-16">
       <!-- Left spacer for sidebar -->
       <div class="w-24 flex-shrink-0"></div>
@@ -347,6 +353,7 @@ const searchIndex = [
   { id: 'getting-started', title: 'Getting Started', description: 'Learn the fundamentals, explore key concepts, and start building with confidence', category: 'Getting Started', path: '/getting-started', icon: 'rocket_launch', tags: ['getting-started', 'onboarding', 'tutorial'] },
   { id: 'research-repo', title: 'Research Repo', description: 'Explore journey maps, user personas, HCD reports, and other human-centered design research artifacts', category: 'Research Repo', path: '/research', icon: 'science', tags: ['research', 'personas', 'journey-maps', 'hcd', 'user-studies'] },
   { id: 'button', title: 'Button', description: 'Primary, secondary, and tertiary button variants with different sizes and states', category: 'Components', path: '/components/buttons', icon: 'smart_button', tags: ['interactive', 'form', 'action'] },
+  { id: 'loupe-tool', title: 'Loupe Tool', description: 'Inspect design system components on any page with keyboard shortcut', category: 'Components', path: '/components/loupe', icon: 'search', tags: ['loupe', 'inspector', 'components', 'keyboard-shortcut'] },
   { id: 'component-status', title: 'Component Status', description: 'Track component development status and availability', category: 'Components', path: '/components/status', icon: 'check_circle', tags: ['status', 'tracking'] },
   { id: 'component-versions', title: 'Component Versions', description: 'Track versions, changelogs, and breaking changes', category: 'Components', path: '/components/versions', icon: 'history', tags: ['version', 'changelog'] },
   { id: 'forms', title: 'Forms', description: 'Input fields, selects, checkboxes, and form controls', category: 'Components', path: '/components/forms', icon: 'description', tags: ['form', 'input', 'validation'] },
@@ -365,6 +372,9 @@ const searchIndex = [
   { id: 'font-subsetting', title: 'Font Subsetting', description: 'Optimize fonts by subsetting character sets', category: 'Fonts', path: '/fonts/subsetting', icon: 'content_cut', tags: ['font', 'optimization'] },
   { id: 'icon-library', title: 'Icon Library', description: 'Upload and manage icon sets from Material and Lucide', category: 'Design Assets', path: '/design-assets/icons', icon: 'star', tags: ['icons', 'assets'] },
   { id: 'color-converter', title: 'Color Converter', description: 'Convert colors between different formats (HEX, RGB, HSL, etc.)', category: 'Tools', path: '/tools/color-converter', icon: 'palette', tags: ['color', 'converter', 'tool'] },
+  { id: 'nasa-tlx', title: 'NASA-TLX', description: 'Assess task workload across six dimensions for usability analysis', category: 'Tools', path: '/tools/nasa-tlx', icon: 'psychology', tags: ['usability', 'workload', 'assessment', 'nasa-tlx'] },
+  { id: 'sus', title: 'System Usability Scale', description: 'Quick and reliable tool for measuring system usability', category: 'Tools', path: '/tools/sus', icon: 'psychology', tags: ['usability', 'sus', 'assessment', 'scale'] },
+  { id: 'png-to-ico', title: 'PNG to ICO Converter', description: 'Convert PNG images to ICO format for favicons and app icons', category: 'Tools', path: '/tools/png-to-ico', icon: 'image', tags: ['image', 'converter', 'ico', 'favicon', 'icon'] },
   { id: 'color-contrast', title: 'Color Contrast Checker', description: 'Check color contrast ratios for accessibility', category: 'Tools', path: '/tools/color-contrast', icon: 'contrast', tags: ['color', 'accessibility', 'contrast'] },
   { id: 'gradient-generator', title: 'Gradient Generator', description: 'Create beautiful gradients with custom stops and directions', category: 'Tools', path: '/tools/gradient-generator', icon: 'gradient', tags: ['gradient', 'color', 'tool'] },
   { id: 'lorem-ipsum', title: 'Lorem Ipsum Generator', description: 'Generate placeholder text with various options', category: 'Tools', path: '/tools/lorem-ipsum', icon: 'text_fields', tags: ['text', 'placeholder', 'tool'] },

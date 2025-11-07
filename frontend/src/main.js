@@ -134,6 +134,10 @@ const router = createRouter({
       component: () => import('./views/Components.vue'),
     },
     {
+      path: '/components/loupe',
+      component: () => import('./views/LoupeTool.vue'),
+    },
+    {
       path: '/components/status',
       component: () => import('./views/ComponentStatus.vue'),
     },
@@ -300,6 +304,18 @@ const router = createRouter({
     {
       path: '/tools/color-contrast',
       component: () => import('./views/ColorContrastChecker.vue'),
+    },
+    {
+      path: '/tools/nasa-tlx',
+      component: () => import('./views/NASA-TLX.vue'),
+    },
+    {
+      path: '/tools/sus',
+      component: () => import('./views/SystemUsabilityScale.vue'),
+    },
+    {
+      path: '/tools/png-to-ico',
+      component: () => import('./views/PNGToICO.vue'),
     },
     {
       path: '/tools',

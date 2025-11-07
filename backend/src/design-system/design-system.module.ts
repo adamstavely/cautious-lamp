@@ -5,8 +5,10 @@ import { ComponentRequestService } from './component-request.service';
 import { NotificationService } from './notification.service';
 import { ComplianceScannerService } from './compliance-scanner.service';
 import { ApplicationScannerService } from './application-scanner.service';
+import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
+  imports: [],
   controllers: [DesignSystemController],
   providers: [
     DesignSystemService,

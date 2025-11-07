@@ -19,6 +19,9 @@
       <!-- Floating Action Button and Chatbot -->
       <FloatingActionButton :isChatOpen="chatOpen" @toggle-chat="handleToggleChat" />
       <EeroChatbot :isOpen="chatOpen" @close="handleCloseChat" />
+      
+      <!-- Loupe Tool -->
+      <LoupeTool />
     </div>
   </v-app>
 </template>
@@ -30,6 +33,7 @@ import TopNav from './components/TopNav.vue';
 import InfoBanner from './components/InfoBanner.vue';
 import FloatingActionButton from './components/FloatingActionButton.vue';
 import EeroChatbot from './components/EeroChatbot.vue';
+import LoupeTool from './components/LoupeTool.vue';
 
 const chatOpen = ref(false);
 

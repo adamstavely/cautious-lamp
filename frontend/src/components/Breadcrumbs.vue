@@ -1,6 +1,8 @@
 <template>
   <nav 
     v-if="crumbs.length > 0" 
+    data-ds-component="breadcrumbs"
+    data-ds-path="@design-system/components/breadcrumbs"
     class="px-8 pt-6 pb-4 border-b"
     :class="isDarkMode 
       ? 'border-gray-700 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
