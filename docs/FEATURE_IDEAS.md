@@ -125,20 +125,16 @@ This document tracks all feature ideas, their implementation status, and future 
 - [ ] **Design System Versioning** - Full versioning system for the design system itself
 - [ ] **Component Usage Analytics** - Track which components are used most
 - [ ] **Design System Audit Reports** - Generate comprehensive audit reports
-- [ ] **Token Migration Tools** - Tools for migrating between token formats
+- [ ] **Token Migration Tools** - Tools for migrating between token formats (✅ Combined with Migration Assistant)
 - [ ] **Component Comparison Tool** - Compare component versions side-by-side
 
 ### Developer Experience
-- [ ] **VS Code Extension** - Design system integration for VS Code
 - [ ] **Component Scaffolding Wizard** - Interactive wizard for creating components
 - [ ] **Design System CLI Plugins** - Plugin system for extending CLI functionality
 - [ ] **Automated Component Testing** - Auto-generate tests based on component props
 
 ### Collaboration & Workflow
-- ✅ **Design System Roadmap** - Public roadmap for design system evolution
-- ✅ **Component Request Workflow** - Automated workflow for component requests (with backend API, state machine, approvals, assignments, comments, notifications, and component integration)
 - [ ] **Design System Newsletter** - Automated newsletter for design system updates
-
 - [ ] **Design System Onboarding** - Interactive onboarding for new team members
 
 

@@ -413,6 +413,7 @@ const reviewItems = [
 
 const tools = [
   { text: 'Overview', link: '/tools', icon: 'build' },
+  { text: 'Migration Assistant', link: '/tools/migration', icon: 'refresh' },
   { text: 'Gradient Generator', link: '/tools/gradient-generator', icon: 'gradient' },
   { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'text_fields' },
   { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'search' },
@@ -447,8 +448,6 @@ const componentItems = [
   { text: 'Documentation Generator', link: '/components/documentation', icon: 'description' },
   { text: 'Handoff Tools', link: '/components/handoff', icon: 'swap_horiz' },
   { text: 'Component Composition', link: '/components/composition', icon: 'view_quilt' },
-  { text: 'Deprecation Manager', link: '/components/deprecation', icon: 'archive' },
-  { text: 'Migration Assistant', link: '/components/migration', icon: 'refresh' },
   { text: 'Buttons', link: '/components/buttons', icon: 'smart_button' },
   { text: 'Forms', link: '/components/forms', icon: 'description' },
   { text: 'Cards', link: '/components/cards', icon: 'view_module' },

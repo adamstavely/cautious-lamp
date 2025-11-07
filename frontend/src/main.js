@@ -183,10 +183,10 @@ const router = createRouter({
     },
     {
       path: '/components/deprecation',
-      component: () => import('./views/DeprecationManager.vue'),
+      redirect: '/tools/migration',
     },
     {
-      path: '/components/migration',
+      path: '/tools/migration',
       component: () => import('./views/MigrationAssistant.vue'),
     },
     {
