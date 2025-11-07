@@ -155,6 +155,41 @@
         </nav>
       </div>
       
+      <!-- Getting Started - only show when on getting started route -->
+      <div v-if="showGettingStarted" class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Getting Started</h3>
+          <button
+            @click="toggle"
+            class="p-2 rounded-lg transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            title="Close drawer"
+          >
+            <span class="material-symbols-outlined">left_panel_close</span>
+          </button>
+        </div>
+        <nav class="space-y-1">
+          <router-link
+            v-for="item in gettingStartedItems"
+            :key="item.link"
+            :to="item.link"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+            :class="[
+              isActive(item.link)
+                ? (isDarkMode 
+                  ? 'text-indigo-400 bg-indigo-900/20' 
+                  : 'text-indigo-600 bg-indigo-50')
+                : (isDarkMode
+                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+            ]"
+          >
+            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+            <span class="font-medium">{{ item.text }}</span>
+          </router-link>
+        </nav>
+      </div>
+      
       <!-- Fonts - only show when on fonts route -->
       <div v-if="showFonts" class="mb-8">
         <div class="flex items-center justify-between mb-4">
@@ -241,6 +276,41 @@
         <nav class="space-y-1">
           <router-link
             v-for="item in reviewItems"
+            :key="item.link"
+            :to="item.link"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+            :class="[
+              isActive(item.link)
+                ? (isDarkMode 
+                  ? 'text-indigo-400 bg-indigo-900/20' 
+                  : 'text-indigo-600 bg-indigo-50')
+                : (isDarkMode
+                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+            ]"
+          >
+            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+            <span class="font-medium">{{ item.text }}</span>
+          </router-link>
+        </nav>
+      </div>
+      
+      <!-- Research Repo - only show when on research route -->
+      <div v-if="showResearch" class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Research Repo</h3>
+          <button
+            @click="toggle"
+            class="p-2 rounded-lg transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            title="Close drawer"
+          >
+            <span class="material-symbols-outlined">left_panel_close</span>
+          </button>
+        </div>
+        <nav class="space-y-1">
+          <router-link
+            v-for="item in researchItems"
             :key="item.link"
             :to="item.link"
             class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -493,6 +563,26 @@ const adminItems = [
   { text: 'Governance', link: '/admin/governance', icon: 'admin_panel_settings' }
 ];
 
+const gettingStartedItems = [
+  { text: 'Overview', link: '/getting-started', icon: 'rocket_launch' },
+  { text: 'Quick Start', link: '/getting-started/quick-start', icon: 'play_arrow' },
+  { text: 'Design Principles', link: '/getting-started/principles', icon: 'lightbulb' },
+  { text: 'Installation', link: '/getting-started/installation', icon: 'download' },
+  { text: 'Best Practices', link: '/getting-started/best-practices', icon: 'check_circle' },
+  { text: 'Resources', link: '/getting-started/resources', icon: 'book' },
+  { text: 'Support', link: '/getting-started/support', icon: 'help' }
+];
+
+const researchItems = [
+  { text: 'Overview', link: '/research', icon: 'science' },
+  { text: 'Journey Maps', link: '/research/journey-maps', icon: 'map' },
+  { text: 'User Personas', link: '/research/personas', icon: 'person' },
+  { text: 'HCD Reports', link: '/research/hcd-reports', icon: 'description' },
+  { text: 'User Studies', link: '/research/user-studies', icon: 'groups' },
+  { text: 'Research Artifacts', link: '/research/artifacts', icon: 'folder' },
+  { text: 'Insights & Findings', link: '/research/insights', icon: 'insights' }
+];
+
 const tokenItems = [
   { text: 'Overview', link: '/tokens', icon: 'style' },
   { text: 'Token Studio', link: '/tokens/studio', icon: 'tune' },
@@ -502,6 +592,14 @@ const tokenItems = [
 
 const showAdmin = computed(() => {
   return route.path === '/admin' || route.path.startsWith('/admin/');
+});
+
+const showGettingStarted = computed(() => {
+  return route.path === '/getting-started' || route.path.startsWith('/getting-started/');
+});
+
+const showResearch = computed(() => {
+  return route.path === '/research' || route.path.startsWith('/research/');
 });
 
 const showTokens = computed(() => {
@@ -533,7 +631,7 @@ const showComponents = computed(() => {
 });
 
 const showMainSections = computed(() => {
-  return !showPatterns.value && !showFonts.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value && !showTokens.value && !showAdmin.value;
+  return !showPatterns.value && !showFonts.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value && !showTokens.value && !showAdmin.value && !showGettingStarted.value && !showResearch.value;
 });
 
 const isActive = (path) => {

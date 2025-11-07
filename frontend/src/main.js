@@ -306,12 +306,20 @@ const router = createRouter({
       component: () => import('./views/Tools.vue'),
     },
     {
+      path: '/research',
+      component: () => import('./views/ResearchRepo.vue'),
+    },
+    {
       path: '/design-assets',
       component: () => import('./views/DesignAssets.vue'),
     },
     {
       path: '/design-assets/icons',
       component: () => import('./views/IconLibrary.vue'),
+    },
+    {
+      path: '/getting-started',
+      component: () => import('./views/GettingStarted.vue'),
     },
     {
       path: '/guidelines',

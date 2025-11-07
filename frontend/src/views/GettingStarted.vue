@@ -1,0 +1,227 @@
+<template>
+  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
+    <!-- Drawer -->
+    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
+    
+    <!-- Main Content Area -->
+    <div 
+      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
+      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
+    >
+      <div class="h-full p-8 overflow-auto">
+        <!-- Hero Section -->
+        <div class="max-w-7xl mx-auto mb-16">
+          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
+            <!-- Background texture/grain effect -->
+            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
+            
+            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+              <div class="flex-1">
+                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
+                  Getting Started
+                </h1>
+                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
+                  Welcome to the design system. Learn the fundamentals, explore key concepts, and start building with confidence.
+                </p>
+              </div>
+              <div class="hidden md:block flex-shrink-0">
+                <div class="w-64 h-64 relative">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                      <linearGradient id="gettingStartedGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <!-- Rocket icon representing getting started -->
+                    <path d="M 100 160 L 110 140 L 100 120 L 90 140 Z" fill="url(#gettingStartedGradient)" opacity="0.6"/>
+                    <rect x="95" y="100" width="10" height="20" rx="2" fill="url(#gettingStartedGradient)" opacity="0.5"/>
+                    <circle cx="100" cy="90" r="8" fill="url(#gettingStartedGradient)" opacity="0.4"/>
+                    <!-- Stars representing journey -->
+                    <path d="M 40 50 L 42 56 L 48 56 L 43 60 L 45 66 L 40 62 L 35 66 L 37 60 L 32 56 L 38 56 Z" fill="url(#gettingStartedGradient)" opacity="0.5"/>
+                    <path d="M 160 70 L 161 73 L 164 73 L 162 75 L 163 78 L 160 76 L 157 78 L 158 75 L 156 73 L 159 73 Z" fill="url(#gettingStartedGradient)" opacity="0.4"/>
+                    <path d="M 50 120 L 51 123 L 54 123 L 52 125 L 53 128 L 50 126 L 47 128 L 48 125 L 46 123 L 49 123 Z" fill="url(#gettingStartedGradient)" opacity="0.3"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Getting Started Cards Grid -->
+        <div class="max-w-7xl mx-auto">
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Quick Start Card -->
+            <div 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">play_arrow</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Quick Start
+              </h3>
+              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Get up and running in minutes with our quick start guide.
+              </p>
+            </div>
+
+            <!-- Design Principles Card -->
+            <div 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">lightbulb</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Design Principles
+              </h3>
+              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Understand the core principles that guide our design decisions.
+              </p>
+            </div>
+
+            <!-- Installation Card -->
+            <div 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">download</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Installation
+              </h3>
+              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Install and configure the design system in your project.
+              </p>
+            </div>
+
+            <!-- Best Practices Card -->
+            <div 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">check_circle</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Best Practices
+              </h3>
+              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Learn the recommended practices for using the design system effectively.
+              </p>
+            </div>
+
+            <!-- Resources Card -->
+            <div 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">book</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Resources
+              </h3>
+              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Access tutorials, examples, and helpful resources to accelerate your learning.
+              </p>
+            </div>
+
+            <!-- Support Card -->
+            <div 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">help</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Support
+              </h3>
+              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Get help from the community or reach out to our team for assistance.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+
+const drawerOpen = ref(false);
+const isDarkMode = ref(false);
+
+const toggleDrawer = () => {
+  drawerOpen.value = !drawerOpen.value;
+};
+
+const closeDrawer = () => {
+  drawerOpen.value = false;
+};
+
+onMounted(() => {
+  isDarkMode.value = document.documentElement.classList.contains('dark');
+  
+  // Watch for dark mode changes
+  const observer = new MutationObserver(() => {
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+  });
+  
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class']
+  });
+});
+</script>
+

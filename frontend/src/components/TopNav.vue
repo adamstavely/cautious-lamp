@@ -344,6 +344,8 @@ const selectedSearchIndex = ref(-1);
 
 // Search index - in a real app, this would come from an API or be generated
 const searchIndex = [
+  { id: 'getting-started', title: 'Getting Started', description: 'Learn the fundamentals, explore key concepts, and start building with confidence', category: 'Getting Started', path: '/getting-started', icon: 'rocket_launch', tags: ['getting-started', 'onboarding', 'tutorial'] },
+  { id: 'research-repo', title: 'Research Repo', description: 'Explore journey maps, user personas, HCD reports, and other human-centered design research artifacts', category: 'Research Repo', path: '/research', icon: 'science', tags: ['research', 'personas', 'journey-maps', 'hcd', 'user-studies'] },
   { id: 'button', title: 'Button', description: 'Primary, secondary, and tertiary button variants with different sizes and states', category: 'Components', path: '/components/buttons', icon: 'smart_button', tags: ['interactive', 'form', 'action'] },
   { id: 'component-status', title: 'Component Status', description: 'Track component development status and availability', category: 'Components', path: '/components/status', icon: 'check_circle', tags: ['status', 'tracking'] },
   { id: 'component-versions', title: 'Component Versions', description: 'Track versions, changelogs, and breaking changes', category: 'Components', path: '/components/versions', icon: 'history', tags: ['version', 'changelog'] },
@@ -410,6 +412,9 @@ const getCategoryBadgeClass = (category) => {
     'Fonts': isDarkMode.value ? 'bg-orange-900/30 text-orange-300' : 'bg-orange-100 text-orange-700',
     'Tools': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300' : 'bg-yellow-100 text-yellow-700',
     'Design Assets': isDarkMode.value ? 'bg-pink-900/30 text-pink-300' : 'bg-pink-100 text-pink-700',
+    'Getting Started': isDarkMode.value ? 'bg-teal-900/30 text-teal-300' : 'bg-teal-100 text-teal-700',
+    'Research Repo': isDarkMode.value ? 'bg-cyan-900/30 text-cyan-300' : 'bg-cyan-100 text-cyan-700',
+    'Admin': isDarkMode.value ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-700',
   };
   return classes[category] || (isDarkMode.value ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700');
 };

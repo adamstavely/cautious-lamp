@@ -124,11 +124,13 @@ const toggleDarkMode = () => {
 };
 
 const menuItems = [
+  { path: '/getting-started', label: 'Getting Started', icon: 'rocket_launch' },
   { path: '/guidelines', label: 'Guidelines', icon: 'menu_book' },
   { path: '/components', label: 'Components', icon: 'widgets' },
   { path: '/tokens', label: 'Tokens', icon: 'style' },
   { path: '/patterns', label: 'Patterns', icon: 'pattern' },
   { path: '/fonts', label: 'Fonts', icon: 'text_fields' },
+  { path: '/research', label: 'Research Repo', icon: 'science' },
   { path: '/design-assets', label: 'Design Assets', icon: 'collections' },
   { path: '/review', label: 'Review', icon: 'rate_review' },
   { path: '/tools', label: 'Tools', icon: 'build' },
@@ -143,6 +145,12 @@ const isActive = (path) => {
   }
   if (path === '/admin') {
     return route.path === '/admin' || route.path.startsWith('/admin/');
+  }
+  if (path === '/getting-started') {
+    return route.path === '/getting-started' || route.path.startsWith('/getting-started/');
+  }
+  if (path === '/research') {
+    return route.path === '/research' || route.path.startsWith('/research/');
   }
   return route.path === path || route.path.startsWith(path + '/');
 };
