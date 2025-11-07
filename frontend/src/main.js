@@ -257,6 +257,10 @@ const router = createRouter({
       component: () => import('./views/AuditLogs.vue'),
     },
     {
+      path: '/admin/roles',
+      component: () => import('./views/RoleManagement.vue'),
+    },
+    {
       path: '/tokens',
       component: () => import('./views/Tokens.vue'),
     },
