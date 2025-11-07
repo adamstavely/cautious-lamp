@@ -295,6 +295,41 @@
         </nav>
       </div>
       
+      <!-- Admin - only show when on admin route -->
+      <div v-if="showAdmin" class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Admin</h3>
+          <button
+            @click="toggle"
+            class="p-2 rounded-lg transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            title="Close drawer"
+          >
+            <span class="material-symbols-outlined">left_panel_close</span>
+          </button>
+        </div>
+        <nav class="space-y-1">
+          <router-link
+            v-for="item in adminItems"
+            :key="item.link"
+            :to="item.link"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+            :class="[
+              isActive(item.link)
+                ? (isDarkMode 
+                  ? 'text-indigo-400 bg-indigo-900/20' 
+                  : 'text-indigo-600 bg-indigo-50')
+                : (isDarkMode
+                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+            ]"
+          >
+            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+            <span class="font-medium">{{ item.text }}</span>
+          </router-link>
+        </nav>
+      </div>
+      
       <!-- Tokens - only show when on tokens route -->
       <div v-if="showTokens" class="mb-8">
         <div class="flex items-center justify-between mb-4">
@@ -408,7 +443,7 @@ const fonts = [
 const reviewItems = [
   { text: 'Overview', link: '/review', icon: 'rate_review' },
   { text: 'My Requested Reviews', link: '/review/my-requests', icon: 'view_module' },
-  { text: 'Admin', link: '/admin', icon: 'admin_panel_settings' }
+  { text: 'Admin', link: '/review/admin', icon: 'admin_panel_settings' }
 ];
 
 const tools = [
@@ -423,7 +458,6 @@ const tools = [
   { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' },
   { text: 'Code Quality Checks', link: '/code-quality', icon: 'check_circle' },
   { text: 'Vulnerability Scanner', link: '/security', icon: 'security' },
-  { text: 'Design System Governance', link: '/governance', icon: 'admin_panel_settings' },
   { text: 'Performance Budgets', link: '/performance/budgets', icon: 'speed' },
   { text: 'Bundle Size Analysis', link: '/performance/bundle-analysis', icon: 'analytics' }
 ];
@@ -453,6 +487,12 @@ const componentItems = [
   { text: 'Data Display', link: '/components/data-display', icon: 'table_chart' }
 ];
 
+const adminItems = [
+  { text: 'Overview', link: '/admin', icon: 'admin_panel_settings' },
+  { text: 'System Health', link: '/admin/health', icon: 'space_dashboard' },
+  { text: 'Governance', link: '/admin/governance', icon: 'admin_panel_settings' }
+];
+
 const tokenItems = [
   { text: 'Overview', link: '/tokens', icon: 'style' },
   { text: 'Token Studio', link: '/tokens/studio', icon: 'tune' },
@@ -460,12 +500,16 @@ const tokenItems = [
   { text: 'Style Library', link: '/tokens/library', icon: 'library_books' }
 ];
 
+const showAdmin = computed(() => {
+  return route.path === '/admin' || route.path.startsWith('/admin/');
+});
+
 const showTokens = computed(() => {
   return route.path === '/tokens' || route.path.startsWith('/tokens/');
 });
 
 const showReview = computed(() => {
-  return route.path === '/review' || route.path.startsWith('/review/') || route.path === '/admin';
+  return route.path === '/review' || route.path.startsWith('/review/');
 });
 
 const showPatterns = computed(() => {
@@ -477,7 +521,7 @@ const showFonts = computed(() => {
 });
 
 const showTools = computed(() => {
-  return route.path === '/tools' || route.path.startsWith('/tools/') || route.path === '/palette-builder' || route.path === '/governance' || route.path === '/theme-builder' || route.path === '/code-quality' || route.path === '/security';
+  return route.path === '/tools' || route.path.startsWith('/tools/') || route.path === '/palette-builder' || route.path === '/theme-builder' || route.path === '/code-quality' || route.path === '/security';
 });
 
 const showDesignAssets = computed(() => {
@@ -489,7 +533,7 @@ const showComponents = computed(() => {
 });
 
 const showMainSections = computed(() => {
-  return !showPatterns.value && !showFonts.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value && !showTokens.value;
+  return !showPatterns.value && !showFonts.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value && !showTokens.value && !showAdmin.value;
 });
 
 const isActive = (path) => {

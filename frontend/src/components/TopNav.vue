@@ -179,33 +179,6 @@
           <span class="material-symbols-outlined flex items-center justify-center" aria-hidden="true">live_help</span>
         </button>
 
-        <!-- System Health -->
-        <router-link
-          to="/health"
-          class="relative flex items-center justify-center p-2 rounded-lg transition-colors"
-          :class="isDarkMode 
-            ? 'text-gray-300 hover:text-indigo-400 hover:bg-indigo-900/20' 
-            : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'"
-          title="System Health"
-          aria-label="View system health dashboard"
-        >
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            width="24" 
-            height="24" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            stroke-width="2" 
-            stroke-linecap="round" 
-            stroke-linejoin="round"
-            class="flex items-center justify-center"
-            aria-hidden="true"
-          >
-            <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
-          </svg>
-        </router-link>
-
         <!-- Feedback -->
         <router-link
           to="/feedback"
@@ -395,9 +368,9 @@ const searchIndex = [
   { id: 'lorem-ipsum', title: 'Lorem Ipsum Generator', description: 'Generate placeholder text with various options', category: 'Tools', path: '/tools/lorem-ipsum', icon: 'text_fields', tags: ['text', 'placeholder', 'tool'] },
   { id: 'seo-tagging', title: 'SEO Tagging Generator', description: 'Generate SEO meta tags for your pages', category: 'Tools', path: '/tools/seo-tagging', icon: 'search', tags: ['seo', 'meta', 'tool'] },
   { id: 'color-scale', title: 'Color Scale Generator', description: 'Generate color scales with accessibility checks', category: 'Tools', path: '/tools/color-scale', icon: 'palette', tags: ['color', 'scale', 'accessibility'] },
-  { id: 'system-health', title: 'System Health', description: 'Monitor your design system\'s health, track adoption, and identify improvements', category: 'Tools', path: '/health', icon: 'space_dashboard', tags: ['health', 'metrics', 'analytics'] },
+  { id: 'admin-health', title: 'System Health', description: 'Monitor your design system\'s health, track adoption, and identify improvements', category: 'Admin', path: '/admin/health', icon: 'space_dashboard', tags: ['health', 'metrics', 'analytics'] },
+  { id: 'admin-governance', title: 'Design System Governance', description: 'Enforce design system rules and check compliance', category: 'Admin', path: '/admin/governance', icon: 'admin_panel_settings', tags: ['governance', 'compliance', 'rules'] },
   { id: 'handoff-tools', title: 'Design-Dev Handoff', description: 'Generate specs, export assets, and measure designs', category: 'Components', path: '/components/handoff', icon: 'swap_horiz', tags: ['handoff', 'specs', 'export'] },
-  { id: 'governance', title: 'Design System Governance', description: 'Enforce rules, check compliance, and manage policies', category: 'Tools', path: '/governance', icon: 'admin_panel_settings', tags: ['governance', 'rules', 'compliance'] },
   { id: 'change-notifications', title: 'Change Notifications', description: 'Stay informed about component and token changes', category: 'Tools', path: '/notifications', icon: 'notifications', tags: ['notifications', 'changes', 'alerts'] },
   { id: 'ai-suggestions', title: 'AI-Powered Suggestions', description: 'Get intelligent recommendations for components and accessibility', category: 'Tools', path: '/ai-suggestions', icon: 'psychology', tags: ['ai', 'suggestions', 'accessibility'] },
   { id: 'multi-brand', title: 'Multi-Brand Support', description: 'Manage multiple brands and white-label systems', category: 'Tools', path: '/brands', icon: 'apps', tags: ['brands', 'white-label', 'themes'] },

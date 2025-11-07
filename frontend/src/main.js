@@ -123,6 +123,10 @@ const router = createRouter({
     },
     {
       path: '/admin',
+      component: () => import('./views/Admin.vue'),
+    },
+    {
+      path: '/review/admin',
       component: () => import('./views/AdminDashboard.vue'),
     },
     {
@@ -155,7 +159,7 @@ const router = createRouter({
     },
     {
       path: '/governance',
-      component: () => import('./views/Governance.vue'),
+      redirect: '/admin/governance',
     },
     {
       path: '/notifications',
@@ -219,7 +223,19 @@ const router = createRouter({
     },
     {
       path: '/health',
+      redirect: '/admin/health',
+    },
+    {
+      path: '/admin',
+      component: () => import('./views/Admin.vue'),
+    },
+    {
+      path: '/admin/health',
       component: () => import('./views/SystemHealth.vue'),
+    },
+    {
+      path: '/admin/governance',
+      component: () => import('./views/Governance.vue'),
     },
     {
       path: '/tokens',

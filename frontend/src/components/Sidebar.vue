@@ -23,6 +23,26 @@
       </router-link>
     </nav>
 
+    <!-- Admin Section -->
+    <div class="px-3 pb-2 border-t" :class="isDarkMode ? 'border-indigo-700' : 'border-indigo-600'">
+      <router-link
+        to="/admin"
+        :class="[
+          'flex flex-col items-center px-3 py-3 relative group',
+          isActive('/admin')
+            ? (isDarkMode 
+              ? 'border border-indigo-300 rounded-lg bg-indigo-400/30' 
+              : 'border border-indigo-400 rounded-lg bg-indigo-500/30')
+            : (isDarkMode
+              ? 'hover:bg-indigo-400/30 rounded-lg'
+              : 'hover:bg-indigo-700/50 rounded-lg')
+        ]"
+      >
+        <span class="material-symbols-outlined flex-shrink-0 mb-2" aria-hidden="true">admin_panel_settings</span>
+        <span class="font-medium text-sm text-center">Admin</span>
+      </router-link>
+    </div>
+
     <!-- Dark Mode Toggle -->
     <div class="p-4">
       <button
@@ -120,6 +140,9 @@ const isActive = (path) => {
   }
   if (path === '/tools') {
     return route.path === '/tools' || route.path.startsWith('/tools/');
+  }
+  if (path === '/admin') {
+    return route.path === '/admin' || route.path.startsWith('/admin/');
   }
   return route.path === path || route.path.startsWith(path + '/');
 };

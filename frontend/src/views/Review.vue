@@ -94,7 +94,7 @@
 
             <!-- Admin Button -->
             <router-link 
-              to="/admin" 
+              to="/review/admin" 
               class="group rounded-2xl p-8 border transition-all flex flex-col items-center text-center"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
