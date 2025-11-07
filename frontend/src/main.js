@@ -203,31 +203,11 @@ const router = createRouter({
     },
     {
       path: '/feedback',
-      component: () => import('./views/Feedback.vue'),
-    },
-    {
-      path: '/components/export',
-      component: () => import('./views/ComponentLibraryExport.vue'),
-    },
-    {
-      path: '/components/examples',
-      component: () => import('./views/ComponentExamples.vue'),
-    },
-    {
-      path: '/components/versions',
-      redirect: '/components',
-    },
-    {
-      path: '/performance/budgets',
-      component: () => import('./views/PerformanceBudgets.vue'),
-    },
-    {
-      path: '/performance/bundle-analysis',
-      component: () => import('./views/BundleSizeAnalysis.vue'),
+      component: () => import('./views/RoadmapFeedback.vue'),
     },
     {
       path: '/roadmap',
-      component: () => import('./views/Roadmap.vue'),
+      redirect: '/feedback',
     },
     {
       path: '/api',

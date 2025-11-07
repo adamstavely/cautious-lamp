@@ -213,10 +213,10 @@
           :class="isDarkMode 
             ? 'text-gray-300 hover:text-indigo-400 hover:bg-indigo-900/20' 
             : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'"
-          title="Feedback & Requests"
-          aria-label="Submit feedback and requests"
+          title="Roadmap & Feedback"
+          aria-label="View roadmap and submit feedback"
         >
-          <span class="material-symbols-outlined flex items-center justify-center" aria-hidden="true">feedback</span>
+          <span class="material-symbols-outlined flex items-center justify-center" aria-hidden="true">new_releases</span>
         </router-link>
 
         <!-- Notifications -->
@@ -411,7 +411,7 @@ const searchIndex = [
   { id: 'guidelines-spacing', title: 'Spacing Guidelines', description: 'Spacing system and layout guidelines', category: 'Guidelines', path: '/guidelines/spacing', icon: 'space_dashboard', tags: ['guidelines', 'spacing'] },
   { id: 'performance-budgets', title: 'Performance Budgets', description: 'Set and monitor performance budgets', category: 'Tools', path: '/performance/budgets', icon: 'speed', tags: ['performance', 'budgets', 'monitoring'] },
   { id: 'bundle-analysis', title: 'Bundle Size Analysis', description: 'Analyze component bundle sizes', category: 'Tools', path: '/performance/bundle-analysis', icon: 'analytics', tags: ['bundle', 'size', 'analysis', 'performance'] },
-  { id: 'roadmap', title: 'Design System Roadmap', description: 'Public roadmap for design system evolution', category: 'Tools', path: '/roadmap', icon: 'timeline', tags: ['roadmap', 'planning', 'features'] },
+  { id: 'roadmap-feedback', title: 'Roadmap & Feedback', description: 'View roadmap, submit feedback, and see what\'s new', category: 'Tools', path: '/feedback', icon: 'new_releases', tags: ['roadmap', 'feedback', 'requests', 'whats-new'] },
 ];
 
 const filteredSearchResults = computed(() => {

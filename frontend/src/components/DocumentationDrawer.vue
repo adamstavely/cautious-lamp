@@ -425,8 +425,7 @@ const tools = [
   { text: 'Vulnerability Scanner', link: '/security', icon: 'security' },
   { text: 'Design System Governance', link: '/governance', icon: 'admin_panel_settings' },
   { text: 'Performance Budgets', link: '/performance/budgets', icon: 'speed' },
-  { text: 'Bundle Size Analysis', link: '/performance/bundle-analysis', icon: 'analytics' },
-  { text: 'Roadmap', link: '/roadmap', icon: 'timeline' }
+  { text: 'Bundle Size Analysis', link: '/performance/bundle-analysis', icon: 'analytics' }
 ];
 
 const designAssets = [
