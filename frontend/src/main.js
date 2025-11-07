@@ -318,12 +318,20 @@ const router = createRouter({
       component: () => import('./views/PNGToICO.vue'),
     },
     {
+      path: '/tools/heuristic-evaluation',
+      component: () => import('./views/HeuristicEvaluation.vue'),
+    },
+    {
       path: '/tools',
       component: () => import('./views/Tools.vue'),
     },
     {
       path: '/research',
       component: () => import('./views/ResearchRepo.vue'),
+    },
+    {
+      path: '/research/user-personas',
+      component: () => import('./views/UserPersonaGenerator.vue'),
     },
     {
       path: '/design-assets',
@@ -336,6 +344,42 @@ const router = createRouter({
     {
       path: '/getting-started',
       component: () => import('./views/GettingStarted.vue'),
+    },
+    {
+      path: '/getting-started/why-design-system',
+      component: () => import('./views/WhyDesignSystem.vue'),
+    },
+    {
+      path: '/getting-started/principles',
+      component: () => import('./views/DesignPrinciples.vue'),
+    },
+    {
+      path: '/getting-started/themes',
+      component: () => import('./views/DesignThemes.vue'),
+    },
+    {
+      path: '/getting-started/contribute',
+      component: () => import('./views/Contribute.vue'),
+    },
+    {
+      path: '/getting-started/quick-start',
+      component: () => import('./views/QuickStart.vue'),
+    },
+    {
+      path: '/getting-started/installation',
+      component: () => import('./views/Installation.vue'),
+    },
+    {
+      path: '/getting-started/best-practices',
+      component: () => import('./views/BestPractices.vue'),
+    },
+    {
+      path: '/getting-started/resources',
+      component: () => import('./views/Resources.vue'),
+    },
+    {
+      path: '/getting-started/support',
+      component: () => import('./views/Support.vue'),
     },
     {
       path: '/guidelines',

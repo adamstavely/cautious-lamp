@@ -1585,6 +1585,58 @@ export const Modal = ({ open = false, title = '', closeOnBackdrop = true, onClos
     }
   }
 
+  // Heuristic Evaluation
+  async submitHeuristicEvaluation(data: {
+    systemName: string;
+    evaluator: string;
+    heuristics: Array<{ heuristic: string; issues: string; severity: number }>;
+    overallAssessment: string;
+    timestamp: string;
+  }) {
+    // Calculate scores
+    const totalIssues = data.heuristics.filter(h => h.issues.trim().length > 0).length;
+    const criticalIssues = data.heuristics.filter(h => h.severity === 4).length;
+    const severities = data.heuristics.map(h => h.severity);
+    const avgSeverity = severities.reduce((a, b) => a + b, 0) / severities.length;
+    const overallScore = Math.max(0, Math.min(10, 10 - avgSeverity));
+
+    const document = {
+      systemName: data.systemName,
+      evaluator: data.evaluator,
+      heuristics: data.heuristics,
+      overallAssessment: data.overallAssessment,
+      totalIssues,
+      criticalIssues,
+      overallScore: Math.round(overallScore * 10) / 10,
+      timestamp: data.timestamp || new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+
+    if (!this.elasticsearchService) {
+      return {
+        id: `mock-${Date.now()}`,
+        ...document,
+      };
+    }
+
+    try {
+      const result = await this.elasticsearchService.index({
+        index: 'heuristic-evaluations',
+        document,
+      });
+
+      return {
+        id: result._id,
+        ...document,
+      };
+    } catch (error) {
+      return {
+        id: `mock-${Date.now()}`,
+        ...document,
+      };
+    }
+  }
+
   // Component metadata for Loupe Tool
   getComponentMetadata() {
     const metadata: Record<string, any> = {};

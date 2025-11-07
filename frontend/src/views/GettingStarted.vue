@@ -52,8 +52,33 @@
         <!-- Getting Started Cards Grid -->
         <div class="max-w-7xl mx-auto">
           <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Why a Design System Card -->
+            <router-link 
+              to="/getting-started/why-design-system"
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">help_outline</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Why a Design System?
+              </h3>
+              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Understand the value and philosophy behind our design system.
+              </p>
+            </router-link>
+
             <!-- Quick Start Card -->
-            <div 
+            <router-link 
+              to="/getting-started/quick-start"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
@@ -73,10 +98,11 @@
               <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Get up and running in minutes with our quick start guide.
               </p>
-            </div>
+            </router-link>
 
             <!-- Design Principles Card -->
-            <div 
+            <router-link 
+              to="/getting-started/principles"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
@@ -96,10 +122,35 @@
               <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Understand the core principles that guide our design decisions.
               </p>
-            </div>
+            </router-link>
+
+            <!-- Contribute Card -->
+            <router-link 
+              to="/getting-started/contribute"
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">groups</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Contribute
+              </h3>
+              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Learn how to contribute components, patterns, and improvements.
+              </p>
+            </router-link>
 
             <!-- Installation Card -->
-            <div 
+            <router-link 
+              to="/getting-started/installation"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
@@ -119,10 +170,11 @@
               <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Install and configure the design system in your project.
               </p>
-            </div>
+            </router-link>
 
             <!-- Best Practices Card -->
-            <div 
+            <router-link 
+              to="/getting-started/best-practices"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
@@ -142,10 +194,11 @@
               <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Learn the recommended practices for using the design system effectively.
               </p>
-            </div>
+            </router-link>
 
             <!-- Resources Card -->
-            <div 
+            <router-link 
+              to="/getting-started/resources"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
@@ -168,7 +221,8 @@
             </div>
 
             <!-- Support Card -->
-            <div 
+            <router-link 
+              to="/getting-started/support"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
@@ -188,7 +242,7 @@
               <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Get help from the community or reach out to our team for assistance.
               </p>
-            </div>
+            </router-link>
           </div>
         </div>
       </div>

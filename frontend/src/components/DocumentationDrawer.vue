@@ -527,6 +527,7 @@ const tools = [
   { text: 'Color Contrast Checker', link: '/tools/color-contrast', icon: 'contrast' },
   { text: 'NASA-TLX', link: '/tools/nasa-tlx', icon: 'psychology' },
   { text: 'System Usability Scale', link: '/tools/sus', icon: 'psychology' },
+  { text: 'Heuristic Evaluation', link: '/tools/heuristic-evaluation', icon: 'checklist' },
   { text: 'PNG to ICO Converter', link: '/tools/png-to-ico', icon: 'image' },
   { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' },
   { text: 'Code Quality Checks', link: '/code-quality', icon: 'check_circle' },
@@ -569,8 +570,11 @@ const adminItems = [
 
 const gettingStartedItems = [
   { text: 'Overview', link: '/getting-started', icon: 'rocket_launch' },
+  { text: 'Why a Design System?', link: '/getting-started/why-design-system', icon: 'help_outline' },
   { text: 'Quick Start', link: '/getting-started/quick-start', icon: 'play_arrow' },
   { text: 'Design Principles', link: '/getting-started/principles', icon: 'lightbulb' },
+  { text: 'Design Themes', link: '/getting-started/themes', icon: 'palette' },
+  { text: 'Contribute', link: '/getting-started/contribute', icon: 'groups' },
   { text: 'Installation', link: '/getting-started/installation', icon: 'download' },
   { text: 'Best Practices', link: '/getting-started/best-practices', icon: 'check_circle' },
   { text: 'Resources', link: '/getting-started/resources', icon: 'book' },
@@ -580,7 +584,7 @@ const gettingStartedItems = [
 const researchItems = [
   { text: 'Overview', link: '/research', icon: 'science' },
   { text: 'Journey Maps', link: '/research/journey-maps', icon: 'map' },
-  { text: 'User Personas', link: '/research/personas', icon: 'person' },
+  { text: 'User Persona Generator', link: '/research/user-personas', icon: 'person' },
   { text: 'HCD Reports', link: '/research/hcd-reports', icon: 'description' },
   { text: 'User Studies', link: '/research/user-studies', icon: 'groups' },
   { text: 'Research Artifacts', link: '/research/artifacts', icon: 'folder' },

@@ -622,6 +622,22 @@ export class DesignSystemController {
     return this.designSystemService.submitSUS(body);
   }
 
+  // Heuristic Evaluation endpoint
+  @Post('heuristic-evaluation')
+  submitHeuristicEvaluation(
+    @Body() body: {
+      systemName: string;
+      evaluator: string;
+      heuristics: Array<{ heuristic: string; issues: string; severity: number }>;
+      overallAssessment: string;
+      timestamp: string;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.submitHeuristicEvaluation(body);
+  }
+
   // Component metadata for Loupe Tool
   @Get('components/metadata')
   getComponentMetadata(

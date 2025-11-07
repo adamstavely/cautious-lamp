@@ -81,9 +81,9 @@
               </p>
             </router-link>
 
-            <!-- User Personas Card -->
+            <!-- User Persona Generator Card -->
             <router-link 
-              to="/research/personas"
+              to="/research/user-personas"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
@@ -98,10 +98,10 @@
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
-                User Personas
+                User Persona Generator
               </h3>
               <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Explore detailed user personas and archetypes that guide our design decisions.
+                Create detailed user personas from research data to inform design decisions.
               </p>
             </router-link>
 
