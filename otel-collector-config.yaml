@@ -1,0 +1,79 @@
+# OpenTelemetry Collector Configuration
+# This file configures the OpenTelemetry Collector to receive OTLP data
+# and export it to Elasticsearch
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - http://localhost:5173
+            - http://localhost:5174
+            - http://localhost:3000
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+  
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: ${DEPLOYMENT_ENVIRONMENT:development}
+        action: upsert
+      - key: collector.name
+        value: otel-collector
+        action: upsert
+  
+  # Memory limiter to prevent OOM
+  memory_limiter:
+    limit_mib: 512
+    spike_limit_mib: 128
+    check_interval: 5s
+
+exporters:
+  elasticsearch:
+    endpoints:
+      - ${ELASTICSEARCH_NODE:http://localhost:9200}
+    logs_index: otel-logs
+    traces_index: otel-traces
+    metrics_index: otel-metrics
+    mapping:
+      mode: ecs
+    flush:
+      bytes: 5242880  # 5MB
+      interval: 10s
+    retry:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+  # Optional: Export to console for debugging
+  logging:
+    loglevel: info
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [elasticsearch, logging]
+    
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [elasticsearch, logging]
+    
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [elasticsearch, logging]
+
+  extensions: []
+

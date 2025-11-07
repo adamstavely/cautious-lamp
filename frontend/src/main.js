@@ -1,3 +1,14 @@
+// Initialize OpenTelemetry BEFORE importing Vue
+// This ensures all modules are instrumented
+import { initializeFrontendOpenTelemetry } from './observability/opentelemetry';
+
+// Initialize OpenTelemetry
+if (import.meta.env.VITE_OTEL_ENABLED !== 'false') {
+  initializeFrontendOpenTelemetry().catch((err) => {
+    console.error('Failed to initialize OpenTelemetry:', err);
+  });
+}
+
 import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
 import App from './App.vue';

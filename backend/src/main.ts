@@ -1,3 +1,14 @@
+// Initialize OpenTelemetry BEFORE importing NestJS
+// This ensures all modules are instrumented
+import { initializeOpenTelemetry } from './observability/opentelemetry';
+
+// Initialize OpenTelemetry
+if (process.env.OTEL_ENABLED !== 'false') {
+  initializeOpenTelemetry().catch((err) => {
+    console.error('Failed to initialize OpenTelemetry:', err);
+  });
+}
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';

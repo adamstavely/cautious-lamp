@@ -218,7 +218,7 @@
               <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Access tutorials, examples, and helpful resources to accelerate your learning.
               </p>
-            </div>
+            </router-link>
 
             <!-- Support Card -->
             <router-link 

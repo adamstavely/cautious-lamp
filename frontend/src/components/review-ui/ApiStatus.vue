@@ -99,7 +99,7 @@ const checkApiStatus = async () => {
   try {
     // Only check if user enabled real API mode
     if (localStorage.getItem('useRealAPI') === 'true') {
-      const response = await fetch(`${apiUrl.value}/health`, {
+      const response = await fetch(`${apiUrl.value}/api/v1/health`, {
         method: 'GET',
         mode: 'cors',
         credentials: 'omit',

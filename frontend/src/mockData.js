@@ -1101,7 +1101,7 @@ export const isMockMode = async () => {
     // Try to ping API health endpoint
     try {
       const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-      const response = await fetch(`${apiUrl}/health`, {
+      const response = await fetch(`${apiUrl}/api/v1/health`, {
         method: 'GET',
         mode: 'cors',
         credentials: 'omit',

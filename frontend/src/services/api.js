@@ -46,7 +46,7 @@ apiClient.interceptors.response.use(
  */
 export const checkApiHealth = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/health`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/health`, {
       method: 'GET',
       mode: 'cors',
       credentials: 'omit',
