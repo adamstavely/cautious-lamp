@@ -218,6 +218,10 @@
                 <h3 class="text-white font-semibold text-xl mb-2">Font Library</h3>
                 <p class="text-white/80 text-sm">Browse and preview hundreds of Google Fonts with advanced filtering and comparison tools.</p>
               </router-link>
+              <router-link to="/api" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">Design System API</h3>
+                <p class="text-white/80 text-sm">Access design tokens and components programmatically via REST and GraphQL APIs.</p>
+              </router-link>
             </div>
           </div>
         </div>

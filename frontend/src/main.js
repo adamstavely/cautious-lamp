@@ -142,8 +142,28 @@ const router = createRouter({
       component: () => import('./views/ComponentPlayground.vue'),
     },
     {
+      path: '/components/dependencies',
+      component: () => import('./views/ComponentDependencyGraph.vue'),
+    },
+    {
+      path: '/components/feedback',
+      redirect: '/feedback',
+    },
+    {
+      path: '/feedback',
+      component: () => import('./views/Feedback.vue'),
+    },
+    {
+      path: '/components/export',
+      component: () => import('./views/ComponentLibraryExport.vue'),
+    },
+    {
       path: '/components/versions',
       redirect: '/components',
+    },
+    {
+      path: '/api',
+      component: () => import('./views/DesignSystemAPI.vue'),
     },
     {
       path: '/search',

@@ -285,7 +285,7 @@
         </div>
 
         <!-- Component Adoption -->
-        <div class="max-w-7xl mx-auto">
+        <div class="max-w-7xl mx-auto mb-8">
           <div 
             class="rounded-lg shadow-sm border"
             :class="isDarkMode 
@@ -342,6 +342,161 @@
                     <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                       {{ component.usage }} uses
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Design System Analytics -->
+        <div class="max-w-7xl mx-auto mb-8">
+          <div 
+            class="rounded-lg shadow-sm border"
+            :class="isDarkMode 
+              ? 'bg-slate-900 border-gray-700' 
+              : 'bg-white border-gray-200'"
+          >
+            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+              <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                Design System Analytics
+              </h3>
+            </div>
+            <div class="p-6">
+              <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                <!-- Most Used Components -->
+                <div>
+                  <h4 class="text-sm font-semibold mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    Most Used Components
+                  </h4>
+                  <div class="space-y-3">
+                    <div
+                      v-for="(comp, index) in mostUsedComponents"
+                      :key="comp.name"
+                      class="flex items-center justify-between"
+                    >
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-medium w-6" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                          {{ index + 1 }}.
+                        </span>
+                        <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                          {{ comp.name }}
+                        </span>
+                      </div>
+                      <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                        {{ comp.usage }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Token Usage Patterns -->
+                <div>
+                  <h4 class="text-sm font-semibold mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    Token Usage Patterns
+                  </h4>
+                  <div class="space-y-3">
+                    <div
+                      v-for="pattern in tokenUsagePatterns"
+                      :key="pattern.category"
+                      class="flex items-center justify-between"
+                    >
+                      <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        {{ pattern.category }}
+                      </span>
+                      <div class="flex items-center gap-2">
+                        <div class="w-20 bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
+                          <div 
+                            class="bg-purple-500 h-2 rounded-full"
+                            :style="{ width: `${pattern.percentage}%` }"
+                          ></div>
+                        </div>
+                        <span class="text-sm font-semibold w-8 text-right" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                          {{ pattern.count }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Performance Metrics -->
+                <div>
+                  <h4 class="text-sm font-semibold mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    Performance Metrics
+                  </h4>
+                  <div class="space-y-4">
+                    <div>
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                          Avg Load Time
+                        </span>
+                        <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                          {{ performanceMetrics.avgLoadTime }}ms
+                        </span>
+                      </div>
+                      <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
+                        <div 
+                          class="bg-green-500 h-2 rounded-full"
+                          :style="{ width: `${100 - (performanceMetrics.avgLoadTime / 10)}%` }"
+                        ></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                          Bundle Size
+                        </span>
+                        <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                          {{ performanceMetrics.bundleSize }}KB
+                        </span>
+                      </div>
+                      <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
+                        <div 
+                          class="bg-blue-500 h-2 rounded-full"
+                          :style="{ width: `${100 - (performanceMetrics.bundleSize / 20)}%` }"
+                        ></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                          Accessibility Score
+                        </span>
+                        <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                          {{ performanceMetrics.accessibilityScore }}%
+                        </span>
+                      </div>
+                      <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
+                        <div 
+                          class="bg-indigo-500 h-2 rounded-full"
+                          :style="{ width: `${performanceMetrics.accessibilityScore}%` }"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Usage Trends -->
+              <div class="mt-6 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                <h4 class="text-sm font-semibold mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  Usage Trends (Last 30 Days)
+                </h4>
+                <div class="flex items-end gap-2 h-32">
+                  <div
+                    v-for="(day, index) in usageTrends"
+                    :key="index"
+                    class="flex-1 flex flex-col items-center justify-end"
+                  >
+                    <div
+                      class="w-full rounded-t transition-all hover:opacity-80"
+                      :class="isDarkMode ? 'bg-indigo-500' : 'bg-indigo-500'"
+                      :style="{ height: `${day.percentage}%` }"
+                      :title="`${day.date}: ${day.usage} uses`"
+                    ></div>
+                    <span class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                      {{ day.label }}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -466,6 +621,45 @@ const topComponents = ref([
   { name: 'Select', status: 'Production Ready', adoption: 76, usage: 432 },
   { name: 'Checkbox', status: 'Production Ready', adoption: 71, usage: 389 },
   { name: 'Alert', status: 'In Progress', adoption: 45, usage: 156 },
+]);
+
+const mostUsedComponents = ref([
+  { name: 'Button', usage: 1247 },
+  { name: 'Card', usage: 892 },
+  { name: 'Input', usage: 654 },
+  { name: 'Select', usage: 432 },
+  { name: 'Checkbox', usage: 389 },
+]);
+
+const tokenUsagePatterns = ref([
+  { category: 'Colors', count: 48, percentage: 85 },
+  { category: 'Spacing', count: 24, percentage: 72 },
+  { category: 'Typography', count: 32, percentage: 68 },
+  { category: 'Shadows', count: 16, percentage: 45 },
+  { category: 'Borders', count: 12, percentage: 38 },
+]);
+
+const performanceMetrics = ref({
+  avgLoadTime: 45,
+  bundleSize: 125,
+  accessibilityScore: 95,
+});
+
+const usageTrends = ref([
+  { date: '2024-01-01', usage: 120, percentage: 60, label: 'M' },
+  { date: '2024-01-02', usage: 145, percentage: 72, label: 'T' },
+  { date: '2024-01-03', usage: 180, percentage: 90, label: 'W' },
+  { date: '2024-01-04', usage: 165, percentage: 82, label: 'T' },
+  { date: '2024-01-05', usage: 200, percentage: 100, label: 'F' },
+  { date: '2024-01-06', usage: 90, percentage: 45, label: 'S' },
+  { date: '2024-01-07', usage: 75, percentage: 37, label: 'S' },
+  { date: '2024-01-08', usage: 130, percentage: 65, label: 'M' },
+  { date: '2024-01-09', usage: 155, percentage: 77, label: 'T' },
+  { date: '2024-01-10', usage: 175, percentage: 87, label: 'W' },
+  { date: '2024-01-11', usage: 190, percentage: 95, label: 'T' },
+  { date: '2024-01-12', usage: 210, percentage: 100, label: 'F' },
+  { date: '2024-01-13', usage: 95, percentage: 47, label: 'S' },
+  { date: '2024-01-14', usage: 80, percentage: 40, label: 'S' },
 ]);
 
 const getStatusBadgeClass = (status) => {

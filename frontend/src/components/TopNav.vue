@@ -206,6 +206,19 @@
           </svg>
         </router-link>
 
+        <!-- Feedback -->
+        <router-link
+          to="/feedback"
+          class="relative flex items-center justify-center p-2 rounded-lg transition-colors"
+          :class="isDarkMode 
+            ? 'text-gray-300 hover:text-indigo-400 hover:bg-indigo-900/20' 
+            : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'"
+          title="Feedback & Requests"
+          aria-label="Submit feedback and requests"
+        >
+          <span class="material-symbols-outlined flex items-center justify-center" aria-hidden="true">feedback</span>
+        </router-link>
+
         <!-- Notifications -->
         <div class="relative" ref="notificationsContainer">
           <button
