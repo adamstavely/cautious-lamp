@@ -9,6 +9,7 @@
         <Sidebar />
         <div class="flex-1 min-w-0 flex flex-col">
           <TopNav />
+          <InfoBanner />
           <main id="main-content" class="flex-1 overflow-auto bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" role="main">
             <router-view :key="$route.path" />
           </main>
@@ -26,6 +27,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import Sidebar from './components/Sidebar.vue';
 import TopNav from './components/TopNav.vue';
+import InfoBanner from './components/InfoBanner.vue';
 import FloatingActionButton from './components/FloatingActionButton.vue';
 import EeroChatbot from './components/EeroChatbot.vue';
 

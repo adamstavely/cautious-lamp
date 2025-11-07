@@ -25,12 +25,9 @@
                     <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
                       Color Scale Generator
                     </h1>
-                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
-                      Powered by Leonardo
-                    </span>
                   </div>
                   <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Generate accessible color scales using Adobe's Leonardo Color. Create sequential, diverging, and qualitative scales with precise contrast control.
+                    Generate accessible color scales with precise contrast control. Create sequential, diverging, and qualitative scales that meet WCAG accessibility standards.
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
@@ -265,21 +262,12 @@
                       </div>
                       <div>
                         <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Contrast Ratio</label>
-                        <select
+                        <Dropdown
                           v-model="settings.contrast"
-                          @change="generateScale"
-                          class="w-full px-3 py-2 border rounded-lg text-sm"
-                          :class="isDarkMode 
-                            ? 'border-gray-600 bg-slate-700 text-white' 
-                            : 'border-gray-300 bg-white text-gray-900'"
-                        >
-                          <option value="1.0">1.0 (No contrast)</option>
-                          <option value="1.5">1.5</option>
-                          <option value="2.0">2.0</option>
-                          <option value="3.0">3.0 (AA Large)</option>
-                          <option value="4.5">4.5 (AA)</option>
-                          <option value="7.0">7.0 (AAA)</option>
-                        </select>
+                          :options="contrastOptions"
+                          :is-dark-mode="isDarkMode"
+                          @update:modelValue="generateScale"
+                        />
                       </div>
                       <div>
                         <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Brightness</label>
@@ -306,6 +294,35 @@
                           class="w-full"
                         />
                         <div class="text-xs mt-1 text-center" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ settings.saturation }}%</div>
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Background Color</label>
+                        <div class="flex items-center gap-3">
+                          <button
+                            @click="openColorPicker('background', $event)"
+                            class="w-16 h-16 rounded cursor-pointer transition-colors flex-shrink-0"
+                            :class="[
+                              isLightColor(settings.backgroundColor)
+                                ? 'border-2 border-gray-400'
+                                : (isDarkMode 
+                                  ? 'border-2 border-gray-600 hover:border-indigo-400' 
+                                  : 'border-2 border-gray-300 hover:border-indigo-500')
+                            ]"
+                            :style="{ backgroundColor: settings.backgroundColor }"
+                            title="Pick background color"
+                          ></button>
+                          <input
+                            v-model="settings.backgroundColor"
+                            type="text"
+                            @input="generateScale"
+                            placeholder="#ffffff"
+                            class="flex-1 px-3 py-2 border rounded-lg text-sm font-mono"
+                            :class="isDarkMode 
+                              ? 'border-gray-600 bg-slate-700 text-white' 
+                              : 'border-gray-300 bg-white text-gray-900'"
+                          />
+                        </div>
+                        <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Used for contrast checking</p>
                       </div>
                     </div>
                   </div>
@@ -367,6 +384,79 @@
                           >
                             <span class="material-symbols-outlined text-sm">content_copy</span>
                           </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Colorblindness Simulation Section -->
+                  <div v-if="generatedScale.length > 0" class="mt-6 rounded-lg p-6" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-100'">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">visibility</span>
+                      Colorblindness Simulation
+                    </h2>
+                    <p class="text-sm mb-6" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      Simulated colors are ordered by hue and saturation for best comparison of similar colors.
+                    </p>
+                    
+                    <div class="space-y-6">
+                      <!-- Protanopia -->
+                      <div>
+                        <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Protanopia</h3>
+                        <div class="flex gap-1">
+                          <div
+                            v-for="(color, index) in generatedScale"
+                            :key="`protanopia-${index}`"
+                            class="flex-1 aspect-square rounded relative group"
+                            :style="{ backgroundColor: simulateColorBlindness(color, 'protanopia') }"
+                            :title="`${color} → ${simulateColorBlindness(color, 'protanopia')}`"
+                          >
+                            <!-- Small original color indicator -->
+                            <div 
+                              class="absolute bottom-1 left-1 w-3 h-3 rounded border border-white"
+                              :style="{ backgroundColor: color }"
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Deuteranopia -->
+                      <div>
+                        <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Deuteranopia</h3>
+                        <div class="flex gap-1">
+                          <div
+                            v-for="(color, index) in generatedScale"
+                            :key="`deuteranopia-${index}`"
+                            class="flex-1 aspect-square rounded relative group"
+                            :style="{ backgroundColor: simulateColorBlindness(color, 'deuteranopia') }"
+                            :title="`${color} → ${simulateColorBlindness(color, 'deuteranopia')}`"
+                          >
+                            <!-- Small original color indicator -->
+                            <div 
+                              class="absolute bottom-1 left-1 w-3 h-3 rounded border border-white"
+                              :style="{ backgroundColor: color }"
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Tritanopia -->
+                      <div>
+                        <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Tritanopia</h3>
+                        <div class="flex gap-1">
+                          <div
+                            v-for="(color, index) in generatedScale"
+                            :key="`tritanopia-${index}`"
+                            class="flex-1 aspect-square rounded relative group"
+                            :style="{ backgroundColor: simulateColorBlindness(color, 'tritanopia') }"
+                            :title="`${color} → ${simulateColorBlindness(color, 'tritanopia')}`"
+                          >
+                            <!-- Small original color indicator -->
+                            <div 
+                              class="absolute bottom-1 left-1 w-3 h-3 rounded border border-white"
+                              :style="{ backgroundColor: color }"
+                            ></div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -538,8 +628,51 @@
                 </div>
               </div>
 
-              <!-- Right Sidebar: Color Analysis and Export -->
+              <!-- Right Sidebar: Export and Color Analysis -->
               <div class="space-y-6">
+                <!-- Export Options -->
+                <div 
+                  class="rounded-lg shadow-sm border p-6"
+                  :class="isDarkMode 
+                    ? 'bg-slate-900 border-gray-700' 
+                    : 'bg-white border-gray-200'"
+                >
+                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">download</span>
+                    Export
+                  </h2>
+                  
+                  <div class="flex flex-col gap-2">
+                    <button
+                      @click="exportCSS"
+                      class="w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                      :class="isDarkMode 
+                        ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
+                        : 'bg-indigo-600 text-white hover:bg-indigo-700'"
+                    >
+                      Export CSS Variables
+                    </button>
+                    <button
+                      @click="exportJSON"
+                      class="w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                      :class="isDarkMode 
+                        ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                    >
+                      Export JSON
+                    </button>
+                    <button
+                      @click="exportTableau"
+                      class="w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                      :class="isDarkMode 
+                        ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                    >
+                      Export Tableau XML
+                    </button>
+                  </div>
+                </div>
+
                 <!-- Color Analysis -->
                 <div 
                   class="rounded-lg shadow-sm border p-6"
@@ -616,33 +749,33 @@
                               <div class="flex items-center gap-2">
                                 <div class="w-16 h-8 rounded border flex overflow-hidden" :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'">
                                   <div class="flex-1" :style="{ backgroundColor: generatedScale[0] }"></div>
-                                  <div class="flex-1" :style="{ backgroundColor: '#ffffff' }"></div>
+                                  <div class="flex-1" :style="{ backgroundColor: settings.backgroundColor }"></div>
                                 </div>
                               </div>
                             </td>
                             <td class="py-3 px-3">
                               <span 
                                 class="px-2 py-1 rounded text-xs font-medium"
-                                :class="getContrastStatus(generatedScale[0], '#ffffff') === 'Pass' 
+                                :class="getContrastStatus(generatedScale[0], settings.backgroundColor) === 'Pass' 
                                   ? 'bg-green-500 text-white' 
                                   : 'bg-red-500 text-white'"
                               >
-                                {{ getContrastStatus(generatedScale[0], '#ffffff') }}
+                                {{ getContrastStatus(generatedScale[0], settings.backgroundColor) }}
                               </span>
                             </td>
                             <td class="py-3 px-3 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                              {{ getContrastRatio(generatedScale[0], '#ffffff').toFixed(2) }}:1
+                              {{ getContrastRatio(generatedScale[0], settings.backgroundColor).toFixed(2) }}:1
                             </td>
                             <td class="py-3 px-3">
                               <div class="space-y-1">
                                 <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                                  Delta E {{ getDeltaE(generatedScale[0], '#ffffff').toFixed(2) }}
+                                  Delta E {{ getDeltaE(generatedScale[0], settings.backgroundColor).toFixed(2) }}
                                 </div>
                                 <div class="w-24 h-1.5 rounded-full overflow-hidden" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
                                   <div 
                                     class="h-full transition-all"
-                                    :class="getDeltaE(generatedScale[0], '#ffffff') > 50 ? 'bg-teal-500' : 'bg-teal-400'"
-                                    :style="{ width: Math.min(100, (getDeltaE(generatedScale[0], '#ffffff') / 100) * 100) + '%' }"
+                                    :class="getDeltaE(generatedScale[0], settings.backgroundColor) > 50 ? 'bg-teal-500' : 'bg-teal-400'"
+                                    :style="{ width: Math.min(100, (getDeltaE(generatedScale[0], settings.backgroundColor) / 100) * 100) + '%' }"
                                   ></div>
                                 </div>
                               </div>
@@ -655,33 +788,33 @@
                               <div class="flex items-center gap-2">
                                 <div class="w-16 h-8 rounded border flex overflow-hidden" :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'">
                                   <div class="flex-1" :style="{ backgroundColor: generatedScale[generatedScale.length - 1] }"></div>
-                                  <div class="flex-1" :style="{ backgroundColor: '#ffffff' }"></div>
+                                  <div class="flex-1" :style="{ backgroundColor: settings.backgroundColor }"></div>
                                 </div>
                               </div>
                             </td>
                             <td class="py-3 px-3">
                               <span 
                                 class="px-2 py-1 rounded text-xs font-medium"
-                                :class="getContrastStatus(generatedScale[generatedScale.length - 1], '#ffffff') === 'Pass' 
+                                :class="getContrastStatus(generatedScale[generatedScale.length - 1], settings.backgroundColor) === 'Pass' 
                                   ? 'bg-green-500 text-white' 
                                   : 'bg-red-500 text-white'"
                               >
-                                {{ getContrastStatus(generatedScale[generatedScale.length - 1], '#ffffff') }}
+                                {{ getContrastStatus(generatedScale[generatedScale.length - 1], settings.backgroundColor) }}
                               </span>
                             </td>
                             <td class="py-3 px-3 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                              {{ getContrastRatio(generatedScale[generatedScale.length - 1], '#ffffff').toFixed(2) }}:1
+                              {{ getContrastRatio(generatedScale[generatedScale.length - 1], settings.backgroundColor).toFixed(2) }}:1
                             </td>
                             <td class="py-3 px-3">
                               <div class="space-y-1">
                                 <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                                  Delta E {{ getDeltaE(generatedScale[generatedScale.length - 1], '#ffffff').toFixed(2) }}
+                                  Delta E {{ getDeltaE(generatedScale[generatedScale.length - 1], settings.backgroundColor).toFixed(2) }}
                                 </div>
                                 <div class="w-24 h-1.5 rounded-full overflow-hidden" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
                                   <div 
                                     class="h-full transition-all"
-                                    :class="getDeltaE(generatedScale[generatedScale.length - 1], '#ffffff') > 50 ? 'bg-teal-500' : 'bg-teal-400'"
-                                    :style="{ width: Math.min(100, (getDeltaE(generatedScale[generatedScale.length - 1], '#ffffff') / 100) * 100) + '%' }"
+                                    :class="getDeltaE(generatedScale[generatedScale.length - 1], settings.backgroundColor) > 50 ? 'bg-teal-500' : 'bg-teal-400'"
+                                    :style="{ width: Math.min(100, (getDeltaE(generatedScale[generatedScale.length - 1], settings.backgroundColor) / 100) * 100) + '%' }"
                                   ></div>
                                 </div>
                               </div>
@@ -730,48 +863,54 @@
                       </table>
                     </div>
                   </div>
-                </div>
 
-                <!-- Export Options -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">download</span>
-                    Export
-                  </h2>
-                  
-                  <div class="flex flex-col gap-2">
-                    <button
-                      @click="exportCSS"
-                      class="w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                      :class="isDarkMode 
-                        ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
-                        : 'bg-indigo-600 text-white hover:bg-indigo-700'"
-                    >
-                      Export CSS Variables
-                    </button>
-                    <button
-                      @click="exportJSON"
-                      class="w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                      :class="isDarkMode 
-                        ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                    >
-                      Export JSON
-                    </button>
-                    <button
-                      @click="exportTableau"
-                      class="w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                      :class="isDarkMode 
-                        ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                    >
-                      Export Tableau XML
-                    </button>
+                  <!-- Color Space Visualizations -->
+                  <div class="mt-6">
+                    <h3 class="text-sm font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">palette</span>
+                      Color Space Visualizations
+                    </h3>
+                    
+                    <div class="space-y-6">
+                      <!-- Color Wheel / Chromaticity Diagram -->
+                      <div>
+                        <h4 class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Color Wheel</h4>
+                        <div class="rounded-lg overflow-hidden border relative" :class="isDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-gray-50'" style="height: 200px;">
+                          <canvas ref="colorWheelCanvas" class="w-full h-full"></canvas>
+                        </div>
+                      </div>
+
+                      <!-- RGB Channels Graph -->
+                      <div>
+                        <h4 class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">RGB Channels</h4>
+                        <div class="rounded-lg overflow-hidden border relative" :class="isDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-gray-50'" style="height: 200px;">
+                          <svg width="100%" height="100%" class="absolute inset-0">
+                            <defs>
+                              <pattern id="gridPattern" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <path d="M 20 0 L 0 0 0 20" fill="none" :stroke="isDarkMode ? '#475569' : '#e2e8f0'" stroke-width="0.5"/>
+                              </pattern>
+                            </defs>
+                            <rect width="100%" height="100%" fill="url(#gridPattern)" />
+                            <g v-for="(channel, index) in rgbChannels" :key="index">
+                              <polyline
+                                :points="channel.points"
+                                :stroke="channel.color"
+                                stroke-width="2"
+                                fill="none"
+                              />
+                            </g>
+                          </svg>
+                        </div>
+                      </div>
+
+                      <!-- 3D Color Space Plot -->
+                      <div>
+                        <h4 class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">3D Color Space</h4>
+                        <div class="rounded-lg overflow-hidden border relative" :class="isDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-gray-50'" style="height: 200px;">
+                          <canvas ref="color3dCanvas" class="w-full h-full"></canvas>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -798,7 +937,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
-import * as Leo from '@adobe/leonardo-contrast-colors';
+import Dropdown from '../components/Dropdown.vue';
 import chroma from 'chroma-js';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
@@ -810,6 +949,15 @@ const scaleTypes = [
   { label: 'Sequential', value: 'sequential' },
   { label: 'Diverging', value: 'diverging' },
   { label: 'Qualitative', value: 'qualitative' },
+];
+
+const contrastOptions = [
+  { label: '1.0 (No contrast)', value: '1.0' },
+  { label: '1.5', value: '1.5' },
+  { label: '2.0', value: '2.0' },
+  { label: '3.0 (AA Large)', value: '3.0' },
+  { label: '4.5 (AA)', value: '4.5' },
+  { label: '7.0 (AAA)', value: '7.0' },
 ];
 
 const sequentialColors = ref(['#3b82f6']);
@@ -824,6 +972,7 @@ const settings = ref({
   contrast: '4.5',
   brightness: 50,
   saturation: 100,
+  backgroundColor: '#ffffff',
 });
 
 // Visualization data
@@ -897,46 +1046,348 @@ const generateScale = () => {
 const generateSequentialScale = () => {
   if (sequentialColors.value.length === 0) return;
   
-  // If only one color, create a scale from that color to a darker version
-  if (sequentialColors.value.length === 1) {
-    const baseColor = sequentialColors.value[0];
-    const scale = chroma.scale([baseColor, chroma(baseColor).darken(2)])
-      .mode('lch')
-      .colors(settings.value.steps);
-    
-    generatedScale.value = applyAdjustments(scale);
-  } else {
-    // Multiple colors: create scale between all colors
-    const scale = chroma.scale(sequentialColors.value)
-      .mode('lch')
-      .colors(settings.value.steps);
-    
-    generatedScale.value = applyAdjustments(scale);
+  const contrastRatio = parseFloat(settings.value.contrast) || 1.0;
+  const bgColor = settings.value.backgroundColor || '#ffffff';
+  
+  try {
+    // Use contrast-based generation if contrast ratio > 1.0
+    if (contrastRatio > 1.0) {
+      let scale = [];
+      
+      if (sequentialColors.value.length === 1) {
+        // Single color: generate scale from base to target contrast
+        scale = generateContrastBasedScale(sequentialColors.value[0], bgColor, contrastRatio, settings.value.steps, 'sequential');
+      } else {
+        // Multiple colors: generate contrast-based scales between each pair
+        const segments = sequentialColors.value.length - 1;
+        const stepsPerSegment = Math.ceil(settings.value.steps / sequentialColors.value.length);
+        
+        for (let i = 0; i < segments; i++) {
+          const startColor = sequentialColors.value[i];
+          const endColor = sequentialColors.value[i + 1];
+          
+          // Generate contrast-based scale for this segment
+          const segmentScale = generateContrastBasedScaleBetweenColors(
+            startColor,
+            endColor,
+            bgColor,
+            contrastRatio,
+            stepsPerSegment
+          );
+          
+          // Add colors (avoid duplicates at boundaries)
+          if (i === 0) {
+            scale.push(...segmentScale);
+          } else {
+            scale.push(...segmentScale.slice(1)); // Skip first to avoid duplicate
+          }
+        }
+        
+        // Trim to desired number of steps
+        scale = scale.slice(0, settings.value.steps);
+        
+        // If we have fewer colors than steps, interpolate the final segment
+        if (scale.length < settings.value.steps) {
+          const remainingSteps = settings.value.steps - scale.length;
+          const lastColor = sequentialColors.value[sequentialColors.value.length - 1];
+          const finalSegment = generateContrastBasedScale(lastColor, bgColor, contrastRatio, remainingSteps + 1, 'sequential');
+          scale.push(...finalSegment.slice(1));
+        }
+      }
+      
+      generatedScale.value = applyAdjustments(scale);
+    } else {
+      // Fallback to chroma for no contrast requirement
+      if (sequentialColors.value.length === 1) {
+        const baseColor = sequentialColors.value[0];
+        const scale = chroma.scale([baseColor, chroma(baseColor).darken(2)])
+          .mode('lch')
+          .colors(settings.value.steps);
+        
+        generatedScale.value = applyAdjustments(scale);
+      } else {
+        const scale = chroma.scale(sequentialColors.value)
+          .mode('lch')
+          .colors(settings.value.steps);
+        
+        generatedScale.value = applyAdjustments(scale);
+      }
+    }
+  } catch (error) {
+    console.error('Error generating sequential scale:', error);
+    // Fallback to chroma
+    if (sequentialColors.value.length === 1) {
+      const baseColor = sequentialColors.value[0];
+      const scale = chroma.scale([baseColor, chroma(baseColor).darken(2)])
+        .mode('lch')
+        .colors(settings.value.steps);
+      
+      generatedScale.value = applyAdjustments(scale);
+    } else {
+      const scale = chroma.scale(sequentialColors.value)
+        .mode('lch')
+        .colors(settings.value.steps);
+      
+      generatedScale.value = applyAdjustments(scale);
+    }
   }
 };
 
 const generateDivergingScale = () => {
   if (divergingColors.value.length === 0) return;
   
-  // If only one color, create a scale from white to that color
-  if (divergingColors.value.length === 1) {
-    const scale = chroma.scale(['#ffffff', divergingColors.value[0]])
-      .mode('lch')
-      .colors(settings.value.steps);
-    
-    generatedScale.value = applyAdjustments(scale);
-  } else {
-    // Multiple colors: create scale through all colors
-    const colors = divergingColors.value.length === 2 
-      ? [divergingColors.value[0], '#ffffff', divergingColors.value[1]]
-      : divergingColors.value;
-    
-    const scale = chroma.scale(colors)
-      .mode('lch')
-      .colors(settings.value.steps);
-    
-    generatedScale.value = applyAdjustments(scale);
+  const contrastRatio = parseFloat(settings.value.contrast) || 1.0;
+  const bgColor = settings.value.backgroundColor || '#ffffff';
+  
+  try {
+    // Use contrast-based generation if contrast ratio > 1.0
+    if (contrastRatio > 1.0) {
+      let scale = [];
+      
+      if (divergingColors.value.length === 1) {
+        // Single color: generate scale from background to target contrast
+        scale = generateContrastBasedScale(divergingColors.value[0], bgColor, contrastRatio, settings.value.steps, 'diverging');
+      } else {
+        // Multiple colors: generate contrast-based scales between colors
+        const midPoint = Math.floor(settings.value.steps / 2);
+        const leftSteps = midPoint + (settings.value.steps % 2);
+        const rightSteps = settings.value.steps - leftSteps + 1;
+        
+        // Left side: from first color to background
+        const leftScale = generateContrastBasedScaleBetweenColors(
+          divergingColors.value[0],
+          bgColor,
+          bgColor,
+          contrastRatio,
+          leftSteps
+        );
+        
+        // Right side: from background to last color
+        const rightScale = generateContrastBasedScaleBetweenColors(
+          bgColor,
+          divergingColors.value[divergingColors.value.length - 1],
+          bgColor,
+          contrastRatio,
+          rightSteps
+        );
+        
+        // Combine scales (avoid duplicate at midpoint)
+        scale = [...leftScale, ...rightScale.slice(1)];
+        
+        // Trim to desired number of steps
+        scale = scale.slice(0, settings.value.steps);
+      }
+      
+      generatedScale.value = applyAdjustments(scale);
+    } else {
+      // Fallback to chroma
+      if (divergingColors.value.length === 1) {
+        const scale = chroma.scale(['#ffffff', divergingColors.value[0]])
+          .mode('lch')
+          .colors(settings.value.steps);
+        
+        generatedScale.value = applyAdjustments(scale);
+      } else {
+        const colors = divergingColors.value.length === 2 
+          ? [divergingColors.value[0], '#ffffff', divergingColors.value[1]]
+          : divergingColors.value;
+        
+        const scale = chroma.scale(colors)
+          .mode('lch')
+          .colors(settings.value.steps);
+        
+        generatedScale.value = applyAdjustments(scale);
+      }
+    }
+  } catch (error) {
+    console.error('Error generating diverging scale:', error);
+    // Fallback to chroma
+    if (divergingColors.value.length === 1) {
+      const scale = chroma.scale(['#ffffff', divergingColors.value[0]])
+        .mode('lch')
+        .colors(settings.value.steps);
+      
+      generatedScale.value = applyAdjustments(scale);
+    } else {
+      const colors = divergingColors.value.length === 2 
+        ? [divergingColors.value[0], '#ffffff', divergingColors.value[1]]
+        : divergingColors.value;
+      
+      const scale = chroma.scale(colors)
+        .mode('lch')
+        .colors(settings.value.steps);
+      
+      generatedScale.value = applyAdjustments(scale);
+    }
   }
+};
+
+// Calculate relative luminance (WCAG formula)
+const getLuminance = (color) => {
+  try {
+    const rgb = chroma(color).rgb();
+    const [r, g, b] = rgb.map(val => {
+      val = val / 255;
+      return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  } catch {
+    return 0;
+  }
+};
+
+// Calculate contrast ratio between two colors
+const calculateContrastRatio = (color1, color2) => {
+  if (!color1 || !color2) return 1;
+  const lum1 = getLuminance(color1);
+  const lum2 = getLuminance(color2);
+  const lighter = Math.max(lum1, lum2);
+  const darker = Math.min(lum1, lum2);
+  return (lighter + 0.05) / (darker + 0.05);
+};
+
+// Find a color that meets a target contrast ratio against a background
+const findColorAtContrast = (baseColor, bgColor, targetRatio, isSequential = true) => {
+  try {
+    const bgLum = getLuminance(bgColor);
+    const baseLum = getLuminance(baseColor);
+    
+    // Determine if we need lighter or darker color
+    const needsLighter = bgLum < baseLum;
+    
+    // Calculate target luminance
+    // contrast = (lighter + 0.05) / (darker + 0.05)
+    // If bg is darker, we need: targetRatio = (colorLum + 0.05) / (bgLum + 0.05)
+    // If bg is lighter, we need: targetRatio = (bgLum + 0.05) / (colorLum + 0.05)
+    
+    let targetLum;
+    if (needsLighter) {
+      // Background is darker, color needs to be lighter
+      targetLum = targetRatio * (bgLum + 0.05) - 0.05;
+    } else {
+      // Background is lighter, color needs to be darker
+      targetLum = (bgLum + 0.05) / targetRatio - 0.05;
+    }
+    
+    // Clamp luminance between 0 and 1
+    targetLum = Math.max(0, Math.min(1, targetLum));
+    
+    // Convert base color to HSL to preserve hue and saturation
+    const baseHsl = chroma(baseColor).hsl();
+    const hue = baseHsl[0] || 0;
+    const saturation = baseHsl[1] || 0;
+    
+    // Binary search for the right lightness
+    let minLightness = 0;
+    let maxLightness = 1;
+    let bestColor = baseColor;
+    let bestRatio = calculateContrastRatio(baseColor, bgColor);
+    
+    // Try to find a color close to the target contrast
+    for (let i = 0; i < 50; i++) {
+      const lightness = (minLightness + maxLightness) / 2;
+      const testColor = chroma.hsl(hue, saturation, lightness).hex();
+      const testLum = getLuminance(testColor);
+      const testRatio = calculateContrastRatio(testColor, bgColor);
+      
+      if (Math.abs(testRatio - targetRatio) < Math.abs(bestRatio - targetRatio)) {
+        bestRatio = testRatio;
+        bestColor = testColor;
+      }
+      
+      if (needsLighter) {
+        if (testLum < targetLum) {
+          minLightness = lightness;
+        } else {
+          maxLightness = lightness;
+        }
+      } else {
+        if (testLum > targetLum) {
+          maxLightness = lightness;
+        } else {
+          minLightness = lightness;
+        }
+      }
+      
+      if (Math.abs(testRatio - targetRatio) < 0.01) {
+        break;
+      }
+    }
+    
+    return bestColor;
+  } catch (error) {
+    console.error('Error finding color at contrast:', error);
+    return baseColor;
+  }
+};
+
+// Generate a contrast-based color scale
+const generateContrastBasedScale = (baseColor, bgColor, targetRatio, steps, type = 'sequential') => {
+  const scale = [];
+  const ratios = [];
+  
+  // Generate ratios from 1.0 (no contrast) to targetRatio
+  for (let i = 0; i < steps; i++) {
+    const ratio = 1.0 + (targetRatio - 1.0) * (i / (steps - 1));
+    ratios.push(ratio);
+  }
+  
+  // For diverging, we want to go from background to target contrast
+  // For sequential, we go from base color to target contrast
+  if (type === 'diverging') {
+    // Start with background color (or very close to it)
+    scale.push(bgColor);
+    
+    // Generate colors at increasing contrast ratios
+    for (let i = 1; i < steps; i++) {
+      const ratio = ratios[i];
+      const color = findColorAtContrast(baseColor, bgColor, ratio, false);
+      scale.push(color);
+    }
+  } else {
+    // Sequential: start from base color, increase contrast
+    for (let i = 0; i < steps; i++) {
+      const ratio = ratios[i];
+      const color = findColorAtContrast(baseColor, bgColor, ratio, true);
+      scale.push(color);
+    }
+  }
+  
+  // Ensure smooth transitions by interpolating between generated colors
+  if (scale.length > 2) {
+    const smoothed = chroma.scale(scale).mode('lch').colors(steps);
+    return smoothed;
+  }
+  
+  return scale;
+};
+
+// Generate a contrast-based scale between two colors
+const generateContrastBasedScaleBetweenColors = (startColor, endColor, bgColor, targetRatio, steps) => {
+  const scale = [];
+  
+  // Generate intermediate colors between start and end
+  for (let i = 0; i < steps; i++) {
+    const t = i / (steps - 1); // 0 to 1
+    
+    // Interpolate between start and end colors
+    const interpolatedColor = chroma.mix(startColor, endColor, t, 'lch').hex();
+    
+    // Calculate what contrast ratio this interpolated color has
+    const currentRatio = calculateContrastRatio(interpolatedColor, bgColor);
+    
+    // If contrast is below target, adjust the color to meet contrast requirement
+    if (currentRatio < targetRatio) {
+      // Find a color that meets the contrast requirement while preserving hue/saturation
+      const adjustedColor = findColorAtContrast(interpolatedColor, bgColor, targetRatio, true);
+      scale.push(adjustedColor);
+    } else {
+      // Color already meets contrast requirement
+      scale.push(interpolatedColor);
+    }
+  }
+  
+  return scale;
 };
 
 const applyAdjustments = (scale) => {
@@ -984,25 +1435,68 @@ const getTextColor = (bgColor) => {
     : (isDarkMode.value ? 'text-white bg-black/40' : 'text-white bg-black/40');
 };
 
-const getLuminance = (color) => {
-  if (!color) return 0;
+
+const isLightColor = (color) => {
   try {
-    return chroma(color).luminance();
-  } catch (e) {
-    return 0;
+    const rgb = chroma(color).rgb();
+    const luminance = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
+    return luminance > 0.8; // Consider colors with luminance > 0.8 as light
+  } catch {
+    return false;
   }
 };
 
 const getContrastRatio = (color1, color2) => {
-  if (!color1 || !color2) return 1;
-  try {
-    const lum1 = chroma(color1).luminance();
-    const lum2 = chroma(color2).luminance();
-    const lighter = Math.max(lum1, lum2);
-    const darker = Math.min(lum1, lum2);
-    return (lighter + 0.05) / (darker + 0.05);
-  } catch (e) {
-    return 1;
+  return calculateContrastRatio(color1, color2);
+};
+
+// Colorblindness simulation functions
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : null;
+};
+
+const rgbToHex = (r, g, b) => {
+  return '#' + [r, g, b].map((x) => {
+    const hex = x.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('');
+};
+
+const simulateColorBlindness = (hex, type) => {
+  if (type === 'normal' || !type) return hex;
+  
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  
+  // Color blindness simulation matrices (based on Brettel et al. 1997)
+  switch (type) {
+    case 'protanopia':
+      return rgbToHex(
+        Math.round(rgb.r * 0.567 + rgb.g * 0.433),
+        Math.round(rgb.r * 0.558 + rgb.g * 0.442),
+        Math.round(rgb.r * 0 + rgb.g * 0.242 + rgb.b * 0.758)
+      );
+    case 'deuteranopia':
+      return rgbToHex(
+        Math.round(rgb.r * 0.625 + rgb.g * 0.375),
+        Math.round(rgb.r * 0.7 + rgb.g * 0.3),
+        Math.round(rgb.r * 0 + rgb.g * 0.3 + rgb.b * 0.7)
+      );
+    case 'tritanopia':
+      return rgbToHex(
+        Math.round(rgb.r * 0.95 + rgb.g * 0.05),
+        Math.round(rgb.r * 0 + rgb.g * 0.433 + rgb.b * 0.567),
+        Math.round(rgb.r * 0 + rgb.g * 0.475 + rgb.b * 0.525)
+      );
+    default:
+      return hex;
   }
 };
 
@@ -1435,31 +1929,55 @@ const openColorPicker = (target, event) => {
     if (!isNaN(index) && qualitativeColors.value[index]) {
       color = qualitativeColors.value[index];
     }
+  } else if (target === 'background') {
+    color = settings.value.backgroundColor;
   }
   
   pickerColor.value = color;
   
   const rect = event.target.getBoundingClientRect();
-  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
   
   const pickerWidth = 280;
   const pickerHeight = 550;
   const padding = 16;
   
-  let left = rect.right + scrollLeft + padding;
-  let top = rect.top + scrollTop;
+  // Use viewport coordinates for fixed positioning
+  let left = rect.right + padding;
+  let top = rect.top;
   
-  if (left + pickerWidth > window.innerWidth + scrollLeft) {
-    left = rect.left + scrollLeft - pickerWidth - padding;
+  // If there's not enough space on the right, show on the left
+  if (left + pickerWidth > window.innerWidth) {
+    left = rect.left - pickerWidth - padding;
   }
   
-  if (top + pickerHeight > window.innerHeight + scrollTop) {
-    top = rect.top + scrollTop - pickerHeight - padding;
+  // Ensure it doesn't go off-screen horizontally
+  left = Math.max(padding, Math.min(left, window.innerWidth - pickerWidth - padding));
+  
+  // Check if there's enough space below the button
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const spaceAbove = rect.top;
+  
+  // If there's not enough space below, try above
+  if (spaceBelow < pickerHeight + padding && spaceAbove > spaceBelow) {
+    top = rect.top - pickerHeight - padding;
   }
   
-  left = Math.max(padding, Math.min(left, window.innerWidth + scrollLeft - pickerWidth - padding));
-  top = Math.max(padding, Math.min(top, window.innerHeight + scrollTop - pickerHeight - padding));
+  // Ensure it doesn't go off-screen vertically
+  top = Math.max(padding, Math.min(top, window.innerHeight - pickerHeight - padding));
+  
+  // If still too tall for viewport, center it vertically or position at top
+  if (top + pickerHeight > window.innerHeight) {
+    const centeredTop = Math.max(padding, (window.innerHeight - pickerHeight) / 2);
+    top = Math.min(centeredTop, padding);
+  }
+  
+  // Final safety check: ensure it's within bounds
+  if (top < padding) {
+    top = padding;
+  }
+  if (top + pickerHeight > window.innerHeight) {
+    top = window.innerHeight - pickerHeight - padding;
+  }
   
   pickerPosition.value = { left, top };
   showColorPicker.value = true;
@@ -1485,6 +2003,9 @@ const handleColorPickerApply = (color) => {
       qualitativeColorsInput.value = qualitativeColors.value.join(', ');
       generateScale();
     }
+  } else if (pickerTarget.value === 'background') {
+    settings.value.backgroundColor = color;
+    generateScale();
   }
   showColorPicker.value = false;
   pickerTarget.value = null;

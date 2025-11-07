@@ -71,6 +71,7 @@ export class DesignSystemService {
     this.scannerService = new ComplianceScannerService();
     this.applicationScanner = new ApplicationScannerService();
     this.apiKeys.set('test-api-key-123', { name: 'Default Test Key', createdAt: new Date() });
+    this.apiKeys.set('dev-key', { name: 'Development Key', createdAt: new Date() });
     
     // Initialize with sample applications (for demonstration)
     this.applications.set('app-1', {
@@ -1387,6 +1388,75 @@ export const Modal = ({ open = false, title = '', closeOnBackdrop = true, onClos
       };
     }
     
-    return { error: 'Invalid format' };
+    // Default return (should not reach here, but TypeScript needs it)
+    return {
+      rules: [],
+      version: '1.0.0',
+      exportedAt: new Date().toISOString()
+    };
+  }
+
+  // Info Banners
+  private infoBanners = new Map<string, {
+    id: string;
+    title: string;
+    message: string;
+    type: 'info' | 'warning' | 'error' | 'success';
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    expiresAt?: Date;
+  }>();
+
+  getAllBanners() {
+    return Array.from(this.infoBanners.values());
+  }
+
+  getActiveBanners() {
+    const now = new Date();
+    return Array.from(this.infoBanners.values()).filter(banner => {
+      if (!banner.isActive) return false;
+      if (banner.expiresAt && banner.expiresAt < now) return false;
+      return true;
+    });
+  }
+
+  getBanner(id: string) {
+    return this.infoBanners.get(id);
+  }
+
+  createBanner(data: { title: string; message: string; type: 'info' | 'warning' | 'error' | 'success'; expiresAt?: string }) {
+    const id = `banner-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const banner = {
+      id,
+      title: data.title,
+      message: data.message,
+      type: data.type,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined
+    };
+    this.infoBanners.set(id, banner);
+    return banner;
+  }
+
+  updateBanner(id: string, updates: { title?: string; message?: string; type?: 'info' | 'warning' | 'error' | 'success'; isActive?: boolean; expiresAt?: string }) {
+    const banner = this.infoBanners.get(id);
+    if (!banner) {
+      throw new Error(`Banner ${id} not found`);
+    }
+    const updatedBanner = {
+      ...banner,
+      ...updates,
+      updatedAt: new Date(),
+      expiresAt: updates.expiresAt !== undefined ? (updates.expiresAt ? new Date(updates.expiresAt) : undefined) : banner.expiresAt
+    };
+    this.infoBanners.set(id, updatedBanner);
+    return updatedBanner;
+  }
+
+  deleteBanner(id: string) {
+    return this.infoBanners.delete(id);
   }
 }

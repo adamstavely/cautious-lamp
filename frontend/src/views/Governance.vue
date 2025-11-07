@@ -23,6 +23,26 @@
                   Enforce design system rules and check compliance. Monitor both the design system itself and applications using it.
                 </p>
               </div>
+              <div class="hidden md:block flex-shrink-0">
+                <div class="w-64 h-64 relative">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                      <linearGradient id="governanceGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <!-- Gavel icon representing governance/rules -->
+                    <rect x="60" y="40" width="80" height="12" rx="2" fill="url(#governanceGradient)" opacity="0.6"/>
+                    <rect x="60" y="60" width="80" height="12" rx="2" fill="url(#governanceGradient)" opacity="0.5"/>
+                    <rect x="60" y="80" width="80" height="12" rx="2" fill="url(#governanceGradient)" opacity="0.4"/>
+                    <!-- Checkmark representing compliance -->
+                    <path d="M 50 130 L 70 150 L 110 110" fill="none" stroke="url(#governanceGradient)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+                    <!-- Shield representing protection/enforcement -->
+                    <path d="M 130 100 L 150 110 L 150 140 Q 150 160, 130 170 Q 110 160, 110 140 L 110 110 Z" fill="url(#governanceGradient)" opacity="0.5"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>

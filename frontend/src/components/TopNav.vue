@@ -4,10 +4,10 @@
       <!-- Left spacer for sidebar -->
       <div class="w-24 flex-shrink-0"></div>
       
-      <!-- Site Title - Left Justified (positioned absolutely) -->
+      <!-- Site Title - Left Justified -->
       <router-link
         to="/"
-        class="absolute left-0 flex items-center gap-2 pl-[50px] transition-all group"
+        class="flex items-center gap-2 pl-[50px] pr-4 transition-all group flex-shrink-0 -ml-24"
       >
         <!-- Custom Carets Icon (overlapping by 25%) -->
         <svg 
@@ -16,7 +16,7 @@
           viewBox="0 0 24 24" 
           fill="none" 
           xmlns="http://www.w3.org/2000/svg"
-          class="transition-transform group-hover:scale-110"
+          class="transition-transform group-hover:scale-110 flex-shrink-0"
           aria-hidden="true"
         >
           <defs>
@@ -50,12 +50,12 @@
             fill="none"
           />
         </svg>
-            <span class="text-2xl font-bold bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-300 dark:via-indigo-400 dark:to-indigo-500 bg-clip-text text-transparent">Design System</span>
+        <span class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-300 dark:via-indigo-400 dark:to-indigo-500 bg-clip-text text-transparent whitespace-nowrap hidden sm:inline">Design System</span>
       </router-link>
       
       <!-- Center Search Bar -->
-      <div class="flex-1 flex justify-center">
-        <div class="w-full max-w-2xl mx-8">
+      <div class="flex-1 flex justify-center min-w-0">
+        <div class="w-full max-w-2xl mx-4 sm:mx-8">
           <div class="relative" ref="searchContainer">
             <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-xl pointer-events-none"
               :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"

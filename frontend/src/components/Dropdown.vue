@@ -18,6 +18,7 @@
     </button>
     
     <Transition
+      v-if="isMounted"
       enter-active-class="transition ease-out duration-100"
       enter-from-class="transform opacity-0 scale-95"
       enter-to-class="transform opacity-100 scale-100"
@@ -33,7 +34,7 @@
           : 'bg-white border-gray-300'"
       >
         <div
-          v-for="option in options"
+          v-for="option in (props.options || [])"
           :key="option.value"
           @click="selectOption(option)"
             :class="[
@@ -51,11 +52,36 @@
         </div>
       </div>
     </Transition>
+    <div
+      v-else-if="isOpen"
+      class="absolute z-50 mt-1 w-full border rounded-lg shadow-lg max-h-60 overflow-auto"
+      :class="computedDarkMode 
+        ? 'bg-slate-700 border-slate-600' 
+        : 'bg-white border-gray-300'"
+    >
+      <div
+        v-for="option in (props.options || [])"
+        :key="option.value"
+        @click="selectOption(option)"
+          :class="[
+          'px-4 py-2 cursor-pointer text-sm transition-colors',
+          option.value === modelValue
+            ? (computedDarkMode 
+              ? 'bg-indigo-900/20 text-indigo-400 font-medium' 
+              : 'bg-indigo-50 text-indigo-600 font-medium')
+            : (computedDarkMode 
+              ? 'text-gray-100 hover:bg-slate-600' 
+              : 'text-gray-900 hover:bg-gray-50')
+        ]"
+      >
+        {{ option.label }}
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 
 const props = defineProps({
   modelValue: {
@@ -64,8 +90,10 @@ const props = defineProps({
   },
   options: {
     type: Array,
-    required: true,
+    required: false,
+    default: () => [],
     validator: (options) => {
+      if (!options || !Array.isArray(options)) return true;
       return options.every(opt => opt.value !== undefined && opt.label !== undefined);
     }
   },
@@ -83,6 +111,7 @@ const emit = defineEmits(['update:modelValue']);
 
 const isOpen = ref(false);
 const dropdownRef = ref(null);
+const isMounted = ref(false);
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 
 // Use prop if provided, otherwise auto-detect
@@ -91,11 +120,15 @@ const computedDarkMode = computed(() => {
 });
 
 const selectedLabel = computed(() => {
+  if (!props.options || !Array.isArray(props.options) || props.options.length === 0) {
+    return '';
+  }
   const option = props.options.find(opt => opt.value === props.modelValue);
   return option ? option.label : '';
 });
 
 const toggleDropdown = () => {
+  if (!isMounted.value) return;
   isOpen.value = !isOpen.value;
 };
 
@@ -105,6 +138,7 @@ const selectOption = (option) => {
 };
 
 const handleClickOutside = (event) => {
+  if (!isMounted.value || !dropdownRef.value) return;
   if (dropdownRef.value && !dropdownRef.value.contains(event.target)) {
     isOpen.value = false;
   }
@@ -113,7 +147,10 @@ const handleClickOutside = (event) => {
 let darkModeObserver = null;
 let darkModeInterval = null;
 
-onMounted(() => {
+onMounted(async () => {
+  await nextTick();
+  isMounted.value = true;
+  
   document.addEventListener('click', handleClickOutside);
   
   darkModeObserver = new MutationObserver(() => {

@@ -266,6 +266,49 @@ export class DesignSystemController {
     return this.designSystemService.exportRulesForLinter(format);
   }
 
+  // Info Banner endpoints
+  @Get('banners')
+  getBanners(@Query('active') active?: string) {
+    if (active === 'true') {
+      return this.designSystemService.getActiveBanners();
+    }
+    return this.designSystemService.getAllBanners();
+  }
+
+  @Get('banners/:id')
+  getBanner(@Param('id') id: string) {
+    return this.designSystemService.getBanner(id);
+  }
+
+  @Post('banners')
+  createBanner(
+    @Body() body: { title: string; message: string; type: 'info' | 'warning' | 'error' | 'success'; expiresAt?: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.createBanner(body);
+  }
+
+  @Put('banners/:id')
+  updateBanner(
+    @Param('id') id: string,
+    @Body() body: { title?: string; message?: string; type?: 'info' | 'warning' | 'error' | 'success'; isActive?: boolean; expiresAt?: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.updateBanner(id, body);
+  }
+
+  @Delete('banners/:id')
+  deleteBanner(
+    @Param('id') id: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    this.designSystemService.deleteBanner(id);
+    return { success: true };
+  }
+
   // Component Request endpoints
   @Get('requests')
   getRequests(

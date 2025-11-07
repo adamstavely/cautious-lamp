@@ -560,7 +560,7 @@ const componentItems = [
 const adminItems = [
   { text: 'Overview', link: '/admin', icon: 'admin_panel_settings' },
   { text: 'System Health', link: '/admin/health', icon: 'space_dashboard' },
-  { text: 'Governance', link: '/admin/governance', icon: 'admin_panel_settings' }
+  { text: 'Governance', link: '/admin/governance', icon: 'gavel' }
 ];
 
 const gettingStartedItems = [

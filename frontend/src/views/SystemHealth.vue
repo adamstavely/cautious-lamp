@@ -23,6 +23,27 @@
                   Monitor your design system's health, track component adoption, and identify areas for improvement.
                 </p>
               </div>
+              <div class="hidden md:block flex-shrink-0">
+                <div class="w-64 h-64 relative">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                      <linearGradient id="healthGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <!-- Dashboard/grid representing system health -->
+                    <rect x="35" y="40" width="35" height="35" rx="4" fill="url(#healthGradient)" opacity="0.4"/>
+                    <rect x="82.5" y="40" width="35" height="35" rx="4" fill="url(#healthGradient)" opacity="0.6"/>
+                    <rect x="130" y="40" width="35" height="35" rx="4" fill="url(#healthGradient)" opacity="0.5"/>
+                    <rect x="35" y="90" width="35" height="35" rx="4" fill="url(#healthGradient)" opacity="0.3"/>
+                    <rect x="82.5" y="90" width="35" height="35" rx="4" fill="url(#healthGradient)" opacity="0.5"/>
+                    <rect x="130" y="90" width="35" height="35" rx="4" fill="url(#healthGradient)" opacity="0.4"/>
+                    <!-- Heartbeat/pulse line representing health monitoring -->
+                    <path d="M 30 150 Q 50 140, 70 150 T 110 150 T 150 150 T 170 150" fill="none" stroke="url(#healthGradient)" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>
