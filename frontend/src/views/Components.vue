@@ -185,7 +185,7 @@
             <!-- Component Card 6: Data Display -->
             <router-link 
               to="/components/data-display" 
-              class="group rounded-2xl p-6 border transition-all relative"
+              class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
@@ -204,9 +204,54 @@
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Tables, lists, and data visualization components.
               </p>
-              <span class="material-symbols-outlined absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
-                chevron_right
-              </span>
+            </router-link>
+
+            <!-- Component Card 7: Component Playground -->
+            <router-link 
+              to="/components/playground" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">code</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Component Playground
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Experiment with components in real-time and export code.
+              </p>
+            </router-link>
+
+            <!-- Component Card 8: Component Versions -->
+            <router-link 
+              to="/components/versions" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">history</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Component Versions
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Track versions, changelogs, and breaking changes.
+              </p>
             </router-link>
           </div>
         </div>

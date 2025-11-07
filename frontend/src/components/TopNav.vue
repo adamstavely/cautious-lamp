@@ -56,7 +56,7 @@
       <!-- Center Search Bar -->
       <div class="flex-1 flex justify-center">
         <div class="w-full max-w-2xl mx-8">
-          <div class="relative">
+          <div class="relative" ref="searchContainer">
             <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-xl pointer-events-none"
               :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
               aria-hidden="true"
@@ -64,14 +64,102 @@
               search
             </span>
             <input
+              v-model="searchQuery"
               type="search"
               placeholder="Search design system..."
+              @focus="showSearchResults = true"
+              @input="performSearch"
+              @keydown.escape="closeSearch"
+              @keydown.down.prevent="navigateSearchResults(1)"
+              @keydown.up.prevent="navigateSearchResults(-1)"
+              @keydown.enter.prevent="selectSearchResult"
               class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-colors"
               :class="isDarkMode 
                 ? 'border-slate-600 bg-slate-700 text-gray-100 placeholder-gray-400' 
                 : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'"
               aria-label="Search design system"
+              aria-expanded="showSearchResults"
+              aria-haspopup="listbox"
             />
+            
+            <!-- Search Results Dropdown -->
+            <div
+              v-if="showSearchResults && (searchQuery.trim() || filteredSearchResults.length > 0)"
+              class="absolute left-0 right-0 top-full mt-2 max-h-[500px] overflow-hidden rounded-lg shadow-xl border z-50"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-slate-700' 
+                : 'bg-white border-gray-200'"
+              role="listbox"
+              aria-label="Search results"
+            >
+              <!-- Results List -->
+              <div class="overflow-y-auto max-h-[500px]">
+                <div v-if="filteredSearchResults.length === 0 && searchQuery.trim()" class="p-8 text-center">
+                  <span class="material-symbols-outlined text-5xl mb-3" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
+                    search_off
+                  </span>
+                  <p class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    No results found
+                  </p>
+                  <p class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                    Try a different search term
+                  </p>
+                </div>
+                
+                <div v-else-if="filteredSearchResults.length > 0" class="divide-y" :class="isDarkMode ? 'divide-slate-700' : 'divide-gray-200'">
+                  <router-link
+                    v-for="(result, index) in filteredSearchResults"
+                    :key="result.id"
+                    :to="result.path"
+                    @click="closeSearch"
+                    class="block px-4 py-3 transition-colors"
+                    :class="[
+                      selectedSearchIndex === index
+                        ? (isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-50')
+                        : (isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50')
+                    ]"
+                    role="option"
+                    :aria-selected="selectedSearchIndex === index"
+                  >
+                    <div class="flex items-start gap-3">
+                      <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                        :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'"
+                      >
+                        <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                          {{ result.icon }}
+                        </span>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                          <h4 class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                            {{ result.title }}
+                          </h4>
+                          <span 
+                            class="px-2 py-0.5 rounded text-xs font-medium"
+                            :class="getCategoryBadgeClass(result.category)"
+                          >
+                            {{ result.category }}
+                          </span>
+                        </div>
+                        <p class="text-xs mb-1 line-clamp-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                          {{ result.description }}
+                        </p>
+                        <p class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                          {{ result.path }}
+                        </p>
+                      </div>
+                    </div>
+                  </router-link>
+                </div>
+                
+                <!-- Empty State (when no query) -->
+                <div v-else class="p-6">
+                  <p class="text-sm text-center" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    Start typing to search...
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -90,6 +178,33 @@
         >
           <span class="material-symbols-outlined flex items-center justify-center" aria-hidden="true">live_help</span>
         </button>
+
+        <!-- System Health -->
+        <router-link
+          to="/health"
+          class="relative flex items-center justify-center p-2 rounded-lg transition-colors"
+          :class="isDarkMode 
+            ? 'text-gray-300 hover:text-indigo-400 hover:bg-indigo-900/20' 
+            : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'"
+          title="System Health"
+          aria-label="View system health dashboard"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            width="24" 
+            height="24" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            stroke-width="2" 
+            stroke-linecap="round" 
+            stroke-linejoin="round"
+            class="flex items-center justify-center"
+            aria-hidden="true"
+          >
+            <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
+          </svg>
+        </router-link>
 
         <!-- Notifications -->
         <div class="relative" ref="notificationsContainer">
@@ -230,12 +345,112 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { mockAPI, isMockMode, mockReviews } from '../mockData.js';
 
 const router = useRouter();
 const notificationsContainer = ref(null);
+const searchContainer = ref(null);
+const searchQuery = ref('');
+const showSearchResults = ref(false);
+const selectedSearchIndex = ref(-1);
+
+// Search index - in a real app, this would come from an API or be generated
+const searchIndex = [
+  { id: 'button', title: 'Button', description: 'Primary, secondary, and tertiary button variants with different sizes and states', category: 'Components', path: '/components/buttons', icon: 'smart_button', tags: ['interactive', 'form', 'action'] },
+  { id: 'component-status', title: 'Component Status', description: 'Track component development status and availability', category: 'Components', path: '/components/status', icon: 'check_circle', tags: ['status', 'tracking'] },
+  { id: 'component-playground', title: 'Component Playground', description: 'Experiment with components in real-time and export code', category: 'Components', path: '/components/playground', icon: 'code', tags: ['playground', 'code'] },
+  { id: 'component-versions', title: 'Component Versions', description: 'Track versions, changelogs, and breaking changes', category: 'Components', path: '/components/versions', icon: 'history', tags: ['version', 'changelog'] },
+  { id: 'forms', title: 'Forms', description: 'Input fields, selects, checkboxes, and form controls', category: 'Components', path: '/components/forms', icon: 'description', tags: ['form', 'input', 'validation'] },
+  { id: 'cards', title: 'Cards', description: 'Card components for displaying content and actions', category: 'Components', path: '/components/cards', icon: 'view_module', tags: ['layout', 'content'] },
+  { id: 'navigation', title: 'Navigation', description: 'Menus, breadcrumbs, tabs, and navigation components', category: 'Components', path: '/components/navigation', icon: 'navigation', tags: ['navigation', 'menu'] },
+  { id: 'data-display', title: 'Data Display', description: 'Tables, lists, and data visualization components', category: 'Components', path: '/components/data-display', icon: 'table_chart', tags: ['data', 'table', 'list'] },
+  { id: 'token-studio', title: 'Token Studio', description: 'Create and manage design tokens with Style Dictionary', category: 'Tokens', path: '/tokens/studio', icon: 'tune', tags: ['tokens', 'design', 'style'] },
+  { id: 'style-library', title: 'Style Library', description: 'View, edit, download, and retire style dictionaries', category: 'Tokens', path: '/tokens/library', icon: 'library_books', tags: ['tokens', 'library'] },
+  { id: 'pattern-navigation', title: 'Navigation Pattern', description: 'Navigation patterns and best practices', category: 'Patterns', path: '/patterns/navigation', icon: 'navigation', tags: ['pattern', 'navigation'] },
+  { id: 'pattern-layout', title: 'Layout Pattern', description: 'Grid systems, containers, and responsive layouts', category: 'Patterns', path: '/patterns/layout', icon: 'view_quilt', tags: ['pattern', 'layout'] },
+  { id: 'pattern-forms', title: 'Form Pattern', description: 'Form patterns and validation guidelines', category: 'Patterns', path: '/patterns/forms', icon: 'description', tags: ['pattern', 'form'] },
+  { id: 'pattern-feedback', title: 'Feedback Pattern', description: 'User feedback patterns and notifications', category: 'Patterns', path: '/patterns/feedback', icon: 'feedback', tags: ['pattern', 'feedback'] },
+  { id: 'font-library', title: 'Font Library', description: 'Browse and preview hundreds of Google Fonts', category: 'Fonts', path: '/fonts/library', icon: 'library_books', tags: ['font', 'typography'] },
+  { id: 'font-scale', title: 'Font Scale', description: 'Typography scale and sizing system', category: 'Fonts', path: '/fonts/scale', icon: 'format_line_spacing', tags: ['font', 'scale', 'typography'] },
+  { id: 'font-stack', title: 'Font Stack', description: 'Font fallback stacks and combinations', category: 'Fonts', path: '/fonts/stack', icon: 'font_download', tags: ['font', 'stack'] },
+  { id: 'font-subsetting', title: 'Font Subsetting', description: 'Optimize fonts by subsetting character sets', category: 'Fonts', path: '/fonts/subsetting', icon: 'content_cut', tags: ['font', 'optimization'] },
+  { id: 'icon-library', title: 'Icon Library', description: 'Upload and manage icon sets from Material and Lucide', category: 'Design Assets', path: '/design-assets/icons', icon: 'star', tags: ['icons', 'assets'] },
+  { id: 'color-converter', title: 'Color Converter', description: 'Convert colors between different formats (HEX, RGB, HSL, etc.)', category: 'Tools', path: '/tools/color-converter', icon: 'palette', tags: ['color', 'converter', 'tool'] },
+  { id: 'color-contrast', title: 'Color Contrast Checker', description: 'Check color contrast ratios for accessibility', category: 'Tools', path: '/tools/color-contrast', icon: 'contrast', tags: ['color', 'accessibility', 'contrast'] },
+  { id: 'gradient-generator', title: 'Gradient Generator', description: 'Create beautiful gradients with custom stops and directions', category: 'Tools', path: '/tools/gradient-generator', icon: 'gradient', tags: ['gradient', 'color', 'tool'] },
+  { id: 'lorem-ipsum', title: 'Lorem Ipsum Generator', description: 'Generate placeholder text with various options', category: 'Tools', path: '/tools/lorem-ipsum', icon: 'text_fields', tags: ['text', 'placeholder', 'tool'] },
+  { id: 'seo-tagging', title: 'SEO Tagging Generator', description: 'Generate SEO meta tags for your pages', category: 'Tools', path: '/tools/seo-tagging', icon: 'search', tags: ['seo', 'meta', 'tool'] },
+  { id: 'color-scale', title: 'Color Scale Generator', description: 'Generate color scales with accessibility checks', category: 'Tools', path: '/tools/color-scale', icon: 'palette', tags: ['color', 'scale', 'accessibility'] },
+  { id: 'system-health', title: 'System Health', description: 'Monitor your design system\'s health, track adoption, and identify improvements', category: 'Tools', path: '/health', icon: 'space_dashboard', tags: ['health', 'metrics', 'analytics'] },
+  { id: 'guidelines-colors', title: 'Color Guidelines', description: 'Color system and usage guidelines', category: 'Guidelines', path: '/guidelines/colors', icon: 'palette', tags: ['guidelines', 'color'] },
+  { id: 'guidelines-typography', title: 'Typography Guidelines', description: 'Typography system and best practices', category: 'Guidelines', path: '/guidelines/typography', icon: 'text_fields', tags: ['guidelines', 'typography'] },
+  { id: 'guidelines-spacing', title: 'Spacing Guidelines', description: 'Spacing system and layout guidelines', category: 'Guidelines', path: '/guidelines/spacing', icon: 'space_dashboard', tags: ['guidelines', 'spacing'] },
+];
+
+const filteredSearchResults = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return [];
+  }
+  
+  const query = searchQuery.value.toLowerCase();
+  return searchIndex.filter(item => {
+    return item.title.toLowerCase().includes(query) ||
+           item.description.toLowerCase().includes(query) ||
+           item.tags.some(tag => tag.toLowerCase().includes(query)) ||
+           item.category.toLowerCase().includes(query);
+  }).slice(0, 8); // Limit to 8 results
+});
+
+const getCategoryBadgeClass = (category) => {
+  const classes = {
+    'Components': isDarkMode.value ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700',
+    'Tokens': isDarkMode.value ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-700',
+    'Patterns': isDarkMode.value ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700',
+    'Guidelines': isDarkMode.value ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-700',
+    'Fonts': isDarkMode.value ? 'bg-orange-900/30 text-orange-300' : 'bg-orange-100 text-orange-700',
+    'Tools': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300' : 'bg-yellow-100 text-yellow-700',
+    'Design Assets': isDarkMode.value ? 'bg-pink-900/30 text-pink-300' : 'bg-pink-100 text-pink-700',
+  };
+  return classes[category] || (isDarkMode.value ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700');
+};
+
+const performSearch = () => {
+  selectedSearchIndex.value = -1;
+  if (searchQuery.value.trim()) {
+    showSearchResults.value = true;
+  }
+};
+
+const closeSearch = () => {
+  showSearchResults.value = false;
+  selectedSearchIndex.value = -1;
+};
+
+const navigateSearchResults = (direction) => {
+  if (filteredSearchResults.value.length === 0) return;
+  
+  selectedSearchIndex.value += direction;
+  if (selectedSearchIndex.value < 0) {
+    selectedSearchIndex.value = filteredSearchResults.value.length - 1;
+  } else if (selectedSearchIndex.value >= filteredSearchResults.value.length) {
+    selectedSearchIndex.value = 0;
+  }
+};
+
+const selectSearchResult = () => {
+  if (selectedSearchIndex.value >= 0 && selectedSearchIndex.value < filteredSearchResults.value.length) {
+    const result = filteredSearchResults.value[selectedSearchIndex.value];
+    router.push(result.path);
+    closeSearch();
+    searchQuery.value = '';
+  } else if (filteredSearchResults.value.length > 0) {
+    router.push(filteredSearchResults.value[0].path);
+    closeSearch();
+    searchQuery.value = '';
+  }
+};
 
 // Check if dark mode is active - make it reactive
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
@@ -269,6 +484,9 @@ const closeNotifications = () => {
 const handleClickOutside = (event) => {
   if (showNotifications.value && notificationsContainer.value && !notificationsContainer.value.contains(event.target)) {
     closeNotifications();
+  }
+  if (showSearchResults.value && searchContainer.value && !searchContainer.value.contains(event.target)) {
+    closeSearch();
   }
 };
 

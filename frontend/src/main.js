@@ -138,6 +138,22 @@ const router = createRouter({
       component: () => import('./views/ComponentButton.vue'),
     },
     {
+      path: '/components/playground',
+      component: () => import('./views/ComponentPlayground.vue'),
+    },
+    {
+      path: '/components/versions',
+      component: () => import('./views/ComponentVersions.vue'),
+    },
+    {
+      path: '/search',
+      redirect: '/',
+    },
+    {
+      path: '/health',
+      component: () => import('./views/SystemHealth.vue'),
+    },
+    {
       path: '/tokens',
       component: () => import('./views/Tokens.vue'),
     },
