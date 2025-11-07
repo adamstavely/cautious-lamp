@@ -3,9 +3,11 @@
     @click="toggleChat"
     class="fixed bottom-6 right-6 z-50 w-14 h-14 bg-indigo-600 dark:bg-indigo-500 text-white rounded-full shadow-lg hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-all duration-200 flex items-center justify-center group hover:scale-110"
     :class="{ 'rotate-45': isChatOpen }"
-    title="Chat with Eero"
+    :title="isChatOpen ? 'Close chat' : 'Chat with Eero'"
+    :aria-label="isChatOpen ? 'Close chat with Eero' : 'Open chat with Eero'"
+    :aria-expanded="isChatOpen"
   >
-    <span class="material-symbols-outlined text-2xl transition-transform" :class="{ 'rotate-45': isChatOpen }">
+    <span class="material-symbols-outlined text-2xl transition-transform" :class="{ 'rotate-45': isChatOpen }" aria-hidden="true">
       {{ isChatOpen ? 'close' : 'psychology' }}
     </span>
   </button>

@@ -1,5 +1,5 @@
 <template>
-  <nav class="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 shadow-sm relative">
+  <nav class="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 shadow-sm relative" role="navigation" aria-label="Top navigation">
     <div class="flex items-center h-16">
       <!-- Left spacer for sidebar -->
       <div class="w-24 flex-shrink-0"></div>
@@ -17,6 +17,7 @@
           fill="none" 
           xmlns="http://www.w3.org/2000/svg"
           class="transition-transform group-hover:scale-110"
+          aria-hidden="true"
         >
           <defs>
             <linearGradient id="caretGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -58,16 +59,18 @@
           <div class="relative">
             <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-xl pointer-events-none"
               :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
+              aria-hidden="true"
             >
               search
             </span>
             <input
-              type="text"
+              type="search"
               placeholder="Search design system..."
               class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-colors"
               :class="isDarkMode 
                 ? 'border-slate-600 bg-slate-700 text-gray-100 placeholder-gray-400' 
                 : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'"
+              aria-label="Search design system"
             />
           </div>
         </div>
@@ -83,8 +86,9 @@
             ? 'text-gray-300 hover:text-indigo-400 hover:bg-indigo-900/20' 
             : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'"
           title="Live Chat"
+          aria-label="Open live chat with Eero"
         >
-          <span class="material-symbols-outlined flex items-center justify-center">live_help</span>
+          <span class="material-symbols-outlined flex items-center justify-center" aria-hidden="true">live_help</span>
         </button>
 
         <!-- Notifications -->
@@ -96,12 +100,16 @@
               ? 'text-gray-300 hover:text-indigo-400 hover:bg-indigo-900/20' 
               : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'"
             title="Notifications"
+            :aria-label="`Notifications${recentActivity.length > 0 ? `, ${recentActivity.length} unread` : ''}`"
+            :aria-expanded="showNotifications"
+            aria-haspopup="true"
           >
-            <span class="material-symbols-outlined flex items-center justify-center">notifications</span>
+            <span class="material-symbols-outlined flex items-center justify-center" aria-hidden="true">notifications</span>
             <span 
               v-if="recentActivity.length > 0"
               class="absolute top-1 right-1 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-xs font-semibold px-1"
               :class="isDarkMode ? 'bg-indigo-400 text-indigo-900' : 'bg-indigo-600 text-white'"
+              aria-hidden="true"
             >
               {{ recentActivity.length > 9 ? '9+' : recentActivity.length }}
             </span>
@@ -114,6 +122,8 @@
             :class="isDarkMode 
               ? 'bg-slate-900 border-slate-700' 
               : 'bg-white border-gray-200'"
+            role="menu"
+            aria-label="Recent activity notifications"
           >
             <!-- Header -->
             <div class="px-4 py-3 border-b flex items-center justify-between"
@@ -192,9 +202,12 @@
           class="flex items-center gap-2 p-1 rounded-lg transition-colors"
           :class="isDarkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'"
           title="User Menu"
+          aria-label="User menu"
+          aria-haspopup="true"
         >
           <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold"
             :class="isDarkMode ? 'bg-indigo-500' : 'bg-indigo-600'"
+            aria-hidden="true"
           >
             A
           </div>
@@ -207,8 +220,9 @@
             ? 'text-gray-300 hover:text-indigo-400 hover:bg-indigo-900/20' 
             : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'"
           title="Switch App"
+          aria-label="Switch application"
         >
-          <span class="material-symbols-outlined flex items-center justify-center">apps</span>
+          <span class="material-symbols-outlined flex items-center justify-center" aria-hidden="true">apps</span>
         </button>
       </div>
     </div>

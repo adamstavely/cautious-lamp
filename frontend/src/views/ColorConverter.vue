@@ -79,9 +79,10 @@
                   
                   <!-- Color Input -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Color</label>
+                    <label for="color-input" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Color</label>
                     <div class="flex items-center gap-3 mb-4">
                       <input
+                        id="color-input"
                         v-model="inputColor"
                         type="text"
                         @input="convertColor"
@@ -90,6 +91,7 @@
                         :class="isDarkMode 
                           ? 'border-gray-600 bg-slate-700 text-white' 
                           : 'border-gray-300 bg-white text-gray-900'"
+                        aria-label="Color input in hex, RGB, HSL, or other format"
                       />
                       <button
                         @click="openColorPicker($event)"
@@ -99,6 +101,7 @@
                           : 'border-gray-300 hover:border-indigo-500'"
                         :style="{ backgroundColor: currentColor }"
                         title="Pick color"
+                        aria-label="Open color picker"
                       ></button>
                     </div>
                     
@@ -107,6 +110,8 @@
                       class="w-full h-32 rounded-lg border-2"
                       :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
                       :style="{ backgroundColor: currentColor }"
+                      role="img"
+                      :aria-label="`Color preview: ${currentColor}`"
                     ></div>
                   </div>
                 </div>
@@ -182,9 +187,10 @@
                                 :class="isDarkMode 
                                   ? 'text-gray-400 hover:text-indigo-400' 
                                   : 'text-gray-400 hover:text-indigo-600'"
-                                title="Copy"
+                                :title="`Copy ${conversion.name} value`"
+                                :aria-label="`Copy ${conversion.name} value: ${conversion.string}`"
                               >
-                                <span class="material-symbols-outlined text-sm">content_copy</span>
+                                <span class="material-symbols-outlined text-sm" aria-hidden="true">content_copy</span>
                               </button>
                             </div>
                           </td>
@@ -225,6 +231,7 @@
             Enter colors separated by commas, newlines, or spaces. One color per line recommended.
           </p>
           <textarea
+            id="bulk-color-input"
             v-model="bulkInput"
             rows="10"
             placeholder="#7AC600&#10;#FF5733&#10;rgb(122, 198, 0)"
@@ -232,7 +239,10 @@
             :class="isDarkMode 
               ? 'border-gray-600 bg-slate-700 text-white' 
               : 'border-gray-300 bg-white text-gray-900'"
+            aria-label="Bulk color input - enter multiple colors separated by commas, newlines, or spaces"
+            aria-describedby="bulk-input-description"
           ></textarea>
+          <p id="bulk-input-description" class="sr-only">Enter colors separated by commas, newlines, or spaces. One color per line recommended.</p>
           <div class="mt-4 flex gap-2">
             <button
               @click="convertBulk"
@@ -479,26 +489,38 @@ const openColorPicker = (event) => {
   if (event) {
     event.stopPropagation();
     const rect = event.target.getBoundingClientRect();
-    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     
     const pickerWidth = 300;
     const pickerHeight = 550;
     const padding = 16;
     
-    let left = rect.right + scrollLeft + padding;
-    let top = rect.top + scrollTop;
+    // Calculate position relative to viewport (for fixed positioning)
+    let left = rect.right + padding;
+    let top = rect.top;
     
-    if (left + pickerWidth > window.innerWidth + scrollLeft) {
-      left = rect.left + scrollLeft - pickerWidth - padding;
+    // Check if picker would go off right edge
+    if (left + pickerWidth > window.innerWidth) {
+      left = rect.left - pickerWidth - padding;
     }
     
-    if (top + pickerHeight > window.innerHeight + scrollTop) {
-      top = rect.top + scrollTop - pickerHeight - padding;
+    // Check if picker would go off left edge
+    if (left < padding) {
+      left = padding;
     }
     
-    left = Math.max(padding, Math.min(left, window.innerWidth + scrollLeft - pickerWidth - padding));
-    top = Math.max(padding, Math.min(top, window.innerHeight + scrollTop - pickerHeight - padding));
+    // Check if picker would go off bottom edge
+    if (top + pickerHeight > window.innerHeight - padding) {
+      top = window.innerHeight - pickerHeight - padding;
+    }
+    
+    // Check if picker would go off top edge
+    if (top < padding) {
+      top = padding;
+    }
+    
+    // Ensure picker stays within viewport bounds
+    left = Math.max(padding, Math.min(left, window.innerWidth - pickerWidth - padding));
+    top = Math.max(padding, Math.min(top, window.innerHeight - pickerHeight - padding));
     
     pickerPosition.value = { left, top };
   }

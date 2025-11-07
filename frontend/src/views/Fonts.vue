@@ -77,13 +77,16 @@
                 <span class="material-symbols-outlined text-5xl">library_books</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Font Library
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Browse and preview hundreds of Google Fonts.
+              </p>
             </router-link>
 
             <!-- Font Tool Card 2: Font Scale -->
@@ -98,13 +101,16 @@
                 <span class="material-symbols-outlined text-5xl">format_line_spacing</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Font Scale
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Create harmonious typography scales with ratios.
+              </p>
             </router-link>
 
             <!-- Font Tool Card 3: Font Stack -->
@@ -119,13 +125,16 @@
                 <span class="material-symbols-outlined text-5xl">layers</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Font Stack
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Build optimal font stacks with fallback fonts.
+              </p>
             </router-link>
 
             <!-- Font Tool Card 4: Font Subsetting -->
@@ -140,13 +149,16 @@
                 <span class="material-symbols-outlined text-5xl">font_download</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Font Subsetting
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Optimize font files by including only needed characters.
+              </p>
               <span class="material-symbols-outlined absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
                 chevron_right
               </span>

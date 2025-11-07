@@ -315,6 +315,10 @@
       v-if="showAddTokenModal || editingToken"
       class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
       @click.self="closeTokenModal"
+      @keydown.escape="closeTokenModal"
+      role="dialog"
+      aria-modal="true"
+      :aria-labelledby="editingToken ? 'edit-token-title' : 'add-token-title'"
     >
       <div 
         class="rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
@@ -325,15 +329,16 @@
           :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
         >
           <div class="flex items-center justify-between">
-            <h3 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <h3 :id="editingToken ? 'edit-token-title' : 'add-token-title'" class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
               {{ editingToken ? 'Edit Token' : 'Add Token' }}
             </h3>
             <button
               @click="closeTokenModal"
               class="p-2 rounded-lg transition-colors"
               :class="isDarkMode ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
+              aria-label="Close modal"
             >
-              <span class="material-symbols-outlined">close</span>
+              <span class="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
           </div>
         </div>
@@ -341,30 +346,44 @@
           <div class="space-y-4">
             <!-- Token Name -->
             <div>
-              <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Token Name <span class="text-red-500">*</span>
+              <label for="token-name-input" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                Token Name <span class="text-red-500" aria-label="required">*</span>
               </label>
               <input
+                id="token-name-input"
                 v-model="tokenForm.name"
                 type="text"
                 placeholder="e.g., color.primary.500"
+                @blur="validateTokenName"
                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono text-sm"
-                :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
+                :class="[
+                  isDarkMode 
+                    ? (tokenFormErrors.name ? 'border-red-500 bg-slate-700 text-white' : 'border-gray-600 bg-slate-700 text-white')
+                    : (tokenFormErrors.name ? 'border-red-500 bg-white text-gray-900' : 'border-gray-300 bg-white text-gray-900')
+                ]"
+                aria-required="true"
+                :aria-invalid="!!tokenFormErrors.name"
+                :aria-describedby="tokenFormErrors.name ? 'token-name-error' : 'token-name-hint'"
               />
-              <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+              <p v-if="tokenFormErrors.name" id="token-name-error" class="text-xs mt-1 text-red-500" role="alert">
+                {{ tokenFormErrors.name }}
+              </p>
+              <p v-else id="token-name-hint" class="text-xs mt-1 sr-only" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
                 Use dot notation (e.g., color.primary.500)
               </p>
             </div>
 
             <!-- Token Type -->
             <div>
-              <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Type <span class="text-red-500">*</span>
+              <label for="token-type-select" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                Type <span class="text-red-500" aria-label="required">*</span>
               </label>
               <select
+                id="token-type-select"
                 v-model="tokenForm.$type"
                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                 :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
+                aria-required="true"
               >
                 <option value="color">Color</option>
                 <option value="dimension">Dimension</option>
@@ -379,41 +398,57 @@
 
             <!-- Token Value -->
             <div>
-              <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Value <span class="text-red-500">*</span>
+              <label for="token-value-input" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                Value <span class="text-red-500" aria-label="required">*</span>
               </label>
               <div class="flex items-center gap-3">
                 <input
                   v-if="tokenForm.$type === 'color'"
+                  id="token-value-color"
                   v-model="tokenForm.$value"
                   type="color"
                   class="w-16 h-12 rounded border-2 cursor-pointer"
                   :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
+                  aria-label="Color picker for token value"
                 />
                 <input
+                  id="token-value-input"
                   v-model="tokenForm.$value"
                   type="text"
                   :placeholder="getValuePlaceholder(tokenForm.$type)"
+                  @blur="validateTokenValue"
                   class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono text-sm"
-                  :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
+                  :class="[
+                    isDarkMode 
+                      ? (tokenFormErrors.value ? 'border-red-500 bg-slate-700 text-white' : 'border-gray-600 bg-slate-700 text-white')
+                      : (tokenFormErrors.value ? 'border-red-500 bg-white text-gray-900' : 'border-gray-300 bg-white text-gray-900')
+                  ]"
+                  aria-required="true"
+                  :aria-invalid="!!tokenFormErrors.value"
+                  :aria-describedby="tokenFormErrors.value ? `token-value-error-${tokenForm.$type}` : `token-value-hint-${tokenForm.$type}`"
                 />
               </div>
-              <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+              <p v-if="tokenFormErrors.value" :id="`token-value-error-${tokenForm.$type}`" class="text-xs mt-1 text-red-500" role="alert">
+                {{ tokenFormErrors.value }}
+              </p>
+              <p v-else :id="`token-value-hint-${tokenForm.$type}`" class="text-xs mt-1 sr-only" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
                 {{ getValueHint(tokenForm.$type) }}
               </p>
             </div>
 
             <!-- Token Description -->
             <div>
-              <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+              <label for="token-description-textarea" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                 Description
               </label>
               <textarea
+                id="token-description-textarea"
                 v-model="tokenForm.$description"
                 rows="3"
                 placeholder="Optional description for this token"
                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
                 :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
+                aria-label="Optional description for this token"
               ></textarea>
             </div>
 
@@ -466,6 +501,10 @@
       v-if="showAddCategoryModal"
       class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
       @click.self="showAddCategoryModal = false"
+      @keydown.escape="showAddCategoryModal = false"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-category-title"
     >
       <div 
         class="rounded-lg shadow-xl max-w-md w-full"
@@ -476,31 +515,44 @@
           :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
         >
           <div class="flex items-center justify-between">
-            <h3 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <h3 id="add-category-title" class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
               Add Category
             </h3>
             <button
               @click="showAddCategoryModal = false"
               class="p-2 rounded-lg transition-colors"
               :class="isDarkMode ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
+              aria-label="Close modal"
             >
-              <span class="material-symbols-outlined">close</span>
+              <span class="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
           </div>
         </div>
         <div class="p-6">
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Category Name
+              <label for="category-name-input" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                Category Name <span class="text-red-500" aria-label="required">*</span>
               </label>
               <input
+                id="category-name-input"
                 v-model="newCategoryName"
                 type="text"
                 placeholder="e.g., Border Radius"
+                @blur="validateCategoryName"
                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
+                :class="[
+                  isDarkMode 
+                    ? (categoryFormErrors.name ? 'border-red-500 bg-slate-700 text-white' : 'border-gray-600 bg-slate-700 text-white')
+                    : (categoryFormErrors.name ? 'border-red-500 bg-white text-gray-900' : 'border-gray-300 bg-white text-gray-900')
+                ]"
+                aria-required="true"
+                :aria-invalid="!!categoryFormErrors.name"
+                :aria-describedby="categoryFormErrors.name ? 'category-name-error' : undefined"
               />
+              <p v-if="categoryFormErrors.name" id="category-name-error" class="text-xs mt-1 text-red-500" role="alert">
+                {{ categoryFormErrors.name }}
+              </p>
             </div>
           </div>
           <div class="flex justify-end gap-3 mt-6">
@@ -528,6 +580,10 @@
       v-if="showSaveModal"
       class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
       @click.self="showSaveModal = false"
+      @keydown.escape="showSaveModal = false"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="save-library-title"
     >
       <div 
         class="rounded-lg shadow-xl max-w-md w-full"
@@ -538,37 +594,51 @@
           :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
         >
           <div class="flex items-center justify-between">
-            <h3 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <h3 id="save-library-title" class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
               Save to Style Library
             </h3>
             <button
               @click="showSaveModal = false"
               class="p-2 rounded-lg transition-colors"
               :class="isDarkMode ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
+              aria-label="Close modal"
             >
-              <span class="material-symbols-outlined">close</span>
+              <span class="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
           </div>
         </div>
         <div class="p-6">
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Dictionary Name <span class="text-red-500">*</span>
+              <label for="dictionary-name-input" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                Dictionary Name <span class="text-red-500" aria-label="required">*</span>
               </label>
               <input
+                id="dictionary-name-input"
                 v-model="saveDictionaryName"
                 type="text"
                 placeholder="e.g., Brand Colors 2024"
+                @blur="validateSaveDictionaryName"
                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
+                :class="[
+                  isDarkMode 
+                    ? (saveFormErrors.name ? 'border-red-500 bg-slate-700 text-white' : 'border-gray-600 bg-slate-700 text-white')
+                    : (saveFormErrors.name ? 'border-red-500 bg-white text-gray-900' : 'border-gray-300 bg-white text-gray-900')
+                ]"
+                aria-required="true"
+                :aria-invalid="!!saveFormErrors.name"
+                :aria-describedby="saveFormErrors.name ? 'dictionary-name-error' : undefined"
               />
+              <p v-if="saveFormErrors.name" id="dictionary-name-error" class="text-xs mt-1 text-red-500" role="alert">
+                {{ saveFormErrors.name }}
+              </p>
             </div>
             <div>
-              <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+              <label for="dictionary-description-textarea" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                 Description
               </label>
               <textarea
+                id="dictionary-description-textarea"
                 v-model="saveDictionaryDescription"
                 rows="3"
                 placeholder="Optional description for this style dictionary"
@@ -621,6 +691,21 @@ const newCategoryName = ref('');
 const saveDictionaryName = ref('');
 const saveDictionaryDescription = ref('');
 const isLoading = ref(true);
+
+// Form validation errors
+const tokenFormErrors = ref({
+  name: '',
+  type: '',
+  value: ''
+});
+
+const categoryFormErrors = ref({
+  name: ''
+});
+
+const saveFormErrors = ref({
+  name: ''
+});
 
 const categories = ref([
   { id: 'color', name: 'Colors', icon: 'palette' },
@@ -761,6 +846,43 @@ const getValueHint = (type) => {
   return hints[type] || '';
 };
 
+// Validation functions
+const validateTokenName = () => {
+  if (!tokenForm.value.name || tokenForm.value.name.trim() === '') {
+    tokenFormErrors.value.name = 'Token name is required';
+  } else if (!tokenForm.value.name.match(/^[a-zA-Z][a-zA-Z0-9._-]*$/)) {
+    tokenFormErrors.value.name = 'Token name must start with a letter and contain only letters, numbers, dots, underscores, or hyphens';
+  } else {
+    tokenFormErrors.value.name = '';
+  }
+};
+
+const validateTokenValue = () => {
+  if (!tokenForm.value.$value || tokenForm.value.$value.trim() === '') {
+    tokenFormErrors.value.value = 'Token value is required';
+  } else {
+    tokenFormErrors.value.value = '';
+  }
+};
+
+const validateCategoryName = () => {
+  if (!newCategoryName.value || newCategoryName.value.trim() === '') {
+    categoryFormErrors.value.name = 'Category name is required';
+  } else if (categories.value.some(c => c.name.toLowerCase() === newCategoryName.value.toLowerCase())) {
+    categoryFormErrors.value.name = 'A category with this name already exists';
+  } else {
+    categoryFormErrors.value.name = '';
+  }
+};
+
+const validateSaveDictionaryName = () => {
+  if (!saveDictionaryName.value || saveDictionaryName.value.trim() === '') {
+    saveFormErrors.value.name = 'Dictionary name is required';
+  } else {
+    saveFormErrors.value.name = '';
+  }
+};
+
 const editToken = (token) => {
   editingToken.value = token;
   tokenForm.value = {
@@ -785,7 +907,11 @@ const deleteToken = (tokenId) => {
 };
 
 const saveToken = () => {
-  if (!tokenForm.value.name || !tokenForm.value.$type || !tokenForm.value.$value) {
+  // Validate all fields
+  validateTokenName();
+  validateTokenValue();
+  
+  if (tokenFormErrors.value.name || tokenFormErrors.value.value || !tokenForm.value.name || !tokenForm.value.$type || !tokenForm.value.$value) {
     return;
   }
 
@@ -814,6 +940,8 @@ const saveToken = () => {
 const closeTokenModal = () => {
   showAddTokenModal.value = false;
   editingToken.value = null;
+  // Reset errors
+  tokenFormErrors.value = { name: '', type: '', value: '' };
   tokenForm.value = {
     name: '',
     category: '',
@@ -825,7 +953,8 @@ const closeTokenModal = () => {
 };
 
 const addCategory = () => {
-  if (!newCategoryName.value) return;
+  validateCategoryName();
+  if (categoryFormErrors.value.name || !newCategoryName.value) return;
   
   const newCategory = {
     id: newCategoryName.value.toLowerCase().replace(/\s+/g, '-'),
@@ -835,12 +964,14 @@ const addCategory = () => {
   
   categories.value.push(newCategory);
   newCategoryName.value = '';
+  categoryFormErrors.value.name = ''; // Reset errors
   showAddCategoryModal.value = false;
   saveCategoriesToStorage();
 };
 
 const saveToLibrary = () => {
-  if (!saveDictionaryName.value || tokens.value.length === 0) return;
+  validateSaveDictionaryName();
+  if (saveFormErrors.value.name || !saveDictionaryName.value || tokens.value.length === 0) return;
   
   const dictionaries = JSON.parse(localStorage.getItem('styleDictionaries') || '[]');
   

@@ -79,13 +79,16 @@
                 <span class="material-symbols-outlined text-5xl">star</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Icons
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Upload and manage icon sets from Material and Lucide.
+              </p>
             </router-link>
 
             <!-- Asset Card 2: Images -->
@@ -100,13 +103,16 @@
                 <span class="material-symbols-outlined text-5xl">image</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Images
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Organize and manage image assets for your projects.
+              </p>
             </a>
 
             <!-- Asset Card 3: Logos -->
@@ -121,13 +127,16 @@
                 <span class="material-symbols-outlined text-5xl">account_circle</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Logos
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Brand logos and identity assets in one place.
+              </p>
             </a>
 
             <!-- Asset Card 4: Illustrations -->
@@ -142,13 +151,16 @@
                 <span class="material-symbols-outlined text-5xl">draw</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Illustrations
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Curated illustration collections for your designs.
+              </p>
             </a>
 
             <!-- Asset Card 5: Patterns -->
@@ -163,13 +175,16 @@
                 <span class="material-symbols-outlined text-5xl">pattern</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Patterns
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Background patterns and texture assets.
+              </p>
               <span class="material-symbols-outlined absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
                 chevron_right
               </span>

@@ -76,13 +76,16 @@
                 <span class="material-symbols-outlined text-5xl">palette</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Colors
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Color palettes and semantic color tokens for your design system.
+              </p>
             </router-link>
 
             <!-- Token Card 2: Typography -->
@@ -97,13 +100,16 @@
                 <span class="material-symbols-outlined text-5xl">text_fields</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Typography
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Font families, sizes, weights, and line heights.
+              </p>
             </router-link>
 
             <!-- Token Card 3: Spacing -->
@@ -118,13 +124,16 @@
                 <span class="material-symbols-outlined text-5xl">space_dashboard</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Spacing
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Consistent spacing scale for margins and padding.
+              </p>
             </a>
 
             <!-- Token Card 4: Shadows -->
@@ -139,13 +148,16 @@
                 <span class="material-symbols-outlined text-5xl">layers</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Shadows
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Elevation and depth through shadow tokens.
+              </p>
             </a>
 
             <!-- Token Card 5: Borders -->
@@ -160,13 +172,16 @@
                 <span class="material-symbols-outlined text-5xl">border_style</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Borders
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Border width, style, and radius tokens.
+              </p>
               <span class="material-symbols-outlined absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
                 chevron_right
               </span>

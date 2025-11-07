@@ -76,13 +76,16 @@
                 <span class="material-symbols-outlined text-5xl">menu_book</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Guidelines
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Design principles and best practices for building consistent interfaces.
+              </p>
             </router-link>
 
             <!-- Components -->
@@ -97,13 +100,16 @@
                 <span class="material-symbols-outlined text-5xl">widgets</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Components
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Reusable UI components built with accessibility and consistency in mind.
+              </p>
             </router-link>
 
             <!-- Tokens -->
@@ -118,13 +124,16 @@
                 <span class="material-symbols-outlined text-5xl">style</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Tokens
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Design tokens for colors, spacing, typography, and more.
+              </p>
             </router-link>
 
             <!-- Patterns -->
@@ -139,13 +148,16 @@
                 <span class="material-symbols-outlined text-5xl">pattern</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Patterns
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Proven design patterns and reusable UI solutions.
+              </p>
             </router-link>
 
             <!-- Fonts -->
@@ -160,13 +172,16 @@
                 <span class="material-symbols-outlined text-5xl">text_fields</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Fonts
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Typography system with font libraries and scale tools.
+              </p>
               <span class="material-symbols-outlined absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
                 chevron_right
               </span>
@@ -187,9 +202,9 @@
             </div>
             
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-              <router-link to="/palette-builder" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">Palette Builder</h3>
-                <p class="text-white/80 text-sm">Create and manage color palettes with AI-powered suggestions and accessibility analysis.</p>
+              <router-link to="/tokens/studio" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">Token Studio</h3>
+                <p class="text-white/80 text-sm">Create, manage, and export design tokens compliant with the Design Token Community Group specification.</p>
               </router-link>
               <router-link to="/tools/gradient-generator" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
                 <h3 class="text-white font-semibold text-xl mb-2">Gradient Generator</h3>

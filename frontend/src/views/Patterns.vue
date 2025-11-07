@@ -86,13 +86,16 @@
                 <span class="material-symbols-outlined text-5xl">view_quilt</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Layout
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Grid systems, containers, and responsive layouts.
+              </p>
             </router-link>
 
             <!-- Pattern Card 2: Navigation -->
@@ -107,13 +110,16 @@
                 <span class="material-symbols-outlined text-5xl">navigation</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Navigation
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Menu patterns, breadcrumbs, and navigation flows.
+              </p>
             </router-link>
 
             <!-- Pattern Card 3: Data Display -->
@@ -128,13 +134,16 @@
                 <span class="material-symbols-outlined text-5xl">table_chart</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Data Display
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Effective patterns for presenting tables and lists.
+              </p>
             </router-link>
 
             <!-- Pattern Card 4: Forms -->
@@ -149,13 +158,16 @@
                 <span class="material-symbols-outlined text-5xl">description</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Forms
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Form layouts, validation, and user input patterns.
+              </p>
             </router-link>
 
             <!-- Pattern Card 5: Feedback -->
@@ -170,13 +182,16 @@
                 <span class="material-symbols-outlined text-5xl">feedback</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Feedback
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Alerts, notifications, and user feedback patterns.
+              </p>
               <span class="material-symbols-outlined absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
                 chevron_right
               </span>

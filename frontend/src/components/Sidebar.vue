@@ -1,8 +1,8 @@
 <template>
-  <aside class="sticky top-0 h-screen text-white flex flex-col flex-shrink-0 w-24 transition-colors z-50 bg-indigo-800 dark:bg-indigo-900"
+  <aside id="navigation" class="sticky top-0 h-screen text-white flex flex-col flex-shrink-0 w-24 transition-colors z-50 bg-indigo-800 dark:bg-indigo-900" aria-label="Main navigation"
   >
     <!-- Navigation Items -->
-    <nav class="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-4">
+    <nav class="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-4" role="navigation" aria-label="Main navigation">
       <router-link
         v-for="item in menuItems"
         :key="item.path"
@@ -18,7 +18,7 @@
               : 'hover:bg-indigo-700/50 rounded-lg')
         ]"
       >
-        <span class="material-symbols-outlined flex-shrink-0 mb-2">{{ item.icon }}</span>
+        <span class="material-symbols-outlined flex-shrink-0 mb-2" aria-hidden="true">{{ item.icon }}</span>
         <span class="font-medium text-sm text-center">{{ item.label }}</span>
       </router-link>
     </nav>
@@ -30,8 +30,10 @@
         class="flex items-center justify-center p-2 rounded-lg transition-colors relative group w-full"
         :class="isDarkMode ? 'hover:bg-indigo-400/30' : 'hover:bg-indigo-700/50'"
         :title="isDarkMode ? 'Light Mode' : 'Dark Mode'"
+        :aria-label="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+        aria-pressed="false"
       >
-        <span class="material-symbols-outlined flex-shrink-0">
+        <span class="material-symbols-outlined flex-shrink-0" aria-hidden="true">
           {{ isDarkMode ? 'light_mode' : 'dark_mode' }}
         </span>
       </button>

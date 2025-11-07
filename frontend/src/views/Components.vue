@@ -74,13 +74,16 @@
                 <span class="material-symbols-outlined text-5xl">check_circle</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Component Status
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Track component development status and availability.
+              </p>
             </router-link>
 
             <!-- Component Card 2: Buttons -->
@@ -95,13 +98,16 @@
                 <span class="material-symbols-outlined text-5xl">smart_button</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Buttons
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Primary, secondary, and tertiary button variants.
+              </p>
             </router-link>
 
             <!-- Component Card 3: Forms -->
@@ -116,13 +122,16 @@
                 <span class="material-symbols-outlined text-5xl">description</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Forms
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Input fields, selects, checkboxes, and form controls.
+              </p>
             </router-link>
 
             <!-- Component Card 4: Cards -->
@@ -137,13 +146,16 @@
                 <span class="material-symbols-outlined text-5xl">view_module</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Cards
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Card components for displaying content and actions.
+              </p>
             </router-link>
 
             <!-- Component Card 5: Navigation -->
@@ -158,13 +170,16 @@
                 <span class="material-symbols-outlined text-5xl">navigation</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Navigation
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Menus, breadcrumbs, tabs, and navigation components.
+              </p>
             </router-link>
 
             <!-- Component Card 6: Data Display -->
@@ -179,13 +194,16 @@
                 <span class="material-symbols-outlined text-5xl">table_chart</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Data Display
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Tables, lists, and data visualization components.
+              </p>
               <span class="material-symbols-outlined absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
                 chevron_right
               </span>

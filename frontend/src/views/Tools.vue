@@ -78,13 +78,16 @@
                 <span class="material-symbols-outlined text-5xl">gradient</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Gradient Generator
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Create beautiful CSS gradients with custom stops.
+              </p>
             </router-link>
 
             <!-- Tool Card 2: Palette Builder -->
@@ -99,13 +102,16 @@
                 <span class="material-symbols-outlined text-5xl">palette</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Palette Builder
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Build comprehensive color palettes with AI suggestions.
+              </p>
             </router-link>
 
             <!-- Tool Card 3: Lorem Ipsum Generator -->
@@ -120,13 +126,16 @@
                 <span class="material-symbols-outlined text-5xl">text_fields</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Lorem Ipsum Generator
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Generate placeholder text for your designs.
+              </p>
             </router-link>
 
             <!-- Tool Card 4: SEO Tagging Generator -->
@@ -141,13 +150,16 @@
                 <span class="material-symbols-outlined text-5xl">search</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 SEO Tagging Generator
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Generate SEO meta tags and structured data.
+              </p>
             </router-link>
 
             <!-- Tool Card 5: Color Scale Generator -->
@@ -162,13 +174,16 @@
                 <span class="material-symbols-outlined text-5xl">format_color_fill</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Color Scale Generator
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Generate accessible color scales using Leonardo Color.
+              </p>
             </router-link>
 
             <!-- Tool Card 6: Color Converter -->
@@ -183,13 +198,16 @@
                 <span class="material-symbols-outlined text-5xl">swap_horiz</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Color Converter
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Convert colors between different formats and spaces.
+              </p>
             </router-link>
 
             <!-- Tool Card 7: Color Contrast -->
@@ -204,13 +222,16 @@
                 <span class="material-symbols-outlined text-5xl">contrast</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Color Contrast
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Check WCAG accessibility standards for color combinations.
+              </p>
             </router-link>
           </div>
         </div>
