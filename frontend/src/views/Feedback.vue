@@ -51,24 +51,14 @@
               Report Issue
             </button>
             <button
-              @click="activeTab = 'requests'"
+              @click="loadRequests"
               class="px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 border"
-              :class="activeTab === 'requests'
-                ? (isDarkMode ? 'border-indigo-500 bg-indigo-900/20 text-indigo-400' : 'border-indigo-500 bg-indigo-50 text-indigo-600')
-                : (isDarkMode ? 'border-gray-600 bg-slate-800 hover:bg-slate-700 text-gray-300' : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700')"
+              :class="isDarkMode 
+                ? 'border-gray-600 bg-slate-800 hover:bg-slate-700 text-gray-300' 
+                : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700'"
             >
-              <span class="material-symbols-outlined">lightbulb</span>
-              View Requests
-            </button>
-            <button
-              @click="activeTab = 'issues'"
-              class="px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 border"
-              :class="activeTab === 'issues'
-                ? (isDarkMode ? 'border-indigo-500 bg-indigo-900/20 text-indigo-400' : 'border-indigo-500 bg-indigo-50 text-indigo-600')
-                : (isDarkMode ? 'border-gray-600 bg-slate-800 hover:bg-slate-700 text-gray-300' : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700')"
-            >
-              <span class="material-symbols-outlined">report</span>
-              View Issues
+              <span class="material-symbols-outlined">refresh</span>
+              Refresh
             </button>
           </div>
         </div>
@@ -109,55 +99,71 @@
 
         <!-- Requests List -->
         <div v-if="activeTab === 'requests'" class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6">
-              <div class="space-y-4">
-                <div
-                  v-for="request in requests"
-                  :key="request.id"
-                  class="p-6 rounded-lg border transition-all"
-                  :class="isDarkMode 
-                    ? 'border-gray-700 bg-slate-800 hover:border-gray-600' 
-                    : 'border-gray-200 bg-gray-50 hover:border-gray-300'"
-                >
-                  <div class="flex items-start justify-between gap-4 mb-4">
-                    <div class="flex-1">
-                      <h3 class="text-lg font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ request.title }}
-                      </h3>
-                      <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        {{ request.description }}
-                      </p>
-                      <div class="flex items-center gap-4 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                        <span>Requested by {{ request.requestedBy }}</span>
-                        <span>{{ formatDate(request.createdAt) }}</span>
-                        <span 
-                          class="px-2 py-1 rounded"
-                          :class="getStatusClass(request.status)"
-                        >
-                          {{ request.status }}
-                        </span>
-                      </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <button
-                        @click="voteRequest(request.id)"
-                        class="flex items-center gap-1 px-3 py-1 rounded-lg border transition-colors text-sm"
-                        :class="request.userVoted
-                          ? (isDarkMode ? 'border-indigo-500 bg-indigo-900/20 text-indigo-400' : 'border-indigo-500 bg-indigo-50 text-indigo-600')
-                          : (isDarkMode ? 'border-gray-600 bg-slate-700 hover:bg-slate-600 text-gray-300' : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700')"
-                      >
-                        <span class="material-symbols-outlined text-base">thumb_up</span>
-                        {{ request.votes }}
-                      </button>
-                    </div>
+          <div v-if="loadingRequests" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2" :class="isDarkMode ? 'border-indigo-400' : 'border-indigo-600'"></div>
+            <p class="mt-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading requests...</p>
+          </div>
+          <div v-else-if="requests.length === 0" class="text-center py-12">
+            <span class="material-symbols-outlined text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">inbox</span>
+            <p class="text-lg" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">No requests yet. Be the first to request a feature!</p>
+          </div>
+          <div v-else class="space-y-4">
+            <div
+              v-for="request in requests"
+              :key="request.id"
+              class="p-6 rounded-lg border transition-all cursor-pointer"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-800 hover:border-gray-600' 
+                : 'border-gray-200 bg-white hover:border-gray-300'"
+              @click="openRequestDetails(request)"
+            >
+              <div class="flex items-start justify-between gap-4 mb-4">
+                <div class="flex-1">
+                  <div class="flex items-center gap-3 mb-2">
+                    <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      {{ request.title }}
+                    </h3>
+                    <span 
+                      class="px-2 py-1 rounded text-xs font-medium"
+                      :class="getStatusClass(request.status)"
+                    >
+                      {{ request.status }}
+                    </span>
+                    <span 
+                      v-if="request.priority"
+                      class="px-2 py-1 rounded text-xs font-medium"
+                      :class="getPriorityClass(request.priority)"
+                    >
+                      {{ request.priority }}
+                    </span>
+                  </div>
+                  <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    {{ request.description }}
+                  </p>
+                  <div class="flex items-center gap-4 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                    <span>Requested by {{ request.requestedBy }}</span>
+                    <span>{{ formatDate(request.createdAt) }}</span>
+                    <span v-if="request.assignedTo">Assigned to {{ request.assignedTo }}</span>
+                    <span v-if="request.componentId" class="text-indigo-500">Linked to component</span>
                   </div>
                 </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    @click.stop="voteRequest(request.id)"
+                    class="flex items-center gap-1 px-3 py-1 rounded-lg border transition-colors text-sm"
+                    :class="isUserVoted(request.id)
+                      ? (isDarkMode ? 'border-indigo-500 bg-indigo-900/20 text-indigo-400' : 'border-indigo-500 bg-indigo-50 text-indigo-600')
+                      : (isDarkMode ? 'border-gray-600 bg-slate-700 hover:bg-slate-600 text-gray-300' : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700')"
+                  >
+                    <span class="material-symbols-outlined text-base">thumb_up</span>
+                    {{ request.votes }}
+                  </button>
+                </div>
+              </div>
+              <div v-if="request.comments && request.comments.length > 0" class="mt-4 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                <p class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                  {{ request.comments.length }} comment{{ request.comments.length !== 1 ? 's' : '' }}
+                </p>
               </div>
             </div>
           </div>
@@ -165,50 +171,50 @@
 
         <!-- Issues List -->
         <div v-if="activeTab === 'issues'" class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6">
-              <div class="space-y-4">
-                <div
-                  v-for="issue in issues"
-                  :key="issue.id"
-                  class="p-6 rounded-lg border transition-all"
-                  :class="isDarkMode 
-                    ? 'border-gray-700 bg-slate-800 hover:border-gray-600' 
-                    : 'border-gray-200 bg-gray-50 hover:border-gray-300'"
-                >
-                  <div class="flex items-start justify-between gap-4 mb-4">
-                    <div class="flex-1">
-                      <div class="flex items-center gap-2 mb-2">
-                        <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          {{ issue.title }}
-                        </h3>
-                        <span 
-                          class="px-2 py-1 rounded text-xs"
-                          :class="getSeverityClass(issue.severity)"
-                        >
-                          {{ issue.severity }}
-                        </span>
-                      </div>
-                      <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        {{ issue.description }}
-                      </p>
-                      <div class="flex items-center gap-4 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                        <span>Reported by {{ issue.reportedBy }}</span>
-                        <span>{{ formatDate(issue.createdAt) }}</span>
-                        <span>Category: {{ issue.category }}</span>
-                        <span 
-                          class="px-2 py-1 rounded"
-                          :class="getStatusClass(issue.status)"
-                        >
-                          {{ issue.status }}
-                        </span>
-                      </div>
-                    </div>
+          <div v-if="loadingIssues" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2" :class="isDarkMode ? 'border-indigo-400' : 'border-indigo-600'"></div>
+            <p class="mt-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading issues...</p>
+          </div>
+          <div v-else-if="issues.length === 0" class="text-center py-12">
+            <span class="material-symbols-outlined text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">check_circle</span>
+            <p class="text-lg" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">No issues reported. Great job!</p>
+          </div>
+          <div v-else class="space-y-4">
+            <div
+              v-for="issue in issues"
+              :key="issue.id"
+              class="p-6 rounded-lg border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-800 hover:border-gray-600' 
+                : 'border-gray-200 bg-white hover:border-gray-300'"
+            >
+              <div class="flex items-start justify-between gap-4 mb-4">
+                <div class="flex-1">
+                  <div class="flex items-center gap-3 mb-2">
+                    <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      {{ issue.title }}
+                    </h3>
+                    <span 
+                      class="px-2 py-1 rounded text-xs font-medium"
+                      :class="getSeverityClass(issue.severity)"
+                    >
+                      {{ issue.severity }}
+                    </span>
+                    <span 
+                      class="px-2 py-1 rounded text-xs font-medium"
+                      :class="getStatusClass(issue.status)"
+                    >
+                      {{ issue.status }}
+                    </span>
+                  </div>
+                  <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    {{ issue.description }}
+                  </p>
+                  <div class="flex items-center gap-4 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                    <span>Reported by {{ issue.reportedBy }}</span>
+                    <span>{{ formatDate(issue.createdAt) }}</span>
+                    <span v-if="issue.componentId">Component: {{ issue.componentId }}</span>
+                    <span v-if="issue.assignedTo">Assigned to {{ issue.assignedTo }}</span>
                   </div>
                 </div>
               </div>
@@ -219,62 +225,56 @@
         <!-- Request Modal -->
         <div
           v-if="showRequestModal"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           @click.self="showRequestModal = false"
         >
           <div 
-            class="w-full max-w-2xl rounded-lg shadow-xl border p-6 max-h-[90vh] overflow-auto"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
+            class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             role="dialog"
             aria-modal="true"
             aria-labelledby="request-modal-title"
           >
-            <div class="flex items-center justify-between mb-6">
-              <h2 id="request-modal-title" class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Request New Feature
-              </h2>
-              <button
-                @click="showRequestModal = false"
-                class="p-2 rounded-lg transition-colors"
-                :class="isDarkMode ? 'hover:bg-slate-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'"
-                aria-label="Close modal"
-              >
-                <span class="material-symbols-outlined">close</span>
-              </button>
+            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+              <div class="flex items-center justify-between">
+                <h2 id="request-modal-title" class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  Request New Feature
+                </h2>
+                <button
+                  @click="showRequestModal = false"
+                  class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  aria-label="Close modal"
+                >
+                  <span class="material-symbols-outlined" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">close</span>
+                </button>
+              </div>
             </div>
-            <form @submit.prevent="submitRequest" class="space-y-4">
+            <form @submit.prevent="submitRequest" class="p-6 space-y-4">
               <div>
                 <label for="request-title" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Feature Name <span class="text-red-500">*</span>
+                  Title *
                 </label>
                 <input
                   id="request-title"
                   v-model="requestForm.title"
                   type="text"
                   required
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-800 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
-                  aria-required="true"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                  placeholder="e.g., Data Table Component"
                 />
               </div>
               <div>
                 <label for="request-description" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Description <span class="text-red-500">*</span>
+                  Description *
                 </label>
                 <textarea
                   id="request-description"
                   v-model="requestForm.description"
                   required
                   rows="4"
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-800 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
-                  aria-required="true"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                  placeholder="Describe the component or feature you'd like to see..."
                 ></textarea>
               </div>
               <div>
@@ -285,31 +285,65 @@
                   id="request-use-case"
                   v-model="requestForm.useCase"
                   rows="3"
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-800 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                  placeholder="How would you use this component?"
                 ></textarea>
               </div>
-              <div class="flex justify-end gap-3 pt-4">
+              <div>
+                <label for="request-category" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  Category *
+                </label>
+                <select
+                  id="request-category"
+                  v-model="requestForm.category"
+                  required
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                >
+                  <option value="">Select category</option>
+                  <option value="form-controls">Form Controls</option>
+                  <option value="data-display">Data Display</option>
+                  <option value="navigation">Navigation</option>
+                  <option value="feedback">Feedback</option>
+                  <option value="layout">Layout</option>
+                  <option value="utilities">Utilities</option>
+                </select>
+              </div>
+              <div>
+                <label for="request-priority" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  Priority
+                </label>
+                <select
+                  id="request-priority"
+                  v-model="requestForm.priority"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                >
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+              <div class="flex gap-3 pt-4">
                 <button
                   type="button"
                   @click="showRequestModal = false"
-                  class="px-4 py-2 rounded-lg border transition-colors"
+                  class="flex-1 px-4 py-2 border rounded-lg font-medium transition-colors"
                   :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-800 hover:bg-slate-700 text-gray-300' 
+                    ? 'border-gray-600 bg-slate-700 hover:bg-slate-600 text-gray-300' 
                     : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700'"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  class="px-4 py-2 rounded-lg font-medium transition-colors"
-                  :class="isDarkMode 
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
+                  :disabled="submittingRequest"
+                  class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Submit Request
+                  <span v-if="submittingRequest">Submitting...</span>
+                  <span v-else>Submit Request</span>
                 </button>
               </div>
             </form>
@@ -319,87 +353,88 @@
         <!-- Issue Modal -->
         <div
           v-if="showIssueModal"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           @click.self="showIssueModal = false"
         >
           <div 
-            class="w-full max-w-2xl rounded-lg shadow-xl border p-6 max-h-[90vh] overflow-auto"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
+            class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             role="dialog"
             aria-modal="true"
             aria-labelledby="issue-modal-title"
           >
-            <div class="flex items-center justify-between mb-6">
-              <h2 id="issue-modal-title" class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Report Issue
-              </h2>
-              <button
-                @click="showIssueModal = false"
-                class="p-2 rounded-lg transition-colors"
-                :class="isDarkMode ? 'hover:bg-slate-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'"
-                aria-label="Close modal"
-              >
-                <span class="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            <form @submit.prevent="submitIssue" class="space-y-4">
-              <div>
-                <label for="issue-category" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Category <span class="text-red-500">*</span>
-                </label>
-                <select
-                  id="issue-category"
-                  v-model="issueForm.category"
-                  required
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-800 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
-                  aria-required="true"
+            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+              <div class="flex items-center justify-between">
+                <h2 id="issue-modal-title" class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  Report Issue
+                </h2>
+                <button
+                  @click="showIssueModal = false"
+                  class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  aria-label="Close modal"
                 >
-                  <option value="">Select category</option>
-                  <option value="Components">Components</option>
-                  <option value="Tokens">Tokens</option>
-                  <option value="Patterns">Patterns</option>
-                  <option value="Guidelines">Guidelines</option>
-                  <option value="Fonts">Fonts</option>
-                  <option value="Tools">Tools</option>
-                  <option value="Design Assets">Design Assets</option>
-                  <option value="API">API</option>
-                  <option value="Other">Other</option>
-                </select>
+                  <span class="material-symbols-outlined" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">close</span>
+                </button>
               </div>
+            </div>
+            <form @submit.prevent="submitIssue" class="p-6 space-y-4">
               <div>
                 <label for="issue-title" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Issue Title <span class="text-red-500">*</span>
+                  Title *
                 </label>
                 <input
                   id="issue-title"
                   v-model="issueForm.title"
                   type="text"
                   required
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-800 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
-                  aria-required="true"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                  placeholder="Brief description of the issue"
                 />
               </div>
               <div>
+                <label for="issue-description" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  Description *
+                </label>
+                <textarea
+                  id="issue-description"
+                  v-model="issueForm.description"
+                  required
+                  rows="4"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                  placeholder="Describe the issue in detail..."
+                ></textarea>
+              </div>
+              <div>
+                <label for="issue-category" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  Category *
+                </label>
+                <select
+                  id="issue-category"
+                  v-model="issueForm.category"
+                  required
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                >
+                  <option value="">Select category</option>
+                  <option value="bug">Bug</option>
+                  <option value="components">Components</option>
+                  <option value="tokens">Tokens</option>
+                  <option value="guidelines">Guidelines</option>
+                  <option value="documentation">Documentation</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
                 <label for="issue-severity" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Severity <span class="text-red-500">*</span>
+                  Severity *
                 </label>
                 <select
                   id="issue-severity"
                   v-model="issueForm.severity"
                   required
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-800 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
-                  aria-required="true"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -407,44 +442,115 @@
                   <option value="critical">Critical</option>
                 </select>
               </div>
-              <div>
-                <label for="issue-description" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Description <span class="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="issue-description"
-                  v-model="issueForm.description"
-                  required
-                  rows="4"
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-800 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
-                  aria-required="true"
-                ></textarea>
-              </div>
-              <div class="flex justify-end gap-3 pt-4">
+              <div class="flex gap-3 pt-4">
                 <button
                   type="button"
                   @click="showIssueModal = false"
-                  class="px-4 py-2 rounded-lg border transition-colors"
+                  class="flex-1 px-4 py-2 border rounded-lg font-medium transition-colors"
                   :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-800 hover:bg-slate-700 text-gray-300' 
+                    ? 'border-gray-600 bg-slate-700 hover:bg-slate-600 text-gray-300' 
                     : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700'"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  class="px-4 py-2 rounded-lg font-medium transition-colors"
-                  :class="isDarkMode 
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
+                  :disabled="submittingIssue"
+                  class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Submit Issue
+                  <span v-if="submittingIssue">Submitting...</span>
+                  <span v-else>Submit Issue</span>
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+
+        <!-- Request Details Modal -->
+        <div
+          v-if="selectedRequest"
+          class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          @click.self="selectedRequest = null"
+        >
+          <div 
+            class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+              <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  {{ selectedRequest.title }}
+                </h2>
+                <button
+                  @click="selectedRequest = null"
+                  class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  aria-label="Close modal"
+                >
+                  <span class="material-symbols-outlined" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">close</span>
+                </button>
+              </div>
+            </div>
+            <div class="p-6 space-y-6">
+              <div>
+                <h3 class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Description</h3>
+                <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ selectedRequest.description }}</p>
+              </div>
+              <div v-if="selectedRequest.useCase">
+                <h3 class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Use Case</h3>
+                <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ selectedRequest.useCase }}</p>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Status</h3>
+                  <span class="px-2 py-1 rounded text-xs font-medium" :class="getStatusClass(selectedRequest.status)">
+                    {{ selectedRequest.status }}
+                  </span>
+                </div>
+                <div>
+                  <h3 class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Priority</h3>
+                  <span class="px-2 py-1 rounded text-xs font-medium" :class="getPriorityClass(selectedRequest.priority)">
+                    {{ selectedRequest.priority }}
+                  </span>
+                </div>
+              </div>
+              <div v-if="selectedRequest.comments && selectedRequest.comments.length > 0">
+                <h3 class="text-sm font-medium mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Comments</h3>
+                <div class="space-y-4">
+                  <div
+                    v-for="comment in selectedRequest.comments"
+                    :key="comment.id"
+                    class="p-4 rounded-lg"
+                    :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-50'"
+                  >
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ comment.author }}</span>
+                      <span class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">{{ formatDate(comment.createdAt) }}</span>
+                    </div>
+                    <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ comment.content }}</p>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h3 class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Add Comment</h3>
+                <div class="flex gap-2">
+                  <input
+                    v-model="newComment"
+                    type="text"
+                    placeholder="Add a comment..."
+                    class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                    @keyup.enter="addComment(selectedRequest.id)"
+                  />
+                  <button
+                    @click="addComment(selectedRequest.id)"
+                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    Comment
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -454,18 +560,32 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
+import axios from 'axios';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+
+const router = useRouter();
+const API_BASE_URL = 'http://localhost:3000/api/v1';
+const API_KEY = 'test-api-key-123';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
 const activeTab = ref('requests');
 const showRequestModal = ref(false);
 const showIssueModal = ref(false);
+const loadingRequests = ref(false);
+const loadingIssues = ref(false);
+const submittingRequest = ref(false);
+const submittingIssue = ref(false);
+const selectedRequest = ref(null);
+const newComment = ref('');
 
 const requestForm = ref({
   title: '',
   description: '',
-  useCase: ''
+  useCase: '',
+  category: '',
+  priority: 'medium'
 });
 
 const issueForm = ref({
@@ -475,71 +595,195 @@ const issueForm = ref({
   description: ''
 });
 
-const requests = ref([
-  {
-    id: 1,
-    title: 'Data Table Component',
-    description: 'A comprehensive data table component with sorting, filtering, and pagination capabilities.',
-    requestedBy: 'John Doe',
-    createdAt: new Date('2024-01-15'),
-    votes: 24,
-    status: 'planned',
-    userVoted: false
-  },
-  {
-    id: 2,
-    title: 'Date Picker Component',
-    description: 'A date picker component with range selection and calendar view.',
-    requestedBy: 'Jane Smith',
-    createdAt: new Date('2024-01-10'),
-    votes: 18,
-    status: 'in-progress',
-    userVoted: true
-  },
-  {
-    id: 3,
-    title: 'Toast Notification Component',
-    description: 'A toast notification system for displaying temporary messages.',
-    requestedBy: 'Mike Johnson',
-    createdAt: new Date('2024-01-08'),
-    votes: 31,
-    status: 'planned',
-    userVoted: false
-  }
-]);
+const requests = ref([]);
+const issues = ref([]);
+const userVotes = ref(new Set()); // Track which requests user has voted on
 
-const issues = ref([
-  {
-    id: 1,
-    title: 'Button hover state not working in dark mode',
-    description: 'The button component does not show proper hover state when in dark mode. The background color change is barely visible.',
-    reportedBy: 'Sarah Williams',
-    createdAt: new Date('2024-01-20'),
-    category: 'Components',
-    severity: 'medium',
-    status: 'open'
-  },
-  {
-    id: 2,
-    title: 'Token export format missing',
-    description: 'The token export should include SCSS variables format, but it\'s currently missing from the export options.',
-    reportedBy: 'Tom Brown',
-    createdAt: new Date('2024-01-18'),
-    category: 'Tokens',
-    severity: 'high',
-    status: 'in-progress'
-  },
-  {
-    id: 3,
-    title: 'Guidelines page loading slowly',
-    description: 'The guidelines page takes too long to load, especially when navigating between sections.',
-    reportedBy: 'Lisa Anderson',
-    createdAt: new Date('2024-01-16'),
-    category: 'Guidelines',
-    severity: 'low',
-    status: 'resolved'
+const loadRequests = async () => {
+  loadingRequests.value = true;
+  try {
+    const response = await axios.get(`${API_BASE_URL}/requests`, {
+      headers: { Authorization: `Bearer ${API_KEY}` }
+    });
+    requests.value = response.data || [];
+    // Track user votes (in real app, this would come from backend)
+    requests.value.forEach(req => {
+      if (req.voters && req.voters.includes('current-user')) {
+        userVotes.value.add(req.id);
+      }
+    });
+  } catch (error) {
+    console.error('Error loading requests:', error);
+  } finally {
+    loadingRequests.value = false;
   }
-]);
+};
+
+const loadIssues = async () => {
+  loadingIssues.value = true;
+  try {
+    const response = await axios.get(`${API_BASE_URL}/issues`, {
+      headers: { Authorization: `Bearer ${API_KEY}` }
+    });
+    issues.value = response.data || [];
+  } catch (error) {
+    console.error('Error loading issues:', error);
+  } finally {
+    loadingIssues.value = false;
+  }
+};
+
+const submitRequest = async () => {
+  if (!requestForm.value.title || !requestForm.value.description || !requestForm.value.category) {
+    alert('Please fill in all required fields (Title, Description, and Category)');
+    return;
+  }
+
+  submittingRequest.value = true;
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/requests`,
+      {
+        title: requestForm.value.title,
+        description: requestForm.value.description,
+        useCase: requestForm.value.useCase || undefined,
+        requestedBy: 'current-user', // In real app, get from auth
+        category: requestForm.value.category,
+        priority: requestForm.value.priority || 'medium'
+      },
+      {
+        headers: { Authorization: `Bearer ${API_KEY}` }
+      }
+    );
+
+    requests.value.unshift(response.data);
+    requestForm.value = { title: '', description: '', useCase: '', category: '', priority: 'medium' };
+    showRequestModal.value = false;
+  } catch (error) {
+    console.error('Error submitting request:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+    console.error('Full error details:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: errorMessage
+    });
+    alert(`Failed to submit request: ${errorMessage}\n\nPlease check the browser console for more details.`);
+  } finally {
+    submittingRequest.value = false;
+  }
+};
+
+const submitIssue = async () => {
+  if (!issueForm.value.title || !issueForm.value.description || !issueForm.value.category) {
+    return;
+  }
+
+  submittingIssue.value = true;
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/issues`,
+      {
+        title: issueForm.value.title,
+        description: issueForm.value.description,
+        category: issueForm.value.category,
+        severity: issueForm.value.severity,
+        reportedBy: 'current-user' // In real app, get from auth
+      },
+      {
+        headers: { Authorization: `Bearer ${API_KEY}` }
+      }
+    );
+
+    issues.value.unshift(response.data);
+    issueForm.value = { category: '', title: '', severity: 'medium', description: '' };
+    showIssueModal.value = false;
+  } catch (error) {
+    console.error('Error submitting issue:', error);
+    alert('Failed to submit issue. Please try again.');
+  } finally {
+    submittingIssue.value = false;
+  }
+};
+
+const voteRequest = async (requestId) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/requests/${requestId}/vote`,
+      { userId: 'current-user' },
+      {
+        headers: { Authorization: `Bearer ${API_KEY}` }
+      }
+    );
+
+    const request = requests.value.find(r => r.id === requestId);
+    if (request) {
+      request.votes = response.data.votes;
+      request.voters = response.data.voters;
+      
+      if (userVotes.value.has(requestId)) {
+        userVotes.value.delete(requestId);
+      } else {
+        userVotes.value.add(requestId);
+      }
+    }
+  } catch (error) {
+    console.error('Error voting:', error);
+  }
+};
+
+const isUserVoted = (requestId) => {
+  return userVotes.value.has(requestId);
+};
+
+const openRequestDetails = async (request) => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/requests/${request.id}`, {
+      headers: { Authorization: `Bearer ${API_KEY}` }
+    });
+    selectedRequest.value = response.data;
+  } catch (error) {
+    console.error('Error loading request details:', error);
+    selectedRequest.value = request;
+  }
+};
+
+const addComment = async (requestId) => {
+  if (!newComment.value.trim()) return;
+
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/requests/${requestId}/comments`,
+      {
+        author: 'current-user',
+        content: newComment.value
+      },
+      {
+        headers: { Authorization: `Bearer ${API_KEY}` }
+      }
+    );
+
+    if (selectedRequest.value) {
+      if (!selectedRequest.value.comments) {
+        selectedRequest.value.comments = [];
+      }
+      selectedRequest.value.comments.push(response.data);
+    }
+
+    // Update in list
+    const request = requests.value.find(r => r.id === requestId);
+    if (request) {
+      if (!request.comments) {
+        request.comments = [];
+      }
+      request.comments.push(response.data);
+    }
+
+    newComment.value = '';
+  } catch (error) {
+    console.error('Error adding comment:', error);
+  }
+};
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('en-US', { 
@@ -551,12 +795,31 @@ const formatDate = (date) => {
 
 const getStatusClass = (status) => {
   const classes = {
+    'submitted': isDarkMode.value ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-700',
+    'under-review': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-700',
+    'approved': isDarkMode.value ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700',
+    'rejected': isDarkMode.value ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700',
+    'needs-more-info': isDarkMode.value ? 'bg-orange-900/30 text-orange-400' : 'bg-orange-100 text-orange-700',
+    'in-progress': isDarkMode.value ? 'bg-indigo-900/30 text-indigo-400' : 'bg-indigo-100 text-indigo-700',
+    'completed': isDarkMode.value ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700',
+    'released': isDarkMode.value ? 'bg-purple-900/30 text-purple-400' : 'bg-purple-100 text-purple-700',
     'planned': isDarkMode.value ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-700',
-    'in-progress': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-700',
     'open': isDarkMode.value ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700',
-    'resolved': isDarkMode.value ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'
+    'investigating': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-700',
+    'resolved': isDarkMode.value ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700',
+    'closed': isDarkMode.value ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
   };
   return classes[status] || (isDarkMode.value ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-700');
+};
+
+const getPriorityClass = (priority) => {
+  const classes = {
+    'low': isDarkMode.value ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-700',
+    'medium': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-700',
+    'high': isDarkMode.value ? 'bg-orange-900/30 text-orange-400' : 'bg-orange-100 text-orange-700',
+    'critical': isDarkMode.value ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700'
+  };
+  return classes[priority] || (isDarkMode.value ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-700');
 };
 
 const getSeverityClass = (severity) => {
@@ -569,51 +832,6 @@ const getSeverityClass = (severity) => {
   return classes[severity] || (isDarkMode.value ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-700');
 };
 
-const voteRequest = (id) => {
-  const request = requests.value.find(r => r.id === id);
-  if (request) {
-    if (request.userVoted) {
-      request.votes--;
-      request.userVoted = false;
-    } else {
-      request.votes++;
-      request.userVoted = true;
-    }
-  }
-};
-
-const submitRequest = () => {
-  const newRequest = {
-    id: requests.value.length + 1,
-    title: requestForm.value.title,
-    description: requestForm.value.description,
-    requestedBy: 'Current User',
-    createdAt: new Date(),
-    votes: 0,
-    status: 'planned',
-    userVoted: false
-  };
-  requests.value.unshift(newRequest);
-  requestForm.value = { title: '', description: '', useCase: '' };
-  showRequestModal.value = false;
-};
-
-const submitIssue = () => {
-  const newIssue = {
-    id: issues.value.length + 1,
-    title: issueForm.value.title,
-    description: issueForm.value.description,
-    reportedBy: 'Current User',
-    createdAt: new Date(),
-    category: issueForm.value.category,
-    severity: issueForm.value.severity,
-    status: 'open'
-  };
-  issues.value.unshift(newIssue);
-  issueForm.value = { category: '', title: '', severity: 'medium', description: '' };
-  showIssueModal.value = false;
-};
-
 const closeDrawer = () => {
   drawerOpen.value = false;
 };
@@ -622,25 +840,29 @@ const toggleDrawer = () => {
   drawerOpen.value = !drawerOpen.value;
 };
 
+// Watch for tab changes to load appropriate data
+const watchTab = () => {
+  if (activeTab.value === 'requests') {
+    loadRequests();
+  } else if (activeTab.value === 'issues') {
+    loadIssues();
+  }
+};
+
 let darkModeObserver = null;
 let darkModeInterval = null;
 
 onMounted(() => {
+  loadRequests();
+  loadIssues();
+  
   darkModeObserver = new MutationObserver(() => {
     isDarkMode.value = document.documentElement.classList.contains('dark');
   });
-  
   darkModeObserver.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ['class']
   });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
 });
 
 onBeforeUnmount(() => {
@@ -652,10 +874,3 @@ onBeforeUnmount(() => {
   }
 });
 </script>
-
-<style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-</style>
-

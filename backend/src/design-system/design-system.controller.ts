@@ -1,9 +1,15 @@
 import { Controller, Get, Post, Put, Delete, Query, Param, Headers, Body, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { DesignSystemService } from './design-system.service';
+import { ComponentRequestService } from './component-request.service';
+import { NotificationService } from './notification.service';
 
 @Controller('api/v1')
 export class DesignSystemController {
-  constructor(private readonly designSystemService: DesignSystemService) {}
+  constructor(
+    private readonly designSystemService: DesignSystemService,
+    private readonly componentRequestService: ComponentRequestService,
+    private readonly notificationService: NotificationService
+  ) {}
 
   private extractApiKey(authHeader: string | undefined): string | null {
     if (!authHeader) return null;
@@ -258,5 +264,275 @@ export class DesignSystemController {
   ) {
     this.validateRequest(authHeader);
     return this.designSystemService.exportRulesForLinter(format);
+  }
+
+  // Component Request endpoints
+  @Get('requests')
+  getRequests(
+    @Query('status') status?: string,
+    @Query('category') category?: string,
+    @Query('assignedTo') assignedTo?: string,
+    @Query('priority') priority?: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.componentRequestService.getAllRequests({ status, category, assignedTo, priority });
+  }
+
+  @Get('requests/:id')
+  getRequest(
+    @Param('id') id: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const request = this.componentRequestService.getRequest(id);
+    if (!request) {
+      throw new BadRequestException(`Request ${id} not found`);
+    }
+    return request;
+  }
+
+  @Post('requests')
+  createRequest(
+    @Body() body: {
+      title: string;
+      description: string;
+      useCase?: string;
+      requestedBy: string;
+      category: string;
+      priority?: 'low' | 'medium' | 'high' | 'critical';
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.componentRequestService.createRequest(body);
+  }
+
+  @Put('requests/:id')
+  updateRequest(
+    @Param('id') id: string,
+    @Body() body: Partial<{
+      title: string;
+      description: string;
+      status: 'submitted' | 'under-review' | 'approved' | 'rejected' | 'needs-more-info' | 'in-progress' | 'completed' | 'released';
+      priority: 'low' | 'medium' | 'high' | 'critical';
+      assignedTo: string;
+    }>,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const request = this.componentRequestService.updateRequest(id, body);
+    if (!request) {
+      throw new BadRequestException(`Request ${id} not found`);
+    }
+    return request;
+  }
+
+  @Delete('requests/:id')
+  deleteRequest(
+    @Param('id') id: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const deleted = this.componentRequestService.deleteRequest(id);
+    if (!deleted) {
+      throw new BadRequestException(`Request ${id} not found`);
+    }
+    return { success: true };
+  }
+
+  @Post('requests/:id/vote')
+  voteRequest(
+    @Param('id') id: string,
+    @Body() body: { userId: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const request = this.componentRequestService.voteRequest(id, body.userId);
+    if (!request) {
+      throw new BadRequestException(`Request ${id} not found`);
+    }
+    return request;
+  }
+
+  @Put('requests/:id/status')
+  updateRequestStatus(
+    @Param('id') id: string,
+    @Body() body: { status: string; userId: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    try {
+      const request = this.componentRequestService.transitionStatus(id, body.status as any, body.userId);
+      if (!request) {
+        throw new BadRequestException(`Request ${id} not found`);
+      }
+      return request;
+    } catch (error: any) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Put('requests/:id/assign')
+  assignRequest(
+    @Param('id') id: string,
+    @Body() body: { userId: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const request = this.componentRequestService.assignRequest(id, body.userId);
+    if (!request) {
+      throw new BadRequestException(`Request ${id} not found`);
+    }
+    return request;
+  }
+
+  @Post('requests/:id/comments')
+  addComment(
+    @Param('id') id: string,
+    @Body() body: {
+      author: string;
+      content: string;
+      mentions?: string[];
+      attachments?: string[];
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.componentRequestService.addComment(id, body);
+  }
+
+  @Get('requests/:id/comments')
+  getComments(
+    @Param('id') id: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.componentRequestService.getComments(id);
+  }
+
+  @Put('requests/:id/link-component')
+  linkToComponent(
+    @Param('id') id: string,
+    @Body() body: { componentId: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const request = this.componentRequestService.linkToComponent(id, body.componentId);
+    if (!request) {
+      throw new BadRequestException(`Request ${id} not found`);
+    }
+    return request;
+  }
+
+  // Issue endpoints
+  @Get('issues')
+  getIssues(
+    @Query('status') status?: string,
+    @Query('severity') severity?: string,
+    @Query('componentId') componentId?: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.componentRequestService.getAllIssues({ status, severity, componentId });
+  }
+
+  @Get('issues/:id')
+  getIssue(
+    @Param('id') id: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const issue = this.componentRequestService.getIssue(id);
+    if (!issue) {
+      throw new BadRequestException(`Issue ${id} not found`);
+    }
+    return issue;
+  }
+
+  @Post('issues')
+  createIssue(
+    @Body() body: {
+      title: string;
+      description: string;
+      category: string;
+      severity: 'low' | 'medium' | 'high' | 'critical';
+      reportedBy: string;
+      componentId?: string;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.componentRequestService.createIssue(body);
+  }
+
+  @Put('issues/:id')
+  updateIssue(
+    @Param('id') id: string,
+    @Body() body: Partial<{
+      title: string;
+      description: string;
+      status: 'open' | 'investigating' | 'in-progress' | 'resolved' | 'closed';
+      severity: 'low' | 'medium' | 'high' | 'critical';
+      assignedTo: string;
+    }>,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const issue = this.componentRequestService.updateIssue(id, body);
+    if (!issue) {
+      throw new BadRequestException(`Issue ${id} not found`);
+    }
+    return issue;
+  }
+
+  // Analytics
+  @Get('requests/analytics')
+  getRequestAnalytics(@Headers('authorization') authHeader?: string) {
+    this.validateRequest(authHeader);
+    return this.componentRequestService.getRequestAnalytics();
+  }
+
+  // Notification endpoints
+  @Get('notifications')
+  getNotifications(
+    @Query('userId') userId: string,
+    @Query('unreadOnly') unreadOnly?: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.notificationService.getNotifications(userId, unreadOnly === 'true');
+  }
+
+  @Put('notifications/:id/read')
+  markNotificationAsRead(
+    @Param('id') id: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const success = this.notificationService.markAsRead(id);
+    if (!success) {
+      throw new BadRequestException(`Notification ${id} not found`);
+    }
+    return { success: true };
+  }
+
+  @Put('notifications/read-all')
+  markAllNotificationsAsRead(
+    @Body() body: { userId: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const count = this.notificationService.markAllAsRead(body.userId);
+    return { success: true, count };
+  }
+
+  @Get('notifications/unread-count')
+  getUnreadCount(
+    @Query('userId') userId: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return { count: this.notificationService.getUnreadCount(userId) };
   }
 }

@@ -317,7 +317,7 @@
               >
                 <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Form Submission</h3>
                 <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono"><code>&lt;form @submit.prevent="handleSubmit"&gt;
+                  <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;form @submit.prevent="handleSubmit"&gt;
   &lt;input v-model="email" type="email" placeholder="Email" /&gt;
   &lt;button 
     type="submit" 

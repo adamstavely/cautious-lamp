@@ -167,7 +167,7 @@ export class ApplicationScannerService {
     
     // Check for inline SVG icons or icon fonts
     const hasInlineIcons = /<svg|<i class.*icon|icon-/i.test(html);
-    const hasIconFonts = /font.*icon|iconfont/i.test(html + css);
+    const hasIconFonts = /font.*icon|iconfont/i.test(html + (context.css || ''));
     
     if ((hasInlineIcons || hasIconFonts) && !hasDesignSystemIcons) {
       checks.push({
@@ -314,7 +314,7 @@ export class ApplicationScannerService {
       checks.push({
         id: 'empty-states',
         rule: 'Empty State Handling',
-        status: 'info',
+        status: 'warning',
         message: 'Lists or tables detected. Consider adding empty state messages when no data is available.',
         application: context.applicationName,
         file: context.file
@@ -411,7 +411,7 @@ export class ApplicationScannerService {
       checks.push({
         id: 'success-states',
         rule: 'Success State Indicators',
-        status: 'info',
+        status: 'warning',
         message: 'Form submissions detected. Consider adding success feedback to confirm user actions.',
         application: context.applicationName,
         file: context.file
@@ -444,7 +444,7 @@ export class ApplicationScannerService {
         checks.push({
           id: 'navigation-consistency',
           rule: 'Navigation Consistency',
-          status: 'info',
+          status: 'warning',
           message: 'Multiple navigation elements detected. Consider adding breadcrumbs for deep navigation.',
           application: context.applicationName,
           file: context.file
@@ -455,7 +455,7 @@ export class ApplicationScannerService {
         checks.push({
           id: 'skip-links',
           rule: 'Navigation Consistency',
-          status: 'info',
+          status: 'warning',
           message: 'Navigation detected but no skip links found. Add skip links for keyboard navigation accessibility.',
           application: context.applicationName,
           file: context.file
@@ -494,7 +494,7 @@ export class ApplicationScannerService {
           checks.push({
             id: `help-text-${index}`,
             rule: 'Help Text and Tooltips',
-            status: 'info',
+            status: 'warning',
             message: 'Complex input detected without help text. Consider adding tooltips or help text for better UX.',
             application: context.applicationName,
             file: context.file,
@@ -636,7 +636,7 @@ export class ApplicationScannerService {
       checks.push({
         id: 'search-functionality',
         rule: 'Search Functionality',
-        status: 'info',
+        status: 'warning',
         message: 'Content-heavy page detected. Consider adding search functionality for better UX.',
         application: context.applicationName,
         file: context.file
@@ -771,7 +771,7 @@ export class ApplicationScannerService {
       checks.push({
         id: 'offline-state-handling',
         rule: 'Offline State Handling',
-        status: 'info',
+        status: 'warning',
         message: 'Async operations detected. Consider adding offline state handling for better UX.',
         application: context.applicationName,
         file: context.file
@@ -840,7 +840,7 @@ export class ApplicationScannerService {
         checks.push({
           id: 'content-hierarchy-semantic',
           rule: 'Content Hierarchy',
-          status: 'info',
+          status: 'warning',
           message: 'Multiple headings detected. Consider using semantic HTML elements (main, article, section) for better structure.',
           application: context.applicationName,
           file: context.file
