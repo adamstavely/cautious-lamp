@@ -206,10 +206,6 @@
                 <h3 class="text-white font-semibold text-xl mb-2">Token Studio</h3>
                 <p class="text-white/80 text-sm">Create, manage, and export design tokens compliant with the Design Token Community Group specification.</p>
               </router-link>
-              <router-link to="/components/playground" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">Component Playground</h3>
-                <p class="text-white/80 text-sm">Experiment with components in real-time, edit props, and export code snippets.</p>
-              </router-link>
               <router-link to="/tools/gradient-generator" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
                 <h3 class="text-white font-semibold text-xl mb-2">Gradient Generator</h3>
                 <p class="text-white/80 text-sm">Create stunning CSS gradients with an intuitive visual editor and multiple gradient types.</p>

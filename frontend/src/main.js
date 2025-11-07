@@ -138,10 +138,6 @@ const router = createRouter({
       component: () => import('./views/ComponentButton.vue'),
     },
     {
-      path: '/components/playground',
-      component: () => import('./views/ComponentPlayground.vue'),
-    },
-    {
       path: '/components/snippets',
       component: () => import('./views/CodeSnippets.vue'),
     },

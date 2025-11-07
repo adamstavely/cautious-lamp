@@ -62,47 +62,224 @@
             </div>
           </div>
 
-          <!-- Live Preview Section -->
+          <!-- Interactive Playground Section -->
           <div class="max-w-7xl mx-auto mb-16">
+            <div class="mb-8">
+              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Interactive Playground</h2>
+              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Experiment with the Button component. Edit props, see live previews, and export code snippets.</p>
+            </div>
+
+            <!-- Export Buttons -->
+            <div class="mb-6 flex items-center gap-4">
+              <button
+                @click="copyCode"
+                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium flex items-center gap-2"
+              >
+                <span class="material-symbols-outlined text-base">content_copy</span>
+                Copy Code
+              </button>
+              <button
+                @click="exportAsVue"
+                class="px-4 py-2 border rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                :class="isDarkMode 
+                  ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
+              >
+                <span class="material-symbols-outlined text-base">code</span>
+                Export Vue
+              </button>
+              <button
+                @click="exportAsReact"
+                class="px-4 py-2 border rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                :class="isDarkMode 
+                  ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
+              >
+                <span class="material-symbols-outlined text-base">code</span>
+                Export React
+              </button>
+              <button
+                @click="exportAsHTML"
+                class="px-4 py-2 border rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                :class="isDarkMode 
+                  ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
+              >
+                <span class="material-symbols-outlined text-base">code</span>
+                Export HTML
+              </button>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-6 mb-6">
+              <!-- Props Editor -->
+              <div 
+                class="rounded-lg shadow-sm border"
+                :class="isDarkMode 
+                  ? 'bg-slate-900 border-gray-700' 
+                  : 'bg-white border-gray-200'"
+              >
+                <div class="p-4 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    Props Editor
+                  </h3>
+                </div>
+                <div class="p-6">
+                  <div class="space-y-4">
+                    <div>
+                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        Label
+                        <span class="text-red-500 ml-1">*</span>
+                      </label>
+                      <input
+                        v-model="propValues.label"
+                        type="text"
+                        placeholder="Click me"
+                        class="w-full px-3 py-2 border rounded-lg text-sm"
+                        :class="isDarkMode 
+                          ? 'border-gray-600 bg-slate-700 text-white' 
+                          : 'border-gray-300 bg-white text-gray-900'"
+                      />
+                      <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                        Button text
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        Variant
+                      </label>
+                      <select
+                        v-model="propValues.variant"
+                        class="w-full px-3 py-2 border rounded-lg text-sm"
+                        :class="isDarkMode 
+                          ? 'border-gray-600 bg-slate-700 text-white' 
+                          : 'border-gray-300 bg-white text-gray-900'"
+                      >
+                        <option value="primary">Primary</option>
+                        <option value="secondary">Secondary</option>
+                        <option value="tertiary">Tertiary</option>
+                        <option value="danger">Danger</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        Size
+                      </label>
+                      <select
+                        v-model="propValues.size"
+                        class="w-full px-3 py-2 border rounded-lg text-sm"
+                        :class="isDarkMode 
+                          ? 'border-gray-600 bg-slate-700 text-white' 
+                          : 'border-gray-300 bg-white text-gray-900'"
+                      >
+                        <option value="sm">Small</option>
+                        <option value="md">Medium</option>
+                        <option value="lg">Large</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          v-model="propValues.disabled"
+                          class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 accent-indigo-600"
+                        />
+                        <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                          Disabled
+                        </span>
+                      </label>
+                    </div>
+                    <div>
+                      <label class="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          v-model="propValues.loading"
+                          class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 accent-indigo-600"
+                        />
+                        <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                          Loading
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Live Preview -->
+              <div 
+                class="rounded-lg shadow-sm border"
+                :class="isDarkMode 
+                  ? 'bg-slate-900 border-gray-700' 
+                  : 'bg-white border-gray-200'"
+              >
+                <div class="p-4 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    Live Preview
+                  </h3>
+                  <button
+                    @click="toggleFullscreen"
+                    class="p-2 rounded-lg transition-colors"
+                    :class="isDarkMode 
+                      ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' 
+                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
+                    aria-label="Toggle fullscreen"
+                  >
+                    <span class="material-symbols-outlined">fullscreen</span>
+                  </button>
+                </div>
+                <div class="p-8 min-h-[400px] flex items-center justify-center" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-50'">
+                  <component-preview 
+                    :key="`button-${JSON.stringify(propValues)}`"
+                    component="button"
+                    :props="propValues"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Generated Code -->
             <div 
-              class="rounded-2xl border overflow-hidden"
+              class="rounded-lg shadow-sm border"
               :class="isDarkMode 
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <div 
-                class="px-6 py-4 border-b"
-                :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-              >
-                <h2 class="text-2xl font-bold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">preview</span>
-                  Live Preview
-                </h2>
+              <div class="p-4 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  Generated Code
+                </h3>
+                <div class="flex gap-2">
+                  <button
+                    @click="codeFormat = 'vue'"
+                    class="px-3 py-1 rounded text-xs font-medium transition-colors"
+                    :class="codeFormat === 'vue' 
+                      ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
+                      : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
+                  >
+                    Vue
+                  </button>
+                  <button
+                    @click="codeFormat = 'react'"
+                    class="px-3 py-1 rounded text-xs font-medium transition-colors"
+                    :class="codeFormat === 'react' 
+                      ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
+                      : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
+                  >
+                    React
+                  </button>
+                  <button
+                    @click="codeFormat = 'html'"
+                    class="px-3 py-1 rounded text-xs font-medium transition-colors"
+                    :class="codeFormat === 'html' 
+                      ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
+                      : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
+                  >
+                    HTML
+                  </button>
+                </div>
               </div>
-              <div class="p-8" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                <div class="flex flex-wrap items-center gap-4">
-                  <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                    Primary
-                  </button>
-                  <button 
-                    class="px-4 py-2 border border-indigo-600 rounded-lg transition-colors"
-                    :class="isDarkMode 
-                      ? 'bg-slate-700 text-indigo-400 hover:bg-slate-600' 
-                      : 'bg-white text-indigo-600 hover:bg-indigo-50'"
-                  >
-                    Secondary
-                  </button>
-                  <button 
-                    class="px-4 py-2 rounded-lg transition-colors"
-                    :class="isDarkMode 
-                      ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'"
-                  >
-                    Tertiary
-                  </button>
-                  <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors opacity-50 cursor-not-allowed" disabled>
-                    Disabled
-                  </button>
+              <div class="p-6">
+                <div class="rounded-lg p-4 overflow-x-auto" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                  <pre class="text-green-400 text-sm font-mono"><code>{{ generatedCode }}</code></pre>
                 </div>
               </div>
             </div>
@@ -605,12 +782,179 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import ComponentPreview from '../components/ComponentPreview.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
+const codeFormat = ref('vue');
+const propValues = reactive({
+  label: 'Click me',
+  variant: 'primary',
+  size: 'md',
+  disabled: false,
+  loading: false
+});
+
+const generatedCode = computed(() => {
+  const props = Object.entries(propValues)
+    .filter(([key, value]) => {
+      if (key === 'label') return false; // Label is handled separately
+      return value !== '' && value !== false && value !== null && value !== undefined;
+    })
+    .map(([key, value]) => {
+      if (typeof value === 'string') {
+        return `  ${key}="${value}"`;
+      } else if (typeof value === 'boolean') {
+        return value ? `  :${key}="true"` : '';
+      } else {
+        return `  :${key}="${value}"`;
+      }
+    })
+    .filter(Boolean)
+    .join('\n');
+
+  const label = propValues.label || 'Button';
+
+  if (codeFormat.value === 'vue') {
+    return `<button${props ? '\n' + props + '\n' : ''}>${label}</button>`;
+  } else if (codeFormat.value === 'react') {
+    const reactProps = Object.entries(propValues)
+      .filter(([key, value]) => {
+        if (key === 'label') return false; // Label is handled separately
+        return value !== '' && value !== false && value !== null && value !== undefined;
+      })
+      .map(([key, value]) => {
+        if (typeof value === 'string') {
+          return `  ${key}="${value}"`;
+        } else if (typeof value === 'boolean') {
+          return value ? `  ${key}={true}` : '';
+        } else {
+          return `  ${key}={${value}}`;
+        }
+      })
+      .filter(Boolean)
+      .join('\n');
+    return `<Button${reactProps ? '\n' + reactProps + '\n' : ''}>${label}</Button>`;
+  } else {
+    // HTML
+    const htmlProps = Object.entries(propValues)
+      .filter(([key, value]) => {
+        if (key === 'label') return false; // Label is handled separately
+        return value !== '' && value !== false && value !== null && value !== undefined;
+      })
+      .map(([key, value]) => {
+        if (typeof value === 'boolean' && value) {
+          return ` ${key}`;
+        } else if (typeof value === 'string') {
+          return ` ${key}="${value}"`;
+        } else {
+          return ` ${key}="${value}"`;
+        }
+      })
+      .filter(Boolean)
+      .join('');
+    return `<button${htmlProps}>${label}</button>`;
+  }
+});
+
+const copyCode = async () => {
+  try {
+    await navigator.clipboard.writeText(generatedCode.value);
+    // Could add a toast notification here
+  } catch (err) {
+    console.error('Failed to copy:', err);
+  }
+};
+
+const generateCodeForFormat = (format) => {
+  const props = Object.entries(propValues)
+    .filter(([key, value]) => {
+      if (key === 'label') return false; // Label is handled separately
+      return value !== '' && value !== false && value !== null && value !== undefined;
+    })
+    .map(([key, value]) => {
+      if (typeof value === 'string') {
+        return `  ${key}="${value}"`;
+      } else if (typeof value === 'boolean') {
+        return value ? `  :${key}="true"` : '';
+      } else {
+        return `  :${key}="${value}"`;
+      }
+    })
+    .filter(Boolean)
+    .join('\n');
+
+  const label = propValues.label || 'Button';
+
+  if (format === 'vue') {
+    return `<button${props ? '\n' + props + '\n' : ''}>${label}</button>`;
+  } else if (format === 'react') {
+    const reactProps = Object.entries(propValues)
+      .filter(([key, value]) => {
+        if (key === 'label') return false; // Label is handled separately
+        return value !== '' && value !== false && value !== null && value !== undefined;
+      })
+      .map(([key, value]) => {
+        if (typeof value === 'string') {
+          return `  ${key}="${value}"`;
+        } else if (typeof value === 'boolean') {
+          return value ? `  ${key}={true}` : '';
+        } else {
+          return `  ${key}={${value}}`;
+        }
+      })
+      .filter(Boolean)
+      .join('\n');
+    return `<Button${reactProps ? '\n' + reactProps + '\n' : ''}>${label}</Button>`;
+  } else {
+    // HTML
+    const htmlProps = Object.entries(propValues)
+      .filter(([key, value]) => {
+        if (key === 'label') return false; // Label is handled separately
+        return value !== '' && value !== false && value !== null && value !== undefined;
+      })
+      .map(([key, value]) => {
+        if (typeof value === 'boolean' && value) {
+          return ` ${key}`;
+        } else if (typeof value === 'string') {
+          return ` ${key}="${value}"`;
+        } else {
+          return ` ${key}="${value}"`;
+        }
+      })
+      .filter(Boolean)
+      .join('');
+    return `<button${htmlProps}>${label}</button>`;
+  }
+};
+
+const exportAsVue = async () => {
+  codeFormat.value = 'vue';
+  await nextTick();
+  const vueCode = generateCodeForFormat('vue');
+  await navigator.clipboard.writeText(vueCode);
+};
+
+const exportAsReact = async () => {
+  codeFormat.value = 'react';
+  await nextTick();
+  const reactCode = generateCodeForFormat('react');
+  await navigator.clipboard.writeText(reactCode);
+};
+
+const exportAsHTML = async () => {
+  codeFormat.value = 'html';
+  await nextTick();
+  const htmlCode = generateCodeForFormat('html');
+  await navigator.clipboard.writeText(htmlCode);
+};
+
+const toggleFullscreen = () => {
+  // Could implement fullscreen preview
+};
 
 // Component-specific version data - in a real app, this would come from an API
 const componentVersions = ref([

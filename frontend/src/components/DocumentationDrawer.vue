@@ -441,7 +441,6 @@ const designAssets = [
 const componentItems = [
   { text: 'Overview', link: '/components', icon: 'widgets' },
   { text: 'Component Status', link: '/components/status', icon: 'check_circle' },
-  { text: 'Component Playground', link: '/components/playground', icon: 'code' },
   { text: 'Component Examples', link: '/components/examples', icon: 'preview' },
   { text: 'Code Snippets', link: '/components/snippets', icon: 'content_copy' },
   { text: 'Testing Framework', link: '/components/testing', icon: 'bug_report' },
