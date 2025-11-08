@@ -419,6 +419,18 @@ const router = createRouter({
       component: () => import('./views/FontSubsetting.vue'),
     },
     {
+      path: '/tools/visual-regression',
+      component: () => import('./views/VisualRegression.vue'),
+    },
+    {
+      path: '/tools/visual-regression/:id',
+      component: () => import('./views/VisualRegressionProject.vue'),
+    },
+    {
+      path: '/tools/visual-regression/:id/runs/:runId',
+      component: () => import('./views/VisualRegressionResults.vue'),
+    },
+    {
       path: '/performance',
       redirect: '/admin/performance',
     },

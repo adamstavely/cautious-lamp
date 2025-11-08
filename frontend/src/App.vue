@@ -22,6 +22,9 @@
       
       <!-- Loupe Tool -->
       <LoupeTool />
+      
+      <!-- Toast Notifications -->
+      <Toast />
     </div>
   </v-app>
 </template>
@@ -34,6 +37,7 @@ import InfoBanner from './components/InfoBanner.vue';
 import FloatingActionButton from './components/FloatingActionButton.vue';
 import EeroChatbot from './components/EeroChatbot.vue';
 import LoupeTool from './components/LoupeTool.vue';
+import Toast from './components/Toast.vue';
 
 const chatOpen = ref(false);
 

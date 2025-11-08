@@ -4,6 +4,7 @@ import { DesignSystemModule } from './design-system/design-system.module';
 import { AuditModule } from './audit/audit.module';
 import { RbacModule } from './rbac/rbac.module';
 import { FeatureFlagsModule } from './feature-flags/feature-flags.module';
+import { VisualRegressionModule } from './visual-regression/visual-regression.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
@@ -24,6 +25,7 @@ import { ElasticsearchModule } from '@nestjs/elasticsearch';
     AuditModule,
     RbacModule,
     FeatureFlagsModule,
+    VisualRegressionModule,
   ],
 })
 export class AppModule {}
