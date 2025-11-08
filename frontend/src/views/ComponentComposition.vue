@@ -66,18 +66,17 @@
                   <span class="material-symbols-outlined text-indigo-600">widgets</span>
                   Primitives
                 </h3>
-                <select
-                  v-model="primitiveFilter"
-                  class="px-2 py-1 border rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-700 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
-                >
-                  <option value="all">All</option>
-                  <option value="component">Components</option>
-                  <option value="layout">Layouts</option>
-                  <option value="element">Elements</option>
-                </select>
+                <Dropdown
+                  :model-value="primitiveFilter"
+                  @update:model-value="primitiveFilter = $event"
+                  :options="[
+                    { value: 'all', label: 'All' },
+                    { value: 'component', label: 'Components' },
+                    { value: 'layout', label: 'Layouts' },
+                    { value: 'element', label: 'Elements' }
+                  ]"
+                  :is-dark-mode="isDarkMode"
+                />
               </div>
               <div class="space-y-2 max-h-64 overflow-y-auto">
                 <div
@@ -393,17 +392,16 @@
                   <span class="material-symbols-outlined text-indigo-600">code</span>
                   Generated Code
                 </h3>
-                <select
-                  v-model="codeFormat"
-                  class="px-2 py-1 border rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-700 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
-                >
-                  <option value="vue">Vue</option>
-                  <option value="react">React</option>
-                  <option value="html">HTML</option>
-                </select>
+                <Dropdown
+                  :model-value="codeFormat"
+                  @update:model-value="codeFormat = $event"
+                  :options="[
+                    { value: 'vue', label: 'Vue' },
+                    { value: 'react', label: 'React' },
+                    { value: 'html', label: 'HTML' }
+                  ]"
+                  :is-dark-mode="isDarkMode"
+                />
               </div>
               <div v-if="composition.length > 0" class="rounded-lg overflow-hidden" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
                 <div class="p-3 overflow-x-auto max-h-64 overflow-y-auto">
@@ -475,6 +473,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, h } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import Dropdown from '../components/Dropdown.vue';
 
 // Helper function to get preview component (defined first)
 let getPreviewComponent = null;

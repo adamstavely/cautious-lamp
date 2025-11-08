@@ -98,8 +98,8 @@
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">palette</span>
+              <div class="w-12 h-12 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <SwatchBook :size="48" :stroke-width="2" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -122,8 +122,8 @@
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">text_fields</span>
+              <div class="w-12 h-12 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <TextInitial :size="48" :stroke-width="2" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -146,8 +146,8 @@
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">search</span>
+              <div class="w-12 h-12 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <Tag :size="48" :stroke-width="2" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -291,8 +291,8 @@
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">psychology</span>
+              <div class="w-12 h-12 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <MonitorCog :size="48" :stroke-width="2" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -409,6 +409,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { MonitorCog, Tag, TextInitial, SwatchBook } from 'lucide-vue-next';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
