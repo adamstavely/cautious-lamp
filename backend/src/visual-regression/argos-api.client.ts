@@ -197,7 +197,9 @@ export class ArgosApiClient {
   ): Promise<ArgosScreenshot> {
     try {
       const formData = new FormData();
-      formData.append('screenshot', new Blob([screenshot.file]), screenshot.name);
+      const buffer = Buffer.isBuffer(screenshot.file) ? screenshot.file : Buffer.from(screenshot.file);
+      // @ts-ignore - Buffer works with FormData in Node.js
+      formData.append('screenshot', buffer, screenshot.name);
       if (screenshot.width) formData.append('width', screenshot.width.toString());
       if (screenshot.height) formData.append('height', screenshot.height.toString());
 

@@ -142,10 +142,11 @@ export class PhotosensitivityService {
           skip_empty_lines: true,
           cast: (value, context) => {
             if (context.column === 'Frame') return parseInt(value);
-            if (context.column.includes('Area') || context.column.includes('Accumulation')) {
+            const columnStr = String(context.column);
+            if (columnStr.includes('Area') || columnStr.includes('Accumulation')) {
               return parseFloat(value);
             }
-            if (context.column.includes('Result') || context.column.includes('Transitions') || context.column.includes('Count')) {
+            if (columnStr.includes('Result') || columnStr.includes('Transitions') || columnStr.includes('Count')) {
               return parseInt(value);
             }
             return value;

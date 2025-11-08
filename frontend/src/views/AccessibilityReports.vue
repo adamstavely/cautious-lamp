@@ -104,7 +104,8 @@
           >
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-lg font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold mb-2 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">apps</span>
                   Select Application
                 </h3>
                 <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
@@ -149,7 +150,7 @@
                   {{ currentReport.complianceScore }}%
                 </div>
                 <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  WCAG {{ currentReport.wcagLevel }}
+                  {{ currentReport.wcagLevel === 'AA' ? 'WCAG 2.1 AA' : currentReport.wcagLevel === 'AAA' ? 'WCAG 2.1 AAA' : currentReport.wcagLevel === 'A' ? 'WCAG 2.1 A' : 'Non-Compliant' }}
                 </div>
               </div>
 
@@ -185,7 +186,7 @@
                   {{ currentReport.totalIssues }}
                 </div>
                 <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  {{ currentReport.seriousIssues }} serious, {{ currentReport.moderateIssues }} moderate
+                  {{ currentReport.highIssues }} high, {{ currentReport.moderateIssues }} moderate, {{ currentReport.lowIssues }} low
                 </div>
               </div>
 
@@ -217,7 +218,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">category</span>
                 Issues by Category
               </h3>
               <div class="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -240,18 +242,31 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">priority_high</span>
                   Prioritized Fixes
                 </h3>
-                <button
-                  @click="generateReport"
-                  class="px-4 py-2 rounded-lg font-medium transition-colors"
-                  :class="isDarkMode 
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-                >
-                  Generate New Report
-                </button>
+                <div class="flex items-center gap-2">
+                  <button
+                    @click="exportToPDF"
+                    class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                    :class="isDarkMode 
+                      ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
+                  >
+                    <span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+                    Export PDF
+                  </button>
+                  <button
+                    @click="generateReport"
+                    class="px-4 py-2 rounded-lg font-medium transition-colors"
+                    :class="isDarkMode 
+                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
+                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
+                  >
+                    Generate New Report
+                  </button>
+                </div>
               </div>
               <div class="space-y-3">
                 <div
@@ -264,7 +279,7 @@
                     <div class="flex-1">
                       <div class="flex items-center gap-2 mb-1">
                         <span class="px-2 py-1 rounded text-xs font-medium" :class="getSeverityBadgeClass(fix.severity)">
-                          {{ fix.severity.toUpperCase() }}
+                          {{ fix.severity ? String(fix.severity).toUpperCase() : 'UNKNOWN' }}
                         </span>
                         <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                           {{ fix.rule }}
@@ -300,50 +315,89 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">checklist</span>
                 WCAG Criteria Compliance
               </h3>
-              <div class="space-y-3">
+              <div class="space-y-4">
                 <div
                   v-for="(criterion, key) in currentReport.wcagCriteria"
                   :key="key"
-                  class="flex items-center justify-between p-3 rounded-lg border"
+                  class="rounded-lg border p-4"
                   :class="criterion.status === 'pass' 
                     ? (isDarkMode ? 'bg-green-900/20 border-green-700' : 'bg-green-50 border-green-200')
                     : criterion.status === 'fail'
                     ? (isDarkMode ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200')
                     : (isDarkMode ? 'bg-yellow-900/20 border-yellow-700' : 'bg-yellow-50 border-yellow-200')"
                 >
-                  <div class="flex-1">
-                    <div class="flex items-center gap-2 mb-1">
-                      <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ criterion.criterion }}
-                      </span>
-                      <span class="px-2 py-0.5 rounded text-xs" :class="criterion.level === 'AAA' 
-                        ? (isDarkMode ? 'bg-purple-700 text-purple-200' : 'bg-purple-100 text-purple-700')
-                        : criterion.level === 'AA'
-                        ? (isDarkMode ? 'bg-blue-700 text-blue-200' : 'bg-blue-100 text-blue-700')
-                        : (isDarkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700')"
+                  <div class="flex items-start justify-between mb-2">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                          {{ criterion.criterion }}
+                        </span>
+                        <span class="px-2 py-0.5 rounded text-xs" :class="criterion.level === 'AAA' 
+                          ? (isDarkMode ? 'bg-purple-700 text-purple-200' : 'bg-purple-100 text-purple-700')
+                          : criterion.level === 'AA'
+                          ? (isDarkMode ? 'bg-blue-700 text-blue-200' : 'bg-blue-100 text-blue-700')
+                          : (isDarkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700')"
+                        >
+                          Level {{ criterion.level }}
+                        </span>
+                      </div>
+                      <p class="text-xs mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                        {{ criterion.description }}
+                      </p>
+                    </div>
+                    <div class="text-right ml-4">
+                      <div class="text-lg font-bold" :class="criterion.status === 'pass' 
+                        ? 'text-green-600' 
+                        : criterion.status === 'fail'
+                        ? 'text-red-600'
+                        : 'text-yellow-600'"
                       >
-                        Level {{ criterion.level }}
-                      </span>
+                        {{ criterion.issues }}
+                      </div>
+                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                        {{ criterion.status === 'pass' ? 'Pass' : criterion.status === 'fail' ? 'Fail' : 'Warning' }}
+                      </div>
                     </div>
-                    <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      {{ criterion.description }}
-                    </p>
                   </div>
-                  <div class="text-right">
-                    <div class="text-lg font-bold" :class="criterion.status === 'pass' 
-                      ? 'text-green-600' 
-                      : criterion.status === 'fail'
-                      ? 'text-red-600'
-                      : 'text-yellow-600'"
-                    >
-                      {{ criterion.issues }}
+                  
+                  <!-- Failing Elements -->
+                  <div v-if="criterion.failingElements && Array.isArray(criterion.failingElements) && criterion.failingElements.length > 0" class="mt-3 pt-3 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                    <div class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Failing Elements ({{ criterion.failingElements.length }}):
                     </div>
-                    <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      {{ criterion.status === 'pass' ? 'Pass' : criterion.status === 'fail' ? 'Fail' : 'Warning' }}
+                    <div class="space-y-2">
+                      <div
+                        v-for="(element, idx) in criterion.failingElements"
+                        :key="element.id || idx"
+                        class="p-2 rounded text-xs"
+                        :class="getElementImpactClass(element.impact)"
+                      >
+                        <div class="font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                          {{ element.message }}
+                        </div>
+                        <div class="flex items-center gap-3 text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                          <span v-if="element.file" class="flex items-center gap-1">
+                            <span class="material-symbols-outlined text-xs">description</span>
+                            {{ element.file }}
+                            <span v-if="element.line">:{{ element.line }}</span>
+                          </span>
+                          <span v-if="element.impact" class="px-1.5 py-0.5 rounded text-xs font-medium" :class="getSeverityBadgeClass(element.impact)">
+                            {{ element.impact }}
+                          </span>
+                        </div>
+                        <div v-if="element.element" class="mt-1 font-mono text-xs p-1 rounded" :class="isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
+                          {{ element.element }}
+                        </div>
+                      </div>
                     </div>
+                  </div>
+                  <!-- Debug: Show if failingElements is missing or empty -->
+                  <div v-else-if="criterion.issues > 0" class="mt-3 pt-3 border-t text-xs italic" :class="isDarkMode ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'">
+                    No failing elements data available ({{ criterion.issues }} issues reported)
                   </div>
                 </div>
               </div>
@@ -375,7 +429,8 @@
               ? 'bg-slate-900 border-gray-700' 
               : 'bg-white border-gray-200'"
           >
-            <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <span class="material-symbols-outlined text-indigo-600">history</span>
               Report History
             </h3>
             <div v-if="reports.length === 0" class="text-center py-8">
@@ -423,7 +478,8 @@
               : 'bg-white border-gray-200'"
           >
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">schedule</span>
                 Scheduled Reports
               </h3>
               <button
@@ -664,6 +720,7 @@ import { ref, onMounted, computed } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
+import jsPDF from 'jspdf';
 
 const drawerOpen = ref(false);
 const isDarkMode = ref(false);
@@ -718,26 +775,61 @@ const formatCategoryName = (category) => {
 };
 
 const getSeverityClass = (severity) => {
+  if (!severity) return isDarkMode.value ? 'bg-slate-800 border border-gray-700' : 'bg-white border border-gray-200';
+  
+  const severityUpper = String(severity).toUpperCase();
   const base = isDarkMode.value ? 'bg-slate-800 border' : 'bg-white border';
-  if (severity === 'critical') {
+  
+  if (severityUpper === 'CRITICAL') {
     return base + (isDarkMode.value ? ' border-red-700' : ' border-red-200');
-  } else if (severity === 'serious') {
+  } else if (severityUpper === 'HIGH') {
     return base + (isDarkMode.value ? ' border-orange-700' : ' border-orange-200');
-  } else if (severity === 'moderate') {
+  } else if (severityUpper === 'MODERATE') {
     return base + (isDarkMode.value ? ' border-yellow-700' : ' border-yellow-200');
+  } else if (severityUpper === 'LOW') {
+    return base + (isDarkMode.value ? ' border-blue-700' : ' border-blue-200');
+  } else if (severityUpper === 'INFO') {
+    return base + (isDarkMode.value ? ' border-gray-700' : ' border-gray-200');
   }
   return base + (isDarkMode.value ? ' border-gray-700' : ' border-gray-200');
 };
 
 const getSeverityBadgeClass = (severity) => {
-  if (severity === 'critical') {
+  if (!severity) return isDarkMode.value ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700';
+  
+  const severityUpper = String(severity).toUpperCase();
+  
+  if (severityUpper === 'CRITICAL') {
     return isDarkMode.value ? 'bg-red-700 text-red-200' : 'bg-red-100 text-red-700';
-  } else if (severity === 'serious') {
+  } else if (severityUpper === 'HIGH') {
     return isDarkMode.value ? 'bg-orange-700 text-orange-200' : 'bg-orange-100 text-orange-700';
-  } else if (severity === 'moderate') {
+  } else if (severityUpper === 'MODERATE') {
     return isDarkMode.value ? 'bg-yellow-700 text-yellow-200' : 'bg-yellow-100 text-yellow-700';
+  } else if (severityUpper === 'LOW') {
+    return isDarkMode.value ? 'bg-blue-700 text-blue-200' : 'bg-blue-100 text-blue-700';
+  } else if (severityUpper === 'INFO') {
+    return isDarkMode.value ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700';
   }
   return isDarkMode.value ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700';
+};
+
+const getElementImpactClass = (impact) => {
+  if (!impact) return isDarkMode.value ? 'bg-gray-900/20 border border-gray-700' : 'bg-gray-50 border border-gray-200';
+  
+  const impactUpper = String(impact).toUpperCase();
+  
+  if (impactUpper === 'CRITICAL') {
+    return isDarkMode.value ? 'bg-red-900/20 border border-red-700' : 'bg-red-50 border border-red-200';
+  } else if (impactUpper === 'HIGH') {
+    return isDarkMode.value ? 'bg-orange-900/20 border border-orange-700' : 'bg-orange-50 border border-orange-200';
+  } else if (impactUpper === 'MODERATE') {
+    return isDarkMode.value ? 'bg-yellow-900/20 border border-yellow-700' : 'bg-yellow-50 border border-yellow-200';
+  } else if (impactUpper === 'LOW') {
+    return isDarkMode.value ? 'bg-blue-900/20 border border-blue-700' : 'bg-blue-50 border border-blue-200';
+  } else if (impactUpper === 'INFO') {
+    return isDarkMode.value ? 'bg-gray-900/20 border border-gray-700' : 'bg-gray-50 border border-gray-200';
+  }
+  return isDarkMode.value ? 'bg-gray-900/20 border border-gray-700' : 'bg-gray-50 border border-gray-200';
 };
 
 const formatDate = (date) => {
@@ -785,7 +877,16 @@ const generateReport = async () => {
   loading.value = true;
   try {
     const response = await axios.post(`/api/v1/accessibility-reports/generate/${selectedApplicationId.value}`);
-    currentReport.value = response.data;
+    const report = response.data;
+    // Debug: Log the generated report structure
+    console.log('Generated report:', report);
+    if (report.wcagCriteria) {
+      console.log('WCAG Criteria sample:', Object.values(report.wcagCriteria)[0]);
+      Object.values(report.wcagCriteria).forEach((criterion, idx) => {
+        console.log(`Criterion ${idx}:`, criterion.criterion, 'failingElements:', criterion.failingElements);
+      });
+    }
+    currentReport.value = report;
     await loadReports();
   } catch (error) {
     console.error('Error generating report:', error);
@@ -806,7 +907,13 @@ const loadReport = async () => {
     const response = await axios.get(`/api/v1/accessibility-reports/reports?applicationId=${selectedApplicationId.value}`);
     reports.value = response.data || [];
     if (reports.value.length > 0) {
-      currentReport.value = reports.value[0];
+      const report = reports.value[0];
+      // Debug: Log the report structure
+      console.log('Loaded report from dropdown:', report);
+      if (report.wcagCriteria) {
+        console.log('WCAG Criteria sample:', Object.values(report.wcagCriteria)[0]);
+      }
+      currentReport.value = report;
     } else {
       currentReport.value = null;
     }
@@ -820,16 +927,38 @@ const loadReport = async () => {
 const loadReportById = async (reportId) => {
   try {
     const response = await axios.get(`/api/v1/accessibility-reports/reports/${reportId}`);
-    currentReport.value = response.data;
+    // Convert date string to Date object if needed
+    const report = response.data;
+    if (report.generatedAt && typeof report.generatedAt === 'string') {
+      report.generatedAt = new Date(report.generatedAt);
+    }
+    // Debug: Log the report structure to check for failingElements
+    console.log('Loaded report:', report);
+    if (report.wcagCriteria) {
+      console.log('WCAG Criteria sample:', Object.values(report.wcagCriteria)[0]);
+      Object.values(report.wcagCriteria).forEach((criterion, idx) => {
+        console.log(`Criterion ${idx}:`, criterion.criterion, 'failingElements:', criterion.failingElements);
+      });
+    }
+    currentReport.value = report;
+    // Switch to dashboard tab to show the report
+    activeTab.value = 'dashboard';
+    // Also set the selected application to match the report
+    if (currentReport.value?.applicationId) {
+      selectedApplicationId.value = currentReport.value.applicationId;
+    }
   } catch (error) {
     console.error('Error loading report:', error);
+    alert('Failed to load report. Please try again.');
   }
 };
 
 const loadReports = async () => {
   try {
     const response = await axios.get('/api/v1/accessibility-reports/reports');
+    console.log('Reports API response:', response.data);
     reports.value = Array.isArray(response.data) ? response.data : [];
+    console.log('Reports loaded:', reports.value.length, reports.value);
   } catch (error) {
     console.error('Error loading reports:', error);
     reports.value = [];
@@ -839,7 +968,9 @@ const loadReports = async () => {
 const loadSchedules = async () => {
   try {
     const response = await axios.get('/api/v1/accessibility-reports/schedules');
+    console.log('Schedules API response:', response.data);
     schedules.value = Array.isArray(response.data) ? response.data : [];
+    console.log('Schedules loaded:', schedules.value.length, schedules.value);
   } catch (error) {
     console.error('Error loading schedules:', error);
     schedules.value = [];
@@ -919,6 +1050,490 @@ const saveSchedule = async () => {
     console.error('Error creating schedule:', error);
     alert('Failed to create schedule. Please try again.');
   }
+};
+
+const exportToPDF = () => {
+  if (!currentReport.value) {
+    alert('No report available to export');
+    return;
+  }
+
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  let yPos = margin;
+  const lineHeight = 7;
+  const sectionSpacing = 15; // Increased from 10
+  const itemSpacing = 8; // Spacing between items in lists
+
+  // Helper function to add a new page if needed
+  const checkPageBreak = (requiredSpace = lineHeight) => {
+    if (yPos + requiredSpace > pageHeight - margin) {
+      doc.addPage();
+      yPos = margin;
+      return true;
+    }
+    return false;
+  };
+
+  // Helper function to add text with word wrapping
+  const addText = (text, fontSize = 10, isBold = false, color = [0, 0, 0]) => {
+    checkPageBreak(fontSize + 2);
+    doc.setFontSize(fontSize);
+    doc.setTextColor(color[0], color[1], color[2]);
+    if (isBold) {
+      doc.setFont(undefined, 'bold');
+    } else {
+      doc.setFont(undefined, 'normal');
+    }
+    
+    const maxWidth = pageWidth - (margin * 2);
+    const lines = doc.splitTextToSize(text, maxWidth);
+    doc.text(lines, margin, yPos);
+    yPos += lines.length * (fontSize * 0.4) + 2;
+  };
+
+  // Title
+  doc.setTextColor(79, 70, 229); // Indigo
+  doc.setFontSize(20);
+  doc.setFont(undefined, 'bold');
+  doc.text('Accessibility Report', margin, yPos);
+  yPos += 15; // Increased spacing after title
+
+  // Application Name and Date
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(14);
+  doc.setFont(undefined, 'bold');
+  doc.text(`Application: ${currentReport.value.applicationName}`, margin, yPos);
+  yPos += lineHeight;
+  
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  const reportDate = currentReport.value.generatedAt instanceof Date 
+    ? currentReport.value.generatedAt 
+    : new Date(currentReport.value.generatedAt);
+  doc.text(`Generated: ${reportDate.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })}`, margin, yPos);
+  yPos += sectionSpacing + 5; // Extra spacing before next section
+
+  // WCAG Compliance Overview - 4 Key Metrics
+  checkPageBreak(30);
+  doc.setFontSize(16);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(79, 70, 229);
+  doc.text('WCAG Compliance Overview', margin, yPos);
+  yPos += lineHeight + 8; // Increased spacing after section title
+
+  // Create a visual grid layout for the 4 metrics
+  const boxWidth = (pageWidth - (margin * 2) - 15) / 2;
+  const boxHeight = 25;
+  const boxMargin = 5;
+
+  // Compliance Score Box
+  checkPageBreak(boxHeight + 10);
+  const scoreColor = currentReport.value.complianceScore >= 95 
+    ? [34, 197, 94] // Green
+    : currentReport.value.complianceScore >= 85
+    ? [59, 130, 246] // Blue
+    : currentReport.value.complianceScore >= 70
+    ? [234, 179, 8] // Yellow
+    : [239, 68, 68]; // Red
+  
+  doc.setDrawColor(scoreColor[0], scoreColor[1], scoreColor[2]);
+  doc.setFillColor(scoreColor[0], scoreColor[1], scoreColor[2]);
+  doc.rect(margin, yPos, boxWidth, boxHeight, 'FD');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  doc.text('Compliance Score', margin + 5, yPos + 7);
+  doc.setFontSize(18);
+  doc.setFont(undefined, 'bold');
+  doc.text(`${currentReport.value.complianceScore}%`, margin + 5, yPos + 16);
+  doc.setFontSize(8);
+  doc.setFont(undefined, 'normal');
+  const wcagDisplay = currentReport.value.wcagLevel === 'AA' ? 'WCAG 2.1 AA' : currentReport.value.wcagLevel === 'AAA' ? 'WCAG 2.1 AAA' : currentReport.value.wcagLevel === 'A' ? 'WCAG 2.1 A' : 'Non-Compliant';
+  doc.text(wcagDisplay, margin + 5, yPos + 22);
+
+  // Critical Issues Box
+  doc.setDrawColor(239, 68, 68);
+  doc.setFillColor(239, 68, 68);
+  doc.rect(margin + boxWidth + boxMargin, yPos, boxWidth, boxHeight, 'FD');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  doc.text('Critical Issues', margin + boxWidth + boxMargin + 5, yPos + 7);
+  doc.setFontSize(18);
+  doc.setFont(undefined, 'bold');
+  doc.text(`${currentReport.value.criticalIssues}`, margin + boxWidth + boxMargin + 5, yPos + 16);
+  doc.setFontSize(8);
+  doc.setFont(undefined, 'normal');
+  doc.text('Blocking accessibility', margin + boxWidth + boxMargin + 5, yPos + 22);
+
+  yPos += boxHeight + boxMargin;
+
+  // Total Issues Box
+  checkPageBreak(boxHeight + 10);
+  doc.setDrawColor(249, 115, 22);
+  doc.setFillColor(249, 115, 22);
+  doc.rect(margin, yPos, boxWidth, boxHeight, 'FD');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  doc.text('Total Issues', margin + 5, yPos + 7);
+  doc.setFontSize(18);
+  doc.setFont(undefined, 'bold');
+  doc.text(`${currentReport.value.totalIssues}`, margin + 5, yPos + 16);
+  doc.setFontSize(8);
+  doc.setFont(undefined, 'normal');
+  doc.text(`${currentReport.value.highIssues} high, ${currentReport.value.moderateIssues} moderate, ${currentReport.value.lowIssues} low`, margin + 5, yPos + 22);
+
+  // Trend Box
+  const trendColor = currentReport.value.trend.scoreChange >= 0 
+    ? [34, 197, 94] 
+    : [239, 68, 68];
+  doc.setDrawColor(trendColor[0], trendColor[1], trendColor[2]);
+  doc.setFillColor(trendColor[0], trendColor[1], trendColor[2]);
+  doc.rect(margin + boxWidth + boxMargin, yPos, boxWidth, boxHeight, 'FD');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  doc.text('Trend', margin + boxWidth + boxMargin + 5, yPos + 7);
+  doc.setFontSize(18);
+  doc.setFont(undefined, 'bold');
+  const trendSign = currentReport.value.trend.scoreChange >= 0 ? '+' : '';
+  doc.text(`${trendSign}${currentReport.value.trend.scoreChange.toFixed(1)}%`, margin + boxWidth + boxMargin + 5, yPos + 16);
+  doc.setFontSize(8);
+  doc.setFont(undefined, 'normal');
+  doc.text(`${currentReport.value.trend.fixedIssues} fixed, ${currentReport.value.trend.newIssues} new`, margin + boxWidth + boxMargin + 5, yPos + 22);
+
+  yPos += boxHeight + sectionSpacing + 5; // Extra spacing after overview boxes
+  
+  // Reset text color
+  doc.setTextColor(0, 0, 0);
+
+  // Issues by Category
+  checkPageBreak(30);
+  doc.setFontSize(16);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(79, 70, 229);
+  doc.text('Issues by Category', margin, yPos);
+  yPos += lineHeight + 8; // Increased spacing after section title
+
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(0, 0, 0);
+  
+  const categories = Object.entries(currentReport.value.issuesByCategory)
+    .filter(([_, count]) => count > 0)
+    .sort(([_, a], [__, b]) => b - a);
+  
+  // Create a table-like layout for categories
+  const categoryBoxWidth = (pageWidth - (margin * 2) - 20) / 3;
+  let categoryX = margin;
+  let categoryRow = 0;
+  
+  categories.forEach(([category, count], index) => {
+    if (index > 0 && index % 3 === 0) {
+      categoryRow++;
+      categoryX = margin;
+      yPos += 18; // Increased row spacing
+      checkPageBreak(18);
+    }
+    
+    const categoryName = formatCategoryName(category);
+    
+    // Draw a small box for each category
+    doc.setDrawColor(200, 200, 200);
+    doc.setFillColor(245, 245, 245);
+    doc.roundedRect(categoryX, yPos, categoryBoxWidth, 12, 2, 2, 'FD');
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text(`${count}`, categoryX + 5, yPos + 8);
+    
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'normal');
+    const nameLines = doc.splitTextToSize(categoryName, categoryBoxWidth - 25);
+    doc.text(nameLines, categoryX + 20, yPos + 8);
+    
+    categoryX += categoryBoxWidth + 10;
+  });
+  
+  yPos += 25; // Increased spacing after categories
+  yPos += sectionSpacing;
+
+  // Prioritized Fixes - Show ALL fixes, not just top 10
+  checkPageBreak(30);
+  doc.setFontSize(16);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(79, 70, 229);
+  doc.text('Prioritized Fixes', margin, yPos);
+  yPos += lineHeight + 8; // Increased spacing after section title
+  
+  doc.setFontSize(9);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Showing all ${currentReport.value.prioritizedFixes.length} prioritized fixes`, margin, yPos);
+  yPos += lineHeight + 5; // Increased spacing before fixes list
+  
+  doc.setFontSize(10);
+  
+  // Show ALL fixes, not just top 10
+  currentReport.value.prioritizedFixes.forEach((fix, index) => {
+    checkPageBreak(40);
+    
+    const fixStartY = yPos - 3;
+    
+    // Severity badge color - handle both old and new severity scales
+    const severityUpper = String(fix.severity || '').toUpperCase();
+    const severityColors = {
+      CRITICAL: [239, 68, 68],
+      HIGH: [249, 115, 22],
+      MODERATE: [234, 179, 8],
+      LOW: [59, 130, 246],
+      INFO: [107, 114, 128],
+      // Legacy support (shouldn't be needed but just in case)
+      SERIOUS: [249, 115, 22], // Map to HIGH
+      MINOR: [59, 130, 246], // Map to LOW
+    };
+    const color = severityColors[severityUpper] || [107, 114, 128];
+    
+    const barWidth = 3;
+    const textStartX = margin + barWidth + 8; // Add space after the bar
+    
+    // Severity and rule - ensure it starts after the bar
+    doc.setTextColor(color[0], color[1], color[2]);
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(11);
+    const severityDisplay = fix.severity ? String(fix.severity).toUpperCase() : 'UNKNOWN';
+    const ruleText = `${index + 1}. [${severityDisplay}] ${fix.rule}`;
+    const ruleLines = doc.splitTextToSize(ruleText, pageWidth - textStartX - margin);
+    doc.text(ruleLines, textStartX, yPos);
+    yPos += ruleLines.length * 5 + 2;
+    
+    // Description - ensure it starts after the bar
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(9);
+    const descStartY = yPos;
+    const descLines = doc.splitTextToSize(fix.description, pageWidth - textStartX - margin);
+    doc.text(descLines, textStartX, yPos);
+    yPos += descLines.length * 4 + 2;
+    
+    // Metadata - ensure it starts after the bar
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    const metadataText = `WCAG ${fix.wcagCriterion} | ${fix.affectedElements} elements | Effort: ${fix.effort} | Priority: ${fix.priority.toFixed(1)}`;
+    const metadataLines = doc.splitTextToSize(metadataText, pageWidth - textStartX - margin);
+    doc.text(metadataLines, textStartX, yPos);
+    yPos += metadataLines.length * 4 + 1;
+    
+    // Impact - ensure it starts after the bar
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
+    doc.text(`Impact: ${fix.impact}`, textStartX, yPos);
+    yPos += lineHeight;
+    
+    // Recommendation in a highlighted box - ensure it starts after the bar
+    doc.setDrawColor(220, 220, 220);
+    doc.setFillColor(250, 250, 250);
+    const recStartY = yPos;
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'italic');
+    doc.setTextColor(60, 60, 60);
+    const recText = `Recommendation: ${fix.recommendation}`;
+    const recLines = doc.splitTextToSize(recText, pageWidth - textStartX - margin - 4);
+    const recHeight = recLines.length * 4 + 4;
+    doc.roundedRect(textStartX, recStartY, pageWidth - textStartX - margin, recHeight, 2, 2, 'FD');
+    doc.text(recLines, textStartX + 4, recStartY + 6);
+    yPos += recHeight + 3;
+    
+    // Draw left border with severity color after calculating total height
+    const fixBoxHeight = yPos - fixStartY;
+    doc.setDrawColor(color[0], color[1], color[2]);
+    doc.setFillColor(color[0], color[1], color[2]);
+    doc.rect(margin, fixStartY, barWidth, fixBoxHeight, 'FD');
+    
+    doc.setFont(undefined, 'normal');
+    yPos += itemSpacing; // Increased spacing between fixes
+  });
+
+  // WCAG Criteria
+  checkPageBreak(30);
+  doc.setFontSize(16);
+  doc.setFont(undefined, 'bold');
+  doc.setTextColor(79, 70, 229);
+  doc.text('WCAG Criteria Compliance', margin, yPos);
+  yPos += lineHeight + 8; // Increased spacing after section title
+
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  doc.setTextColor(0, 0, 0);
+
+  const criteria = Object.entries(currentReport.value.wcagCriteria);
+  criteria.forEach(([key, criterion]) => {
+    checkPageBreak(30); // Increased space check
+    
+    const statusColor = criterion.status === 'pass'
+      ? [34, 197, 94] // Green
+      : criterion.status === 'fail'
+      ? [239, 68, 68] // Red
+      : [234, 179, 8]; // Yellow
+    
+    const barWidth = 3;
+    const textStartX = margin + barWidth + 8; // Add space after the bar
+    
+    // Draw a colored bar on the left
+    doc.setDrawColor(statusColor[0], statusColor[1], statusColor[2]);
+    doc.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
+    const criterionStartY = yPos;
+    doc.rect(margin, criterionStartY - 2, barWidth, 20, 'FD');
+    
+    // Criterion title - ensure it starts after the bar
+    doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(10);
+    const titleText = `${criterion.criterion} (Level ${criterion.level}) - ${criterion.status.toUpperCase()}`;
+    const titleLines = doc.splitTextToSize(titleText, pageWidth - textStartX - margin);
+    doc.text(titleLines, textStartX, yPos + 5);
+    yPos += titleLines.length * 5 + 3; // Increased spacing after title
+    
+    // Description - ensure it starts after the bar
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(9);
+    const descStartY = yPos;
+    const descLines = doc.splitTextToSize(criterion.description, pageWidth - textStartX - margin);
+    doc.text(descLines, textStartX, yPos);
+    yPos += descLines.length * 4 + 3; // Increased spacing after description
+    
+    // Issues count
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Issues: ${criterion.issues}`, textStartX, yPos);
+    yPos += lineHeight + 2;
+    
+    // Failing Elements
+    if (criterion.failingElements && criterion.failingElements.length > 0) {
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(80, 80, 80);
+      doc.text('Failing Elements:', textStartX, yPos);
+      yPos += lineHeight + 2;
+      
+      criterion.failingElements.forEach((element, idx) => {
+        checkPageBreak(15);
+        
+        // Element message
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(0, 0, 0);
+        const messageLines = doc.splitTextToSize(`${idx + 1}. ${element.message}`, pageWidth - textStartX - margin);
+        doc.text(messageLines, textStartX, yPos);
+        yPos += messageLines.length * 3.5 + 1;
+        
+        // File and line info
+        if (element.file) {
+          doc.setFontSize(7);
+          doc.setTextColor(100, 100, 100);
+          const fileInfo = element.line ? `${element.file}:${element.line}` : element.file;
+          doc.text(`File: ${fileInfo}`, textStartX, yPos);
+          yPos += lineHeight - 1;
+        }
+        
+        // Impact badge
+        if (element.impact) {
+          const impactColor = element.impact === 'CRITICAL' ? [239, 68, 68] :
+            element.impact === 'HIGH' ? [249, 115, 22] :
+            element.impact === 'MODERATE' ? [234, 179, 8] :
+            element.impact === 'LOW' ? [59, 130, 246] : [107, 114, 128];
+          doc.setFillColor(impactColor[0], impactColor[1], impactColor[2]);
+          doc.setDrawColor(impactColor[0], impactColor[1], impactColor[2]);
+          doc.roundedRect(textStartX, yPos - 2, 20, 4, 1, 1, 'FD');
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(6);
+          doc.text(element.impact, textStartX + 2, yPos);
+          doc.setTextColor(0, 0, 0);
+          yPos += lineHeight;
+        }
+        
+        // Element code snippet
+        if (element.element) {
+          doc.setFontSize(6);
+          doc.setFont('courier', 'normal');
+          doc.setTextColor(60, 60, 60);
+          const elementLines = doc.splitTextToSize(element.element, pageWidth - textStartX - margin);
+          doc.text(elementLines, textStartX, yPos);
+          yPos += elementLines.length * 3 + 2;
+          doc.setFont('helvetica', 'normal'); // Reset font
+        }
+        
+        yPos += 2; // Spacing between elements
+      });
+    }
+    
+    // Update bar height to match content
+    const criterionHeight = yPos - criterionStartY + 2;
+    doc.setDrawColor(statusColor[0], statusColor[1], statusColor[2]);
+    doc.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
+    doc.rect(margin, criterionStartY - 2, barWidth, criterionHeight, 'FD');
+    
+    yPos += itemSpacing; // Increased spacing between criteria items
+  });
+
+  // Trend Information
+  if (currentReport.value.trend) {
+    checkPageBreak(25);
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(79, 70, 229);
+    doc.text('Trend Analysis', margin, yPos);
+    yPos += lineHeight + 8; // Increased spacing after section title
+
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(0, 0, 0);
+    
+    const trendColor = currentReport.value.trend.scoreChange >= 0 
+      ? [34, 197, 94] 
+      : [239, 68, 68];
+    doc.setTextColor(trendColor[0], trendColor[1], trendColor[2]);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Score Change: ${currentReport.value.trend.scoreChange >= 0 ? '+' : ''}${currentReport.value.trend.scoreChange.toFixed(1)}%`, margin, yPos);
+    yPos += lineHeight;
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Issues Change: ${currentReport.value.trend.issuesChange >= 0 ? '+' : ''}${currentReport.value.trend.issuesChange}`, margin, yPos);
+    yPos += lineHeight + 2; // Increased spacing
+    doc.text(`New Issues: ${currentReport.value.trend.newIssues} | Fixed Issues: ${currentReport.value.trend.fixedIssues}`, margin, yPos);
+    yPos += sectionSpacing; // Extra spacing after trend section
+  }
+
+  // Footer
+  const totalPages = doc.internal.pages.length - 1;
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.text(
+      `Page ${i} of ${totalPages} | Generated by Design System Accessibility Reports`,
+      pageWidth / 2,
+      pageHeight - 10,
+      { align: 'center' }
+    );
+  }
+
+  // Save the PDF
+  const filename = `accessibility-report-${currentReport.value.applicationName.replace(/\s+/g, '-').toLowerCase()}-${reportDate.toISOString().split('T')[0]}.pdf`;
+  doc.save(filename);
 };
 
 onMounted(async () => {

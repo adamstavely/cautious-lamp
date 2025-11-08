@@ -101,6 +101,8 @@ export interface ComplianceCheck {
   application?: string;
   file?: string;
   line?: number;
+  element?: string;
+  impact?: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW' | 'INFO';
 }
 
 @Injectable()
@@ -128,6 +130,7 @@ export class DesignSystemService {
       repository: 'https://github.com/company/marketing-site',
       version: '2.1.0',
       registeredAt: new Date('2024-01-15'),
+      updatedAt: new Date('2024-01-20'),
       lastScanned: new Date('2024-01-20')
     });
     this.applications.set('app-2', {
@@ -136,6 +139,7 @@ export class DesignSystemService {
       repository: 'https://github.com/company/admin-dashboard',
       version: '1.5.3',
       registeredAt: new Date('2024-01-10'),
+      updatedAt: new Date('2024-01-18'),
       lastScanned: new Date('2024-01-18')
     });
     this.applications.set('app-3', {
