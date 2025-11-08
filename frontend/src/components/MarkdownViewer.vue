@@ -15,7 +15,7 @@
         </div>
       </div>
       <div v-else>
-        <div v-html="renderedMarkdown" class="prose prose-slate dark:prose-invert max-w-none"></div>
+        <div v-html="renderedMarkdown" class="prose prose-slate dark:prose-invert max-w-none markdown-content"></div>
         
         <!-- Edit Page and Last Updated Footer -->
         <div class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-sm">
@@ -140,10 +140,143 @@ marked.setOptions({
   renderer: renderer
 });
 
+// Foundation page hero card data
+const foundationHeroCards = {
+  '/colors': {
+    title: 'Colors',
+    description: 'Our color system is built on a foundation of semantic colors and a comprehensive palette that supports both light and dark modes.',
+    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="colorsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <!-- Color swatches -->
+      <circle cx="60" cy="60" r="25" fill="url(#colorsGradient)" opacity="0.8"/>
+      <circle cx="140" cy="60" r="25" fill="#10b981" opacity="0.8"/>
+      <circle cx="60" cy="140" r="25" fill="#f59e0b" opacity="0.8"/>
+      <circle cx="140" cy="140" r="25" fill="#ef4444" opacity="0.8"/>
+      <!-- Central palette icon -->
+      <rect x="85" y="85" width="30" height="30" rx="4" fill="url(#colorsGradient)" opacity="0.6"/>
+    </svg>`
+  },
+  '/typography': {
+    title: 'Typography',
+    description: 'Typography establishes visual hierarchy and ensures readability across all interfaces. Our type system includes font families, sizes, weights, and line heights.',
+    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="typographyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <!-- Typography lines -->
+      <line x1="40" y1="60" x2="160" y2="60" stroke="url(#typographyGradient)" stroke-width="4" opacity="0.8"/>
+      <line x1="40" y1="90" x2="160" y2="90" stroke="url(#typographyGradient)" stroke-width="3" opacity="0.7"/>
+      <line x1="40" y1="120" x2="160" y2="120" stroke="url(#typographyGradient)" stroke-width="2" opacity="0.6"/>
+      <line x1="40" y1="150" x2="160" y2="150" stroke="url(#typographyGradient)" stroke-width="2" opacity="0.5"/>
+      <!-- Letter "A" representation -->
+      <path d="M 100 50 L 70 150 L 85 150 L 95 120 L 105 120 L 115 150 L 130 150 L 100 50 Z" fill="url(#typographyGradient)" opacity="0.3"/>
+    </svg>`
+  },
+  '/spacing': {
+    title: 'Spacing',
+    description: 'Consistent spacing creates rhythm and improves visual hierarchy. Our spacing system uses a consistent scale to maintain harmony across all components.',
+    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="spacingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <!-- Spacing blocks -->
+      <rect x="50" y="50" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
+      <rect x="90" y="50" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
+      <rect x="130" y="50" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
+      <rect x="50" y="90" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
+      <rect x="130" y="90" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
+      <rect x="50" y="130" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
+      <rect x="90" y="130" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
+      <rect x="130" y="130" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
+    </svg>`
+  },
+  '/shadows': {
+    title: 'Shadows',
+    description: 'Shadows add depth and elevation to our interface, helping users understand the hierarchy and relationships between elements.',
+    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="shadowsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+        </linearGradient>
+        <filter id="shadowFilter">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+          <feOffset dx="2" dy="2" result="offsetblur"/>
+          <feComponentTransfer>
+            <feFuncA type="linear" slope="0.3"/>
+          </feComponentTransfer>
+          <feMerge>
+            <feMergeNode/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      <!-- Layered cards with shadows -->
+      <rect x="50" y="50" width="100" height="100" rx="8" fill="url(#shadowsGradient)" opacity="0.9" filter="url(#shadowFilter)"/>
+      <rect x="60" y="60" width="100" height="100" rx="8" fill="url(#shadowsGradient)" opacity="0.7" filter="url(#shadowFilter)"/>
+      <rect x="70" y="70" width="100" height="100" rx="8" fill="url(#shadowsGradient)" opacity="0.5" filter="url(#shadowFilter)"/>
+    </svg>`
+  }
+};
+
+const isFoundationPage = computed(() => {
+  return foundationHeroCards.hasOwnProperty(props.docPath);
+});
+
+const getHeroCardHTML = () => {
+  if (!isFoundationPage.value) return '';
+  const hero = foundationHeroCards[props.docPath];
+  // Make gradient IDs unique by adding the doc path
+  const uniqueId = props.docPath.replace(/\//g, '-').replace(/^-/, '');
+  let svgWithUniqueIds = hero.svg;
+  
+  // Replace gradient IDs
+  svgWithUniqueIds = svgWithUniqueIds.replace(/id="([^"]+Gradient)"/g, `id="$1-${uniqueId}"`);
+  // Replace filter IDs
+  svgWithUniqueIds = svgWithUniqueIds.replace(/id="([^"]+Filter)"/g, `id="$1-${uniqueId}"`);
+  // Replace URL references to gradients
+  svgWithUniqueIds = svgWithUniqueIds.replace(/url\(#([^)]+Gradient)\)/g, `url(#$1-${uniqueId})`);
+  // Replace URL references to filters
+  svgWithUniqueIds = svgWithUniqueIds.replace(/url\(#([^)]+Filter)\)/g, `url(#$1-${uniqueId})`);
+  
+  return `
+    <div class="mb-12 -mx-8">
+      <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
+        <div class="absolute inset-0 opacity-10 texture-pattern"></div>
+        <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+          <div class="flex-1">
+            <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">${hero.title}</h1>
+            <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">${hero.description}</p>
+          </div>
+          <div class="hidden md:block flex-shrink-0">
+            <div class="w-64 h-64 relative">${svgWithUniqueIds}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
 const renderedMarkdown = computed(() => {
   if (!markdownContent.value) return '';
   headings.length = 0; // Clear previous headings
-  return marked.parse(markdownContent.value);
+  const parsedMarkdown = marked.parse(markdownContent.value);
+  // Prepend hero card for foundation pages
+  if (isFoundationPage.value) {
+    return getHeroCardHTML() + parsedMarkdown;
+  }
+  return parsedMarkdown;
 });
 
 // Watch for rendered markdown to update TOC
@@ -570,6 +703,17 @@ onBeforeUnmount(() => {
   padding-right: 0.5714286em;
   padding-bottom: 0.5714286em;
   padding-left: 0.5714286em;
+}
+
+/* Hero card styles within markdown */
+.markdown-content :deep(.texture-pattern) {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Ensure hero card h1 doesn't conflict with prose styles */
+.markdown-content :deep(.mb-12 h1) {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
 }
 </style>
 
