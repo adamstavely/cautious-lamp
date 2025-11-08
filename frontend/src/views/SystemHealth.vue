@@ -63,14 +63,37 @@
                   <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
                   Overall Health
                 </h3>
+                <div v-if="healthScore?.trend" class="flex items-center gap-1">
+                  <span 
+                    class="material-symbols-outlined text-sm"
+                    :class="healthScore.trend.direction === 'up' 
+                      ? 'text-green-500' 
+                      : healthScore.trend.direction === 'down' 
+                      ? 'text-red-500' 
+                      : 'text-gray-500'"
+                  >
+                    {{ healthScore.trend.direction === 'up' ? 'trending_up' : healthScore.trend.direction === 'down' ? 'trending_down' : 'trending_flat' }}
+                  </span>
+                  <span 
+                    class="text-xs font-medium"
+                    :class="healthScore.trend.direction === 'up' 
+                      ? 'text-green-500' 
+                      : healthScore.trend.direction === 'down' 
+                      ? 'text-red-500' 
+                      : 'text-gray-500'"
+                  >
+                    {{ healthScore.trend.change >= 0 ? '+' : '' }}{{ healthScore.trend.change.toFixed(1) }}
+                  </span>
+                </div>
               </div>
               <div class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                {{ overallHealth }}%
+                {{ overallHealth.toFixed(1) }}%
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
                 <div 
-                  class="bg-green-500 h-2 rounded-full transition-all"
-                  :style="{ width: `${overallHealth}%` }"
+                  class="h-2 rounded-full transition-all"
+                  :class="overallHealth >= 80 ? 'bg-green-500' : overallHealth >= 60 ? 'bg-yellow-500' : 'bg-red-500'"
+                  :style="{ width: `${Math.min(100, overallHealth)}%` }"
                 ></div>
               </div>
             </div>
@@ -213,6 +236,180 @@
                     <span class="text-sm font-semibold w-8 text-right" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                       {{ category.count }}
                     </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Health Score Factors -->
+        <div v-if="healthScore" class="max-w-7xl mx-auto mb-8">
+          <div 
+            class="rounded-lg shadow-sm border"
+            :class="isDarkMode 
+              ? 'bg-slate-900 border-gray-700' 
+              : 'bg-white border-gray-200'"
+          >
+            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">analytics</span>
+                Health Score Factors
+              </h3>
+              <p class="text-sm mt-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Weighted factors contributing to overall health score
+              </p>
+            </div>
+            <div class="p-6">
+              <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Component Coverage</div>
+                  <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    {{ healthScore.factors.componentCoverage.toFixed(1) }}%
+                  </div>
+                  <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 25%</div>
+                </div>
+                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Adoption Rate</div>
+                  <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    {{ healthScore.factors.adoptionRate.toFixed(1) }}%
+                  </div>
+                  <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 25%</div>
+                </div>
+                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Compliance</div>
+                  <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    {{ healthScore.factors.compliance.toFixed(1) }}%
+                  </div>
+                  <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 20%</div>
+                </div>
+                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Maintenance</div>
+                  <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    {{ healthScore.factors.maintenance.toFixed(1) }}%
+                  </div>
+                  <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 15%</div>
+                </div>
+                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Accessibility</div>
+                  <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    {{ healthScore.factors.accessibility.toFixed(1) }}%
+                  </div>
+                  <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 15%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Health Score Trends -->
+        <div v-if="healthScoreTrends.length > 0" class="max-w-7xl mx-auto mb-8">
+          <div 
+            class="rounded-lg shadow-sm border"
+            :class="isDarkMode 
+              ? 'bg-slate-900 border-gray-700' 
+              : 'bg-white border-gray-200'"
+          >
+            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">show_chart</span>
+                Health Score Trends (Last 30 Days)
+              </h3>
+            </div>
+            <div class="p-6">
+              <div class="h-64 flex items-end gap-1">
+                <div
+                  v-for="(trend, index) in healthScoreTrends"
+                  :key="index"
+                  class="flex-1 group relative"
+                >
+                  <div
+                    class="w-full rounded-t transition-all hover:opacity-80 cursor-pointer"
+                    :class="trend.score >= 80 ? 'bg-green-500' : trend.score >= 60 ? 'bg-yellow-500' : 'bg-red-500'"
+                    :style="{ height: `${(trend.score / 100) * 100}%` }"
+                    :title="`${new Date(trend.date).toLocaleDateString()}: ${trend.score.toFixed(1)}%`"
+                  ></div>
+                  <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <div class="bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                      {{ trend.score.toFixed(1) }}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="flex justify-between mt-4 text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                <span>{{ healthScoreTrends.length > 0 ? new Date(healthScoreTrends[0].date).toLocaleDateString() : '' }}</span>
+                <span>{{ healthScoreTrends.length > 0 ? new Date(healthScoreTrends[healthScoreTrends.length - 1].date).toLocaleDateString() : '' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Health Score Recommendations -->
+        <div v-if="healthScoreRecommendations.length > 0" class="max-w-7xl mx-auto mb-8">
+          <div 
+            class="rounded-lg shadow-sm border"
+            :class="isDarkMode 
+              ? 'bg-slate-900 border-gray-700' 
+              : 'bg-white border-gray-200'"
+          >
+            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">lightbulb</span>
+                Recommendations to Improve Health Score
+              </h3>
+            </div>
+            <div class="p-6">
+              <div class="space-y-4">
+                <div
+                  v-for="rec in healthScoreRecommendations"
+                  :key="rec.id"
+                  class="p-4 rounded-lg border"
+                  :class="rec.priority === 'high'
+                    ? (isDarkMode ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200')
+                    : rec.priority === 'medium'
+                    ? (isDarkMode ? 'bg-yellow-900/20 border-yellow-700' : 'bg-yellow-50 border-yellow-200')
+                    : (isDarkMode ? 'bg-blue-900/20 border-blue-700' : 'bg-blue-50 border-blue-200')"
+                >
+                  <div class="flex items-start gap-3">
+                    <span 
+                      class="material-symbols-outlined flex-shrink-0 mt-0.5"
+                      :class="rec.priority === 'high' ? 'text-red-400' : rec.priority === 'medium' ? 'text-yellow-400' : 'text-blue-400'"
+                    >
+                      {{ rec.priority === 'high' ? 'priority_high' : 'info' }}
+                    </span>
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2 mb-1">
+                        <h4 class="font-semibold" :class="rec.priority === 'high' 
+                          ? (isDarkMode ? 'text-red-300' : 'text-red-900')
+                          : rec.priority === 'medium'
+                          ? (isDarkMode ? 'text-yellow-300' : 'text-yellow-900')
+                          : (isDarkMode ? 'text-blue-300' : 'text-blue-900')">
+                          {{ rec.title }}
+                        </h4>
+                        <span class="px-2 py-0.5 rounded text-xs font-medium"
+                          :class="rec.priority === 'high'
+                            ? (isDarkMode ? 'bg-red-700 text-red-200' : 'bg-red-100 text-red-700')
+                            : rec.priority === 'medium'
+                            ? (isDarkMode ? 'bg-yellow-700 text-yellow-200' : 'bg-yellow-100 text-yellow-700')
+                            : (isDarkMode ? 'bg-blue-700 text-blue-200' : 'bg-blue-100 text-blue-700')"
+                        >
+                          {{ rec.priority.toUpperCase() }}
+                        </span>
+                      </div>
+                      <p class="text-sm mb-2" :class="rec.priority === 'high' 
+                        ? (isDarkMode ? 'text-red-200' : 'text-red-800')
+                        : rec.priority === 'medium'
+                        ? (isDarkMode ? 'text-yellow-200' : 'text-yellow-800')
+                        : (isDarkMode ? 'text-blue-200' : 'text-blue-800')">
+                        {{ rec.description }}
+                      </p>
+                      <p class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        Impact: {{ rec.impact }}
+                      </p>
+                      <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                        {{ rec.action }}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -531,8 +728,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import axios from 'axios';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Dropdown from '../components/Dropdown.vue';
 
@@ -610,7 +808,45 @@ const tokenCategories = computed(() => {
   }));
 });
 
+// Enhanced health score data from API
+const healthScore = ref(null);
+const healthScoreTrends = ref([]);
+const healthScoreAlerts = ref([]);
+const healthScoreRecommendations = ref([]);
+const loadingHealthScore = ref(false);
+
+// Load health score data from API
+const loadHealthScore = async () => {
+  loadingHealthScore.value = true;
+  try {
+    const response = await axios.get('/api/v1/system-health/score');
+    healthScore.value = response.data;
+    healthScoreAlerts.value = response.data.alerts || [];
+    healthScoreRecommendations.value = response.data.recommendations || [];
+  } catch (error) {
+    console.error('Error loading health score:', error);
+    // Fallback to computed value if API fails
+  } finally {
+    loadingHealthScore.value = false;
+  }
+};
+
+// Load health score trends
+const loadHealthScoreTrends = async (days = 30) => {
+  try {
+    const response = await axios.get(`/api/v1/system-health/trends?days=${days}`);
+    healthScoreTrends.value = response.data;
+  } catch (error) {
+    console.error('Error loading health score trends:', error);
+  }
+};
+
+// Computed overall health - use API data if available, otherwise fallback
 const overallHealth = computed(() => {
+  if (healthScore.value) {
+    return healthScore.value.score;
+  }
+  // Fallback calculation
   const componentScore = (metrics.value.components.productionReady / metrics.value.components.total) * 100;
   const accessibilityScore = metrics.value.accessibility.score;
   const deprecatedPenalty = (metrics.value.components.deprecated / metrics.value.components.total) * 20;
@@ -618,24 +854,31 @@ const overallHealth = computed(() => {
   return Math.round((componentScore + accessibilityScore) / 2 - deprecatedPenalty);
 });
 
-const alerts = ref([
-  {
-    id: 1,
-    severity: 'medium',
-    title: '4 Components In Progress',
-    message: 'Some components are still in development and may have breaking changes.',
-    action: 'View Components',
-    actionPath: '/components/status',
-  },
-  {
-    id: 2,
-    severity: 'low',
-    title: 'Token Usage Optimization',
-    message: '24 tokens are unused and could be removed to simplify the system.',
-    action: 'Review Tokens',
-    actionPath: '/tokens',
-  },
-]);
+// Combined alerts - merge API alerts with static alerts
+const alerts = computed(() => {
+  const staticAlerts = [
+    {
+      id: 'static-1',
+      severity: 'medium',
+      title: '4 Components In Progress',
+      message: 'Some components are still in development and may have breaking changes.',
+      action: 'View Components',
+      actionPath: '/components/status',
+    },
+  ];
+  
+  // Add health score alerts from API
+  const healthAlerts = healthScoreAlerts.value.map((alert, index) => ({
+    id: `health-${alert.severity}-${index}`,
+    severity: alert.severity,
+    title: 'Health Score Alert',
+    message: alert.message,
+    action: null,
+    actionPath: null,
+  }));
+  
+  return [...healthAlerts, ...staticAlerts];
+});
 
 const topComponents = ref([
   { name: 'Button', status: 'Production Ready', adoption: 95, usage: 1247 },
@@ -713,7 +956,13 @@ const toggleDrawer = () => {
 let darkModeObserver = null;
 let darkModeInterval = null;
 
-onMounted(() => {
+onMounted(async () => {
+  // Auto-open drawer if navigating from sidebar
+  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
+    drawerOpen.value = true;
+    sessionStorage.removeItem('openDrawerOnLoad');
+  }
+
   darkModeObserver = new MutationObserver(() => {
     isDarkMode.value = document.documentElement.classList.contains('dark');
   });
@@ -729,6 +978,10 @@ onMounted(() => {
   
   checkDarkMode();
   darkModeInterval = setInterval(checkDarkMode, 100);
+
+  // Load health score data
+  await loadHealthScore();
+  await loadHealthScoreTrends(30);
 });
 
 onBeforeUnmount(() => {

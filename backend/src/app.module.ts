@@ -8,6 +8,7 @@ import { VisualRegressionModule } from './visual-regression/visual-regression.mo
 import { SessionReplayModule } from './session-replay/session-replay.module';
 import { PhotosensitivityModule } from './photosensitivity/photosensitivity.module';
 import { AccessibilityReportsModule } from './accessibility-reports/accessibility-reports.module';
+import { SystemHealthModule } from './system-health/system-health.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
@@ -32,6 +33,7 @@ import { ElasticsearchModule } from '@nestjs/elasticsearch';
     SessionReplayModule,
     PhotosensitivityModule,
     AccessibilityReportsModule,
+    SystemHealthModule,
   ],
 })
 export class AppModule {}
