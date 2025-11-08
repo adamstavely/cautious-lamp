@@ -757,7 +757,8 @@ const toolGroups = computed(() => ({
   development: [
     { text: 'Migration Assistant', link: '/tools/migration', icon: 'refresh' },
     { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' },
-    { text: 'Visual Regression Testing', link: '/tools/visual-regression', icon: 'compare' }
+    { text: 'Visual Regression Testing', link: '/tools/visual-regression', icon: 'compare' },
+    { text: 'Session Replay', link: '/tools/session-replay', icon: 'videocam' }
   ],
   image: [
     { text: 'PNG to ICO Converter', link: '/tools/png-to-ico', icon: 'image' }

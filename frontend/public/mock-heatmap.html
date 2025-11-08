@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mock Heatmap - OpenReplay</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 20px;
+    }
+    
+    .header {
+      background: #0f172a;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid #334155;
+    }
+    
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: #f1f5f9;
+    }
+    
+    .header p {
+      color: #94a3b8;
+      font-size: 14px;
+    }
+    
+    .controls {
+      background: #0f172a;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 1px solid #334155;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #e2e8f0;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      background: #334155;
+      border-color: #475569;
+    }
+    
+    .btn.active {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      color: white;
+    }
+    
+    .heatmap-container {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 20px;
+      border: 1px solid #334155;
+      position: relative;
+      min-height: 600px;
+    }
+    
+    .page-preview {
+      background: white;
+      border-radius: 8px;
+      padding: 40px;
+      margin: 0 auto;
+      max-width: 800px;
+      position: relative;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    
+    .heatmap-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      border-radius: 8px;
+    }
+    
+    .heat-point {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0.7;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 0.7; transform: scale(1); }
+      50% { opacity: 0.9; transform: scale(1.1); }
+    }
+    
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    
+    .stat-card {
+      background: #1e293b;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #f1f5f9;
+    }
+    
+    .demo-content {
+      color: #1e293b;
+    }
+    
+    .demo-content h2 {
+      margin-bottom: 16px;
+      font-size: 28px;
+    }
+    
+    .demo-content p {
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+    
+    .demo-button {
+      background: #3b82f6;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 16px;
+    }
+    
+    .demo-button:hover {
+      background: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔥 Mock Heatmap Viewer</h1>
+    <p>This is a demo heatmap interface for testing. In production, this would show real OpenReplay heatmap data.</p>
+  </div>
+  
+  <div class="controls">
+    <button class="btn active" onclick="showHeatmap('click')">Click Heatmap</button>
+    <button class="btn" onclick="showHeatmap('scroll')">Scroll Heatmap</button>
+    <button class="btn" onclick="showHeatmap('movement')">Mouse Movement</button>
+  </div>
+  
+  <div class="heatmap-container">
+    <div class="page-preview" id="pagePreview">
+      <div class="demo-content">
+        <h2>Sample Web Page</h2>
+        <p>This is a mock webpage showing how heatmaps would overlay on your actual pages.</p>
+        <p>The colored circles represent user interaction hotspots - red areas indicate high activity, while blue areas show less engagement.</p>
+        <button class="demo-button">Call to Action Button</button>
+        <p style="margin-top: 20px;">Scroll down to see more content and how scroll heatmaps would appear.</p>
+        <div style="height: 400px; margin-top: 20px; background: #f1f5f9; border-radius: 6px; padding: 20px;">
+          <h3 style="margin-bottom: 12px;">Additional Content Section</h3>
+          <p>This section demonstrates how heatmaps visualize user engagement across different parts of your page.</p>
+        </div>
+      </div>
+      <div class="heatmap-overlay" id="heatmapOverlay"></div>
+    </div>
+    
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Total Sessions</div>
+        <div class="stat-value">1,234</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Clicks</div>
+        <div class="stat-value">8,567</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg. Scroll Depth</div>
+        <div class="stat-value">68%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Hot Spots</div>
+        <div class="stat-value">12</div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const heatmapData = {
+      click: [
+        { x: 15, y: 25, intensity: 95, size: 40 },
+        { x: 45, y: 30, intensity: 85, size: 35 },
+        { x: 70, y: 28, intensity: 75, size: 30 },
+        { x: 50, y: 50, intensity: 90, size: 38 },
+        { x: 25, y: 60, intensity: 70, size: 28 },
+        { x: 80, y: 55, intensity: 65, size: 25 },
+      ],
+      scroll: [
+        { x: 50, y: 20, intensity: 100, size: 200 },
+        { x: 50, y: 40, intensity: 90, size: 180 },
+        { x: 50, y: 60, intensity: 80, size: 160 },
+        { x: 50, y: 80, intensity: 60, size: 140 },
+      ],
+      movement: [
+        { x: 20, y: 30, intensity: 80, size: 30 },
+        { x: 35, y: 35, intensity: 75, size: 28 },
+        { x: 50, y: 40, intensity: 85, size: 32 },
+        { x: 65, y: 38, intensity: 70, size: 26 },
+        { x: 75, y: 45, intensity: 65, size: 24 },
+      ]
+    };
+    
+    function showHeatmap(type) {
+      // Update active button
+      document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      // Clear existing heatmap
+      const overlay = document.getElementById('heatmapOverlay');
+      overlay.innerHTML = '';
+      
+      // Get data for selected type
+      const data = heatmapData[type];
+      const container = document.getElementById('pagePreview');
+      const containerRect = container.getBoundingClientRect();
+      
+      // Create heat points
+      data.forEach(point => {
+        const heatPoint = document.createElement('div');
+        heatPoint.className = 'heat-point';
+        
+        const x = (point.x / 100) * containerRect.width;
+        const y = (point.y / 100) * containerRect.height;
+        const size = point.size;
+        
+        // Color based on intensity
+        const intensity = point.intensity;
+        let color;
+        if (intensity > 80) {
+          color = `rgba(239, 68, 68, ${intensity / 100})`; // Red
+        } else if (intensity > 60) {
+          color = `rgba(251, 146, 60, ${intensity / 100})`; // Orange
+        } else {
+          color = `rgba(59, 130, 246, ${intensity / 100})`; // Blue
+        }
+        
+        heatPoint.style.left = `${x}px`;
+        heatPoint.style.top = `${y}px`;
+        heatPoint.style.width = `${size}px`;
+        heatPoint.style.height = `${size}px`;
+        heatPoint.style.background = `radial-gradient(circle, ${color} 0%, transparent 70%)`;
+        heatPoint.style.marginLeft = `-${size / 2}px`;
+        heatPoint.style.marginTop = `-${size / 2}px`;
+        
+        overlay.appendChild(heatPoint);
+      });
+    }
+    
+    // Initialize with click heatmap
+    showHeatmap('click');
+    
+    // Update heatmap on window resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        const activeBtn = document.querySelector('.btn.active');
+        if (activeBtn) {
+          const type = activeBtn.textContent.toLowerCase().includes('click') ? 'click' :
+                      activeBtn.textContent.toLowerCase().includes('scroll') ? 'scroll' : 'movement';
+          showHeatmap(type);
+        }
+      }, 250);
+    });
+  </script>
+</body>
+</html>
+
