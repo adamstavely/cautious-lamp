@@ -15,7 +15,7 @@
             <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
               <div class="flex-1">
                 <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Design System
+                  Design.com
                   <span class="block text-indigo-400 mt-2">Unifying the Mission; by Design</span>
                 </h1>
                 <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
