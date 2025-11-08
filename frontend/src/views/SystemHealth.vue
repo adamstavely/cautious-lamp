@@ -722,6 +722,143 @@
             </div>
           </div>
         </div>
+
+        <!-- Design Debt Metrics -->
+        <div v-if="designDebtMetrics" class="max-w-7xl mx-auto mb-8">
+          <div 
+            class="rounded-lg shadow-sm border"
+            :class="isDarkMode 
+              ? 'bg-slate-900 border-gray-700' 
+              : 'bg-white border-gray-200'"
+          >
+            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">construction</span>
+                Design Debt Metrics
+              </h3>
+            </div>
+            <div class="p-6">
+              <div class="grid md:grid-cols-3 gap-6 mb-6">
+                <div>
+                  <div class="text-sm mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    Deprecated Components in Use
+                  </div>
+                  <div class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    {{ designDebtMetrics.deprecatedComponentsInUse }}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-sm mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    Custom Components
+                  </div>
+                  <div class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    {{ designDebtMetrics.customComponentCount }}
+                  </div>
+                </div>
+                <div>
+                  <div class="text-sm mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    Technical Debt Score
+                  </div>
+                  <div class="text-3xl font-bold" 
+                    :class="designDebtMetrics.technicalDebtScore >= 70 
+                      ? 'text-red-500' 
+                      : designDebtMetrics.technicalDebtScore >= 40 
+                      ? 'text-yellow-500' 
+                      : 'text-green-500'"
+                  >
+                    {{ designDebtMetrics.technicalDebtScore }}/100
+                  </div>
+                </div>
+              </div>
+              <div v-if="designDebtMetrics.recommendations && designDebtMetrics.recommendations.length > 0">
+                <h4 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  Recommendations
+                </h4>
+                <ul class="space-y-2">
+                  <li 
+                    v-for="(rec, index) in designDebtMetrics.recommendations"
+                    :key="index"
+                    class="flex items-start gap-2 text-sm"
+                    :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+                  >
+                    <span class="material-symbols-outlined text-indigo-600 text-base">check_circle</span>
+                    {{ rec }}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cross-Application Comparison -->
+        <div v-if="crossApplicationComparison.length > 0" class="max-w-7xl mx-auto mb-8">
+          <div 
+            class="rounded-lg shadow-sm border"
+            :class="isDarkMode 
+              ? 'bg-slate-900 border-gray-700' 
+              : 'bg-white border-gray-200'"
+          >
+            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">compare_arrows</span>
+                Cross-Application Comparison
+              </h3>
+            </div>
+            <div class="p-6">
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead>
+                    <tr class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        Application
+                      </th>
+                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        Components Used
+                      </th>
+                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        Adoption Rate
+                      </th>
+                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        Shared Components
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr 
+                      v-for="app in crossApplicationComparison"
+                      :key="app.applicationId"
+                      class="border-b"
+                      :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
+                    >
+                      <td class="py-3 px-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                        {{ app.applicationName }}
+                      </td>
+                      <td class="py-3 px-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        {{ app.uniqueComponents }}
+                      </td>
+                      <td class="py-3 px-4">
+                        <div class="flex items-center gap-2">
+                          <div class="w-24 bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
+                            <div 
+                              class="bg-indigo-500 h-2 rounded-full"
+                              :style="{ width: `${app.adoptionRate}%` }"
+                            ></div>
+                          </div>
+                          <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                            {{ app.adoptionRate.toFixed(1) }}%
+                          </span>
+                        </div>
+                      </td>
+                      <td class="py-3 px-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        {{ app.sharedComponents.length }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -880,22 +1017,12 @@ const alerts = computed(() => {
   return [...healthAlerts, ...staticAlerts];
 });
 
-const topComponents = ref([
-  { name: 'Button', status: 'Production Ready', adoption: 95, usage: 1247 },
-  { name: 'Card', status: 'Production Ready', adoption: 87, usage: 892 },
-  { name: 'Input', status: 'Production Ready', adoption: 82, usage: 654 },
-  { name: 'Select', status: 'Production Ready', adoption: 76, usage: 432 },
-  { name: 'Checkbox', status: 'Production Ready', adoption: 71, usage: 389 },
-  { name: 'Alert', status: 'In Progress', adoption: 45, usage: 156 },
-]);
-
-const mostUsedComponents = ref([
-  { name: 'Button', usage: 1247 },
-  { name: 'Card', usage: 892 },
-  { name: 'Input', usage: 654 },
-  { name: 'Select', usage: 432 },
-  { name: 'Checkbox', usage: 389 },
-]);
+const topComponents = ref([]);
+const mostUsedComponents = ref([]);
+const applicationAdoption = ref([]);
+const designDebtMetrics = ref(null);
+const crossApplicationComparison = ref([]);
+const loadingAnalytics = ref(false);
 
 const tokenUsagePatterns = ref([
   { category: 'Colors', count: 48, percentage: 85 },
@@ -911,22 +1038,65 @@ const performanceMetrics = ref({
   accessibilityScore: 95,
 });
 
-const usageTrends = ref([
-  { date: '2024-01-01', usage: 120, percentage: 60, label: 'M' },
-  { date: '2024-01-02', usage: 145, percentage: 72, label: 'T' },
-  { date: '2024-01-03', usage: 180, percentage: 90, label: 'W' },
-  { date: '2024-01-04', usage: 165, percentage: 82, label: 'T' },
-  { date: '2024-01-05', usage: 200, percentage: 100, label: 'F' },
-  { date: '2024-01-06', usage: 90, percentage: 45, label: 'S' },
-  { date: '2024-01-07', usage: 75, percentage: 37, label: 'S' },
-  { date: '2024-01-08', usage: 130, percentage: 65, label: 'M' },
-  { date: '2024-01-09', usage: 155, percentage: 77, label: 'T' },
-  { date: '2024-01-10', usage: 175, percentage: 87, label: 'W' },
-  { date: '2024-01-11', usage: 190, percentage: 95, label: 'T' },
-  { date: '2024-01-12', usage: 210, percentage: 100, label: 'F' },
-  { date: '2024-01-13', usage: 95, percentage: 47, label: 'S' },
-  { date: '2024-01-14', usage: 80, percentage: 40, label: 'S' },
-]);
+const usageTrends = ref([]);
+
+const loadAnalytics = async () => {
+  loadingAnalytics.value = true;
+  try {
+    // Load component popularity
+    const popularityResponse = await axios.get(`/api/v1/analytics/component-popularity?timeframe=${adoptionTimeframe.value}`);
+    const popularity = popularityResponse.data || [];
+    
+    // Update top components with real data
+    topComponents.value = popularity.slice(0, 6).map(comp => ({
+      name: comp.componentName,
+      status: 'Production Ready', // TODO: Get from component status
+      adoption: comp.adoptionRate,
+      usage: comp.totalUsage,
+    }));
+
+    // Update most used components
+    mostUsedComponents.value = popularity.slice(0, 5).map(comp => ({
+      name: comp.componentName,
+      usage: comp.totalUsage,
+    }));
+
+    // Load application adoption
+    const adoptionResponse = await axios.get('/api/v1/analytics/application-adoption');
+    applicationAdoption.value = adoptionResponse.data || [];
+
+    // Load usage trends
+    const trendsResponse = await axios.get('/api/v1/analytics/usage-trends?days=30');
+    const trends = trendsResponse.data || [];
+    const maxUsage = Math.max(...trends.map(t => t.totalUsage), 1);
+    usageTrends.value = trends.map(trend => {
+      const date = new Date(trend.date);
+      return {
+        date: trend.date,
+        usage: trend.totalUsage,
+        percentage: (trend.totalUsage / maxUsage) * 100,
+        label: date.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0),
+      };
+    });
+
+    // Load design debt metrics
+    const debtResponse = await axios.get('/api/v1/analytics/design-debt');
+    designDebtMetrics.value = debtResponse.data;
+
+    // Load cross-application comparison
+    const comparisonResponse = await axios.get('/api/v1/analytics/cross-application-comparison');
+    crossApplicationComparison.value = comparisonResponse.data || [];
+  } catch (error) {
+    console.error('Error loading analytics:', error);
+    // Keep mock data as fallback
+  } finally {
+    loadingAnalytics.value = false;
+  }
+};
+
+watch(adoptionTimeframe, () => {
+  loadAnalytics();
+});
 
 const getStatusBadgeClass = (status) => {
   const classes = {
@@ -982,6 +1152,7 @@ onMounted(async () => {
   // Load health score data
   await loadHealthScore();
   await loadHealthScoreTrends(30);
+  await loadAnalytics();
 });
 
 onBeforeUnmount(() => {

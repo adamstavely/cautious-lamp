@@ -4,6 +4,7 @@ import { ComplianceScannerService, ScannerContext } from './compliance-scanner.s
 import { ApplicationScannerService, ApplicationScanContext } from './application-scanner.service';
 import { VisualRegressionService } from '../visual-regression/visual-regression.service';
 import { SessionReplayService } from '../session-replay/session-replay.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 
 export interface Token {
   name: string;
@@ -113,6 +114,8 @@ export class DesignSystemService {
   private applicationScanner: ApplicationScannerService;
   
   // Initialize with a default API key for testing
+  private analyticsService?: AnalyticsService;
+
   constructor(
     @Optional() @Inject(ElasticsearchService) private readonly elasticsearchService?: ElasticsearchService,
     @Optional() @Inject(forwardRef(() => VisualRegressionService)) private readonly visualRegressionService?: VisualRegressionService,
@@ -122,6 +125,11 @@ export class DesignSystemService {
     this.applicationScanner = new ApplicationScannerService();
     this.apiKeys.set('test-api-key-123', { name: 'Default Test Key', createdAt: new Date() });
     this.apiKeys.set('dev-key', { name: 'Development Key', createdAt: new Date() });
+  }
+
+  // Set analytics service (called by module to avoid circular dependency)
+  setAnalyticsService(analyticsService: AnalyticsService) {
+    this.analyticsService = analyticsService;
     
     // Initialize with sample applications (for demonstration)
     this.applications.set('app-1', {
@@ -1351,6 +1359,38 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
       applicationName: application.name,
       file: codebase?.file
     };
+
+    // Track component usage for analytics
+    if (this.analyticsService && codebase?.javascript) {
+      const framework = application.metadata?.framework?.toLowerCase().includes('react') ? 'react' : 'vue';
+      const detectedComponents = this.analyticsService.extractComponentUsage(codebase.javascript, framework);
+      
+      // Group by component and collect files
+      const componentFiles = new Map<string, string[]>();
+      detectedComponents.forEach(({ componentId, componentName }) => {
+        if (!componentFiles.has(componentId)) {
+          componentFiles.set(componentId, []);
+        }
+        const files = componentFiles.get(componentId)!;
+        if (codebase?.file && !files.includes(codebase.file)) {
+          files.push(codebase.file);
+        }
+      });
+
+      // Track usage
+      const usageData = Array.from(componentFiles.entries()).map(([componentId, files]) => {
+        const component = detectedComponents.find(c => c.componentId === componentId);
+        return {
+          componentId,
+          componentName: component?.componentName || componentId,
+          files,
+        };
+      });
+
+      if (usageData.length > 0) {
+        this.analyticsService.trackComponentUsage(applicationId, application.name, usageData);
+      }
+    }
 
     // Determine which rules to run based on categories
     const allRules = this.getAllAvailableRules();

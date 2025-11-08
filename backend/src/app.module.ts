@@ -9,6 +9,7 @@ import { SessionReplayModule } from './session-replay/session-replay.module';
 import { PhotosensitivityModule } from './photosensitivity/photosensitivity.module';
 import { AccessibilityReportsModule } from './accessibility-reports/accessibility-reports.module';
 import { SystemHealthModule } from './system-health/system-health.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
@@ -34,6 +35,7 @@ import { ElasticsearchModule } from '@nestjs/elasticsearch';
     PhotosensitivityModule,
     AccessibilityReportsModule,
     SystemHealthModule,
+    AnalyticsModule,
   ],
 })
 export class AppModule {}
