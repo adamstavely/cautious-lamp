@@ -94,13 +94,16 @@
                 <span class="material-symbols-outlined text-5xl">palette</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Foundations
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Core design principles, color systems, typography, and spacing that form the foundation of our design system.
+              </p>
             </a>
 
             <!-- Topic Card 2: Artificial Intelligence -->
@@ -115,13 +118,16 @@
                 <span class="material-symbols-outlined text-5xl">psychology</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Artificial Intelligence
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Guidelines for designing AI-powered interfaces, ethical AI practices, and human-AI interaction patterns.
+              </p>
             </a>
 
             <!-- Topic Card 3: Human-Centered Design -->
@@ -136,13 +142,16 @@
                 <span class="material-symbols-outlined text-5xl">people</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Human-Centered Design
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                User research methodologies, persona development, and design processes that prioritize user needs and experiences.
+              </p>
             </a>
 
             <!-- Topic Card 4: Components -->
@@ -157,13 +166,16 @@
                 <span class="material-symbols-outlined text-5xl">widgets</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Components
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Reusable UI components with usage guidelines, accessibility requirements, and implementation best practices.
+              </p>
             </a>
 
             <!-- Topic Card 5: Patterns -->
@@ -178,13 +190,16 @@
                 <span class="material-symbols-outlined text-5xl">pattern</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors"
+                class="font-semibold text-lg transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Patterns
               </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Common design patterns and interaction models for solving recurring design problems across applications.
+              </p>
               <span class="material-symbols-outlined absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
                 chevron_right
               </span>
