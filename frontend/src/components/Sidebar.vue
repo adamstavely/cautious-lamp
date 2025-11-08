@@ -12,6 +12,7 @@
         v-for="item in menuItems"
         :key="item.path"
         :to="item.path"
+        @click="handleSidebarClick"
         :class="[
           'flex flex-col items-center px-3 py-3 relative group mb-2',
           isActive(item.path)
@@ -32,6 +33,7 @@
     <div class="px-3 pb-2 border-t" :class="isDarkMode ? 'border-indigo-700' : 'border-indigo-600'">
       <router-link
         to="/admin"
+        @click="handleSidebarClick"
         :class="[
           'flex flex-col items-center px-3 py-3 relative group',
           isActive('/admin')
@@ -73,6 +75,12 @@ import { useTheme } from 'vuetify';
 
 const route = useRoute();
 const theme = useTheme();
+
+// Handle sidebar click - set flag to auto-open drawer
+const handleSidebarClick = () => {
+  // Set flag in sessionStorage to indicate sidebar navigation
+  sessionStorage.setItem('openDrawerOnLoad', 'true');
+};
 
 // Initialize dark mode synchronously based on current state
 const getInitialDarkMode = () => {

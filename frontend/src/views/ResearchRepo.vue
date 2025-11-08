@@ -301,6 +301,12 @@ const closeDrawer = () => {
 };
 
 onMounted(() => {
+  // Auto-open drawer if navigating from sidebar
+  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
+    drawerOpen.value = true;
+    sessionStorage.removeItem('openDrawerOnLoad');
+  }
+  
   isDarkMode.value = document.documentElement.classList.contains('dark');
   
   // Watch for dark mode changes

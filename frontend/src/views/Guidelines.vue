@@ -294,10 +294,11 @@ let darkModeObserver = null;
 let darkModeInterval = null;
 
 onMounted(() => {
-  // Removed auto-open drawer
-  // if (route.path === '/guidelines') {
-  //   drawerOpen.value = true;
-  // }
+  // Auto-open drawer if navigating from sidebar
+  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
+    drawerOpen.value = true;
+    sessionStorage.removeItem('openDrawerOnLoad');
+  }
   
   darkModeObserver = new MutationObserver(() => {
     isDarkMode.value = document.documentElement.classList.contains('dark');

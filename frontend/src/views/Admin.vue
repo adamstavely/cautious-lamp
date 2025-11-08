@@ -683,6 +683,12 @@ let darkModeObserver = null;
 let darkModeInterval = null;
 
 onMounted(() => {
+  // Auto-open drawer if navigating from sidebar
+  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
+    drawerOpen.value = true;
+    sessionStorage.removeItem('openDrawerOnLoad');
+  }
+  
   fetchBanners();
   
   darkModeObserver = new MutationObserver(() => {
