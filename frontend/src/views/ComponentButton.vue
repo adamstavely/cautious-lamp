@@ -72,47 +72,6 @@
               <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Experiment with the Button component. Edit props, see live previews, and export code snippets.</p>
             </div>
 
-            <!-- Export Buttons -->
-            <div class="mb-6 flex items-center gap-4">
-              <button
-                @click="copyCode"
-                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium flex items-center gap-2"
-              >
-                <span class="material-symbols-outlined text-base">content_copy</span>
-                Copy Code
-              </button>
-              <button
-                @click="exportAsVue"
-                class="px-4 py-2 border rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
-                :class="isDarkMode 
-                  ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
-              >
-                <span class="material-symbols-outlined text-base">code</span>
-                Export Vue
-              </button>
-              <button
-                @click="exportAsReact"
-                class="px-4 py-2 border rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
-                :class="isDarkMode 
-                  ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
-              >
-                <span class="material-symbols-outlined text-base">code</span>
-                Export React
-              </button>
-              <button
-                @click="exportAsHTML"
-                class="px-4 py-2 border rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
-                :class="isDarkMode 
-                  ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
-              >
-                <span class="material-symbols-outlined text-base">code</span>
-                Export HTML
-              </button>
-            </div>
-
             <div class="grid lg:grid-cols-2 gap-6 mb-6">
               <!-- Props Editor -->
               <div 
@@ -270,31 +229,55 @@
                   <span class="material-symbols-outlined text-indigo-600">code</span>
                   Generated Code
                 </h3>
-                <div class="flex gap-2">
+                <div class="flex items-center gap-2">
                   <button
-                    @click="codeFormat = 'vue'"
-                    class="px-3 py-1 rounded text-xs font-medium transition-colors"
-                    :class="codeFormat === 'vue' 
-                      ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
-                      : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
+                    @click="copyCode"
+                    class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-xs font-medium flex items-center gap-1.5"
+                  >
+                    <span class="material-symbols-outlined text-sm">content_copy</span>
+                    Copy
+                  </button>
+                  <button
+                    @click="exportAsVue"
+                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
+                    :class="codeFormat === 'vue'
+                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
+                      : (isDarkMode 
+                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
                   >
                     Vue
                   </button>
                   <button
-                    @click="codeFormat = 'react'"
-                    class="px-3 py-1 rounded text-xs font-medium transition-colors"
-                    :class="codeFormat === 'react' 
-                      ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
-                      : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
+                    @click="exportAsReact"
+                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
+                    :class="codeFormat === 'react'
+                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
+                      : (isDarkMode 
+                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
                   >
                     React
                   </button>
                   <button
-                    @click="codeFormat = 'html'"
-                    class="px-3 py-1 rounded text-xs font-medium transition-colors"
-                    :class="codeFormat === 'html' 
-                      ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
-                      : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
+                    @click="exportAsReactNative"
+                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
+                    :class="codeFormat === 'react-native'
+                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
+                      : (isDarkMode 
+                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
+                  >
+                    React Native
+                  </button>
+                  <button
+                    @click="exportAsHTML"
+                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
+                    :class="codeFormat === 'html'
+                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
+                      : (isDarkMode 
+                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
                   >
                     HTML
                   </button>
@@ -1169,6 +1152,24 @@ const generateCodeForFormat = (format) => {
       .filter(Boolean)
       .join('\n');
     return `<Button${reactProps ? '\n' + reactProps + '\n' : ''}>${label}</Button>`;
+  } else if (format === 'react-native') {
+    const reactNativeProps = Object.entries(propValues)
+      .filter(([key, value]) => {
+        if (key === 'label') return false; // Label is handled separately
+        return value !== '' && value !== false && value !== null && value !== undefined;
+      })
+      .map(([key, value]) => {
+        if (typeof value === 'string') {
+          return `  ${key}="${value}"`;
+        } else if (typeof value === 'boolean') {
+          return value ? `  ${key}={true}` : '';
+        } else {
+          return `  ${key}={${value}}`;
+        }
+      })
+      .filter(Boolean)
+      .join('\n');
+    return `import { Button } from 'react-native';\n\n<Button${reactNativeProps ? '\n' + reactNativeProps + '\n' : ''} title="${label}" />`;
   } else {
     // HTML
     const htmlProps = Object.entries(propValues)
@@ -1203,6 +1204,13 @@ const exportAsReact = async () => {
   await nextTick();
   const reactCode = generateCodeForFormat('react');
   await navigator.clipboard.writeText(reactCode);
+};
+
+const exportAsReactNative = async () => {
+  codeFormat.value = 'react-native';
+  await nextTick();
+  const reactNativeCode = generateCodeForFormat('react-native');
+  await navigator.clipboard.writeText(reactNativeCode);
 };
 
 const exportAsHTML = async () => {
@@ -1290,6 +1298,17 @@ const getStatusBadgeClass = (status) => {
     'Beta': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300' : 'bg-yellow-100 text-yellow-700',
   };
   return classes[status] || (isDarkMode.value ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700');
+};
+
+const getComponentStatusBadgeClass = (status) => {
+  const classes = {
+    'Production Ready': isDarkMode.value ? 'bg-green-900/30 text-green-300 border-green-400/30' : 'bg-green-100 text-green-700 border-green-300',
+    'In Progress': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300 border-yellow-400/30' : 'bg-yellow-100 text-yellow-700 border-yellow-300',
+    'Planned': isDarkMode.value ? 'bg-blue-900/30 text-blue-300 border-blue-400/30' : 'bg-blue-100 text-blue-700 border-blue-300',
+    'Deprecated': isDarkMode.value ? 'bg-red-900/30 text-red-300 border-red-400/30' : 'bg-red-100 text-red-700 border-red-300',
+    'Beta': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300 border-yellow-400/30' : 'bg-yellow-100 text-yellow-700 border-yellow-300',
+  };
+  return classes[status] || (isDarkMode.value ? 'bg-gray-700 text-gray-300 border-gray-600' : 'bg-gray-100 text-gray-700 border-gray-300');
 };
 
 const getChangeTypeIcon = (type) => {

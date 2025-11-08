@@ -186,15 +186,57 @@
                   <span class="material-symbols-outlined text-indigo-600">code</span>
                   Generated Code
                 </h3>
-                <div class="flex gap-2">
+                <div class="flex items-center gap-2">
                   <button
-                    @click="codeFormat = 'vue'"
-                    class="px-3 py-1 rounded text-xs font-medium transition-colors"
-                    :class="codeFormat === 'vue' 
-                      ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
-                      : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
+                    @click="copyCode"
+                    class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-xs font-medium flex items-center gap-1.5"
+                  >
+                    <span class="material-symbols-outlined text-sm">content_copy</span>
+                    Copy
+                  </button>
+                  <button
+                    @click="exportAsVue"
+                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
+                    :class="codeFormat === 'vue'
+                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
+                      : (isDarkMode 
+                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
                   >
                     Vue
+                  </button>
+                  <button
+                    @click="exportAsReact"
+                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
+                    :class="codeFormat === 'react'
+                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
+                      : (isDarkMode 
+                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
+                  >
+                    React
+                  </button>
+                  <button
+                    @click="exportAsReactNative"
+                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
+                    :class="codeFormat === 'react-native'
+                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
+                      : (isDarkMode 
+                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
+                  >
+                    React Native
+                  </button>
+                  <button
+                    @click="exportAsHTML"
+                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
+                    :class="codeFormat === 'html'
+                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
+                      : (isDarkMode 
+                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
+                  >
+                    HTML
                   </button>
                 </div>
               </div>
@@ -893,9 +935,10 @@ const selectedColor = ref('#4f46e5');
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
 import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
 import axios from 'axios';
@@ -1103,6 +1146,17 @@ const getStatusBadgeClass = (status) => {
   return classes[status] || (isDarkMode.value ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700');
 };
 
+const getComponentStatusBadgeClass = (status) => {
+  const classes = {
+    'Production Ready': isDarkMode.value ? 'bg-green-900/30 text-green-300 border-green-400/30' : 'bg-green-100 text-green-700 border-green-300',
+    'In Progress': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300 border-yellow-400/30' : 'bg-yellow-100 text-yellow-700 border-yellow-300',
+    'Planned': isDarkMode.value ? 'bg-blue-900/30 text-blue-300 border-blue-400/30' : 'bg-blue-100 text-blue-700 border-blue-300',
+    'Deprecated': isDarkMode.value ? 'bg-red-900/30 text-red-300 border-red-400/30' : 'bg-red-100 text-red-700 border-red-300',
+    'Beta': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300 border-yellow-400/30' : 'bg-yellow-100 text-yellow-700 border-yellow-300',
+  };
+  return classes[status] || (isDarkMode.value ? 'bg-gray-700 text-gray-300 border-gray-600' : 'bg-gray-100 text-gray-700 border-gray-300');
+};
+
 const getChangeTypeIcon = (type) => {
   const icons = {
     'added': '✓',
@@ -1200,36 +1254,190 @@ const handleExampleApply = (color) => {
   exampleShowPicker2.value = false;
 };
 
-const generatedCode = computed(() => {
-  if (codeFormat.value === 'vue') {
-    return `<template>
-  <button
-    @click="showPicker = !showPicker"
-    class="w-16 h-16 rounded-lg border-2 cursor-pointer"
-    :style="{ backgroundColor: selectedColor }"
-  ></button>
+// Helper function to generate React code - defined outside component to avoid Vue parsing
+const generateReactCode = (initialColor) => {
+  const parts = [];
+  parts.push("import React, { useState } from 'react';");
+  parts.push("import ColorPicker from './components/ColorPicker';");
+  parts.push("");
+  parts.push("function ColorPickerExample() {");
+  parts.push("  const [showPicker, setShowPicker] = useState(false);");
+  parts.push("  const [selectedColor, setSelectedColor] = useState('" + initialColor + "');");
+  parts.push("  const [pickerPosition, setPickerPosition] = useState({ left: 200, top: 200 });");
+  parts.push("");
+  parts.push("  return (");
+  parts.push("    <>");
+  parts.push("      <button");
+  parts.push("        onClick={() => setShowPicker(!showPicker)}");
+  parts.push('        className="w-16 h-16 rounded-lg border-2 cursor-pointer"');
+  parts.push("        style={{ backgroundColor: selectedColor }}");
+  parts.push("      />");
+  parts.push("      ");
+  parts.push("      <ColorPicker");
+  parts.push("        show={showPicker}");
+  parts.push("        initialColor={selectedColor}");
+  parts.push("        position={pickerPosition}");
+  parts.push("        onUpdateShow={setShowPicker}");
+  parts.push("        onApply={setSelectedColor}");
+  parts.push("        onCancel={() => setShowPicker(false)}");
+  parts.push("      />");
+  parts.push("    </>");
+  parts.push("  );");
+  parts.push("}");
+  parts.push("");
+  parts.push("export default ColorPickerExample;");
+  return parts.join('\n');
+};
+
+// Helper function to generate React Native code
+const generateReactNativeCode = (initialColor) => {
+  const parts = [];
+  parts.push("import React, { useState } from 'react';");
+  parts.push("import { View, TouchableOpacity, StyleSheet, Modal } from 'react-native';");
+  parts.push("import ColorPicker from './components/ColorPicker';");
+  parts.push("");
+  parts.push("export default function ColorPickerExample() {");
+  parts.push("  const [showPicker, setShowPicker] = useState(false);");
+  parts.push("  const [selectedColor, setSelectedColor] = useState('" + initialColor + "');");
+  parts.push("");
+  parts.push("  return (");
+  parts.push("    <View style={styles.container}>");
+  parts.push("      <TouchableOpacity");
+  parts.push("        onPress={() => setShowPicker(!showPicker)}");
+  parts.push("        style={[styles.colorSwatch, { backgroundColor: selectedColor }]}");
+  parts.push("      />");
+  parts.push("      ");
+  parts.push("      <Modal");
+  parts.push("        visible={showPicker}");
+  parts.push("        transparent={true}");
+  parts.push("        animationType=\"fade\"");
+  parts.push("        onRequestClose={() => setShowPicker(false)}");
+  parts.push("      >");
+  parts.push("        <ColorPicker");
+  parts.push("          initialColor={selectedColor}");
+  parts.push("          onApply={(color) => {");
+  parts.push("            setSelectedColor(color);");
+  parts.push("            setShowPicker(false);");
+  parts.push("          }}");
+  parts.push("          onCancel={() => setShowPicker(false)}");
+  parts.push("        />");
+  parts.push("      </Modal>");
+  parts.push("    </View>");
+  parts.push("  );");
+  parts.push("}");
+  parts.push("");
+  parts.push("const styles = StyleSheet.create({");
+  parts.push("  container: {");
+  parts.push("    padding: 16,");
+  parts.push("  },");
+  parts.push("  colorSwatch: {");
+  parts.push("    width: 64,");
+  parts.push("    height: 64,");
+  parts.push("    borderRadius: 8,");
+  parts.push("    borderWidth: 2,");
+  parts.push("    borderColor: '#e5e7eb',");
+  parts.push("  },");
+  parts.push("});");
+  return parts.join('\n');
+};
+
+const generateCodeForFormat = (format) => {
+  const initialColor = propValues.value.initialColor || '#4f46e5';
   
-  <ColorPicker
-    :show="showPicker"
-    :initial-color="selectedColor"
-    :position="pickerPosition"
-    @update:show="showPicker = $event"
-    @apply="selectedColor = $event"
-    @cancel="showPicker = false"
-  />
-</template>
-
-<script setup>
-import { ref } from 'vue';
-import ColorPicker from './components/ColorPicker.vue';
-
-const showPicker = ref(false);
-const selectedColor = ref('${propValues.value.initialColor}');
-const pickerPosition = ref({ left: 200, top: 200 });
-<\/script>`;
+  if (format === 'vue') {
+    // Build Vue code using array to avoid Vue parsing script tags
+    const vueParts = [];
+    vueParts.push("<template>");
+    vueParts.push("  <button");
+    vueParts.push('    @click="showPicker = !showPicker"');
+    vueParts.push('    class="w-16 h-16 rounded-lg border-2 cursor-pointer"');
+    vueParts.push('    :style="{ backgroundColor: selectedColor }"');
+    vueParts.push("  ></button>");
+    vueParts.push("  ");
+    vueParts.push("  <ColorPicker");
+    vueParts.push('    :show="showPicker"');
+    vueParts.push('    :initial-color="selectedColor"');
+    vueParts.push('    :position="pickerPosition"');
+    vueParts.push('    @update:show="showPicker = $event"');
+    vueParts.push('    @apply="selectedColor = $event"');
+    vueParts.push('    @cancel="showPicker = false"');
+    vueParts.push("  />");
+    vueParts.push("</template>");
+    vueParts.push("");
+    vueParts.push("<script setup>");
+    vueParts.push("import { ref } from 'vue';");
+    vueParts.push("import ColorPicker from './components/ColorPicker.vue';");
+    vueParts.push("");
+    vueParts.push("const showPicker = ref(false);");
+    vueParts.push("const selectedColor = ref('" + initialColor + "');");
+    vueParts.push("const pickerPosition = ref({ left: 200, top: 200 });");
+    vueParts.push("</" + "script>");
+    return vueParts.join('\n');
+  } else if (format === 'react') {
+    return generateReactCode(initialColor);
+  } else if (format === 'react-native') {
+    return generateReactNativeCode(initialColor);
+  } else {
+    // HTML
+    const htmlParts = [];
+    htmlParts.push('<!-- Note: ColorPicker requires a JavaScript framework (Vue/React) -->');
+    htmlParts.push('<!-- This is a basic HTML structure for reference -->');
+    htmlParts.push('<div class="color-picker-container">');
+    htmlParts.push('  <button');
+    htmlParts.push('    id="color-trigger"');
+    htmlParts.push('    class="w-16 h-16 rounded-lg border-2 cursor-pointer"');
+    htmlParts.push('    style="background-color: ' + initialColor + ';"');
+    htmlParts.push('  ></button>');
+    htmlParts.push('</div>');
+    htmlParts.push('');
+    htmlParts.push('<' + 'script>');
+    htmlParts.push('// You\'ll need to implement ColorPicker functionality in vanilla JS');
+    htmlParts.push('// or use a framework like Vue or React');
+    htmlParts.push('</' + 'script>');
+    return htmlParts.join('\n');
   }
-  return '';
+};
+
+const generatedCode = computed(() => {
+  return generateCodeForFormat(codeFormat.value);
 });
+
+const copyCode = async () => {
+  try {
+    await navigator.clipboard.writeText(generatedCode.value);
+    // Could add a toast notification here
+  } catch (err) {
+    console.error('Failed to copy:', err);
+  }
+};
+
+const exportAsVue = async () => {
+  codeFormat.value = 'vue';
+  await nextTick();
+  const vueCode = generateCodeForFormat('vue');
+  await navigator.clipboard.writeText(vueCode);
+};
+
+const exportAsReact = async () => {
+  codeFormat.value = 'react';
+  await nextTick();
+  const reactCode = generateCodeForFormat('react');
+  await navigator.clipboard.writeText(reactCode);
+};
+
+const exportAsReactNative = async () => {
+  codeFormat.value = 'react-native';
+  await nextTick();
+  const reactNativeCode = generateCodeForFormat('react-native');
+  await navigator.clipboard.writeText(reactNativeCode);
+};
+
+const exportAsHTML = async () => {
+  codeFormat.value = 'html';
+  await nextTick();
+  const htmlCode = generateCodeForFormat('html');
+  await navigator.clipboard.writeText(htmlCode);
+};
 
 const closeDrawer = () => {
   drawerOpen.value = false;
