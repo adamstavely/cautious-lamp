@@ -91,7 +91,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 const props = defineProps({
   modelValue: {
     type: [String, Number],
-    required: true
+    default: ''
   },
   options: {
     type: Array,

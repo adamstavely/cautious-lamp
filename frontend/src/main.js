@@ -594,6 +594,10 @@ const router = createRouter({
       path: '/palette-builder',
       component: () => import('./views/Wizard.vue'),
     },
+    {
+      path: '/admin/accessibility-reports',
+      component: () => import('./views/AccessibilityReports.vue'),
+    },
     // Legacy route redirect
     {
       path: '/gradient-generator',

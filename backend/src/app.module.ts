@@ -7,6 +7,7 @@ import { FeatureFlagsModule } from './feature-flags/feature-flags.module';
 import { VisualRegressionModule } from './visual-regression/visual-regression.module';
 import { SessionReplayModule } from './session-replay/session-replay.module';
 import { PhotosensitivityModule } from './photosensitivity/photosensitivity.module';
+import { AccessibilityReportsModule } from './accessibility-reports/accessibility-reports.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
@@ -30,6 +31,7 @@ import { ElasticsearchModule } from '@nestjs/elasticsearch';
     VisualRegressionModule,
     SessionReplayModule,
     PhotosensitivityModule,
+    AccessibilityReportsModule,
   ],
 })
 export class AppModule {}
