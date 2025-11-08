@@ -36,6 +36,7 @@ export enum Permission {
   ADMIN_RBAC = 'admin:rbac',
   ADMIN_CODE_QUALITY = 'admin:code_quality',
   ADMIN_VULNERABILITY_SCANNER = 'admin:vulnerability_scanner',
+  ADMIN_PERFORMANCE_ANALYSIS = 'admin:performance_analysis',
   
   // Roadmap & Feedback permissions
   ROADMAP_VIEW = 'roadmap:view',

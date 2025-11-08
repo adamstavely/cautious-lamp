@@ -241,6 +241,30 @@
                 Scan dependencies for security vulnerabilities and get recommendations for updates to keep the design system secure.
               </p>
             </router-link>
+
+            <!-- Performance Analysis Card -->
+            <router-link 
+              to="/admin/performance"
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">speed</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Performance Analysis
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Analyze component bundle sizes and set performance budgets to monitor and prevent regressions.
+              </p>
+            </router-link>
           </div>
         </div>
       </div>

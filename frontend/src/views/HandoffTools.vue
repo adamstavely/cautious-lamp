@@ -23,6 +23,31 @@
                   Generate specs, export assets, and measure designs for seamless design-to-development handoff.
                 </p>
               </div>
+              <div class="hidden md:block flex-shrink-0">
+                <div class="w-64 h-64 relative">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
+                    <defs>
+                      <linearGradient id="handoffGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <!-- Design side (left) -->
+                    <rect x="30" y="60" width="60" height="80" rx="4" fill="url(#handoffGradient)" opacity="0.3"/>
+                    <circle cx="50" cy="80" r="8" fill="url(#handoffGradient)" opacity="0.5"/>
+                    <rect x="45" y="100" width="30" height="20" rx="2" fill="url(#handoffGradient)" opacity="0.4"/>
+                    <!-- Arrow/transfer -->
+                    <path d="M 100 100 L 120 100" stroke="url(#handoffGradient)" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+                    <path d="M 115 95 L 120 100 L 115 105" stroke="url(#handoffGradient)" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+                    <!-- Development side (right) -->
+                    <rect x="110" y="60" width="60" height="80" rx="4" fill="url(#handoffGradient)" opacity="0.3"/>
+                    <line x1="120" y1="75" x2="160" y2="75" stroke="white" stroke-width="2" opacity="0.5"/>
+                    <line x1="120" y1="90" x2="150" y2="90" stroke="white" stroke-width="2" opacity="0.5"/>
+                    <line x1="120" y1="105" x2="155" y2="105" stroke="white" stroke-width="2" opacity="0.5"/>
+                    <line x1="120" y1="120" x2="145" y2="120" stroke="white" stroke-width="2" opacity="0.5"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>

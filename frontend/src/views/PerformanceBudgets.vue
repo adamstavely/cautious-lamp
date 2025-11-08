@@ -20,7 +20,7 @@
                   Performance Budgets
                 </h1>
                 <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Set and monitor performance budgets to ensure your design system stays fast and efficient.
+                  Define performance limits (bundle size, load time, memory usage) and get alerts when components exceed thresholds. Prevent performance regressions before they impact users.
                 </p>
               </div>
               <button

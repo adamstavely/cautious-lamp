@@ -81,7 +81,8 @@
                     : 'bg-white border-gray-200'"
                 >
                   <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <h2 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      <span class="material-symbols-outlined text-base text-indigo-600">folder</span>
                       Categories
                     </h2>
                     <button
@@ -114,7 +115,8 @@
 
                   <!-- Export Section -->
                   <div class="mt-8 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <h3 class="text-sm font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      <span class="material-symbols-outlined text-base text-indigo-600">swap_horiz</span>
                       Import / Export
                     </h3>
                     <div class="space-y-2 mb-4">
@@ -191,7 +193,8 @@
                 >
                   <div class="flex items-center justify-between mb-6">
                     <div>
-                      <h2 class="text-xl font-semibold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      <h2 class="text-xl font-semibold mb-1 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                        <span class="material-symbols-outlined text-lg text-indigo-600">{{ getCategoryIcon(selectedCategory) }}</span>
                         {{ getCategoryName(selectedCategory) }} Tokens
                       </h2>
                       <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
@@ -329,7 +332,8 @@
           :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
         >
           <div class="flex items-center justify-between">
-            <h3 :id="editingToken ? 'edit-token-title' : 'add-token-title'" class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <h3 :id="editingToken ? 'edit-token-title' : 'add-token-title'" class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <span class="material-symbols-outlined text-lg text-indigo-600">{{ editingToken ? 'edit' : 'add' }}</span>
               {{ editingToken ? 'Edit Token' : 'Add Token' }}
             </h3>
             <button
@@ -378,22 +382,12 @@
               <label for="token-type-select" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                 Type <span class="text-red-500" aria-label="required">*</span>
               </label>
-              <select
+              <Dropdown
                 id="token-type-select"
                 v-model="tokenForm.$type"
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
-                aria-required="true"
-              >
-                <option value="color">Color</option>
-                <option value="dimension">Dimension</option>
-                <option value="fontFamily">Font Family</option>
-                <option value="fontWeight">Font Weight</option>
-                <option value="duration">Duration</option>
-                <option value="cubicBezier">Cubic Bezier</option>
-                <option value="number">Number</option>
-                <option value="string">String</option>
-              </select>
+                :options="tokenTypeOptions"
+                :is-dark-mode="isDarkMode"
+              />
             </div>
 
             <!-- Token Value -->
@@ -402,15 +396,17 @@
                 Value <span class="text-red-500" aria-label="required">*</span>
               </label>
               <div class="flex items-center gap-3">
-                <input
+                <button
                   v-if="tokenForm.$type === 'color'"
-                  id="token-value-color"
-                  v-model="tokenForm.$value"
-                  type="color"
-                  class="w-16 h-12 rounded border-2 cursor-pointer"
-                  :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                  aria-label="Color picker for token value"
-                />
+                  @click="openColorPicker($event)"
+                  class="w-16 h-12 rounded border-2 cursor-pointer transition-colors flex-shrink-0"
+                  :class="isDarkMode 
+                    ? 'border-gray-600 hover:border-indigo-400' 
+                    : 'border-gray-300 hover:border-indigo-500'"
+                  :style="{ backgroundColor: tokenForm.$value || '#000000' }"
+                  title="Pick color"
+                  aria-label="Open color picker"
+                ></button>
                 <input
                   id="token-value-input"
                   v-model="tokenForm.$value"
@@ -669,6 +665,16 @@
         </div>
       </div>
     </div>
+
+    <!-- Color Picker -->
+    <ColorPicker
+      :show="showColorPicker"
+      :initial-color="pickerColor"
+      :position="pickerPosition"
+      @update:show="showColorPicker = $event"
+      @apply="handleColorPickerApply"
+      @cancel="showColorPicker = false"
+    />
   </div>
 </template>
 
@@ -677,6 +683,8 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import Dropdown from '../components/Dropdown.vue';
+import ColorPicker from '../components/ColorPicker.vue';
 
 const route = useRoute();
 
@@ -706,6 +714,23 @@ const categoryFormErrors = ref({
 const saveFormErrors = ref({
   name: ''
 });
+
+// Color picker state
+const showColorPicker = ref(false);
+const pickerColor = ref('#000000');
+const pickerPosition = ref({ left: 0, top: 0 });
+
+// Token type options for dropdown
+const tokenTypeOptions = [
+  { label: 'Color', value: 'color' },
+  { label: 'Dimension', value: 'dimension' },
+  { label: 'Font Family', value: 'fontFamily' },
+  { label: 'Font Weight', value: 'fontWeight' },
+  { label: 'Duration', value: 'duration' },
+  { label: 'Cubic Bezier', value: 'cubicBezier' },
+  { label: 'Number', value: 'number' },
+  { label: 'String', value: 'string' },
+];
 
 const categories = ref([
   { id: 'color', name: 'Colors', icon: 'palette' },
@@ -940,6 +965,7 @@ const saveToken = () => {
 const closeTokenModal = () => {
   showAddTokenModal.value = false;
   editingToken.value = null;
+  showColorPicker.value = false;
   // Reset errors
   tokenFormErrors.value = { name: '', type: '', value: '' };
   tokenForm.value = {
@@ -950,6 +976,67 @@ const closeTokenModal = () => {
     $description: '',
     useAlias: false
   };
+};
+
+const openColorPicker = (event) => {
+  if (event) {
+    event.stopPropagation();
+    const rect = event.target.getBoundingClientRect();
+    
+    const pickerWidth = 300;
+    const pickerHeight = 550;
+    const padding = 16;
+    
+    // Calculate position relative to viewport (for fixed positioning)
+    let left = rect.right + padding;
+    let top = rect.top;
+    
+    // Check if picker would go off right edge
+    if (left + pickerWidth > window.innerWidth - padding) {
+      left = rect.left - pickerWidth - padding;
+    }
+    
+    // Check if picker would go off left edge
+    if (left < padding) {
+      left = padding;
+    }
+    
+    // Check if picker would go off bottom edge - prioritize showing above if needed
+    if (top + pickerHeight > window.innerHeight - padding) {
+      // Try to position above the button
+      const spaceAbove = rect.top - padding;
+      const spaceBelow = window.innerHeight - rect.bottom - padding;
+      
+      if (spaceAbove >= pickerHeight) {
+        // Position above
+        top = rect.top - pickerHeight - padding;
+      } else if (spaceBelow >= pickerHeight) {
+        // Position below (shouldn't happen, but just in case)
+        top = rect.bottom + padding;
+      } else {
+        // Not enough space above or below, center it vertically
+        top = Math.max(padding, (window.innerHeight - pickerHeight) / 2);
+      }
+    }
+    
+    // Check if picker would go off top edge
+    if (top < padding) {
+      top = padding;
+    }
+    
+    // Final bounds check to ensure picker stays within viewport
+    left = Math.max(padding, Math.min(left, window.innerWidth - pickerWidth - padding));
+    top = Math.max(padding, Math.min(top, window.innerHeight - pickerHeight - padding));
+    
+    pickerPosition.value = { left, top };
+  }
+  pickerColor.value = tokenForm.value.$value || '#000000';
+  showColorPicker.value = true;
+};
+
+const handleColorPickerApply = (color) => {
+  tokenForm.value.$value = color;
+  showColorPicker.value = false;
 };
 
 const addCategory = () => {

@@ -416,8 +416,7 @@ const searchIndex = [
   { id: 'guidelines-colors', title: 'Color Guidelines', description: 'Color system and usage guidelines', category: 'Guidelines', path: '/guidelines/colors', icon: 'palette', tags: ['guidelines', 'color'] },
   { id: 'guidelines-typography', title: 'Typography Guidelines', description: 'Typography system and best practices', category: 'Guidelines', path: '/guidelines/typography', icon: 'text_fields', tags: ['guidelines', 'typography'] },
   { id: 'guidelines-spacing', title: 'Spacing Guidelines', description: 'Spacing system and layout guidelines', category: 'Guidelines', path: '/guidelines/spacing', icon: 'space_dashboard', tags: ['guidelines', 'spacing'] },
-  { id: 'performance-budgets', title: 'Performance Budgets', description: 'Set and monitor performance budgets', category: 'Tools', path: '/performance/budgets', icon: 'speed', tags: ['performance', 'budgets', 'monitoring'] },
-  { id: 'bundle-analysis', title: 'Bundle Size Analysis', description: 'Analyze component bundle sizes', category: 'Tools', path: '/performance/bundle-analysis', icon: 'analytics', tags: ['bundle', 'size', 'analysis', 'performance'] },
+  { id: 'performance-analysis', title: 'Performance Analysis', description: 'Analyze bundle sizes and set performance budgets', category: 'Admin', path: '/admin/performance', icon: 'speed', tags: ['performance', 'budgets', 'bundle', 'size', 'analysis', 'monitoring'] },
   { id: 'roadmap-feedback', title: 'Roadmap & Feedback', description: 'View roadmap, submit feedback, and see what\'s new', category: 'Tools', path: '/feedback', icon: 'new_releases', tags: ['roadmap', 'feedback', 'requests', 'whats-new'] },
 ];
 

@@ -23,6 +23,29 @@
                   Pre-built code snippets for common use cases. Copy, customize, and integrate into your projects.
                 </p>
               </div>
+              <div class="hidden md:block flex-shrink-0">
+                <div class="w-64 h-64 relative">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
+                    <defs>
+                      <linearGradient id="codeSnippetsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <!-- Code/document representation -->
+                    <rect x="40" y="40" width="120" height="120" rx="4" fill="url(#codeSnippetsGradient)" opacity="0.2"/>
+                    <rect x="50" y="50" width="100" height="100" rx="2" fill="url(#codeSnippetsGradient)" opacity="0.3"/>
+                    <!-- Code lines -->
+                    <line x1="60" y1="70" x2="140" y2="70" stroke="white" stroke-width="3" opacity="0.6"/>
+                    <line x1="60" y1="90" x2="120" y2="90" stroke="white" stroke-width="3" opacity="0.5"/>
+                    <line x1="60" y1="110" x2="130" y2="110" stroke="white" stroke-width="3" opacity="0.5"/>
+                    <line x1="60" y1="130" x2="110" y2="130" stroke="white" stroke-width="3" opacity="0.4"/>
+                    <!-- Copy icon overlay -->
+                    <circle cx="150" cy="60" r="12" fill="url(#codeSnippetsGradient)" opacity="0.6"/>
+                    <path d="M 145 60 L 148 63 L 155 56" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>

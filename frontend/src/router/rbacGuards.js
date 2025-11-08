@@ -13,6 +13,7 @@ const routeToPermissionMap = {
   '/admin/banners': 'admin:banners',
   '/admin/roles': 'admin:rbac',
   '/admin/feature-flags': 'admin:rbac', // Feature flags also require admin access
+  '/admin/performance': 'admin:performance_analysis',
   // Roadmap & Feedback is viewable by all (no permission check needed)
   // But editing requires 'roadmap:edit' permission (checked in component)
 };

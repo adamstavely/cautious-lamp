@@ -23,6 +23,30 @@
                   Build complex components from primitives. Drag and drop components to create new compositions.
                 </p>
               </div>
+              <div class="hidden md:block flex-shrink-0">
+                <div class="w-64 h-64 relative">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
+                    <defs>
+                      <linearGradient id="compositionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <!-- Building blocks/primitives -->
+                    <rect x="40" y="50" width="40" height="40" rx="4" fill="url(#compositionGradient)" opacity="0.4"/>
+                    <rect x="90" y="50" width="40" height="40" rx="4" fill="url(#compositionGradient)" opacity="0.5"/>
+                    <rect x="120" y="50" width="40" height="40" rx="4" fill="url(#compositionGradient)" opacity="0.3"/>
+                    <!-- Composed component (larger) -->
+                    <rect x="50" y="110" width="100" height="60" rx="4" fill="url(#compositionGradient)" opacity="0.6"/>
+                    <rect x="60" y="120" width="30" height="20" rx="2" fill="url(#compositionGradient)" opacity="0.4"/>
+                    <rect x="100" y="120" width="40" height="20" rx="2" fill="url(#compositionGradient)" opacity="0.4"/>
+                    <rect x="60" y="150" width="80" height="10" rx="2" fill="url(#compositionGradient)" opacity="0.4"/>
+                    <!-- Connection lines -->
+                    <line x1="60" y1="90" x2="70" y2="110" stroke="url(#compositionGradient)" stroke-width="2" opacity="0.4" stroke-dasharray="4,4"/>
+                    <line x1="110" y1="90" x2="100" y2="110" stroke="url(#compositionGradient)" stroke-width="2" opacity="0.4" stroke-dasharray="4,4"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>

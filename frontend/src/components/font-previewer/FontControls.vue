@@ -3,48 +3,58 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-0">
       <!-- Search and Filters Section -->
       <div class="mb-6 bg-white rounded-lg shadow-md border border-gray-200 p-4">
-        <div class="flex flex-col lg:flex-row gap-4">
+        <div class="flex flex-col lg:flex-row gap-4 items-center">
           <!-- Search Bar -->
-          <div class="flex-1">
+          <div class="relative lg:w-80 flex-1">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-base pointer-events-none">
+              search
+            </span>
             <input 
               type="text" 
               :value="search" 
               @input="$emit('update:search', $event.target.value)" 
               placeholder="Search fonts..." 
-              class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+              class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
             />
           </div>
           
           <!-- Filter Dropdowns -->
           <div class="flex flex-wrap gap-3 lg:flex-nowrap">
-            <select :value="selectedTag" @change="$emit('update:selectedTag', $event.target.value)" class="flex-1 min-w-[140px] px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
-              <option value="">All Categories</option>
-              <option value="serif">Serif</option>
-              <option value="sans-serif">Sans-serif</option>
-              <option value="display">Display</option>
-              <option value="monospace">Monospace</option>
-              <option value="handwriting">Handwriting</option>
-            </select>
-            <select :value="selectedScript" @change="$emit('update:selectedScript', $event.target.value)" class="flex-1 min-w-[140px] px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
-              <option value="">All Scripts</option>
-              <option value="latin">Latin</option>
-              <option value="cyrillic">Cyrillic</option>
-              <option value="arabic">Arabic</option>
-              <option value="devanagari">Devanagari</option>
-              <option value="chinese">Chinese</option>
-            </select>
-            <select :value="selectedWeight" @change="$emit('update:selectedWeight', $event.target.value)" class="flex-1 min-w-[140px] px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
-              <option value="">All Weights</option>
-              <option value="100">Thin (100)</option>
-              <option value="200">Extra Light (200)</option>
-              <option value="300">Light (300)</option>
-              <option value="400">Regular (400)</option>
-              <option value="500">Medium (500)</option>
-              <option value="600">Semi Bold (600)</option>
-              <option value="700">Bold (700)</option>
-              <option value="800">Extra Bold (800)</option>
-              <option value="900">Black (900)</option>
-            </select>
+            <div class="w-full lg:w-auto lg:min-w-[150px]">
+              <Dropdown
+                :model-value="selectedTag"
+                @update:model-value="$emit('update:selectedTag', $event)"
+                :options="categoryOptions"
+                :is-dark-mode="false"
+              />
+            </div>
+            <div class="w-full lg:w-auto lg:min-w-[150px]">
+              <Dropdown
+                :model-value="selectedScript"
+                @update:model-value="$emit('update:selectedScript', $event)"
+                :options="scriptOptions"
+                :is-dark-mode="false"
+              />
+            </div>
+            <div class="w-full lg:w-auto lg:min-w-[150px]">
+              <Dropdown
+                :model-value="selectedWeight"
+                @update:model-value="$emit('update:selectedWeight', $event)"
+                :options="weightOptions"
+                :is-dark-mode="false"
+              />
+            </div>
+          </div>
+          
+          <!-- Export Button -->
+          <div class="flex-shrink-0 ml-auto">
+            <button 
+              v-if="(props.favorites && props.favorites.length > 0) || (props.comparisonFonts && props.comparisonFonts.length > 0)" 
+              @click="$emit('showExportModal')" 
+              class="px-3 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors whitespace-nowrap"
+            >
+              Export ({{ (props.favorites?.length || 0) + (props.comparisonFonts?.length || 0) }})
+            </button>
           </div>
         </div>
       </div>
@@ -55,7 +65,10 @@
           <!-- Left: Typography Controls -->
           <div class="flex-1">
             <div class="mb-3">
-              <h3 class="text-sm font-semibold text-gray-700 mb-4">Typography Controls</h3>
+              <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-base text-indigo-600">text_fields</span>
+                Typography Controls
+              </h3>
               <div class="grid grid-cols-3 gap-4">
                 <!-- Size and Weight Stacked -->
                 <div class="flex flex-col gap-4">
@@ -77,17 +90,12 @@
                   <!-- Weight -->
                   <div class="flex flex-col gap-2">
                     <label class="text-xs font-medium text-gray-600">Weight</label>
-                    <select :value="fontWeight" @change="$emit('update:fontWeight', Number($event.target.value))" class="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
-                      <option value="100">Thin (100)</option>
-                      <option value="200">Extra Light (200)</option>
-                      <option value="300">Light (300)</option>
-                      <option value="400">Regular (400)</option>
-                      <option value="500">Medium (500)</option>
-                      <option value="600">Semi-Bold (600)</option>
-                      <option value="700">Bold (700)</option>
-                      <option value="800">Extra Bold (800)</option>
-                      <option value="900">Black (900)</option>
-                    </select>
+                    <Dropdown
+                      :model-value="String(fontWeight)"
+                      @update:model-value="$emit('update:fontWeight', Number($event))"
+                      :options="fontWeightOptions"
+                      :is-dark-mode="false"
+                    />
                   </div>
                 </div>
 
@@ -202,20 +210,18 @@
           <div class="lg:w-80 border-l border-gray-200 pl-6">
             <div class="flex flex-col gap-2">
               <div class="flex items-center justify-between mb-1">
-                <label class="text-xs font-medium text-gray-600">Sample Text</label>
-                <select 
-                  :value="selectedSampleType"
-                  @change="selectSampleText($event.target.value)"
-                  class="text-xs px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                >
-                  <option value="">Custom</option>
-                  <option value="pangram">Pangram</option>
-                  <option value="headings">Headings</option>
-                  <option value="paragraph">Paragraph</option>
-                  <option value="numbers">Numbers</option>
-                  <option value="special">Special Characters</option>
-                  <option value="lorem">Lorem Ipsum</option>
-                </select>
+                <label class="text-xs font-medium text-gray-600 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-sm text-indigo-600">description</span>
+                  Sample Text
+                </label>
+                <div class="w-40">
+                  <Dropdown
+                    :model-value="selectedSampleType"
+                    @update:model-value="selectSampleText($event)"
+                    :options="sampleTextOptions"
+                    :is-dark-mode="false"
+                  />
+                </div>
               </div>
               <textarea 
                 :value="sampleText" 
@@ -235,12 +241,67 @@
 <script setup>
 import { ref, computed } from 'vue'
 import ColorPickerPopup from './ColorPickerPopup.vue'
+import Dropdown from '../Dropdown.vue'
 
 const activeColorPicker = ref(null)
 const textColorButtonRef = ref(null)
 const bgColorButtonRef = ref(null)
 const textColorPickerStyle = ref({})
 const bgColorPickerStyle = ref({})
+
+// Dropdown options
+const categoryOptions = [
+  { label: 'All Categories', value: '' },
+  { label: 'Serif', value: 'serif' },
+  { label: 'Sans-serif', value: 'sans-serif' },
+  { label: 'Display', value: 'display' },
+  { label: 'Monospace', value: 'monospace' },
+  { label: 'Handwriting', value: 'handwriting' },
+]
+
+const scriptOptions = [
+  { label: 'All Scripts', value: '' },
+  { label: 'Latin', value: 'latin' },
+  { label: 'Cyrillic', value: 'cyrillic' },
+  { label: 'Arabic', value: 'arabic' },
+  { label: 'Devanagari', value: 'devanagari' },
+  { label: 'Chinese', value: 'chinese' },
+]
+
+const weightOptions = [
+  { label: 'All Weights', value: '' },
+  { label: 'Thin (100)', value: '100' },
+  { label: 'Extra Light (200)', value: '200' },
+  { label: 'Light (300)', value: '300' },
+  { label: 'Regular (400)', value: '400' },
+  { label: 'Medium (500)', value: '500' },
+  { label: 'Semi Bold (600)', value: '600' },
+  { label: 'Bold (700)', value: '700' },
+  { label: 'Extra Bold (800)', value: '800' },
+  { label: 'Black (900)', value: '900' },
+]
+
+const fontWeightOptions = [
+  { label: 'Thin (100)', value: '100' },
+  { label: 'Extra Light (200)', value: '200' },
+  { label: 'Light (300)', value: '300' },
+  { label: 'Regular (400)', value: '400' },
+  { label: 'Medium (500)', value: '500' },
+  { label: 'Semi-Bold (600)', value: '600' },
+  { label: 'Bold (700)', value: '700' },
+  { label: 'Extra Bold (800)', value: '800' },
+  { label: 'Black (900)', value: '900' },
+]
+
+const sampleTextOptions = [
+  { label: 'Custom', value: '' },
+  { label: 'Pangram', value: 'pangram' },
+  { label: 'Headings', value: 'headings' },
+  { label: 'Paragraph', value: 'paragraph' },
+  { label: 'Numbers', value: 'numbers' },
+  { label: 'Special Characters', value: 'special' },
+  { label: 'Lorem Ipsum', value: 'lorem' },
+]
 
 const props = defineProps([
   'search', 'selectedTag', 'selectedScript', 'selectedWeight', 'sampleText',
@@ -252,7 +313,7 @@ const props = defineProps([
 const emit = defineEmits([
   'update:search', 'update:selectedTag', 'update:selectedScript', 'update:selectedWeight', 'update:sampleText',
   'update:fontSize', 'update:fontWeight', 'update:lineHeight', 'update:letterSpacing',
-  'update:textColor', 'update:bgColor', 'update:fontTokens', 'toggleDarkMode'
+  'update:textColor', 'update:bgColor', 'update:fontTokens', 'toggleDarkMode', 'showExportModal'
 ])
 
 const exportStyleDictionary = () => {

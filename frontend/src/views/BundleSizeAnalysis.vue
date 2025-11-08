@@ -20,7 +20,7 @@
                   Bundle Size Analysis
                 </h1>
                 <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Analyze component bundle sizes to optimize performance and identify optimization opportunities.
+                  Measure the actual file size of each component (Vue and React versions) including dependencies. Identify which components are largest and find opportunities to reduce bundle size.
                 </p>
               </div>
               <button

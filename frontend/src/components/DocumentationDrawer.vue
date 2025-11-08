@@ -238,25 +238,157 @@
             <span class="material-symbols-outlined">left_panel_close</span>
           </button>
         </div>
-        <nav class="space-y-1">
-          <router-link
-            v-for="item in tools"
-            :key="item.link"
-            :to="item.link"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-            :class="[
-              isActive(item.link)
-                ? (isDarkMode 
-                  ? 'text-indigo-400 bg-indigo-900/20' 
-                  : 'text-indigo-600 bg-indigo-50')
-                : (isDarkMode
-                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-            ]"
-          >
-            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-            <span class="font-medium">{{ item.text }}</span>
-          </router-link>
+        <nav class="space-y-6">
+          <!-- Overview -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Overview</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in toolGroups.overview"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Color Tools -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Color Tools</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in toolGroups.color"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Text & Content -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Text & Content</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in toolGroups.text"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- UX Research -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">UX Research</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in toolGroups.ux"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Development -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Development</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in toolGroups.development"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+
+          <!-- Image Tools -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Image Tools</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in toolGroups.image"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
         </nav>
       </div>
       
@@ -530,9 +662,36 @@ const tools = [
   { text: 'Heuristic Evaluation', link: '/tools/heuristic-evaluation', icon: 'checklist' },
   { text: 'PNG to ICO Converter', link: '/tools/png-to-ico', icon: 'image' },
   { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' },
-  { text: 'Performance Budgets', link: '/performance/budgets', icon: 'speed' },
-  { text: 'Bundle Size Analysis', link: '/performance/bundle-analysis', icon: 'analytics' }
 ];
+
+// Group tools by category
+const toolGroups = computed(() => ({
+  overview: [
+    { text: 'Overview', link: '/tools', icon: 'build' }
+  ],
+  color: [
+    { text: 'Gradient Generator', link: '/tools/gradient-generator', icon: 'gradient' },
+    { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'palette' },
+    { text: 'Color Converter', link: '/tools/color-converter', icon: 'swap_horiz' },
+    { text: 'Color Contrast Checker', link: '/tools/color-contrast', icon: 'contrast' }
+  ],
+  text: [
+    { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'text_fields' },
+    { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'search' }
+  ],
+  ux: [
+    { text: 'NASA-TLX', link: '/tools/nasa-tlx', icon: 'psychology' },
+    { text: 'System Usability Scale', link: '/tools/sus', icon: 'psychology' },
+    { text: 'Heuristic Evaluation', link: '/tools/heuristic-evaluation', icon: 'checklist' }
+  ],
+  development: [
+    { text: 'Migration Assistant', link: '/tools/migration', icon: 'refresh' },
+    { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' }
+  ],
+  image: [
+    { text: 'PNG to ICO Converter', link: '/tools/png-to-ico', icon: 'image' }
+  ]
+}));
 
 const designAssets = [
   { text: 'Overview', link: '/design-assets', icon: 'collections' },
@@ -572,7 +731,8 @@ const adminItems = [
   { text: 'Role Management', link: '/admin/roles', icon: 'admin_panel_settings' },
   { text: 'Feature Flags', link: '/admin/feature-flags', icon: 'flag' },
   { text: 'Code Quality', link: '/admin/code-quality', icon: 'check_circle' },
-  { text: 'Vulnerability Scanner', link: '/admin/security', icon: 'security' }
+  { text: 'Vulnerability Scanner', link: '/admin/security', icon: 'security' },
+  { text: 'Performance Analysis', link: '/admin/performance', icon: 'speed' }
 ];
 
 const gettingStartedItems = [

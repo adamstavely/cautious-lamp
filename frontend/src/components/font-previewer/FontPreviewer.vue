@@ -1,18 +1,5 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
-    <!-- Header Actions -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <div class="flex items-center justify-end gap-2 mb-4">
-        <button 
-          v-if="favorites.length > 0 || comparisonFonts.length > 0" 
-          @click="showExportModal = true" 
-          class="px-3 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
-        >
-          Export ({{ favorites.length + comparisonFonts.length }})
-        </button>
-      </div>
-    </div>
-
     <!-- Controls -->
     <FontControls
       v-model:search="search"
@@ -34,6 +21,7 @@
       :fontCount="filteredFonts.length"
       @toggleDarkMode="toggleDarkMode"
       @showTypographyScale="showTypographyScale = true"
+      @showExportModal="showExportModal = true"
     />
 
     <!-- Comparison View -->
@@ -81,7 +69,10 @@
       <!-- Recently Viewed Section -->
       <div v-if="recentlyViewed.length > 0" class="mb-6 bg-white rounded-lg border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold text-gray-900">Recently Viewed</h2>
+          <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <span class="material-symbols-outlined text-base text-indigo-600">history</span>
+            Recently Viewed
+          </h2>
           <button @click="recentlyViewed = []; recentlyViewedStorage.set([])" class="text-sm text-gray-500 hover:text-gray-700 transition-colors">
             Clear
           </button>
@@ -504,15 +495,17 @@
     </div>
 
     <!-- A/B Testing Modal -->
-    <div v-if="showABTesting && abTestFont1 && abTestFont2" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" @click="showABTesting = false; activeABColorPicker = null">
+    <div v-if="showABTesting && abTestFont1 && abTestFont2" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click="showABTesting = false; activeABColorPicker = null">
       <div class="bg-white rounded-lg shadow-xl max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto relative" @click.stop>
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div class="flex-1">
-            <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2 mb-1">
-              <span class="material-symbols-outlined text-indigo-600">compare</span>
-              A/B Font Testing
-            </h3>
-            <p class="text-sm text-gray-600 ml-9">Compare these fonts side-by-side. You can adjust typography settings and see how both fonts respond.</p>
+            <div class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0 items-start">
+              <span class="material-symbols-outlined text-indigo-600 row-span-2">compare</span>
+              <h3 class="text-xl font-bold text-gray-900">
+                A/B Font Testing
+              </h3>
+              <p class="text-sm text-gray-600 text-left col-start-1 col-end-3 mt-2">Compare these fonts side-by-side. You can adjust typography settings and see how both fonts respond.</p>
+            </div>
           </div>
           <button @click="showABTesting = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <span class="material-symbols-outlined text-gray-600">close</span>
@@ -522,7 +515,10 @@
         <div class="p-6" @click="activeABColorPicker = null">
           <!-- Typography Controls -->
           <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <h4 class="text-sm font-semibold text-gray-700 mb-4">Typography Settings</h4>
+            <h4 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-base text-indigo-600">text_fields</span>
+              Typography Settings
+            </h4>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               <!-- Font Size -->
               <div class="flex flex-col gap-2">

@@ -23,6 +23,30 @@
                   Visualize and test design token combinations. See how tokens work together in real-time.
                 </p>
               </div>
+              <div class="hidden md:block flex-shrink-0">
+                <div class="w-64 h-64 relative">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
+                    <defs>
+                      <linearGradient id="playgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <!-- Playground/swatch representation -->
+                    <rect x="40" y="40" width="120" height="120" rx="8" fill="url(#playgroundGradient)" opacity="0.2" stroke="url(#playgroundGradient)" stroke-width="2" stroke-opacity="0.4"/>
+                    <!-- Color swatches -->
+                    <rect x="60" y="60" width="30" height="30" rx="4" fill="url(#playgroundGradient)" opacity="0.5"/>
+                    <rect x="100" y="60" width="30" height="30" rx="4" fill="url(#playgroundGradient)" opacity="0.6"/>
+                    <rect x="140" y="60" width="30" height="30" rx="4" fill="url(#playgroundGradient)" opacity="0.4"/>
+                    <rect x="60" y="100" width="30" height="30" rx="4" fill="url(#playgroundGradient)" opacity="0.6"/>
+                    <rect x="100" y="100" width="30" height="30" rx="4" fill="url(#playgroundGradient)" opacity="0.5"/>
+                    <rect x="140" y="100" width="30" height="30" rx="4" fill="url(#playgroundGradient)" opacity="0.4"/>
+                    <!-- Play icon -->
+                    <circle cx="100" cy="150" r="20" fill="url(#playgroundGradient)" opacity="0.5"/>
+                    <path d="M 92 145 L 92 155 L 102 150 Z" fill="white" opacity="0.9"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -37,7 +61,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-base text-indigo-600">folder</span>
                 Token Categories
               </h3>
               <div class="space-y-2">
@@ -62,7 +87,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-base text-indigo-600">check_circle</span>
                 Selected Tokens
               </h3>
               <div v-if="selectedTokens.length === 0" class="text-sm text-center py-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
@@ -105,18 +131,24 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-base text-indigo-600">style</span>
                   Available Tokens
                 </h3>
-                <input
-                  v-model="tokenSearch"
-                  type="text"
-                  placeholder="Search tokens..."
-                  class="px-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-700 text-white placeholder-gray-400' 
-                    : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'"
-                />
+                <div class="relative">
+                  <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-base pointer-events-none">
+                    search
+                  </span>
+                  <input
+                    v-model="tokenSearch"
+                    type="text"
+                    placeholder="Search tokens..."
+                    class="pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    :class="isDarkMode 
+                      ? 'border-gray-600 bg-slate-700 text-white placeholder-gray-400' 
+                      : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'"
+                  />
+                </div>
               </div>
               <div class="grid md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto">
                 <div
@@ -157,7 +189,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-base text-indigo-600">preview</span>
                 Live Preview
               </h3>
               <div class="space-y-6">
@@ -252,7 +285,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-base text-indigo-600">download</span>
                 Export Token Combination
               </h3>
               <div class="flex flex-wrap gap-3">

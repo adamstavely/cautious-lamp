@@ -23,6 +23,31 @@
                   Generate tests, run visual regression tests, and ensure component quality with integrated testing tools.
                 </p>
               </div>
+              <div class="hidden md:block flex-shrink-0">
+                <div class="w-64 h-64 relative">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
+                    <defs>
+                      <linearGradient id="testingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <!-- Test checklist/document -->
+                    <rect x="50" y="40" width="100" height="120" rx="4" fill="url(#testingGradient)" opacity="0.3"/>
+                    <!-- Checkmarks -->
+                    <circle cx="70" cy="70" r="8" fill="url(#testingGradient)" opacity="0.5"/>
+                    <path d="M 67 70 L 70 73 L 73 67" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+                    <circle cx="70" cy="100" r="8" fill="url(#testingGradient)" opacity="0.5"/>
+                    <path d="M 67 100 L 70 103 L 73 97" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+                    <circle cx="70" cy="130" r="8" fill="url(#testingGradient)" opacity="0.5"/>
+                    <path d="M 67 130 L 70 133 L 73 127" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+                    <!-- Test lines -->
+                    <line x1="90" y1="70" x2="130" y2="70" stroke="white" stroke-width="2" opacity="0.6"/>
+                    <line x1="90" y1="100" x2="130" y2="100" stroke="white" stroke-width="2" opacity="0.6"/>
+                    <line x1="90" y1="130" x2="130" y2="130" stroke="white" stroke-width="2" opacity="0.6"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>

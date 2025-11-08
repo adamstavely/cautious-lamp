@@ -23,6 +23,39 @@
                   Visualize component relationships, dependencies, and understand how components work together.
                 </p>
               </div>
+              <div class="hidden md:block flex-shrink-0">
+                <div class="w-64 h-64 relative">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
+                    <defs>
+                      <linearGradient id="dependencyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <!-- Network graph representation -->
+                    <!-- Central node -->
+                    <circle cx="100" cy="100" r="20" fill="url(#dependencyGradient)" opacity="0.6"/>
+                    <circle cx="100" cy="100" r="15" fill="url(#dependencyGradient)" opacity="0.4"/>
+                    <!-- Connected nodes -->
+                    <circle cx="50" cy="60" r="12" fill="url(#dependencyGradient)" opacity="0.5"/>
+                    <circle cx="150" cy="60" r="12" fill="url(#dependencyGradient)" opacity="0.5"/>
+                    <circle cx="50" cy="140" r="12" fill="url(#dependencyGradient)" opacity="0.5"/>
+                    <circle cx="150" cy="140" r="12" fill="url(#dependencyGradient)" opacity="0.5"/>
+                    <circle cx="30" cy="100" r="10" fill="url(#dependencyGradient)" opacity="0.4"/>
+                    <circle cx="170" cy="100" r="10" fill="url(#dependencyGradient)" opacity="0.4"/>
+                    <!-- Connection lines -->
+                    <line x1="100" y1="100" x2="50" y2="60" stroke="url(#dependencyGradient)" stroke-width="2" opacity="0.4"/>
+                    <line x1="100" y1="100" x2="150" y2="60" stroke="url(#dependencyGradient)" stroke-width="2" opacity="0.4"/>
+                    <line x1="100" y1="100" x2="50" y2="140" stroke="url(#dependencyGradient)" stroke-width="2" opacity="0.4"/>
+                    <line x1="100" y1="100" x2="150" y2="140" stroke="url(#dependencyGradient)" stroke-width="2" opacity="0.4"/>
+                    <line x1="100" y1="100" x2="30" y2="100" stroke="url(#dependencyGradient)" stroke-width="2" opacity="0.4"/>
+                    <line x1="100" y1="100" x2="170" y2="100" stroke="url(#dependencyGradient)" stroke-width="2" opacity="0.4"/>
+                    <!-- Additional connections between nodes -->
+                    <line x1="50" y1="60" x2="50" y2="140" stroke="url(#dependencyGradient)" stroke-width="1.5" opacity="0.3" stroke-dasharray="3,3"/>
+                    <line x1="150" y1="60" x2="150" y2="140" stroke="url(#dependencyGradient)" stroke-width="1.5" opacity="0.3" stroke-dasharray="3,3"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>

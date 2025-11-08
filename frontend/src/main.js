@@ -355,6 +355,22 @@ const router = createRouter({
       component: () => import('./views/HeuristicEvaluation.vue'),
     },
     {
+      path: '/performance',
+      redirect: '/admin/performance',
+    },
+    {
+      path: '/performance/budgets',
+      redirect: '/admin/performance',
+    },
+    {
+      path: '/performance/bundle-analysis',
+      redirect: '/admin/performance',
+    },
+    {
+      path: '/admin/performance',
+      component: () => import('./views/PerformanceAnalysis.vue'),
+    },
+    {
       path: '/tools',
       component: () => import('./views/Tools.vue'),
     },
