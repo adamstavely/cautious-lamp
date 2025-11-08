@@ -59,12 +59,10 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                <h3 class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
                   Overall Health
                 </h3>
-                <span class="material-symbols-outlined" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">
-                  check_circle
-                </span>
               </div>
               <div class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                 {{ overallHealth }}%
@@ -85,12 +83,10 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                <h3 class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">widgets</span>
                   Components
                 </h3>
-                <span class="material-symbols-outlined" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  widgets
-                </span>
               </div>
               <div class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                 {{ metrics.components.total }}
@@ -108,12 +104,10 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                <h3 class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-purple-400' : 'text-purple-600'">style</span>
                   Design Tokens
                 </h3>
-                <span class="material-symbols-outlined" :class="isDarkMode ? 'text-purple-400' : 'text-purple-600'">
-                  style
-                </span>
               </div>
               <div class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                 {{ metrics.tokens.total }}
@@ -131,12 +125,10 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                <h3 class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">accessibility</span>
                   Accessibility
                 </h3>
-                <span class="material-symbols-outlined" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">
-                  accessibility
-                </span>
               </div>
               <div class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                 {{ metrics.accessibility.score }}%
@@ -158,7 +150,8 @@
               : 'bg-white border-gray-200'"
           >
             <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">info</span>
                 Component Status
               </h3>
             </div>
@@ -199,7 +192,8 @@
               : 'bg-white border-gray-200'"
           >
             <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">category</span>
                 Token Usage by Category
               </h3>
             </div>
@@ -235,7 +229,8 @@
               : 'bg-white border-gray-200'"
           >
             <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">warning</span>
                 Alerts & Warnings
               </h3>
             </div>
@@ -314,21 +309,22 @@
               : 'bg-white border-gray-200'"
           >
             <div class="p-6 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">trending_up</span>
                 Component Adoption
               </h3>
-              <select
-                v-model="adoptionTimeframe"
-                class="px-3 py-1 border rounded text-sm"
-                :class="isDarkMode 
-                  ? 'border-gray-600 bg-slate-700 text-white' 
-                  : 'border-gray-300 bg-white text-gray-900'"
-              >
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
-                <option value="90d">Last 90 days</option>
-                <option value="all">All time</option>
-              </select>
+              <Dropdown
+                :model-value="adoptionTimeframe"
+                @update:model-value="adoptionTimeframe = $event"
+                :options="[
+                  { value: '7d', label: 'Last 7 days' },
+                  { value: '30d', label: 'Last 30 days' },
+                  { value: '90d', label: 'Last 90 days' },
+                  { value: 'all', label: 'All time' }
+                ]"
+                :is-dark-mode="isDarkMode"
+                label="Select timeframe"
+              />
             </div>
             <div class="p-6">
               <div class="space-y-4">
@@ -379,7 +375,8 @@
               : 'bg-white border-gray-200'"
           >
             <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">analytics</span>
                 Design System Analytics
               </h3>
             </div>
@@ -387,7 +384,8 @@
               <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                 <!-- Most Used Components -->
                 <div>
-                  <h4 class="text-sm font-semibold mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  <h4 class="text-sm font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    <span class="material-symbols-outlined text-base text-indigo-600">star</span>
                     Most Used Components
                   </h4>
                   <div class="space-y-3">
@@ -413,7 +411,8 @@
 
                 <!-- Token Usage Patterns -->
                 <div>
-                  <h4 class="text-sm font-semibold mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  <h4 class="text-sm font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    <span class="material-symbols-outlined text-base text-indigo-600">pattern</span>
                     Token Usage Patterns
                   </h4>
                   <div class="space-y-3">
@@ -442,7 +441,8 @@
 
                 <!-- Performance Metrics -->
                 <div>
-                  <h4 class="text-sm font-semibold mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  <h4 class="text-sm font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    <span class="material-symbols-outlined text-base text-indigo-600">speed</span>
                     Performance Metrics
                   </h4>
                   <div class="space-y-4">
@@ -500,7 +500,8 @@
 
               <!-- Usage Trends -->
               <div class="mt-6 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <h4 class="text-sm font-semibold mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                <h4 class="text-sm font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  <span class="material-symbols-outlined text-base text-indigo-600">show_chart</span>
                   Usage Trends (Last 30 Days)
                 </h4>
                 <div class="flex items-end gap-2 h-32">
@@ -533,6 +534,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import Dropdown from '../components/Dropdown.vue';
 
 const router = useRouter();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));

@@ -137,7 +137,8 @@
               ? 'bg-slate-900 border-gray-700' 
               : 'bg-white border-gray-200'"
           >
-            <h2 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <h2 class="text-xl font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <span class="material-symbols-outlined text-indigo-600">filter_list</span>
               Filters
             </h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">

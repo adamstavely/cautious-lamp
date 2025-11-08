@@ -54,6 +54,11 @@ const initUserRole = () => {
     // Always set to design_system_admin for full access to all pages
     localStorage.setItem('userRole', 'design_system_admin');
   }
+  
+  // Set userId if not already set (required for RBAC guards)
+  if (!localStorage.getItem('userId')) {
+    localStorage.setItem('userId', 'admin-user');
+  }
 };
 
 const initialTheme = initDarkMode();

@@ -208,7 +208,21 @@
                     </tr>
                   </thead>
                   <tbody class="divide-y" :class="isDarkMode ? 'divide-gray-700' : 'divide-gray-200'">
+                    <tr v-if="!analysis.components || analysis.components.length === 0">
+                      <td colspan="7" class="px-6 py-12 text-center">
+                        <div class="flex flex-col items-center gap-3">
+                          <span class="material-symbols-outlined text-4xl" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">widgets</span>
+                          <p class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                            No components found
+                          </p>
+                          <p class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                            Component analysis data will appear here once components are available.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
                     <tr 
+                      v-else
                       v-for="component in analysis.components"
                       :key="component.componentId"
                       class="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
@@ -824,9 +838,18 @@ const loadAnalysis = async () => {
     const response = await axios.get(`${API_BASE_URL}/performance/bundle-analysis`, {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
-    analysis.value = response.data;
+    // Ensure response data has the expected structure
+    if (response.data && response.data.components && Array.isArray(response.data.components)) {
+      analysis.value = response.data;
+    } else {
+      console.error('Invalid response structure:', response.data);
+      analysis.value = null;
+      alert('Received invalid data from server. Please try again.');
+    }
   } catch (error) {
     console.error('Error loading analysis:', error);
+    // Clear any stale data on error
+    analysis.value = null;
     alert('Error loading bundle analysis. Please try again.');
   } finally {
     loading.value = false;

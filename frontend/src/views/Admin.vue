@@ -283,7 +283,8 @@
         <div class="sticky top-0 p-6 border-b flex items-center justify-between"
           :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-white'"
         >
-          <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+          <h2 class="text-2xl font-bold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">campaign</span>
             Site Banners
           </h2>
           <button

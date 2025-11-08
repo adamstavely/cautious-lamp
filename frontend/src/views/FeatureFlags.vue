@@ -63,7 +63,8 @@
               : 'bg-white border-gray-200'"
           >
             <div class="flex items-center justify-between mb-6">
-              <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h2 class="text-2xl font-bold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">flag</span>
                 Feature Flags
               </h2>
               <button
@@ -210,7 +211,8 @@
         <div class="sticky top-0 p-6 border-b flex items-center justify-between"
           :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-white'"
         >
-          <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+          <h2 class="text-2xl font-bold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <span class="material-symbols-outlined text-indigo-600">{{ showEditModal ? 'edit' : 'add' }}</span>
             {{ showEditModal ? 'Edit Feature Flag' : 'Create Feature Flag' }}
           </h2>
           <button
@@ -442,7 +444,8 @@
           </div>
 
           <div class="border-t pt-4" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-            <h3 class="text-lg font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <h3 class="text-lg font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <span class="material-symbols-outlined text-base text-indigo-600">track_changes</span>
               Targeting (Optional)
             </h3>
             

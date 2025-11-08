@@ -37,7 +37,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">checklist</span>
                 Check Types
               </h3>
               <div class="space-y-2">
@@ -67,7 +68,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">upload_file</span>
                 Upload File
               </h3>
               <input
@@ -94,11 +96,12 @@
             <button
               @click="runChecks"
               :disabled="!uploadedCode && !selectedComponent"
-              class="w-full px-6 py-3 rounded-lg font-medium transition-colors"
+              class="w-full px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
               :class="uploadedCode || selectedComponent
                 ? (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')
                 : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
             >
+              <span class="material-symbols-outlined text-base">play_arrow</span>
               Run Quality Checks
             </button>
           </div>
@@ -114,7 +117,8 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">assessment</span>
                   Quality Check Results
                 </h3>
                 <div class="flex items-center gap-4">
@@ -179,7 +183,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">analytics</span>
                 Code Metrics
               </h3>
               <div class="grid grid-cols-3 gap-4">

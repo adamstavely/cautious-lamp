@@ -58,7 +58,8 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">rule</span>
                   Rules Engine
                 </h3>
                 <Dropdown
@@ -143,7 +144,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">apps</span>
                 Select Application
               </h3>
               <div class="space-y-3">
@@ -192,7 +194,8 @@
             >
               <div class="flex items-center justify-between mb-4">
                 <div class="flex-1">
-                  <h3 class="text-lg font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <h3 class="text-lg font-semibold mb-2 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-indigo-600">verified</span>
                     Compliance Checker
                   </h3>
                   <div class="flex items-center gap-4">
@@ -235,11 +238,12 @@
                   </button>
                   <button
                     @click="runComplianceCheck"
-                    class="px-4 py-2 rounded-lg font-medium transition-colors"
+                    class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
                     :class="isDarkMode 
                       ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
                       : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
                   >
+                    <span class="material-symbols-outlined text-base">play_arrow</span>
                     Run Check
                   </button>
                 </div>
@@ -323,7 +327,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">tune</span>
                 Rule Configuration
               </h3>
               <div v-if="selectedRule" class="space-y-4">

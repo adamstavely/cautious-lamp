@@ -583,6 +583,155 @@
             </div>
           </div>
 
+          <!-- Performance Section -->
+          <div class="max-w-7xl mx-auto mb-16">
+            <div 
+              class="rounded-lg shadow-sm border overflow-hidden"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
+              <div class="p-6 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                <h2 class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">speed</span>
+                  Performance Metrics
+                </h2>
+                <button
+                  v-if="performanceData"
+                  @click="loadPerformanceData"
+                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  :class="isDarkMode 
+                    ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                >
+                  <span class="material-symbols-outlined text-base">refresh</span>
+                  Refresh
+                </button>
+              </div>
+              
+              <div v-if="performanceLoading" class="p-12 text-center">
+                <div class="flex justify-center mb-4">
+                  <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  Loading performance data...
+                </p>
+              </div>
+
+              <div v-else-if="performanceData" class="p-6">
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">code</span>
+                      Vue Size
+                    </div>
+                    <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      {{ formatSize(performanceData.vueSize) }}
+                    </div>
+                  </div>
+                  
+                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">code</span>
+                      React Size
+                    </div>
+                    <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      {{ formatSize(performanceData.reactSize) }}
+                    </div>
+                  </div>
+                  
+                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">storage</span>
+                      Total Size
+                    </div>
+                    <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      {{ formatSize(performanceData.totalSize) }}
+                    </div>
+                    <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                      + {{ formatSize(performanceData.dependenciesSize) }} deps
+                    </div>
+                  </div>
+                  
+                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">compress</span>
+                      Gzipped
+                    </div>
+                    <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      {{ formatSize(performanceData.gzippedSize) }}
+                    </div>
+                    <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                      {{ Math.round((performanceData.gzippedSize / performanceData.totalSize) * 100) }}% compression
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-6 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                  <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">info</span>
+                      Status
+                    </h3>
+                    <span 
+                      class="px-3 py-1 text-sm rounded-full font-medium"
+                      :class="getPerformanceStatusClass(performanceData.status)"
+                    >
+                      {{ performanceData.status === 'pass' ? 'Optimal' : performanceData.status === 'warning' ? 'Warning' : 'Error' }}
+                    </span>
+                  </div>
+                  <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    <span v-if="performanceData.dependencies && performanceData.dependencies.length > 0">
+                      Dependencies: {{ performanceData.dependencies.join(', ') }}
+                    </span>
+                    <span v-else>No dependencies</span>
+                  </p>
+                </div>
+
+                <div class="mt-6 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                  <h3 class="text-lg font-semibold flex items-center gap-2 mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">language</span>
+                    Supported Browsers
+                  </h3>
+                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div 
+                      v-for="browser in getSupportedBrowsers()"
+                      :key="browser.name"
+                      class="flex items-center gap-2 p-3 rounded-lg border"
+                      :class="isDarkMode 
+                        ? 'bg-slate-800 border-gray-700' 
+                        : 'bg-gray-50 border-gray-200'"
+                    >
+                      <div 
+                        class="w-8 h-8 flex-shrink-0"
+                        :title="`${browser.name} ${browser.version}+`"
+                        v-html="getBrowserIcon(browser.name)"
+                      ></div>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                          {{ browser.name }}
+                        </div>
+                        <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                          {{ browser.version }}+
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else class="p-12 text-center">
+                <span class="material-symbols-outlined text-4xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">speed</span>
+                <p class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  Performance data unavailable
+                </p>
+                <p class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                  Unable to load performance metrics for this component.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <!-- Version History -->
           <div class="max-w-7xl mx-auto mb-16">
             <div class="mb-8">
@@ -803,10 +952,13 @@
 
 <script setup>
 import { ref, computed, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ComponentPreview from '../components/ComponentPreview.vue';
+import axios from 'axios';
 
+const route = useRoute();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
 const previewDarkMode = ref(false);
@@ -818,6 +970,102 @@ const propValues = reactive({
   disabled: false,
   loading: false
 });
+
+// Performance data
+const performanceData = ref(null);
+const performanceLoading = ref(false);
+
+const API_BASE_URL = 'http://localhost:3000/api/v1';
+const API_KEY = 'test-api-key-123';
+
+// Map route paths to component IDs
+const getComponentId = () => {
+  const routeToIdMap = {
+    '/components/buttons': 'button',
+    '/components/color-picker': 'color-picker',
+    '/components/forms': 'input',
+    '/components/cards': 'card',
+    '/components/navigation': 'navigation',
+    '/components/data-display': 'table'
+  };
+  return routeToIdMap[route.path] || null;
+};
+
+const formatSize = (bytes) => {
+  if (!bytes) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
+
+const getPerformanceStatusClass = (status) => {
+  if (status === 'error') return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+  if (status === 'warning') return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
+  return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+};
+
+const getSupportedBrowsers = () => {
+  // Default browser support - can be customized per component
+  return [
+    { name: 'Chrome', version: '90' },
+    { name: 'Firefox', version: '88' },
+    { name: 'Safari', version: '14' },
+    { name: 'Edge', version: '90' }
+  ];
+};
+
+const getBrowserIcon = (browserName) => {
+  const icons = {
+    'Chrome': `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
+      <circle cx="12" cy="12" r="10" fill="#4285F4"/>
+      <path d="M12 2C6.48 2 2 6.48 2 12c0 2.4.9 4.6 2.4 6.3L12 12V2z" fill="#EA4335"/>
+      <path d="M12 2c5.52 0 10 4.48 10 10 0 1.7-.4 3.3-1.1 4.7L12 12V2z" fill="#FBBC04"/>
+      <path d="M4.4 18.3C5.9 20 8.1 21 10.5 21c2.1 0 4-.8 5.4-2.1L12 12l-7.6 6.3z" fill="#34A853"/>
+      <circle cx="12" cy="12" r="3" fill="#FFFFFF"/>
+    </svg>`,
+    'Firefox': `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#FF7139"/>
+      <path d="M12 4c4.41 0 8 3.59 8 8 0 1.57-.46 3.03-1.24 4.26L12 12V4z" fill="#FF7139" opacity="0.9"/>
+      <path d="M8 8c0-2.21 1.79-4 4-4s4 1.79 4 4v4H8V8z" fill="#FFFFFF" opacity="0.3"/>
+      <circle cx="10" cy="10" r="2" fill="#FFFFFF" opacity="0.5"/>
+    </svg>`,
+    'Safari': `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
+      <circle cx="12" cy="12" r="10" fill="#000000"/>
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="#5AC8FA"/>
+      <path d="M8 8l8 8M16 8l-8 8" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+    </svg>`,
+    'Edge': `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#0078D4"/>
+      <path d="M12 4c4.41 0 8 3.59 8 8 0 1.57-.46 3.03-1.24 4.26L12 12V4z" fill="#0078D4" opacity="0.8"/>
+      <path d="M4 12c0-4.41 3.59-8 8-8v8H4z" fill="#0078D4" opacity="0.6"/>
+      <path d="M12 12l8 0c0 4.41-3.59 8-8 8v-8z" fill="#0078D4" opacity="0.9"/>
+    </svg>`
+  };
+  return icons[browserName] || icons['Chrome'];
+};
+
+const loadPerformanceData = async () => {
+  const componentId = getComponentId();
+  if (!componentId) {
+    performanceData.value = null;
+    return;
+  }
+
+  performanceLoading.value = true;
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/performance/bundle-analysis/analyze`,
+      { componentId, includeDependencies: true },
+      { headers: { Authorization: `Bearer ${API_KEY}` } }
+    );
+    performanceData.value = response.data;
+  } catch (error) {
+    console.error('Error loading performance data:', error);
+    performanceData.value = null;
+  } finally {
+    performanceLoading.value = false;
+  }
+};
 
 const generatedCode = computed(() => {
   const props = Object.entries(propValues)
@@ -1106,6 +1354,9 @@ onMounted(() => {
   
   checkDarkMode();
   darkModeInterval = setInterval(checkDarkMode, 100);
+  
+  // Load performance data
+  loadPerformanceData();
 });
 
 onBeforeUnmount(() => {

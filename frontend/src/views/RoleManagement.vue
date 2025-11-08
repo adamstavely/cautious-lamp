@@ -86,7 +86,8 @@
           : 'bg-white border-gray-200'"
       >
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+          <h2 class="text-2xl font-bold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <span class="material-symbols-outlined text-indigo-600">badge</span>
             Roles
           </h2>
         </div>
@@ -175,7 +176,8 @@
           : 'bg-white border-gray-200'"
       >
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+          <h2 class="text-2xl font-bold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <span class="material-symbols-outlined text-indigo-600">group</span>
             User Role Assignments
           </h2>
           <button
