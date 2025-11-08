@@ -63,18 +63,19 @@
                     ? 'bg-slate-900 border-gray-700' 
                     : 'bg-white border-gray-200'"
                 >
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    Figma Library
+                  <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">design_services</span>
+                    Penpot Library
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Access our Figma component library with all design system components, patterns, and styles.
+                    Access our Penpot component library with all design system components, patterns, and styles.
                   </p>
                   <a
                     href="#"
                     class="text-indigo-600 hover:text-indigo-700 underline"
                     :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : ''"
                   >
-                    Open Figma Library →
+                    Open Penpot Library →
                   </a>
                 </div>
 
@@ -84,7 +85,8 @@
                     ? 'bg-slate-900 border-gray-700' 
                     : 'bg-white border-gray-200'"
                 >
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">style</span>
                     Design Tokens
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -105,7 +107,8 @@
                     ? 'bg-slate-900 border-gray-700' 
                     : 'bg-white border-gray-200'"
                 >
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">image</span>
                     Icon Library
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -126,7 +129,8 @@
                     ? 'bg-slate-900 border-gray-700' 
                     : 'bg-white border-gray-200'"
                 >
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">palette</span>
                     Color Palette
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -155,7 +159,8 @@
                     ? 'bg-slate-900 border-gray-700' 
                     : 'bg-white border-gray-200'"
                 >
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">code</span>
                     GitHub Repository
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -176,19 +181,30 @@
                     ? 'bg-slate-900 border-gray-700' 
                     : 'bg-white border-gray-200'"
                 >
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">inventory</span>
                     NPM Package
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                     Install the design system package from npm.
                   </p>
                   <div 
-                    class="rounded-lg p-3 font-mono text-sm mb-3"
+                    class="rounded-lg p-3 font-mono text-sm mb-3 relative group"
                     :class="isDarkMode 
                       ? 'bg-slate-800 border border-slate-700 text-gray-100' 
                       : 'bg-gray-50 border border-gray-200 text-gray-900'"
                   >
-                    npm install @design-system/core
+                    <span>npm install @design-system/core</span>
+                    <button
+                      @click="copyToClipboard('npm install @design-system/core')"
+                      class="absolute top-1/2 right-2 -translate-y-1/2 p-1.5 rounded hover:bg-opacity-20 transition-colors"
+                      :class="isDarkMode 
+                        ? 'text-gray-400 hover:text-gray-200 hover:bg-white' 
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'"
+                      title="Copy to clipboard"
+                    >
+                      <span class="material-symbols-outlined text-lg">{{ copiedText === 'npm install @design-system/core' ? 'check' : 'content_copy' }}</span>
+                    </button>
                   </div>
                   <a
                     href="#"
@@ -205,19 +221,30 @@
                     ? 'bg-slate-900 border-gray-700' 
                     : 'bg-white border-gray-200'"
                 >
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">terminal</span>
                     CLI Tool
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                     Use our CLI tool to scaffold components, validate code, and manage design tokens.
                   </p>
                   <div 
-                    class="rounded-lg p-3 font-mono text-sm mb-3"
+                    class="rounded-lg p-3 font-mono text-sm mb-3 relative group"
                     :class="isDarkMode 
                       ? 'bg-slate-800 border border-slate-700 text-gray-100' 
                       : 'bg-gray-50 border border-gray-200 text-gray-900'"
                   >
-                    npm install -g @design-system/cli
+                    <span>npm install -g @design-system/cli</span>
+                    <button
+                      @click="copyToClipboard('npm install -g @design-system/cli')"
+                      class="absolute top-1/2 right-2 -translate-y-1/2 p-1.5 rounded hover:bg-opacity-20 transition-colors"
+                      :class="isDarkMode 
+                        ? 'text-gray-400 hover:text-gray-200 hover:bg-white' 
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'"
+                      title="Copy to clipboard"
+                    >
+                      <span class="material-symbols-outlined text-lg">{{ copiedText === 'npm install -g @design-system/cli' ? 'check' : 'content_copy' }}</span>
+                    </button>
                   </div>
                 </div>
 
@@ -227,7 +254,8 @@
                     ? 'bg-slate-900 border-gray-700' 
                     : 'bg-white border-gray-200'"
                 >
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">api</span>
                     SDK & API
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -241,35 +269,6 @@
                     View API Documentation →
                   </router-link>
                 </div>
-              </div>
-            </div>
-
-            <!-- Learning Resources -->
-            <div>
-              <h2 class="text-2xl font-bold mb-6" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Learning Resources
-              </h2>
-              <div class="grid md:grid-cols-2 gap-6">
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    Video Tutorials
-                  </h3>
-                  <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Watch video tutorials covering component usage, theming, and advanced patterns.
-                  </p>
-                  <a
-                    href="#"
-                    class="text-indigo-600 hover:text-indigo-700 underline"
-                    :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : ''"
-                  >
-                    Watch Tutorials →
-                  </a>
-                </div>
 
                 <div 
                   class="rounded-lg shadow-sm border p-6"
@@ -277,78 +276,8 @@
                     ? 'bg-slate-900 border-gray-700' 
                     : 'bg-white border-gray-200'"
                 >
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    Code Examples
-                  </h3>
-                  <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Browse code examples and sample implementations for common use cases.
-                  </p>
-                  <router-link
-                    to="/components"
-                    class="text-indigo-600 hover:text-indigo-700 underline"
-                    :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : ''"
-                  >
-                    View Examples →
-                  </router-link>
-                </div>
-
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    Design System Blog
-                  </h3>
-                  <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Read articles about design system best practices, updates, and case studies.
-                  </p>
-                  <a
-                    href="#"
-                    class="text-indigo-600 hover:text-indigo-700 underline"
-                    :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : ''"
-                  >
-                    Read Blog →
-                  </a>
-                </div>
-
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    Community Forum
-                  </h3>
-                  <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Join discussions, ask questions, and share knowledge with other design system users.
-                  </p>
-                  <a
-                    href="#"
-                    class="text-indigo-600 hover:text-indigo-700 underline"
-                    :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : ''"
-                  >
-                    Join Forum →
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            <!-- Tools -->
-            <div>
-              <h2 class="text-2xl font-bold mb-6" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Design Tools
-              </h2>
-              <div class="grid md:grid-cols-2 gap-6">
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">extension</span>
                     VS Code Extension
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -369,23 +298,131 @@
                     ? 'bg-slate-900 border-gray-700' 
                     : 'bg-white border-gray-200'"
                 >
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">rule</span>
                     ESLint Plugin
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                     Enforce design system rules and best practices in your code with our ESLint plugin.
                   </p>
                   <div 
-                    class="rounded-lg p-3 font-mono text-sm mb-3"
+                    class="rounded-lg p-3 font-mono text-sm mb-3 relative group"
                     :class="isDarkMode 
                       ? 'bg-slate-800 border border-slate-700 text-gray-100' 
                       : 'bg-gray-50 border border-gray-200 text-gray-900'"
                   >
-                    npm install eslint-plugin-design-system
+                    <span>npm install eslint-plugin-design-system</span>
+                    <button
+                      @click="copyToClipboard('npm install eslint-plugin-design-system')"
+                      class="absolute top-1/2 right-2 -translate-y-1/2 p-1.5 rounded hover:bg-opacity-20 transition-colors"
+                      :class="isDarkMode 
+                        ? 'text-gray-400 hover:text-gray-200 hover:bg-white' 
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'"
+                      title="Copy to clipboard"
+                    >
+                      <span class="material-symbols-outlined text-lg">{{ copiedText === 'npm install eslint-plugin-design-system' ? 'check' : 'content_copy' }}</span>
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
+
+            <!-- Learning Resources -->
+            <div>
+              <h2 class="text-2xl font-bold mb-6" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                Learning Resources
+              </h2>
+              <div class="grid md:grid-cols-2 gap-6">
+                <div 
+                  class="rounded-lg shadow-sm border p-6"
+                  :class="isDarkMode 
+                    ? 'bg-slate-900 border-gray-700' 
+                    : 'bg-white border-gray-200'"
+                >
+                  <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">play_circle</span>
+                    Video Tutorials
+                  </h3>
+                  <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    Watch video tutorials covering component usage, theming, and advanced patterns.
+                  </p>
+                  <a
+                    href="#"
+                    class="text-indigo-600 hover:text-indigo-700 underline"
+                    :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : ''"
+                  >
+                    Watch Tutorials →
+                  </a>
+                </div>
+
+                <div 
+                  class="rounded-lg shadow-sm border p-6"
+                  :class="isDarkMode 
+                    ? 'bg-slate-900 border-gray-700' 
+                    : 'bg-white border-gray-200'"
+                >
+                  <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">code_blocks</span>
+                    Code Examples
+                  </h3>
+                  <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    Browse code examples and sample implementations for common use cases.
+                  </p>
+                  <router-link
+                    to="/components"
+                    class="text-indigo-600 hover:text-indigo-700 underline"
+                    :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : ''"
+                  >
+                    View Examples →
+                  </router-link>
+                </div>
+
+                <div 
+                  class="rounded-lg shadow-sm border p-6"
+                  :class="isDarkMode 
+                    ? 'bg-slate-900 border-gray-700' 
+                    : 'bg-white border-gray-200'"
+                >
+                  <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">article</span>
+                    Design System Blog
+                  </h3>
+                  <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    Read articles about design system best practices, updates, and case studies.
+                  </p>
+                  <a
+                    href="#"
+                    class="text-indigo-600 hover:text-indigo-700 underline"
+                    :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : ''"
+                  >
+                    Read Blog →
+                  </a>
+                </div>
+
+                <div 
+                  class="rounded-lg shadow-sm border p-6"
+                  :class="isDarkMode 
+                    ? 'bg-slate-900 border-gray-700' 
+                    : 'bg-white border-gray-200'"
+                >
+                  <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">forum</span>
+                    Community Forum
+                  </h3>
+                  <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    Join discussions, ask questions, and share knowledge with other design system users.
+                  </p>
+                  <a
+                    href="#"
+                    class="text-indigo-600 hover:text-indigo-700 underline"
+                    :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : ''"
+                  >
+                    Join Forum →
+                  </a>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -400,6 +437,7 @@ import Breadcrumbs from '../components/Breadcrumbs.vue';
 
 const drawerOpen = ref(false);
 const isDarkMode = ref(false);
+const copiedText = ref('');
 
 const closeDrawer = () => {
   drawerOpen.value = false;
@@ -407,6 +445,18 @@ const closeDrawer = () => {
 
 const toggleDrawer = () => {
   drawerOpen.value = !drawerOpen.value;
+};
+
+const copyToClipboard = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    copiedText.value = text;
+    setTimeout(() => {
+      copiedText.value = '';
+    }, 2000);
+  } catch (err) {
+    console.error('Failed to copy text:', err);
+  }
 };
 
 onMounted(() => {

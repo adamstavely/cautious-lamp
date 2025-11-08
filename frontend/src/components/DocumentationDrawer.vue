@@ -53,44 +53,6 @@
         </nav>
       </div>
       
-      <!-- Artificial Intelligence - only show when not on patterns route -->
-      <div v-if="showMainSections" class="mb-8">
-        <h3 class="text-sm font-semibold uppercase tracking-wider mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Artificial Intelligence</h3>
-        <nav class="space-y-1">
-          <button
-            v-for="item in artificialIntelligence"
-            :key="item.link"
-            @click="navigateToDoc(item.link)"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-            :class="isDarkMode 
-              ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'"
-          >
-            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-            <span class="font-medium">{{ item.text }}</span>
-          </button>
-        </nav>
-      </div>
-      
-      <!-- Human-Centered Design - only show when not on patterns route -->
-      <div v-if="showMainSections" class="mb-8">
-        <h3 class="text-sm font-semibold uppercase tracking-wider mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Human-Centered Design</h3>
-        <nav class="space-y-1">
-          <button
-            v-for="item in humanCenteredDesign"
-            :key="item.link"
-            @click="navigateToDoc(item.link)"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-            :class="isDarkMode 
-              ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'"
-          >
-            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-            <span class="font-medium">{{ item.text }}</span>
-          </button>
-        </nav>
-      </div>
-      
       <!-- Patterns - only show when on patterns route -->
       <div v-if="showPatterns" class="mb-8">
         <div class="flex items-center justify-between mb-4">
@@ -261,25 +223,106 @@
             <span class="material-symbols-outlined">left_panel_close</span>
           </button>
         </div>
-        <nav class="space-y-1">
-          <router-link
-            v-for="item in gettingStartedItems"
-            :key="item.link"
-            :to="item.link"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-            :class="[
-              isActive(item.link)
-                ? (isDarkMode 
-                  ? 'text-indigo-400 bg-indigo-900/20' 
-                  : 'text-indigo-600 bg-indigo-50')
-                : (isDarkMode
-                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-            ]"
-          >
-            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-            <span class="font-medium">{{ item.text }}</span>
-          </router-link>
+        <nav class="space-y-6">
+          <!-- Overview & Basics -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Overview & Basics</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in gettingStartedBasics"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Design Principles -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Design Principles</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in gettingStartedPrinciples"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Setup & Installation -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Setup & Installation</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in gettingStartedSetup"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Resources & Support -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Resources & Support</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in gettingStartedResources"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
         </nav>
       </div>
       
@@ -474,6 +517,31 @@
           </button>
         </div>
         <nav class="space-y-6">
+          <!-- HCD Guidelines -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">HCD Guidelines</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in humanCenteredDesign"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
           <!-- Research Artifacts -->
           <div>
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Research Artifacts</h4>
@@ -523,6 +591,41 @@
               </router-link>
             </div>
           </div>
+        </nav>
+      </div>
+      
+      <!-- AI - only show when on AI route -->
+      <div v-if="showAI" class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Artificial Intelligence</h3>
+          <button
+            @click="toggle"
+            class="p-2 rounded-lg transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            title="Close drawer"
+          >
+            <span class="material-symbols-outlined">left_panel_close</span>
+          </button>
+        </div>
+        <nav class="space-y-1">
+          <router-link
+            v-for="item in artificialIntelligence"
+            :key="item.link"
+            :to="item.link"
+            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+            :class="[
+              isActive(item.link)
+                ? (isDarkMode 
+                  ? 'text-indigo-400 bg-indigo-900/20' 
+                  : 'text-indigo-600 bg-indigo-50')
+                : (isDarkMode
+                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+            ]"
+          >
+            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+            <span class="font-medium">{{ item.text }}</span>
+          </router-link>
         </nav>
       </div>
       
@@ -812,15 +915,24 @@ const adminItems = [
   { text: 'Performance Analysis', link: '/admin/performance', icon: 'speed' }
 ];
 
-const gettingStartedItems = [
+const gettingStartedBasics = [
   { text: 'Overview', link: '/getting-started', icon: 'rocket_launch' },
   { text: 'Why a Design System?', link: '/getting-started/why-design-system', icon: 'help_outline' },
-  { text: 'Quick Start', link: '/getting-started/quick-start', icon: 'play_arrow' },
+  { text: 'Quick Start', link: '/getting-started/quick-start', icon: 'play_arrow' }
+];
+
+const gettingStartedPrinciples = [
   { text: 'Design Principles', link: '/getting-started/principles', icon: 'lightbulb' },
-  { text: 'Design Themes', link: '/getting-started/themes', icon: 'palette' },
-  { text: 'Contribute', link: '/getting-started/contribute', icon: 'groups' },
+  { text: 'Design Themes', link: '/getting-started/themes', icon: 'palette' }
+];
+
+const gettingStartedSetup = [
   { text: 'Installation', link: '/getting-started/installation', icon: 'download' },
   { text: 'Best Practices', link: '/getting-started/best-practices', icon: 'check_circle' },
+  { text: 'Contribute', link: '/getting-started/contribute', icon: 'groups' }
+];
+
+const gettingStartedResources = [
   { text: 'Resources', link: '/getting-started/resources', icon: 'book' },
   { text: 'Support', link: '/getting-started/support', icon: 'help' }
 ];
@@ -859,6 +971,7 @@ const showGettingStarted = computed(() => {
 const showResearch = computed(() => {
   return route.path === '/research' || 
          route.path.startsWith('/research/') ||
+         route.path.startsWith('/hcd/') ||
          route.path === '/tools/nasa-tlx' ||
          route.path === '/tools/sus' ||
          route.path === '/tools/heuristic-evaluation';
@@ -894,8 +1007,12 @@ const showComponents = computed(() => {
   return route.path === '/components' || route.path.startsWith('/components/');
 });
 
+const showAI = computed(() => {
+  return route.path === '/ai' || route.path.startsWith('/ai/');
+});
+
 const showMainSections = computed(() => {
-  return !showPatterns.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value && !showTokens.value && !showAdmin.value && !showGettingStarted.value && !showResearch.value;
+  return !showPatterns.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value && !showTokens.value && !showAdmin.value && !showGettingStarted.value && !showResearch.value && !showAI.value;
 });
 
 const isActive = (path) => {

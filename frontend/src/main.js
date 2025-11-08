@@ -163,6 +163,22 @@ const router = createRouter({
       component: () => import('./views/Admin.vue'),
     },
     {
+      path: '/ai',
+      component: () => import('./views/AI.vue'),
+    },
+    {
+      path: '/ai/overview',
+      component: () => import('./views/AIOverview.vue'),
+    },
+    {
+      path: '/ai/patterns',
+      component: () => import('./views/AIPatterns.vue'),
+    },
+    {
+      path: '/ai/components',
+      component: () => import('./views/AIComponents.vue'),
+    },
+    {
       path: '/components',
       component: () => import('./views/Components.vue'),
     },

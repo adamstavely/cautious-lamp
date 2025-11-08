@@ -8,29 +8,36 @@
   >
     <!-- Navigation Items -->
     <nav class="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-4" role="navigation" aria-label="Main navigation">
-      <router-link
-        v-for="item in menuItems"
-        :key="item.path"
-        :to="item.path"
-        @click="handleSidebarClick"
-        :class="[
-          'flex flex-col items-center px-3 py-3 relative group mb-2',
-          isActive(item.path)
-            ? (isDarkMode 
-              ? 'border border-indigo-300 rounded-lg bg-indigo-400/30' 
-              : 'border border-indigo-400 rounded-lg bg-indigo-500/30')
-            : (isDarkMode
-              ? 'hover:bg-indigo-400/30 rounded-lg'
-              : 'hover:bg-indigo-700/50 rounded-lg')
-        ]"
-      >
-        <span class="material-symbols-outlined flex-shrink-0 mb-2" aria-hidden="true">{{ item.icon }}</span>
-        <span class="font-medium text-sm text-center">{{ item.label }}</span>
-      </router-link>
+      <template v-for="(item, index) in menuItems" :key="item.path">
+        <router-link
+          :to="item.path"
+          @click="handleSidebarClick"
+          :class="[
+            'flex flex-col items-center px-3 py-3 relative group mb-2',
+            isActive(item.path)
+              ? (isDarkMode 
+                ? 'border border-indigo-300 rounded-lg bg-indigo-400/30' 
+                : 'border border-indigo-400 rounded-lg bg-indigo-500/30')
+              : (isDarkMode
+                ? 'hover:bg-indigo-400/30 rounded-lg'
+                : 'hover:bg-indigo-700/50 rounded-lg')
+          ]"
+        >
+          <span class="material-symbols-outlined flex-shrink-0 mb-2" aria-hidden="true">{{ item.icon }}</span>
+          <span class="font-medium text-sm text-center">{{ item.label }}</span>
+        </router-link>
+        <!-- Divider after Getting Started, AI, and Design Assets -->
+        <div 
+          v-if="item.path === '/getting-started' || item.path === '/ai' || item.path === '/design-assets'"
+          class="h-px mx-4 mb-2"
+          :class="isDarkMode ? 'bg-indigo-700' : 'bg-indigo-600'"
+          aria-hidden="true"
+        ></div>
+      </template>
     </nav>
 
     <!-- Admin Section -->
-    <div class="px-3 pb-2 border-t" :class="isDarkMode ? 'border-indigo-700' : 'border-indigo-600'">
+    <div class="px-3 pb-2">
       <router-link
         to="/admin"
         @click="handleSidebarClick"
@@ -139,10 +146,11 @@ const toggleDarkMode = () => {
 const menuItems = [
   { path: '/getting-started', label: 'Getting Started', icon: 'rocket_launch' },
   { path: '/guidelines', label: 'Guidelines', icon: 'menu_book' },
+  { path: '/research', label: 'HCD', icon: 'note_stack' },
+  { path: '/ai', label: 'AI', icon: 'psychology' },
   { path: '/components', label: 'Components', icon: 'widgets' },
   { path: '/tokens', label: 'Tokens', icon: 'style' },
   { path: '/patterns', label: 'Patterns', icon: 'pattern' },
-  { path: '/research', label: 'HCD', icon: 'note_stack' },
   { path: '/design-assets', label: 'Design Assets', icon: 'collections' },
   { path: '/review', label: 'Review', icon: 'rate_review' },
   { path: '/tools', label: 'Tools', icon: 'build' },
@@ -162,7 +170,10 @@ const isActive = (path) => {
     return route.path === '/getting-started' || route.path.startsWith('/getting-started/');
   }
   if (path === '/research') {
-    return route.path === '/research' || route.path.startsWith('/research/');
+    return route.path === '/research' || route.path.startsWith('/research/') || route.path.startsWith('/hcd/');
+  }
+  if (path === '/ai') {
+    return route.path === '/ai' || route.path.startsWith('/ai/');
   }
   return route.path === path || route.path.startsWith(path + '/');
 };

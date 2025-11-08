@@ -205,62 +205,90 @@
             <div class="space-y-6">
               <!-- Principle 1 -->
               <div 
-                class="rounded-lg shadow-sm border p-6"
+                class="rounded-lg shadow-sm border p-6 flex gap-6"
                 :class="isDarkMode 
                   ? 'bg-slate-900 border-gray-700' 
                   : 'bg-white border-gray-200'"
               >
-                <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  User-Centric by Design
-                </h3>
-                <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Every component, pattern, and guideline is informed by real user research and testing. We don't design in a vacuum—we design with and for our users, ensuring that every element serves a real need and solves a real problem.
-                </p>
+                <div class="flex-shrink-0">
+                  <div class="w-12 h-12" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                    <span class="material-symbols-outlined text-5xl">person</span>
+                  </div>
+                </div>
+                <div class="flex-1">
+                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    User-Centric by Design
+                  </h3>
+                  <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    Every component, pattern, and guideline is informed by real user research and testing. We don't design in a vacuum—we design with and for our users, ensuring that every element serves a real need and solves a real problem.
+                  </p>
+                </div>
               </div>
 
               <!-- Principle 2 -->
               <div 
-                class="rounded-lg shadow-sm border p-6"
+                class="rounded-lg shadow-sm border p-6 flex gap-6"
                 :class="isDarkMode 
                   ? 'bg-slate-900 border-gray-700' 
                   : 'bg-white border-gray-200'"
               >
-                <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  Accessibility Built-In
-                </h3>
-                <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Accessibility isn't an afterthought—it's foundational. Every component meets WCAG 2.1 AA standards, ensuring that our capabilities work for everyone, regardless of ability or context.
-                </p>
+                <div class="flex-shrink-0">
+                  <div class="w-12 h-12" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                    <span class="material-symbols-outlined text-5xl">accessibility</span>
+                  </div>
+                </div>
+                <div class="flex-1">
+                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    Accessibility Built-In
+                  </h3>
+                  <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    Accessibility isn't an afterthought—it's foundational. Every component meets WCAG 2.1 AA standards, ensuring that our capabilities work for everyone, regardless of ability or context.
+                  </p>
+                </div>
               </div>
 
               <!-- Principle 3 -->
               <div 
-                class="rounded-lg shadow-sm border p-6"
+                class="rounded-lg shadow-sm border p-6 flex gap-6"
                 :class="isDarkMode 
                   ? 'bg-slate-900 border-gray-700' 
                   : 'bg-white border-gray-200'"
               >
-                <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  Living and Evolving
-                </h3>
-                <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  This system is not static. It evolves based on user feedback, changing needs, and new technologies. We continuously iterate, improve, and expand the system to serve our mission better.
-                </p>
+                <div class="flex-shrink-0">
+                  <div class="w-12 h-12" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                    <span class="material-symbols-outlined text-5xl">autorenew</span>
+                  </div>
+                </div>
+                <div class="flex-1">
+                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    Living and Evolving
+                  </h3>
+                  <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    This system is not static. It evolves based on user feedback, changing needs, and new technologies. We continuously iterate, improve, and expand the system to serve our mission better.
+                  </p>
+                </div>
               </div>
 
               <!-- Principle 4 -->
               <div 
-                class="rounded-lg shadow-sm border p-6"
+                class="rounded-lg shadow-sm border p-6 flex gap-6"
                 :class="isDarkMode 
                   ? 'bg-slate-900 border-gray-700' 
                   : 'bg-white border-gray-200'"
               >
-                <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  Mission-Aligned
-                </h3>
-                <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  The user experience of our capabilities directly impacts the success of mission. This system is designed to support that mission by enabling teams to build exceptional experiences that serve users effectively, regardless of geographic location or context.
-                </p>
+                <div class="flex-shrink-0">
+                  <div class="w-12 h-12" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                    <span class="material-symbols-outlined text-5xl">flag</span>
+                  </div>
+                </div>
+                <div class="flex-1">
+                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    Mission-Aligned
+                  </h3>
+                  <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    The user experience of our capabilities directly impacts the success of mission. This system is designed to support that mission by enabling teams to build exceptional experiences that serve users effectively, regardless of geographic location or context.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

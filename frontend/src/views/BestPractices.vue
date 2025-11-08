@@ -57,7 +57,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h2 class="text-2xl font-bold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h2 class="text-2xl font-bold mb-4 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">style</span>
                 Use Design Tokens
               </h2>
               <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -100,7 +101,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h2 class="text-2xl font-bold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h2 class="text-2xl font-bold mb-4 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">widgets</span>
                 Use Existing Components
               </h2>
               <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -121,7 +123,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h2 class="text-2xl font-bold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h2 class="text-2xl font-bold mb-4 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">accessibility</span>
                 Prioritize Accessibility
               </h2>
               <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -144,7 +147,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h2 class="text-2xl font-bold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h2 class="text-2xl font-bold mb-4 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">speed</span>
                 Optimize for Performance
               </h2>
               <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -166,7 +170,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h2 class="text-2xl font-bold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h2 class="text-2xl font-bold mb-4 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">view_module</span>
                 Maintain Consistency
               </h2>
               <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -188,7 +193,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h2 class="text-2xl font-bold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h2 class="text-2xl font-bold mb-4 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">update</span>
                 Stay Up to Date
               </h2>
               <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -210,7 +216,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h2 class="text-2xl font-bold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h2 class="text-2xl font-bold mb-4 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">science</span>
                 Test Thoroughly
               </h2>
               <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
