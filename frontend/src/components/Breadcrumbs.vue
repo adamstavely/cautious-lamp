@@ -135,6 +135,7 @@ const crumbs = computed(() => {
     '/tools/font-subsetting': 'Font Subsetting',
     '/design-assets': 'Design Assets',
     '/review': 'Review',
+    '/research': 'HCD',
     '/tools': 'Tools',
     '/tools/gradient-generator': 'Gradient Generator',
     '/guidelines': 'Guidelines',

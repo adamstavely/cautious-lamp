@@ -18,7 +18,7 @@
             <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
               <div class="flex-1">
                 <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Research Repo
+                  Human-Centered Design
                 </h1>
                 <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
                   Explore journey maps, user personas, HCD reports, and other human-centered design research artifacts that inform our design decisions.
@@ -28,25 +28,26 @@
                 <div class="w-64 h-64 relative">
                   <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
                     <defs>
-                      <linearGradient id="researchGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <linearGradient id="hcdGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
                         <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
                       </linearGradient>
                     </defs>
-                    <!-- Microscope/research icon -->
-                    <circle cx="100" cy="80" r="25" fill="none" stroke="url(#researchGradient)" stroke-width="3" opacity="0.5"/>
-                    <rect x="85" y="105" width="30" height="60" rx="4" fill="url(#researchGradient)" opacity="0.4"/>
-                    <rect x="90" y="165" width="20" height="10" rx="2" fill="url(#researchGradient)" opacity="0.6"/>
-                    <!-- Data points representing research findings -->
-                    <circle cx="50" cy="50" r="4" fill="url(#researchGradient)" opacity="0.6"/>
-                    <circle cx="150" cy="60" r="4" fill="url(#researchGradient)" opacity="0.5"/>
-                    <circle cx="60" cy="140" r="4" fill="url(#researchGradient)" opacity="0.4"/>
-                    <circle cx="140" cy="150" r="4" fill="url(#researchGradient)" opacity="0.5"/>
-                    <!-- Chart bars representing data -->
-                    <rect x="35" y="120" width="8" height="30" rx="2" fill="url(#researchGradient)" opacity="0.3"/>
-                    <rect x="47" y="110" width="8" height="40" rx="2" fill="url(#researchGradient)" opacity="0.4"/>
-                    <rect x="145" y="100" width="8" height="50" rx="2" fill="url(#researchGradient)" opacity="0.3"/>
-                    <rect x="157" y="115" width="8" height="35" rx="2" fill="url(#researchGradient)" opacity="0.4"/>
+                    <!-- Person/user icon representing human-centered focus -->
+                    <circle cx="100" cy="70" r="20" fill="url(#hcdGradient)" opacity="0.6"/>
+                    <path d="M 100 90 Q 70 90 70 120 L 70 150 L 130 150 L 130 120 Q 130 90 100 90" fill="url(#hcdGradient)" opacity="0.5"/>
+                    <!-- Design elements - circles representing ideas/insights -->
+                    <circle cx="50" cy="50" r="8" fill="url(#hcdGradient)" opacity="0.4"/>
+                    <circle cx="150" cy="50" r="8" fill="url(#hcdGradient)" opacity="0.4"/>
+                    <circle cx="50" cy="150" r="8" fill="url(#hcdGradient)" opacity="0.4"/>
+                    <circle cx="150" cy="150" r="8" fill="url(#hcdGradient)" opacity="0.4"/>
+                    <!-- Connecting lines representing relationships and connections -->
+                    <line x1="100" y1="70" x2="50" y2="50" stroke="url(#hcdGradient)" stroke-width="2" opacity="0.3"/>
+                    <line x1="100" y1="70" x2="150" y2="50" stroke="url(#hcdGradient)" stroke-width="2" opacity="0.3"/>
+                    <line x1="100" y1="120" x2="50" y2="150" stroke="url(#hcdGradient)" stroke-width="2" opacity="0.3"/>
+                    <line x1="100" y1="120" x2="150" y2="150" stroke="url(#hcdGradient)" stroke-width="2" opacity="0.3"/>
+                    <!-- Heart shape representing empathy and care -->
+                    <path d="M 100 100 Q 90 90 85 95 Q 80 100 85 105 Q 90 110 100 120 Q 110 110 115 105 Q 120 100 115 95 Q 110 90 100 100" fill="url(#hcdGradient)" opacity="0.3"/>
                   </svg>
                 </div>
               </div>
@@ -143,7 +144,7 @@
               </p>
             </router-link>
 
-            <!-- User Studies Card -->
+            <!-- User Personas Card -->
             <router-link 
               to="/research/user-studies"
               class="group rounded-2xl p-6 border transition-all"
@@ -160,7 +161,7 @@
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
-                User Studies
+                User Personas
               </h3>
               <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Browse comprehensive user research studies, interviews, and observations.
@@ -217,31 +218,63 @@
           </div>
         </div>
 
-        <!-- Featured Research Section -->
+        <!-- Featured UX Research Tools Section -->
         <div class="max-w-7xl mx-auto">
           <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-950 dark:via-indigo-900 dark:to-indigo-800">
             <div class="flex items-center justify-between mb-8">
               <h2 class="text-4xl md:text-5xl font-bold text-white">
-                Research collections
+                UX Research Tools
               </h2>
-              <button class="px-6 py-2 rounded-full border border-white/30 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-                View all research
-              </button>
             </div>
             
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-              <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                <h3 class="text-white font-semibold text-xl mb-2">User Personas</h3>
-                <p class="text-white/80 text-sm">Create and explore detailed user personas that represent your target audience and inform design decisions.</p>
-              </div>
-              <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                <h3 class="text-white font-semibold text-xl mb-2">Journey Maps</h3>
-                <p class="text-white/80 text-sm">Visualize user journeys and experiences across different touchpoints to identify pain points and opportunities.</p>
-              </div>
-              <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                <h3 class="text-white font-semibold text-xl mb-2">HCD Reports</h3>
-                <p class="text-white/80 text-sm">Access comprehensive human-centered design research reports, findings, and actionable insights.</p>
-              </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+              <!-- User Persona Generator Card -->
+              <router-link 
+                to="/research/user-personas" 
+                class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
+              >
+                <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
+                  <span class="material-symbols-outlined text-5xl">person</span>
+                </div>
+                <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">User Persona Generator</h3>
+                <p class="text-white/80 text-sm">Create detailed user personas from research data to inform design decisions.</p>
+              </router-link>
+
+              <!-- NASA-TLX Card -->
+              <router-link 
+                to="/tools/nasa-tlx" 
+                class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
+              >
+                <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
+                  <span class="material-symbols-outlined text-5xl">psychology</span>
+                </div>
+                <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">NASA-TLX</h3>
+                <p class="text-white/80 text-sm">Assess task workload across six dimensions for usability analysis.</p>
+              </router-link>
+
+              <!-- System Usability Scale Card -->
+              <router-link 
+                to="/tools/sus" 
+                class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
+              >
+                <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
+                  <MonitorCog :size="48" :stroke-width="2" />
+                </div>
+                <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">System Usability Scale</h3>
+                <p class="text-white/80 text-sm">Quick and reliable tool for measuring system usability.</p>
+              </router-link>
+
+              <!-- Heuristic Evaluation Card -->
+              <router-link 
+                to="/tools/heuristic-evaluation" 
+                class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
+              >
+                <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
+                  <Checklist :size="48" :stroke-width="2" />
+                </div>
+                <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">Heuristic Evaluation</h3>
+                <p class="text-white/80 text-sm">Evaluate interfaces using Nielsen's 10 Usability Heuristics.</p>
+              </router-link>
             </div>
           </div>
         </div>

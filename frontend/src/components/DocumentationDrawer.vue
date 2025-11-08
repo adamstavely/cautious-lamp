@@ -372,31 +372,6 @@
             </div>
           </div>
 
-          <!-- UX Research -->
-          <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">UX Research</h4>
-            <div class="space-y-1">
-              <router-link
-                v-for="item in toolGroups.ux"
-                :key="item.link"
-                :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
-                    : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-                ]"
-              >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-                <span class="font-medium">{{ item.text }}</span>
-              </router-link>
-            </div>
-          </div>
-
           <!-- Development -->
           <div>
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Development</h4>
@@ -485,10 +460,10 @@
         </nav>
       </div>
       
-      <!-- Research Repo - only show when on research route -->
+      <!-- HCD - only show when on research route -->
       <div v-if="showResearch" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Research Repo</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">HCD</h3>
           <button
             @click="toggle"
             class="p-2 rounded-lg transition-colors"
@@ -498,25 +473,56 @@
             <span class="material-symbols-outlined">left_panel_close</span>
           </button>
         </div>
-        <nav class="space-y-1">
-          <router-link
-            v-for="item in researchItems"
-            :key="item.link"
-            :to="item.link"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-            :class="[
-              isActive(item.link)
-                ? (isDarkMode 
-                  ? 'text-indigo-400 bg-indigo-900/20' 
-                  : 'text-indigo-600 bg-indigo-50')
-                : (isDarkMode
-                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-            ]"
-          >
-            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-            <span class="font-medium">{{ item.text }}</span>
-          </router-link>
+        <nav class="space-y-6">
+          <!-- Research Artifacts -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Research Artifacts</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in researchArtifacts"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- UX Research Tools -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">UX Research Tools</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in uxResearchTools"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
         </nav>
       </div>
       
@@ -748,11 +754,6 @@ const toolGroups = computed(() => ({
     { text: 'Font Stack', link: '/tools/font-stack', icon: 'layers' },
     { text: 'Font Subsetting', link: '/tools/font-subsetting', icon: 'content_cut' }
   ],
-  ux: [
-    { text: 'NASA-TLX', link: '/tools/nasa-tlx', icon: 'psychology' },
-    { text: 'System Usability Scale', link: '/tools/sus', icon: 'psychology' },
-    { text: 'Heuristic Evaluation', link: '/tools/heuristic-evaluation', icon: 'checklist' }
-  ],
   development: [
     { text: 'Migration Assistant', link: '/tools/migration', icon: 'refresh' },
     { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' }
@@ -820,14 +821,20 @@ const gettingStartedItems = [
   { text: 'Support', link: '/getting-started/support', icon: 'help' }
 ];
 
-const researchItems = [
-  { text: 'Overview', link: '/research', icon: 'science' },
+const researchArtifacts = [
+  { text: 'Overview', link: '/research', icon: 'note_stack' },
   { text: 'Journey Maps', link: '/research/journey-maps', icon: 'map' },
-  { text: 'User Persona Generator', link: '/research/user-personas', icon: 'person' },
   { text: 'HCD Reports', link: '/research/hcd-reports', icon: 'description' },
-  { text: 'User Studies', link: '/research/user-studies', icon: 'groups' },
+  { text: 'User Personas', link: '/research/user-studies', icon: 'groups' },
   { text: 'Research Artifacts', link: '/research/artifacts', icon: 'folder' },
   { text: 'Insights & Findings', link: '/research/insights', icon: 'insights' }
+];
+
+const uxResearchTools = [
+  { text: 'User Persona Generator', link: '/research/user-personas', icon: 'person' },
+  { text: 'NASA-TLX', link: '/tools/nasa-tlx', icon: 'psychology' },
+  { text: 'System Usability Scale', link: '/tools/sus', icon: 'psychology' },
+  { text: 'Heuristic Evaluation', link: '/tools/heuristic-evaluation', icon: 'checklist' }
 ];
 
 const tokenItems = [
@@ -846,7 +853,11 @@ const showGettingStarted = computed(() => {
 });
 
 const showResearch = computed(() => {
-  return route.path === '/research' || route.path.startsWith('/research/');
+  return route.path === '/research' || 
+         route.path.startsWith('/research/') ||
+         route.path === '/tools/nasa-tlx' ||
+         route.path === '/tools/sus' ||
+         route.path === '/tools/heuristic-evaluation';
 });
 
 const showTokens = computed(() => {
@@ -863,7 +874,12 @@ const showPatterns = computed(() => {
 
 
 const showTools = computed(() => {
-  return route.path === '/tools' || route.path.startsWith('/tools/') || route.path === '/palette-builder' || route.path === '/theme-builder';
+  const path = route.path;
+  // Exclude UX Research tools (they're now in HCD)
+  if (path === '/tools/nasa-tlx' || path === '/tools/sus' || path === '/tools/heuristic-evaluation') {
+    return false;
+  }
+  return path === '/tools' || path.startsWith('/tools/') || path === '/palette-builder' || path === '/theme-builder';
 });
 
 const showDesignAssets = computed(() => {

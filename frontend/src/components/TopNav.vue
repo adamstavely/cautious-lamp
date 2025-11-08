@@ -360,7 +360,7 @@ const searchIndex = [
   { id: 'best-practices', title: 'Best Practices', description: 'Recommended practices for using the design system effectively', category: 'Getting Started', path: '/getting-started/best-practices', icon: 'check_circle', tags: ['best-practices', 'guidelines', 'recommendations', 'standards'] },
   { id: 'resources', title: 'Resources', description: 'Helpful resources, tools, and links to help you work effectively with the design system', category: 'Getting Started', path: '/getting-started/resources', icon: 'book', tags: ['resources', 'tools', 'links', 'documentation'] },
   { id: 'support', title: 'Support & Help', description: 'Get help when you need it. Find answers to common questions, report issues, or contact the design system team', category: 'Getting Started', path: '/getting-started/support', icon: 'help', tags: ['support', 'help', 'faq', 'contact', 'assistance'] },
-  { id: 'research-repo', title: 'Research Repo', description: 'Explore journey maps, user personas, HCD reports, and other human-centered design research artifacts', category: 'Research Repo', path: '/research', icon: 'science', tags: ['research', 'personas', 'journey-maps', 'hcd', 'user-studies'] },
+  { id: 'research-repo', title: 'HCD', description: 'Explore journey maps, user personas, HCD reports, and other human-centered design research artifacts', category: 'HCD', path: '/research', icon: 'note_stack', tags: ['research', 'personas', 'journey-maps', 'hcd', 'user-studies'] },
   { id: 'button', title: 'Button', description: 'Primary, secondary, and tertiary button variants with different sizes and states', category: 'Components', path: '/components/buttons', icon: 'smart_button', tags: ['interactive', 'form', 'action'] },
   { id: 'loupe-tool', title: 'Loupe', description: 'Inspect design system components on any page with keyboard shortcut', category: 'Components', path: '/components/loupe', icon: 'scan-eye', tags: ['loupe', 'inspector', 'components', 'keyboard-shortcut'] },
   { id: 'component-status', title: 'Component Status', description: 'Track component development status and availability', category: 'Components', path: '/components/status', icon: 'check_circle', tags: ['status', 'tracking'] },
@@ -444,7 +444,7 @@ const getCategoryBadgeClass = (category) => {
     'Tools': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300' : 'bg-yellow-100 text-yellow-700',
     'Design Assets': isDarkMode.value ? 'bg-pink-900/30 text-pink-300' : 'bg-pink-100 text-pink-700',
     'Getting Started': isDarkMode.value ? 'bg-teal-900/30 text-teal-300' : 'bg-teal-100 text-teal-700',
-    'Research Repo': isDarkMode.value ? 'bg-cyan-900/30 text-cyan-300' : 'bg-cyan-100 text-cyan-700',
+    'HCD': isDarkMode.value ? 'bg-cyan-900/30 text-cyan-300' : 'bg-cyan-100 text-cyan-700',
     'Admin': isDarkMode.value ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-700',
   };
   return classes[category] || (isDarkMode.value ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700');

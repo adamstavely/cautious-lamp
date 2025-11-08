@@ -311,7 +311,7 @@
                 <option value="/patterns">Patterns System</option>
                 <option value="/design-assets/icons">Icon Library</option>
                 <option value="/getting-started">Getting Started</option>
-                <option value="/research">Research Repository</option>
+                <option value="/research">HCD</option>
                 <option value="/research/user-personas">User Persona Generator</option>
                 <option value="/guidelines">Guidelines Documentation</option>
                 <option value="/ai-suggestions">AI Suggestions</option>
@@ -412,7 +412,7 @@
               <option value="Tokens">Tokens</option>
               <option value="Patterns">Patterns</option>
               <option value="Fonts">Fonts</option>
-              <option value="Research Repo">Research Repo</option>
+              <option value="HCD">HCD</option>
               <option value="Design Assets">Design Assets</option>
               <option value="Review">Review</option>
               <option value="Tools">Tools</option>
@@ -652,7 +652,7 @@ const routeToName = {
   '/patterns': 'Patterns System',
   '/design-assets/icons': 'Icon Library',
   '/getting-started': 'Getting Started',
-  '/research': 'Research Repository',
+  '/research': 'HCD',
   '/research/user-personas': 'User Persona Generator',
   '/guidelines': 'Guidelines Documentation',
   '/ai-suggestions': 'AI Suggestions',
@@ -686,7 +686,7 @@ const getCategoryFromRoute = (route) => {
   if (route.startsWith('/patterns')) return 'Patterns';
   if (route.startsWith('/design-assets')) return 'Design Assets';
   if (route.startsWith('/getting-started')) return 'Getting Started';
-  if (route.startsWith('/research')) return 'Research Repo';
+  if (route.startsWith('/research')) return 'HCD';
   if (route.startsWith('/guidelines')) return 'Guidelines';
   if (route.startsWith('/ai')) return 'AI';
   if (route === '/api') return 'API';

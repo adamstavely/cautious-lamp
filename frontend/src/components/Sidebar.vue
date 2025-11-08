@@ -134,7 +134,7 @@ const menuItems = [
   { path: '/components', label: 'Components', icon: 'widgets' },
   { path: '/tokens', label: 'Tokens', icon: 'style' },
   { path: '/patterns', label: 'Patterns', icon: 'pattern' },
-  { path: '/research', label: 'Research Repo', icon: 'science' },
+  { path: '/research', label: 'HCD', icon: 'note_stack' },
   { path: '/design-assets', label: 'Design Assets', icon: 'collections' },
   { path: '/review', label: 'Review', icon: 'rate_review' },
   { path: '/tools', label: 'Tools', icon: 'build' },
