@@ -116,6 +116,7 @@ const crumbs = computed(() => {
     '/components': 'Components',
     '/components/status': 'Component Status',
     '/components/buttons': 'Buttons',
+    '/components/color-picker': 'Color Picker',
     '/components/forms': 'Forms',
     '/components/cards': 'Cards',
     '/components/navigation': 'Navigation',

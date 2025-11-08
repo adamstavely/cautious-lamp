@@ -2,20 +2,40 @@
   <div
     v-if="show"
     ref="colorPickerContainerRef"
-    class="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-4"
-    :style="pickerStyle"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="color-picker-title"
+    :class="[
+      'fixed z-50 rounded-lg shadow-xl border p-4',
+      isDarkMode 
+        ? 'bg-slate-800 border-gray-700' 
+        : 'bg-white border-gray-200'
+    ]"
+    :style="safePickerStyle"
     @click.stop
+    @keydown.esc="cancel"
+    tabindex="-1"
   >
     <div class="w-64">
+      <h2 id="color-picker-title" class="sr-only">Color Picker</h2>
       <!-- Gradient/Hue Selector -->
       <div class="relative mb-4">
+        <label for="gradient-canvas" class="sr-only">Saturation and Lightness Selector</label>
         <canvas
+          id="gradient-canvas"
           ref="gradientCanvas"
           width="256"
           height="200"
-          class="w-full h-48 rounded-lg cursor-crosshair border border-gray-300"
+          role="img"
+          :aria-label="`Saturation and lightness selector. Current saturation: ${Math.round(currentSaturation)}%, lightness: ${Math.round(currentLightness)}%`"
+          :class="[
+            'w-full h-48 rounded-lg cursor-crosshair border focus:outline-none focus:ring-2 focus:ring-indigo-500',
+            isDarkMode ? 'border-gray-600' : 'border-gray-300'
+          ]"
           @mousedown="startGradientDrag"
           @click="handleGradientClick"
+          @keydown="handleGradientKeydown"
+          tabindex="0"
         ></canvas>
         <!-- Selector indicator -->
         <div
@@ -26,14 +46,25 @@
       
       <!-- Hue Slider -->
       <div class="mb-4">
-        <label class="block text-xs font-medium text-gray-700 mb-1">Hue</label>
+        <label for="hue-canvas" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">Hue</label>
         <div class="relative h-8">
           <canvas
+            id="hue-canvas"
             ref="hueCanvas"
             width="256"
             height="32"
-            class="w-full h-8 rounded cursor-pointer border border-gray-300"
+            role="slider"
+            :aria-label="`Hue selector. Current hue: ${Math.round(currentHue)} degrees`"
+            :aria-valuemin="0"
+            :aria-valuemax="360"
+            :aria-valuenow="Math.round(currentHue)"
+            :class="[
+              'w-full h-8 rounded cursor-pointer border focus:outline-none focus:ring-2 focus:ring-indigo-500',
+              isDarkMode ? 'border-gray-600' : 'border-gray-300'
+            ]"
             @click="handleHueClick"
+            @keydown="handleHueKeydown"
+            tabindex="0"
           ></canvas>
           <div
             class="absolute top-0 h-8 w-1 border border-gray-800 pointer-events-none"
@@ -45,48 +76,77 @@
       <!-- RGB Inputs -->
       <div class="grid grid-cols-3 gap-2 mb-4">
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">R</label>
+          <label for="rgb-r-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">R</label>
           <input
+            id="rgb-r-input"
             v-model.number="rgbValues.r"
             @input="updateFromRGB"
             type="number"
             min="0"
             max="255"
-            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            aria-label="Red value"
+            :class="[
+              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
+              isDarkMode 
+                ? 'border-gray-600 bg-slate-700 text-white' 
+                : 'border-gray-300 bg-white text-gray-900'
+            ]"
           />
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">G</label>
+          <label for="rgb-g-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">G</label>
           <input
+            id="rgb-g-input"
             v-model.number="rgbValues.g"
             @input="updateFromRGB"
             type="number"
             min="0"
             max="255"
-            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            aria-label="Green value"
+            :class="[
+              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
+              isDarkMode 
+                ? 'border-gray-600 bg-slate-700 text-white' 
+                : 'border-gray-300 bg-white text-gray-900'
+            ]"
           />
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">B</label>
+          <label for="rgb-b-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">B</label>
           <input
+            id="rgb-b-input"
             v-model.number="rgbValues.b"
             @input="updateFromRGB"
             type="number"
             min="0"
             max="255"
-            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            aria-label="Blue value"
+            :class="[
+              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
+              isDarkMode 
+                ? 'border-gray-600 bg-slate-700 text-white' 
+                : 'border-gray-300 bg-white text-gray-900'
+            ]"
           />
         </div>
       </div>
       
       <!-- Hex Input -->
       <div class="mb-4">
-        <label class="block text-xs font-medium text-gray-700 mb-1">Hex</label>
+        <label for="hex-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">Hex</label>
         <input
+          id="hex-input"
           v-model="hexInput"
           @input="updateFromHex"
           type="text"
-          class="w-full px-2 py-1 text-sm border border-gray-300 rounded font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          aria-label="Hex color value"
+          pattern="^#[0-9A-Fa-f]{6}$"
+          :class="[
+            'w-full px-2 py-1 text-sm border rounded font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
+            isDarkMode 
+              ? 'border-gray-600 bg-slate-700 text-white' 
+              : 'border-gray-300 bg-white text-gray-900'
+          ]"
           placeholder="#000000"
         />
       </div>
@@ -94,65 +154,98 @@
       <!-- CMYK Inputs -->
       <div class="grid grid-cols-4 gap-2 mb-4">
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">C</label>
+          <label for="cmyk-c-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">C</label>
           <input
+            id="cmyk-c-input"
             v-model.number="cmykValues.c"
             @input="updateFromCMYK"
             type="number"
             min="0"
             max="100"
             step="0.1"
-            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            aria-label="Cyan value"
+            :class="[
+              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
+              isDarkMode 
+                ? 'border-gray-600 bg-slate-700 text-white' 
+                : 'border-gray-300 bg-white text-gray-900'
+            ]"
           />
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">M</label>
+          <label for="cmyk-m-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">M</label>
           <input
+            id="cmyk-m-input"
             v-model.number="cmykValues.m"
             @input="updateFromCMYK"
             type="number"
             min="0"
             max="100"
             step="0.1"
-            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            aria-label="Magenta value"
+            :class="[
+              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
+              isDarkMode 
+                ? 'border-gray-600 bg-slate-700 text-white' 
+                : 'border-gray-300 bg-white text-gray-900'
+            ]"
           />
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">Y</label>
+          <label for="cmyk-y-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">Y</label>
           <input
+            id="cmyk-y-input"
             v-model.number="cmykValues.y"
             @input="updateFromCMYK"
             type="number"
             min="0"
             max="100"
             step="0.1"
-            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            aria-label="Yellow value"
+            :class="[
+              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
+              isDarkMode 
+                ? 'border-gray-600 bg-slate-700 text-white' 
+                : 'border-gray-300 bg-white text-gray-900'
+            ]"
           />
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">K</label>
+          <label for="cmyk-k-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">K</label>
           <input
+            id="cmyk-k-input"
             v-model.number="cmykValues.k"
             @input="updateFromCMYK"
             type="number"
             min="0"
             max="100"
             step="0.1"
-            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            aria-label="Key (black) value"
+            :class="[
+              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
+              isDarkMode 
+                ? 'border-gray-600 bg-slate-700 text-white' 
+                : 'border-gray-300 bg-white text-gray-900'
+            ]"
           />
         </div>
       </div>
       
       <!-- Color Preview -->
-      <div class="mb-4 flex items-center gap-3">
+      <div class="mb-4 flex items-center gap-3" role="region" aria-label="Color preview">
         <div
-          class="w-16 h-16 rounded-lg border-2 border-gray-300"
+          :class="[
+            'w-16 h-16 rounded-lg border-2',
+            isDarkMode ? 'border-gray-600' : 'border-gray-300'
+          ]"
           :style="{ backgroundColor: currentHex }"
+          :aria-label="`Selected color: ${currentHex}`"
+          role="img"
         ></div>
         <div class="flex-1">
-          <div class="text-sm font-mono font-semibold text-gray-900">{{ currentHex }}</div>
-          <div class="text-xs text-gray-500">RGB({{ rgbValues.r }}, {{ rgbValues.g }}, {{ rgbValues.b }})</div>
-          <div class="text-xs text-gray-500">CMYK({{ Math.round(cmykValues.c) }}, {{ Math.round(cmykValues.m) }}, {{ Math.round(cmykValues.y) }}, {{ Math.round(cmykValues.k) }})</div>
+          <div :class="['text-sm font-mono font-semibold', isDarkMode ? 'text-white' : 'text-gray-900']" aria-live="polite">{{ currentHex }}</div>
+          <div :class="['text-xs', isDarkMode ? 'text-gray-400' : 'text-gray-500']">RGB({{ rgbValues.r }}, {{ rgbValues.g }}, {{ rgbValues.b }})</div>
+          <div :class="['text-xs', isDarkMode ? 'text-gray-400' : 'text-gray-500']">CMYK({{ Math.round(cmykValues.c) }}, {{ Math.round(cmykValues.m) }}, {{ Math.round(cmykValues.y) }}, {{ Math.round(cmykValues.k) }})</div>
         </div>
       </div>
       
@@ -160,9 +253,15 @@
       <div class="mb-4">
         <button
           @click="toggleEyedropper"
-          class="w-full px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+          aria-label="Use eyedropper tool to pick color from screen"
+          :class="[
+            'w-full px-4 py-2 text-sm border rounded-lg transition-colors flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500',
+            isDarkMode
+              ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
+              : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
+          ]"
         >
-          <span class="material-symbols-outlined eyedropper-icon">colorize</span>
+          <span class="material-symbols-outlined eyedropper-icon" aria-hidden="true">colorize</span>
           Use Eyedropper
         </button>
       </div>
@@ -171,13 +270,20 @@
       <div class="flex gap-2">
         <button
           @click="applyColor"
-          class="flex-1 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          aria-label="Apply selected color"
+          class="flex-1 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         >
           Apply
         </button>
         <button
           @click="cancel"
-          class="flex-1 px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          aria-label="Cancel color selection"
+          :class="[
+            'flex-1 px-4 py-2 text-sm rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2',
+            isDarkMode
+              ? 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          ]"
         >
           Cancel
         </button>
@@ -187,7 +293,15 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+
+// Picker dimensions
+const PICKER_WIDTH = 280;
+const PICKER_HEIGHT = 400;
+const PADDING = 16;
+
+// Use previewDarkMode prop for dark mode styling
+const isDarkMode = computed(() => props.previewDarkMode);
 
 const props = defineProps({
   show: {
@@ -201,6 +315,10 @@ const props = defineProps({
   position: {
     type: Object,
     default: () => ({ left: 0, top: 0 }),
+  },
+  previewDarkMode: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -220,6 +338,43 @@ const currentSaturation = ref(100);
 const currentLightness = ref(50);
 const cmykValues = ref({ c: 0, m: 0, y: 0, k: 100 });
 const pickerStyle = ref({});
+
+// Computed style that ensures picker stays within viewport
+const safePickerStyle = computed(() => {
+  if (!props.show) return {};
+  
+  let left = typeof props.position.left === 'string' 
+    ? parseFloat(props.position.left) 
+    : props.position.left;
+  let top = typeof props.position.top === 'string' 
+    ? parseFloat(props.position.top) 
+    : props.position.top;
+  
+  // Ensure picker doesn't go off right edge
+  if (left + PICKER_WIDTH > window.innerWidth - PADDING) {
+    left = window.innerWidth - PICKER_WIDTH - PADDING;
+  }
+  
+  // Ensure picker doesn't go off left edge
+  if (left < PADDING) {
+    left = PADDING;
+  }
+  
+  // Ensure picker doesn't go off bottom edge
+  if (top + PICKER_HEIGHT > window.innerHeight - PADDING) {
+    top = window.innerHeight - PICKER_HEIGHT - PADDING;
+  }
+  
+  // Ensure picker doesn't go off top edge
+  if (top < PADDING) {
+    top = PADDING;
+  }
+  
+  return {
+    left: `${left}px`,
+    top: `${top}px`,
+  };
+});
 
 // Color conversion utilities
 const hexToRgb = (hex) => {
@@ -430,10 +585,21 @@ const drawGradientCanvas = () => {
 
 const drawHueCanvas = () => {
   const canvas = hueCanvas.value;
-  if (!canvas) return;
+  if (!canvas) {
+    // If canvas isn't ready, try again on next tick
+    nextTick(() => {
+      drawHueCanvas();
+    });
+    return;
+  }
   const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  
   const width = canvas.width;
   const height = canvas.height;
+  
+  // Clear canvas first
+  ctx.clearRect(0, 0, width, height);
   
   // Create hue gradient
   for (let x = 0; x < width; x++) {
@@ -475,6 +641,99 @@ const handleHueClick = (event) => {
   currentHue.value = (x / width) * 360;
   huePosition.value = (x / width) * 100;
   
+  updateFromHSL();
+  drawGradientCanvas();
+};
+
+// Keyboard navigation for gradient canvas
+const handleGradientKeydown = (event) => {
+  const step = 1; // 1% per arrow key press
+  let newSaturation = currentSaturation.value;
+  let newLightness = currentLightness.value;
+  
+  switch (event.key) {
+    case 'ArrowLeft':
+      event.preventDefault();
+      newSaturation = Math.max(0, currentSaturation.value - step);
+      break;
+    case 'ArrowRight':
+      event.preventDefault();
+      newSaturation = Math.min(100, currentSaturation.value + step);
+      break;
+    case 'ArrowUp':
+      event.preventDefault();
+      newLightness = Math.min(100, currentLightness.value + step);
+      break;
+    case 'ArrowDown':
+      event.preventDefault();
+      newLightness = Math.max(0, currentLightness.value - step);
+      break;
+    case 'Home':
+      event.preventDefault();
+      newSaturation = 0;
+      break;
+    case 'End':
+      event.preventDefault();
+      newSaturation = 100;
+      break;
+    case 'PageUp':
+      event.preventDefault();
+      newLightness = 100;
+      break;
+    case 'PageDown':
+      event.preventDefault();
+      newLightness = 0;
+      break;
+    default:
+      return;
+  }
+  
+  currentSaturation.value = newSaturation;
+  currentLightness.value = newLightness;
+  updateFromHSL();
+  drawGradientCanvas();
+  
+  // Update selector position
+  if (gradientCanvas.value) {
+    const width = gradientCanvas.value.width;
+    const height = gradientCanvas.value.height;
+    selectorStyle.value = {
+      left: `${newSaturation}%`,
+      top: `${100 - newLightness}%`,
+    };
+  }
+};
+
+// Keyboard navigation for hue slider
+const handleHueKeydown = (event) => {
+  const step = 5; // 5 degrees per arrow key press
+  let newHue = currentHue.value;
+  
+  switch (event.key) {
+    case 'ArrowLeft':
+    case 'ArrowDown':
+      event.preventDefault();
+      newHue = Math.max(0, currentHue.value - step);
+      break;
+    case 'ArrowRight':
+    case 'ArrowUp':
+      event.preventDefault();
+      newHue = Math.min(360, currentHue.value + step);
+      break;
+    case 'Home':
+      event.preventDefault();
+      newHue = 0;
+      break;
+    case 'End':
+      event.preventDefault();
+      newHue = 360;
+      break;
+    default:
+      return;
+  }
+  
+  currentHue.value = newHue;
+  huePosition.value = (newHue / 360) * 100;
   updateFromHSL();
   drawGradientCanvas();
 };
@@ -548,13 +807,16 @@ watch(() => props.show, (newVal) => {
   if (newVal) {
     const color = props.initialColor || '#000000';
     setColorFromHex(color);
+    // Use double nextTick to ensure canvas elements are rendered
     nextTick(() => {
-      drawGradientCanvas();
-      drawHueCanvas();
-      pickerStyle.value = {
-        left: `${props.position.left}px`,
-        top: `${props.position.top}px`,
-      };
+      nextTick(() => {
+        drawGradientCanvas();
+        drawHueCanvas();
+        // Focus the gradient canvas for keyboard navigation
+        if (gradientCanvas.value) {
+          gradientCanvas.value.focus();
+        }
+      });
     });
   }
 });
@@ -562,6 +824,19 @@ watch(() => props.show, (newVal) => {
 watch(() => props.initialColor, (newVal) => {
   if (props.show && newVal) {
     setColorFromHex(newVal);
+    // Use double nextTick to ensure canvas elements are rendered
+    nextTick(() => {
+      nextTick(() => {
+        drawGradientCanvas();
+        drawHueCanvas();
+      });
+    });
+  }
+});
+
+// Watch for canvas ref to be available and draw when it becomes available
+watch([hueCanvas, gradientCanvas], () => {
+  if (props.show && hueCanvas.value && gradientCanvas.value) {
     nextTick(() => {
       drawGradientCanvas();
       drawHueCanvas();
@@ -569,14 +844,7 @@ watch(() => props.initialColor, (newVal) => {
   }
 });
 
-watch(() => props.position, (newPos) => {
-  if (props.show) {
-    pickerStyle.value = {
-      left: `${newPos.left}px`,
-      top: `${newPos.top}px`,
-    };
-  }
-}, { deep: true });
+// Position watcher removed - safePickerStyle computed property handles positioning with bounds checking
 
 // Close on outside click
 const handleClickOutside = (event) => {
@@ -587,11 +855,19 @@ const handleClickOutside = (event) => {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
+  
   if (props.show) {
     setColorFromHex(props.initialColor);
+    // Use double nextTick to ensure canvas elements are rendered
     nextTick(() => {
-      drawGradientCanvas();
-      drawHueCanvas();
+      nextTick(() => {
+        drawGradientCanvas();
+        drawHueCanvas();
+        // Focus the gradient canvas for keyboard navigation
+        if (gradientCanvas.value) {
+          gradientCanvas.value.focus();
+        }
+      });
     });
   }
 });

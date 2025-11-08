@@ -119,7 +119,8 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="p-4 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-indigo-600">tune</span>
                     Props Editor
                   </h3>
                 </div>
@@ -212,7 +213,8 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="p-4 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-indigo-600">preview</span>
                     Live Preview
                   </h3>
                   <div class="flex items-center gap-2">
@@ -261,7 +263,8 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="p-4 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">code</span>
                   Generated Code
                 </h3>
                 <div class="flex gap-2">

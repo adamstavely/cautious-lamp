@@ -64,7 +64,7 @@
                 </span>
                 <span class="w-3 h-3 rounded-full bg-green-500"></span>
               </div>
-              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">24</p>
+              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">25</p>
             </div>
             <div 
               class="rounded-2xl p-6 border"
@@ -231,6 +231,7 @@ const components = ref([
   { name: 'Checkbox', icon: 'check_box', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-03' },
   { name: 'Radio', icon: 'radio_button_checked', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-02' },
   { name: 'Switch', icon: 'toggle_on', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2023-12-28' },
+  { name: 'Color Picker', icon: 'palette', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-15' },
   { name: 'Tabs', icon: 'tab', status: 'In Progress', version: '0.9.0', documentation: 'Partial', lastUpdated: '2024-01-20' },
   { name: 'Accordion', icon: 'expand_more', status: 'In Progress', version: '0.8.0', documentation: 'Partial', lastUpdated: '2024-01-18' },
   { name: 'Tooltip', icon: 'info', status: 'In Progress', version: '0.7.0', documentation: 'Partial', lastUpdated: '2024-01-16' },
@@ -284,6 +285,7 @@ const getComponentRoute = (componentName) => {
     'Checkbox': '/components/forms',
     'Radio': '/components/forms',
     'Switch': '/components/forms',
+    'Color Picker': '/components/color-picker',
     'Tabs': '/components/navigation',
     'Accordion': '/components',
     'Tooltip': '/components',

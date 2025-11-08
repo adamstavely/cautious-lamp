@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="relative" 
+    class="relative w-full min-w-[200px]" 
     ref="dropdownRef"
   >
     <button
@@ -37,7 +37,7 @@
           : 'bg-white border-gray-300'"
       >
         <div
-          v-for="option in options"
+          v-for="option in props.options"
           :key="option.value"
           @click="selectOption(option)"
           :class="[
@@ -63,12 +63,12 @@
         : 'bg-white border-gray-300'"
     >
       <div
-        v-for="option in options"
+        v-for="option in props.options"
         :key="option.value"
         @click="selectOption(option)"
         :class="[
           'px-4 py-2 cursor-pointer text-sm transition-colors',
-          option.value === modelValue
+          option.value === props.modelValue
             ? (isDarkMode 
               ? 'bg-indigo-900/20 text-indigo-400 font-medium' 
               : 'bg-indigo-50 text-indigo-600 font-medium')
@@ -90,16 +90,18 @@ const props = defineProps({
   modelValue: {
     type: String,
     default: 'css'
+  },
+  options: {
+    type: Array,
+    default: () => [
+      { value: 'css', label: 'CSS' },
+      { value: 'scss', label: 'SCSS' },
+      { value: 'json', label: 'JSON' }
+    ]
   }
 });
 
 const emit = defineEmits(['update:modelValue']);
-
-const options = [
-  { value: 'css', label: 'CSS' },
-  { value: 'scss', label: 'SCSS' },
-  { value: 'json', label: 'JSON' }
-];
 
 const isOpen = ref(false);
 const dropdownRef = ref(null);
@@ -107,8 +109,8 @@ const isMounted = ref(false);
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 
 const selectedLabel = computed(() => {
-  const option = options.find(opt => opt.value === props.modelValue);
-  return option ? option.label : 'CSS';
+  const option = props.options.find(opt => opt.value === props.modelValue);
+  return option ? option.label : props.options[0]?.label || 'CSS';
 });
 
 const toggleDropdown = () => {

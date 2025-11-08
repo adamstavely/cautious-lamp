@@ -766,6 +766,7 @@ const componentItems = [
   { text: 'Handoff Tools', link: '/components/handoff', icon: 'swap_horiz' },
   { text: 'Component Composition', link: '/components/composition', icon: 'view_quilt' },
   { text: 'Buttons', link: '/components/buttons', icon: 'smart_button' },
+  { text: 'Color Picker', link: '/components/color-picker', icon: 'palette' },
   { text: 'Forms', link: '/components/forms', icon: 'description' },
   { text: 'Cards', link: '/components/cards', icon: 'view_module' },
   { text: 'Navigation', link: '/components/navigation', icon: 'navigation' },
