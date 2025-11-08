@@ -18,6 +18,7 @@ import { createVuetify } from 'vuetify';
 import * as components from 'vuetify/components';
 import * as directives from 'vuetify/directives';
 import '@mdi/font/css/materialdesignicons.css';
+import { checkFeatureFlagGuard } from './router/featureFlagGuards';
 
 // Initialize dark mode before creating Vuetify
 const initDarkMode = () => {
@@ -261,6 +262,10 @@ const router = createRouter({
       component: () => import('./views/RoleManagement.vue'),
     },
     {
+      path: '/admin/feature-flags',
+      component: () => import('./views/FeatureFlags.vue'),
+    },
+    {
       path: '/tokens',
       component: () => import('./views/Tokens.vue'),
     },
@@ -414,6 +419,16 @@ const router = createRouter({
       redirect: '/tools/gradient-generator',
     },
   ],
+});
+
+// Add feature flag guard to router
+router.beforeEach(async (to, from, next) => {
+  const result = await checkFeatureFlagGuard(to);
+  if (result === true) {
+    next();
+  } else {
+    next(result);
+  }
 });
 
 const app = createApp(App);

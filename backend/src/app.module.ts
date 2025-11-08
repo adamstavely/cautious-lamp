@@ -3,6 +3,7 @@ import { ColorPaletteModule } from './color-palette/color-palette.module';
 import { DesignSystemModule } from './design-system/design-system.module';
 import { AuditModule } from './audit/audit.module';
 import { RbacModule } from './rbac/rbac.module';
+import { FeatureFlagsModule } from './feature-flags/feature-flags.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
@@ -22,6 +23,7 @@ import { ElasticsearchModule } from '@nestjs/elasticsearch';
     DesignSystemModule,
     AuditModule,
     RbacModule,
+    FeatureFlagsModule,
   ],
 })
 export class AppModule {}

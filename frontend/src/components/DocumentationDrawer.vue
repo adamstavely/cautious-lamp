@@ -567,7 +567,8 @@ const adminItems = [
   { text: 'Overview', link: '/admin', icon: 'admin_panel_settings' },
   { text: 'System Health', link: '/admin/health', icon: 'space_dashboard' },
   { text: 'Governance', link: '/admin/governance', icon: 'gavel' },
-  { text: 'Role Management', link: '/admin/roles', icon: 'admin_panel_settings' }
+  { text: 'Role Management', link: '/admin/roles', icon: 'admin_panel_settings' },
+  { text: 'Feature Flags', link: '/admin/feature-flags', icon: 'flag' }
 ];
 
 const gettingStartedItems = [

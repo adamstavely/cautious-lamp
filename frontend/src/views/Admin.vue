@@ -169,6 +169,30 @@
                 Manage user roles and their access to design system features and permissions.
               </p>
             </router-link>
+
+            <!-- Feature Flags Card -->
+            <router-link 
+              to="/admin/feature-flags"
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">flag</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Feature Flags
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Control feature availability across your design system. Turn features on or off, target specific users or groups, and manage gradual rollouts.
+              </p>
+            </router-link>
           </div>
         </div>
       </div>
