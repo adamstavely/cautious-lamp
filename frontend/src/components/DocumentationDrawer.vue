@@ -803,6 +803,7 @@ const adminItems = [
   { text: 'Governance', link: '/admin/governance', icon: 'gavel' },
   { text: 'Role Management', link: '/admin/roles', icon: 'admin_panel_settings' },
   { text: 'Feature Flags', link: '/admin/feature-flags', icon: 'flag' },
+  { text: 'Component and Pattern Lifecycle Management', link: '/admin/content', icon: 'edit_document' },
   { text: 'Code Quality', link: '/admin/code-quality', icon: 'check_circle' },
   { text: 'Vulnerability Scanner', link: '/admin/security', icon: 'security' },
   { text: 'Performance Analysis', link: '/admin/performance', icon: 'speed' }

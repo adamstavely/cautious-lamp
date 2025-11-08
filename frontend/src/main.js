@@ -295,6 +295,10 @@ const router = createRouter({
       component: () => import('./views/FeatureFlags.vue'),
     },
     {
+      path: '/admin/content',
+      component: () => import('./views/ContentManagement.vue'),
+    },
+    {
       path: '/tokens',
       component: () => import('./views/Tokens.vue'),
     },

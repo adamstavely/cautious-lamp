@@ -55,7 +55,7 @@
 
           <!-- Status Overview -->
           <div class="max-w-7xl mx-auto mb-16">
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-8">
               <div 
                 @click="setStatusFilter('Production Ready')"
                 class="rounded-2xl p-6 border cursor-pointer transition-all"
@@ -135,6 +135,26 @@
                   <span class="w-3 h-3 rounded-full bg-orange-500"></span>
                 </div>
                 <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ statusCounts.sunsetting }}</p>
+              </div>
+              <div 
+                @click="setStatusFilter('Experimental')"
+                class="rounded-2xl p-6 border cursor-pointer transition-all"
+                :class="selectedStatus === 'Experimental'
+                  ? (isDarkMode 
+                    ? 'bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500' 
+                    : 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500')
+                  : (isDarkMode 
+                    ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
+                    : 'bg-white border-gray-200 hover:border-indigo-500')"
+              >
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
+                    <span class="material-symbols-outlined text-indigo-600">science</span>
+                    Experimental
+                  </span>
+                  <span class="w-3 h-3 rounded-full bg-purple-500"></span>
+                </div>
+                <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ statusCounts.experimental }}</p>
               </div>
               <div 
                 @click="setStatusFilter('Deprecated')"
@@ -261,40 +281,24 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
 
 const router = useRouter();
+const { patterns: sharedPatterns } = useComponentPatternStatus();
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
 const selectedStatus = ref(null);
 
-const patterns = ref([
-  // Design Patterns
-  { name: 'Layout', icon: 'view_quilt', type: 'Design Pattern', status: 'Production Ready', category: 'Layout', documentation: 'Complete', lastUpdated: '2024-01-15', route: '/patterns/layout' },
-  { name: 'Navigation', icon: 'navigation', type: 'Design Pattern', status: 'Production Ready', category: 'Navigation', documentation: 'Complete', lastUpdated: '2024-01-12', route: '/patterns/navigation' },
-  { name: 'Data Display', icon: 'table_chart', type: 'Design Pattern', status: 'Production Ready', category: 'Data Display', documentation: 'Complete', lastUpdated: '2024-01-10', route: '/patterns/data-display' },
-  { name: 'Forms', icon: 'description', type: 'Design Pattern', status: 'Production Ready', category: 'Forms', documentation: 'Complete', lastUpdated: '2024-01-08', route: '/patterns/forms' },
-  { name: 'Feedback', icon: 'feedback', type: 'Design Pattern', status: 'Production Ready', category: 'Feedback', documentation: 'Complete', lastUpdated: '2024-01-05', route: '/patterns/feedback' },
-  
-  // Code Patterns
-  { name: 'Form Validation', icon: 'verified', type: 'Code Pattern', status: 'Production Ready', category: 'Forms', documentation: 'Complete', lastUpdated: '2024-01-20', route: '/patterns/form-validation' },
-  { name: 'Accessible Modal', icon: 'fullscreen', type: 'Code Pattern', status: 'Production Ready', category: 'Feedback', documentation: 'Complete', lastUpdated: '2024-01-18', route: '/patterns/accessible-modal' },
-  { name: 'Sortable Data Table', icon: 'sort', type: 'Code Pattern', status: 'Production Ready', category: 'Data Display', documentation: 'Complete', lastUpdated: '2024-01-16', route: '/patterns/sortable-data-table' },
-  { name: 'Login Form', icon: 'lock', type: 'Code Pattern', status: 'Production Ready', category: 'Authentication', documentation: 'Complete', lastUpdated: '2024-01-14', route: '/patterns/login-form' },
-  { name: 'Responsive Navigation', icon: 'menu', type: 'Code Pattern', status: 'In Progress', category: 'Navigation', documentation: 'Partial', lastUpdated: '2024-01-22', route: '/patterns/responsive-navigation' },
-  { name: 'Toast Notification', icon: 'notifications', type: 'Code Pattern', status: 'Production Ready', category: 'Feedback', documentation: 'Complete', lastUpdated: '2024-01-12', route: '/patterns/toast-notification' },
-  
-  // Planned Patterns
-  { name: 'Dashboard Layout', icon: 'dashboard', type: 'Design Pattern', status: 'Planned', category: 'Layout', documentation: 'Not Started', lastUpdated: '-', route: '/patterns' },
-  { name: 'Search Interface', icon: 'search', type: 'Design Pattern', status: 'Planned', category: 'Navigation', documentation: 'Not Started', lastUpdated: '-', route: '/patterns' },
-  { name: 'Data Visualization', icon: 'bar_chart', type: 'Design Pattern', status: 'Planned', category: 'Data Display', documentation: 'Not Started', lastUpdated: '-', route: '/patterns' },
-]);
+// Use shared patterns from composable
+const patterns = computed(() => sharedPatterns.value);
 
 const statusCounts = computed(() => {
   return {
     productionReady: patterns.value.filter(p => p.status === 'Production Ready').length,
     planned: patterns.value.filter(p => p.status === 'Planned').length,
     inProgress: patterns.value.filter(p => p.status === 'In Progress').length,
+    experimental: patterns.value.filter(p => p.status === 'Experimental').length,
     sunsetting: patterns.value.filter(p => p.status === 'Sunsetting').length,
     deprecated: patterns.value.filter(p => p.status === 'Deprecated').length,
   };
@@ -330,6 +334,10 @@ const getStatusClass = (status) => {
       return isDarkMode.value 
         ? 'bg-blue-900/30 text-blue-400' 
         : 'bg-blue-100 text-blue-800';
+    case 'Experimental':
+      return isDarkMode.value 
+        ? 'bg-purple-900/30 text-purple-400' 
+        : 'bg-purple-100 text-purple-800';
     case 'Sunsetting':
       return isDarkMode.value 
         ? 'bg-orange-900/30 text-orange-400' 

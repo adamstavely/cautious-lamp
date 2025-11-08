@@ -50,7 +50,7 @@
 
         <!-- Status Overview -->
         <div class="max-w-7xl mx-auto mb-16">
-          <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+          <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-8">
             <div 
               @click="setStatusFilter('Production Ready')"
               class="rounded-2xl p-6 border cursor-pointer transition-all"
@@ -130,6 +130,26 @@
                 <span class="w-3 h-3 rounded-full bg-orange-500"></span>
               </div>
               <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ statusCounts.sunsetting }}</p>
+            </div>
+            <div 
+              @click="setStatusFilter('Experimental')"
+              class="rounded-2xl p-6 border cursor-pointer transition-all"
+              :class="selectedStatus === 'Experimental'
+                ? (isDarkMode 
+                  ? 'bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500' 
+                  : 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500')
+                : (isDarkMode 
+                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
+                  : 'bg-white border-gray-200 hover:border-indigo-500')"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
+                  <span class="material-symbols-outlined text-indigo-600">science</span>
+                  Experimental
+                </span>
+                <span class="w-3 h-3 rounded-full bg-purple-500"></span>
+              </div>
+              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ statusCounts.experimental }}</p>
             </div>
             <div 
               @click="setStatusFilter('Deprecated')"
@@ -238,42 +258,29 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { Pipette } from 'lucide-vue-next';
+import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
 
 const router = useRouter();
+const { components: sharedComponents } = useComponentPatternStatus();
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
 const selectedStatus = ref(null);
 
-const components = ref([
-  { name: 'Button', icon: 'smart_button', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-15' },
-  { name: 'Input', icon: 'input', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-10' },
-  { name: 'Card', icon: 'view_module', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-12' },
-  { name: 'Modal', icon: 'fullscreen', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-08' },
-  { name: 'Dropdown', icon: 'arrow_drop_down', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-05' },
-  { name: 'Checkbox', icon: 'check_box', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-03' },
-  { name: 'Radio', icon: 'radio_button_checked', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-02' },
-  { name: 'Switch', icon: 'toggle_on', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2023-12-28' },
-  { name: 'Color Picker', icon: 'pipette', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-15' },
-  { name: 'Tabs', icon: 'tab', status: 'In Progress', version: '0.9.0', documentation: 'Partial', lastUpdated: '2024-01-20' },
-  { name: 'Accordion', icon: 'expand_more', status: 'In Progress', version: '0.8.0', documentation: 'Partial', lastUpdated: '2024-01-18' },
-  { name: 'Tooltip', icon: 'info', status: 'In Progress', version: '0.7.0', documentation: 'Partial', lastUpdated: '2024-01-16' },
-  { name: 'Popover', icon: 'open_in_new', status: 'In Progress', version: '0.6.0', documentation: 'Partial', lastUpdated: '2024-01-14' },
-  { name: 'Breadcrumbs', icon: 'navigate_next', status: 'Planned', version: '-', documentation: 'Not Started', lastUpdated: '-' },
-  { name: 'Pagination', icon: 'more_horiz', status: 'Planned', version: '-', documentation: 'Not Started', lastUpdated: '-' },
-  { name: 'Data Table', icon: 'table_chart', status: 'Planned', version: '-', documentation: 'Not Started', lastUpdated: '-' },
-]);
+// Use shared components from composable
+const components = computed(() => sharedComponents.value);
 
 const statusCounts = computed(() => {
   return {
     productionReady: components.value.filter(c => c.status === 'Production Ready').length,
     planned: components.value.filter(c => c.status === 'Planned').length,
     inProgress: components.value.filter(c => c.status === 'In Progress').length,
+    experimental: components.value.filter(c => c.status === 'Experimental').length,
     sunsetting: components.value.filter(c => c.status === 'Sunsetting').length,
     deprecated: components.value.filter(c => c.status === 'Deprecated').length,
   };
@@ -309,6 +316,14 @@ const getStatusClass = (status) => {
       return isDarkMode.value 
         ? 'bg-blue-900/30 text-blue-400' 
         : 'bg-blue-100 text-blue-800';
+    case 'Experimental':
+      return isDarkMode.value 
+        ? 'bg-purple-900/30 text-purple-400' 
+        : 'bg-purple-100 text-purple-800';
+    case 'Sunsetting':
+      return isDarkMode.value 
+        ? 'bg-orange-900/30 text-orange-400' 
+        : 'bg-orange-100 text-orange-800';
     case 'Deprecated':
       return isDarkMode.value 
         ? 'bg-red-900/30 text-red-400' 

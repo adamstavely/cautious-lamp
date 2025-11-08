@@ -228,9 +228,13 @@
                       class="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
                     >
                       <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                        <router-link
+                          :to="getComponentRoute(component.componentId, component.componentName)"
+                          class="font-medium hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+                          :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+                        >
                           {{ component.componentName }}
-                        </div>
+                        </router-link>
                         <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
                           {{ component.componentId }}
                         </div>
@@ -295,6 +299,60 @@
 
         <!-- Performance Budgets Tab -->
         <div v-if="activeTab === 'budgets'" class="max-w-7xl mx-auto">
+          <!-- Help Section -->
+          <div 
+            class="rounded-lg border p-6 mb-6"
+            :class="isDarkMode 
+              ? 'bg-slate-900 border-gray-700' 
+              : 'bg-white border-gray-200'"
+          >
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0">
+                <div class="w-12 h-12 rounded-lg flex items-center justify-center" :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'">
+                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">info</span>
+                </div>
+              </div>
+              <div class="flex-1">
+                <h3 class="text-lg font-semibold mb-2 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  What are Performance Budgets?
+                </h3>
+                <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  Performance budgets help you maintain fast, efficient components by setting limits on key metrics like bundle size, load time, and memory usage. When a component exceeds your budget threshold, you'll get an alert so you can optimize before it impacts users.
+                </p>
+                <div class="grid md:grid-cols-2 gap-4 mt-4">
+                  <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-lg flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
+                    <div>
+                      <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Prevent Regressions</div>
+                      <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-600'">Catch performance issues before they reach production</div>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-lg flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
+                    <div>
+                      <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Set Clear Goals</div>
+                      <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-600'">Define acceptable performance limits for your team</div>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-lg flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
+                    <div>
+                      <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Track Progress</div>
+                      <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-600'">Monitor how components perform over time</div>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-lg flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
+                    <div>
+                      <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Get Alerts</div>
+                      <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-600'">Receive notifications when budgets are exceeded</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="flex justify-end mb-6">
             <button
               @click="showCreateModal = true"
@@ -334,10 +392,18 @@
                       Disabled
                     </span>
                   </div>
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      {{ getMetricDisplayName(budget.metric) }}
+                    </span>
+                    <span class="text-xs px-2 py-0.5 rounded" :class="isDarkMode ? 'bg-slate-800 text-gray-400' : 'bg-gray-100 text-gray-600'">
+                      {{ budget.metric }}
+                    </span>
+                  </div>
                   <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ budget.metric }} - Threshold: {{ budget.threshold }}{{ budget.unit }}
-                    <span v-if="budget.alertThreshold">
-                      (Alert at {{ budget.alertThreshold }}{{ budget.unit }})
+                    <span class="font-medium">Threshold:</span> {{ budget.threshold }}{{ budget.unit }}
+                    <span v-if="budget.alertThreshold" class="ml-2">
+                      • <span class="font-medium">Alert:</span> {{ budget.alertThreshold }}{{ budget.unit }}
                     </span>
                   </p>
                 </div>
@@ -364,20 +430,53 @@
                   <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                     Current Value
                   </span>
-                  <span class="text-sm font-semibold" :class="getBudgetStatusColor(budget)">
-                    {{ getCurrentValue(budget) }}{{ budget.unit }}
-                  </span>
+                  <div class="flex items-center gap-3">
+                    <span class="text-sm font-semibold" :class="getBudgetStatusColor(budget)">
+                      {{ getCurrentValue(budget) }}{{ budget.unit }}
+                    </span>
+                    <span 
+                      class="text-xs px-2 py-1 rounded-full font-medium"
+                      :class="getBudgetStatusBadgeClass(budget)"
+                    >
+                      {{ getBudgetStatusText(budget) }}
+                    </span>
+                  </div>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-3" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
+                <div class="w-full bg-gray-200 rounded-full h-3 relative" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
                   <div 
                     class="h-3 rounded-full transition-all"
                     :class="getBudgetStatusClass(budget)"
                     :style="{ width: `${Math.min((getCurrentValue(budget) / budget.threshold) * 100, 100)}%` }"
                   ></div>
+                  <div 
+                    v-if="budget.alertThreshold && budget.alertThreshold < budget.threshold"
+                    class="absolute top-0 h-3 w-0.5"
+                    :style="{ left: `${(budget.alertThreshold / budget.threshold) * 100}%`, backgroundColor: '#fbbf24' }"
+                    :title="`Alert threshold: ${budget.alertThreshold}${budget.unit}`"
+                  ></div>
                 </div>
                 <div class="flex items-center justify-between mt-2 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
                   <span>0{{ budget.unit }}</span>
-                  <span>{{ budget.threshold }}{{ budget.unit }}</span>
+                  <span class="flex items-center gap-4">
+                    <span v-if="budget.alertThreshold && budget.alertThreshold < budget.threshold" class="flex items-center gap-1">
+                      <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                      Alert: {{ budget.alertThreshold }}{{ budget.unit }}
+                    </span>
+                    <span class="font-medium">{{ budget.threshold }}{{ budget.unit }} (Limit)</span>
+                  </span>
+                </div>
+                <div class="mt-3 pt-3 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                  <div class="flex items-center justify-between text-xs">
+                    <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      {{ getBudgetUsagePercentage(budget) }}% of budget used
+                    </span>
+                    <span v-if="getBudgetRemaining(budget) > 0" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      {{ getBudgetRemaining(budget) }}{{ budget.unit }} remaining
+                    </span>
+                    <span v-else class="text-red-600 dark:text-red-400 font-medium">
+                      Exceeded by {{ Math.abs(getBudgetRemaining(budget)) }}{{ budget.unit }}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -457,24 +556,30 @@
           <div>
             <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
               Metric
+              <span class="text-red-500">*</span>
             </label>
-            <select
-              v-model="budgetForm.metric"
-              required
-              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
-            >
-              <option value="bundle-size">Bundle Size</option>
-              <option value="load-time">Load Time</option>
-              <option value="render-time">Render Time</option>
-              <option value="memory-usage">Memory Usage</option>
-              <option value="api-response-time">API Response Time</option>
-            </select>
+            <Dropdown
+              :model-value="budgetForm.metric"
+              @update:model-value="budgetForm.metric = $event"
+              :options="[
+                { value: 'bundle-size', label: 'Bundle Size - Total JavaScript bundle size' },
+                { value: 'load-time', label: 'Load Time - Time to load component' },
+                { value: 'render-time', label: 'Render Time - Time to render component' },
+                { value: 'memory-usage', label: 'Memory Usage - RAM consumption' },
+                { value: 'api-response-time', label: 'API Response Time - Backend API latency' }
+              ]"
+              :is-dark-mode="isDarkMode"
+            />
+            <p class="mt-1 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+              {{ getMetricDescription(budgetForm.metric) }}
+            </p>
           </div>
           
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                 Threshold
+                <span class="text-red-500">*</span>
               </label>
               <input
                 v-model.number="budgetForm.threshold"
@@ -483,26 +588,37 @@
                 min="0"
                 step="0.01"
                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                :placeholder="getSuggestedThreshold(budgetForm.metric)"
               />
+              <p class="mt-1 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                Suggested: {{ getSuggestedThreshold(budgetForm.metric) }}{{ getSuggestedUnit(budgetForm.metric) }}
+              </p>
             </div>
             
             <div>
               <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                 Unit
+                <span class="text-red-500">*</span>
               </label>
-              <input
-                v-model="budgetForm.unit"
-                type="text"
-                required
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
-                placeholder="KB, ms, MB"
+              <Dropdown
+                :model-value="budgetForm.unit"
+                @update:model-value="budgetForm.unit = $event"
+                :options="[
+                  { value: 'B', label: 'Bytes (B)' },
+                  { value: 'KB', label: 'Kilobytes (KB)' },
+                  { value: 'MB', label: 'Megabytes (MB)' },
+                  { value: 'ms', label: 'Milliseconds (ms)' },
+                  { value: 's', label: 'Seconds (s)' }
+                ]"
+                :is-dark-mode="isDarkMode"
               />
             </div>
           </div>
           
           <div>
             <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Alert Threshold (Optional)
+              Alert Threshold
+              <span class="text-xs font-normal ml-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">(Optional)</span>
             </label>
             <input
               v-model.number="budgetForm.alertThreshold"
@@ -510,8 +626,11 @@
               min="0"
               step="0.01"
               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
-              placeholder="Optional warning threshold"
+              placeholder="Leave empty to disable alerts"
             />
+            <p class="mt-1 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+              Get an early warning when this value is reached (should be less than threshold)
+            </p>
           </div>
           
           <div class="flex items-center gap-4 pt-4">
@@ -783,6 +902,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
 import { componentMetadataService } from '../services/componentMetadataService.js';
 
@@ -830,6 +950,55 @@ const getStatusClass = (status) => {
   if (status === 'error') return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
   if (status === 'warning') return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
   return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+};
+
+// Map componentId to component route
+const getComponentRoute = (componentId, componentName) => {
+  // Map componentId (from API) to route paths
+  const idToRouteMap = {
+    'button': '/components/buttons',
+    'input': '/components/forms',
+    'card': '/components/cards',
+    'modal': '/components',
+    'dropdown': '/components',
+    'checkbox': '/components/forms',
+    'radio': '/components/forms',
+    'switch': '/components/forms',
+    'color-picker': '/components/color-picker',
+    'tabs': '/components/navigation',
+    'accordion': '/components',
+    'tooltip': '/components',
+    'popover': '/components',
+    'breadcrumbs': '/components/navigation',
+    'pagination': '/components/navigation',
+    'table': '/components/data-display',
+    'select': '/components/forms',
+  };
+  
+  // Try componentId first
+  if (idToRouteMap[componentId]) {
+    return idToRouteMap[componentId];
+  }
+  
+  // Fallback: try componentName mapping (for cases where componentId doesn't match)
+  const nameToRouteMap = {
+    'Button': '/components/buttons',
+    'Input': '/components/forms',
+    'Card': '/components/cards',
+    'Color Picker': '/components/color-picker',
+    'Tabs': '/components/navigation',
+    'Breadcrumbs': '/components/navigation',
+    'Pagination': '/components/navigation',
+    'Data Table': '/components/data-display',
+  };
+  
+  if (componentName && nameToRouteMap[componentName]) {
+    return nameToRouteMap[componentName];
+  }
+  
+  // Final fallback: generate route from componentId
+  const routeName = componentId.toLowerCase().replace(/\s+/g, '-');
+  return `/components/${routeName}`;
 };
 
 const loadAnalysis = async () => {
@@ -987,6 +1156,74 @@ const getBudgetStatusClass = (budget) => {
   if (current > budget.threshold) return 'bg-red-500';
   if (budget.alertThreshold && current > budget.alertThreshold) return 'bg-yellow-500';
   return 'bg-green-500';
+};
+
+const getBudgetStatusBadgeClass = (budget) => {
+  const current = getCurrentValue(budget);
+  if (current > budget.threshold) return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+  if (budget.alertThreshold && current > budget.alertThreshold) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
+  return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+};
+
+const getBudgetStatusText = (budget) => {
+  const current = getCurrentValue(budget);
+  if (current > budget.threshold) return 'Exceeded';
+  if (budget.alertThreshold && current > budget.alertThreshold) return 'Warning';
+  return 'Within Budget';
+};
+
+const getBudgetUsagePercentage = (budget) => {
+  const current = getCurrentValue(budget);
+  return Math.min(Math.round((current / budget.threshold) * 100), 100);
+};
+
+const getBudgetRemaining = (budget) => {
+  const current = getCurrentValue(budget);
+  return budget.threshold - current;
+};
+
+const getMetricDisplayName = (metric) => {
+  const names = {
+    'bundle-size': 'Bundle Size',
+    'load-time': 'Load Time',
+    'render-time': 'Render Time',
+    'memory-usage': 'Memory Usage',
+    'api-response-time': 'API Response Time'
+  };
+  return names[metric] || metric;
+};
+
+const getMetricDescription = (metric) => {
+  const descriptions = {
+    'bundle-size': 'The total size of JavaScript code for this component. Smaller is better for faster page loads.',
+    'load-time': 'How long it takes for the component to load and become interactive. Aim for under 1 second.',
+    'render-time': 'How long it takes for the component to render on screen. Lower values mean snappier UI.',
+    'memory-usage': 'The amount of RAM the component uses. Important for mobile devices and long-running apps.',
+    'api-response-time': 'How long backend API calls take when using this component. Affects user experience.'
+  };
+  return descriptions[metric] || 'Performance metric for this component.';
+};
+
+const getSuggestedThreshold = (metric) => {
+  const suggestions = {
+    'bundle-size': 100,
+    'load-time': 1000,
+    'render-time': 100,
+    'memory-usage': 10,
+    'api-response-time': 500
+  };
+  return suggestions[metric] || 100;
+};
+
+const getSuggestedUnit = (metric) => {
+  const units = {
+    'bundle-size': 'KB',
+    'load-time': 'ms',
+    'render-time': 'ms',
+    'memory-usage': 'MB',
+    'api-response-time': 'ms'
+  };
+  return units[metric] || 'KB';
 };
 
 const saveBudget = async () => {

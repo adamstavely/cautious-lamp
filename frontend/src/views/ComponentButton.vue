@@ -25,8 +25,11 @@
                     <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
                       Button
                     </h1>
-                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
-                      Production Ready
+                    <span 
+                      class="px-3 py-1 rounded-full text-sm font-medium border"
+                      :class="getComponentStatusBadgeClass(componentStatus)"
+                    >
+                      {{ componentStatus || 'Production Ready' }}
                     </span>
                   </div>
                   <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
@@ -957,12 +960,20 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ComponentPreview from '../components/ComponentPreview.vue';
 import axios from 'axios';
+import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
 
 const route = useRoute();
+const { getComponent } = useComponentPatternStatus();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
 const previewDarkMode = ref(false);
 const codeFormat = ref('vue');
+
+// Get component status from shared store
+const componentStatus = computed(() => {
+  const component = getComponent('Button');
+  return component?.status || 'Production Ready';
+});
 const propValues = reactive({
   label: 'Click me',
   variant: 'primary',
