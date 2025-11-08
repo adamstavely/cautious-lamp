@@ -73,7 +73,8 @@
                     ? 'bg-slate-900 border-gray-700' 
                     : 'bg-white border-gray-200'"
                 >
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  <label class="block text-sm font-medium mb-2 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    <span class="material-symbols-outlined text-indigo-600">format_color_text</span>
                     Foreground color<span class="text-red-500">*</span>
                   </label>
                   <div class="flex items-center gap-3 mb-4">
@@ -124,7 +125,8 @@
                     ? 'bg-slate-900 border-gray-700' 
                     : 'bg-white border-gray-200'"
                 >
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  <label class="block text-sm font-medium mb-2 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    <span class="material-symbols-outlined text-indigo-600">format_color_fill</span>
                     Background color
                   </label>
                   <div class="flex items-center gap-3 mb-4">
@@ -164,7 +166,8 @@
                     ? 'bg-slate-900 border-gray-700' 
                     : 'bg-white border-gray-200'"
                 >
-                  <h3 class="text-sm font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <h3 class="text-sm font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-indigo-600">code</span>
                     Supported formats
                   </h3>
                   <div class="overflow-x-auto">
@@ -303,6 +306,10 @@
                     : 'bg-white border-gray-200'"
                 >
                   <div class="p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      <span class="material-symbols-outlined text-indigo-600">visibility</span>
+                      Color Blindness Simulation
+                    </h3>
                     <div class="overflow-x-auto">
                       <table class="w-full">
                         <thead>
@@ -369,7 +376,8 @@
 
                     <!-- How This Works Section -->
                     <div class="mt-8 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                      <h3 class="text-lg font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      <h3 class="text-lg font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                        <span class="material-symbols-outlined text-indigo-600">help</span>
                         How this works
                       </h3>
                       <p class="text-sm leading-relaxed" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
