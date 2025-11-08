@@ -1,14 +1,4 @@
 <template>
-  <!-- Debug: Always show a small indicator when mounted -->
-  <div 
-    v-if="!isActive" 
-    class="loupe-tool-indicator" 
-    title="Press Ctrl+Shift+L to activate Loupe Tool (or click here)"
-    @click="activateLoupe"
-  >
-    <ScanEye :size="24" />
-  </div>
-  
   <div v-if="isActive" class="loupe-tool">
     <!-- Overlay for highlighting components -->
     <div
@@ -549,33 +539,5 @@ kbd {
   color: #cbd5e1;
 }
 
-.loupe-tool-indicator {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #6366f1;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  z-index: 9997;
-  cursor: pointer;
-  transition: all 0.2s;
-  opacity: 0.7;
-}
-
-.loupe-tool-indicator:hover {
-  opacity: 1;
-  transform: scale(1.1);
-  background: #818cf8;
-}
-
-.loupe-tool-indicator svg {
-  color: white;
-}
 </style>
 

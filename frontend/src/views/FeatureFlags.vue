@@ -749,6 +749,12 @@ const toggleFlag = async (id) => {
   try {
     await axios.put(`${API_BASE_URL}/api/v1/feature-flags/${id}/toggle`);
     await loadFlags();
+    // Refresh feature flag cache and notify all components
+    if (window.OpenFeature) {
+      await window.OpenFeature.refreshCache();
+    }
+    // Dispatch event to notify all components to refresh their flags
+    window.dispatchEvent(new CustomEvent('feature-flags-updated'));
   } catch (error) {
     console.error('Failed to toggle feature flag:', error);
     alert('Failed to toggle feature flag. Please try again.');
@@ -824,6 +830,12 @@ const saveFlag = async () => {
     }
 
     await loadFlags();
+    // Refresh feature flag cache and notify all components
+    if (window.OpenFeature) {
+      await window.OpenFeature.refreshCache();
+    }
+    // Dispatch event to notify all components to refresh their flags
+    window.dispatchEvent(new CustomEvent('feature-flags-updated'));
     closeModal();
   } catch (error) {
     console.error('Failed to save feature flag:', error);

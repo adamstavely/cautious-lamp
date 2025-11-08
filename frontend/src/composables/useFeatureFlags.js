@@ -1,9 +1,121 @@
-import { ref, computed } from 'vue';
+import { ref, computed, watch, reactive } from 'vue';
 import OpenFeature from '../services/featureFlagsService';
 
-// Cache for feature flag states
-const flagCache = ref({});
+// Cache for feature flag states - load from localStorage on initialization
+const loadFlagCache = () => {
+  try {
+    const cached = localStorage.getItem('featureFlagsCache');
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (error) {
+    console.warn('Failed to load feature flags cache from localStorage:', error);
+  }
+  return {};
+};
+
+// Use reactive() for better nested property tracking
+const flagCache = reactive(loadFlagCache());
 const loadingFlags = ref(new Set());
+const activeFlagRefreshers = new Map(); // Track active flag refreshers
+
+// Preload all flags from API on initialization
+const preloadAllFlags = async () => {
+  try {
+    const context = getUserContext();
+    // Get all flags from the service
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/v1/feature-flags`);
+    if (response.ok) {
+      const flags = await response.json();
+      // Populate flagCache with all flags
+      flags.forEach(flag => {
+        // Check if flag is enabled and respects targeting
+        if (!flag.enabled) {
+          flagCache[flag.key] = false;
+          return;
+        }
+        
+        // Check targeting rules
+        let enabled = flag.enabled;
+        if (flag.targeting) {
+          const userId = context.userId;
+          const userGroups = context.userGroups || [];
+          
+          // User targeting
+          if (flag.targeting.users && userId) {
+            enabled = flag.targeting.users.includes(userId);
+            if (enabled) {
+              flagCache[flag.key] = true;
+              return;
+            }
+          }
+          
+          // Group targeting
+          if (flag.targeting.groups && userGroups.length > 0) {
+            enabled = flag.targeting.groups.some(group => userGroups.includes(group));
+            if (enabled) {
+              flagCache[flag.key] = true;
+              return;
+            }
+          }
+          
+          // Percentage rollout
+          if (flag.targeting.percentage !== undefined) {
+            if (userId) {
+              const hash = hashString(userId);
+              const percentage = (hash % 100) + 1;
+              enabled = percentage <= flag.targeting.percentage;
+            } else {
+              enabled = Math.random() * 100 <= flag.targeting.percentage;
+            }
+          }
+        }
+        
+        flagCache[flag.key] = enabled;
+      });
+    }
+  } catch (error) {
+    console.warn('Failed to preload feature flags:', error);
+  }
+};
+
+// Hash function for percentage rollout
+const hashString = (str) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+};
+
+// Preload flags on initialization
+if (typeof window !== 'undefined') {
+  preloadAllFlags();
+}
+
+// Export flagCache so components can access it reactively
+export { flagCache };
+
+// Persist cache to localStorage whenever it changes
+watch(flagCache, (newCache) => {
+  try {
+    localStorage.setItem('featureFlagsCache', JSON.stringify(newCache));
+  } catch (error) {
+    console.warn('Failed to persist feature flags cache to localStorage:', error);
+  }
+}, { deep: true });
+
+// Single global listener for flag updates
+if (typeof window !== 'undefined') {
+  window.addEventListener('feature-flags-updated', () => {
+    // Refresh all active flags
+    activeFlagRefreshers.forEach((refresh) => {
+      refresh();
+    });
+  });
+}
 
 // Get current user context (can be enhanced with actual user data)
 const getUserContext = () => {
@@ -39,7 +151,7 @@ export function useFeatureFlag(flagKey, defaultValue = false) {
       const context = getUserContext();
       const enabled = await OpenFeature.getBooleanValue(flagKey, defaultValue, context);
       isEnabled.value = enabled;
-      flagCache.value[flagKey] = enabled;
+      flagCache[flagKey] = enabled;
     } catch (error) {
       console.error(`Error checking feature flag ${flagKey}:`, error);
       isEnabled.value = defaultValue;
@@ -49,17 +161,22 @@ export function useFeatureFlag(flagKey, defaultValue = false) {
     }
   };
 
-  // Check flag on initialization
-  if (flagCache.value[flagKey] !== undefined) {
-    isEnabled.value = flagCache.value[flagKey];
+  // Check flag on initialization - use cached value if available, otherwise fetch
+  if (flagCache[flagKey] !== undefined) {
+    isEnabled.value = flagCache[flagKey];
+    // Still refresh in background to ensure we have latest value
+    checkFlag();
   } else {
     checkFlag();
   }
 
   const refresh = () => {
-    delete flagCache.value[flagKey];
+    delete flagCache[flagKey];
     checkFlag();
   };
+
+  // Register this flag's refresher for global updates
+  activeFlagRefreshers.set(flagKey, refresh);
 
   return {
     isEnabled: computed(() => isEnabled.value),
@@ -97,7 +214,7 @@ export function useFeatureFlags(flagKeys, defaultValue = false) {
 
       results.forEach(({ key, enabled }) => {
         flags.value[key] = enabled;
-        flagCache.value[key] = enabled;
+        flagCache[key] = enabled;
       });
     } catch (error) {
       console.error('Error checking feature flags:', error);
@@ -114,7 +231,7 @@ export function useFeatureFlags(flagKeys, defaultValue = false) {
 
   const refresh = () => {
     flagKeys.forEach(key => {
-      delete flagCache.value[key];
+      delete flagCache[key];
     });
     checkFlags();
   };
@@ -133,6 +250,6 @@ export function useFeatureFlags(flagKeys, defaultValue = false) {
  * @returns {boolean}
  */
 export function isFeatureEnabled(flagKey, defaultValue = false) {
-  return flagCache.value[flagKey] ?? defaultValue;
+  return flagCache[flagKey] ?? defaultValue;
 }
 

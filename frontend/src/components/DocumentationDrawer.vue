@@ -39,7 +39,7 @@
         </div>
         <nav class="space-y-1">
           <button
-            v-for="item in foundations"
+            v-for="item in filteredFoundations"
             :key="item.link"
             @click="navigateToDoc(item.link)"
             class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -72,7 +72,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Design Patterns</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in designPatterns"
+                v-for="item in filteredDesignPatterns"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -97,7 +97,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Code Patterns</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in codePatterns"
+                v-for="item in filteredCodePatterns"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -161,7 +161,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Utilities</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in componentUtilities"
+                v-for="item in filteredComponentUtilities"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -187,7 +187,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Components</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in componentItems"
+                v-for="item in filteredComponentItems"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -229,7 +229,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Overview & Basics</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in gettingStartedBasics"
+                v-for="item in filteredGettingStartedBasics"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -254,7 +254,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Design Principles</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in gettingStartedPrinciples"
+                v-for="item in filteredGettingStartedPrinciples"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -279,7 +279,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Setup & Installation</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in gettingStartedSetup"
+                v-for="item in filteredGettingStartedSetup"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -304,7 +304,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Resources & Support</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in gettingStartedResources"
+                v-for="item in filteredGettingStartedResources"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -345,7 +345,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Overview</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in toolGroups.overview"
+                v-for="item in filteredToolGroups.overview"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -370,7 +370,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Color Tools</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in toolGroups.color"
+                v-for="item in filteredToolGroups.color"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -395,7 +395,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Text & Content</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in toolGroups.text"
+                v-for="item in filteredToolGroups.text"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -420,7 +420,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Development</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in toolGroups.development"
+                v-for="item in filteredToolGroups.development"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -446,7 +446,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Image Tools</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in toolGroups.image"
+                v-for="item in filteredToolGroups.image"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -483,7 +483,7 @@
         </div>
         <nav class="space-y-1">
           <router-link
-            v-for="item in reviewItems"
+            v-for="item in filteredReviewItems"
             :key="item.link"
             :to="item.link"
             class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -522,7 +522,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">HCD Guidelines</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in humanCenteredDesign"
+                v-for="item in filteredHumanCenteredDesign"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -547,7 +547,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Research Artifacts</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in researchArtifacts"
+                v-for="item in filteredResearchArtifacts"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -572,7 +572,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">UX Research Tools</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in uxResearchTools"
+                v-for="item in filteredUxResearchTools"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -609,7 +609,7 @@
         </div>
         <nav class="space-y-1">
           <router-link
-            v-for="item in artificialIntelligence"
+            v-for="item in filteredArtificialIntelligence"
             :key="item.link"
             :to="item.link"
             class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -644,7 +644,7 @@
         </div>
         <nav class="space-y-1">
           <router-link
-            v-for="item in designAssets"
+            v-for="item in filteredDesignAssets"
             :key="item.link"
             :to="item.link"
             class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -679,7 +679,7 @@
         </div>
         <nav class="space-y-1">
           <router-link
-            v-for="item in adminItems"
+            v-for="item in filteredAdminItems"
             :key="item.link"
             :to="item.link"
             class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -714,7 +714,7 @@
         </div>
         <nav class="space-y-1">
           <router-link
-            v-for="item in tokenItems"
+            v-for="item in filteredTokenItems"
             :key="item.link"
             :to="item.link"
             class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -741,6 +741,8 @@
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import { Pipette, ScanEye } from 'lucide-vue-next';
+import { getFeatureFlagForRoute } from '../router/featureFlagGuards';
+import { flagCache } from '../composables/useFeatureFlags';
 
 const props = defineProps({
   isOpen: {
@@ -1019,12 +1021,188 @@ const isActive = (path) => {
   return route.path === path || route.path.startsWith(path + '/');
 };
 
+// Helper function to check if a route is enabled via feature flag
+// This function accesses flagCache, making computed properties that use it reactive
+const isRouteEnabled = (routePath) => {
+  const flagKey = getFeatureFlagForRoute(routePath);
+  if (!flagKey) {
+    // No feature flag for this route, allow it (show it)
+    return true;
+  }
+  // Check if the feature flag is enabled (uses cache)
+  // Access flagCache directly (it's reactive) - Vue will track this dependency
+  const enabled = flagCache[flagKey];
+  // Default to false if flag not found (hide until we know it's enabled)
+  // This ensures items are hidden when flags are disabled
+  return enabled === true; // Only show if explicitly enabled
+};
+
+// Filter arrays based on feature flags
+// flagCache is reactive, so accessing it in computed properties makes them reactive
+const filteredFoundations = computed(() => {
+  return foundations.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredArtificialIntelligence = computed(() => {
+  return artificialIntelligence.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredHumanCenteredDesign = computed(() => {
+  return humanCenteredDesign.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredDesignPatterns = computed(() => {
+  return designPatterns.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredCodePatterns = computed(() => {
+  return codePatterns.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredComponentUtilities = computed(() => {
+  return componentUtilities.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredComponentItems = computed(() => {
+  return componentItems.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredAdminItems = computed(() => {
+  return adminItems.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredGettingStartedBasics = computed(() => {
+  return gettingStartedBasics.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredGettingStartedPrinciples = computed(() => {
+  return gettingStartedPrinciples.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredGettingStartedSetup = computed(() => {
+  return gettingStartedSetup.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredGettingStartedResources = computed(() => {
+  return gettingStartedResources.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredResearchArtifacts = computed(() => {
+  return researchArtifacts.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredUxResearchTools = computed(() => {
+  return uxResearchTools.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredTokenItems = computed(() => {
+  return tokenItems.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredDesignAssets = computed(() => {
+  return designAssets.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredToolGroups = computed(() => {
+  return {
+    overview: toolGroups.value.overview.filter(item => isRouteEnabled(item.link)),
+    color: toolGroups.value.color.filter(item => isRouteEnabled(item.link)),
+    text: toolGroups.value.text.filter(item => isRouteEnabled(item.link)),
+    development: toolGroups.value.development.filter(item => isRouteEnabled(item.link)),
+    image: toolGroups.value.image.filter(item => isRouteEnabled(item.link))
+  };
+});
+
+const filteredReviewItems = computed(() => {
+  return reviewItems.filter(item => isRouteEnabled(item.link));
+});
+
 // Watch for dark mode changes and Escape key
 let darkModeObserver = null;
 let darkModeInterval = null;
 let escapeHandler = null;
 
-onMounted(() => {
+// Function to get all flag keys used in the drawer
+const getAllDrawerFlagKeys = () => {
+  const allRoutes = [
+    ...foundations.map(f => f.link),
+    ...artificialIntelligence.map(a => a.link),
+    ...humanCenteredDesign.map(h => h.link),
+    ...designPatterns.map(d => d.link),
+    ...codePatterns.map(c => c.link),
+    ...componentUtilities.map(c => c.link),
+    ...componentItems.map(c => c.link),
+    ...adminItems.map(a => a.link),
+    ...gettingStartedBasics.map(g => g.link),
+    ...gettingStartedPrinciples.map(g => g.link),
+    ...gettingStartedSetup.map(g => g.link),
+    ...gettingStartedResources.map(g => g.link),
+    ...researchArtifacts.map(r => r.link),
+    ...uxResearchTools.map(u => u.link),
+    ...tokenItems.map(t => t.link),
+    ...designAssets.map(d => d.link),
+    ...reviewItems.map(r => r.link),
+    ...toolGroups.value.overview.map(t => t.link),
+    ...toolGroups.value.color.map(t => t.link),
+    ...toolGroups.value.text.map(t => t.link),
+    ...toolGroups.value.development.map(t => t.link),
+    ...toolGroups.value.image.map(t => t.link),
+  ];
+  
+  // Get unique flag keys for all routes
+  const flagKeys = new Set();
+  allRoutes.forEach(route => {
+    const flagKey = getFeatureFlagForRoute(route);
+    if (flagKey) {
+      flagKeys.add(flagKey);
+    }
+  });
+  
+  return flagKeys;
+};
+
+// Function to load all drawer flags
+const loadDrawerFlags = async () => {
+  const flagKeys = getAllDrawerFlagKeys();
+  if (flagKeys.size > 0) {
+    try {
+      const context = {
+        userId: localStorage.getItem('userId') || undefined,
+        userGroups: localStorage.getItem('userGroups') 
+          ? JSON.parse(localStorage.getItem('userGroups'))
+          : undefined,
+      };
+      
+      // Load all flags in parallel
+      await Promise.all(
+        Array.from(flagKeys).map(async (flagKey) => {
+          try {
+            const enabled = await OpenFeature.getBooleanValue(flagKey, false, context);
+            flagCache[flagKey] = enabled;
+          } catch (error) {
+            console.warn(`Failed to load flag ${flagKey}:`, error);
+            flagCache[flagKey] = false; // Default to disabled on error
+          }
+        })
+      );
+    } catch (error) {
+      console.warn('Failed to preload drawer flags:', error);
+    }
+  }
+};
+
+let flagUpdateHandler = null;
+
+onMounted(async () => {
+  // Load flags on mount
+  await loadDrawerFlags();
+  
+  // Listen for feature flag updates and refresh drawer flags
+  flagUpdateHandler = () => {
+    loadDrawerFlags();
+  };
+  window.addEventListener('feature-flags-updated', flagUpdateHandler);
+  
   // Dark mode observer
   darkModeObserver = new MutationObserver(() => {
     isDarkMode.value = document.documentElement.classList.contains('dark');
@@ -1052,6 +1230,9 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  if (flagUpdateHandler) {
+    window.removeEventListener('feature-flags-updated', flagUpdateHandler);
+  }
   if (darkModeObserver) {
     darkModeObserver.disconnect();
   }

@@ -174,6 +174,7 @@
       <div class="flex items-center gap-4 px-4 sm:px-6 lg:px-8 flex-shrink-0">
         <!-- Live Chat -->
         <button
+          v-if="aiAssistantEnabled"
           @click="toggleChat"
           class="relative flex items-center justify-center p-2 rounded-lg transition-colors"
           :class="isDarkMode 
@@ -340,6 +341,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { mockAPI, isMockMode, mockReviews } from '../mockData.js';
+import { useFeatureFlag } from '../composables/useFeatureFlags';
 
 const router = useRouter();
 const notificationsContainer = ref(null);
@@ -495,6 +497,7 @@ const recentActivity = ref([]);
 const currentUser = ref(localStorage.getItem('currentDesigner') || 'Sarah Johnson');
 const currentUserEmail = ref(localStorage.getItem('currentUserEmail') || 'sarah@example.com');
 const currentUserRole = ref(localStorage.getItem('userRole') || 'designer');
+const { isEnabled: aiAssistantEnabled } = useFeatureFlag('ai-assistant', false);
 
 // Toggle chat (opens Eero chatbot via FAB)
 const toggleChat = () => {

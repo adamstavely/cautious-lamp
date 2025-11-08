@@ -17,11 +17,11 @@
       </div>
       
       <!-- Floating Action Button and Chatbot -->
-      <FloatingActionButton :isChatOpen="chatOpen" @toggle-chat="handleToggleChat" />
-      <EeroChatbot :isOpen="chatOpen" @close="handleCloseChat" />
+      <FloatingActionButton v-if="aiAssistantEnabled" :isChatOpen="chatOpen" @toggle-chat="handleToggleChat" />
+      <EeroChatbot v-if="aiAssistantEnabled" :isOpen="chatOpen" @close="handleCloseChat" />
       
       <!-- Loupe Tool -->
-      <LoupeTool />
+      <LoupeTool v-if="loupeToolEnabled" />
       
       <!-- Toast Notifications -->
       <Toast />
@@ -38,8 +38,11 @@ import FloatingActionButton from './components/FloatingActionButton.vue';
 import EeroChatbot from './components/EeroChatbot.vue';
 import LoupeTool from './components/LoupeTool.vue';
 import Toast from './components/Toast.vue';
+import { useFeatureFlag } from './composables/useFeatureFlags';
 
 const chatOpen = ref(false);
+const { isEnabled: aiAssistantEnabled } = useFeatureFlag('ai-assistant', false);
+const { isEnabled: loupeToolEnabled } = useFeatureFlag('component-loupe', false);
 
 const handleToggleChat = () => {
   chatOpen.value = !chatOpen.value;
@@ -51,7 +54,9 @@ const handleCloseChat = () => {
 
 // Listen for custom event from TopNav to open chat
 const handleOpenChatEvent = () => {
-  chatOpen.value = true;
+  if (aiAssistantEnabled.value) {
+    chatOpen.value = true;
+  }
 };
 
 onMounted(() => {

@@ -169,3 +169,15 @@ export const OpenFeature = {
   },
 };
 
+// Expose OpenFeature to window and listen for flag update events
+if (typeof window !== 'undefined') {
+  window.OpenFeature = OpenFeature;
+  
+  // Listen for flag update events
+  window.addEventListener('feature-flags-updated', () => {
+    featureFlagProvider.refreshCache().catch(err => {
+      console.warn('Failed to refresh feature flags cache after update:', err);
+    });
+  });
+}
+
