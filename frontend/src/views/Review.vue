@@ -108,14 +108,14 @@
 
             <!-- Admin Button -->
             <router-link 
-              to="/review/admin" 
+              to="/review/management" 
               class="group rounded-2xl p-8 border transition-all flex flex-col items-center text-center"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-16 h-16 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-6xl">admin_panel_settings</span>
+                <FolderKanban :size="64" :stroke-width="2" />
               </div>
               <h3 
                 class="font-semibold text-xl mb-2 transition-colors"
@@ -123,7 +123,7 @@
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
-                Admin
+                Review Management
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Manage reviews, users, and system settings.</p>
             </router-link>
@@ -169,13 +169,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, shallowRef, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { RouterLink } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { FolderKanban } from 'lucide-vue-next';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
-const UploadPageComponent = ref(null);
+const UploadPageComponent = shallowRef(null);
 const uploadPageRef = ref(null);
 const mounted = ref(false);
 

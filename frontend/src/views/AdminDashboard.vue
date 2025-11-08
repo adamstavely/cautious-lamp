@@ -33,7 +33,7 @@
                 <div class="flex-1">
                   <div class="flex items-center gap-4 mb-4">
                     <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Admin Dashboard
+                      Review Management
                     </h1>
                   </div>
                   <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
@@ -41,8 +41,8 @@
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">admin_panel_settings</span>
-                      Admin Controls
+                      <span class="material-symbols-outlined text-base">workflow</span>
+                      Workflow Tools
                     </span>
                     <span class="flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">update</span>
@@ -72,6 +72,72 @@
             </div>
           </div>
 
+          <!-- Tabs -->
+          <div class="max-w-7xl mx-auto mb-8">
+            <div class="flex gap-2 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'" role="tablist">
+              <button
+                id="tab-links"
+                @click="activeTab = 'links'"
+                @keydown.enter="activeTab = 'links'"
+                @keydown.space.prevent="activeTab = 'links'"
+                role="tab"
+                :aria-selected="activeTab === 'links'"
+                :aria-controls="'tabpanel-links'"
+                tabindex="0"
+                class="px-6 py-3 font-medium transition-colors relative flex items-center gap-2 focus:outline-none"
+                :class="activeTab === 'links'
+                  ? (isDarkMode ? 'text-indigo-400' : 'text-indigo-600')
+                  : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
+              >
+                <svg 
+                  class="w-5 h-5" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                Review Links
+                <div 
+                  v-if="activeTab === 'links'"
+                  class="absolute bottom-0 left-0 right-0 h-0.5 pointer-events-none"
+                  :class="isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600'"
+                ></div>
+              </button>
+              <button
+                id="tab-teams"
+                @click="activeTab = 'teams'"
+                @keydown.enter="activeTab = 'teams'"
+                @keydown.space.prevent="activeTab = 'teams'"
+                role="tab"
+                :aria-selected="activeTab === 'teams'"
+                :aria-controls="'tabpanel-teams'"
+                tabindex="0"
+                class="px-6 py-3 font-medium transition-colors relative flex items-center gap-2 focus:outline-none cursor-pointer"
+                :class="activeTab === 'teams'
+                  ? (isDarkMode ? 'text-indigo-400' : 'text-indigo-600')
+                  : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
+              >
+                <svg 
+                  class="w-5 h-5" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Teams
+                <div 
+                  v-if="activeTab === 'teams'"
+                  class="absolute bottom-0 left-0 right-0 h-0.5 pointer-events-none"
+                  :class="isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600'"
+                ></div>
+              </button>
+            </div>
+          </div>
+
           <!-- Admin Content -->
           <div class="max-w-7xl mx-auto">
             <div 
@@ -80,41 +146,9 @@
                 ? 'bg-slate-800 border-slate-700' 
                 : 'bg-white border-gray-200'"
             >
-              <!-- Tabs -->
-              <v-tabs v-model="activeTab" bg-color="transparent" class="px-8">
-        <v-tab value="links">
-          <svg 
-            class="w-5 h-5 mr-2" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-            :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-          </svg>
-          Review Links
-        </v-tab>
-        <v-tab value="teams">
-          <svg 
-            class="w-5 h-5 mr-2" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-            :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-          Teams
-        </v-tab>
-      </v-tabs>
-      
-      <v-divider />
-      
-      <!-- Tab Content -->
-      <v-window v-model="activeTab">
-        <!-- Design Links Tab -->
-        <v-window-item value="links">
-          <div class="p-8">
+              <!-- Tab Content -->
+              <!-- Review Links Tab -->
+              <div v-if="activeTab === 'links'" id="tabpanel-links" role="tabpanel" aria-labelledby="tab-links" class="p-8">
         <v-data-table
           :items="filteredLinks"
           :headers="headers"
@@ -292,142 +326,138 @@
             </template>
           </v-tooltip>
         </div>
-      </div>
-        </v-window-item>
-        
-        <!-- Teams Tab -->
-        <v-window-item value="teams">
-          <div class="p-8">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'">Teams</h3>
-              <button
-                @click="showCreateTeamModal = true"
-                class="px-4 py-2 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
-                :class="isDarkMode 
-                  ? 'bg-indigo-500 hover:bg-indigo-400' 
-                  : 'bg-indigo-600 hover:bg-indigo-700'"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-                Create Team
-              </button>
-            </div>
-            
-            <div v-if="teams.length === 0" class="text-center py-12">
-              <svg 
-                class="w-16 h-16 mx-auto mb-4" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-                :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <p class="mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">No teams yet</p>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Create your first team to start collaborating</p>
-            </div>
-            
-            <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div
-                v-for="team in teams"
-                :key="team.id"
-                class="rounded-lg border p-6 hover:shadow-md transition-shadow flex flex-col"
-                :class="isDarkMode 
-                  ? 'bg-slate-700 border-slate-600' 
-                  : 'bg-gray-50 border-gray-200'"
-              >
-                <div class="flex items-start justify-between mb-4">
-                  <div class="flex-1">
-                    <h3 class="text-lg font-semibold mb-1" :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'">{{ team.name }}</h3>
-                    <p class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'">{{ team.description || 'No description' }}</p>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <button
-                      @click="editTeam(team)"
-                      class="p-2 transition-colors"
-                      :class="isDarkMode 
-                        ? 'text-gray-500 hover:text-indigo-400' 
-                        : 'text-gray-400 hover:text-indigo-600'"
-                      title="Edit Team"
-                    >
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                    <button
-                      @click="confirmDeleteTeam(team)"
-                      class="p-2 transition-colors"
-                      :class="isDarkMode 
-                        ? 'text-gray-500 hover:text-red-400' 
-                        : 'text-gray-400 hover:text-red-600'"
-                      title="Delete Team"
-                    >
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                
-                <div class="flex flex-col flex-1 space-y-3">
-                  <div class="flex items-center justify-between text-sm">
-                    <span :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'">Members</span>
-                    <span class="font-medium" :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'">{{ team.members.length }}</span>
-                  </div>
-                  <div class="flex items-center justify-between text-sm">
-                    <span :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'">Reviews</span>
-                    <span class="font-medium" :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'">{{ team.reviews?.length || 0 }}</span>
-                  </div>
-                  
-                  <!-- Team Members Preview -->
-                  <div class="mt-4">
-                    <div class="flex items-center gap-2 mb-2">
-                      <span class="text-xs font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-500'">Members:</span>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                      <span
-                        v-for="member in team.members.slice(0, 5)"
-                        :key="member.email"
-                        class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium"
-                        :class="member.role === 'Art Director' 
-                          ? (isDarkMode 
-                            ? 'bg-purple-900 text-purple-200' 
-                            : 'bg-purple-100 text-purple-800')
-                          : (isDarkMode 
-                            ? 'bg-indigo-900 text-indigo-200' 
-                            : 'bg-indigo-100 text-indigo-800')"
-                      >
-                        {{ member.name || member.email }}
-                        <span class="text-xs opacity-75">({{ member.role || 'Designer' }})</span>
-                      </span>
-                      <span
-                        v-if="team.members.length > 5"
-                        class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium"
-                        :class="isDarkMode 
-                          ? 'bg-slate-600 text-gray-300' 
-                          : 'bg-gray-100 text-gray-600'"
-                      >
-                        +{{ team.members.length - 5 }} more
-                      </span>
-                    </div>
-                  </div>
-                  
+              </div>
+
+              <!-- Teams Tab -->
+              <div v-if="activeTab === 'teams'" id="tabpanel-teams" role="tabpanel" aria-labelledby="tab-teams" class="p-8">
+                <div class="flex items-center justify-between mb-6">
+                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'">Teams</h3>
                   <button
-                    @click="manageTeamMembers(team)"
-                    class="w-full mt-auto px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors shadow-sm"
+                    @click="showCreateTeamModal = true"
+                    class="px-4 py-2 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
                     :class="isDarkMode 
                       ? 'bg-indigo-500 hover:bg-indigo-400' 
                       : 'bg-indigo-600 hover:bg-indigo-700'"
                   >
-                    Manage Members
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create Team
                   </button>
                 </div>
+                
+                <div v-if="teams.length === 0" class="text-center py-12">
+                  <svg 
+                    class="w-16 h-16 mx-auto mb-4" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                    :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <p class="mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">No teams yet</p>
+                  <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Create your first team to start collaborating</p>
+                </div>
+                
+                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div
+                    v-for="team in teams"
+                    :key="team.id"
+                    class="rounded-lg border p-6 hover:shadow-md transition-shadow flex flex-col"
+                    :class="isDarkMode 
+                      ? 'bg-slate-700 border-slate-600' 
+                      : 'bg-gray-50 border-gray-200'"
+                  >
+                    <div class="flex items-start justify-between mb-4">
+                      <div class="flex-1">
+                        <h3 class="text-lg font-semibold mb-1" :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'">{{ team.name }}</h3>
+                        <p class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'">{{ team.description || 'No description' }}</p>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <button
+                          @click="editTeam(team)"
+                          class="p-2 transition-colors"
+                          :class="isDarkMode 
+                            ? 'text-gray-500 hover:text-indigo-400' 
+                            : 'text-gray-400 hover:text-indigo-600'"
+                          title="Edit Team"
+                        >
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          @click="confirmDeleteTeam(team)"
+                          class="p-2 transition-colors"
+                          :class="isDarkMode 
+                            ? 'text-gray-500 hover:text-red-400' 
+                            : 'text-gray-400 hover:text-red-600'"
+                          title="Delete Team"
+                        >
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div class="flex flex-col flex-1 space-y-3">
+                      <div class="flex items-center justify-between text-sm">
+                        <span :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'">Members</span>
+                        <span class="font-medium" :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'">{{ team.members?.length || 0 }}</span>
+                      </div>
+                      <div class="flex items-center justify-between text-sm">
+                        <span :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'">Reviews</span>
+                        <span class="font-medium" :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'">{{ team.reviews?.length || 0 }}</span>
+                      </div>
+                      
+                      <!-- Team Members Preview -->
+                      <div v-if="team.members && team.members.length > 0" class="mt-4">
+                        <div class="flex items-center gap-2 mb-2">
+                          <span class="text-xs font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-500'">Members:</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                          <span
+                            v-for="member in team.members.slice(0, 5)"
+                            :key="member.email"
+                            class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium"
+                            :class="member.role === 'Art Director' 
+                              ? (isDarkMode 
+                                ? 'bg-purple-900 text-purple-200' 
+                                : 'bg-purple-100 text-purple-800')
+                              : (isDarkMode 
+                                ? 'bg-indigo-900 text-indigo-200' 
+                                : 'bg-indigo-100 text-indigo-800')"
+                          >
+                            {{ member.name || member.email }}
+                            <span class="text-xs opacity-75">({{ member.role || 'Designer' }})</span>
+                          </span>
+                          <span
+                            v-if="team.members && team.members.length > 5"
+                            class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium"
+                            :class="isDarkMode 
+                              ? 'bg-slate-600 text-gray-300' 
+                              : 'bg-gray-100 text-gray-600'"
+                          >
+                            +{{ team.members.length - 5 }} more
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <button
+                        @click.stop="manageTeamMembers(team)"
+                        class="w-full mt-auto px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors shadow-sm"
+                        :class="isDarkMode 
+                          ? 'bg-indigo-500 hover:bg-indigo-400' 
+                          : 'bg-indigo-600 hover:bg-indigo-700'"
+                      >
+                        Manage Members
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </v-window-item>
-        </v-window>
             </div>
           </div>
         </div>
@@ -500,7 +530,7 @@
 
     <TeamMembersModal
       v-model="showMembersModal"
-      :team="selectedTeam"
+      :team="selectedTeam || null"
       @members-updated="handleMembersUpdated"
     />
 
@@ -895,6 +925,10 @@ const handleTeamUpdated = () => {
 };
 
 const manageTeamMembers = (team) => {
+  if (!team || typeof team !== 'object') {
+    console.error('Invalid team object:', team);
+    return;
+  }
   selectedTeam.value = team;
   showMembersModal.value = true;
 };

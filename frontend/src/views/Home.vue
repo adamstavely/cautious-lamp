@@ -16,7 +16,7 @@
               <div class="flex-1">
                 <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
                   Design System
-                  <span class="block text-indigo-400 mt-2">Unifying the Mission; One UI at a Time</span>
+                  <span class="block text-indigo-400 mt-2">Unifying the Mission; By Design</span>
                 </h1>
                 <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
                   The Agency's Design System for Digital Experiences. Guidelines, components, tokens, patterns, assets; everything you need in one Powerful platform.

@@ -13,5 +13,9 @@ export default defineConfig({
     },
   },
   publicDir: 'public',
+  optimizeDeps: {
+    include: ['@pdftron/webviewer'],
+    exclude: [],
+  },
 });
 

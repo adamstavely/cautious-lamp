@@ -16,7 +16,7 @@ const routeToFlagMap = {
   '/tokens/library': 'token-library',
   '/review': 'review-system',
   '/review/my-requests': 'review-kanban',
-  '/review/admin': 'review-admin',
+  '/review/management': 'review-admin',
   '/admin/health': 'admin-system-health',
   '/admin/governance': 'admin-governance',
   '/admin/audit': 'admin-audit',

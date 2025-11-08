@@ -717,7 +717,7 @@ const codePatterns = [
 const reviewItems = [
   { text: 'Overview', link: '/review', icon: 'rate_review' },
   { text: 'My Requested Reviews', link: '/review/my-requests', icon: 'view_module' },
-  { text: 'Admin', link: '/review/admin', icon: 'admin_panel_settings' }
+  { text: 'Review Management', link: '/review/management', icon: 'folder_kanban' }
 ];
 
 const tools = [

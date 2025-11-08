@@ -274,7 +274,7 @@
               <optgroup label="Review">
                 <option value="/review">Review System</option>
                 <option value="/review/my-requests">Review Kanban</option>
-                <option value="/review/admin">Review Admin</option>
+                <option value="/review/management">Review Management</option>
               </optgroup>
               <optgroup label="Admin">
                 <option value="/admin/health">System Health</option>
@@ -568,7 +568,7 @@ const routeToFlagKey = {
   '/tokens/library': 'token-library',
   '/review': 'review-system',
   '/review/my-requests': 'review-kanban',
-  '/review/admin': 'review-admin',
+  '/review/management': 'review-admin',
   '/admin/health': 'admin-system-health',
   '/admin/governance': 'admin-governance',
   '/admin/audit': 'admin-audit',
@@ -623,7 +623,7 @@ const routeToName = {
   '/tokens/library': 'Style Library',
   '/review': 'Review System',
   '/review/my-requests': 'Review Kanban',
-  '/review/admin': 'Review Admin',
+  '/review/management': 'Review Management',
   '/admin/health': 'System Health',
   '/admin/governance': 'Governance',
   '/admin/audit': 'Audit Logs',

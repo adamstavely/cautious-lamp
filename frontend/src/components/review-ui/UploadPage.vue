@@ -472,6 +472,7 @@ watch(() => [currentUser.value, currentUserEmail.value], () => {
 
 // Recently viewed links for clients
 const recentlyViewedLinks = ref([]);
+const recentActivity = ref([]);
 
 // Load recently viewed links for clients
 const loadRecentlyViewedLinks = async () => {

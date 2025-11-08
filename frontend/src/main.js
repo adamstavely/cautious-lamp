@@ -147,6 +147,10 @@ const router = createRouter({
       component: () => import('./views/ReviewKanban.vue'),
     },
     {
+      path: '/review/management',
+      component: () => import('./views/AdminDashboard.vue'),
+    },
+    {
       path: '/review/:id',
       component: () => import('./views/ReviewPage.vue'),
     },
@@ -157,10 +161,6 @@ const router = createRouter({
     {
       path: '/admin',
       component: () => import('./views/Admin.vue'),
-    },
-    {
-      path: '/review/admin',
-      component: () => import('./views/AdminDashboard.vue'),
     },
     {
       path: '/components',
