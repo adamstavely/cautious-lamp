@@ -211,7 +211,7 @@ const router = createRouter({
       component: () => import('./views/DocumentationGenerator.vue'),
     },
     {
-      path: '/components/handoff',
+      path: '/review/handoff',
       component: () => import('./views/HandoffTools.vue'),
     },
     {

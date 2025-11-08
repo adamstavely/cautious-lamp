@@ -261,7 +261,7 @@
                 <option value="/components/loupe">Loupe</option>
                 <option value="/components/testing">Component Testing</option>
                 <option value="/components/documentation">Documentation Generator</option>
-                <option value="/components/handoff">Design-Dev Handoff</option>
+                <option value="/review/handoff">Design-Dev Handoff</option>
                 <option value="/components/composition">Component Composition</option>
                 <option value="/components/dependencies">Dependency Graph</option>
               </optgroup>
@@ -559,7 +559,7 @@ const routeToFlagKey = {
   '/components/loupe': 'component-loupe',
   '/components/testing': 'component-testing',
   '/components/documentation': 'component-documentation',
-  '/components/handoff': 'component-handoff',
+  '/review/handoff': 'component-handoff',
   '/components/composition': 'component-composition',
   '/components/dependencies': 'component-dependencies',
   '/tokens': 'token-studio',
@@ -614,7 +614,7 @@ const routeToName = {
   '/components/loupe': 'Loupe',
   '/components/testing': 'Component Testing',
   '/components/documentation': 'Documentation Generator',
-  '/components/handoff': 'Design-Dev Handoff',
+  '/review/handoff': 'Design-Dev Handoff',
   '/components/composition': 'Component Composition',
   '/components/dependencies': 'Dependency Graph',
   '/tokens': 'Tokens Overview',

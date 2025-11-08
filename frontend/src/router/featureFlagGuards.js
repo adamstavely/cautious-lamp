@@ -7,7 +7,7 @@ const routeToFlagMap = {
   '/components/status': 'component-status',
   '/components/testing': 'component-testing',
   '/components/documentation': 'component-documentation',
-  '/components/handoff': 'component-handoff',
+  '/review/handoff': 'component-handoff',
   '/components/composition': 'component-composition',
   '/components/dependencies': 'component-dependencies',
   '/tokens': 'token-studio',

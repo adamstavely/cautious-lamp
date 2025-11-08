@@ -502,7 +502,8 @@
                   : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
             ]"
           >
-            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+            <FolderKanban v-if="item.icon === 'folder-kanban'" :size="20" :stroke-width="2" />
+            <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
             <span class="font-medium">{{ item.text }}</span>
           </router-link>
         </nav>
@@ -745,7 +746,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
-import { Pipette, ScanEye, Captions, Tag, TextInitial, SwatchBook } from 'lucide-vue-next';
+import { Pipette, ScanEye, Captions, Tag, TextInitial, SwatchBook, FolderKanban } from 'lucide-vue-next';
 import { getFeatureFlagForRoute } from '../router/featureFlagGuards';
 import { flagCache } from '../composables/useFeatureFlags';
 
@@ -827,7 +828,8 @@ const codePatterns = [
 const reviewItems = [
   { text: 'Overview', link: '/review', icon: 'rate_review' },
   { text: 'My Requested Reviews', link: '/review/my-requests', icon: 'view_module' },
-  { text: 'Review Management', link: '/review/management', icon: 'folder_kanban' }
+  { text: 'Review Management', link: '/review/management', icon: 'folder-kanban' },
+  { text: 'Handoff Tools', link: '/review/handoff', icon: 'swap_horiz' }
 ];
 
 const tools = [
@@ -896,7 +898,6 @@ const componentUtilities = [
   { text: 'Component Examples', link: '/components/examples', icon: 'preview' },
   { text: 'Testing Framework', link: '/components/testing', icon: 'bug_report' },
   { text: 'Documentation Generator', link: '/components/documentation', icon: 'description' },
-  { text: 'Handoff Tools', link: '/components/handoff', icon: 'swap_horiz' },
   { text: 'Component Composition', link: '/components/composition', icon: 'view_quilt' }
 ];
 
