@@ -234,19 +234,6 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Argos Base URL *</label>
-            <input
-              v-model="newProject.argosBaseUrl"
-              type="url"
-              required
-              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-              placeholder="https://argos.example.com"
-            />
-            <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Your self-hosted Argos instance URL (e.g., https://argos.example.com)</p>
-          </div>
-
-          <div>
             <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Argos Project ID *</label>
             <input
               v-model="newProject.argosProjectId"
@@ -256,7 +243,9 @@
               :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
               placeholder="your-org/your-project"
             />
-            <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Your Argos project identifier</p>
+            <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+              Branch: <strong>develop</strong> (default) | Argos URL: <strong>{{ defaultArgosUrl }}</strong>
+            </p>
           </div>
 
           <div>
@@ -270,17 +259,6 @@
               placeholder="Enter your Argos API token"
             />
             <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Your Argos API token (stored securely)</p>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Branch</label>
-            <input
-              v-model="newProject.argosBranch"
-              type="text"
-              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-              placeholder="main"
-            />
           </div>
 
           <div class="flex justify-end gap-3 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
@@ -320,14 +298,16 @@ const loading = ref(false);
 const showCreateModal = ref(false);
 const creating = ref(false);
 
+const defaultArgosUrl = 'https://app.argos-ci.com';
+
 const newProject = ref({
   name: '',
   description: '',
   teamId: 'default-team',
-  argosBaseUrl: '',
+  argosBaseUrl: defaultArgosUrl,
   argosProjectId: '',
   argosToken: '',
-  argosBranch: 'main',
+  argosBranch: 'develop',
 });
 
 const API_BASE_URL = 'http://localhost:3000/api/v1';
@@ -362,17 +342,22 @@ const closeCreateProjectModal = () => {
     name: '',
     description: '',
     teamId: 'default-team',
-    argosBaseUrl: '',
+    argosBaseUrl: defaultArgosUrl,
     argosProjectId: '',
     argosToken: '',
-    argosBranch: 'main',
+    argosBranch: 'develop',
   };
 };
 
 const createProject = async () => {
   creating.value = true;
   try {
-    await axios.post(`${API_BASE_URL}/visual-regression/projects`, newProject.value);
+    const payload = {
+      ...newProject.value,
+      argosBaseUrl: defaultArgosUrl,
+      argosBranch: 'develop',
+    };
+    await axios.post(`${API_BASE_URL}/visual-regression/projects`, payload);
     window.showToast?.('Project created successfully', 'success');
     await loadProjects();
     closeCreateProjectModal();

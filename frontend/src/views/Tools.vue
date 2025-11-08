@@ -282,31 +282,7 @@
               </p>
             </router-link>
 
-            <!-- Tool Card 10: Session Replay -->
-            <router-link 
-              to="/tools/session-replay" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">videocam</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Session Replay
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                See exactly what users experience with session replay for your applications.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 11: Photosensitivity Analysis -->
+            <!-- Tool Card 10: Photosensitivity Analysis -->
             <router-link 
               to="/tools/photosensitivity" 
               class="group rounded-2xl p-6 border transition-all"
@@ -351,6 +327,30 @@
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Convert PNG images to ICO format for favicons and app icons.
+              </p>
+            </router-link>
+
+            <!-- Tool Card 13: Alt Text Generator -->
+            <router-link 
+              to="/tools/alt-text-generator" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <Captions :size="48" :stroke-width="2" />
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Alt Text Generator
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Generate accessible, descriptive alt text for images to improve web accessibility.
               </p>
             </router-link>
           </div>
@@ -408,7 +408,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { MonitorCog, Tag, TextInitial, SwatchBook } from 'lucide-vue-next';
+import { MonitorCog, Tag, TextInitial, SwatchBook, Captions } from 'lucide-vue-next';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);

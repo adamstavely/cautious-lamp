@@ -310,10 +310,18 @@ const router = createRouter({
       path: '/admin/feature-flags',
       component: () => import('./views/FeatureFlags.vue'),
     },
-    {
-      path: '/admin/content',
-      component: () => import('./views/ContentManagement.vue'),
-    },
+      {
+        path: '/admin/content',
+        component: () => import('./views/ContentManagement.vue'),
+      },
+      {
+        path: '/admin/applications',
+        component: () => import('./views/ApplicationManagement.vue'),
+      },
+      {
+        path: '/admin/applications/register',
+        component: () => import('./views/ApplicationRegistration.vue'),
+      },
     {
       path: '/tokens',
       component: () => import('./views/Tokens.vue'),
@@ -417,6 +425,10 @@ const router = createRouter({
     {
       path: '/tools/png-to-ico',
       component: () => import('./views/PNGToICO.vue'),
+    },
+    {
+      path: '/tools/alt-text-generator',
+      component: () => import('./views/AltTextGenerator.vue'),
     },
     {
       path: '/tools/heuristic-evaluation',

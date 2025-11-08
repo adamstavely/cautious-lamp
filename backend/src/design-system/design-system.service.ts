@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException, Optional } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Optional, Inject, forwardRef } from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
-import { Inject } from '@nestjs/common';
 import { ComplianceScannerService, ScannerContext } from './compliance-scanner.service';
 import { ApplicationScannerService, ApplicationScanContext } from './application-scanner.service';
+import { VisualRegressionService } from '../visual-regression/visual-regression.service';
+import { SessionReplayService } from '../session-replay/session-replay.service';
 
 export interface Token {
   name: string;
@@ -41,13 +42,54 @@ export interface ComponentProp {
   description?: string;
 }
 
+export interface ApplicationCapabilities {
+  governance?: {
+    enabled: boolean;
+    rules?: string[]; // Specific rules to run (empty = all enabled rules)
+    scanSchedule?: 'manual' | 'daily' | 'weekly' | 'on-commit';
+    lastScan?: Date;
+  };
+  visualRegression?: {
+    enabled: boolean;
+    projectId?: string; // Link to visual regression project
+    argosProjectId?: string;
+    argosBaseUrl?: string;
+    argosBranch?: string;
+    lastRun?: Date;
+  };
+  sessionReplay?: {
+    enabled: boolean;
+    projectId?: string; // Link to session replay project
+    openreplayProjectKey?: string;
+    openreplayBaseUrl?: string;
+    privacySettings?: {
+      maskAllInputs?: boolean;
+      maskAllText?: boolean;
+      respectDoNotTrack?: boolean;
+    };
+  };
+}
+
+export interface ApplicationMetadata {
+  environment?: 'development' | 'staging' | 'production';
+  framework?: string;
+  language?: string;
+  tags?: string[];
+}
+
 export interface Application {
   id: string;
   name: string;
+  description?: string;
   repository?: string;
   version?: string;
+  applicationUrl?: string;
+  teamId?: string;
   registeredAt: Date;
+  updatedAt: Date;
   lastScanned?: Date;
+  capabilities?: ApplicationCapabilities;
+  metadata?: ApplicationMetadata;
 }
 
 export interface ComplianceCheck {
@@ -71,6 +113,8 @@ export class DesignSystemService {
   // Initialize with a default API key for testing
   constructor(
     @Optional() @Inject(ElasticsearchService) private readonly elasticsearchService?: ElasticsearchService,
+    @Optional() @Inject(forwardRef(() => VisualRegressionService)) private readonly visualRegressionService?: VisualRegressionService,
+    @Optional() @Inject(forwardRef(() => SessionReplayService)) private readonly sessionReplayService?: SessionReplayService,
   ) {
     this.scannerService = new ComplianceScannerService();
     this.applicationScanner = new ApplicationScannerService();
@@ -99,8 +143,35 @@ export class DesignSystemService {
       name: 'Mobile App',
       repository: 'https://github.com/company/mobile-app',
       version: '3.0.1',
+      applicationUrl: 'https://mobile.example.com',
       registeredAt: new Date('2024-01-05'),
-      lastScanned: new Date('2024-01-19')
+      updatedAt: new Date('2024-01-05'),
+      lastScanned: new Date('2024-01-19'),
+      capabilities: {
+        governance: {
+          enabled: true,
+          rules: [],
+          scanSchedule: 'manual',
+          lastScan: new Date('2024-01-19')
+        },
+        visualRegression: {
+          enabled: true,
+          argosProjectId: 'argos-project-789',
+          argosBaseUrl: 'https://app.argos-ci.com',
+          argosBranch: 'develop'
+        },
+        sessionReplay: {
+          enabled: true,
+          openreplayProjectKey: 'project-key-789',
+          openreplayBaseUrl: 'https://api.openreplay.com'
+        }
+      },
+      metadata: {
+        environment: 'production',
+        framework: 'React Native',
+        language: 'TypeScript',
+        tags: ['mobile', 'ios', 'android']
+      }
     });
   }
 
@@ -847,23 +918,218 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
     return this.components.filter(component => component.status === status);
   }
 
-  registerApplication(name: string, repository?: string, version?: string): Application {
+  async registerApplication(
+    name: string,
+    options?: {
+      description?: string;
+      repository?: string;
+      version?: string;
+      applicationUrl?: string;
+      teamId?: string;
+      capabilities?: ApplicationCapabilities;
+      metadata?: ApplicationMetadata;
+    }
+  ): Promise<Application> {
     const id = `app-${Date.now()}`;
+    const now = new Date();
+    const teamId = options?.teamId || 'default-team';
+    
+    // Initialize capabilities
+    const capabilities = options?.capabilities || {
+      governance: { enabled: false },
+      visualRegression: { enabled: false },
+      sessionReplay: { enabled: false }
+    };
+    
+    // Create visual regression project if enabled
+    if (capabilities.visualRegression?.enabled && capabilities.visualRegression?.argosProjectId) {
+      try {
+        if (this.visualRegressionService) {
+          const argosBaseUrl = capabilities.visualRegression.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
+          const vrProject = await this.visualRegressionService.createProject(teamId, {
+            name: `${name} - Visual Regression`,
+            description: `Visual regression testing for ${name}`,
+            argosProjectId: capabilities.visualRegression.argosProjectId,
+            argosBaseUrl: argosBaseUrl,
+            argosBranch: 'develop',
+          });
+          capabilities.visualRegression.projectId = vrProject.id;
+          capabilities.visualRegression.argosBaseUrl = argosBaseUrl;
+          capabilities.visualRegression.argosBranch = 'develop';
+        }
+      } catch (error: any) {
+        console.warn(`Failed to create visual regression project: ${error.message}`);
+        // Continue with registration even if VR project creation fails
+      }
+    }
+    
+    // Create session replay project if enabled
+    if (capabilities.sessionReplay?.enabled && capabilities.sessionReplay?.openreplayProjectKey) {
+      try {
+        if (this.sessionReplayService) {
+          const srProject = await this.sessionReplayService.createProject(teamId, {
+            name: `${name} - Session Replay`,
+            description: `Session replay for ${name}`,
+            applicationUrl: options?.applicationUrl,
+            openreplayProjectKey: capabilities.sessionReplay.openreplayProjectKey,
+            openreplayBaseUrl: capabilities.sessionReplay.openreplayBaseUrl,
+            privacySettings: capabilities.sessionReplay.privacySettings,
+          });
+          capabilities.sessionReplay.projectId = srProject.id;
+        }
+      } catch (error: any) {
+        console.warn(`Failed to create session replay project: ${error.message}`);
+        // Continue with registration even if SR project creation fails
+      }
+    }
+    
     const application: Application = {
       id,
       name,
-      repository,
-      version,
-      registeredAt: new Date()
+      description: options?.description,
+      repository: options?.repository,
+      version: options?.version,
+      applicationUrl: options?.applicationUrl,
+      teamId,
+      registeredAt: now,
+      updatedAt: now,
+      capabilities,
+      metadata: options?.metadata
     };
     this.applications.set(id, application);
     return application;
   }
 
-  getAllApplications(): { applications: Application[]; count: number } {
+  updateApplication(id: string, updates: Partial<Application>): Application {
+    const application = this.applications.get(id);
+    if (!application) {
+      throw new Error(`Application ${id} not found`);
+    }
+    const updated = {
+      ...application,
+      ...updates,
+      id, // Ensure ID cannot be changed
+      updatedAt: new Date()
+    };
+    this.applications.set(id, updated);
+    return updated;
+  }
+
+  async updateApplicationCapabilities(id: string, capabilities: Partial<ApplicationCapabilities>): Promise<Application> {
+    const application = this.applications.get(id);
+    if (!application) {
+      throw new Error(`Application ${id} not found`);
+    }
+    const currentCapabilities = application.capabilities || {
+      governance: { enabled: false },
+      visualRegression: { enabled: false },
+      sessionReplay: { enabled: false }
+    };
+    
+    const teamId = application.teamId || 'default-team';
+    
+    // Handle visual regression capability changes
+    if (capabilities.visualRegression) {
+      const vrCap = capabilities.visualRegression;
+      const currentVr = currentCapabilities.visualRegression || { enabled: false };
+      
+      // If enabling and project doesn't exist, create it
+      if (vrCap.enabled && !currentVr.enabled && vrCap.argosProjectId) {
+        try {
+          if (this.visualRegressionService) {
+            const argosBaseUrl = vrCap.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
+            const vrProject = await this.visualRegressionService.createProject(teamId, {
+              name: `${application.name} - Visual Regression`,
+              description: `Visual regression testing for ${application.name}`,
+              argosProjectId: vrCap.argosProjectId,
+              argosBaseUrl: argosBaseUrl,
+              argosBranch: 'develop',
+            });
+            vrCap.projectId = vrProject.id;
+            vrCap.argosBaseUrl = argosBaseUrl;
+            vrCap.argosBranch = 'develop';
+          }
+        } catch (error: any) {
+          console.warn(`Failed to create visual regression project: ${error.message}`);
+        }
+      }
+    }
+    
+    // Handle session replay capability changes
+    if (capabilities.sessionReplay) {
+      const srCap = capabilities.sessionReplay;
+      const currentSr = currentCapabilities.sessionReplay || { enabled: false };
+      
+      // If enabling and project doesn't exist, create it
+      if (srCap.enabled && !currentSr.enabled && srCap.openreplayProjectKey) {
+        try {
+          if (this.sessionReplayService) {
+            const srProject = await this.sessionReplayService.createProject(teamId, {
+              name: `${application.name} - Session Replay`,
+              description: `Session replay for ${application.name}`,
+              applicationUrl: application.applicationUrl,
+              openreplayProjectKey: srCap.openreplayProjectKey,
+              openreplayBaseUrl: srCap.openreplayBaseUrl,
+              privacySettings: srCap.privacySettings,
+            });
+            srCap.projectId = srProject.id;
+          }
+        } catch (error: any) {
+          console.warn(`Failed to create session replay project: ${error.message}`);
+        }
+      }
+    }
+    
+    // Deep merge capabilities
+    const updatedCapabilities: ApplicationCapabilities = {
+      governance: capabilities.governance 
+        ? { ...currentCapabilities.governance, ...capabilities.governance }
+        : currentCapabilities.governance,
+      visualRegression: capabilities.visualRegression
+        ? { ...currentCapabilities.visualRegression, ...capabilities.visualRegression }
+        : currentCapabilities.visualRegression,
+      sessionReplay: capabilities.sessionReplay
+        ? { ...currentCapabilities.sessionReplay, ...capabilities.sessionReplay }
+        : currentCapabilities.sessionReplay,
+    };
+    
+    const updated = {
+      ...application,
+      capabilities: updatedCapabilities,
+      updatedAt: new Date()
+    };
+    this.applications.set(id, updated);
+    return updated;
+  }
+
+  deleteApplication(id: string): boolean {
+    return this.applications.delete(id);
+  }
+
+  getApplication(id: string): Application | undefined {
+    return this.applications.get(id);
+  }
+
+  getAllApplications(filters?: {
+    teamId?: string;
+    capability?: 'governance' | 'visualRegression' | 'sessionReplay';
+  }): { applications: Application[]; count: number } {
+    let applications = Array.from(this.applications.values());
+    
+    if (filters?.teamId) {
+      applications = applications.filter(app => app.teamId === filters.teamId);
+    }
+    
+    if (filters?.capability) {
+      applications = applications.filter(app => {
+        const cap = app.capabilities?.[filters.capability];
+        return cap?.enabled === true;
+      });
+    }
+    
     return {
-      applications: Array.from(this.applications.values()),
-      count: this.applications.size
+      applications,
+      count: applications.length
     };
   }
 

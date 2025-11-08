@@ -5,10 +5,12 @@ import { ComponentRequestService } from './component-request.service';
 import { NotificationService } from './notification.service';
 import { ComplianceScannerService } from './compliance-scanner.service';
 import { ApplicationScannerService } from './application-scanner.service';
+import { VisualRegressionModule } from '../visual-regression/visual-regression.module';
+import { SessionReplayModule } from '../session-replay/session-replay.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
-  imports: [],
+  imports: [VisualRegressionModule, SessionReplayModule],
   controllers: [DesignSystemController],
   providers: [
     DesignSystemService,

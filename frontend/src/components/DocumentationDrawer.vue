@@ -202,6 +202,7 @@
                 ]"
               >
                 <Pipette v-if="item.icon === 'pipette'" :size="20" :stroke-width="2" />
+                <Captions v-else-if="item.icon === 'captions'" :size="20" :stroke-width="2" />
                 <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
@@ -384,7 +385,8 @@
                       : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
                 ]"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <SwatchBook v-if="item.icon === 'swatch-book'" :size="20" :stroke-width="2" />
+                <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -409,7 +411,9 @@
                       : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
                 ]"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <TextInitial v-if="item.icon === 'text-initial'" :size="20" :stroke-width="2" />
+                <Tag v-else-if="item.icon === 'tag'" :size="20" :stroke-width="2" />
+                <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -460,7 +464,8 @@
                       : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
                 ]"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <Captions v-if="item.icon === 'captions'" :size="20" :stroke-width="2" />
+                <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -740,7 +745,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
-import { Pipette, ScanEye } from 'lucide-vue-next';
+import { Pipette, ScanEye, Captions, Tag, TextInitial, SwatchBook } from 'lucide-vue-next';
 import { getFeatureFlagForRoute } from '../router/featureFlagGuards';
 import { flagCache } from '../composables/useFeatureFlags';
 
@@ -848,13 +853,14 @@ const toolGroups = computed(() => ({
   ],
   color: [
     { text: 'Gradient Generator', link: '/tools/gradient-generator', icon: 'gradient' },
-    { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'palette' },
+    { text: 'Palette Builder', link: '/palette-builder', icon: 'swatch-book' },
+    { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'format_color_fill' },
     { text: 'Color Converter', link: '/tools/color-converter', icon: 'swap_horiz' },
     { text: 'Color Contrast Checker', link: '/tools/color-contrast', icon: 'contrast' }
   ],
   text: [
-    { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'text_fields' },
-    { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'search' },
+    { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'text-initial' },
+    { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'tag' },
     { text: 'Font Scale', link: '/tools/font-scale', icon: 'format_size' },
     { text: 'Font Stack', link: '/tools/font-stack', icon: 'layers' },
     { text: 'Font Subsetting', link: '/tools/font-subsetting', icon: 'content_cut' }
@@ -863,11 +869,11 @@ const toolGroups = computed(() => ({
     { text: 'Migration Assistant', link: '/tools/migration', icon: 'refresh' },
     { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' },
     { text: 'Visual Regression Testing', link: '/tools/visual-regression', icon: 'compare' },
-    { text: 'Session Replay', link: '/tools/session-replay', icon: 'videocam' },
     { text: 'Photosensitivity Analysis', link: '/tools/photosensitivity', icon: 'visibility' }
   ],
   image: [
-    { text: 'PNG to ICO Converter', link: '/tools/png-to-ico', icon: 'image' }
+    { text: 'PNG to ICO Converter', link: '/tools/png-to-ico', icon: 'image' },
+    { text: 'Alt Text Generator', link: '/tools/alt-text-generator', icon: 'captions' }
   ]
 }));
 
@@ -912,6 +918,7 @@ const adminItems = [
   { text: 'Role Management', link: '/admin/roles', icon: 'admin_panel_settings' },
   { text: 'Feature Flags', link: '/admin/feature-flags', icon: 'flag' },
   { text: 'Component and Pattern Lifecycle Management', link: '/admin/content', icon: 'edit_document' },
+  { text: 'Application Management', link: '/admin/applications', icon: 'apps' },
   { text: 'Code Quality', link: '/admin/code-quality', icon: 'check_circle' },
   { text: 'Vulnerability Scanner', link: '/admin/security', icon: 'security' },
   { text: 'Performance Analysis', link: '/admin/performance', icon: 'speed' }
@@ -952,7 +959,8 @@ const uxResearchTools = [
   { text: 'User Persona Generator', link: '/research/user-personas', icon: 'person' },
   { text: 'NASA-TLX', link: '/tools/nasa-tlx', icon: 'psychology' },
   { text: 'System Usability Scale', link: '/tools/sus', icon: 'psychology' },
-  { text: 'Heuristic Evaluation', link: '/tools/heuristic-evaluation', icon: 'checklist' }
+  { text: 'Heuristic Evaluation', link: '/tools/heuristic-evaluation', icon: 'checklist' },
+  { text: 'Session Replay', link: '/tools/session-replay', icon: 'videocam' }
 ];
 
 const tokenItems = [

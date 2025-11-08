@@ -203,7 +203,7 @@
               </h2>
             </div>
             
-            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+            <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-6 mt-8">
               <!-- User Persona Generator Card -->
               <router-link 
                 to="/research/user-personas" 
@@ -250,6 +250,18 @@
                 </div>
                 <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">Heuristic Evaluation</h3>
                 <p class="text-white/80 text-sm">Evaluate interfaces using Nielsen's 10 Usability Heuristics.</p>
+              </router-link>
+
+              <!-- Session Replay Card -->
+              <router-link 
+                to="/tools/session-replay" 
+                class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
+              >
+                <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
+                  <span class="material-symbols-outlined text-5xl">videocam</span>
+                </div>
+                <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">Session Replay</h3>
+                <p class="text-white/80 text-sm">See exactly what users experience with session replay and heatmaps for your applications.</p>
               </router-link>
             </div>
           </div>

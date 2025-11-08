@@ -93,7 +93,7 @@ export class VisualRegressionService {
       description: dto.description,
       argosProjectId: dto.argosProjectId,
       argosBaseUrl,
-      argosBranch: dto.argosBranch || 'main',
+      argosBranch: dto.argosBranch || 'develop',
       argosToken: dto.argosToken, // In production, this should be encrypted
       config: dto.config || {},
       createdAt: new Date(),

@@ -224,9 +224,13 @@
                 <input
                   v-model="projectForm.argosBranch"
                   type="text"
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                  readonly
+                  class="w-full px-4 py-2 border rounded-lg bg-gray-100 dark:bg-slate-600 cursor-not-allowed"
+                  :class="isDarkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-600'"
                 />
+                <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                  Branch is set to <strong>develop</strong> by default for all projects
+                </p>
               </div>
 
               <div class="flex justify-end gap-3 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
@@ -275,7 +279,7 @@ const saving = ref(false);
 const projectForm = ref({
   name: '',
   description: '',
-  argosBranch: 'main',
+  argosBranch: 'develop',
 });
 
 const API_BASE_URL = 'http://localhost:3000/api/v1';
@@ -296,7 +300,7 @@ const loadProject = async () => {
     projectForm.value = {
       name: project.value.name,
       description: project.value.description || '',
-      argosBranch: project.value.argosBranch,
+      argosBranch: project.value.argosBranch || 'develop',
     };
     await loadTestRuns();
   } catch (error) {
@@ -319,7 +323,7 @@ const triggerTest = async () => {
   testRunning.value = true;
   try {
     const response = await axios.post(`${API_BASE_URL}/visual-regression/projects/${route.params.id}/runs`, {
-      branch: project.value.argosBranch,
+      branch: project.value.argosBranch || 'develop',
     });
     window.showToast?.('Test run started successfully', 'success');
     // Poll for updates
@@ -355,7 +359,7 @@ const resetForm = () => {
     projectForm.value = {
       name: project.value.name,
       description: project.value.description || '',
-      argosBranch: project.value.argosBranch,
+      argosBranch: project.value.argosBranch || 'develop',
     };
   }
 };

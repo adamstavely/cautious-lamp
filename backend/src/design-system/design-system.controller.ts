@@ -1,7 +1,10 @@
-import { Controller, Get, Post, Put, Delete, Query, Param, Headers, Body, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Query, Param, Headers, Body, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { DesignSystemService } from './design-system.service';
 import { ComponentRequestService } from './component-request.service';
 import { NotificationService } from './notification.service';
+import { RegisterApplicationDto } from './dto/register-application.dto';
+import { UpdateApplicationDto } from './dto/update-application.dto';
+import { UpdateCapabilitiesDto } from './dto/update-capabilities.dto';
 
 @Controller('api/v1')
 export class DesignSystemController {
@@ -151,18 +154,84 @@ export class DesignSystemController {
   }
 
   @Post('applications/register')
-  registerApplication(
-    @Body() body: { name: string; repository?: string; version?: string },
+  async registerApplication(
+    @Body() body: RegisterApplicationDto,
     @Headers('authorization') authHeader?: string,
   ) {
     this.validateRequest(authHeader);
-    return this.designSystemService.registerApplication(body.name, body.repository, body.version);
+    return await this.designSystemService.registerApplication(body.name, {
+      description: body.description,
+      repository: body.repository,
+      version: body.version,
+      applicationUrl: body.applicationUrl,
+      teamId: body.teamId,
+      capabilities: body.capabilities,
+      metadata: body.metadata,
+    });
   }
 
   @Get('applications')
-  getApplications(@Headers('authorization') authHeader?: string) {
+  getApplications(
+    @Query('teamId') teamId?: string,
+    @Query('capability') capability?: 'governance' | 'visualRegression' | 'sessionReplay',
+    @Headers('authorization') authHeader?: string,
+  ) {
     this.validateRequest(authHeader);
-    return this.designSystemService.getAllApplications();
+    return this.designSystemService.getAllApplications({ teamId, capability });
+  }
+
+  @Get('applications/:id')
+  getApplication(
+    @Param('id') id: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const application = this.designSystemService.getApplication(id);
+    if (!application) {
+      return { error: 'Application not found' };
+    }
+    return application;
+  }
+
+  @Put('applications/:id')
+  updateApplication(
+    @Param('id') id: string,
+    @Body() body: UpdateApplicationDto,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.updateApplication(id, body);
+  }
+
+  @Patch('applications/:id/capabilities')
+  async updateApplicationCapabilities(
+    @Param('id') id: string,
+    @Body() body: UpdateCapabilitiesDto,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    // Convert DTO to ApplicationCapabilities format
+    const capabilities: any = {};
+    if (body.governance) {
+      capabilities.governance = body.governance;
+    }
+    if (body.visualRegression) {
+      capabilities.visualRegression = body.visualRegression;
+    }
+    if (body.sessionReplay) {
+      capabilities.sessionReplay = body.sessionReplay;
+    }
+    return await this.designSystemService.updateApplicationCapabilities(id, capabilities);
+  }
+
+  @Delete('applications/:id')
+  deleteApplication(
+    @Param('id') id: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const deleted = this.designSystemService.deleteApplication(id);
+    return { success: deleted };
   }
 
   @Post('compliance/scan')
