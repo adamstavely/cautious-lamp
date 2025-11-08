@@ -24,7 +24,7 @@ export interface ComplianceCheck {
   file?: string;
   line?: number;
   element?: string;
-  impact?: 'minor' | 'moderate' | 'serious' | 'critical';
+  impact?: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW' | 'INFO';
 }
 
 @Injectable()
@@ -1084,7 +1084,7 @@ export class ApplicationScannerService {
         message: 'Video content detected. Please upload video files for IRIS photosensitivity analysis to check for luminance flashes, red saturation flashes, and spatial patterns that may cause photosensitive epileptic seizures. Use the "Photosensitivity Analysis" tool in the Tools section.',
         application: context.applicationName,
         file: context.file,
-        impact: 'serious',
+        impact: 'HIGH',
       });
     } else {
       checks.push({

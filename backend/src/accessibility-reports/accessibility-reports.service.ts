@@ -80,6 +80,12 @@ export interface PrioritizedFix {
   recommendation: string;
   wcagCriterion: string;
   checks: ComplianceCheck[];
+  codeExamples?: {
+    before: string;
+    after: string;
+    language: 'html' | 'vue' | 'react' | 'css';
+    explanation: string;
+  }[];
 }
 
 export interface ReportSchedule {
@@ -95,11 +101,46 @@ export interface ReportSchedule {
   recipients: string[]; // Email addresses
 }
 
+export interface ComplianceSLA {
+  id: string;
+  applicationId: string;
+  targetScore: number; // 0-100
+  targetLevel: 'A' | 'AA' | 'AAA';
+  criticalIssuesThreshold: number; // Max allowed critical issues
+  highIssuesThreshold: number; // Max allowed high issues
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MultiApplicationComplianceSummary {
+  totalApplications: number;
+  compliantApplications: number;
+  nonCompliantApplications: number;
+  averageScore: number;
+  applications: Array<{
+    applicationId: string;
+    applicationName: string;
+    latestReportId?: string;
+    complianceScore: number;
+    wcagLevel: 'A' | 'AA' | 'AAA' | 'Non-Compliant';
+    totalIssues: number;
+    criticalIssues: number;
+    highIssues: number;
+    slaStatus?: 'compliant' | 'at-risk' | 'non-compliant';
+    lastReportDate?: Date;
+    trend?: {
+      scoreChange: number;
+      issuesChange: number;
+    };
+  }>;
+}
+
 @Injectable()
 export class AccessibilityReportsService {
   private readonly logger = new Logger(AccessibilityReportsService.name);
   private reports: Map<string, AccessibilityReport> = new Map();
   private schedules: Map<string, ReportSchedule> = new Map();
+  private slas: Map<string, ComplianceSLA> = new Map();
 
   private mockDataInitialized = false;
 
@@ -497,6 +538,7 @@ export class AccessibilityReportsService {
         recommendation: this.getRecommendation(rule),
         wcagCriterion,
         checks: ruleChecks,
+        codeExamples: this.generateCodeExamples(rule, ruleChecks),
       });
     });
 
@@ -534,6 +576,96 @@ export class AccessibilityReportsService {
       return 'Associate all form inputs with labels using the "for" attribute or aria-label.';
     }
     return 'Review and fix accessibility issues according to WCAG 2.1 guidelines.';
+  }
+
+  /**
+   * Generate code examples for a fix
+   */
+  private generateCodeExamples(rule: string, checks: ComplianceCheck[]): PrioritizedFix['codeExamples'] {
+    const examples: PrioritizedFix['codeExamples'] = [];
+
+    if (rule.includes('Alt Text')) {
+      examples.push({
+        before: `<img src="hero.jpg" />`,
+        after: `<img src="hero.jpg" alt="Aerial view of downtown cityscape at sunset" />`,
+        language: 'html',
+        explanation: 'Add descriptive alt text that conveys the same information as the image would to a sighted user.',
+      });
+      examples.push({
+        before: `<img src="decorative-line.png" alt="Decorative line" />`,
+        after: `<img src="decorative-line.png" alt="" />`,
+        language: 'html',
+        explanation: 'Use empty alt text for purely decorative images that don\'t convey meaningful information.',
+      });
+    } else if (rule.includes('Color Contrast')) {
+      examples.push({
+        before: `<p style="color: #999999;">Low contrast text</p>`,
+        after: `<p style="color: #333333;">High contrast text</p>`,
+        language: 'html',
+        explanation: 'Ensure text color meets WCAG AA contrast ratio of 4.5:1 for normal text (3:1 for large text).',
+      });
+      examples.push({
+        before: `.text { color: #999; }`,
+        after: `.text { color: #333; }`,
+        language: 'css',
+        explanation: 'Update CSS color values to meet contrast requirements. Use tools to verify contrast ratios.',
+      });
+    } else if (rule.includes('Keyboard')) {
+      examples.push({
+        before: `<div onclick="handleClick()">Click me</div>`,
+        after: `<button onclick="handleClick()">Click me</button>`,
+        language: 'html',
+        explanation: 'Use semantic HTML elements (button, a, input) instead of divs for interactive elements to ensure keyboard accessibility.',
+      });
+      examples.push({
+        before: `<div class="button" tabindex="0" @click="handleClick">Click</div>`,
+        after: `<button @click="handleClick">Click</button>`,
+        language: 'vue',
+        explanation: 'Use native button elements which are keyboard accessible by default. Avoid adding tabindex to non-semantic elements.',
+      });
+    } else if (rule.includes('Focus')) {
+      examples.push({
+        before: `.button { outline: none; }`,
+        after: `.button:focus { outline: 2px solid #0066cc; outline-offset: 2px; }`,
+        language: 'css',
+        explanation: 'Add visible focus indicators so keyboard users can see which element has focus.',
+      });
+    } else if (rule.includes('ARIA')) {
+      examples.push({
+        before: `<div class="menu">...</div>`,
+        after: `<div class="menu" role="menu" aria-label="Main navigation">...</div>`,
+        language: 'html',
+        explanation: 'Add appropriate ARIA roles and labels to provide context for screen reader users.',
+      });
+      examples.push({
+        before: `<button>Toggle</button>`,
+        after: `<button aria-expanded="false" aria-controls="menu">Toggle</button>`,
+        language: 'html',
+        explanation: 'Use aria-expanded and aria-controls to indicate the state and relationship of interactive elements.',
+      });
+    } else if (rule.includes('Label')) {
+      examples.push({
+        before: `<input type="text" name="email" />`,
+        after: `<label for="email">Email Address</label>\n<input type="text" id="email" name="email" />`,
+        language: 'html',
+        explanation: 'Associate labels with form inputs using the for attribute and matching id.',
+      });
+      examples.push({
+        before: `<input type="checkbox" />`,
+        after: `<label>\n  <input type="checkbox" />\n  I agree to the terms\n</label>`,
+        language: 'html',
+        explanation: 'Wrap inputs with labels or use aria-label for inputs that cannot have visible labels.',
+      });
+    } else if (rule.includes('Heading')) {
+      examples.push({
+        before: `<h1>Title</h1>\n<h3>Subtitle</h3>`,
+        after: `<h1>Title</h1>\n<h2>Subtitle</h2>`,
+        language: 'html',
+        explanation: 'Maintain proper heading hierarchy without skipping levels (h1 → h2 → h3).',
+      });
+    }
+
+    return examples.length > 0 ? examples : undefined;
   }
 
   /**
@@ -685,6 +817,173 @@ export class AccessibilityReportsService {
    */
   deleteSchedule(scheduleId: string): boolean {
     return this.schedules.delete(scheduleId);
+  }
+
+  /**
+   * SLA Management
+   */
+  createSLA(sla: Omit<ComplianceSLA, 'id' | 'createdAt' | 'updatedAt'>): ComplianceSLA {
+    const id = `sla-${Date.now()}`;
+    const now = new Date();
+    const newSLA: ComplianceSLA = {
+      id,
+      ...sla,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.slas.set(id, newSLA);
+    return newSLA;
+  }
+
+  getSLA(slaId: string): ComplianceSLA | null {
+    return this.slas.get(slaId) || null;
+  }
+
+  getSLAByApplication(applicationId: string): ComplianceSLA | null {
+    const slas = Array.from(this.slas.values()).filter(sla => sla.applicationId === applicationId);
+    return slas.length > 0 ? slas[0] : null;
+  }
+
+  getAllSLAs(): ComplianceSLA[] {
+    return Array.from(this.slas.values());
+  }
+
+  updateSLA(slaId: string, updates: Partial<Omit<ComplianceSLA, 'id' | 'createdAt'>>): ComplianceSLA | null {
+    const sla = this.slas.get(slaId);
+    if (!sla) {
+      return null;
+    }
+    const updated: ComplianceSLA = {
+      ...sla,
+      ...updates,
+      updatedAt: new Date(),
+    };
+    this.slas.set(slaId, updated);
+    return updated;
+  }
+
+  deleteSLA(slaId: string): boolean {
+    return this.slas.delete(slaId);
+  }
+
+  /**
+   * Check SLA compliance status
+   */
+  checkSLACompliance(applicationId: string, report: AccessibilityReport): 'compliant' | 'at-risk' | 'non-compliant' {
+    const sla = this.getSLAByApplication(applicationId);
+    if (!sla) {
+      return 'non-compliant'; // No SLA defined means non-compliant
+    }
+
+    // Check score
+    if (report.complianceScore < sla.targetScore) {
+      return 'non-compliant';
+    }
+
+    // Check WCAG level
+    const levelOrder = { 'A': 1, 'AA': 2, 'AAA': 3, 'Non-Compliant': 0 };
+    if (levelOrder[report.wcagLevel] < levelOrder[sla.targetLevel]) {
+      return 'non-compliant';
+    }
+
+    // Check critical issues threshold
+    if (report.criticalIssues > sla.criticalIssuesThreshold) {
+      return 'non-compliant';
+    }
+
+    // Check high issues threshold
+    if (report.highIssues > sla.highIssuesThreshold) {
+      return 'at-risk';
+    }
+
+    // Check if close to thresholds (within 10% of threshold)
+    const criticalThreshold = sla.criticalIssuesThreshold * 0.9;
+    const highThreshold = sla.highIssuesThreshold * 0.9;
+    if (report.criticalIssues >= criticalThreshold || report.highIssues >= highThreshold) {
+      return 'at-risk';
+    }
+
+    return 'compliant';
+  }
+
+  /**
+   * Get multi-application compliance summary
+   */
+  getMultiApplicationComplianceSummary(): MultiApplicationComplianceSummary {
+    // Get all applications
+    const applications = this.designSystemService.getAllApplications({}).applications;
+    
+    const applicationSummaries: MultiApplicationComplianceSummary['applications'] = [];
+    let totalScore = 0;
+    let compliantCount = 0;
+    let nonCompliantCount = 0;
+
+    applications.forEach(app => {
+      const latestReport = this.getLatestReport(app.id);
+      if (!latestReport) {
+        // Application has no reports yet
+        applicationSummaries.push({
+          applicationId: app.id,
+          applicationName: app.name,
+          complianceScore: 0,
+          wcagLevel: 'Non-Compliant',
+          totalIssues: 0,
+          criticalIssues: 0,
+          highIssues: 0,
+          slaStatus: 'non-compliant',
+        });
+        nonCompliantCount++;
+        return;
+      }
+
+      // Get previous report for trend
+      const previousReport = this.getLatestReport(app.id, latestReport.id);
+      const trend = previousReport ? this.calculateTrend(latestReport, previousReport) : undefined;
+
+      // Check SLA compliance
+      const slaStatus = this.checkSLACompliance(app.id, latestReport);
+
+      if (slaStatus === 'compliant') {
+        compliantCount++;
+      } else {
+        nonCompliantCount++;
+      }
+
+      totalScore += latestReport.complianceScore;
+
+      applicationSummaries.push({
+        applicationId: app.id,
+        applicationName: app.name,
+        latestReportId: latestReport.id,
+        complianceScore: latestReport.complianceScore,
+        wcagLevel: latestReport.wcagLevel,
+        totalIssues: latestReport.totalIssues,
+        criticalIssues: latestReport.criticalIssues,
+        highIssues: latestReport.highIssues,
+        slaStatus,
+        lastReportDate: latestReport.generatedAt,
+        trend: trend ? {
+          scoreChange: trend.scoreChange,
+          issuesChange: trend.issuesChange,
+        } : undefined,
+      });
+    });
+
+    const averageScore = applications.length > 0 ? totalScore / applications.length : 0;
+
+    return {
+      totalApplications: applications.length,
+      compliantApplications: compliantCount,
+      nonCompliantApplications: nonCompliantCount,
+      averageScore: Math.round(averageScore * 100) / 100,
+      applications: applicationSummaries.sort((a, b) => {
+        // Sort by SLA status (compliant first), then by score
+        const statusOrder = { 'compliant': 0, 'at-risk': 1, 'non-compliant': 2 };
+        const statusDiff = (statusOrder[a.slaStatus || 'non-compliant'] || 2) - (statusOrder[b.slaStatus || 'non-compliant'] || 2);
+        if (statusDiff !== 0) return statusDiff;
+        return b.complianceScore - a.complianceScore;
+      }),
+    };
   }
 
   /**
