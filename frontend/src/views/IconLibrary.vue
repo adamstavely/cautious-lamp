@@ -74,7 +74,10 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Upload Icon Set</h2>
+                <h2 class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">upload</span>
+                  Upload Icon Set
+                </h2>
                 <button
                   @click="showUploadModal = true"
                   class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
@@ -94,25 +97,27 @@
             <div class="flex items-center justify-between mb-6">
               <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Icon Sets</h2>
               <div class="flex items-center gap-4">
-                <input
-                  v-model="searchQuery"
-                  type="text"
-                  placeholder="Search icons..."
-                  class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-700 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
+                <div class="relative">
+                  <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">search</span>
+                  <input
+                    v-model="searchQuery"
+                    type="text"
+                    placeholder="Search icons..."
+                    class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                    :class="isDarkMode 
+                      ? 'border-gray-600 bg-slate-700 text-white' 
+                      : 'border-gray-300 bg-white text-gray-900'"
+                  />
+                </div>
+                <Dropdown
+                  :model-value="selectedSet"
+                  @update:model-value="selectedSet = $event"
+                  :options="[
+                    { value: '', label: 'All Sets' },
+                    ...iconSets.map(set => ({ value: set.id, label: set.name }))
+                  ]"
+                  :is-dark-mode="isDarkMode"
                 />
-                <select
-                  v-model="selectedSet"
-                  class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-700 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
-                >
-                  <option value="">All Sets</option>
-                  <option v-for="set in iconSets" :key="set.id" :value="set.id">{{ set.name }}</option>
-                </select>
               </div>
             </div>
 
@@ -128,7 +133,12 @@
                 @click="selectedSet = set.id"
               >
                 <div class="flex items-center justify-between mb-4">
-                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ set.name }}</h3>
+                  <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span v-if="set.id === 'material'" class="material-symbols-outlined text-indigo-600">palette</span>
+                    <span v-else-if="set.id === 'lucide'" class="w-6 h-6 flex-shrink-0" v-html="lucideLogo"></span>
+                    <span v-else class="material-symbols-outlined text-indigo-600">{{ set.sourceIcon }}</span>
+                    {{ set.name }}
+                  </h3>
                   <span 
                     class="px-2 py-1 text-xs rounded-full"
                     :class="isDarkMode 
@@ -678,6 +688,7 @@ import { ref, computed, onMounted, onBeforeUnmount, h, createApp, watch } from '
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
+import Dropdown from '../components/Dropdown.vue';
 import * as LucideIcons from 'lucide-vue-next';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
@@ -1055,6 +1066,21 @@ const handleColorPickerApply = (color) => {
 const getSelectedSet = () => {
   return iconSets.value.find(set => set.id === selectedSet.value);
 };
+
+const lucideLogo = computed(() => {
+  // Lucide logo SVG - dark mode version
+  if (isDarkMode.value) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full">
+      <path d="M14 12C14 9.79086 12.2091 8 10 8C7.79086 8 6 9.79086 6 12C6 16.4183 9.58172 20 14 20C18.4183 20 22 16.4183 22 12C22 8.446 20.455 5.25285 18 3.05557" stroke="#fff" />
+      <path d="M10 12C10 14.2091 11.7909 16 14 16C16.2091 16 18 14.2091 18 12C18 7.58172 14.4183 4 10 4C5.58172 4 2 7.58172 2 12C2 15.5841 3.57127 18.8012 6.06253 21" stroke="#F56565" />
+    </svg>`;
+  }
+  // Lucide logo SVG - light mode version
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full">
+    <path d="M14 12C14 9.79086 12.2091 8 10 8C7.79086 8 6 9.79086 6 12C6 16.4183 9.58172 20 14 20C18.4183 20 22 16.4183 22 12C22 8.446 20.455 5.25285 18 3.05557" stroke="#2D3748" />
+    <path d="M10 12C10 14.2091 11.7909 16 14 16C16.2091 16 18 14.2091 18 12C18 7.58172 14.4183 4 10 4C5.58172 4 2 7.58172 2 12C2 15.5841 3.57127 18.8012 6.06253 21" stroke="#F56565" />
+  </svg>`;
+});
 
 const handleDrop = (e) => {
   isDragging.value = false;
