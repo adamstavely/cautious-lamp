@@ -240,11 +240,7 @@ const router = createRouter({
     },
     {
       path: '/components/deprecation',
-      redirect: '/tools/migration',
-    },
-    {
-      path: '/tools/migration',
-      component: () => import('./views/MigrationAssistant.vue'),
+      component: () => import('./views/DeprecationManager.vue'),
     },
     {
       path: '/code-quality',
@@ -341,6 +337,10 @@ const router = createRouter({
     {
       path: '/tokens/playground',
       component: () => import('./views/TokenPlayground.vue'),
+    },
+    {
+      path: '/tokens/migration',
+      component: () => import('./views/TokenMigration.vue'),
     },
     {
       path: '/patterns',

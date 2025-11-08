@@ -36,7 +36,6 @@ const routeToFlagMap = {
   '/theme-builder': 'theme-builder',
   '/admin/code-quality': 'code-quality',
   '/admin/security': 'vulnerability-scanner',
-  '/tools/migration': 'migration-assistant',
   '/fonts': 'font-library',
   '/design-assets/font-library': 'font-library',
   '/tools/font-scale': 'font-scale',

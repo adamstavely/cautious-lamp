@@ -23,6 +23,28 @@
                   Track and manage deprecated components. Set deprecation dates, migration paths, and retirement schedules.
                 </p>
               </div>
+              <div class="hidden md:block flex-shrink-0">
+                <div class="w-64 h-64 relative">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
+                    <defs>
+                      <linearGradient id="deprecationGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <!-- Warning triangle -->
+                    <path d="M 100 30 L 170 150 L 30 150 Z" fill="url(#deprecationGradient)" opacity="0.6"/>
+                    <path d="M 100 50 L 150 140 L 50 140 Z" fill="url(#deprecationGradient)" opacity="0.8"/>
+                    <!-- Exclamation mark -->
+                    <rect x="90" y="70" width="20" height="40" rx="2" fill="white" opacity="0.9"/>
+                    <circle cx="100" cy="125" r="6" fill="white" opacity="0.9"/>
+                    <!-- Component boxes representing deprecated items -->
+                    <rect x="40" y="160" width="30" height="20" rx="2" fill="url(#deprecationGradient)" opacity="0.4"/>
+                    <rect x="85" y="160" width="30" height="20" rx="2" fill="url(#deprecationGradient)" opacity="0.5"/>
+                    <rect x="130" y="160" width="30" height="20" rx="2" fill="url(#deprecationGradient)" opacity="0.3"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -41,18 +63,12 @@
                 <span class="material-symbols-outlined text-indigo-600">filter_list</span>
                 Filter
               </h3>
-              <select
-                v-model="filterStatus"
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                :class="isDarkMode 
-                  ? 'border-gray-600 bg-slate-700 text-white' 
-                  : 'border-gray-300 bg-white text-gray-900'"
-              >
-                <option value="all">All Status</option>
-                <option value="deprecated">Deprecated</option>
-                <option value="sunset">Sunset Scheduled</option>
-                <option value="retired">Retired</option>
-              </select>
+              <Dropdown
+                :model-value="filterStatus"
+                @update:model-value="filterStatus = $event"
+                :options="filterOptions"
+                :is-dark-mode="isDarkMode"
+              />
             </div>
 
             <!-- Deprecated Components -->
@@ -210,6 +226,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import Dropdown from '../components/Dropdown.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
@@ -255,6 +272,13 @@ const deprecatedComponents = ref([
 const deprecationSchedule = ref([
   { id: 1, component: 'OldButton', action: 'Sunset', date: new Date('2024-07-15') },
   { id: 2, component: 'LegacyCard', action: 'Retire', date: new Date('2024-05-01') }
+]);
+
+const filterOptions = computed(() => [
+  { label: 'All Status', value: 'all' },
+  { label: 'Deprecated', value: 'deprecated' },
+  { label: 'Sunset Scheduled', value: 'sunset' },
+  { label: 'Retired', value: 'retired' }
 ]);
 
 const filteredDeprecated = computed(() => {

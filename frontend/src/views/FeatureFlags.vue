@@ -298,7 +298,6 @@
                 <option value="/theme-builder">Theme Builder</option>
                 <option value="/admin/code-quality">Code Quality Checks</option>
                 <option value="/admin/security">Vulnerability Scanner</option>
-                <option value="/tools/migration">Migration Assistant</option>
               </optgroup>
               <optgroup label="Fonts">
                 <option value="/fonts">Fonts Overview</option>
@@ -588,7 +587,6 @@ const routeToFlagKey = {
   '/theme-builder': 'theme-builder',
   '/admin/code-quality': 'code-quality',
   '/admin/security': 'vulnerability-scanner',
-  '/tools/migration': 'migration-assistant',
   '/fonts': 'font-library',
   '/fonts/library': 'font-library',
   '/fonts/scale': 'font-scale',
@@ -643,7 +641,6 @@ const routeToName = {
   '/theme-builder': 'Theme Builder',
   '/admin/code-quality': 'Code Quality Checks',
   '/admin/security': 'Vulnerability Scanner',
-  '/tools/migration': 'Migration Assistant',
   '/fonts': 'Fonts Overview',
   '/fonts/library': 'Font Library',
   '/fonts/scale': 'Font Scale',

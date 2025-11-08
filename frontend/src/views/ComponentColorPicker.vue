@@ -850,6 +850,138 @@ const selectedColor = ref('#4f46e5');
             </div>
           </div>
 
+          <!-- Component Migration Setup -->
+          <div class="max-w-7xl mx-auto mb-16">
+            <div class="mb-8">
+              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Component Migration</h2>
+              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Migrate this component from one version to another with step-by-step guidance.</p>
+            </div>
+
+            <div 
+              class="rounded-lg shadow-sm border p-6"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">swap_horiz</span>
+                Component Migration Setup
+              </h3>
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    From Version
+                  </label>
+                  <Dropdown
+                    :model-value="componentMigration.fromVersion"
+                    @update:model-value="componentMigration.fromVersion = $event"
+                    :options="fromVersionOptions"
+                    :is-dark-mode="isDarkMode"
+                    placeholder="Select version..."
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    To Version
+                  </label>
+                  <Dropdown
+                    :model-value="componentMigration.toVersion"
+                    @update:model-value="componentMigration.toVersion = $event"
+                    :options="toVersionOptions"
+                    :is-dark-mode="isDarkMode"
+                    placeholder="Select version..."
+                    :disabled="!componentMigration.fromVersion"
+                  />
+                </div>
+                <div class="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    v-model="componentMigration.dryRun"
+                    id="dry-run-colorpicker"
+                    class="accent-indigo-600"
+                  />
+                  <label for="dry-run-colorpicker" class="text-sm cursor-pointer" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    Dry Run (Preview Only)
+                  </label>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    v-model="componentMigration.generateCodemod"
+                    id="codemod-colorpicker"
+                    class="accent-indigo-600"
+                  />
+                  <label for="codemod-colorpicker" class="text-sm cursor-pointer" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    Generate Codemod
+                  </label>
+                </div>
+                <button
+                  @click="analyzeComponentMigration"
+                  :disabled="!canAnalyzeComponent"
+                  class="w-full px-4 py-2 rounded-lg font-medium transition-colors"
+                  :class="canAnalyzeComponent
+                    ? (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')
+                    : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
+                >
+                  Analyze Migration
+                </button>
+              </div>
+
+              <!-- Migration Plan -->
+              <div 
+                v-if="componentMigrationPlan"
+                class="mt-6 pt-6 border-t"
+                :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
+              >
+                <div class="flex items-center justify-between mb-4">
+                  <h4 class="text-md font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-indigo-600">list</span>
+                    Migration Plan
+                  </h4>
+                  <button
+                    v-if="componentMigration.generateCodemod && componentCodemodScript"
+                    @click="downloadComponentCodemod"
+                    class="px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+                    :class="isDarkMode 
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                      : 'bg-purple-600 hover:bg-purple-700 text-white'"
+                  >
+                    Download Codemod
+                  </button>
+                </div>
+                <div class="space-y-3">
+                  <div
+                    v-for="(step, index) in componentMigrationPlan.steps"
+                    :key="index"
+                    class="p-4 rounded-lg border"
+                    :class="step.type === 'breaking'
+                      ? (isDarkMode ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200')
+                      : (isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200')"
+                  >
+                    <div class="flex items-start gap-3">
+                      <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm" :class="step.type === 'breaking' ? 'bg-red-500 text-white' : 'bg-indigo-500 text-white'">
+                        {{ index + 1 }}
+                      </div>
+                      <div class="flex-1">
+                        <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                          {{ step.title }}
+                        </div>
+                        <div class="text-xs mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                          {{ step.description }}
+                        </div>
+                        <div v-if="step.code" class="rounded-lg overflow-hidden mt-2" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                          <div class="p-3">
+                            <div class="text-xs text-green-400 font-mono whitespace-pre-wrap" v-pre><code>{{ step.code }}</code></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Related Components -->
           <div class="max-w-7xl mx-auto mb-16">
             <div class="mb-8">
@@ -935,11 +1067,12 @@ const selectedColor = ref('#4f46e5');
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
+import Dropdown from '../components/Dropdown.vue';
 import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
 import axios from 'axios';
 
@@ -1252,6 +1385,163 @@ const openExamplePicker = (index, event) => {
 const handleExampleApply = (color) => {
   exampleColors.value[exampleColorIndex.value] = color;
   exampleShowPicker2.value = false;
+};
+
+// Component Migration Setup
+// Get component name from route (e.g., /components/color-picker -> 'color-picker')
+const getComponentNameFromRoute = () => {
+  const path = route.path;
+  const match = path.match(/\/components\/([^/]+)/);
+  return match ? match[1] : 'color-picker';
+};
+
+const componentName = computed(() => {
+  const name = getComponentNameFromRoute();
+  // Capitalize first letter and handle hyphens for display
+  return name.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+});
+
+const componentMigration = ref({
+  component: getComponentNameFromRoute(), // Pre-filled with current component
+  fromVersion: '',
+  toVersion: '',
+  dryRun: true,
+  generateCodemod: false
+});
+
+const componentMigrationPlan = ref(null);
+const componentCodemodScript = ref('');
+
+// Version options for dropdowns
+const fromVersionOptions = computed(() => {
+  // Get all versions except the latest (current) one, sorted by version number (descending)
+  const versions = componentVersions.value
+    .map(v => v.version)
+    .filter(v => v !== currentVersion.value.version)
+    .sort((a, b) => {
+      // Simple version comparison - split by dots and compare numerically
+      const aParts = a.split('.').map(Number);
+      const bParts = b.split('.').map(Number);
+      for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+        const aVal = aParts[i] || 0;
+        const bVal = bParts[i] || 0;
+        if (bVal !== aVal) return bVal - aVal; // Descending order
+      }
+      return 0;
+    });
+  
+  return versions.map(v => ({ label: `v${v}`, value: v }));
+});
+
+const toVersionOptions = computed(() => {
+  if (!componentMigration.value.fromVersion) {
+    return [];
+  }
+  
+  // Get all versions that come after the selected "from version" (including current version)
+  const fromVersion = componentMigration.value.fromVersion;
+  const fromVersionParts = fromVersion.split('.').map(Number);
+  
+  const availableVersions = componentVersions.value
+    .map(v => v.version)
+    .filter(v => {
+      // Compare versions - only include versions greater than fromVersion
+      const vParts = v.split('.').map(Number);
+      for (let i = 0; i < Math.max(fromVersionParts.length, vParts.length); i++) {
+        const fromVal = fromVersionParts[i] || 0;
+        const vVal = vParts[i] || 0;
+        if (vVal > fromVal) return true;
+        if (vVal < fromVal) return false;
+      }
+      return false; // Equal versions
+    })
+    .sort((a, b) => {
+      // Sort ascending for "to version"
+      const aParts = a.split('.').map(Number);
+      const bParts = b.split('.').map(Number);
+      for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+        const aVal = aParts[i] || 0;
+        const bVal = bParts[i] || 0;
+        if (aVal !== bVal) return aVal - bVal;
+      }
+      return 0;
+    });
+  
+  return availableVersions.map(v => ({ label: `v${v}`, value: v }));
+});
+
+// Reset toVersion when fromVersion changes
+watch(() => componentMigration.value.fromVersion, () => {
+  componentMigration.value.toVersion = '';
+});
+
+const canAnalyzeComponent = computed(() => {
+  return componentMigration.value.fromVersion && componentMigration.value.toVersion;
+});
+
+const analyzeComponentMigration = () => {
+  if (!canAnalyzeComponent.value) return;
+  
+  const fromVersion = componentMigration.value.fromVersion;
+  const toVersion = componentMigration.value.toVersion;
+  
+  componentMigrationPlan.value = {
+    component: componentName.value,
+    fromVersion: fromVersion,
+    toVersion: toVersion,
+    steps: [
+      {
+        title: 'Update Import Path',
+        description: `Update the import statement from v${fromVersion} to v${toVersion}`,
+        type: 'standard',
+        code: `// Old\nimport ColorPicker from '@/components/v${fromVersion}/ColorPicker';\n\n// New\nimport ColorPicker from '@/components/v${toVersion}/ColorPicker';`
+      },
+      {
+        title: 'Review Breaking Changes',
+        description: 'Check the changelog above for any breaking changes between versions',
+        type: 'breaking'
+      },
+      {
+        title: 'Update Component Usage',
+        description: 'Review and update any deprecated props or APIs based on the version changelog',
+        type: 'standard'
+      }
+    ]
+  };
+
+  if (componentMigration.value.generateCodemod) {
+    componentCodemodScript.value = `// Codemod for ${componentName.value} ${fromVersion} → ${toVersion}
+// This codemod helps automate the migration process
+
+export default function transformer(file, api) {
+  const j = api.jscodeshift;
+  const root = j(file.source);
+  
+  // Update import paths
+  root.find(j.ImportDeclaration)
+    .filter(path => path.value.source.value.includes('v${fromVersion}'))
+    .replaceWith(path => {
+      return j.importDeclaration(
+        path.value.specifiers,
+        j.literal(path.value.source.value.replace('v${fromVersion}', 'v${toVersion}'))
+      );
+    });
+  
+  return root.toSource();
+}`;
+  }
+};
+
+const downloadComponentCodemod = () => {
+  const blob = new Blob([componentCodemodScript.value], { type: 'text/javascript' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `codemod-${componentMigration.value.component}-${componentMigration.value.fromVersion}-to-${componentMigration.value.toVersion}.js`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 
 // Helper function to generate React code - defined outside component to avoid Vue parsing

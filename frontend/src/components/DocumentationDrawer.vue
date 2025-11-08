@@ -738,6 +738,31 @@
             <span class="font-medium">{{ item.text }}</span>
           </router-link>
         </nav>
+
+        <!-- Utilities -->
+        <div class="mt-6">
+          <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Utilities</h4>
+          <nav class="space-y-1">
+            <router-link
+              v-for="item in filteredTokenUtilities"
+              :key="item.link"
+              :to="item.link"
+              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              :class="[
+                isActive(item.link)
+                  ? (isDarkMode 
+                    ? 'text-indigo-400 bg-indigo-900/20' 
+                    : 'text-indigo-600 bg-indigo-50')
+                  : (isDarkMode
+                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+              ]"
+            >
+              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+              <span class="font-medium">{{ item.text }}</span>
+            </router-link>
+          </nav>
+        </div>
       </div>
     </div>
   </div>
@@ -834,7 +859,6 @@ const reviewItems = [
 
 const tools = [
   { text: 'Overview', link: '/tools', icon: 'build' },
-  { text: 'Migration Assistant', link: '/tools/migration', icon: 'refresh' },
   { text: 'Gradient Generator', link: '/tools/gradient-generator', icon: 'gradient' },
   { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'text_fields' },
   { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'search' },
@@ -867,7 +891,6 @@ const toolGroups = computed(() => ({
     { text: 'Font Stack & Subsetting', link: '/tools/font-stack', icon: 'layers' }
   ],
   development: [
-    { text: 'Migration Assistant', link: '/tools/migration', icon: 'refresh' },
     { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' },
     { text: 'Visual Regression Testing', link: '/tools/visual-regression', icon: 'compare' }
   ],
@@ -898,7 +921,8 @@ const componentUtilities = [
   { text: 'Component Examples', link: '/components/examples', icon: 'preview' },
   { text: 'Testing Framework', link: '/components/testing', icon: 'bug_report' },
   { text: 'Documentation Generator', link: '/components/documentation', icon: 'description' },
-  { text: 'Component Composition', link: '/components/composition', icon: 'view_quilt' }
+  { text: 'Component Composition', link: '/components/composition', icon: 'view_quilt' },
+  { text: 'Deprecation Manager', link: '/components/deprecation', icon: 'warning' }
 ];
 
 const componentItems = [
@@ -969,6 +993,10 @@ const tokenItems = [
   { text: 'Token Studio', link: '/tokens/studio', icon: 'tune' },
   { text: 'Token Playground', link: '/tokens/playground', icon: 'palette' },
   { text: 'Style Library', link: '/tokens/library', icon: 'library_books' }
+];
+
+const tokenUtilities = [
+  { text: 'Token Migration', link: '/tokens/migration', icon: 'swap_horiz' }
 ];
 
 const showAdmin = computed(() => {
@@ -1106,6 +1134,10 @@ const filteredUxResearchTools = computed(() => {
 
 const filteredTokenItems = computed(() => {
   return tokenItems.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredTokenUtilities = computed(() => {
+  return tokenUtilities.filter(item => isRouteEnabled(item.link));
 });
 
 const filteredDesignAssets = computed(() => {
