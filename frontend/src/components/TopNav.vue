@@ -56,7 +56,7 @@
             fill="none"
           />
         </svg>
-        <span class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-300 dark:via-indigo-400 dark:to-indigo-500 bg-clip-text text-transparent whitespace-nowrap hidden sm:inline">Design System</span>
+        <span class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-300 dark:via-indigo-400 dark:to-indigo-500 bg-clip-text text-transparent whitespace-nowrap hidden sm:inline">DESIGN.COM</span>
       </router-link>
       
       <!-- Center Search Bar -->
