@@ -96,30 +96,6 @@
               </p>
             </router-link>
 
-            <!-- User Persona Generator Card -->
-            <router-link 
-              to="/research/user-personas"
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">person</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                User Persona Generator
-              </h3>
-              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Create detailed user personas from research data to inform design decisions.
-              </p>
-            </router-link>
-
             <!-- HCD Reports Card -->
             <router-link 
               to="/research/hcd-reports"
@@ -258,7 +234,7 @@
                 class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
               >
                 <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
-                  <MonitorCog :size="48" :stroke-width="2" />
+                  <MonitorCog :size="48" :stroke-width="2" class="text-white" />
                 </div>
                 <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">System Usability Scale</h3>
                 <p class="text-white/80 text-sm">Quick and reliable tool for measuring system usability.</p>
@@ -270,7 +246,7 @@
                 class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
               >
                 <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
-                  <Checklist :size="48" :stroke-width="2" />
+                  <ListChecks :size="48" :stroke-width="2" class="text-white" />
                 </div>
                 <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">Heuristic Evaluation</h3>
                 <p class="text-white/80 text-sm">Evaluate interfaces using Nielsen's 10 Usability Heuristics.</p>
@@ -287,6 +263,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { MonitorCog, ListChecks } from 'lucide-vue-next';
 
 const route = useRoute();
 const drawerOpen = ref(false);
