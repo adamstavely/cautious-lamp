@@ -57,10 +57,15 @@
           <div class="max-w-7xl mx-auto mb-16">
             <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
               <div 
-                class="rounded-2xl p-6 border"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
+                @click="setStatusFilter('Production Ready')"
+                class="rounded-2xl p-6 border cursor-pointer transition-all"
+                :class="selectedStatus === 'Production Ready'
+                  ? (isDarkMode 
+                    ? 'bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500' 
+                    : 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500')
+                  : (isDarkMode 
+                    ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
+                    : 'bg-white border-gray-200 hover:border-indigo-500')"
               >
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
@@ -72,10 +77,15 @@
                 <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ statusCounts.productionReady }}</p>
               </div>
               <div 
-                class="rounded-2xl p-6 border"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
+                @click="setStatusFilter('Planned')"
+                class="rounded-2xl p-6 border cursor-pointer transition-all"
+                :class="selectedStatus === 'Planned'
+                  ? (isDarkMode 
+                    ? 'bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500' 
+                    : 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500')
+                  : (isDarkMode 
+                    ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
+                    : 'bg-white border-gray-200 hover:border-indigo-500')"
               >
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
@@ -87,10 +97,15 @@
                 <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ statusCounts.planned }}</p>
               </div>
               <div 
-                class="rounded-2xl p-6 border"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
+                @click="setStatusFilter('In Progress')"
+                class="rounded-2xl p-6 border cursor-pointer transition-all"
+                :class="selectedStatus === 'In Progress'
+                  ? (isDarkMode 
+                    ? 'bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500' 
+                    : 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500')
+                  : (isDarkMode 
+                    ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
+                    : 'bg-white border-gray-200 hover:border-indigo-500')"
               >
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
@@ -102,10 +117,15 @@
                 <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ statusCounts.inProgress }}</p>
               </div>
               <div 
-                class="rounded-2xl p-6 border"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
+                @click="setStatusFilter('Sunsetting')"
+                class="rounded-2xl p-6 border cursor-pointer transition-all"
+                :class="selectedStatus === 'Sunsetting'
+                  ? (isDarkMode 
+                    ? 'bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500' 
+                    : 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500')
+                  : (isDarkMode 
+                    ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
+                    : 'bg-white border-gray-200 hover:border-indigo-500')"
               >
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
@@ -117,10 +137,15 @@
                 <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ statusCounts.sunsetting }}</p>
               </div>
               <div 
-                class="rounded-2xl p-6 border"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
+                @click="setStatusFilter('Deprecated')"
+                class="rounded-2xl p-6 border cursor-pointer transition-all"
+                :class="selectedStatus === 'Deprecated'
+                  ? (isDarkMode 
+                    ? 'bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500' 
+                    : 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500')
+                  : (isDarkMode 
+                    ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
+                    : 'bg-white border-gray-200 hover:border-indigo-500')"
               >
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
@@ -165,7 +190,7 @@
                   </thead>
                   <tbody :class="isDarkMode ? 'divide-y divide-gray-700' : 'divide-y divide-gray-200'">
                     <tr 
-                      v-for="pattern in patterns" 
+                      v-for="pattern in filteredPatterns" 
                       :key="pattern.name" 
                       class="transition-colors cursor-pointer"
                       :class="isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'"
@@ -241,6 +266,7 @@ const router = useRouter();
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
+const selectedStatus = ref(null);
 
 const patterns = ref([
   // Design Patterns
@@ -273,6 +299,22 @@ const statusCounts = computed(() => {
     deprecated: patterns.value.filter(p => p.status === 'Deprecated').length,
   };
 });
+
+const filteredPatterns = computed(() => {
+  if (!selectedStatus.value) {
+    return patterns.value;
+  }
+  return patterns.value.filter(p => p.status === selectedStatus.value);
+});
+
+const setStatusFilter = (status) => {
+  if (selectedStatus.value === status) {
+    // If clicking the same status, clear the filter
+    selectedStatus.value = null;
+  } else {
+    selectedStatus.value = status;
+  }
+};
 
 const getStatusClass = (status) => {
   switch (status) {
