@@ -241,7 +241,7 @@
                 @click="statusFilter = status"
                 class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                 :class="statusFilter === status
-                  ? 'bg-indigo-600 dark:bg-indigo-500 text-white'
+                  ? (isDarkMode ? 'bg-indigo-500 text-white' : 'bg-indigo-600 text-white')
                   : isDarkMode
                     ? 'bg-slate-800 text-gray-300 hover:bg-slate-700'
                     : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'"
@@ -311,14 +311,19 @@
                 <div v-if="canEditRoadmap" class="flex items-center gap-2">
                   <button
                     @click="editRoadmapItem(item)"
-                    class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+                    class="p-2 rounded-lg transition-colors"
+                    :class="isDarkMode 
+                      ? 'text-gray-400 hover:bg-gray-800' 
+                      : 'text-gray-600 hover:bg-gray-100'"
                   >
                     <span class="material-symbols-outlined text-lg">edit</span>
                   </button>
                   <button
                     @click="deleteRoadmapItem(item.id)"
-                    class="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-red-600 dark:text-red-400"
+                    class="p-2 rounded-lg transition-colors"
+                    :class="isDarkMode 
+                      ? 'text-red-400 hover:bg-red-900/30' 
+                      : 'text-red-600 hover:bg-red-100'"
                   >
                     <span class="material-symbols-outlined text-lg">delete</span>
                   </button>
@@ -346,7 +351,10 @@
               <button
                 v-if="statusFilter === 'all' && canEditRoadmap"
                 @click="showCreateModal = true"
-                class="px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-colors"
+                class="px-6 py-3 text-white rounded-lg font-semibold transition-colors"
+                :class="isDarkMode 
+                  ? 'bg-indigo-500 hover:bg-indigo-400' 
+                  : 'bg-indigo-600 hover:bg-indigo-700'"
               >
                 Add Item
               </button>
@@ -560,7 +568,8 @@
       @click.self="closeRoadmapModal"
     >
       <div 
-        class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+        class="rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+        :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
         role="dialog"
         aria-modal="true"
         aria-labelledby="roadmap-modal-title"
@@ -572,7 +581,8 @@
             </h2>
             <button
               @click="closeRoadmapModal"
-              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              class="p-1 rounded transition-colors"
+              :class="isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'"
               aria-label="Close modal"
             >
               <span class="material-symbols-outlined" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">close</span>
@@ -589,7 +599,10 @@
               v-model="roadmapForm.title"
               type="text"
               required
-              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+              :class="isDarkMode 
+                ? 'bg-slate-700 text-gray-100 border-gray-600 focus:ring-indigo-400 focus:border-indigo-400' 
+                : 'bg-white text-gray-900 border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2"
               placeholder="e.g., Dark Mode Support"
             />
           </div>
@@ -602,7 +615,10 @@
               v-model="roadmapForm.description"
               required
               rows="4"
-              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+              :class="isDarkMode 
+                ? 'bg-slate-700 text-gray-100 border-gray-600 focus:ring-indigo-400 focus:border-indigo-400' 
+                : 'bg-white text-gray-900 border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2"
               placeholder="Describe the roadmap item..."
             ></textarea>
           </div>
@@ -615,7 +631,10 @@
               <select
                 v-model="roadmapForm.category"
                 required
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                :class="isDarkMode 
+                ? 'bg-slate-700 text-gray-100 border-gray-600 focus:ring-indigo-400 focus:border-indigo-400' 
+                : 'bg-white text-gray-900 border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2"
               >
                 <option value="feature">Feature</option>
                 <option value="improvement">Improvement</option>
@@ -632,7 +651,10 @@
               <select
                 v-model="roadmapForm.priority"
                 required
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                :class="isDarkMode 
+                ? 'bg-slate-700 text-gray-100 border-gray-600 focus:ring-indigo-400 focus:border-indigo-400' 
+                : 'bg-white text-gray-900 border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2"
               >
                 <option value="high">High</option>
                 <option value="medium">Medium</option>
@@ -649,7 +671,10 @@
               <select
                 v-model="roadmapForm.status"
                 required
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                :class="isDarkMode 
+                ? 'bg-slate-700 text-gray-100 border-gray-600 focus:ring-indigo-400 focus:border-indigo-400' 
+                : 'bg-white text-gray-900 border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2"
               >
                 <option value="planned">Planned</option>
                 <option value="in-progress">In Progress</option>
@@ -665,7 +690,10 @@
               <input
                 v-model="roadmapForm.targetDate"
                 type="date"
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                :class="isDarkMode 
+                ? 'bg-slate-700 text-gray-100 border-gray-600 focus:ring-indigo-400 focus:border-indigo-400' 
+                : 'bg-white text-gray-900 border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2"
               />
             </div>
           </div>
@@ -673,15 +701,20 @@
           <div class="flex items-center gap-4 pt-4">
             <button
               type="submit"
-              class="flex-1 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-colors font-medium"
+              class="flex-1 px-4 py-2 text-white rounded-lg transition-colors font-medium"
+              :class="isDarkMode 
+                ? 'bg-indigo-500 hover:bg-indigo-400' 
+                : 'bg-indigo-600 hover:bg-indigo-700'"
             >
               {{ editingRoadmapItem ? 'Update Item' : 'Create Item' }}
             </button>
             <button
               type="button"
               @click="closeRoadmapModal"
-              class="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-              :class="isDarkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'"
+              class="px-4 py-2 border rounded-lg transition-colors font-medium"
+              :class="isDarkMode 
+                ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+                : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
             >
               Cancel
             </button>
@@ -697,19 +730,22 @@
       @click.self="showRequestModal = false"
     >
       <div 
-        class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        class="rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
         role="dialog"
         aria-modal="true"
         aria-labelledby="request-modal-title"
       >
         <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
           <div class="flex items-center justify-between">
-            <h2 id="request-modal-title" class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <h2 id="request-modal-title" class="text-2xl font-bold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <span class="material-symbols-outlined text-indigo-600">lightbulb</span>
               Request New Feature
             </h2>
             <button
               @click="showRequestModal = false"
-              class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              class="p-1 rounded transition-colors"
+              :class="isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'"
               aria-label="Close modal"
             >
               <span class="material-symbols-outlined" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">close</span>
@@ -762,37 +798,23 @@
             <label for="request-category" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
               Category *
             </label>
-            <select
+            <Dropdown
               id="request-category"
               v-model="requestForm.category"
-              required
-              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-            >
-              <option value="">Select category</option>
-              <option value="form-controls">Form Controls</option>
-              <option value="data-display">Data Display</option>
-              <option value="navigation">Navigation</option>
-              <option value="feedback">Feedback</option>
-              <option value="layout">Layout</option>
-              <option value="utilities">Utilities</option>
-            </select>
+              :options="categoryOptions"
+              :is-dark-mode="isDarkMode"
+            />
           </div>
           <div>
             <label for="request-priority" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
               Priority
             </label>
-            <select
+            <Dropdown
               id="request-priority"
               v-model="requestForm.priority"
-              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-            >
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
+              :options="priorityOptions"
+              :is-dark-mode="isDarkMode"
+            />
           </div>
           <div class="flex gap-3 pt-4">
             <button
@@ -825,19 +847,22 @@
       @click.self="showIssueModal = false"
     >
       <div 
-        class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        class="rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
         role="dialog"
         aria-modal="true"
         aria-labelledby="issue-modal-title"
       >
         <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
           <div class="flex items-center justify-between">
-            <h2 id="issue-modal-title" class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <h2 id="issue-modal-title" class="text-2xl font-bold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <span class="material-symbols-outlined text-indigo-600">bug_report</span>
               Report Issue
             </h2>
             <button
               @click="showIssueModal = false"
-              class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              class="p-1 rounded transition-colors"
+              :class="isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'"
               aria-label="Close modal"
             >
               <span class="material-symbols-outlined" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">close</span>
@@ -877,38 +902,23 @@
             <label for="issue-category" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
               Category *
             </label>
-            <select
+            <Dropdown
               id="issue-category"
               v-model="issueForm.category"
-              required
-              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-            >
-              <option value="">Select category</option>
-              <option value="bug">Bug</option>
-              <option value="components">Components</option>
-              <option value="tokens">Tokens</option>
-              <option value="guidelines">Guidelines</option>
-              <option value="documentation">Documentation</option>
-              <option value="other">Other</option>
-            </select>
+              :options="issueCategoryOptions"
+              :is-dark-mode="isDarkMode"
+            />
           </div>
           <div>
             <label for="issue-severity" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
               Severity *
             </label>
-            <select
+            <Dropdown
               id="issue-severity"
               v-model="issueForm.severity"
-              required
-              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
+              :options="severityOptions"
+              :is-dark-mode="isDarkMode"
+            />
           </div>
           <div class="flex gap-3 pt-4">
             <button
@@ -941,7 +951,8 @@
       @click.self="selectedRequest = null"
     >
       <div 
-        class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        class="rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
         role="dialog"
         aria-modal="true"
       >
@@ -952,7 +963,8 @@
             </h2>
             <button
               @click="selectedRequest = null"
-              class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              class="p-1 rounded transition-colors"
+              :class="isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'"
               aria-label="Close modal"
             >
               <span class="material-symbols-outlined" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">close</span>
@@ -1027,6 +1039,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
@@ -1172,6 +1185,41 @@ const issueForm = ref({
   severity: 'medium',
   description: ''
 });
+
+// Dropdown options
+const categoryOptions = ref([
+  { value: '', label: 'Select category' },
+  { value: 'form-controls', label: 'Form Controls' },
+  { value: 'data-display', label: 'Data Display' },
+  { value: 'navigation', label: 'Navigation' },
+  { value: 'feedback', label: 'Feedback' },
+  { value: 'layout', label: 'Layout' },
+  { value: 'utilities', label: 'Utilities' }
+]);
+
+const priorityOptions = ref([
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+  { value: 'high', label: 'High' },
+  { value: 'critical', label: 'Critical' }
+]);
+
+const issueCategoryOptions = ref([
+  { value: '', label: 'Select category' },
+  { value: 'bug', label: 'Bug' },
+  { value: 'components', label: 'Components' },
+  { value: 'tokens', label: 'Tokens' },
+  { value: 'guidelines', label: 'Guidelines' },
+  { value: 'documentation', label: 'Documentation' },
+  { value: 'other', label: 'Other' }
+]);
+
+const severityOptions = ref([
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'critical', label: 'Critical' }
+]);
 
 const filteredRoadmapItems = computed(() => {
   if (statusFilter.value === 'all') return roadmapItems.value;
@@ -1448,33 +1496,57 @@ const addComment = async (requestId) => {
 
 // Style Classes
 const getStatusClass = (status) => {
-  const classes = {
-    'planned': 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-    'in-progress': 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
-    'completed': 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-    'cancelled': 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+  const lightClasses = {
+    'planned': 'bg-blue-100 text-blue-700',
+    'in-progress': 'bg-yellow-100 text-yellow-700',
+    'completed': 'bg-green-100 text-green-700',
+    'cancelled': 'bg-gray-100 text-gray-700'
   };
-  return classes[status] || classes.planned;
+  const darkClasses = {
+    'planned': 'bg-blue-900/30 text-blue-300',
+    'in-progress': 'bg-yellow-900/30 text-yellow-300',
+    'completed': 'bg-green-900/30 text-green-300',
+    'cancelled': 'bg-gray-800 text-gray-300'
+  };
+  const baseClass = lightClasses[status] || lightClasses.planned;
+  const darkClass = darkClasses[status] || darkClasses.planned;
+  return isDarkMode.value ? darkClass : baseClass;
 };
 
 const getPriorityClass = (priority) => {
-  const classes = {
-    'high': 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-    'medium': 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
-    'low': 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+  const lightClasses = {
+    'high': 'bg-red-100 text-red-700',
+    'medium': 'bg-yellow-100 text-yellow-700',
+    'low': 'bg-gray-100 text-gray-700'
   };
-  return classes[priority] || classes.medium;
+  const darkClasses = {
+    'high': 'bg-red-900/30 text-red-300',
+    'medium': 'bg-yellow-900/30 text-yellow-300',
+    'low': 'bg-gray-800 text-gray-300'
+  };
+  const baseClass = lightClasses[priority] || lightClasses.medium;
+  const darkClass = darkClasses[priority] || darkClasses.medium;
+  return isDarkMode.value ? darkClass : baseClass;
 };
 
 const getCategoryClass = (category) => {
-  const classes = {
-    'feature': 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
-    'improvement': 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300',
-    'bug-fix': 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-    'deprecation': 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
-    'integration': 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+  const lightClasses = {
+    'feature': 'bg-purple-100 text-purple-700',
+    'improvement': 'bg-indigo-100 text-indigo-700',
+    'bug-fix': 'bg-red-100 text-red-700',
+    'deprecation': 'bg-orange-100 text-orange-700',
+    'integration': 'bg-blue-100 text-blue-700'
   };
-  return classes[category] || classes.feature;
+  const darkClasses = {
+    'feature': 'bg-purple-900/30 text-purple-300',
+    'improvement': 'bg-indigo-900/30 text-indigo-300',
+    'bug-fix': 'bg-red-900/30 text-red-300',
+    'deprecation': 'bg-orange-900/30 text-orange-300',
+    'integration': 'bg-blue-900/30 text-blue-300'
+  };
+  const baseClass = lightClasses[category] || lightClasses.feature;
+  const darkClass = darkClasses[category] || darkClasses.feature;
+  return isDarkMode.value ? darkClass : baseClass;
 };
 
 const getRequestStatusClass = (status) => {
