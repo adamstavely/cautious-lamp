@@ -275,6 +275,157 @@
             </div>
           </div>
 
+          <!-- Accessibility -->
+          <div class="max-w-7xl mx-auto mb-16">
+            <div 
+              class="border rounded-2xl p-8"
+              :class="isDarkMode 
+                ? 'bg-blue-900/20 border-blue-800' 
+                : 'bg-blue-50 border-blue-200'"
+            >
+              <div class="flex items-start gap-4">
+                <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">accessibility</span>
+                <div>
+                  <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Accessibility</h3>
+                  <ul class="space-y-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    <li class="flex items-start gap-2">
+                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
+                      <span>Ensure all navigation elements are keyboard accessible with proper tab order</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
+                      <span>Provide clear focus indicators for keyboard navigation</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
+                      <span>Use semantic HTML elements (nav, ul, li) for proper screen reader support</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
+                      <span>Include ARIA labels and landmarks to help users understand navigation structure</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
+                      <span>Ensure sufficient color contrast for navigation text and backgrounds</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
+                      <span>Provide skip links for users to bypass repetitive navigation</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Performance Section -->
+          <div class="max-w-7xl mx-auto mb-16">
+            <div 
+              class="rounded-lg shadow-sm border overflow-hidden"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
+              <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                <h2 class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">speed</span>
+                  Pattern Performance
+                </h2>
+              </div>
+              
+              <div class="p-6">
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">category</span>
+                      Category
+                    </div>
+                    <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      Navigation
+                    </div>
+                    <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                      Design Pattern
+                    </div>
+                  </div>
+                  
+                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">check_circle</span>
+                      Status
+                    </div>
+                    <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      Production Ready
+                    </div>
+                    <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                      v1.0.0
+                    </div>
+                  </div>
+                  
+                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">devices</span>
+                      Responsive
+                    </div>
+                    <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      Yes
+                    </div>
+                    <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                      Mobile & Desktop
+                    </div>
+                  </div>
+                  
+                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">accessibility</span>
+                      WCAG
+                    </div>
+                    <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      AA
+                    </div>
+                    <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                      Compliant
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Version History -->
+          <div class="max-w-7xl mx-auto mb-16">
+            <div class="mb-8">
+              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Version History</h2>
+              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Track pattern versions, view changelogs, and manage breaking changes.</p>
+            </div>
+
+            <!-- Current Version Info -->
+            <div 
+              class="rounded-lg shadow-sm border p-6 mb-6"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="text-xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    Current Version: v1.0.0
+                  </h3>
+                  <p class="text-sm mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    Initial release of navigation patterns with sidebar, top navigation, and breadcrumbs.
+                  </p>
+                </div>
+                <span 
+                  class="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                >
+                  Production Ready
+                </span>
+              </div>
+              <div class="flex items-center gap-4 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                <span>Released: Jan 15, 2024</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Related Patterns -->
           <div class="max-w-7xl mx-auto">
             <div class="mb-8">
