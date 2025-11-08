@@ -119,20 +119,20 @@ const router = createRouter({
       component: () => import('./views/Fonts.vue'),
     },
     {
-      path: '/fonts/library',
-      component: () => import('./views/FontLibrary.vue'),
-    },
-    {
       path: '/fonts/scale',
-      component: () => import('./views/FontScale.vue'),
+      redirect: '/tools/font-scale',
     },
     {
       path: '/fonts/stack',
-      component: () => import('./views/FontStack.vue'),
+      redirect: '/tools/font-stack',
     },
     {
       path: '/fonts/subsetting',
-      component: () => import('./views/FontSubsetting.vue'),
+      redirect: '/tools/font-subsetting',
+    },
+    {
+      path: '/fonts/library',
+      redirect: '/design-assets/font-library',
     },
     {
       path: '/font/:fontName',
@@ -403,6 +403,18 @@ const router = createRouter({
       component: () => import('./views/HeuristicEvaluation.vue'),
     },
     {
+      path: '/tools/font-scale',
+      component: () => import('./views/FontScale.vue'),
+    },
+    {
+      path: '/tools/font-stack',
+      component: () => import('./views/FontStack.vue'),
+    },
+    {
+      path: '/tools/font-subsetting',
+      component: () => import('./views/FontSubsetting.vue'),
+    },
+    {
       path: '/performance',
       redirect: '/admin/performance',
     },
@@ -469,6 +481,10 @@ const router = createRouter({
     {
       path: '/design-assets/company-logos',
       component: () => import('./views/CompanyLogos.vue'),
+    },
+    {
+      path: '/design-assets/font-library',
+      component: () => import('./views/FontLibrary.vue'),
     },
     {
       path: '/getting-started',

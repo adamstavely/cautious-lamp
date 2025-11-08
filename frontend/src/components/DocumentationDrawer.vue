@@ -170,25 +170,81 @@
             <span class="material-symbols-outlined">left_panel_close</span>
           </button>
         </div>
-        <nav class="space-y-1">
-          <router-link
-            v-for="item in componentItems"
-            :key="item.link"
-            :to="item.link"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-            :class="[
-              isActive(item.link)
-                ? (isDarkMode 
-                  ? 'text-indigo-400 bg-indigo-900/20' 
-                  : 'text-indigo-600 bg-indigo-50')
-                : (isDarkMode
-                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-            ]"
-          >
-            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-            <span class="font-medium">{{ item.text }}</span>
-          </router-link>
+        <nav class="space-y-6">
+          <!-- Overview -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Overview</h4>
+            <div class="space-y-1">
+              <router-link
+                to="/components"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive('/components')
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">widgets</span>
+                <span class="font-medium">Overview</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Utilities -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Utilities</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in componentUtilities"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <ScanEye v-if="item.icon === 'scan-eye'" :size="20" :stroke-width="2" />
+                <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Components -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Components</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in componentItems"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <Pipette v-if="item.icon === 'pipette'" :size="20" :stroke-width="2" />
+                <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
         </nav>
       </div>
       
@@ -208,41 +264,6 @@
         <nav class="space-y-1">
           <router-link
             v-for="item in gettingStartedItems"
-            :key="item.link"
-            :to="item.link"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-            :class="[
-              isActive(item.link)
-                ? (isDarkMode 
-                  ? 'text-indigo-400 bg-indigo-900/20' 
-                  : 'text-indigo-600 bg-indigo-50')
-                : (isDarkMode
-                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-            ]"
-          >
-            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-            <span class="font-medium">{{ item.text }}</span>
-          </router-link>
-        </nav>
-      </div>
-      
-      <!-- Fonts - only show when on fonts route -->
-      <div v-if="showFonts" class="mb-8">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Fonts</h3>
-          <button
-            @click="toggle"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
-            title="Close drawer"
-          >
-            <span class="material-symbols-outlined">left_panel_close</span>
-          </button>
-        </div>
-        <nav class="space-y-1">
-          <router-link
-            v-for="item in fonts"
             :key="item.link"
             :to="item.link"
             class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -610,6 +631,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
+import { Pipette, ScanEye } from 'lucide-vue-next';
 
 const props = defineProps({
   isOpen: {
@@ -685,12 +707,6 @@ const codePatterns = [
   { text: 'Toast Notification', link: '/patterns/toast-notification', icon: 'notifications' }
 ];
 
-const fonts = [
-  { text: 'Font Library', link: '/fonts/library', icon: 'library_books' },
-  { text: 'Font Scale', link: '/fonts/scale', icon: 'format_size' },
-  { text: 'Font Stack', link: '/fonts/stack', icon: 'layers' },
-  { text: 'Font Subsetting', link: '/fonts/subsetting', icon: 'content_cut' }
-];
 
 const reviewItems = [
   { text: 'Overview', link: '/review', icon: 'rate_review' },
@@ -727,7 +743,10 @@ const toolGroups = computed(() => ({
   ],
   text: [
     { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'text_fields' },
-    { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'search' }
+    { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'search' },
+    { text: 'Font Scale', link: '/tools/font-scale', icon: 'format_size' },
+    { text: 'Font Stack', link: '/tools/font-stack', icon: 'layers' },
+    { text: 'Font Subsetting', link: '/tools/font-subsetting', icon: 'content_cut' }
   ],
   ux: [
     { text: 'NASA-TLX', link: '/tools/nasa-tlx', icon: 'psychology' },
@@ -746,6 +765,7 @@ const toolGroups = computed(() => ({
 const designAssets = [
   { text: 'Overview', link: '/design-assets', icon: 'collections' },
   { text: 'Icons', link: '/design-assets/icons', icon: 'star' },
+  { text: 'Font Library', link: '/design-assets/font-library', icon: 'library_books' },
   { text: 'Country Flags', link: '/design-assets/country-flags', icon: 'flag' },
   { text: 'USG Seals', link: '/design-assets/usg-seals', icon: 'verified' },
   { text: 'Internal Seals', link: '/design-assets/internal-seals', icon: 'security' },
@@ -756,17 +776,19 @@ const designAssets = [
   { text: 'Company Logos', link: '/design-assets/company-logos', icon: 'business' }
 ];
 
-const componentItems = [
-  { text: 'Overview', link: '/components', icon: 'widgets' },
-  { text: 'Loupe Tool', link: '/components/loupe', icon: 'search' },
+const componentUtilities = [
+  { text: 'Loupe', link: '/components/loupe', icon: 'scan-eye' },
   { text: 'Component Status', link: '/components/status', icon: 'check_circle' },
   { text: 'Component Examples', link: '/components/examples', icon: 'preview' },
   { text: 'Testing Framework', link: '/components/testing', icon: 'bug_report' },
   { text: 'Documentation Generator', link: '/components/documentation', icon: 'description' },
   { text: 'Handoff Tools', link: '/components/handoff', icon: 'swap_horiz' },
-  { text: 'Component Composition', link: '/components/composition', icon: 'view_quilt' },
+  { text: 'Component Composition', link: '/components/composition', icon: 'view_quilt' }
+];
+
+const componentItems = [
   { text: 'Buttons', link: '/components/buttons', icon: 'smart_button' },
-  { text: 'Color Picker', link: '/components/color-picker', icon: 'palette' },
+  { text: 'Color Picker', link: '/components/color-picker', icon: 'pipette' },
   { text: 'Forms', link: '/components/forms', icon: 'description' },
   { text: 'Cards', link: '/components/cards', icon: 'view_module' },
   { text: 'Navigation', link: '/components/navigation', icon: 'navigation' },
@@ -839,9 +861,6 @@ const showPatterns = computed(() => {
   return route.path === '/patterns' || route.path.startsWith('/patterns/');
 });
 
-const showFonts = computed(() => {
-  return route.path === '/fonts' || route.path.startsWith('/fonts/');
-});
 
 const showTools = computed(() => {
   return route.path === '/tools' || route.path.startsWith('/tools/') || route.path === '/palette-builder' || route.path === '/theme-builder';
@@ -856,7 +875,7 @@ const showComponents = computed(() => {
 });
 
 const showMainSections = computed(() => {
-  return !showPatterns.value && !showFonts.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value && !showTokens.value && !showAdmin.value && !showGettingStarted.value && !showResearch.value;
+  return !showPatterns.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value && !showTokens.value && !showAdmin.value && !showGettingStarted.value && !showResearch.value;
 });
 
 const isActive = (path) => {

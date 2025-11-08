@@ -167,7 +167,8 @@
                   >
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">{{ component.icon }}</span>
+                        <Pipette v-if="component.name === 'Color Picker'" :size="20" :stroke-width="2" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
+                        <span v-else class="material-symbols-outlined" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">{{ component.icon }}</span>
                         <span class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ component.name }}</span>
                       </div>
                     </td>
@@ -216,6 +217,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { Pipette } from 'lucide-vue-next';
 
 const router = useRouter();
 
@@ -231,7 +233,7 @@ const components = ref([
   { name: 'Checkbox', icon: 'check_box', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-03' },
   { name: 'Radio', icon: 'radio_button_checked', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-02' },
   { name: 'Switch', icon: 'toggle_on', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2023-12-28' },
-  { name: 'Color Picker', icon: 'palette', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-15' },
+  { name: 'Color Picker', icon: 'pipette', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-15' },
   { name: 'Tabs', icon: 'tab', status: 'In Progress', version: '0.9.0', documentation: 'Partial', lastUpdated: '2024-01-20' },
   { name: 'Accordion', icon: 'expand_more', status: 'In Progress', version: '0.8.0', documentation: 'Partial', lastUpdated: '2024-01-18' },
   { name: 'Tooltip', icon: 'info', status: 'In Progress', version: '0.7.0', documentation: 'Partial', lastUpdated: '2024-01-16' },

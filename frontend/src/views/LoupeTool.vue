@@ -23,7 +23,7 @@
                 <div class="flex-1">
                   <div class="flex items-center gap-4 mb-4">
                     <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Loupe Tool
+                      Loupe
                     </h1>
                   </div>
                   <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
@@ -31,7 +31,7 @@
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">search</span>
+                      <ScanEye :size="18" :stroke-width="2" />
                       Component Inspector
                     </span>
                     <span class="flex items-center gap-2">
@@ -238,6 +238,7 @@
 import { ref, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { ScanEye } from 'lucide-vue-next';
 
 const drawerOpen = ref(false);
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));

@@ -258,7 +258,7 @@
               <optgroup label="Components">
                 <option value="/components">Components Overview</option>
                 <option value="/components/status">Component Status</option>
-                <option value="/components/loupe">Loupe Tool</option>
+                <option value="/components/loupe">Loupe</option>
                 <option value="/components/testing">Component Testing</option>
                 <option value="/components/documentation">Documentation Generator</option>
                 <option value="/components/handoff">Design-Dev Handoff</option>
@@ -611,7 +611,7 @@ const routeToFlagKey = {
 const routeToName = {
   '/components': 'Components Overview',
   '/components/status': 'Component Status',
-  '/components/loupe': 'Loupe Tool',
+  '/components/loupe': 'Loupe',
   '/components/testing': 'Component Testing',
   '/components/documentation': 'Documentation Generator',
   '/components/handoff': 'Design-Dev Handoff',

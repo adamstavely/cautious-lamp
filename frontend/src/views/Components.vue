@@ -62,55 +62,7 @@
           </div>
           
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <!-- Component Card 0: Loupe Tool -->
-            <router-link 
-              to="/components/loupe" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">search</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Loupe Tool
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Inspect design system components on any page.
-              </p>
-            </router-link>
-
-            <!-- Component Card 1: Component Status -->
-            <router-link 
-              to="/components/status" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">check_circle</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Component Status
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Track component development status and availability.
-              </p>
-            </router-link>
-
-            <!-- Component Card 2: Buttons -->
+            <!-- Component Card 0: Buttons -->
             <router-link 
               to="/components/buttons" 
               class="group rounded-2xl p-6 border transition-all"
@@ -142,8 +94,8 @@
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">palette</span>
+              <div class="w-12 h-12 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <Pipette :size="48" :stroke-width="2" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -302,32 +254,7 @@
               </p>
             </router-link>
 
-            <!-- Component Card 8: Dependency Graph -->
-            <router-link 
-              to="/components/dependencies" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">account_tree</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Dependency Graph
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Visualize component relationships and dependencies.
-              </p>
-            </router-link>
-
-
-            <!-- Component Card 10: Export -->
+            <!-- Component Card 7: Export -->
             <router-link 
               to="/components/export" 
               class="group rounded-2xl p-6 border transition-all"
@@ -358,26 +285,46 @@
           <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-950 dark:via-indigo-900 dark:to-indigo-800">
             <div class="flex items-center justify-between mb-8">
               <h2 class="text-4xl md:text-5xl font-bold text-white">
-                Building with components
+                Component Tools
               </h2>
-              <button class="px-6 py-2 rounded-full border border-white/30 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-                View all components
-              </button>
             </div>
             
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-              <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                <h3 class="text-white font-semibold text-xl mb-2">Button Variants</h3>
-                <p class="text-white/80 text-sm">Explore primary, secondary, and tertiary button styles with different sizes and states.</p>
-              </div>
-              <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                <h3 class="text-white font-semibold text-xl mb-2">Form Controls</h3>
-                <p class="text-white/80 text-sm">Learn how to build accessible forms with input fields, selects, checkboxes, and more.</p>
-              </div>
-              <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                <h3 class="text-white font-semibold text-xl mb-2">Card Components</h3>
-                <p class="text-white/80 text-sm">Discover different card layouts and patterns for displaying content effectively.</p>
-              </div>
+            <div class="grid md:grid-cols-3 gap-6 mt-8">
+              <!-- Component Status Card -->
+              <router-link 
+                to="/components/status" 
+                class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
+              >
+                <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
+                  <span class="material-symbols-outlined text-5xl">check_circle</span>
+                </div>
+                <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">Component Status</h3>
+                <p class="text-white/80 text-sm">Track component development status and availability.</p>
+              </router-link>
+
+              <!-- Loupe Card -->
+              <router-link 
+                to="/components/loupe" 
+                class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
+              >
+                <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
+                  <ScanEye :size="48" :stroke-width="2" />
+                </div>
+                <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">Loupe</h3>
+                <p class="text-white/80 text-sm">Inspect design system components on any page.</p>
+              </router-link>
+
+              <!-- Dependency Graph Card -->
+              <router-link 
+                to="/components/dependencies" 
+                class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
+              >
+                <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
+                  <span class="material-symbols-outlined text-5xl">account_tree</span>
+                </div>
+                <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">Dependency Graph</h3>
+                <p class="text-white/80 text-sm">Visualize component relationships and dependencies.</p>
+              </router-link>
             </div>
           </div>
         </div>
@@ -390,6 +337,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { RouterLink } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { Pipette, ScanEye } from 'lucide-vue-next';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
