@@ -100,7 +100,7 @@ GET    /api/v1/heatmaps/{heatmapId}/data
 **Phase 1: Quick Win (Recommended)**
 Implement **Option C.1 (Embed UI)** or **Option C.3 (Hybrid)**:
 - Add "Heatmaps" tab to project page
-- Generate direct links to OpenReplay heatmap pages
+- Generate direct links to OpenReplay heatmap pagesl
 - Use iframe to embed heatmap viewer
 - This provides immediate value with minimal development
 

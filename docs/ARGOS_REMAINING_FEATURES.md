@@ -163,13 +163,6 @@ The following features were recently implemented:
 - [ ] Token rotation support
 - [ ] OAuth integration for Argos
 
-### 13. Quota & Usage Tracking
-- [ ] Free tier limits (5 projects, 100 runs/month)
-- [ ] Pro tier limits (unlimited projects, 1000 runs/month)
-- [ ] Enterprise tier (custom limits)
-- [ ] Usage dashboard
-- [ ] Quota warnings
-- [ ] Billing integration (if applicable)
 
 ### 14. Performance Optimizations
 - [ ] Image CDN integration
