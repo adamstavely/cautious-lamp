@@ -521,6 +521,219 @@ const selectedColor = ref('#4f46e5');
               </div>
             </div>
           </div>
+
+          <!-- Version History -->
+          <div class="max-w-7xl mx-auto mb-16">
+            <div class="mb-8">
+              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Version History</h2>
+              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Track component versions, view changelogs, and manage breaking changes.</p>
+            </div>
+
+            <!-- Current Version Info -->
+            <div 
+              v-if="currentVersion.version"
+              class="rounded-lg shadow-sm border p-6 mb-6"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="text-xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    Current Version: v{{ currentVersion.version }}
+                  </h3>
+                  <p class="text-sm mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    {{ currentVersion.description }}
+                  </p>
+                </div>
+                <span 
+                  class="px-3 py-1 rounded-full text-xs font-medium"
+                  :class="getStatusBadgeClass(currentVersion.status)"
+                >
+                  {{ currentVersion.status }}
+                </span>
+              </div>
+              <div class="flex items-center gap-4 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                <span>Released: {{ formatDate(currentVersion.releasedAt) }}</span>
+                <span v-if="currentVersion.lastUpdated">Last Updated: {{ formatDate(currentVersion.lastUpdated) }}</span>
+              </div>
+            </div>
+
+            <!-- Version History List -->
+            <div 
+              v-if="componentVersions.length > 0"
+              class="rounded-lg shadow-sm border"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
+              <div class="divide-y" :class="isDarkMode ? 'divide-gray-700' : 'divide-gray-200'">
+                <div
+                  v-for="version in componentVersions"
+                  :key="version.version"
+                  class="p-6"
+                >
+                  <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-3 mb-2">
+                        <h4 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                          v{{ version.version }}
+                        </h4>
+                        <span 
+                          class="px-2 py-0.5 rounded text-xs font-medium"
+                          :class="getStatusBadgeClass(version.status)"
+                        >
+                          {{ version.status }}
+                        </span>
+                        <span 
+                          v-if="version.breaking"
+                          class="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                        >
+                          Breaking Changes
+                        </span>
+                      </div>
+                      <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        {{ version.description }}
+                      </p>
+                      <div class="text-xs mb-3" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                        Released: {{ formatDate(version.releasedAt) }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Changelog -->
+                  <div v-if="version.changelog && version.changelog.length > 0" class="ml-6 border-l-2 pl-4 mb-4"
+                    :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
+                  >
+                    <h5 class="text-sm font-semibold mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Changelog
+                    </h5>
+                    <ul class="space-y-1 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      <li v-for="(change, idx) in version.changelog" :key="idx" class="flex items-start gap-2">
+                        <span class="mt-1" :class="getChangeTypeColor(change.type)">
+                          {{ getChangeTypeIcon(change.type) }}
+                        </span>
+                        <span>{{ change.description }}</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <!-- Migration Guide -->
+                  <div v-if="version.migrationGuide" class="mt-4 p-4 rounded-lg"
+                    :class="isDarkMode ? 'bg-slate-800 border border-gray-700' : 'bg-yellow-50 border border-yellow-200'"
+                  >
+                    <div class="flex items-start gap-2 mb-2">
+                      <span class="material-symbols-outlined text-yellow-600 dark:text-yellow-400">warning</span>
+                      <h5 class="text-sm font-semibold" :class="isDarkMode ? 'text-yellow-300' : 'text-yellow-900'">
+                        Migration Guide
+                      </h5>
+                    </div>
+                    <p class="text-sm" :class="isDarkMode ? 'text-yellow-200' : 'text-yellow-800'">
+                      {{ version.migrationGuide }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty State -->
+            <div 
+              v-else
+              class="rounded-lg shadow-sm border p-12 text-center"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
+              <span class="material-symbols-outlined text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
+                history
+              </span>
+              <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                No version history
+              </p>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                Version history will appear here once versions are added
+              </p>
+            </div>
+          </div>
+
+          <!-- Related Components -->
+          <div class="max-w-7xl mx-auto mb-16">
+            <div class="mb-8">
+              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Related Components</h2>
+              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Components that work well with ColorPicker or serve similar purposes.</p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-6">
+              <router-link 
+                to="/components/forms" 
+                class="rounded-2xl border p-6 transition-all group"
+                :class="isDarkMode 
+                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-400' 
+                  : 'bg-white border-gray-200 hover:border-indigo-500'"
+              >
+                <div class="flex items-center gap-3 mb-3">
+                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">description</span>
+                  <h3 
+                    class="text-lg font-semibold transition-colors"
+                    :class="isDarkMode 
+                      ? 'text-white group-hover:text-indigo-400' 
+                      : 'text-gray-900 group-hover:text-indigo-600'"
+                  >
+                    Forms
+                  </h3>
+                </div>
+                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  Form components often use color pickers for theme customization and color input fields.
+                </p>
+              </router-link>
+
+              <router-link 
+                to="/components/buttons" 
+                class="rounded-2xl border p-6 transition-all group"
+                :class="isDarkMode 
+                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-400' 
+                  : 'bg-white border-gray-200 hover:border-indigo-500'"
+              >
+                <div class="flex items-center gap-3 mb-3">
+                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">smart_button</span>
+                  <h3 
+                    class="text-lg font-semibold transition-colors"
+                    :class="isDarkMode 
+                      ? 'text-white group-hover:text-indigo-400' 
+                      : 'text-gray-900 group-hover:text-indigo-600'"
+                  >
+                    Buttons
+                  </h3>
+                </div>
+                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  Buttons can trigger color pickers for theme customization and color selection workflows.
+                </p>
+              </router-link>
+
+              <router-link 
+                to="/theme-builder" 
+                class="rounded-2xl border p-6 transition-all group"
+                :class="isDarkMode 
+                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-400' 
+                  : 'bg-white border-gray-200 hover:border-indigo-500'"
+              >
+                <div class="flex items-center gap-3 mb-3">
+                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">palette</span>
+                  <h3 
+                    class="text-lg font-semibold transition-colors"
+                    :class="isDarkMode 
+                      ? 'text-white group-hover:text-indigo-400' 
+                      : 'text-gray-900 group-hover:text-indigo-600'"
+                  >
+                    Theme Builder
+                  </h3>
+                </div>
+                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  Theme Builder uses color pickers extensively for customizing design system colors and themes.
+                </p>
+              </router-link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -606,6 +819,75 @@ const handleColorApply = (color) => {
   selectedColor.value = color;
   propValues.value.initialColor = color;
   showPicker.value = false;
+};
+
+// Component-specific version data - in a real app, this would come from an API
+const componentVersions = ref([
+  {
+    version: '1.0.0',
+    status: 'Current',
+    description: 'Initial release with full WCAG 2.1 AA compliance',
+    releasedAt: '2024-01-15',
+    lastUpdated: '2024-01-15',
+    breaking: false,
+    changelog: [
+      { type: 'added', description: 'Initial release of ColorPicker component' },
+      { type: 'added', description: 'Gradient selector for saturation and lightness' },
+      { type: 'added', description: 'Hue slider with full color spectrum' },
+      { type: 'added', description: 'RGB, Hex, and CMYK color format support' },
+      { type: 'added', description: 'Eyedropper tool integration' },
+      { type: 'added', description: 'Full keyboard navigation support' },
+      { type: 'added', description: 'WCAG 2.1 AA compliant with ARIA labels and roles' },
+      { type: 'added', description: 'Dark mode support via previewDarkMode prop' },
+      { type: 'added', description: 'Smart positioning to prevent off-screen display' },
+    ]
+  },
+]);
+
+const currentVersion = computed(() => {
+  return componentVersions.value.find(v => v.status === 'Current') || componentVersions.value[0] || {};
+});
+
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+};
+
+const getStatusBadgeClass = (status) => {
+  const classes = {
+    'Current': isDarkMode.value ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700',
+    'Stable': isDarkMode.value ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700',
+    'Deprecated': isDarkMode.value ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-700',
+    'Beta': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300' : 'bg-yellow-100 text-yellow-700',
+  };
+  return classes[status] || (isDarkMode.value ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700');
+};
+
+const getChangeTypeIcon = (type) => {
+  const icons = {
+    'added': '✓',
+    'changed': '→',
+    'deprecated': '⚠',
+    'removed': '✗',
+    'fixed': '🔧',
+    'improved': '↑',
+    'breaking': '⚠',
+  };
+  return icons[type] || '•';
+};
+
+const getChangeTypeColor = (type) => {
+  const colors = {
+    'added': 'text-green-600 dark:text-green-400',
+    'changed': 'text-blue-600 dark:text-blue-400',
+    'deprecated': 'text-yellow-600 dark:text-yellow-400',
+    'removed': 'text-red-600 dark:text-red-400',
+    'fixed': 'text-purple-600 dark:text-purple-400',
+    'improved': 'text-indigo-600 dark:text-indigo-400',
+    'breaking': 'text-red-600 dark:text-red-400 font-bold',
+  };
+  return colors[type] || 'text-gray-600 dark:text-gray-400';
 };
 
 const openExamplePicker1 = (event) => {
