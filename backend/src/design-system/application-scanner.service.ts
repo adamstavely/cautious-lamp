@@ -1058,5 +1058,46 @@ export class ApplicationScannerService {
   private getLineNumber(content: string, index: number): number {
     return content.substring(0, index).split('\n').length;
   }
+
+  /**
+   * Scan for video content that may need IRIS analysis
+   */
+  scanForVideoContent(context: ApplicationScanContext): ComplianceCheck[] {
+    const checks: ComplianceCheck[] = [];
+    
+    if (!context.html && !context.javascript) {
+      return checks;
+    }
+
+    const html = context.html || '';
+    const js = context.javascript || '';
+
+    // Check for video elements or video-related code
+    const hasVideoElements = /<video|<source.*type=['"]video/i.test(html);
+    const hasVideoCode = /video|Video|VIDEO|\.mp4|\.webm|\.avi|\.mov/i.test(html + js);
+
+    if (hasVideoElements || hasVideoCode) {
+      checks.push({
+        id: `photosensitivity-video-detected-${Date.now()}`,
+        rule: 'Photosensitivity Analysis (IRIS)',
+        status: 'warning',
+        message: 'Video content detected. Please upload video files for IRIS photosensitivity analysis to check for luminance flashes, red saturation flashes, and spatial patterns that may cause photosensitive epileptic seizures. Use the "Photosensitivity Analysis" tool in the Tools section.',
+        application: context.applicationName,
+        file: context.file,
+        impact: 'serious',
+      });
+    } else {
+      checks.push({
+        id: `photosensitivity-no-video-${Date.now()}`,
+        rule: 'Photosensitivity Analysis (IRIS)',
+        status: 'pass',
+        message: 'No video content detected. IRIS photosensitivity analysis not required.',
+        application: context.applicationName,
+        file: context.file,
+      });
+    }
+
+    return checks;
+  }
 }
 

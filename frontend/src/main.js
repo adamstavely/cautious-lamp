@@ -443,6 +443,10 @@ const router = createRouter({
       component: () => import('./views/SessionReplayViewer.vue'),
     },
     {
+      path: '/tools/photosensitivity',
+      component: () => import('./views/PhotosensitivityAnalysis.vue'),
+    },
+    {
       path: '/performance',
       redirect: '/admin/performance',
     },

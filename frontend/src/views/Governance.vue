@@ -1059,10 +1059,51 @@ headings.forEach((heading, index) => {
 
 return checks;`
   },
+  {
+    id: 12,
+    name: 'Photosensitivity Analysis (IRIS)',
+    description: 'Analyze video content for photosensitive epileptic risks (luminance flashes, red saturation flashes, spatial patterns)',
+    enabled: true,
+    severity: 'error',
+    category: 'accessibility',
+    scannerCode: `// Photosensitivity analysis using IRIS
+// Note: This rule requires video files to be uploaded and analyzed via the IRIS service
+// The scanner code here checks if video content exists and triggers IRIS analysis
+const checks = [];
+const html = context.html || '';
+const js = context.javascript || '';
+
+// Check for video elements or video-related code
+const hasVideoElements = /<video|<source.*type=['"]video/i.test(html);
+const hasVideoCode = /video|Video|VIDEO|\.mp4|\.webm|\.avi|\.mov/i.test(html + js);
+
+if (hasVideoElements || hasVideoCode) {
+  checks.push({
+    id: 'photosensitivity-video-detected',
+    rule: 'Photosensitivity Analysis (IRIS)',
+    status: 'warning',
+    message: 'Video content detected. Please upload video files for IRIS photosensitivity analysis to check for luminance flashes, red saturation flashes, and spatial patterns that may cause photosensitive epileptic seizures. Use the "Photosensitivity Analysis" tool in the Tools section.',
+    application: context.applicationName,
+    file: context.file,
+    impact: 'serious'
+  });
+} else {
+  checks.push({
+    id: 'photosensitivity-no-video',
+    rule: 'Photosensitivity Analysis (IRIS)',
+    status: 'pass',
+    message: 'No video content detected. IRIS photosensitivity analysis not required.',
+    application: context.applicationName,
+    file: context.file
+  });
+}
+
+return checks;`
+  },
   
   // Design System Rules (for scanning design system itself)
   {
-    id: 12,
+    id: 13,
     name: 'Color Contrast WCAG AA',
     description: 'All text must meet WCAG AA contrast requirements (4.5:1)',
     enabled: true,

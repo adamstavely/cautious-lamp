@@ -1193,6 +1193,11 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
             case 'Heading Hierarchy':
               allChecks.push(...this.applicationScanner.basicAccessibilityScan(scanContext));
               break;
+            case 'Photosensitivity Analysis (IRIS)':
+              // IRIS analysis is handled separately via video upload
+              // This rule just checks for video content presence
+              allChecks.push(...this.applicationScanner.scanForVideoContent(scanContext));
+              break;
           }
         }
       } catch (error: any) {
