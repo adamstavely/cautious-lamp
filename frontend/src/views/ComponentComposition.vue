@@ -62,7 +62,8 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">widgets</span>
                   Primitives
                 </h3>
                 <select
@@ -106,7 +107,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">description</span>
                 Templates
               </h3>
               <div class="space-y-2">
@@ -136,7 +138,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">view_quilt</span>
                 Layout Options
               </h3>
               <div class="space-y-2">
@@ -168,7 +171,8 @@
               @dragover.prevent
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">edit</span>
                   Composition Canvas
                 </h3>
                 <div class="flex items-center gap-2">
@@ -277,26 +281,43 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">preview</span>
                   Live Preview
                 </h3>
-                <button
-                  @click="refreshPreview"
-                  class="px-2 py-1 rounded text-xs font-medium transition-colors"
-                  :class="isDarkMode 
-                    ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                  title="Refresh preview"
-                >
-                  <span class="material-symbols-outlined text-sm">refresh</span>
-                </button>
+                <div class="flex items-center gap-2">
+                  <button
+                    @click="previewDarkMode = !previewDarkMode"
+                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    :class="previewDarkMode
+                      ? (isDarkMode 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'bg-indigo-600 text-white')
+                      : (isDarkMode 
+                        ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
+                  >
+                    <span class="material-symbols-outlined text-base">{{ previewDarkMode ? 'dark_mode' : 'light_mode' }}</span>
+                    {{ previewDarkMode ? 'Dark' : 'Light' }}
+                  </button>
+                  <button
+                    @click="refreshPreview"
+                    class="px-2 py-1 rounded text-xs font-medium transition-colors"
+                    :class="isDarkMode 
+                      ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
+                    title="Refresh preview"
+                  >
+                    <span class="material-symbols-outlined text-sm">refresh</span>
+                  </button>
+                </div>
               </div>
-              <div class="rounded-lg border p-6 min-h-[200px]" :class="isDarkMode ? 'bg-slate-950 border-gray-800' : 'bg-gray-50 border-gray-200'">
+              <div class="rounded-lg border p-6 min-h-[200px]" :class="previewDarkMode ? 'bg-slate-950 border-gray-800 dark' : 'bg-gray-50 border-gray-200'">
                 <div v-if="composition.length === 0" class="text-center py-12">
-                  <span class="material-symbols-outlined text-4xl mb-3" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
+                  <span class="material-symbols-outlined text-4xl mb-3" :class="previewDarkMode ? 'text-gray-600' : 'text-gray-300'">
                     preview
                   </span>
-                  <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                  <p class="text-sm" :class="previewDarkMode ? 'text-gray-500' : 'text-gray-500'">
                     Preview will appear here
                   </p>
                 </div>
@@ -306,7 +327,7 @@
                     :is="getPreviewComponent(item)"
                     :key="`${item.id || index}-${previewKey}`"
                     :item="item"
-                    :is-dark-mode="isDarkMode"
+                    :is-dark-mode="previewDarkMode"
                   />
                 </div>
               </div>
@@ -323,7 +344,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">tune</span>
                 Properties
               </h3>
               <div class="space-y-3">
@@ -367,7 +389,8 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">code</span>
                   Generated Code
                 </h3>
                 <select
@@ -422,7 +445,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">account_tree</span>
                 Relationships
               </h3>
               <div class="space-y-2 text-sm">
@@ -719,6 +743,7 @@ getPreviewComponent = (item) => {
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
+const previewDarkMode = ref(false);
 const composition = ref([]);
 const draggedItem = ref(null);
 const selectedItemIndex = ref(null);

@@ -67,36 +67,64 @@
           <div class="max-w-3xl mx-auto">
 
           <!-- Info Box -->
-          <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <p class="text-sm text-gray-700 dark:text-gray-300">
-              <strong>What is a font stack?</strong> A font stack is a list of fonts in CSS that browsers try to use in order. If the first font isn't available, the browser falls back to the next font in the list. This ensures your text is always readable, even if the primary font fails to load. The builder helps you create an optimal CSS <code class="px-1 py-0.5 bg-blue-100 dark:bg-blue-800 rounded text-xs font-mono">font-family</code> declaration with appropriate fallback fonts.
+          <div 
+            class="mb-6 p-4 border rounded-lg" 
+            :class="isDarkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'"
+          >
+            <p 
+              class="text-sm" 
+              :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+            >
+              <strong>What is a font stack?</strong> A font stack is a list of fonts in CSS that browsers try to use in order. If the first font isn't available, the browser falls back to the next font in the list. This ensures your text is always readable, even if the primary font fails to load. The builder helps you create an optimal CSS <code 
+                class="px-1 py-0.5 rounded text-xs font-mono" 
+                :class="isDarkMode ? 'bg-blue-800' : 'bg-blue-100'"
+              >font-family</code> declaration with appropriate fallback fonts.
             </p>
           </div>
           
           <!-- Select Primary Font -->
-          <div class="mb-6 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Select Primary Font</label>
-            <select 
-              v-model="selectedFontForStack"
-              @change="fontStack = buildFontStack(selectedFontForStack)"
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          <div 
+            class="mb-6 rounded-lg border p-6" 
+            :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+          >
+            <label 
+              class="text-sm font-medium mb-2 block flex items-center gap-2" 
+              :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
             >
-              <option value="">Choose a font...</option>
-              <option v-for="font in fontData" :key="font.name" :value="font.name">{{ font.name }}</option>
-            </select>
+              <span class="material-symbols-outlined text-indigo-600">font_download</span>
+              Select Primary Font
+            </label>
+            <Dropdown
+              :model-value="selectedFontForStack"
+              @update:model-value="selectedFontForStack = $event; fontStack = buildFontStack($event)"
+              :options="fontOptions"
+              :is-dark-mode="isDarkMode"
+            />
           </div>
           
           <!-- Font Stack Builder -->
           <div v-if="selectedFontForStack" class="space-y-6">
             <!-- Pairs Well With -->
-            <div v-if="getSelectedFontForStack()?.pairsWellWith && getSelectedFontForStack().pairsWellWith.length > 0" class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Pairs Well With</h4>
+            <div 
+              v-if="getSelectedFontForStack()?.pairsWellWith && getSelectedFontForStack().pairsWellWith.length > 0" 
+              class="rounded-lg border p-6" 
+              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+            >
+              <h4 
+                class="font-semibold mb-3" 
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                Pairs Well With
+              </h4>
               <div class="flex flex-wrap gap-2">
                 <button 
                   v-for="pair in getSelectedFontForStack().pairsWellWith" 
                   :key="pair" 
                   @click="addToFontStack(pair)"
-                  class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors cursor-pointer"
+                  class="px-3 py-1 rounded-lg transition-colors cursor-pointer"
+                  :class="isDarkMode 
+                    ? 'bg-green-900/30 text-green-300 hover:bg-green-900/50' 
+                    : 'bg-green-100 text-green-700 hover:bg-green-200'"
                   title="Click to add to font stack"
                 >
                   {{ pair }}
@@ -105,10 +133,24 @@
             </div>
             
             <!-- Font Stack Display -->
-            <div class="bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div 
+              class="rounded-lg border p-6" 
+              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'"
+            >
               <div class="flex items-center justify-between mb-3">
-                <div class="text-sm font-medium text-gray-600 dark:text-gray-400">Font Stack</div>
-                <button @click="resetFontStack" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+                <div 
+                  class="text-sm font-medium" 
+                  :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+                >
+                  Font Stack
+                </div>
+                <button 
+                  @click="resetFontStack" 
+                  class="text-xs transition-colors"
+                  :class="isDarkMode 
+                    ? 'text-indigo-400 hover:text-indigo-300' 
+                    : 'text-indigo-600 hover:text-indigo-700'"
+                >
                   Reset to Default
                 </button>
               </div>
@@ -116,13 +158,24 @@
                 <div 
                   v-for="(fontName, index) in fontStack" 
                   :key="`${fontName}-${index}`"
-                  class="px-3 py-1 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg flex items-center gap-2 group"
+                  class="px-3 py-1 border rounded-lg flex items-center gap-2 group"
+                  :class="isDarkMode 
+                    ? 'bg-slate-700 border-gray-600' 
+                    : 'bg-white border-gray-300'"
                 >
-                  <span class="text-sm font-mono text-gray-900 dark:text-white">{{ fontName }}</span>
+                  <span 
+                    class="text-sm font-mono" 
+                    :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+                  >
+                    {{ fontName }}
+                  </span>
                   <button 
                     v-if="index > 0"
                     @click="removeFromFontStack(index)"
-                    class="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                    class="transition-colors opacity-0 group-hover:opacity-100"
+                    :class="isDarkMode 
+                      ? 'text-gray-500 hover:text-red-400' 
+                      : 'text-gray-400 hover:text-red-600'"
                     title="Remove from stack"
                   >
                     <span class="material-symbols-outlined text-sm">close</span>
@@ -132,14 +185,25 @@
             </div>
             
             <!-- Manually Add Font -->
-            <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Manually Add Font</label>
+            <div 
+              class="rounded-lg border p-6" 
+              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+            >
+              <label 
+                class="text-sm font-medium mb-2 block" 
+                :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+              >
+                Manually Add Font
+              </label>
               <div class="flex gap-2">
                 <input 
                   v-model="newFontInStack"
                   type="text"
                   placeholder="Type font name (e.g., Arial, Georgia)..."
-                  class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                  class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                  :class="isDarkMode 
+                    ? 'border-gray-600 bg-slate-700 text-white placeholder-gray-500' 
+                    : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'"
                   @keyup.enter="addToFontStack(newFontInStack)"
                 />
                 <button 
@@ -152,17 +216,35 @@
             </div>
             
             <!-- Preview -->
-            <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Preview</div>
-              <div class="text-gray-900 dark:text-white leading-relaxed" :style="{ fontFamily: fontStack.join(', ') }">
+            <div 
+              class="rounded-lg border p-6" 
+              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+            >
+              <div 
+                class="text-sm font-medium mb-2" 
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+              >
+                Preview
+              </div>
+              <div 
+                class="leading-relaxed" 
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+                :style="{ fontFamily: fontStack.join(', ') }"
+              >
                 The quick brown fox jumps over the lazy dog. This demonstrates how the font stack falls back to system fonts if the primary font fails to load.
               </div>
             </div>
             
             <!-- CSS Output -->
-            <div class="bg-gray-900 dark:bg-slate-900 rounded-lg border border-gray-700 dark:border-gray-600 p-6">
+            <div 
+              class="rounded-lg border p-6" 
+              :class="isDarkMode ? 'bg-slate-900 border-gray-600' : 'bg-gray-900 border-gray-700'"
+            >
               <div class="mb-2 text-sm text-gray-400">CSS:</div>
-              <div class="text-green-400 dark:text-green-300 font-mono text-sm break-all">
+              <div 
+                class="font-mono text-sm break-all" 
+                :class="isDarkMode ? 'text-green-300' : 'text-green-400'"
+              >
                 font-family: {{ fontStack.map(f => `'${f}'`).join(', ') }};
               </div>
             </div>
@@ -180,9 +262,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import Dropdown from '../components/Dropdown.vue';
 import fontData from '../assets/fonts.json';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
@@ -191,6 +274,14 @@ const selectedFontForStack = ref('');
 const fontStack = ref(['Arial', 'Helvetica', 'sans-serif']);
 const newFontInStack = ref('');
 const defaultFontStack = ref(['Arial', 'Helvetica', 'sans-serif']);
+
+// Create font options for dropdown
+const fontOptions = computed(() => {
+  return [
+    { label: 'Choose a font...', value: '' },
+    ...fontData.map(font => ({ label: font.name, value: font.name }))
+  ];
+});
 
 function getSelectedFontForStack() {
   if (!selectedFontForStack.value) return null;

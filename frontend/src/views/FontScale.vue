@@ -68,14 +68,26 @@
           <div class="max-w-6xl mx-auto">
 
           <!-- Base Font Size Input -->
-          <div class="mb-6 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Base Font Size (px)</label>
+          <div 
+            class="mb-6 rounded-lg border p-6" 
+            :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+          >
+            <label 
+              class="text-sm font-medium mb-2 block flex items-center gap-2" 
+              :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+            >
+              <span class="material-symbols-outlined text-indigo-600">text_fields</span>
+              Base Font Size (px)
+            </label>
             <input 
               v-model.number="fontSize" 
               type="number" 
               min="12" 
               max="72"
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              :class="isDarkMode 
+                ? 'border-gray-600 bg-slate-700 text-white' 
+                : 'border-gray-300 bg-white text-gray-900'"
             />
           </div>
           
@@ -83,27 +95,82 @@
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Left Column: Individual Size Displays -->
             <div class="space-y-4">
-              <div v-for="(size, name) in computedTypographyScale" :key="name" class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-                <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
+              <div 
+                v-for="(size, name) in computedTypographyScale" 
+                :key="name" 
+                class="rounded-lg border p-6" 
+                :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+              >
+                <div 
+                  class="text-xs font-semibold uppercase tracking-wide mb-2" 
+                  :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+                >
                   {{ name === 'h1' ? 'Heading 1' : name === 'h2' ? 'Heading 2' : name === 'h3' ? 'Heading 3' : name === 'h4' ? 'Heading 4' : name === 'h5' ? 'Heading 5' : name === 'h6' ? 'Heading 6' : name === 'body' ? 'Body Text' : 'Small Text' }}
                 </div>
-                <div class="text-gray-900 dark:text-white" :style="{ fontSize: size + 'px', fontFamily: 'system-ui, sans-serif', lineHeight: lineHeight, letterSpacing: letterSpacing + 'px', fontWeight: name.startsWith('h') ? 'bold' : 'normal' }">
+                <div 
+                  :class="isDarkMode ? 'text-white' : 'text-gray-900'" 
+                  :style="{ fontSize: size + 'px', fontFamily: 'system-ui, sans-serif', lineHeight: lineHeight, letterSpacing: letterSpacing + 'px', fontWeight: name.startsWith('h') ? 'bold' : 'normal' }"
+                >
                   {{ name === 'body' ? 'The quick brown fox jumps over the lazy dog.' : name === 'small' ? 'Small text example' : name.toUpperCase() + ' Heading Example' }}
                 </div>
-                <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">{{ size }}px</div>
+                <div 
+                  class="text-xs mt-2" 
+                  :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
+                >
+                  {{ size }}px
+                </div>
               </div>
             </div>
             
             <!-- Right Column: Complete Scale Preview -->
-            <div class="bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <h4 class="font-semibold text-gray-900 dark:text-white mb-4">Complete Scale Preview</h4>
+            <div 
+              class="rounded-lg border p-6" 
+              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'"
+            >
+              <h4 
+                class="font-semibold mb-4 flex items-center gap-2" 
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                <span class="material-symbols-outlined text-indigo-600">preview</span>
+                Complete Scale Preview
+              </h4>
               <div class="space-y-2" :style="{ fontFamily: 'system-ui, sans-serif' }">
-                <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.h1 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 1</div>
-                <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.h2 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 2</div>
-                <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.h3 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 3</div>
-                <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.h4 + 'px', fontWeight: 'bold', lineHeight: lineHeight }">Heading 4</div>
-                <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.body + 'px', lineHeight: lineHeight }">Body text with normal weight</div>
-                <div class="text-gray-900 dark:text-white" :style="{ fontSize: computedTypographyScale.small + 'px', lineHeight: lineHeight }">Small text</div>
+                <div 
+                  :class="isDarkMode ? 'text-white' : 'text-gray-900'" 
+                  :style="{ fontSize: computedTypographyScale.h1 + 'px', fontWeight: 'bold', lineHeight: lineHeight }"
+                >
+                  Heading 1
+                </div>
+                <div 
+                  :class="isDarkMode ? 'text-white' : 'text-gray-900'" 
+                  :style="{ fontSize: computedTypographyScale.h2 + 'px', fontWeight: 'bold', lineHeight: lineHeight }"
+                >
+                  Heading 2
+                </div>
+                <div 
+                  :class="isDarkMode ? 'text-white' : 'text-gray-900'" 
+                  :style="{ fontSize: computedTypographyScale.h3 + 'px', fontWeight: 'bold', lineHeight: lineHeight }"
+                >
+                  Heading 3
+                </div>
+                <div 
+                  :class="isDarkMode ? 'text-white' : 'text-gray-900'" 
+                  :style="{ fontSize: computedTypographyScale.h4 + 'px', fontWeight: 'bold', lineHeight: lineHeight }"
+                >
+                  Heading 4
+                </div>
+                <div 
+                  :class="isDarkMode ? 'text-white' : 'text-gray-900'" 
+                  :style="{ fontSize: computedTypographyScale.body + 'px', lineHeight: lineHeight }"
+                >
+                  Body text with normal weight
+                </div>
+                <div 
+                  :class="isDarkMode ? 'text-white' : 'text-gray-900'" 
+                  :style="{ fontSize: computedTypographyScale.small + 'px', lineHeight: lineHeight }"
+                >
+                  Small text
+                </div>
               </div>
             </div>
           </div>

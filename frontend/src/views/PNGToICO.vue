@@ -71,7 +71,8 @@
                   ? 'bg-slate-900 border-gray-700' 
                   : 'bg-white border-gray-200'"
               >
-                <h2 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">upload</span>
                   Upload PNG Image
                 </h2>
                 
@@ -218,7 +219,8 @@
                   ? 'bg-slate-900 border-gray-700' 
                   : 'bg-white border-gray-200'"
               >
-                <h2 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">preview</span>
                   Preview
                 </h2>
                 

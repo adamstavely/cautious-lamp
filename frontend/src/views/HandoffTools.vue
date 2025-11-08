@@ -62,7 +62,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">widgets</span>
                 Select Component
               </h3>
               <select
@@ -88,7 +89,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">straighten</span>
                 Measurement Tool
               </h3>
               <div class="space-y-3">
@@ -171,7 +173,8 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">description</span>
                   Generate Specs
                 </h3>
                 <div class="flex items-center gap-2">
@@ -233,7 +236,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">download</span>
                 Export Assets
               </h3>
               <div class="grid md:grid-cols-2 gap-4">
@@ -291,19 +295,36 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Visual Spec Preview
-              </h3>
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">preview</span>
+                  Visual Spec Preview
+                </h3>
+                <button
+                  @click="previewDarkMode = !previewDarkMode"
+                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  :class="previewDarkMode
+                    ? (isDarkMode 
+                      ? 'bg-indigo-600 text-white' 
+                      : 'bg-indigo-600 text-white')
+                    : (isDarkMode 
+                      ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
+                >
+                  <span class="material-symbols-outlined text-base">{{ previewDarkMode ? 'dark_mode' : 'light_mode' }}</span>
+                  {{ previewDarkMode ? 'Dark' : 'Light' }}
+                </button>
+              </div>
               <div 
                 class="rounded-lg border-2 border-dashed p-8 flex items-center justify-center"
                 :style="getPreviewStyle()"
-                :class="isDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-gray-50'"
+                :class="previewDarkMode ? 'border-gray-600 bg-slate-800 dark' : 'border-gray-300 bg-gray-50'"
               >
                 <div class="text-center">
-                  <div class="text-sm mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  <div class="text-sm mb-2" :class="previewDarkMode ? 'text-gray-300' : 'text-gray-600'">
                     Component Preview
                   </div>
-                  <div class="text-xs font-mono" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                  <div class="text-xs font-mono" :class="previewDarkMode ? 'text-gray-400' : 'text-gray-500'">
                     {{ measurements.width }}px × {{ measurements.height }}px
                   </div>
                 </div>
@@ -340,6 +361,7 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
+const previewDarkMode = ref(false);
 const selectedComponent = ref('');
 const specFormat = ref('css');
 const generatedSpecs = ref('');

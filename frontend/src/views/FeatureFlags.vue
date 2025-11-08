@@ -257,7 +257,6 @@
                 <option value="/components">Components Overview</option>
                 <option value="/components/status">Component Status</option>
                 <option value="/components/loupe">Loupe Tool</option>
-                <option value="/components/snippets">Code Snippets</option>
                 <option value="/components/testing">Component Testing</option>
                 <option value="/components/documentation">Documentation Generator</option>
                 <option value="/components/handoff">Design-Dev Handoff</option>
@@ -555,7 +554,6 @@ const routeToFlagKey = {
   '/components': 'component-status',
   '/components/status': 'component-status',
   '/components/loupe': 'component-loupe',
-  '/components/snippets': 'component-snippets',
   '/components/testing': 'component-testing',
   '/components/documentation': 'component-documentation',
   '/components/handoff': 'component-handoff',
@@ -611,7 +609,6 @@ const routeToName = {
   '/components': 'Components Overview',
   '/components/status': 'Component Status',
   '/components/loupe': 'Loupe Tool',
-  '/components/snippets': 'Code Snippets',
   '/components/testing': 'Component Testing',
   '/components/documentation': 'Documentation Generator',
   '/components/handoff': 'Design-Dev Handoff',

@@ -62,7 +62,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">widgets</span>
                 Select Component
               </h3>
               <select
@@ -88,7 +89,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">checklist</span>
                 Test Type
               </h3>
               <div class="space-y-2">
@@ -138,7 +140,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">integration_instructions</span>
                 CI/CD Integration
               </h3>
               <div class="space-y-2">
@@ -185,7 +188,8 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="p-6 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">code</span>
                   Generated Tests
                 </h3>
                 <div class="flex items-center gap-2">
@@ -260,7 +264,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">settings</span>
                 CI/CD Configurations
               </h3>
               <div class="space-y-4">
@@ -312,7 +317,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">play_arrow</span>
                 Test Runner
               </h3>
               <div class="space-y-4">
@@ -397,7 +403,8 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">image</span>
                   Visual Regression Tests
                 </h3>
                 <button
@@ -443,7 +450,8 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">accessibility</span>
                   Accessibility Tests
                 </h3>
                 <button
@@ -482,7 +490,8 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">speed</span>
                   Performance Tests
                 </h3>
                 <button
@@ -521,7 +530,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">checklist</span>
                 Test Coverage
               </h3>
               <div class="space-y-4">

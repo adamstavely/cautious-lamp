@@ -73,9 +73,28 @@
             </div>
             
             <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8">
-              <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
-                Effective navigation is crucial for user experience. It helps users understand the application structure, find content quickly, and move between sections seamlessly. This guide covers the most common navigation patterns and their best practices.
-              </p>
+              <div class="flex items-start gap-6">
+                <div class="flex-shrink-0 w-16 h-16">
+                  <svg viewBox="0 0 64 64" class="w-full h-full">
+                    <defs>
+                      <linearGradient id="navOverviewGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <rect x="8" y="12" width="48" height="6" rx="2" fill="url(#navOverviewGradient)" opacity="0.6"/>
+                    <rect x="8" y="24" width="36" height="6" rx="2" fill="url(#navOverviewGradient)" opacity="0.5"/>
+                    <rect x="8" y="36" width="42" height="6" rx="2" fill="url(#navOverviewGradient)" opacity="0.6"/>
+                    <rect x="8" y="48" width="32" height="6" rx="2" fill="url(#navOverviewGradient)" opacity="0.4"/>
+                    <circle cx="52" cy="27" r="5" fill="url(#navOverviewGradient)" opacity="0.5"/>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
+                    Effective navigation is crucial for user experience. It helps users understand the application structure, find content quickly, and move between sections seamlessly. This guide covers the most common navigation patterns and their best practices.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 

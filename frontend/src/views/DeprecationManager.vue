@@ -37,7 +37,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">filter_list</span>
                 Filter
               </h3>
               <select
@@ -61,7 +62,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">warning</span>
                 Deprecated Components
               </h3>
               <div class="space-y-2">
@@ -69,16 +71,19 @@
                   v-for="component in filteredDeprecated"
                   :key="component.id"
                   @click="selectedComponent = component"
-                  class="p-3 rounded-lg cursor-pointer transition-colors"
+                  class="p-3 rounded-lg cursor-pointer transition-colors flex items-center gap-3"
                   :class="selectedComponent?.id === component.id
                     ? (isDarkMode ? 'bg-indigo-900/30 border border-indigo-700' : 'bg-indigo-50 border border-indigo-200')
                     : (isDarkMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-50 hover:bg-gray-100')"
                 >
-                  <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ component.name }}
-                  </div>
-                  <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ component.status }}
+                  <span class="material-symbols-outlined text-indigo-600 flex-shrink-0">widgets</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      {{ component.name }}
+                    </div>
+                    <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      {{ component.status }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -96,7 +101,8 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">widgets</span>
                   {{ selectedComponent.name }}
                 </h3>
                 <span 
@@ -169,7 +175,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">calendar_today</span>
                 Deprecation Schedule
               </h3>
               <div class="space-y-3">

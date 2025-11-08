@@ -42,7 +42,22 @@ const initDarkMode = () => {
   return isDark ? 'dark' : 'light';
 };
 
+// Initialize user role to design_system_admin for full access
+const initUserRole = () => {
+  // Allow override via query param, otherwise set to design_system_admin
+  const urlParams = new URLSearchParams(window.location.search);
+  const overrideRole = urlParams.get('role');
+  
+  if (overrideRole) {
+    localStorage.setItem('userRole', overrideRole);
+  } else {
+    // Always set to design_system_admin for full access to all pages
+    localStorage.setItem('userRole', 'design_system_admin');
+  }
+};
+
 const initialTheme = initDarkMode();
+initUserRole();
 
 const vuetify = createVuetify({
   components,
@@ -157,10 +172,6 @@ const router = createRouter({
     {
       path: '/components/buttons',
       component: () => import('./views/ComponentButton.vue'),
-    },
-    {
-      path: '/components/snippets',
-      component: () => import('./views/CodeSnippets.vue'),
     },
     {
       path: '/components/testing',
@@ -295,6 +306,10 @@ const router = createRouter({
       component: () => import('./views/Patterns.vue'),
     },
     {
+      path: '/patterns/status',
+      component: () => import('./views/PatternStatus.vue'),
+    },
+    {
       path: '/patterns/navigation',
       component: () => import('./views/PatternNavigation.vue'),
     },
@@ -313,6 +328,30 @@ const router = createRouter({
     {
       path: '/patterns/feedback',
       component: () => import('./views/PatternDetail.vue'),
+    },
+    {
+      path: '/patterns/form-validation',
+      component: () => import('./views/PatternCodeSnippet.vue'),
+    },
+    {
+      path: '/patterns/accessible-modal',
+      component: () => import('./views/PatternCodeSnippet.vue'),
+    },
+    {
+      path: '/patterns/sortable-data-table',
+      component: () => import('./views/PatternCodeSnippet.vue'),
+    },
+    {
+      path: '/patterns/login-form',
+      component: () => import('./views/PatternCodeSnippet.vue'),
+    },
+    {
+      path: '/patterns/responsive-navigation',
+      component: () => import('./views/PatternCodeSnippet.vue'),
+    },
+    {
+      path: '/patterns/toast-notification',
+      component: () => import('./views/PatternCodeSnippet.vue'),
     },
     {
       path: '/tools/gradient-generator',

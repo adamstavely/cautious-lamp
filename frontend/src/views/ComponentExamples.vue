@@ -108,21 +108,37 @@
                         {{ example.description }}
                       </p>
                     </div>
-                    <button
-                      @click="copyExample(example.code)"
-                      class="px-3 py-1 rounded text-xs font-medium transition-colors flex items-center gap-2"
-                      :class="isDarkMode 
-                        ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                    >
-                      <span class="material-symbols-outlined text-sm">content_copy</span>
-                      Copy Code
-                    </button>
+                    <div class="flex items-center gap-2">
+                      <button
+                        @click="togglePreviewDarkMode(exampleIndex)"
+                        class="px-3 py-1 rounded text-xs font-medium transition-colors flex items-center gap-2"
+                        :class="getPreviewDarkMode(exampleIndex)
+                          ? (isDarkMode 
+                            ? 'bg-indigo-600 text-white' 
+                            : 'bg-indigo-600 text-white')
+                          : (isDarkMode 
+                            ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700')"
+                      >
+                        <span class="material-symbols-outlined text-sm">{{ getPreviewDarkMode(exampleIndex) ? 'dark_mode' : 'light_mode' }}</span>
+                        {{ getPreviewDarkMode(exampleIndex) ? 'Dark' : 'Light' }}
+                      </button>
+                      <button
+                        @click="copyExample(example.code)"
+                        class="px-3 py-1 rounded text-xs font-medium transition-colors flex items-center gap-2"
+                        :class="isDarkMode 
+                          ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
+                      >
+                        <span class="material-symbols-outlined text-sm">content_copy</span>
+                        Copy Code
+                      </button>
+                    </div>
                   </div>
 
                   <!-- Live Preview -->
-                  <div class="p-6" :class="isDarkMode ? 'bg-slate-950' : 'bg-white'">
-                    <div v-html="example.preview"></div>
+                  <div class="p-6" :class="getPreviewDarkMode(exampleIndex) ? 'bg-slate-950 dark' : 'bg-white'">
+                    <div v-html="example.preview" :class="getPreviewDarkMode(exampleIndex) ? 'dark' : ''"></div>
                   </div>
 
                   <!-- Code Snippet -->
@@ -151,6 +167,15 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
 const selectedComponent = ref('');
+const previewDarkModes = ref({});
+
+const togglePreviewDarkMode = (exampleIndex) => {
+  previewDarkModes.value[exampleIndex] = !previewDarkModes.value[exampleIndex];
+};
+
+const getPreviewDarkMode = (exampleIndex) => {
+  return previewDarkModes.value[exampleIndex] || false;
+};
 
 const components = ref([
   {

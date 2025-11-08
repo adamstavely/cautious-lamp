@@ -189,11 +189,27 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-base text-indigo-600">preview</span>
-                Live Preview
-              </h3>
-              <div class="space-y-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-base text-indigo-600">preview</span>
+                  Live Preview
+                </h3>
+                <button
+                  @click="previewDarkMode = !previewDarkMode"
+                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  :class="previewDarkMode
+                    ? (isDarkMode 
+                      ? 'bg-indigo-600 text-white' 
+                      : 'bg-indigo-600 text-white')
+                    : (isDarkMode 
+                      ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
+                >
+                  <span class="material-symbols-outlined text-base">{{ previewDarkMode ? 'dark_mode' : 'light_mode' }}</span>
+                  {{ previewDarkMode ? 'Dark' : 'Light' }}
+                </button>
+              </div>
+              <div class="space-y-6" :class="previewDarkMode ? 'dark' : ''">
                 <!-- Typography Preview -->
                 <div>
                   <h4 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -205,7 +221,7 @@
                       :key="size"
                       :style="getTypographyStyle(size)"
                       class="p-4 rounded-lg border"
-                      :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'"
+                      :class="previewDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'"
                     >
                       {{ size === 'h1' ? 'Heading 1' : size === 'h2' ? 'Heading 2' : size === 'h3' ? 'Heading 3' : size === 'body' ? 'Body text example' : 'Caption text' }}
                     </div>
@@ -222,7 +238,7 @@
                       v-for="colorToken in colorTokens"
                       :key="colorToken.name"
                       class="aspect-square rounded-lg border-2 flex flex-col items-center justify-center p-2"
-                      :style="{ backgroundColor: colorToken.value, borderColor: isDarkMode ? '#374151' : '#e5e7eb' }"
+                      :style="{ backgroundColor: colorToken.value, borderColor: previewDarkMode ? '#374151' : '#e5e7eb' }"
                     >
                       <span class="text-xs font-medium" :style="{ color: getContrastColor(colorToken.value) }">
                         {{ colorToken.name.split('.').pop() }}
@@ -242,14 +258,14 @@
                       :key="spacingToken.name"
                       class="flex items-center gap-4"
                     >
-                      <div class="text-xs font-mono w-24" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      <div class="text-xs font-mono w-24" :class="previewDarkMode ? 'text-gray-400' : 'text-gray-600'">
                         {{ spacingToken.name }}
                       </div>
                       <div 
                         class="h-8 rounded"
-                        :style="{ width: spacingToken.value, backgroundColor: isDarkMode ? '#4f46e5' : '#6366f1' }"
+                        :style="{ width: spacingToken.value, backgroundColor: previewDarkMode ? '#4f46e5' : '#6366f1' }"
                       ></div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      <div class="text-xs" :class="previewDarkMode ? 'text-gray-400' : 'text-gray-600'">
                         {{ spacingToken.value }}
                       </div>
                     </div>
@@ -263,10 +279,11 @@
                   </h4>
                   <div 
                     class="p-6 rounded-lg border"
+                    :class="previewDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
                     :style="getComponentStyle()"
                   >
-                    <h3 class="text-xl font-bold mb-2">Card Title</h3>
-                    <p class="text-sm mb-4">This is a preview card using your selected tokens.</p>
+                    <h3 class="text-xl font-bold mb-2" :class="previewDarkMode ? 'text-white' : 'text-gray-900'">Card Title</h3>
+                    <p class="text-sm mb-4" :class="previewDarkMode ? 'text-gray-300' : 'text-gray-600'">This is a preview card using your selected tokens.</p>
                     <button 
                       class="px-4 py-2 rounded-lg font-medium"
                       :style="getButtonStyle()"
@@ -340,6 +357,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const previewDarkMode = ref(false);
 const drawerOpen = ref(false);
 const selectedCategory = ref('');
 const tokenSearch = ref('');
@@ -453,7 +471,7 @@ const getTypographyStyle = (size) => {
     ? (getTokenValue('typography.fontWeight.bold') || '700')
     : (getTokenValue('typography.fontWeight.normal') || '400');
   const lineHeight = getTokenValue('typography.lineHeight.normal') || '1.5';
-  const color = getTokenValue('color.text.primary') || (isDarkMode.value ? '#f3f4f6' : '#111827');
+  const color = getTokenValue('color.text.primary') || (previewDarkMode.value ? '#f3f4f6' : '#111827');
   
   return {
     fontSize,
@@ -465,11 +483,11 @@ const getTypographyStyle = (size) => {
 };
 
 const getComponentStyle = () => {
-  const backgroundColor = getTokenValue('color.surface') || (isDarkMode.value ? '#1e293b' : '#f9fafb');
+  const backgroundColor = getTokenValue('color.surface') || (previewDarkMode.value ? '#1e293b' : '#f9fafb');
   const padding = getTokenValue('spacing.lg') || '1.5rem';
   const borderRadius = getTokenValue('border.radius.md') || '0.5rem';
   const borderWidth = getTokenValue('border.width.thin') || '1px';
-  const borderColor = isDarkMode.value ? '#374151' : '#e5e7eb';
+  const borderColor = previewDarkMode.value ? '#374151' : '#e5e7eb';
   const shadow = getTokenValue('shadow.md') || '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
   
   return {

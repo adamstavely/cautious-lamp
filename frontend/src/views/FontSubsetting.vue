@@ -66,59 +66,128 @@
           <div class="max-w-3xl mx-auto">
 
           <!-- Info Box -->
-          <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <p class="text-sm text-gray-700 dark:text-gray-300">
+          <div 
+            class="mb-6 p-4 border rounded-lg" 
+            :class="isDarkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'"
+          >
+            <p 
+              class="text-sm" 
+              :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+            >
               <strong>What is font subsetting?</strong> Font subsetting allows you to include only the character sets you need, reducing file size and improving load times. Select the character sets your project requires to generate an optimized Google Fonts URL.
             </p>
           </div>
           
           <!-- Select Font -->
-          <div class="mb-6 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Select Font</label>
-            <select 
-              v-model="selectedFontForSubsetting"
-              @change="selectedSubsets = []; selectedWeightForSubsetting = ''"
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          <div 
+            class="mb-6 rounded-lg border p-6" 
+            :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+          >
+            <label 
+              class="text-sm font-medium mb-2 block flex items-center gap-2" 
+              :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
             >
-              <option value="">Choose a font...</option>
-              <option v-for="font in fontData" :key="font.name" :value="font.name">{{ font.name }}</option>
-            </select>
+              <span class="material-symbols-outlined text-indigo-600">font_download</span>
+              Select Font
+            </label>
+            <Dropdown
+              :model-value="selectedFontForSubsetting"
+              @update:model-value="selectedFontForSubsetting = $event; selectedSubsets = []; selectedWeightForSubsetting = ''"
+              :options="fontOptions"
+              :is-dark-mode="isDarkMode"
+            />
           </div>
           
           <!-- Select Weight -->
-          <div v-if="selectedFontForSubsetting" class="mb-6 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Select Weight</label>
-            <select 
-              v-model="selectedWeightForSubsetting"
-              class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+          <div 
+            v-if="selectedFontForSubsetting" 
+            class="mb-6 rounded-lg border p-6" 
+            :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+          >
+            <label 
+              class="text-sm font-medium mb-2 block flex items-center gap-2" 
+              :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
             >
-              <option value="">Choose a weight...</option>
-              <option v-for="weight in getAvailableWeightsForSubsetting()" :key="weight" :value="weight">
-                {{ getWeightName(weight) }} ({{ weight }})
-              </option>
-            </select>
+              <span class="material-symbols-outlined text-indigo-600">format_bold</span>
+              Select Weight
+            </label>
+            <Dropdown
+              :model-value="selectedWeightForSubsetting"
+              @update:model-value="selectedWeightForSubsetting = $event"
+              :options="weightOptions"
+              :is-dark-mode="isDarkMode"
+            />
           </div>
           
           <!-- Select Character Sets -->
           <div v-if="selectedFontForSubsetting" class="space-y-6">
-            <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <h4 class="font-semibold text-gray-900 dark:text-white mb-2">Select Character Sets to Include</h4>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Choose which character sets to include in your font subset. Only options supported by this font are shown.</p>
-              <div v-if="getAvailableSubsetsForFont().length === 0" class="text-sm text-gray-500 dark:text-gray-400 italic">
+            <div 
+              class="rounded-lg border p-6" 
+              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+            >
+              <h4 
+                class="font-semibold mb-2 flex items-center gap-2" 
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                <span class="material-symbols-outlined text-indigo-600">text_fields</span>
+                Select Character Sets to Include
+              </h4>
+              <p 
+                class="text-xs mb-3" 
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
+              >
+                Choose which character sets to include in your font subset. Only options supported by this font are shown.
+              </p>
+              <div 
+                v-if="getAvailableSubsetsForFont().length === 0" 
+                class="text-sm italic" 
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
+              >
                 No character sets available for this font.
               </div>
               <div v-else class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <label v-for="subset in getAvailableSubsetsForFont()" :key="subset.value" class="flex items-center gap-2 p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer">
-                  <input type="checkbox" :value="subset.value" v-model="selectedSubsets" class="rounded" />
-                  <span class="text-sm text-gray-700 dark:text-gray-300 capitalize">{{ subset.label }}</span>
+                <label 
+                  v-for="subset in getAvailableSubsetsForFont()" 
+                  :key="subset.value" 
+                  class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition-colors"
+                  :class="isDarkMode 
+                    ? 'border-gray-600 hover:bg-slate-700' 
+                    : 'border-gray-200 hover:bg-gray-50'"
+                >
+                  <input 
+                    type="checkbox" 
+                    :value="subset.value" 
+                    v-model="selectedSubsets" 
+                    class="rounded" 
+                  />
+                  <span 
+                    class="text-sm capitalize" 
+                    :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+                  >
+                    {{ subset.label }}
+                  </span>
                 </label>
               </div>
             </div>
             
             <!-- Generated URL -->
-            <div v-if="selectedSubsets.length > 0 && selectedWeightForSubsetting" class="bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Google Fonts URL</div>
-              <div class="text-xs font-mono text-gray-900 dark:text-white break-all mb-3 p-3 bg-white dark:bg-slate-700 rounded border border-gray-200 dark:border-gray-600">
+            <div 
+              v-if="selectedSubsets.length > 0 && selectedWeightForSubsetting" 
+              class="rounded-lg border p-6" 
+              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'"
+            >
+              <div 
+                class="text-sm font-medium mb-2" 
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+              >
+                Google Fonts URL
+              </div>
+              <div 
+                class="text-xs font-mono break-all mb-3 p-3 rounded border" 
+                :class="isDarkMode 
+                  ? 'bg-slate-700 text-white border-gray-600' 
+                  : 'bg-white text-gray-900 border-gray-200'"
+              >
                 https://fonts.googleapis.com/css2?family={{ selectedFontForSubsetting.replace(/\s/g, '+') }}:wght@{{ selectedWeightForSubsetting }}&subset={{ selectedSubsets.join(',') }}
               </div>
               <button @click="copySubsetURL" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
@@ -134,9 +203,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import Dropdown from '../components/Dropdown.vue';
 import fontData from '../assets/fonts.json';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
@@ -144,6 +214,26 @@ const drawerOpen = ref(false);
 const selectedFontForSubsetting = ref('');
 const selectedWeightForSubsetting = ref('');
 const selectedSubsets = ref([]);
+
+// Create font options for dropdown
+const fontOptions = computed(() => {
+  return [
+    { label: 'Choose a font...', value: '' },
+    ...fontData.map(font => ({ label: font.name, value: font.name }))
+  ];
+});
+
+// Create weight options for dropdown
+const weightOptions = computed(() => {
+  const weights = getAvailableWeightsForSubsetting();
+  return [
+    { label: 'Choose a weight...', value: '' },
+    ...weights.map(weight => ({ 
+      label: `${getWeightName(weight)} (${weight})`, 
+      value: weight 
+    }))
+  ];
+});
 
 function getSelectedFontForSubsetting() {
   if (!selectedFontForSubsetting.value) return null;

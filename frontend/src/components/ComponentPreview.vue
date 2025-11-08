@@ -219,10 +219,14 @@ const props = defineProps({
   props: {
     type: Object,
     default: () => ({})
+  },
+  isDarkMode: {
+    type: Boolean,
+    default: false
   }
 });
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = computed(() => props.isDarkMode || document.documentElement.classList.contains('dark'));
 
 // Create a computed property to ensure reactivity
 const componentProps = computed(() => props.props);

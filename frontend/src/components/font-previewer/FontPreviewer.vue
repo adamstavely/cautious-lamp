@@ -1,7 +1,8 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
+  <div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
     <!-- Controls -->
     <FontControls
+      :key="`font-controls-${isDarkMode}`"
       v-model:search="search"
       v-model:selectedTag="selectedTag"
       v-model:selectedScript="selectedScript"
@@ -18,6 +19,7 @@
       :favorites="favorites"
       :comparisonFonts="comparisonFonts"
       :isDarkMode="isDarkMode"
+      :previewDarkMode="previewDarkMode"
       :fontCount="filteredFonts.length"
       @toggleDarkMode="toggleDarkMode"
       @showTypographyScale="showTypographyScale = true"
@@ -36,10 +38,14 @@
     </div>
 
     <!-- Font Grid -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 -mt-8">
+    <main :key="`font-grid-${isDarkMode}`" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 -mt-8">
       <!-- Recommendations Section -->
-      <div v-if="computedRecommendations.length > 0 && favorites.length > 0 && !search && !selectedTag && !selectedScript && !selectedWeight" class="mb-6 bg-white rounded-lg border border-gray-200 p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Recommended Fonts</h2>
+      <div 
+        v-if="computedRecommendations.length > 0 && favorites.length > 0 && !search && !selectedTag && !selectedScript && !selectedWeight" 
+        class="mb-6 rounded-lg border p-6" 
+        :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'"
+      >
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recommended Fonts</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <FontCard
             v-for="font in computedRecommendations"
@@ -54,6 +60,7 @@
             :sampleText="sampleText"
             :selected="isFavorite(font)"
             :isInComparison="isInComparison(font)"
+            :previewDarkMode="previewDarkMode"
             :copyFont="copyFont"
             :getCustomFilename="getCustomFilename"
             :toggleFavorite="toggleFavorite"
@@ -67,13 +74,17 @@
       </div>
 
       <!-- Recently Viewed Section -->
-      <div v-if="recentlyViewed.length > 0" class="mb-6 bg-white rounded-lg border border-gray-200 p-6">
+      <div 
+        v-if="recentlyViewed.length > 0" 
+        class="mb-6 rounded-lg border p-6" 
+        :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'"
+      >
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <span class="material-symbols-outlined text-base text-indigo-600">history</span>
             Recently Viewed
           </h2>
-          <button @click="recentlyViewed = []; recentlyViewedStorage.set([])" class="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+          <button @click="recentlyViewed = []; recentlyViewedStorage.set([])" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
             Clear
           </button>
         </div>
@@ -91,6 +102,7 @@
             :sampleText="sampleText"
             :selected="isFavorite(fontData.find(f => f.name === fontName))"
             :isInComparison="isInComparison(fontData.find(f => f.name === fontName))"
+            :previewDarkMode="previewDarkMode"
             :copyFont="copyFont"
             :getCustomFilename="getCustomFilename"
             :toggleFavorite="toggleFavorite"
@@ -103,15 +115,19 @@
         </div>
       </div>
 
-      <div v-if="search || selectedTag || selectedScript || selectedWeight" class="mb-6 bg-white rounded-lg border border-gray-200 p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-2">Search Results</h2>
-        <p class="text-sm text-gray-600 mb-4">{{ filteredFonts.length }} font families found</p>
+      <div 
+        v-if="search || selectedTag || selectedScript || selectedWeight" 
+        class="mb-6 rounded-lg border p-6" 
+        :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'"
+      >
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Search Results</h2>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ filteredFonts.length }} font families found</p>
         <div v-if="search || selectedTag || selectedScript || selectedWeight" class="flex flex-wrap items-center gap-2">
-          <span class="text-sm font-medium text-gray-700">Active filters:</span>
-          <span v-if="search" class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">Search: "{{ search }}"</span>
-          <span v-if="selectedTag" class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">Category: {{ selectedTag }}</span>
-          <span v-if="selectedScript" class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">Script: {{ selectedScript }}</span>
-          <span v-if="selectedWeight" class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">Weight: {{ selectedWeight }}</span>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Active filters:</span>
+          <span v-if="search" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded">Search: "{{ search }}"</span>
+          <span v-if="selectedTag" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded">Category: {{ selectedTag }}</span>
+          <span v-if="selectedScript" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded">Script: {{ selectedScript }}</span>
+          <span v-if="selectedWeight" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded">Weight: {{ selectedWeight }}</span>
         </div>
       </div>
       
@@ -128,15 +144,16 @@
         :bgColor="bgColor"
         :sampleText="sampleText"
         :selected="isFavorite(font)"
-          :isInComparison="isInComparison(font)"
+        :isInComparison="isInComparison(font)"
+        :previewDarkMode="previewDarkMode"
         :copyFont="copyFont"
         :getCustomFilename="getCustomFilename"
         :toggleFavorite="toggleFavorite"
         :toggleCompare="toggleCompare"
         :getContrastLevel="getContrastLevel"
-          :showFontInfo="showFontInfo"
-          @togglePreview="quickPreview"
-          @addToRecentlyViewed="addToRecentlyViewed"
+        :showFontInfo="showFontInfo"
+        @togglePreview="quickPreview"
+        @addToRecentlyViewed="addToRecentlyViewed"
       />
     </div>
     </main>
@@ -1277,7 +1294,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watchEffect, onMounted, watch } from 'vue'
+import { ref, computed, watchEffect, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import FontControls from './FontControls.vue'
 import FontCard from './FontCard.vue'
@@ -1364,7 +1381,22 @@ const lineHeight = ref(1.4)
 const letterSpacing = ref(0)
 const textColor = ref('#000000')
 const bgColor = ref('#FFFFFF')
-const isDarkMode = ref(false)
+// Initialize dark mode from localStorage or document class
+const getInitialDarkMode = () => {
+  // Check if dark class is already on html
+  if (document.documentElement.classList.contains('dark')) {
+    return true;
+  }
+  // Check localStorage
+  const saved = localStorage.getItem('darkMode');
+  if (saved !== null) {
+    return saved === 'true';
+  }
+  return false;
+};
+
+const isDarkMode = ref(getInitialDarkMode())
+const previewDarkMode = ref(false)
 const theme = ref('light')
 const mobileMode = ref(false)
 const favorites = ref([])
@@ -1386,6 +1418,18 @@ const playlistsStorage = useLocalStorage('fontPreviewer_playlists', [])
 const customTagsStorage = useLocalStorage('fontPreviewer_customTags', {})
 const { getCollections, saveCollection, deleteCollection, updateCollection } = useCollections()
 
+let darkModeObserver = null
+
+// Watch isDarkMode and sync with document class
+watch(isDarkMode, (newValue) => {
+  // Apply class synchronously
+  if (newValue) {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+}, { immediate: true })
+
 onMounted(() => {
   recentlyViewed.value = recentlyViewedStorage.get()
   favorites.value = favoritesStorage.get()
@@ -1395,6 +1439,25 @@ onMounted(() => {
   fontPlaylists.value = playlistsStorage.get()
   customTags.value = customTagsStorage.get()
   loadCollectionFromURL()
+  
+  // Watch for external dark mode changes (from other components)
+  darkModeObserver = new MutationObserver(() => {
+    const hasDarkClass = document.documentElement.classList.contains('dark')
+    if (hasDarkClass !== isDarkMode.value) {
+      isDarkMode.value = hasDarkClass
+    }
+  })
+  
+  darkModeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class']
+  })
+})
+
+onBeforeUnmount(() => {
+  if (darkModeObserver) {
+    darkModeObserver.disconnect()
+  }
 })
 
 // Watch route changes to refresh recentlyViewed when returning to homepage
@@ -1443,14 +1506,23 @@ function toggleTheme() {
 }
 
 function toggleDarkMode() {
-  isDarkMode.value = !isDarkMode.value
-  if (isDarkMode.value) {
-    bgColor.value = '#1F2937'
-    textColor.value = '#FFFFFF'
+  // Only toggle preview dark mode, not global dark mode
+  previewDarkMode.value = !previewDarkMode.value
+  
+  // Update preview box colors based on preview dark mode
+  if (previewDarkMode.value) {
+    bgColor.value = '#1e293b' // slate-800
+    textColor.value = '#f1f5f9' // slate-100
   } else {
     bgColor.value = '#FFFFFF'
     textColor.value = '#000000'
   }
+  
+  // Force Vue to re-render by triggering a style recalculation
+  nextTick(() => {
+    // Force a repaint to ensure Tailwind classes are applied
+    document.body.offsetHeight
+  })
 }
 
 function addToRecentlyViewed(fontName) {

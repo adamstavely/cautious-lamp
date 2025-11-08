@@ -104,19 +104,56 @@
             <span class="material-symbols-outlined">left_panel_close</span>
           </button>
         </div>
-        <nav class="space-y-1">
-          <button
-            v-for="item in patterns"
-            :key="item.link"
-            @click="navigateToDoc(item.link)"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-            :class="isDarkMode 
-              ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'"
-          >
-            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-            <span class="font-medium">{{ item.text }}</span>
-          </button>
+        <nav class="space-y-6">
+          <!-- Design Patterns -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Design Patterns</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in designPatterns"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Code Patterns -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Code Patterns</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in codePatterns"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
         </nav>
       </div>
       
@@ -629,10 +666,23 @@ const humanCenteredDesign = [
   { text: 'Accessibility', link: '/hcd/accessibility', icon: 'accessibility' }
 ];
 
-const patterns = [
-  { text: 'Layout Patterns', link: '/patterns', icon: 'view_quilt' },
+const designPatterns = [
+  { text: 'Overview', link: '/patterns', icon: 'view_quilt' },
+  { text: 'Pattern Status', link: '/patterns/status', icon: 'check_circle' },
+  { text: 'Layout Patterns', link: '/patterns/layout', icon: 'view_quilt' },
   { text: 'Navigation', link: '/patterns/navigation', icon: 'navigation' },
-  { text: 'Data Display', link: '/patterns/data-display', icon: 'table_chart' }
+  { text: 'Data Display', link: '/patterns/data-display', icon: 'table_chart' },
+  { text: 'Forms', link: '/patterns/forms', icon: 'description' },
+  { text: 'Feedback', link: '/patterns/feedback', icon: 'feedback' }
+];
+
+const codePatterns = [
+  { text: 'Form Validation', link: '/patterns/form-validation', icon: 'description' },
+  { text: 'Accessible Modal', link: '/patterns/accessible-modal', icon: 'fullscreen' },
+  { text: 'Sortable Data Table', link: '/patterns/sortable-data-table', icon: 'table_chart' },
+  { text: 'Login Form', link: '/patterns/login-form', icon: 'lock' },
+  { text: 'Responsive Navigation', link: '/patterns/responsive-navigation', icon: 'menu' },
+  { text: 'Toast Notification', link: '/patterns/toast-notification', icon: 'notifications' }
 ];
 
 const fonts = [
@@ -711,7 +761,6 @@ const componentItems = [
   { text: 'Loupe Tool', link: '/components/loupe', icon: 'search' },
   { text: 'Component Status', link: '/components/status', icon: 'check_circle' },
   { text: 'Component Examples', link: '/components/examples', icon: 'preview' },
-  { text: 'Code Snippets', link: '/components/snippets', icon: 'content_copy' },
   { text: 'Testing Framework', link: '/components/testing', icon: 'bug_report' },
   { text: 'Documentation Generator', link: '/components/documentation', icon: 'description' },
   { text: 'Handoff Tools', link: '/components/handoff', icon: 'swap_horiz' },

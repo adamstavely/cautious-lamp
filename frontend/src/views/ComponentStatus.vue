@@ -50,7 +50,7 @@
 
         <!-- Status Overview -->
         <div class="max-w-7xl mx-auto mb-16">
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
             <div 
               class="rounded-2xl p-6 border"
               :class="isDarkMode 
@@ -58,7 +58,10 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Production Ready</span>
+                <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
+                  <span class="material-symbols-outlined text-indigo-600">check_circle</span>
+                  Production Ready
+                </span>
                 <span class="w-3 h-3 rounded-full bg-green-500"></span>
               </div>
               <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">24</p>
@@ -70,19 +73,10 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">In Progress</span>
-                <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
-              </div>
-              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">8</p>
-            </div>
-            <div 
-              class="rounded-2xl p-6 border"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Planned</span>
+                <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
+                  <span class="material-symbols-outlined text-indigo-600">event</span>
+                  Planned
+                </span>
                 <span class="w-3 h-3 rounded-full bg-blue-500"></span>
               </div>
               <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">12</p>
@@ -94,7 +88,40 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Deprecated</span>
+                <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
+                  <span class="material-symbols-outlined text-indigo-600">progress_activity</span>
+                  In Progress
+                </span>
+                <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+              </div>
+              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">8</p>
+            </div>
+            <div 
+              class="rounded-2xl p-6 border"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
+                  <span class="material-symbols-outlined text-indigo-600">schedule</span>
+                  Sunsetting
+                </span>
+                <span class="w-3 h-3 rounded-full bg-orange-500"></span>
+              </div>
+              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">3</p>
+            </div>
+            <div 
+              class="rounded-2xl p-6 border"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
+                  <span class="material-symbols-outlined text-indigo-600">warning</span>
+                  Deprecated
+                </span>
                 <span class="w-3 h-3 rounded-full bg-red-500"></span>
               </div>
               <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">2</p>
@@ -114,7 +141,10 @@
               class="px-6 py-4 border-b"
               :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
             >
-              <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">All Components</h2>
+              <h2 class="text-2xl font-bold flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">widgets</span>
+                All Components
+              </h2>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full">
@@ -131,8 +161,9 @@
                   <tr 
                     v-for="component in components" 
                     :key="component.name" 
-                    class="transition-colors"
+                    class="transition-colors cursor-pointer"
                     :class="isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'"
+                    @click="navigateToComponent(component.name)"
                   >
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="flex items-center gap-3">
@@ -182,8 +213,11 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+
+const router = useRouter();
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
@@ -237,6 +271,42 @@ const closeDrawer = () => {
 
 const toggleDrawer = () => {
   drawerOpen.value = !drawerOpen.value;
+};
+
+// Map component names to their routes
+const getComponentRoute = (componentName) => {
+  const routeMap = {
+    'Button': '/components/buttons',
+    'Input': '/components/forms',
+    'Card': '/components/cards',
+    'Modal': '/components',
+    'Dropdown': '/components',
+    'Checkbox': '/components/forms',
+    'Radio': '/components/forms',
+    'Switch': '/components/forms',
+    'Tabs': '/components/navigation',
+    'Accordion': '/components',
+    'Tooltip': '/components',
+    'Popover': '/components',
+    'Breadcrumbs': '/components/navigation',
+    'Pagination': '/components/navigation',
+    'Data Table': '/components/data-display',
+  };
+  
+  // Return mapped route or generate a default route
+  if (routeMap[componentName]) {
+    return routeMap[componentName];
+  }
+  
+  // Fallback: convert component name to route
+  // Convert to lowercase, replace spaces with hyphens
+  const routeName = componentName.toLowerCase().replace(/\s+/g, '-');
+  return `/components/${routeName}`;
+};
+
+const navigateToComponent = (componentName) => {
+  const route = getComponentRoute(componentName);
+  router.push(route);
 };
 
 let darkModeObserver = null;

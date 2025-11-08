@@ -332,14 +332,30 @@
 
                   <!-- Preview Section -->
                   <div>
-                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">preview</span>
-                      Preview
-                    </h2>
+                    <div class="flex items-center justify-between mb-4">
+                      <h2 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                        <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">preview</span>
+                        Preview
+                      </h2>
+                      <button
+                        @click="previewDarkMode = !previewDarkMode"
+                        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        :class="previewDarkMode
+                          ? (isDarkMode 
+                            ? 'bg-indigo-600 text-white' 
+                            : 'bg-indigo-600 text-white')
+                          : (isDarkMode 
+                            ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
+                      >
+                        <span class="material-symbols-outlined text-base">{{ previewDarkMode ? 'dark_mode' : 'light_mode' }}</span>
+                        {{ previewDarkMode ? 'Dark' : 'Light' }}
+                      </button>
+                    </div>
                     
                     <div class="space-y-4">
                       <!-- Scale Swatches -->
-                      <div class="rounded-lg overflow-hidden border" :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'">
+                      <div class="rounded-lg overflow-hidden border" :class="previewDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-white'">
                         <div class="flex h-24">
                           <div
                             v-for="(color, index) in generatedScale"
@@ -568,60 +584,6 @@
                           fill="none"
                         />
                       </svg>
-                    </div>
-                  </div>
-                  </div>
-                </div>
-
-                <!-- Color Space Visualizations -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">palette</span>
-                    Color Space Visualizations
-                  </h2>
-                  
-                  <div class="grid md:grid-cols-3 gap-6">
-                  <!-- Color Wheel / Chromaticity Diagram -->
-                  <div>
-                    <h3 class="text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Color Wheel</h3>
-                    <div class="rounded-lg overflow-hidden border relative" :class="isDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-gray-50'" style="height: 200px;">
-                      <canvas ref="colorWheelCanvas" class="w-full h-full"></canvas>
-                    </div>
-                  </div>
-
-                  <!-- RGB Channels Graph -->
-                  <div>
-                    <h3 class="text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">RGB Channels</h3>
-                    <div class="rounded-lg overflow-hidden border relative" :class="isDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-gray-50'" style="height: 200px;">
-                      <svg width="100%" height="100%" class="absolute inset-0">
-                        <defs>
-                          <pattern id="gridPattern" width="20" height="20" patternUnits="userSpaceOnUse">
-                            <path d="M 20 0 L 0 0 0 20" fill="none" :stroke="isDarkMode ? '#475569' : '#e2e8f0'" stroke-width="0.5"/>
-                          </pattern>
-                        </defs>
-                        <rect width="100%" height="100%" fill="url(#gridPattern)" />
-                        <g v-for="(channel, index) in rgbChannels" :key="index">
-                          <polyline
-                            :points="channel.points"
-                            :stroke="channel.color"
-                            stroke-width="2"
-                            fill="none"
-                          />
-                        </g>
-                      </svg>
-                    </div>
-                  </div>
-
-                  <!-- 3D Color Space Plot -->
-                  <div>
-                    <h3 class="text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">3D Color Space</h3>
-                    <div class="rounded-lg overflow-hidden border relative" :class="isDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-gray-50'" style="height: 200px;">
-                      <canvas ref="color3dCanvas" class="w-full h-full"></canvas>
                     </div>
                   </div>
                   </div>
@@ -942,6 +904,7 @@ import chroma from 'chroma-js';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
+const previewDarkMode = ref(false);
 const scaleType = ref('sequential');
 const generatedScale = ref([]);
 

@@ -215,22 +215,39 @@
                   <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                     Live Preview
                   </h3>
-                  <button
-                    @click="toggleFullscreen"
-                    class="p-2 rounded-lg transition-colors"
-                    :class="isDarkMode 
-                      ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' 
-                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
-                    aria-label="Toggle fullscreen"
-                  >
-                    <span class="material-symbols-outlined">fullscreen</span>
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <button
+                      @click="previewDarkMode = !previewDarkMode"
+                      class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      :class="previewDarkMode
+                        ? (isDarkMode 
+                          ? 'bg-indigo-600 text-white' 
+                          : 'bg-indigo-600 text-white')
+                        : (isDarkMode 
+                          ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
+                    >
+                      <span class="material-symbols-outlined text-base">{{ previewDarkMode ? 'dark_mode' : 'light_mode' }}</span>
+                      {{ previewDarkMode ? 'Dark' : 'Light' }}
+                    </button>
+                    <button
+                      @click="toggleFullscreen"
+                      class="p-2 rounded-lg transition-colors"
+                      :class="isDarkMode 
+                        ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' 
+                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
+                      aria-label="Toggle fullscreen"
+                    >
+                      <span class="material-symbols-outlined">fullscreen</span>
+                    </button>
+                  </div>
                 </div>
-                <div class="p-8 min-h-[400px] flex items-center justify-center" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-50'">
+                <div class="p-8 min-h-[400px] flex items-center justify-center" :class="previewDarkMode ? 'bg-slate-950 dark' : 'bg-gray-50'">
                   <component-preview 
                     :key="`button-${JSON.stringify(propValues)}`"
                     component="button"
                     :props="propValues"
+                    :is-dark-mode="previewDarkMode"
                   />
                 </div>
               </div>
@@ -789,6 +806,7 @@ import ComponentPreview from '../components/ComponentPreview.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
+const previewDarkMode = ref(false);
 const codeFormat = ref('vue');
 const propValues = reactive({
   label: 'Click me',

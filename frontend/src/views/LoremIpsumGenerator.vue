@@ -69,6 +69,14 @@
                 ? 'bg-slate-900 border-slate-700' 
                 : 'bg-white border-gray-200'"
             >
+              <!-- Generation Settings -->
+              <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">settings</span>
+                  Generation Settings
+                </h3>
+              </div>
+              
               <!-- Controls -->
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 <!-- Variant Selection -->
@@ -227,7 +235,10 @@
               <!-- Output -->
               <div>
                 <div class="flex items-center justify-between mb-4">
-                  <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Generated Text</label>
+                  <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-indigo-600">format_align_center</span>
+                    Generated Text
+                  </h3>
                   <button
                     @click="copyToClipboard"
                     class="px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2"

@@ -2,7 +2,10 @@
   <div @click="activeColorPicker = null">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-0">
       <!-- Search and Filters Section -->
-      <div class="mb-6 bg-white rounded-lg shadow-md border border-gray-200 p-4">
+      <div 
+        class="mb-6 rounded-lg shadow-md border p-4" 
+        :class="props.isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'"
+      >
         <div class="flex flex-col lg:flex-row gap-4 items-center">
           <!-- Search Bar -->
           <div class="relative lg:w-80 flex-1">
@@ -14,7 +17,10 @@
               :value="search" 
               @input="$emit('update:search', $event.target.value)" 
               placeholder="Search fonts..." 
-              class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+              class="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+              :class="props.isDarkMode 
+                ? 'border-gray-600 bg-slate-700 text-white placeholder-gray-500' 
+                : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'"
             />
           </div>
           
@@ -25,7 +31,7 @@
                 :model-value="selectedTag"
                 @update:model-value="$emit('update:selectedTag', $event)"
                 :options="categoryOptions"
-                :is-dark-mode="false"
+                :is-dark-mode="props.isDarkMode"
               />
             </div>
             <div class="w-full lg:w-auto lg:min-w-[150px]">
@@ -33,7 +39,7 @@
                 :model-value="selectedScript"
                 @update:model-value="$emit('update:selectedScript', $event)"
                 :options="scriptOptions"
-                :is-dark-mode="false"
+                :is-dark-mode="props.isDarkMode"
               />
             </div>
             <div class="w-full lg:w-auto lg:min-w-[150px]">
@@ -41,7 +47,7 @@
                 :model-value="selectedWeight"
                 @update:model-value="$emit('update:selectedWeight', $event)"
                 :options="weightOptions"
-                :is-dark-mode="false"
+                :is-dark-mode="props.isDarkMode"
               />
             </div>
           </div>
@@ -60,12 +66,15 @@
       </div>
 
       <!-- Typography Controls Section -->
-      <div class="bg-white rounded-lg shadow-md border border-gray-200 p-4">
+      <div 
+        class="rounded-lg shadow-md border p-4" 
+        :class="props.isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'"
+      >
         <div class="flex flex-col lg:flex-row gap-6">
           <!-- Left: Typography Controls -->
           <div class="flex-1">
             <div class="mb-3">
-              <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+              <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
                 <span class="material-symbols-outlined text-base text-indigo-600">text_fields</span>
                 Typography Controls
               </h3>
@@ -75,8 +84,8 @@
                   <!-- Size -->
                   <div class="flex flex-col gap-2">
                     <div class="flex items-center justify-between">
-                      <label class="text-xs font-medium text-gray-600">Size</label>
-                      <span class="text-xs text-gray-500">{{ fontSize }}px</span>
+                      <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Size</label>
+                      <span class="text-xs text-gray-500 dark:text-gray-400">{{ fontSize }}px</span>
                     </div>
                     <input 
                       type="range" 
@@ -89,12 +98,12 @@
                   </div>
                   <!-- Weight -->
                   <div class="flex flex-col gap-2">
-                    <label class="text-xs font-medium text-gray-600">Weight</label>
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Weight</label>
                     <Dropdown
                       :model-value="String(fontWeight)"
                       @update:model-value="$emit('update:fontWeight', Number($event))"
                       :options="fontWeightOptions"
-                      :is-dark-mode="false"
+                      :is-dark-mode="props.isDarkMode"
                     />
                   </div>
                 </div>
@@ -104,8 +113,8 @@
                   <!-- Line Height -->
                   <div class="flex flex-col gap-2">
                     <div class="flex items-center justify-between">
-                      <label class="text-xs font-medium text-gray-600">Line Height</label>
-                      <span class="text-xs text-gray-500">{{ lineHeight }}</span>
+                      <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Line Height</label>
+                      <span class="text-xs text-gray-500 dark:text-gray-400">{{ lineHeight }}</span>
                     </div>
                     <input 
                       type="range" 
@@ -120,8 +129,8 @@
                   <!-- Letter Spacing -->
                   <div class="flex flex-col gap-2">
                     <div class="flex items-center justify-between">
-                      <label class="text-xs font-medium text-gray-600">Letter Spacing</label>
-                      <span class="text-xs text-gray-500">{{ letterSpacing }}px</span>
+                      <label class="text-xs font-medium text-gray-600 dark:text-gray-400">Letter Spacing</label>
+                      <span class="text-xs text-gray-500 dark:text-gray-400">{{ letterSpacing }}px</span>
                     </div>
                     <input 
                       type="range" 
@@ -136,18 +145,18 @@
                 </div>
 
                 <!-- Color and Mode Controls -->
-                <div class="flex items-start gap-4 pl-4 border-l border-gray-200 justify-between">
+                <div class="flex gap-4 pl-4 border-l border-gray-200 dark:border-gray-700">
                   <!-- Text Color -->
                   <div class="flex flex-col gap-2">
-                    <label class="text-xs font-medium text-gray-600">Text Color</label>
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-400 h-8 flex items-start">Text Color</label>
                     <div class="relative">
                       <button 
                         ref="textColorButtonRef"
                         @click.stop="openColorPicker('text', $event)"
-                        class="relative w-12 h-12 rounded-lg overflow-hidden shadow-sm border border-gray-300 hover:border-gray-400 transition-colors cursor-pointer block"
+                        class="relative w-12 h-12 rounded-lg overflow-hidden shadow-sm border border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-colors cursor-pointer block"
                         :style="{ backgroundColor: textColor }"
                       >
-                        <div class="absolute inset-0 border border-gray-200 rounded-lg pointer-events-none"></div>
+                        <div class="absolute inset-0 border border-gray-200 dark:border-gray-600 rounded-lg pointer-events-none"></div>
                       </button>
                       
                       <!-- Color Picker Popup -->
@@ -163,15 +172,15 @@
                   
                   <!-- Background -->
                   <div class="flex flex-col gap-2">
-                    <label class="text-xs font-medium text-gray-600">Background</label>
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-400 h-8 flex items-start">Background</label>
                     <div class="relative">
                       <button 
                         ref="bgColorButtonRef"
                         @click.stop="openColorPicker('bg', $event)"
-                        class="relative w-12 h-12 rounded-lg overflow-hidden shadow-sm border border-gray-300 hover:border-gray-400 transition-colors cursor-pointer block"
+                        class="relative w-12 h-12 rounded-lg overflow-hidden shadow-sm border border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-colors cursor-pointer block"
                         :style="{ backgroundColor: bgColor }"
                       >
-                        <div class="absolute inset-0 border border-gray-200 rounded-lg pointer-events-none"></div>
+                        <div class="absolute inset-0 border border-gray-200 dark:border-gray-600 rounded-lg pointer-events-none"></div>
                       </button>
                       
                       <!-- Color Picker Popup -->
@@ -185,21 +194,23 @@
                     </div>
                   </div>
                   
-                  <!-- Dark Mode -->
+                  <!-- Preview Dark Mode -->
                   <div class="flex flex-col gap-2">
-                    <label class="text-xs font-medium text-gray-600">Dark Mode</label>
-                    <button
-                      @click="toggleDarkMode"
-                      class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                      :class="isDarkMode ? 'bg-indigo-600' : 'bg-gray-300'"
-                      role="switch"
-                      :aria-checked="isDarkMode"
-                    >
-                      <span
-                        class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-                        :class="isDarkMode ? 'translate-x-6' : 'translate-x-1'"
-                      ></span>
-                    </button>
+                    <label class="text-xs font-medium text-gray-600 dark:text-gray-400 h-8 flex items-start">Preview Dark Mode</label>
+                    <div class="h-12 flex items-center">
+                      <button
+                        @click="toggleDarkMode"
+                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                        :class="props.previewDarkMode ? 'bg-indigo-600' : 'bg-gray-300'"
+                        role="switch"
+                        :aria-checked="props.previewDarkMode"
+                      >
+                        <span
+                          class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                          :class="props.previewDarkMode ? 'translate-x-6' : 'translate-x-1'"
+                        ></span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -207,19 +218,22 @@
           </div>
 
           <!-- Right: Sample Text -->
-          <div class="lg:w-80 border-l border-gray-200 pl-6">
+          <div 
+            class="lg:w-80 border-l pl-6" 
+            :class="props.isDarkMode ? 'border-gray-700' : 'border-gray-200'"
+          >
             <div class="flex flex-col gap-2">
               <div class="flex items-center justify-between mb-1">
-                <label class="text-xs font-medium text-gray-600 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-sm text-indigo-600">description</span>
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-base text-indigo-600">description</span>
                   Sample Text
-                </label>
+                </h3>
                 <div class="w-40">
                   <Dropdown
                     :model-value="selectedSampleType"
                     @update:model-value="selectSampleText($event)"
                     :options="sampleTextOptions"
-                    :is-dark-mode="false"
+                    :is-dark-mode="props.isDarkMode"
                   />
                 </div>
               </div>
@@ -228,7 +242,10 @@
                 @input="$emit('update:sampleText', $event.target.value)" 
                 placeholder="Type something to preview..."
                 rows="4"
-                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors resize-none"
+                class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors resize-none"
+                :class="props.isDarkMode 
+                  ? 'border-gray-600 bg-slate-700 text-white placeholder-gray-500' 
+                  : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'"
               ></textarea>
             </div>
           </div>
@@ -307,7 +324,7 @@ const props = defineProps([
   'search', 'selectedTag', 'selectedScript', 'selectedWeight', 'sampleText',
   'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing',
   'textColor', 'bgColor', 'fontTokens', 'styleJSON',
-  'favorites', 'comparisonFonts', 'exportStyleDictionary', 'isDarkMode', 'fontCount'
+  'favorites', 'comparisonFonts', 'exportStyleDictionary', 'isDarkMode', 'previewDarkMode', 'fontCount'
 ])
 
 const emit = defineEmits([
@@ -524,24 +541,48 @@ function openColorPicker(type, event) {
   const buttonRef = type === 'text' ? textColorButtonRef.value : bgColorButtonRef.value
   if (!buttonRef) return
   
-  // Calculate position
+  // Calculate position - ColorPickerPopup uses fixed positioning, so coordinates are relative to viewport
   const rect = buttonRef.getBoundingClientRect()
-  const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-  const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
   const pickerWidth = 280
+  const pickerHeight = 550 // More accurate height estimate
+  const padding = 16
   const gap = 16
   
-  let left = rect.right + scrollLeft + gap
-  let top = rect.top + scrollTop
+  // Horizontal positioning
+  let left = rect.right + gap
   
   // If there's not enough space on the right, show on the left
-  if (left + pickerWidth > window.innerWidth + scrollLeft) {
-    left = rect.left + scrollLeft - pickerWidth - gap
+  if (left + pickerWidth > window.innerWidth - padding) {
+    left = rect.left - pickerWidth - gap
   }
   
-  // Ensure it doesn't go off-screen
-  left = Math.max(16, Math.min(left, window.innerWidth + scrollLeft - pickerWidth - 16))
-  top = Math.max(16, Math.min(top, window.innerHeight + scrollTop - 600))
+  // Ensure picker doesn't go off left or right edge
+  left = Math.max(padding, Math.min(left, window.innerWidth - pickerWidth - padding))
+  
+  // Vertical positioning - check available space above and below
+  const spaceBelow = window.innerHeight - rect.bottom - padding
+  const spaceAbove = rect.top - padding
+  
+  let top
+  
+  // If there's enough space below, position below the button
+  if (spaceBelow >= pickerHeight) {
+    top = rect.bottom + gap
+  }
+  // If there's more space above than below, position above
+  else if (spaceAbove >= pickerHeight) {
+    top = rect.top - pickerHeight - gap
+  }
+  // If there's not enough space in either direction, use the one with more space
+  else if (spaceAbove > spaceBelow) {
+    top = Math.max(padding, rect.top - pickerHeight - gap)
+  }
+  else {
+    top = Math.min(window.innerHeight - pickerHeight - padding, rect.bottom + gap)
+  }
+  
+  // Final bounds check to ensure picker stays within viewport
+  top = Math.max(padding, Math.min(top, window.innerHeight - pickerHeight - padding))
   
   const style = {
     left: `${left}px`,

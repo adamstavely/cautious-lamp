@@ -32,7 +32,7 @@
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">library_books</span>
-                      {{ activeDictionaries.length }} Active Dictionary{{ activeDictionaries.length !== 1 ? 'ies' : '' }}
+                      {{ activeDictionaries.length }} Active Dictionar{{ activeDictionaries.length !== 1 ? 'ies' : 'y' }}
                     </span>
                     <span class="flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">style</span>

@@ -5,7 +5,6 @@ const routeToFlagMap = {
   '/components': 'component-status',
   '/components/loupe': 'component-loupe',
   '/components/status': 'component-status',
-  '/components/snippets': 'component-snippets',
   '/components/testing': 'component-testing',
   '/components/documentation': 'component-documentation',
   '/components/handoff': 'component-handoff',

@@ -86,7 +86,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">swap_horiz</span>
                 Component Migration Setup
               </h3>
               <div class="space-y-3">
@@ -210,7 +211,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">description</span>
                 Templates
               </h3>
               <div class="space-y-2">
@@ -241,7 +243,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">undo</span>
                 Rollback
               </h3>
               <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
@@ -269,7 +272,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">progress_activity</span>
                 Migration Progress
               </h3>
               <div class="space-y-3">
@@ -297,7 +301,8 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">list</span>
                   Migration Plan
                 </h3>
                 <div class="flex items-center gap-2">
@@ -362,7 +367,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">check_circle</span>
                 Migration Results
               </h3>
               <div class="space-y-3">
@@ -400,7 +406,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">palette</span>
                 Token Migration Setup
               </h3>
               <div class="space-y-3">
@@ -561,7 +568,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">undo</span>
                 Rollback
               </h3>
               <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
@@ -589,7 +597,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">progress_activity</span>
                 Migration Progress
               </h3>
               <div class="space-y-3">
@@ -734,21 +743,16 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">filter_list</span>
                 Filter
               </h3>
-              <select
-                v-model="filterStatus"
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                :class="isDarkMode 
-                  ? 'border-gray-600 bg-slate-700 text-white' 
-                  : 'border-gray-300 bg-white text-gray-900'"
-              >
-                <option value="all">All Status</option>
-                <option value="deprecated">Deprecated</option>
-                <option value="sunset">Sunset Scheduled</option>
-                <option value="retired">Retired</option>
-              </select>
+              <Dropdown
+                :model-value="filterStatus"
+                @update:model-value="filterStatus = $event"
+                :options="filterOptions"
+                :is-dark-mode="isDarkMode"
+              />
             </div>
 
             <!-- Deprecated Components -->
@@ -758,7 +762,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">warning</span>
                 Deprecated Components
               </h3>
               <div class="space-y-2">
@@ -766,16 +771,19 @@
                   v-for="component in filteredDeprecated"
                   :key="component.id"
                   @click="selectedComponent = component"
-                  class="p-3 rounded-lg cursor-pointer transition-colors"
+                  class="p-3 rounded-lg cursor-pointer transition-colors flex items-center gap-3"
                   :class="selectedComponent?.id === component.id
                     ? (isDarkMode ? 'bg-indigo-900/30 border border-indigo-700' : 'bg-indigo-50 border border-indigo-200')
                     : (isDarkMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-50 hover:bg-gray-100')"
                 >
-                  <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ component.name }}
-                  </div>
-                  <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ component.status }}
+                  <span class="material-symbols-outlined text-indigo-600 flex-shrink-0">widgets</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      {{ component.name }}
+                    </div>
+                    <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      {{ component.status }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -793,7 +801,8 @@
                 : 'bg-white border-gray-200'"
             >
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">widgets</span>
                   {{ selectedComponent.name }}
                 </h3>
                 <span 
@@ -866,7 +875,8 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">calendar_today</span>
                 Deprecation Schedule
               </h3>
               <div class="space-y-3">
@@ -900,6 +910,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import Dropdown from '../components/Dropdown.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
@@ -947,6 +958,13 @@ const deprecatedComponents = ref([
 const deprecationSchedule = ref([
   { id: 1, component: 'OldButton', action: 'Sunset', date: new Date('2024-07-15') },
   { id: 2, component: 'LegacyCard', action: 'Retire', date: new Date('2024-05-01') }
+]);
+
+const filterOptions = computed(() => [
+  { label: 'All Status', value: 'all' },
+  { label: 'Deprecated', value: 'deprecated' },
+  { label: 'Sunset Scheduled', value: 'sunset' },
+  { label: 'Retired', value: 'retired' }
 ]);
 
 const filteredDeprecated = computed(() => {

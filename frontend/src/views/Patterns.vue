@@ -199,6 +199,173 @@
           </div>
         </div>
 
+        <!-- Code Snippet Patterns Section -->
+        <div class="max-w-7xl mx-auto mb-16">
+          <div class="flex items-center justify-between mb-8">
+            <h2 class="text-4xl md:text-5xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              Code Pattern Library
+            </h2>
+          </div>
+          
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <router-link 
+              to="/patterns/form-validation" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">description</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Form Validation
+              </h3>
+              <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Complete form validation with error handling and accessibility
+              </p>
+              <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-800'">
+                Intermediate
+              </span>
+            </router-link>
+
+            <router-link 
+              to="/patterns/accessible-modal" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">fullscreen</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Accessible Modal
+              </h3>
+              <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Fully accessible modal dialog with focus trap and keyboard support
+              </p>
+              <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-800'">
+                Advanced
+              </span>
+            </router-link>
+
+            <router-link 
+              to="/patterns/sortable-data-table" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">table_chart</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Sortable Data Table
+              </h3>
+              <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Data table with sorting, filtering, and pagination
+              </p>
+              <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-800'">
+                Advanced
+              </span>
+            </router-link>
+
+            <router-link 
+              to="/patterns/login-form" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">lock</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Login Form
+              </h3>
+              <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Complete authentication form with validation and error handling
+              </p>
+              <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-800'">
+                Intermediate
+              </span>
+            </router-link>
+
+            <router-link 
+              to="/patterns/responsive-navigation" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">menu</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Responsive Navigation
+              </h3>
+              <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Mobile-responsive navigation menu with dropdowns
+              </p>
+              <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-800'">
+                Intermediate
+              </span>
+            </router-link>
+
+            <router-link 
+              to="/patterns/toast-notification" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">notifications</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Toast Notification
+              </h3>
+              <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Toast notification system for temporary messages
+              </p>
+              <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-800'">
+                Beginner
+              </span>
+            </router-link>
+          </div>
+        </div>
+
         <!-- Featured Patterns Section -->
         <div class="max-w-7xl mx-auto">
           <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-950 dark:via-indigo-900 dark:to-indigo-800">
