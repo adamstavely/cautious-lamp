@@ -530,19 +530,21 @@ const tools = [
   { text: 'Heuristic Evaluation', link: '/tools/heuristic-evaluation', icon: 'checklist' },
   { text: 'PNG to ICO Converter', link: '/tools/png-to-ico', icon: 'image' },
   { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' },
-  { text: 'Code Quality Checks', link: '/code-quality', icon: 'check_circle' },
-  { text: 'Vulnerability Scanner', link: '/security', icon: 'security' },
   { text: 'Performance Budgets', link: '/performance/budgets', icon: 'speed' },
   { text: 'Bundle Size Analysis', link: '/performance/bundle-analysis', icon: 'analytics' }
 ];
 
 const designAssets = [
   { text: 'Overview', link: '/design-assets', icon: 'collections' },
-  { text: 'Icon Library', link: '/design-assets/icons', icon: 'star' },
-  { text: 'Images', link: '/design-assets/images', icon: 'image' },
-  { text: 'Logos', link: '/design-assets/logos', icon: 'account_circle' },
+  { text: 'Icons', link: '/design-assets/icons', icon: 'star' },
+  { text: 'Country Flags', link: '/design-assets/country-flags', icon: 'flag' },
+  { text: 'USG Seals', link: '/design-assets/usg-seals', icon: 'verified' },
+  { text: 'Internal Seals', link: '/design-assets/internal-seals', icon: 'security' },
+  { text: 'Interactives', link: '/design-assets/interactives', icon: 'touch_app' },
+  { text: 'Stock Photos', link: '/design-assets/stock-photos', icon: 'photo_library' },
   { text: 'Illustrations', link: '/design-assets/illustrations', icon: 'draw' },
-  { text: 'Patterns', link: '/design-assets/patterns', icon: 'pattern' }
+  { text: 'Capability Logos', link: '/design-assets/capability-logos', icon: 'workspace_premium' },
+  { text: 'Company Logos', link: '/design-assets/company-logos', icon: 'business' }
 ];
 
 const componentItems = [
@@ -568,7 +570,9 @@ const adminItems = [
   { text: 'System Health', link: '/admin/health', icon: 'space_dashboard' },
   { text: 'Governance', link: '/admin/governance', icon: 'gavel' },
   { text: 'Role Management', link: '/admin/roles', icon: 'admin_panel_settings' },
-  { text: 'Feature Flags', link: '/admin/feature-flags', icon: 'flag' }
+  { text: 'Feature Flags', link: '/admin/feature-flags', icon: 'flag' },
+  { text: 'Code Quality', link: '/admin/code-quality', icon: 'check_circle' },
+  { text: 'Vulnerability Scanner', link: '/admin/security', icon: 'security' }
 ];
 
 const gettingStartedItems = [
@@ -630,7 +634,7 @@ const showFonts = computed(() => {
 });
 
 const showTools = computed(() => {
-  return route.path === '/tools' || route.path.startsWith('/tools/') || route.path === '/palette-builder' || route.path === '/theme-builder' || route.path === '/code-quality' || route.path === '/security';
+  return route.path === '/tools' || route.path.startsWith('/tools/') || route.path === '/palette-builder' || route.path === '/theme-builder';
 });
 
 const showDesignAssets = computed(() => {

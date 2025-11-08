@@ -102,7 +102,7 @@
                 Foundations
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Core design principles, color systems, typography, and spacing that form the foundation of our design system.
+                Core design principles, colors, typography, and spacing.
               </p>
             </a>
 
@@ -126,7 +126,7 @@
                 Artificial Intelligence
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Guidelines for designing AI-powered interfaces, ethical AI practices, and human-AI interaction patterns.
+                Design guidelines for AI interfaces and ethical practices.
               </p>
             </a>
 
@@ -150,7 +150,7 @@
                 Human-Centered Design
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                User research methodologies, persona development, and design processes that prioritize user needs and experiences.
+                User research, personas, and design processes focused on user needs.
               </p>
             </a>
 
@@ -174,7 +174,7 @@
                 Components
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Reusable UI components with usage guidelines, accessibility requirements, and implementation best practices.
+                Reusable UI components with usage guidelines and best practices.
               </p>
             </a>
 
@@ -198,7 +198,7 @@
                 Patterns
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Common design patterns and interaction models for solving recurring design problems across applications.
+                Design patterns and interaction models for common problems.
               </p>
               <span class="material-symbols-outlined absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
                 chevron_right

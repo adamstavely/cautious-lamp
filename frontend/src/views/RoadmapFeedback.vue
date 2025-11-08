@@ -104,9 +104,19 @@
 
         <!-- What's New Tab -->
         <div v-if="activeTab === 'whats-new'" class="max-w-7xl mx-auto">
-          <div class="mb-8">
-            <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Release Notes</h2>
-            <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Latest features, improvements, and updates to the design system.</p>
+          <div class="mb-8 flex items-center justify-between">
+            <div>
+              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Release Notes</h2>
+              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Latest features, improvements, and updates to the design system.</p>
+            </div>
+            <button
+              v-if="canEditReleaseNotes"
+              @click="showReleaseNotesModal = true; editingReleaseNote = null"
+              class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2"
+            >
+              <span class="material-symbols-outlined">add</span>
+              Add Release Note
+            </button>
           </div>
 
           <div class="space-y-6">
@@ -240,6 +250,7 @@
               </button>
             </div>
             <button
+              v-if="canEditRoadmap"
               @click="showCreateModal = true"
               class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2"
             >
@@ -297,7 +308,7 @@
                     </span>
                   </div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div v-if="canEditRoadmap" class="flex items-center gap-2">
                   <button
                     @click="editRoadmapItem(item)"
                     class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -333,7 +344,7 @@
                 {{ statusFilter === 'all' ? 'Create your first roadmap item to get started.' : `No items with status "${statusFilter}".` }}
               </p>
               <button
-                v-if="statusFilter === 'all'"
+                v-if="statusFilter === 'all' && canEditRoadmap"
                 @click="showCreateModal = true"
                 class="px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-colors"
               >
@@ -1027,15 +1038,43 @@ const showCreateModal = ref(false);
 const editingRoadmapItem = ref(null);
 const showRequestModal = ref(false);
 const showIssueModal = ref(false);
+const showReleaseNotesModal = ref(false);
+const editingReleaseNote = ref(null);
 const loadingRequests = ref(false);
 const loadingIssues = ref(false);
 const submittingRequest = ref(false);
 const submittingIssue = ref(false);
 const selectedRequest = ref(null);
 const newComment = ref('');
+const canEditRoadmap = ref(false);
+const canEditReleaseNotes = ref(false);
 
 const API_BASE_URL = 'http://localhost:3000/api/v1';
 const API_KEY = 'test-api-key-123';
+
+// Check RBAC permissions
+const checkPermissions = async () => {
+  try {
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      canEditRoadmap.value = false;
+      canEditReleaseNotes.value = false;
+      return;
+    }
+    
+    const roadmapEditResponse = await axios.get(
+      `http://localhost:3000/api/v1/rbac/users/${userId}/permissions/roadmap:edit`
+    );
+    
+    canEditRoadmap.value = roadmapEditResponse.data.hasPermission;
+    canEditReleaseNotes.value = roadmapEditResponse.data.hasPermission; // Same permission for release notes
+  } catch (error) {
+    console.error('Error checking permissions:', error);
+    // Fail open - allow viewing but not editing
+    canEditRoadmap.value = false;
+    canEditReleaseNotes.value = false;
+  }
+};
 
 // Release Notes Data
 const releaseNotes = ref([
@@ -1468,7 +1507,8 @@ const getSeverityClass = (severity) => {
 
 let darkModeObserver = null;
 
-onMounted(() => {
+onMounted(async () => {
+  await checkPermissions();
   loadRoadmap();
   loadRequests();
   loadIssues();

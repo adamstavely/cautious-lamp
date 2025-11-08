@@ -49,9 +49,23 @@
           </div>
         </div>
 
-        <!-- Getting Started Cards Grid -->
-        <div class="max-w-7xl mx-auto">
-          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Getting Started Cards Section -->
+        <div class="max-w-7xl mx-auto mb-16">
+          <div class="flex items-center justify-between mb-8">
+            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
+              Browse getting started
+            </h2>
+            <button 
+              class="px-6 py-2 rounded-full border transition-colors text-sm font-medium"
+              :class="isDarkMode 
+                ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' 
+                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'"
+            >
+              View all guides
+            </button>
+          </div>
+          
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <!-- Why a Design System Card -->
             <router-link 
               to="/getting-started/why-design-system"
@@ -243,6 +257,35 @@
                 Get help from the community or reach out to our team for assistance.
               </p>
             </router-link>
+          </div>
+        </div>
+
+        <!-- Featured Resources Section -->
+        <div class="max-w-7xl mx-auto">
+          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-950 dark:via-indigo-900 dark:to-indigo-800">
+            <div class="flex items-center justify-between mb-8">
+              <h2 class="text-4xl md:text-5xl font-bold text-white">
+                Getting started resources
+              </h2>
+              <button class="px-6 py-2 rounded-full border border-white/30 text-white hover:bg-white/10 transition-colors text-sm font-medium">
+                View all resources
+              </button>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+              <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+                <h3 class="text-white font-semibold text-xl mb-2">Quick Start Guide</h3>
+                <p class="text-white/80 text-sm">Get up and running in minutes with our step-by-step quick start guide and installation instructions.</p>
+              </div>
+              <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+                <h3 class="text-white font-semibold text-xl mb-2">Design Principles</h3>
+                <p class="text-white/80 text-sm">Understand the core principles and themes that guide our design decisions and ensure consistent experiences.</p>
+              </div>
+              <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+                <h3 class="text-white font-semibold text-xl mb-2">Contribution Guide</h3>
+                <p class="text-white/80 text-sm">Learn how to contribute components, patterns, documentation, and feedback to help improve the design system.</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -34,6 +34,14 @@ export enum Permission {
   ADMIN_AUDIT = 'admin:audit',
   ADMIN_BANNERS = 'admin:banners',
   ADMIN_RBAC = 'admin:rbac',
+  ADMIN_CODE_QUALITY = 'admin:code_quality',
+  ADMIN_VULNERABILITY_SCANNER = 'admin:vulnerability_scanner',
+  
+  // Roadmap & Feedback permissions
+  ROADMAP_VIEW = 'roadmap:view',
+  ROADMAP_EDIT = 'roadmap:edit',
+  FEEDBACK_CREATE = 'feedback:create',
+  FEEDBACK_VOTE = 'feedback:vote',
   
   // Style/Tokens permissions
   STYLE_MANAGE = 'style:manage',
@@ -86,6 +94,9 @@ export class RbacService {
       Permission.REVIEW_CREATE,
       Permission.DESIGN_CREATE,
       Permission.DESIGN_EDIT,
+      Permission.ROADMAP_VIEW,
+      Permission.FEEDBACK_CREATE,
+      Permission.FEEDBACK_VOTE,
     ],
     [Role.ART_DIRECTOR]: [
       Permission.COMPONENT_VIEW,
@@ -105,6 +116,9 @@ export class RbacService {
       Permission.DESIGN_CREATE,
       Permission.DESIGN_EDIT,
       Permission.DESIGN_APPROVE,
+      Permission.ROADMAP_VIEW,
+      Permission.FEEDBACK_CREATE,
+      Permission.FEEDBACK_VOTE,
     ],
     [Role.CREATIVE_DIRECTOR]: [
       Permission.COMPONENT_VIEW,
@@ -127,6 +141,9 @@ export class RbacService {
       Permission.DESIGN_CREATE,
       Permission.DESIGN_EDIT,
       Permission.DESIGN_APPROVE,
+      Permission.ROADMAP_VIEW,
+      Permission.FEEDBACK_CREATE,
+      Permission.FEEDBACK_VOTE,
     ],
     [Role.DESIGN_SYSTEM_ADMIN]: [
       // All permissions
@@ -139,12 +156,18 @@ export class RbacService {
       Permission.REVIEW_APPROVE,
       Permission.REVIEW_REJECT,
       Permission.REVIEW_ADMIN,
+      Permission.ROADMAP_VIEW,
+      Permission.FEEDBACK_CREATE,
+      Permission.FEEDBACK_VOTE,
     ],
     [Role.STYLE_MANAGER]: [
       Permission.COMPONENT_VIEW,
       Permission.TOKEN_VIEW,
       Permission.TOKEN_CREATE,
       Permission.TOKEN_EDIT,
+      Permission.ROADMAP_VIEW,
+      Permission.FEEDBACK_CREATE,
+      Permission.FEEDBACK_VOTE,
       Permission.TOKEN_DELETE,
       Permission.STYLE_MANAGE,
       Permission.STYLE_APPROVE,
@@ -466,6 +489,14 @@ export class RbacService {
       { value: Permission.ADMIN_AUDIT, label: 'Audit Logs', category: 'Administration' },
       { value: Permission.ADMIN_BANNERS, label: 'Site Banners', category: 'Administration' },
       { value: Permission.ADMIN_RBAC, label: 'Role Management', category: 'Administration' },
+      { value: Permission.ADMIN_CODE_QUALITY, label: 'Code Quality', category: 'Administration' },
+      { value: Permission.ADMIN_VULNERABILITY_SCANNER, label: 'Vulnerability Scanner', category: 'Administration' },
+      
+      // Roadmap & Feedback permissions
+      { value: Permission.ROADMAP_VIEW, label: 'View Roadmap', category: 'Roadmap & Feedback' },
+      { value: Permission.ROADMAP_EDIT, label: 'Edit Roadmap', category: 'Roadmap & Feedback' },
+      { value: Permission.FEEDBACK_CREATE, label: 'Create Feedback', category: 'Roadmap & Feedback' },
+      { value: Permission.FEEDBACK_VOTE, label: 'Vote on Feedback', category: 'Roadmap & Feedback' },
       
       // Style permissions
       { value: Permission.STYLE_MANAGE, label: 'Manage Styles', category: 'Style' },

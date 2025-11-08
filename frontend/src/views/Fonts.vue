@@ -52,7 +52,7 @@
         <div class="max-w-7xl mx-auto mb-16">
           <div class="flex items-center justify-between mb-8">
             <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Font tools
+              Browse fonts
             </h2>
             <button 
               class="px-6 py-2 rounded-full border transition-colors text-sm font-medium"

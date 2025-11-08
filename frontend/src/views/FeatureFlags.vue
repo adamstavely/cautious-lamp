@@ -295,8 +295,8 @@
                 <option value="/tools/heuristic-evaluation">Heuristic Evaluation</option>
                 <option value="/palette-builder">Palette Builder</option>
                 <option value="/theme-builder">Theme Builder</option>
-                <option value="/code-quality">Code Quality Checks</option>
-                <option value="/security">Vulnerability Scanner</option>
+                <option value="/admin/code-quality">Code Quality Checks</option>
+                <option value="/admin/security">Vulnerability Scanner</option>
                 <option value="/tools/migration">Migration Assistant</option>
               </optgroup>
               <optgroup label="Fonts">
@@ -585,8 +585,8 @@ const routeToFlagKey = {
   '/tools/heuristic-evaluation': 'heuristic-evaluation',
   '/palette-builder': 'palette-builder',
   '/theme-builder': 'theme-builder',
-  '/code-quality': 'code-quality',
-  '/security': 'vulnerability-scanner',
+  '/admin/code-quality': 'code-quality',
+  '/admin/security': 'vulnerability-scanner',
   '/tools/migration': 'migration-assistant',
   '/fonts': 'font-library',
   '/fonts/library': 'font-library',
@@ -641,8 +641,8 @@ const routeToName = {
   '/tools/heuristic-evaluation': 'Heuristic Evaluation',
   '/palette-builder': 'Palette Builder',
   '/theme-builder': 'Theme Builder',
-  '/code-quality': 'Code Quality Checks',
-  '/security': 'Vulnerability Scanner',
+  '/admin/code-quality': 'Code Quality Checks',
+  '/admin/security': 'Vulnerability Scanner',
   '/tools/migration': 'Migration Assistant',
   '/fonts': 'Fonts Overview',
   '/fonts/library': 'Font Library',
@@ -681,7 +681,7 @@ const getCategoryFromRoute = (route) => {
   if (route.startsWith('/tokens')) return 'Tokens';
   if (route.startsWith('/review')) return 'Review';
   if (route.startsWith('/admin')) return 'Admin';
-  if (route.startsWith('/tools') || route === '/palette-builder' || route === '/theme-builder' || route === '/code-quality' || route === '/security') return 'Tools';
+  if (route.startsWith('/tools') || route === '/palette-builder' || route === '/theme-builder') return 'Tools';
   if (route.startsWith('/fonts')) return 'Fonts';
   if (route.startsWith('/patterns')) return 'Patterns';
   if (route.startsWith('/design-assets')) return 'Design Assets';

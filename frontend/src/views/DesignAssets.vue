@@ -91,16 +91,16 @@
               </p>
             </router-link>
 
-            <!-- Asset Card 2: Images -->
-            <a 
-              href="#" 
+            <!-- Asset Card 2: Country Flags -->
+            <router-link 
+              to="/design-assets/country-flags" 
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">image</span>
+                <span class="material-symbols-outlined text-5xl">flag</span>
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -108,23 +108,23 @@
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
-                Images
+                Country Flags
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Organize and manage image assets for your projects.
+                Collection of country flag assets for use in your designs.
               </p>
-            </a>
+            </router-link>
 
-            <!-- Asset Card 3: Logos -->
-            <a 
-              href="#" 
+            <!-- Asset Card 3: USG Seals -->
+            <router-link 
+              to="/design-assets/usg-seals" 
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">account_circle</span>
+                <span class="material-symbols-outlined text-5xl">verified</span>
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -132,16 +132,88 @@
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
-                Logos
+                USG Seals
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Brand logos and identity assets in one place.
+                Official US Government seals and emblems for authorized use.
               </p>
-            </a>
+            </router-link>
 
-            <!-- Asset Card 4: Illustrations -->
-            <a 
-              href="#" 
+            <!-- Asset Card 4: Internal Seals -->
+            <router-link 
+              to="/design-assets/internal-seals" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">security</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Internal Seals
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Internal organizational seals and emblems for agency use.
+              </p>
+            </router-link>
+
+            <!-- Asset Card 5: Interactives -->
+            <router-link 
+              to="/design-assets/interactives" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">touch_app</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Interactives
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Interactive design assets and components for enhanced user experiences.
+              </p>
+            </router-link>
+
+            <!-- Asset Card 6: Stock Photos -->
+            <router-link 
+              to="/design-assets/stock-photos" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">photo_library</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Stock Photos
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Curated collection of stock photography for use in your projects.
+              </p>
+            </router-link>
+
+            <!-- Asset Card 7: Illustrations -->
+            <router-link 
+              to="/design-assets/illustrations" 
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
@@ -161,18 +233,18 @@
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Curated illustration collections for your designs.
               </p>
-            </a>
+            </router-link>
 
-            <!-- Asset Card 5: Patterns -->
-            <a 
-              href="#" 
-              class="group rounded-2xl p-6 border transition-all relative"
+            <!-- Asset Card 8: Capability Logos -->
+            <router-link 
+              to="/design-assets/capability-logos" 
+              class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">pattern</span>
+                <span class="material-symbols-outlined text-5xl">workspace_premium</span>
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -180,15 +252,36 @@
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
-                Patterns
+                Capability Logos
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Background patterns and texture assets.
+                Logos and branding assets for specific capabilities and services.
               </p>
-              <span class="material-symbols-outlined absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
-                chevron_right
-              </span>
-            </a>
+            </router-link>
+
+            <!-- Asset Card 9: Company Logos -->
+            <router-link 
+              to="/design-assets/company-logos" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">business</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Company Logos
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Company and organization logos for partnership and collaboration materials.
+              </p>
+            </router-link>
           </div>
         </div>
 

@@ -19,6 +19,7 @@ import * as components from 'vuetify/components';
 import * as directives from 'vuetify/directives';
 import '@mdi/font/css/materialdesignicons.css';
 import { checkFeatureFlagGuard } from './router/featureFlagGuards';
+import { checkRbacGuard } from './router/rbacGuards';
 
 // Initialize dark mode before creating Vuetify
 const initDarkMode = () => {
@@ -207,10 +208,18 @@ const router = createRouter({
     },
     {
       path: '/code-quality',
-      component: () => import('./views/CodeQuality.vue'),
+      redirect: '/admin/code-quality',
     },
     {
       path: '/security',
+      redirect: '/admin/security',
+    },
+    {
+      path: '/admin/code-quality',
+      component: () => import('./views/CodeQuality.vue'),
+    },
+    {
+      path: '/admin/security',
       component: () => import('./views/VulnerabilityScanner.vue'),
     },
     {
@@ -366,6 +375,38 @@ const router = createRouter({
       component: () => import('./views/IconLibrary.vue'),
     },
     {
+      path: '/design-assets/country-flags',
+      component: () => import('./views/CountryFlags.vue'),
+    },
+    {
+      path: '/design-assets/usg-seals',
+      component: () => import('./views/USGSeals.vue'),
+    },
+    {
+      path: '/design-assets/internal-seals',
+      component: () => import('./views/InternalSeals.vue'),
+    },
+    {
+      path: '/design-assets/interactives',
+      component: () => import('./views/Interactives.vue'),
+    },
+    {
+      path: '/design-assets/stock-photos',
+      component: () => import('./views/StockPhotos.vue'),
+    },
+    {
+      path: '/design-assets/illustrations',
+      component: () => import('./views/Illustrations.vue'),
+    },
+    {
+      path: '/design-assets/capability-logos',
+      component: () => import('./views/CapabilityLogos.vue'),
+    },
+    {
+      path: '/design-assets/company-logos',
+      component: () => import('./views/CompanyLogos.vue'),
+    },
+    {
       path: '/getting-started',
       component: () => import('./views/GettingStarted.vue'),
     },
@@ -418,16 +459,28 @@ const router = createRouter({
       path: '/gradient-generator',
       redirect: '/tools/gradient-generator',
     },
+    {
+      path: '/:pathMatch(.*)*',
+      component: () => import('./views/NotFound.vue'),
+    },
   ],
 });
 
-// Add feature flag guard to router
+// Add feature flag and RBAC guards to router
 router.beforeEach(async (to, from, next) => {
-  const result = await checkFeatureFlagGuard(to);
-  if (result === true) {
+  // First check feature flags
+  const featureFlagResult = await checkFeatureFlagGuard(to);
+  if (featureFlagResult !== true) {
+    next(featureFlagResult);
+    return;
+  }
+  
+  // Then check RBAC permissions
+  const rbacResult = await checkRbacGuard(to);
+  if (rbacResult === true) {
     next();
   } else {
-    next(result);
+    next(rbacResult);
   }
 });
 
