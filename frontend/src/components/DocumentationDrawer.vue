@@ -366,9 +366,9 @@
             </div>
           </div>
 
-          <!-- Color Tools -->
+          <!-- Color -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Color Tools</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Color</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredToolGroups.color"
@@ -445,9 +445,9 @@
           </div>
 
 
-          <!-- Image Tools -->
+          <!-- Image & Video -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Image Tools</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Image & Video</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredToolGroups.image"
@@ -862,18 +862,17 @@ const toolGroups = computed(() => ({
     { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'text-initial' },
     { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'tag' },
     { text: 'Font Scale', link: '/tools/font-scale', icon: 'format_size' },
-    { text: 'Font Stack', link: '/tools/font-stack', icon: 'layers' },
-    { text: 'Font Subsetting', link: '/tools/font-subsetting', icon: 'content_cut' }
+    { text: 'Font Stack & Subsetting', link: '/tools/font-stack', icon: 'layers' }
   ],
   development: [
     { text: 'Migration Assistant', link: '/tools/migration', icon: 'refresh' },
     { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' },
-    { text: 'Visual Regression Testing', link: '/tools/visual-regression', icon: 'compare' },
-    { text: 'Photosensitivity Analysis', link: '/tools/photosensitivity', icon: 'visibility' }
+    { text: 'Visual Regression Testing', link: '/tools/visual-regression', icon: 'compare' }
   ],
   image: [
     { text: 'PNG to ICO Converter', link: '/tools/png-to-ico', icon: 'image' },
-    { text: 'Alt Text Generator', link: '/tools/alt-text-generator', icon: 'captions' }
+    { text: 'Alt Text Generator', link: '/tools/alt-text-generator', icon: 'captions' },
+    { text: 'Photosensitivity Analysis', link: '/tools/photosensitivity', icon: 'visibility' }
   ]
 }));
 

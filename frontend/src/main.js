@@ -127,8 +127,12 @@ const router = createRouter({
       redirect: '/tools/font-stack',
     },
     {
+      path: '/tools/font-subsetting',
+      redirect: '/tools/font-stack',
+    },
+    {
       path: '/fonts/subsetting',
-      redirect: '/tools/font-subsetting',
+      redirect: '/tools/font-stack',
     },
     {
       path: '/fonts/library',
@@ -441,10 +445,6 @@ const router = createRouter({
     {
       path: '/tools/font-stack',
       component: () => import('./views/FontStack.vue'),
-    },
-    {
-      path: '/tools/font-subsetting',
-      component: () => import('./views/FontSubsetting.vue'),
     },
     {
       path: '/tools/visual-regression',

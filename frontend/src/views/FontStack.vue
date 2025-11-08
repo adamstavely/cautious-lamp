@@ -23,14 +23,14 @@
                 <div class="flex-1">
                   <div class="flex items-center gap-4 mb-4">
                     <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Font Stack Builder
+                      Font Stack & Subsetting
                     </h1>
                     <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
                       Production Ready
                     </span>
                   </div>
                   <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Build optimal font stacks with fallback fonts. Ensure your text is always readable, even if the primary font fails to load.
+                    Build optimal font stacks with fallback fonts and generate optimized Google Fonts URLs by subsetting character sets. Reduce file size and improve load times.
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
@@ -64,196 +64,337 @@
             </div>
           </div>
 
-          <div class="max-w-3xl mx-auto">
-
-          <!-- Info Box -->
-          <div 
-            class="mb-6 p-4 border rounded-lg" 
-            :class="isDarkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'"
-          >
-            <p 
-              class="text-sm" 
-              :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-            >
-              <strong>What is a font stack?</strong> A font stack is a list of fonts in CSS that browsers try to use in order. If the first font isn't available, the browser falls back to the next font in the list. This ensures your text is always readable, even if the primary font fails to load. The builder helps you create an optimal CSS <code 
-                class="px-1 py-0.5 rounded text-xs font-mono" 
-                :class="isDarkMode ? 'bg-blue-800' : 'bg-blue-100'"
-              >font-family</code> declaration with appropriate fallback fonts.
-            </p>
-          </div>
-          
-          <!-- Select Primary Font -->
-          <div 
-            class="mb-6 rounded-lg border p-6" 
-            :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-          >
-            <label 
-              class="text-sm font-medium mb-2 block flex items-center gap-2" 
-              :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-            >
-              <span class="material-symbols-outlined text-indigo-600">font_download</span>
-              Select Primary Font
-            </label>
-            <Dropdown
-              :model-value="selectedFontForStack"
-              @update:model-value="selectedFontForStack = $event; fontStack = buildFontStack($event)"
-              :options="fontOptions"
-              :is-dark-mode="isDarkMode"
-            />
-          </div>
-          
-          <!-- Font Stack Builder -->
-          <div v-if="selectedFontForStack" class="space-y-6">
-            <!-- Pairs Well With -->
-            <div 
-              v-if="getSelectedFontForStack()?.pairsWellWith && getSelectedFontForStack().pairsWellWith.length > 0" 
-              class="rounded-lg border p-6" 
-              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-            >
-              <h4 
-                class="font-semibold mb-3" 
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+          <div class="max-w-7xl mx-auto">
+            <!-- Two Column Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              <!-- Font Stack Section - Left Pane -->
+              <div 
+                class="rounded-lg shadow-sm border p-6" 
+                :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'"
               >
-                Pairs Well With
-              </h4>
-              <div class="flex flex-wrap gap-2">
-                <button 
-                  v-for="pair in getSelectedFontForStack().pairsWellWith" 
-                  :key="pair" 
-                  @click="addToFontStack(pair)"
-                  class="px-3 py-1 rounded-lg transition-colors cursor-pointer"
-                  :class="isDarkMode 
-                    ? 'bg-green-900/30 text-green-300 hover:bg-green-900/50' 
-                    : 'bg-green-100 text-green-700 hover:bg-green-200'"
-                  title="Click to add to font stack"
+                <h2 
+                  class="text-2xl font-bold mb-4 flex items-center gap-2" 
+                  :class="isDarkMode ? 'text-white' : 'text-gray-900'"
                 >
-                  {{ pair }}
-                </button>
-              </div>
-            </div>
+                  <span class="material-symbols-outlined text-indigo-600">layers</span>
+                  Font Stack Builder
+                </h2>
             
-            <!-- Font Stack Display -->
-            <div 
-              class="rounded-lg border p-6" 
-              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-3">
+                <!-- Info Box -->
                 <div 
-                  class="text-sm font-medium" 
-                  :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+                  class="mb-6 p-4 border rounded-lg" 
+                  :class="isDarkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'"
                 >
-                  Font Stack
+                  <p 
+                    class="text-sm" 
+                    :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+                  >
+                    <strong>What is a font stack?</strong> A font stack is a list of fonts in CSS that browsers try to use in order. If the first font isn't available, the browser falls back to the next font in the list. This ensures your text is always readable, even if the primary font fails to load. The builder helps you create an optimal CSS <code 
+                      class="px-1 py-0.5 rounded text-xs font-mono" 
+                      :class="isDarkMode ? 'bg-blue-800' : 'bg-blue-100'"
+                    >font-family</code> declaration with appropriate fallback fonts.
+                  </p>
                 </div>
-                <button 
-                  @click="resetFontStack" 
-                  class="text-xs transition-colors"
-                  :class="isDarkMode 
-                    ? 'text-indigo-400 hover:text-indigo-300' 
-                    : 'text-indigo-600 hover:text-indigo-700'"
-                >
-                  Reset to Default
-                </button>
-              </div>
-              <div class="flex flex-wrap gap-2 items-center">
-                <div 
-                  v-for="(fontName, index) in fontStack" 
-                  :key="`${fontName}-${index}`"
-                  class="px-3 py-1 border rounded-lg flex items-center gap-2 group"
-                  :class="isDarkMode 
-                    ? 'bg-slate-700 border-gray-600' 
-                    : 'bg-white border-gray-300'"
-                >
-                  <span 
-                    class="text-sm font-mono" 
-                    :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              
+                <!-- Select Primary Font -->
+                <div class="mb-6">
+                  <label 
+                    class="block text-sm font-medium mb-2 flex items-center gap-2" 
+                    :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
                   >
-                    {{ fontName }}
-                  </span>
-                  <button 
-                    v-if="index > 0"
-                    @click="removeFromFontStack(index)"
-                    class="transition-colors opacity-0 group-hover:opacity-100"
-                    :class="isDarkMode 
-                      ? 'text-gray-500 hover:text-red-400' 
-                      : 'text-gray-400 hover:text-red-600'"
-                    title="Remove from stack"
+                    <span class="material-symbols-outlined text-indigo-600 text-base">font_download</span>
+                    Select Primary Font
+                  </label>
+                  <Dropdown
+                    :model-value="selectedFontForStack"
+                    @update:model-value="selectedFontForStack = $event; fontStack = buildFontStack($event)"
+                    :options="fontOptions"
+                    :is-dark-mode="isDarkMode"
+                  />
+                </div>
+                
+                <!-- Font Stack Builder -->
+                <div v-if="selectedFontForStack" class="space-y-4">
+                  <!-- Pairs Well With -->
+                  <div 
+                    v-if="getSelectedFontForStack()?.pairsWellWith && getSelectedFontForStack().pairsWellWith.length > 0"
                   >
-                    <span class="material-symbols-outlined text-sm">close</span>
+                    <h4 
+                      class="text-base font-semibold mb-3 flex items-center gap-2" 
+                      :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+                    >
+                      <span class="material-symbols-outlined text-indigo-600">link</span>
+                      Pairs Well With
+                    </h4>
+                    <div class="flex flex-wrap gap-2">
+                      <button 
+                        v-for="pair in getSelectedFontForStack().pairsWellWith" 
+                        :key="pair" 
+                        @click="addToFontStack(pair)"
+                        class="px-3 py-1 rounded-lg transition-colors cursor-pointer"
+                        :class="isDarkMode 
+                          ? 'bg-green-900/30 text-green-300 hover:bg-green-900/50' 
+                          : 'bg-green-100 text-green-700 hover:bg-green-200'"
+                        title="Click to add to font stack"
+                      >
+                        {{ pair }}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <!-- Font Stack Display -->
+                  <div>
+                    <div class="flex items-center justify-between mb-3">
+                      <div 
+                        class="text-sm font-medium flex items-center gap-2" 
+                        :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+                      >
+                        <span class="material-symbols-outlined text-indigo-600 text-base">format_list_bulleted</span>
+                        Font Stack
+                      </div>
+                      <button 
+                        @click="resetFontStack" 
+                        class="text-xs transition-colors"
+                        :class="isDarkMode 
+                          ? 'text-indigo-400 hover:text-indigo-300' 
+                          : 'text-indigo-600 hover:text-indigo-700'"
+                      >
+                        Reset to Default
+                      </button>
+                    </div>
+                    <div class="flex flex-wrap gap-2 items-center">
+                      <div 
+                        v-for="(fontName, index) in fontStack" 
+                        :key="`${fontName}-${index}`"
+                        class="px-3 py-1 border rounded-lg flex items-center gap-2 group"
+                        :class="isDarkMode 
+                          ? 'bg-slate-700 border-gray-600' 
+                          : 'bg-white border-gray-300'"
+                      >
+                        <span 
+                          class="text-sm font-mono" 
+                          :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+                        >
+                          {{ fontName }}
+                        </span>
+                        <button 
+                          v-if="index > 0"
+                          @click="removeFromFontStack(index)"
+                          class="transition-colors opacity-0 group-hover:opacity-100"
+                          :class="isDarkMode 
+                            ? 'text-gray-500 hover:text-red-400' 
+                            : 'text-gray-400 hover:text-red-600'"
+                          title="Remove from stack"
+                        >
+                          <span class="material-symbols-outlined text-sm">close</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Manually Add Font -->
+                  <div>
+                    <label 
+                      class="text-sm font-medium mb-2 block flex items-center gap-2" 
+                      :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+                    >
+                      <span class="material-symbols-outlined text-indigo-600 text-base">add_circle</span>
+                      Manually Add Font
+                    </label>
+                    <div class="flex gap-2">
+                      <input 
+                        v-model="newFontInStack"
+                        type="text"
+                        placeholder="Type font name (e.g., Arial, Georgia)..."
+                        class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                        :class="isDarkMode 
+                          ? 'border-gray-600 bg-slate-700 text-white placeholder-gray-500' 
+                          : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'"
+                        @keyup.enter="addToFontStack(newFontInStack)"
+                      />
+                      <button 
+                        @click="addToFontStack(newFontInStack)"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <!-- Preview -->
+                  <div>
+                    <div 
+                      class="text-sm font-medium mb-2 flex items-center gap-2" 
+                      :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+                    >
+                      <span class="material-symbols-outlined text-indigo-600 text-base">preview</span>
+                      Preview
+                    </div>
+                    <div 
+                      class="leading-relaxed" 
+                      :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+                      :style="{ fontFamily: fontStack.join(', ') }"
+                    >
+                      The quick brown fox jumps over the lazy dog. This demonstrates how the font stack falls back to system fonts if the primary font fails to load.
+                    </div>
+                  </div>
+                  
+                  <!-- CSS Output -->
+                  <div 
+                    class="rounded-lg border p-4" 
+                    :class="isDarkMode ? 'bg-slate-900 border-gray-600' : 'bg-gray-900 border-gray-700'"
+                  >
+                    <div class="mb-2 text-sm text-gray-400">CSS:</div>
+                    <div 
+                      class="font-mono text-sm break-all" 
+                      :class="isDarkMode ? 'text-green-300' : 'text-green-400'"
+                    >
+                      font-family: {{ fontStack.map(f => `'${f}'`).join(', ') }};
+                    </div>
+                  </div>
+                  
+                  <!-- Copy Button -->
+                  <button @click="copyFontStack" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                    Copy CSS
                   </button>
                 </div>
               </div>
-            </div>
-            
-            <!-- Manually Add Font -->
-            <div 
-              class="rounded-lg border p-6" 
-              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-            >
-              <label 
-                class="text-sm font-medium mb-2 block" 
-                :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+
+              <!-- Font Subsetting Section - Right Pane -->
+              <div 
+                class="rounded-lg shadow-sm border p-6" 
+                :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'"
               >
-                Manually Add Font
-              </label>
-              <div class="flex gap-2">
-                <input 
-                  v-model="newFontInStack"
-                  type="text"
-                  placeholder="Type font name (e.g., Arial, Georgia)..."
-                  class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-700 text-white placeholder-gray-500' 
-                    : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'"
-                  @keyup.enter="addToFontStack(newFontInStack)"
-                />
-                <button 
-                  @click="addToFontStack(newFontInStack)"
-                  class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                <h2 
+                  class="text-2xl font-bold mb-4 flex items-center gap-2" 
+                  :class="isDarkMode ? 'text-white' : 'text-gray-900'"
                 >
-                  Add
-                </button>
+                  <span class="material-symbols-outlined text-indigo-600">content_cut</span>
+                  Font Subsetting
+                </h2>
+            
+                <!-- Info Box -->
+                <div 
+                  class="mb-6 p-4 border rounded-lg" 
+                  :class="isDarkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'"
+                >
+                  <p 
+                    class="text-sm" 
+                    :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+                  >
+                    <strong>What is font subsetting?</strong> Font subsetting allows you to include only the character sets you need, reducing file size and improving load times. Select the character sets your project requires to generate an optimized Google Fonts URL.
+                  </p>
+                </div>
+                
+                <!-- Select Font -->
+                <div class="mb-6">
+                  <label 
+                    class="block text-sm font-medium mb-2 flex items-center gap-2" 
+                    :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+                  >
+                    <span class="material-symbols-outlined text-indigo-600 text-base">font_download</span>
+                    Select Font
+                  </label>
+                  <Dropdown
+                    :model-value="selectedFontForSubsetting"
+                    @update:model-value="selectedFontForSubsetting = $event; selectedSubsets = []; selectedWeightForSubsetting = ''"
+                    :options="fontOptions"
+                    :is-dark-mode="isDarkMode"
+                  />
+                </div>
+                
+                <!-- Select Weight -->
+                <div v-if="selectedFontForSubsetting" class="mb-6">
+                  <label 
+                    class="block text-sm font-medium mb-2 flex items-center gap-2" 
+                    :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+                  >
+                    <span class="material-symbols-outlined text-indigo-600 text-base">format_bold</span>
+                    Select Weight
+                  </label>
+                  <Dropdown
+                    :model-value="selectedWeightForSubsetting"
+                    @update:model-value="selectedWeightForSubsetting = $event"
+                    :options="weightOptions"
+                    :is-dark-mode="isDarkMode"
+                  />
+                </div>
+                
+                <!-- Select Character Sets -->
+                <div v-if="selectedFontForSubsetting" class="space-y-4">
+                  <div>
+                    <h4 
+                      class="text-base font-semibold mb-3 flex items-center gap-2" 
+                      :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+                    >
+                      <CaseSensitive :size="20" :stroke-width="2" class="text-indigo-600" />
+                      Select Character Sets to Include
+                    </h4>
+                    <p 
+                      class="text-xs mb-3" 
+                      :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
+                    >
+                      Choose which character sets to include in your font subset. Only options supported by this font are shown.
+                    </p>
+                    <div 
+                      v-if="getAvailableSubsetsForFont().length === 0" 
+                      class="text-sm italic" 
+                      :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
+                    >
+                      No character sets available for this font.
+                    </div>
+                    <div v-else class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <label 
+                        v-for="subset in getAvailableSubsetsForFont()" 
+                        :key="subset.value" 
+                        class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition-colors"
+                        :class="isDarkMode 
+                          ? 'border-gray-600 hover:bg-slate-700' 
+                          : 'border-gray-200 hover:bg-gray-50'"
+                      >
+                        <input 
+                          type="checkbox" 
+                          :value="subset.value" 
+                          v-model="selectedSubsets" 
+                          class="rounded" 
+                        />
+                        <span 
+                          class="text-sm capitalize" 
+                          :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+                        >
+                          {{ subset.label }}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                  
+                  <!-- Generated URL -->
+                  <div 
+                    v-if="selectedSubsets.length > 0 && selectedWeightForSubsetting"
+                  >
+                    <div 
+                      class="text-sm font-medium mb-2 flex items-center gap-2" 
+                      :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+                    >
+                      <span class="material-symbols-outlined text-indigo-600 text-base">link</span>
+                      Google Fonts URL
+                    </div>
+                    <div 
+                      class="text-xs font-mono break-all mb-3 p-3 rounded border" 
+                      :class="isDarkMode 
+                        ? 'bg-slate-700 text-white border-gray-600' 
+                        : 'bg-white text-gray-900 border-gray-200'"
+                    >
+                      https://fonts.googleapis.com/css2?family={{ selectedFontForSubsetting.replace(/\s/g, '+') }}:wght@{{ selectedWeightForSubsetting }}&subset={{ selectedSubsets.join(',') }}
+                    </div>
+                    <button @click="copySubsetURL" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                      Copy URL
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <!-- Preview -->
-            <div 
-              class="rounded-lg border p-6" 
-              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-            >
-              <div 
-                class="text-sm font-medium mb-2" 
-                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-              >
-                Preview
-              </div>
-              <div 
-                class="leading-relaxed" 
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                :style="{ fontFamily: fontStack.join(', ') }"
-              >
-                The quick brown fox jumps over the lazy dog. This demonstrates how the font stack falls back to system fonts if the primary font fails to load.
-              </div>
-            </div>
-            
-            <!-- CSS Output -->
-            <div 
-              class="rounded-lg border p-6" 
-              :class="isDarkMode ? 'bg-slate-900 border-gray-600' : 'bg-gray-900 border-gray-700'"
-            >
-              <div class="mb-2 text-sm text-gray-400">CSS:</div>
-              <div 
-                class="font-mono text-sm break-all" 
-                :class="isDarkMode ? 'text-green-300' : 'text-green-400'"
-              >
-                font-family: {{ fontStack.map(f => `'${f}'`).join(', ') }};
-              </div>
-            </div>
-            
-            <!-- Copy Button -->
-            <button @click="copyFontStack" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-              Copy CSS
-            </button>
-          </div>
           </div>
         </div>
       </div>
@@ -266,6 +407,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
+import { CaseSensitive } from 'lucide-vue-next';
 import fontData from '../assets/fonts.json';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
@@ -274,6 +416,9 @@ const selectedFontForStack = ref('');
 const fontStack = ref(['Arial', 'Helvetica', 'sans-serif']);
 const newFontInStack = ref('');
 const defaultFontStack = ref(['Arial', 'Helvetica', 'sans-serif']);
+const selectedFontForSubsetting = ref('');
+const selectedWeightForSubsetting = ref('');
+const selectedSubsets = ref([]);
 
 // Create font options for dropdown
 const fontOptions = computed(() => {
@@ -335,6 +480,77 @@ function buildFontStack(fontName) {
   }
   return stacks['sans-serif'];
 }
+
+// Font Subsetting functions
+function getSelectedFontForSubsetting() {
+  if (!selectedFontForSubsetting.value) return null;
+  return fontData.find(f => f.name === selectedFontForSubsetting.value);
+}
+
+function getAvailableWeightsForSubsetting() {
+  const font = getSelectedFontForSubsetting();
+  if (!font || !font.weights) return [];
+  return font.weights.sort((a, b) => parseInt(a) - parseInt(b));
+}
+
+function getAvailableSubsetsForFont() {
+  const font = getSelectedFontForSubsetting();
+  if (!font || !font.supports) return [];
+  
+  const allSubsets = [
+    { value: 'latin', label: 'Latin', base: 'latin' },
+    { value: 'latin-ext', label: 'Latin Extended', base: 'latin' },
+    { value: 'cyrillic', label: 'Cyrillic', base: 'cyrillic' },
+    { value: 'cyrillic-ext', label: 'Cyrillic Extended', base: 'cyrillic' },
+    { value: 'greek', label: 'Greek', base: 'greek' },
+    { value: 'greek-ext', label: 'Greek Extended', base: 'greek' },
+    { value: 'arabic', label: 'Arabic', base: 'arabic' },
+    { value: 'devanagari', label: 'Devanagari', base: 'devanagari' },
+    { value: 'chinese', label: 'Chinese', base: 'chinese' }
+  ];
+  
+  // Filter to only show subsets for scripts the font supports
+  return allSubsets.filter(subset => {
+    return font.supports.includes(subset.base);
+  });
+}
+
+function copySubsetURL() {
+  if (!selectedFontForSubsetting.value || selectedSubsets.value.length === 0 || !selectedWeightForSubsetting.value) return;
+  const url = `https://fonts.googleapis.com/css2?family=${selectedFontForSubsetting.value.replace(/\s/g, '+')}:wght@${selectedWeightForSubsetting.value}&subset=${selectedSubsets.value.join(',')}`;
+  navigator.clipboard.writeText(url).then(() => {
+    alert('Font subset URL copied to clipboard!');
+  }).catch(() => {
+    alert('Failed to copy to clipboard');
+  });
+}
+
+function getWeightName(weight) {
+  const weightNames = {
+    '100': 'Thin',
+    '200': 'Extra Light',
+    '300': 'Light',
+    '400': 'Regular',
+    '500': 'Medium',
+    '600': 'Semi Bold',
+    '700': 'Bold',
+    '800': 'Extra Bold',
+    '900': 'Black'
+  };
+  return weightNames[weight.toString()] || 'Unknown';
+}
+
+// Create weight options for dropdown
+const weightOptions = computed(() => {
+  const weights = getAvailableWeightsForSubsetting();
+  return [
+    { label: 'Choose a weight...', value: '' },
+    ...weights.map(weight => ({ 
+      label: `${getWeightName(weight)} (${weight})`, 
+      value: weight 
+    }))
+  ];
+});
 
 const closeDrawer = () => {
   drawerOpen.value = false;
