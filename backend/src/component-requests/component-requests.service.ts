@@ -35,6 +35,12 @@ export class ComponentRequestsService {
     private readonly designSystemService: DesignSystemService,
   ) {
     this.initializeExampleData();
+    // Set up callback for component creation
+    this.designSystemService.setComponentCreatedCallback(
+      (componentId: string, componentName: string, linkedRequestId?: string) => {
+        this.onComponentCreated(componentId, componentName, linkedRequestId);
+      }
+    );
   }
 
   private initializeExampleData() {
@@ -417,6 +423,113 @@ export class ComponentRequestsService {
     return Array.from(this.comments.values())
       .filter(c => c.requestId === requestId)
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+
+  // Link request to component
+  linkToComponent(requestId: string, componentId: string): ComponentRequest | null {
+    const request = this.requests.get(requestId);
+    if (!request) return null;
+
+    request.componentId = componentId;
+    request.updatedAt = new Date();
+    this.requests.set(requestId, request);
+
+    // Auto-transition to completed if in-progress
+    if (request.status === 'in-progress') {
+      this.transitionStatus(requestId, 'completed', 'system');
+    }
+
+    return request;
+  }
+
+  // Unlink request from component
+  unlinkFromComponent(requestId: string): ComponentRequest | null {
+    const request = this.requests.get(requestId);
+    if (!request) return null;
+
+    request.componentId = undefined;
+    request.updatedAt = new Date();
+    this.requests.set(requestId, request);
+
+    return request;
+  }
+
+  // Auto-link when component is created (called from DesignSystemService)
+  onComponentCreated(componentId: string, componentName: string, linkedRequestId?: string): void {
+    // If a specific request ID is provided, link directly
+    if (linkedRequestId) {
+      const request = this.requests.get(linkedRequestId);
+      if (request) {
+        this.linkToComponent(linkedRequestId, componentId);
+        // Auto-transition to in-progress if approved
+        if (request.status === 'approved') {
+          this.transitionStatus(linkedRequestId, 'in-progress', 'system');
+        }
+        return;
+      }
+    }
+
+    // Otherwise, try to find matching request by name
+    // Improved matching: check title, description, and category keywords
+    const componentNameLower = componentName.toLowerCase();
+    const componentKeywords = componentNameLower
+      .split(/[\s-]+/)
+      .filter(word => word.length > 2); // Filter out short words
+
+    const matchingRequests = Array.from(this.requests.values())
+      .filter(req => {
+        // Skip if already linked
+        if (req.componentId) return false;
+        
+        // Must be approved or in-progress
+        if (!['approved', 'in-progress'].includes(req.status)) return false;
+
+        const titleLower = req.title.toLowerCase();
+        const descLower = req.description.toLowerCase();
+
+        // Exact match or contains match
+        if (titleLower === componentNameLower || 
+            componentNameLower === titleLower ||
+            titleLower.includes(componentNameLower) ||
+            componentNameLower.includes(titleLower)) {
+          return true;
+        }
+
+        // Keyword matching
+        const titleKeywords = titleLower.split(/[\s-]+/).filter(w => w.length > 2);
+        const matchingKeywords = componentKeywords.filter(kw => 
+          titleKeywords.some(tk => tk.includes(kw) || kw.includes(tk))
+        );
+        
+        // If at least 2 keywords match, consider it a match
+        if (matchingKeywords.length >= 2) {
+          return true;
+        }
+
+        // Check description for component name
+        if (descLower.includes(componentNameLower) || componentNameLower.includes(descLower.split(' ')[0])) {
+          return true;
+        }
+
+        return false;
+      })
+      .sort((a, b) => {
+        // Sort by priority and recency
+        const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
+        const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+        if (priorityDiff !== 0) return priorityDiff;
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
+
+    // Link to the best matching request
+    if (matchingRequests.length > 0) {
+      const bestMatch = matchingRequests[0];
+      this.linkToComponent(bestMatch.id, componentId);
+      // Auto-transition to in-progress if approved
+      if (bestMatch.status === 'approved') {
+        this.transitionStatus(bestMatch.id, 'in-progress', 'system');
+      }
+    }
   }
 
   // Duplicate detection using similarity algorithm

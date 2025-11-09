@@ -241,5 +241,32 @@ export class ComponentRequestsController {
     }
     return request;
   }
+
+  @Post(':id/link-component')
+  linkToComponent(
+    @Param('id') id: string,
+    @Body() body: { componentId: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const request = this.requestsService.linkToComponent(id, body.componentId);
+    if (!request) {
+      throw new BadRequestException(`Request '${id}' not found`);
+    }
+    return request;
+  }
+
+  @Post(':id/unlink-component')
+  unlinkFromComponent(
+    @Param('id') id: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const request = this.requestsService.unlinkFromComponent(id);
+    if (!request) {
+      throw new BadRequestException(`Request '${id}' not found`);
+    }
+    return request;
+  }
 }
 

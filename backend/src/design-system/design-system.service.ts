@@ -1478,6 +1478,52 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
     return this.components.filter(component => component.status === status);
   }
 
+  /**
+   * Create a new component and auto-link to matching requests
+   */
+  createComponent(data: {
+    id: string;
+    name: string;
+    description: string;
+    status?: 'production' | 'in-progress' | 'planned' | 'deprecated';
+    props?: ComponentProp[];
+    code?: { vue?: string; react?: string; html?: string };
+    dependencies?: string[];
+    examples?: string[];
+    accessibility?: { wcag: string; notes?: string };
+    linkedRequestId?: string; // Optional: explicitly link to a specific request
+  }): Component {
+    const component: Component = {
+      id: data.id,
+      name: data.name,
+      description: data.description,
+      status: data.status || 'in-progress',
+      props: data.props || [],
+      code: data.code || { vue: '', react: '' },
+      dependencies: data.dependencies || [],
+      examples: data.examples || [],
+      accessibility: data.accessibility,
+    };
+
+    this.components.push(component);
+
+    // Auto-link to matching component requests
+    // This will be called via ComponentRequestsService if available
+    // We'll use a callback pattern to avoid circular dependency
+    if (typeof (this as any).onComponentCreatedCallback === 'function') {
+      (this as any).onComponentCreatedCallback(component.id, component.name, data.linkedRequestId);
+    }
+
+    return component;
+  }
+
+  /**
+   * Set callback for component creation (called from ComponentRequestsService)
+   */
+  setComponentCreatedCallback(callback: (componentId: string, componentName: string, linkedRequestId?: string) => void) {
+    (this as any).onComponentCreatedCallback = callback;
+  }
+
   async registerApplication(
     name: string,
     options?: {

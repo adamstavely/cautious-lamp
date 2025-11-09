@@ -830,4 +830,37 @@ export class DesignSystemController {
     }
     return { success: true };
   }
+
+  // Component creation with auto-linking
+  @Post('components')
+  createComponent(
+    @Body() data: {
+      id: string;
+      name: string;
+      description: string;
+      status?: 'production' | 'in-progress' | 'planned' | 'deprecated';
+      props?: any[];
+      code?: { vue?: string; react?: string; html?: string };
+      dependencies?: string[];
+      examples?: string[];
+      accessibility?: { wcag: string; notes?: string };
+      linkedRequestId?: string;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.createComponent(data);
+  }
+
+  // Get linked requests for a component
+  @Get('components/:id/linked-requests')
+  getLinkedRequests(
+    @Param('id') componentId: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    // This would need to query ComponentRequestsService
+    // For now, return empty array - this can be enhanced later
+    return { requests: [] };
+  }
 }

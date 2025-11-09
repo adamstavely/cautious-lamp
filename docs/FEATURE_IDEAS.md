@@ -195,8 +195,8 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 - ✅ Duplicate detection - Smart duplicate request detection with similarity checking
 - ✅ Request analytics - Request volume, fulfillment rates, time to completion, trends
 - ✅ Roadmap integration - Approved requests automatically create roadmap items as "planned" features
+- ✅ Integration with component creation - Auto-link requests to created components (automatic matching by name/keywords, manual linking via API, auto-transition status)
 - [ ] Email notifications - Automated email notifications for status changes
-- [ ] Integration with component creation - Auto-link requests to created components
 
 ### Visual Regression Testing (Argos) Enhancements
 **Current**: Phase 1 & Quick Wins completed  
