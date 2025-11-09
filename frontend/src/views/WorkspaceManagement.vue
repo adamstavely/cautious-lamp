@@ -16,6 +16,7 @@
           <!-- Hero Section -->
           <div class="max-w-7xl mx-auto mb-8">
             <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
+              <!-- Background texture/grain effect -->
               <div class="absolute inset-0 opacity-10 texture-pattern"></div>
               
               <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
@@ -1975,4 +1976,10 @@ onBeforeUnmount(() => {
   }
 });
 </script>
+
+<style scoped>
+.texture-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+</style>
 

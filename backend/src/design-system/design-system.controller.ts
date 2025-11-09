@@ -1034,6 +1034,16 @@ export class DesignSystemController {
     return this.designSystemService.getWorkspaceAnalytics(workspaceId);
   }
 
+  @Get('workspaces/analytics/compare')
+  getCrossWorkspaceComparison(
+    @Query('workspaceIds') workspaceIds?: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const ids = workspaceIds ? workspaceIds.split(',') : undefined;
+    return this.designSystemService.getCrossWorkspaceComparison(ids);
+  }
+
   @Post('components/:id/share')
   shareComponent(
     @Param('id') componentId: string,

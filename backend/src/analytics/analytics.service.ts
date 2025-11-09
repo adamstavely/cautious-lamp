@@ -123,6 +123,13 @@ export class AnalyticsService {
   }
 
   /**
+   * Get component usage records
+   */
+  getComponentUsage(componentId: string): ComponentUsage[] {
+    return this.componentUsage.get(componentId) || [];
+  }
+
+  /**
    * Get component popularity rankings
    */
   getComponentPopularity(timeframe: '7d' | '30d' | '90d' | 'all' = 'all'): ComponentPopularity[] {

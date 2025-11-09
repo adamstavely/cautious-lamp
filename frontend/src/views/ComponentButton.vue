@@ -74,9 +74,40 @@
 
           <!-- Interactive Playground Section -->
           <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Interactive Playground</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Experiment with the Button component. Edit props, see live previews, and export code snippets.</p>
+            <div class="mb-8 flex items-center justify-between">
+              <div>
+                <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Interactive Playground</h2>
+                <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Experiment with the Button component. Edit props, see live previews, and export code snippets.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  @click="sharePlayground"
+                  class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  :class="isDarkMode 
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
+                >
+                  <span class="material-symbols-outlined text-sm">share</span>
+                  Share Playground
+                </button>
+                <button
+                  v-if="sharedPlaygroundUrl"
+                  @click="copyShareUrl"
+                  class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  :class="isDarkMode 
+                    ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'"
+                >
+                  <span class="material-symbols-outlined text-sm">{{ shareUrlCopied ? 'check' : 'content_copy' }}</span>
+                  {{ shareUrlCopied ? 'Copied!' : 'Copy Link' }}
+                </button>
+              </div>
+            </div>
+            <div v-if="sharedPlaygroundUrl" class="mb-4 p-4 rounded-lg" :class="isDarkMode ? 'bg-green-900/20 border border-green-700' : 'bg-green-50 border border-green-200'">
+              <p class="text-sm" :class="isDarkMode ? 'text-green-300' : 'text-green-700'">
+                <span class="material-symbols-outlined text-base align-middle mr-2">check_circle</span>
+                Playground shared! Share this URL: <code class="px-2 py-1 rounded bg-white/10 text-xs">{{ sharedPlaygroundUrl }}</code>
+              </p>
             </div>
 
             <div class="grid lg:grid-cols-2 gap-6 mb-6">
@@ -776,15 +807,133 @@
                   : 'bg-white border-gray-200'"
               >
                 <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Action Buttons</h3>
+                <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  Group primary and secondary actions together. Primary actions should be visually prominent, while secondary actions are less emphasized.
+                </p>
                 <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
                   <pre class="text-green-400 text-sm font-mono"><code>&lt;div class="flex gap-4"&gt;
-  &lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
+  &lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"&gt;
     Save Changes
   &lt;/button&gt;
-  &lt;button class="px-6 py-3 bg-white text-indigo-600 border border-indigo-600 rounded-lg"&gt;
+  &lt;button class="px-6 py-3 bg-white text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50"&gt;
     Cancel
   &lt;/button&gt;
 &lt;/div&gt;</code></pre>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-slate-900 border-gray-700' 
+                  : 'bg-white border-gray-200'"
+              >
+                <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Icon Buttons</h3>
+                <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  Use icon buttons for compact actions or when space is limited. Always include an aria-label for accessibility.
+                </p>
+                <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                  <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Icon button with label --&gt;
+&lt;button 
+  class="p-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+  aria-label="Delete item"
+&gt;
+  &lt;span class="material-symbols-outlined"&gt;delete&lt;/span&gt;
+&lt;/button&gt;
+
+&lt;!-- Icon button with text --&gt;
+&lt;button class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg"&gt;
+  &lt;span class="material-symbols-outlined text-sm"&gt;download&lt;/span&gt;
+  Download
+&lt;/button&gt;</code></pre>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-slate-900 border-gray-700' 
+                  : 'bg-white border-gray-200'"
+              >
+                <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Destructive Actions</h3>
+                <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  Use a distinct style (typically red) for destructive actions like delete or remove. Consider adding a confirmation step for critical actions.
+                </p>
+                <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                  <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Destructive action button --&gt;
+&lt;button 
+  class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700"
+  @click="confirmDelete"
+&gt;
+  Delete Account
+&lt;/button&gt;
+
+&lt;!-- With confirmation dialog --&gt;
+&lt;button 
+  class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700"
+  @click="showDeleteConfirmation = true"
+&gt;
+  Delete Item
+&lt;/button&gt;</code></pre>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-slate-900 border-gray-700' 
+                  : 'bg-white border-gray-200'"
+              >
+                <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Button Groups</h3>
+                <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  Group related buttons together, especially when they represent different views or states of the same data.
+                </p>
+                <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                  <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Button group for view switching --&gt;
+&lt;div class="inline-flex rounded-lg border" :class="isDarkMode ? 'border-gray-700' : 'border-gray-300'"&gt;
+  &lt;button 
+    class="px-4 py-2 rounded-l-lg"
+    :class="view === 'list' 
+      ? 'bg-indigo-600 text-white' 
+      : 'bg-white text-gray-700 hover:bg-gray-50'"
+    @click="view = 'list'"
+  &gt;
+    List
+  &lt;/button&gt;
+  &lt;button 
+    class="px-4 py-2 rounded-r-lg border-l"
+    :class="view === 'grid' 
+      ? 'bg-indigo-600 text-white' 
+      : 'bg-white text-gray-700 hover:bg-gray-50'"
+    :class="isDarkMode ? 'border-gray-700' : 'border-gray-300'"
+    @click="view = 'grid'"
+  &gt;
+    Grid
+  &lt;/button&gt;
+&lt;/div&gt;</code></pre>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-slate-900 border-gray-700' 
+                  : 'bg-white border-gray-200'"
+              >
+                <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Full-Width Buttons</h3>
+                <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  Use full-width buttons on mobile devices or when the button is the primary focus of the view.
+                </p>
+                <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                  <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Full-width button --&gt;
+&lt;button class="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"&gt;
+  Complete Purchase
+&lt;/button&gt;
+
+&lt;!-- Responsive: full-width on mobile, auto on desktop --&gt;
+&lt;button class="w-full md:w-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"&gt;
+  Sign Up
+&lt;/button&gt;</code></pre>
                 </div>
               </div>
             </div>
@@ -1246,6 +1395,298 @@
             </div>
           </div>
 
+          <!-- Best Practices -->
+          <div class="max-w-7xl mx-auto mb-16">
+            <div class="mb-8">
+              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Best Practices</h2>
+              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Recommended patterns and guidelines for using the Button component effectively.</p>
+            </div>
+            
+            <div class="space-y-6">
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-green-900/20 border-green-800' 
+                  : 'bg-green-50 border-green-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Use Descriptive Labels</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Button labels should clearly communicate the action that will occur when clicked. Avoid generic labels like "Click here" or "Submit".
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Descriptive label --&gt;
+&lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
+  Save Changes
+&lt;/button&gt;
+
+&lt;!-- Good: Action-oriented --&gt;
+&lt;button class="px-6 py-3 bg-red-600 text-white rounded-lg"&gt;
+  Delete Account
+&lt;/button&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-green-900/20 border-green-800' 
+                  : 'bg-green-50 border-green-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Provide Visual Feedback</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Use loading states and disabled states to provide clear feedback about the button's current state and prevent duplicate submissions.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Loading state --&gt;
+&lt;button 
+  class="px-6 py-3 bg-indigo-600 text-white rounded-lg"
+  :disabled="isLoading"
+&gt;
+  &lt;span v-if="isLoading"&gt;Processing...&lt;/span&gt;
+  &lt;span v-else&gt;Submit Form&lt;/span&gt;
+&lt;/button&gt;
+
+&lt;!-- Good: Disabled state for invalid forms --&gt;
+&lt;button 
+  class="px-6 py-3 bg-indigo-600 text-white rounded-lg disabled:opacity-50"
+  :disabled="!isFormValid"
+&gt;
+  Save
+&lt;/button&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-green-900/20 border-green-800' 
+                  : 'bg-green-50 border-green-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Use Appropriate Variants</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Choose the right variant based on the action's importance. Use primary for main actions, secondary for secondary actions, and tertiary for less important actions.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Primary for main action --&gt;
+&lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
+  Create Account
+&lt;/button&gt;
+
+&lt;!-- Good: Secondary for alternative action --&gt;
+&lt;button class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg"&gt;
+  Cancel
+&lt;/button&gt;
+
+&lt;!-- Good: Tertiary for less important actions --&gt;
+&lt;button class="px-6 py-3 text-indigo-600 rounded-lg hover:bg-indigo-50"&gt;
+  Learn More
+&lt;/button&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-green-900/20 border-green-800' 
+                  : 'bg-green-50 border-green-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Group Related Actions</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Group related buttons together and use consistent spacing. Place primary actions on the right in left-to-right languages.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Grouped actions --&gt;
+&lt;div class="flex gap-3 justify-end"&gt;
+  &lt;button class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg"&gt;
+    Cancel
+  &lt;/button&gt;
+  &lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
+    Save Changes
+  &lt;/button&gt;
+&lt;/div&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Anti-Patterns -->
+          <div class="max-w-7xl mx-auto mb-16">
+            <div class="mb-8">
+              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Anti-Patterns</h2>
+              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Common mistakes to avoid when using the Button component.</p>
+            </div>
+            
+            <div class="space-y-6">
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-red-900/20 border-red-800' 
+                  : 'bg-red-50 border-red-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Avoid Generic Labels</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Generic labels like "Click here" or "Submit" don't provide context about what will happen. Users need clear, action-oriented labels.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: Generic label --&gt;
+&lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
+  Click Here
+&lt;/button&gt;
+
+&lt;!-- Bad: Unclear action --&gt;
+&lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
+  Submit
+&lt;/button&gt;
+
+&lt;!-- Good: Descriptive and clear --&gt;
+&lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
+  Save Profile Changes
+&lt;/button&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-red-900/20 border-red-800' 
+                  : 'bg-red-50 border-red-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Don't Use Buttons for Navigation</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Buttons are for actions, not navigation. Use links or router-links for navigation between pages.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: Button for navigation --&gt;
+&lt;button 
+  class="px-6 py-3 bg-indigo-600 text-white rounded-lg"
+  @click="$router.push('/about')"
+&gt;
+  About Us
+&lt;/button&gt;
+
+&lt;!-- Good: Link for navigation --&gt;
+&lt;router-link 
+  to="/about"
+  class="px-6 py-3 text-indigo-600 rounded-lg hover:bg-indigo-50"
+&gt;
+  About Us
+&lt;/router-link&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-red-900/20 border-red-800' 
+                  : 'bg-red-50 border-red-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Avoid Too Many Primary Actions</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Having multiple primary buttons on the same page creates confusion. There should typically be only one primary action per view.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: Multiple primary actions --&gt;
+&lt;div class="flex gap-3"&gt;
+  &lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
+    Save
+  &lt;/button&gt;
+  &lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
+    Publish
+  &lt;/button&gt;
+  &lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
+    Share
+  &lt;/button&gt;
+&lt;/div&gt;
+
+&lt;!-- Good: One primary, others secondary --&gt;
+&lt;div class="flex gap-3"&gt;
+  &lt;button class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg"&gt;
+    Save Draft
+  &lt;/button&gt;
+  &lt;button class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg"&gt;
+    Preview
+  &lt;/button&gt;
+  &lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
+    Publish
+  &lt;/button&gt;
+&lt;/div&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-red-900/20 border-red-800' 
+                  : 'bg-red-50 border-red-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Don't Hide Disabled State Reason</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      When a button is disabled, users should understand why. Use tooltips or helper text to explain the disabled state.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: No explanation for disabled state --&gt;
+&lt;button 
+  class="px-6 py-3 bg-indigo-600 text-white rounded-lg disabled:opacity-50"
+  :disabled="true"
+&gt;
+  Submit
+&lt;/button&gt;
+
+&lt;!-- Good: Tooltip explains why disabled --&gt;
+&lt;div class="relative group"&gt;
+  &lt;button 
+    class="px-6 py-3 bg-indigo-600 text-white rounded-lg disabled:opacity-50"
+    :disabled="!isFormValid"
+    title="Please fill in all required fields"
+  &gt;
+    Submit
+  &lt;/button&gt;
+&lt;/div&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Related Components -->
           <div class="max-w-7xl mx-auto">
             <div class="mb-8">
@@ -1347,6 +1788,8 @@ const route = useRoute();
 const { getComponent } = useComponentPatternStatus();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
+const sharedPlaygroundUrl = ref('');
+const shareUrlCopied = ref(false);
 const previewDarkMode = ref(false);
 const codeFormat = ref('vue');
 
@@ -2226,6 +2669,34 @@ const deleteVariant = async (variantName) => {
   }
 };
 
+// Playground sharing
+const sharePlayground = () => {
+  const state = {
+    component: 'button',
+    props: { ...propValues },
+    timestamp: Date.now(),
+  };
+  const encoded = btoa(JSON.stringify(state));
+  const url = `${window.location.origin}${window.location.pathname}?playground=${encoded}`;
+  sharedPlaygroundUrl.value = url;
+  copyShareUrl();
+};
+
+const copyShareUrl = async () => {
+  if (!sharedPlaygroundUrl.value) return;
+  try {
+    await navigator.clipboard.writeText(sharedPlaygroundUrl.value);
+    shareUrlCopied.value = true;
+    window.showToast?.('Share URL copied to clipboard!', 'success');
+    setTimeout(() => {
+      shareUrlCopied.value = false;
+    }, 2000);
+  } catch (error) {
+    console.error('Failed to copy URL:', error);
+    window.showToast?.('Failed to copy URL', 'error');
+  }
+};
+
 // Watch for property changes to generate code preview
 watch(() => newVariant.properties, () => {
   if (newVariant.name) {
@@ -2255,6 +2726,21 @@ let darkModeObserver = null;
 let darkModeInterval = null;
 
 onMounted(() => {
+  // Load playground state from URL
+  const params = new URLSearchParams(window.location.search);
+  const playgroundState = params.get('playground');
+  if (playgroundState) {
+    try {
+      const state = JSON.parse(atob(playgroundState));
+      if (state.component === 'button' && state.props) {
+        Object.assign(propValues, state.props);
+        sharedPlaygroundUrl.value = window.location.href;
+      }
+    } catch (error) {
+      console.error('Failed to load playground state:', error);
+    }
+  }
+
   darkModeObserver = new MutationObserver(() => {
     isDarkMode.value = document.documentElement.classList.contains('dark');
   });

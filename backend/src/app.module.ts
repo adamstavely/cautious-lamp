@@ -14,6 +14,11 @@ import { TokenSyncModule } from './token-sync/token-sync.module';
 import { DesignSyncModule } from './design-sync/design-sync.module';
 import { ComponentScaffoldingModule } from './component-scaffolding/component-scaffolding.module';
 import { ComponentRequestsModule } from './component-requests/component-requests.module';
+import { PatternsLibraryModule } from './patterns-library/patterns-library.module';
+import { ChangelogAggregationModule } from './changelog-aggregation/changelog-aggregation.module';
+import { ContributionWorkflowModule } from './contribution-workflow/contribution-workflow.module';
+import { ApiVersioningModule } from './api-versioning/api-versioning.module';
+import { SearchModule } from './search/search.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
@@ -44,6 +49,11 @@ import { ElasticsearchModule } from '@nestjs/elasticsearch';
     DesignSyncModule,
     ComponentScaffoldingModule,
     ComponentRequestsModule,
+    PatternsLibraryModule,
+    ChangelogAggregationModule,
+    ContributionWorkflowModule,
+    ApiVersioningModule,
+    SearchModule,
   ],
 })
 export class AppModule {}

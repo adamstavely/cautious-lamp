@@ -72,7 +72,7 @@
             <input
               v-model="searchQuery"
               type="search"
-              placeholder="Search design system..."
+              placeholder="Search components, tokens, patterns... (use filters: type:component, hasProps:label)"
               @focus="showSearchResults = true"
               @input="performSearch"
               @keydown.escape="closeSearch"
@@ -87,6 +87,77 @@
               aria-expanded="showSearchResults"
               aria-haspopup="listbox"
             />
+            <button
+              v-if="searchQuery"
+              @click="showAdvancedFilters = !showAdvancedFilters"
+              class="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded"
+              :class="isDarkMode 
+                ? 'text-gray-400 hover:text-white hover:bg-slate-600' 
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+              title="Advanced filters"
+            >
+              <span class="material-symbols-outlined text-sm">tune</span>
+            </button>
+            
+            <!-- Advanced Filters Panel -->
+            <div
+              v-if="showAdvancedFilters"
+              class="absolute left-0 right-0 top-full mt-2 rounded-lg shadow-xl border z-50 p-4"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-slate-700' 
+                : 'bg-white border-gray-200'"
+            >
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Type</label>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="type in availableFilters?.types || []"
+                      :key="type.value"
+                      @click="toggleSearchFilter('type', type.value)"
+                      class="px-2 py-1 rounded text-xs"
+                      :class="searchFilters.type?.includes(type.value)
+                        ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
+                        : (isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700')"
+                    >
+                      {{ type.label }} ({{ type.count }})
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Category</label>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="cat in availableFilters?.categories?.slice(0, 8) || []"
+                      :key="cat.value"
+                      @click="toggleSearchFilter('category', cat.value)"
+                      class="px-2 py-1 rounded text-xs"
+                      :class="searchFilters.category?.includes(cat.value)
+                        ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
+                        : (isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700')"
+                    >
+                      {{ cat.label }} ({{ cat.count }})
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Has Props</label>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="prop in availableFilters?.commonProps?.slice(0, 6) || []"
+                      :key="prop.value"
+                      @click="toggleSearchFilter('hasProps', prop.value)"
+                      class="px-2 py-1 rounded text-xs"
+                      :class="searchFilters.hasProps?.includes(prop.value)
+                        ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
+                        : (isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700')"
+                    >
+                      {{ prop.label }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
             
             <!-- Search Results Dropdown -->
             <div
@@ -509,7 +580,16 @@ const notificationsContainer = ref(null);
 const searchContainer = ref(null);
 const searchQuery = ref('');
 const showSearchResults = ref(false);
+const showAdvancedFilters = ref(false);
 const selectedSearchIndex = ref(-1);
+const searchFilters = ref({
+  type: [],
+  category: [],
+  hasProps: [],
+  useCase: '',
+});
+const availableFilters = ref(null);
+const usingBackendSearch = ref(false);
 
 // Search index - in a real app, this would come from an API or be generated
 const searchIndex = [
@@ -600,11 +680,25 @@ const searchIndex = [
   { id: 'roadmap-feedback', title: 'Roadmap & Feedback', description: 'View roadmap, submit feedback, and see what\'s new', category: 'Tools', path: '/feedback', icon: 'new_releases', tags: ['roadmap', 'feedback', 'requests', 'whats-new'] },
 ];
 
+const backendSearchResults = ref([]);
+
 const filteredSearchResults = computed(() => {
-  if (!searchQuery.value.trim()) {
+  if (!searchQuery.value.trim() && Object.values(searchFilters.value).every(v => 
+    Array.isArray(v) ? v.length === 0 : !v
+  )) {
     return [];
   }
   
+  // Use backend search if filters are active or query is complex
+  if (usingBackendSearch.value || 
+      searchFilters.value.type.length > 0 || 
+      searchFilters.value.category.length > 0 || 
+      searchFilters.value.hasProps.length > 0 ||
+      searchFilters.value.useCase) {
+    return backendSearchResults.value;
+  }
+  
+  // Fallback to local search
   const query = searchQuery.value.toLowerCase();
   return searchIndex.filter(item => {
     return item.title.toLowerCase().includes(query) ||
@@ -613,6 +707,34 @@ const filteredSearchResults = computed(() => {
            item.category.toLowerCase().includes(query);
   }).slice(0, 8); // Limit to 8 results
 });
+const API_BASE_URL = 'http://localhost:3000';
+const API_KEY = 'test-api-key-123';
+
+const loadAvailableFilters = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/search/filters`, {
+      headers: { Authorization: `Bearer ${API_KEY}` }
+    });
+    if (response.ok) {
+      availableFilters.value = await response.json();
+    }
+  } catch (error) {
+    console.error('Failed to load search filters:', error);
+  }
+};
+
+const toggleSearchFilter = (filterType, value) => {
+  if (!searchFilters.value[filterType]) {
+    searchFilters.value[filterType] = [];
+  }
+  const index = searchFilters.value[filterType].indexOf(value);
+  if (index > -1) {
+    searchFilters.value[filterType].splice(index, 1);
+  } else {
+    searchFilters.value[filterType].push(value);
+  }
+  performSearch();
+};
 
 const getCategoryBadgeClass = (category) => {
   const classes = {
@@ -632,11 +754,85 @@ const getCategoryBadgeClass = (category) => {
   return classes[category] || (isDarkMode.value ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700');
 };
 
-const performSearch = () => {
+const performSearch = async () => {
   selectedSearchIndex.value = -1;
-  if (searchQuery.value.trim()) {
+  
+  // Check if we should use backend search
+  const shouldUseBackend = searchFilters.value.type.length > 0 || 
+      searchFilters.value.category.length > 0 || 
+      searchFilters.value.hasProps.length > 0 ||
+      searchFilters.value.useCase;
+  
+  if (shouldUseBackend && searchQuery.value.trim()) {
+    // Use backend search when filters are active
     showSearchResults.value = true;
+    usingBackendSearch.value = true;
+    
+    try {
+      const params = new URLSearchParams();
+      if (searchQuery.value.trim()) {
+        params.append('q', searchQuery.value);
+      }
+      if (searchFilters.value.type.length > 0) {
+        params.append('type', searchFilters.value.type.join(','));
+      }
+      if (searchFilters.value.category.length > 0) {
+        params.append('category', searchFilters.value.category.join(','));
+      }
+      if (searchFilters.value.hasProps.length > 0) {
+        params.append('hasProps', searchFilters.value.hasProps.join(','));
+      }
+      if (searchFilters.value.useCase) {
+        params.append('useCase', searchFilters.value.useCase);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/search?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${API_KEY}` }
+      });
+      
+      if (response.ok) {
+        const results = await response.json();
+        // Transform backend results to match frontend format
+        backendSearchResults.value = results.map(r => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          category: r.category || r.type,
+          path: r.path,
+          icon: getIconForType(r.type),
+          tags: r.tags || [],
+        })).slice(0, 8);
+      } else {
+        // Fallback to empty if backend fails
+        backendSearchResults.value = [];
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      backendSearchResults.value = [];
+      usingBackendSearch.value = false;
+    }
+  } else if (searchQuery.value.trim()) {
+    // Use local search for simple queries without filters
+    showSearchResults.value = true;
+    usingBackendSearch.value = false;
+    backendSearchResults.value = [];
+  } else {
+    showSearchResults.value = false;
+    usingBackendSearch.value = false;
+    backendSearchResults.value = [];
   }
+};
+
+const getIconForType = (type) => {
+  const icons = {
+    component: 'widgets',
+    token: 'tune',
+    pattern: 'pattern',
+    guideline: 'description',
+    workspace: 'workspace',
+    application: 'apps',
+  };
+  return icons[type] || 'search';
 };
 
 const closeSearch = () => {
