@@ -1387,7 +1387,7 @@ const generateAuditReport = async () => {
 };
 
 // Export report in different formats
-const exportReport = (format: string) => {
+const exportReport = (format) => {
   if (!auditReport.value) return;
 
   const timestamp = new Date().toISOString().split('T')[0];

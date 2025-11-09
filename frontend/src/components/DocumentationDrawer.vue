@@ -990,7 +990,7 @@ const uxResearchTools = [
   { text: 'NASA-TLX', link: '/tools/nasa-tlx', icon: 'psychology' },
   { text: 'System Usability Scale', link: '/tools/sus', icon: 'psychology' },
   { text: 'Heuristic Evaluation', link: '/tools/heuristic-evaluation', icon: 'checklist' },
-  { text: 'Session Replay', link: '/tools/session-replay', icon: 'videocam' }
+  { text: 'Session Replay', link: '/hcd/session-replay', icon: 'videocam' }
 ];
 
 const tokenItems = [

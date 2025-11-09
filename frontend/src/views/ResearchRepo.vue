@@ -254,7 +254,7 @@
 
               <!-- Session Replay Card -->
               <router-link 
-                to="/tools/session-replay" 
+                to="/hcd/session-replay" 
                 class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
               >
                 <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">

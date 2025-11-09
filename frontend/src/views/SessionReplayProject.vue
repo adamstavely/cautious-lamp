@@ -6,10 +6,12 @@
       class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
       :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
     >
-      <div class="h-full p-8 overflow-y-auto">
-        <Breadcrumbs />
-
-        <!-- Loading State -->
+      <!-- Breadcrumbs -->
+      <Breadcrumbs />
+      
+      <div class="h-full overflow-y-auto">
+        <div class="p-8">
+          <!-- Loading State -->
         <div v-if="loading" class="max-w-7xl mx-auto py-12 text-center">
           <div class="flex justify-center mb-4">
             <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
@@ -47,7 +49,7 @@
                 ></div>
               </button>
               <button
-                @click="activeTab = 'sessions'"
+                @click="navigateToSessionsTab"
                 class="px-6 py-3 font-medium transition-colors relative"
                 :class="activeTab === 'sessions'
                   ? (isDarkMode ? 'text-indigo-400' : 'text-indigo-600')
@@ -415,6 +417,7 @@
             </form>
           </div>
         </div>
+        </div>
       </div>
     </div>
   </div>
@@ -539,8 +542,12 @@ const resetForm = () => {
   }
 };
 
+const navigateToSessionsTab = () => {
+  router.push(`/hcd/session-replay/${route.params.id}/sessions`);
+};
+
 const navigateToSession = (sessionId) => {
-  router.push(`/tools/session-replay/${route.params.id}/sessions/${sessionId}`);
+  router.push(`/hcd/session-replay/${route.params.id}/sessions/${sessionId}`);
 };
 
 const formatDate = (dateString) => {
@@ -613,6 +620,15 @@ let darkModeObserver = null;
 
 onMounted(() => {
   loadProject();
+  
+  // Set active tab based on route
+  if (route.path.includes('/sessions') && !route.params.sessionId) {
+    activeTab.value = 'sessions';
+  } else if (route.path.includes('/heatmaps')) {
+    activeTab.value = 'heatmaps';
+  } else if (route.path.includes('/settings')) {
+    activeTab.value = 'settings';
+  }
 
   darkModeObserver = new MutationObserver(() => {
     isDarkMode.value = document.documentElement.classList.contains('dark');

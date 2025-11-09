@@ -135,6 +135,8 @@ const crumbs = computed(() => {
     '/design-assets': 'Design Assets',
     '/review': 'Review',
     '/research': 'HCD',
+    '/hcd': 'HCD',
+    '/hcd/session-replay': 'Session Replay',
     '/tools': 'Tools',
     '/tools/gradient-generator': 'Gradient Generator',
     '/guidelines': 'Guidelines',
@@ -154,11 +156,11 @@ const crumbs = computed(() => {
   
   // Build breadcrumbs from path parts
   let currentPath = '';
-  let skipNext = false;
+  let skipCount = 0;
   
   parts.forEach((part, index) => {
-    if (skipNext) {
-      skipNext = false;
+    if (skipCount > 0) {
+      skipCount--;
       return;
     }
     
@@ -180,8 +182,60 @@ const crumbs = computed(() => {
         label: docLabel,
         path: null // Current page, not clickable
       });
-      skipNext = true; // Skip processing the remaining parts
+      skipCount = parts.length - index - 1; // Skip all remaining parts
       return;
+    }
+    
+    // Special handling for session replay paths
+    // /hcd/session-replay/:id/sessions/:sessionId
+    if (part === 'hcd' && index + 1 < parts.length && parts[index + 1] === 'session-replay') {
+      // Add HCD breadcrumb
+      breadcrumbs.push({
+        label: 'HCD',
+        path: '/hcd'
+      });
+      // Add Session Replay breadcrumb
+      breadcrumbs.push({
+        label: 'Session Replay',
+        path: '/hcd/session-replay'
+      });
+      // Process remaining parts (id, sessions, sessionId)
+      if (index + 2 < parts.length) {
+        const projectId = parts[index + 2];
+        const projectLabel = projectId.replace(/^sr-project-/, '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        breadcrumbs.push({
+          label: projectLabel,
+          path: `/hcd/session-replay/${projectId}`
+        });
+        // If there's a sessions part
+        if (index + 3 < parts.length && parts[index + 3] === 'sessions') {
+          const hasSessionId = index + 4 < parts.length;
+          breadcrumbs.push({
+            label: 'Sessions',
+            path: hasSessionId ? `/hcd/session-replay/${projectId}/sessions` : null // Clickable only when viewing a specific session
+          });
+          // If there's a sessionId
+          if (hasSessionId) {
+            const sessionId = parts[index + 4];
+            const sessionLabel = sessionId.replace(/^mock-session-/, '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            breadcrumbs.push({
+              label: sessionLabel,
+              path: null // Current page, not clickable
+            });
+            skipCount = parts.length - index - 1; // Skip all remaining parts
+            return;
+          } else {
+            skipCount = parts.length - index - 1; // Skip all remaining parts
+            return;
+          }
+        } else {
+          skipCount = parts.length - index - 1; // Skip all remaining parts
+          return;
+        }
+      } else {
+        skipCount = parts.length - index - 1; // Skip all remaining parts
+        return;
+      }
     }
     
     const label = pathLabels[currentPath] || part.charAt(0).toUpperCase() + part.slice(1).replace(/-/g, ' ');

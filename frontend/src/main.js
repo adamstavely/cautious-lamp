@@ -483,16 +483,20 @@ const router = createRouter({
       component: () => import('./views/VisualRegressionResults.vue'),
     },
     {
-      path: '/tools/session-replay',
-      component: () => import('./views/SessionReplay.vue'),
+      path: '/hcd/session-replay/:id/sessions/:sessionId',
+      component: () => import('./views/SessionReplayViewer.vue'),
     },
     {
-      path: '/tools/session-replay/:id',
+      path: '/hcd/session-replay/:id/sessions',
       component: () => import('./views/SessionReplayProject.vue'),
     },
     {
-      path: '/tools/session-replay/:id/sessions/:sessionId',
-      component: () => import('./views/SessionReplayViewer.vue'),
+      path: '/hcd/session-replay/:id',
+      component: () => import('./views/SessionReplayProject.vue'),
+    },
+    {
+      path: '/hcd/session-replay',
+      component: () => import('./views/SessionReplay.vue'),
     },
     {
       path: '/tools/photosensitivity',

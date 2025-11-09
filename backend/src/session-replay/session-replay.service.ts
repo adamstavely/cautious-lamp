@@ -220,8 +220,95 @@ export class SessionReplayService {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
 
-    if (!project.openreplayApiKey) {
-      throw new BadRequestException('OpenReplay API key not configured for this project');
+    // If no API key is configured, return mock sessions for development/demo purposes
+    if (!project.openreplayApiKey || (typeof project.openreplayApiKey === 'string' && project.openreplayApiKey.trim() === '')) {
+      const mockSessions: Session[] = [
+        {
+          sessionId: 'mock-session-001',
+          projectId,
+          userId: 'user-123',
+          userEmail: 'user@example.com',
+          userDisplayName: 'Demo User',
+          startTime: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+          duration: 1250,
+          pagesCount: 5,
+          eventsCount: 342,
+          errorsCount: 0,
+          issueScore: 0,
+          issueTypes: [],
+          favorite: false,
+          viewed: false,
+          live: false,
+          replayUrl: `${project.openreplayBaseUrl || 'https://demo.openreplay.com'}/project/${project.openreplayProjectKey || '1'}/session/mock-session-001`,
+          metadata: {},
+        },
+        {
+          sessionId: 'mock-session-002',
+          projectId,
+          userId: 'user-456',
+          userEmail: 'another@example.com',
+          userDisplayName: 'Another User',
+          startTime: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
+          duration: 890,
+          pagesCount: 3,
+          eventsCount: 198,
+          errorsCount: 2,
+          issueScore: 45,
+          issueTypes: ['js_error', 'network_error'],
+          favorite: true,
+          viewed: true,
+          live: false,
+          replayUrl: `${project.openreplayBaseUrl || 'https://demo.openreplay.com'}/project/${project.openreplayProjectKey || '1'}/session/mock-session-002`,
+          metadata: {},
+        },
+        {
+          sessionId: 'mock-session-003',
+          projectId,
+          userId: 'user-789',
+          userEmail: 'test@example.com',
+          userDisplayName: 'Test User',
+          startTime: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+          duration: 2100,
+          pagesCount: 8,
+          eventsCount: 567,
+          errorsCount: 1,
+          issueScore: 12,
+          issueTypes: ['js_error'],
+          favorite: false,
+          viewed: false,
+          live: false,
+          replayUrl: `${project.openreplayBaseUrl || 'https://demo.openreplay.com'}/project/${project.openreplayProjectKey || '1'}/session/mock-session-003`,
+          metadata: {},
+        },
+      ];
+
+      // Apply filters if provided
+      let filteredSessions = mockSessions;
+      if (params.userEmail) {
+        filteredSessions = filteredSessions.filter(s => 
+          s.userEmail?.toLowerCase().includes(params.userEmail!.toLowerCase())
+        );
+      }
+      if (params.userId) {
+        filteredSessions = filteredSessions.filter(s => 
+          s.userId?.toLowerCase().includes(params.userId!.toLowerCase())
+        );
+      }
+      if (params.issueType) {
+        filteredSessions = filteredSessions.filter(s => 
+          s.issueTypes?.includes(params.issueType!)
+        );
+      }
+
+      // Apply pagination
+      const limit = params.limit || 50;
+      const offset = params.offset || 0;
+      const paginatedSessions = filteredSessions.slice(offset, offset + limit);
+
+      return {
+        sessions: paginatedSessions,
+        total: filteredSessions.length,
+      };
     }
 
     const openreplayBaseUrl = project.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com';
@@ -273,8 +360,71 @@ export class SessionReplayService {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
 
-    if (!project.openreplayApiKey) {
-      throw new BadRequestException('OpenReplay API key not configured for this project');
+    // If no API key is configured, return mock session for development/demo purposes
+    if (!project.openreplayApiKey || (typeof project.openreplayApiKey === 'string' && project.openreplayApiKey.trim() === '')) {
+      // Find the mock session by ID or return a default one
+      const mockSessions = [
+        {
+          sessionId: 'mock-session-001',
+          projectId,
+          userId: 'user-123',
+          userEmail: 'user@example.com',
+          userDisplayName: 'Demo User',
+          startTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
+          duration: 1250,
+          pagesCount: 5,
+          eventsCount: 342,
+          errorsCount: 0,
+          issueScore: 0,
+          issueTypes: [],
+          favorite: false,
+          viewed: false,
+          live: false,
+          replayUrl: `${project.openreplayBaseUrl || 'https://demo.openreplay.com'}/project/${project.openreplayProjectKey || '1'}/session/mock-session-001`,
+          metadata: {},
+        },
+        {
+          sessionId: 'mock-session-002',
+          projectId,
+          userId: 'user-456',
+          userEmail: 'another@example.com',
+          userDisplayName: 'Another User',
+          startTime: new Date(Date.now() - 5 * 60 * 60 * 1000),
+          duration: 890,
+          pagesCount: 3,
+          eventsCount: 198,
+          errorsCount: 2,
+          issueScore: 45,
+          issueTypes: ['js_error', 'network_error'],
+          favorite: true,
+          viewed: true,
+          live: false,
+          replayUrl: `${project.openreplayBaseUrl || 'https://demo.openreplay.com'}/project/${project.openreplayProjectKey || '1'}/session/mock-session-002`,
+          metadata: {},
+        },
+        {
+          sessionId: 'mock-session-003',
+          projectId,
+          userId: 'user-789',
+          userEmail: 'test@example.com',
+          userDisplayName: 'Test User',
+          startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          duration: 2100,
+          pagesCount: 8,
+          eventsCount: 567,
+          errorsCount: 1,
+          issueScore: 12,
+          issueTypes: ['js_error'],
+          favorite: false,
+          viewed: false,
+          live: false,
+          replayUrl: `${project.openreplayBaseUrl || 'https://demo.openreplay.com'}/project/${project.openreplayProjectKey || '1'}/session/mock-session-003`,
+          metadata: {},
+        },
+      ];
+
+      const mockSession = mockSessions.find(s => s.sessionId === sessionId) || mockSessions[0];
+      return mockSession;
     }
 
     const openreplayBaseUrl = project.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com';

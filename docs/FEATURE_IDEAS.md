@@ -79,7 +79,7 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 - ✅ **Alt Text Generator** - AI-powered alt text generation for images
 - ✅ **Photosensitivity Analysis (IRIS)** - Video content analysis for photosensitive epilepsy risks
 - ✅ **Visual Regression Testing (Argos)** - Visual regression testing service integration (Phase 1 & Quick Wins)
-- ✅ **Session Replay (OpenReplay)** - Session replay and heatmap analysis service integration (Phase 1)
+- ✅ **Session Replay (OpenReplay)** - Session replay and heatmap analysis service integration (Phase 1). Located under HCD section (`/hcd/session-replay`).
 - ✅ **Design-to-Code Sync** - Sync components and tokens from Figma/Penpot with auto-component generation, bidirectional sync, and version tracking
 - ✅ **Design Token Sync** - Sync tokens from Figma/Penpot/Adobe XD with mapping, validation, conflict resolution, and auto-update
 

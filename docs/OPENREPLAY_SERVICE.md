@@ -8,7 +8,7 @@ Integrate OpenReplay as a service capability that teams can use to test and debu
 
 ### Service Components
 
-1. **Session Replay Dashboard** (`/tools/session-replay`)
+1. **Session Replay Dashboard** (`/hcd/session-replay`)
    - Project management interface
    - Integration configuration UI
    - Session replay viewer
@@ -61,7 +61,7 @@ Integrate OpenReplay as a service capability that teams can use to test and debu
 
 ### Setting Up a New Project
 
-1. Navigate to `/tools/session-replay`
+1. Navigate to `/hcd/session-replay`
 2. Click "Create New Project"
 3. Fill in project details:
    - Project name

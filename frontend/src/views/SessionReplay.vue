@@ -150,7 +150,7 @@
               <div class="flex items-center gap-4 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
                 <span v-if="project.applicationUrl" class="flex items-center gap-1">
                   <span class="material-symbols-outlined text-base">link</span>
-                  {{ new URL(project.applicationUrl).hostname }}
+                  {{ getHostname(project.applicationUrl) }}
                 </span>
                 <span class="flex items-center gap-1">
                   <span class="material-symbols-outlined text-base">group</span>
@@ -372,8 +372,23 @@ const createProject = async () => {
   }
 };
 
+const getHostname = (url) => {
+  if (!url) return '';
+  try {
+    return new URL(url).hostname;
+  } catch (e) {
+    // If URL parsing fails, try to extract hostname manually
+    try {
+      const match = url.match(/^https?:\/\/([^\/]+)/);
+      return match ? match[1] : url;
+    } catch {
+      return url;
+    }
+  }
+};
+
 const navigateToProject = (projectId) => {
-  router.push(`/tools/session-replay/${projectId}`);
+  router.push(`/hcd/session-replay/${projectId}`);
 };
 
 const totalSessions = computed(() => {

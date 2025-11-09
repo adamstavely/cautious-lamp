@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request, HttpCode, Headers, BadRequestException } from '@nestjs/common';
 import { VisualRegressionService } from './visual-regression.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -79,11 +79,76 @@ export class VisualRegressionController {
 
   @Post('webhooks/argos')
   @HttpCode(200)
-  async handleArgosWebhook(@Body() payload: any) {
-    // Handle webhooks from Argos for build status updates
-    // This allows Argos to notify us when builds complete
-    // Note: This is a placeholder - actual webhook handling would need to be implemented
-    // based on Argos webhook payload structure
-    return { message: 'Webhook received' };
+  async handleArgosWebhook(
+    @Body() payload: any,
+    @Headers('x-argos-signature') signature?: string,
+    @Headers('x-argos-event') event?: string,
+  ) {
+    return this.visualRegressionService.handleWebhook(payload, signature, event);
+  }
+
+  // Analytics & Reporting
+  @Get('projects/:id/analytics')
+  async getProjectAnalytics(
+    @Param('id') projectId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.visualRegressionService.getProjectAnalytics(projectId, startDate, endDate);
+  }
+
+  @Get('projects/:id/reports/pdf')
+  async generatePDFReport(@Param('id') projectId: string) {
+    return this.visualRegressionService.generatePDFReport(projectId);
+  }
+
+  // Team Management
+  @Post('projects/:id/share')
+  async shareProject(
+    @Param('id') projectId: string,
+    @Body() dto: { teamId: string; role: 'viewer' | 'tester' | 'admin' },
+  ) {
+    return this.visualRegressionService.shareProject(projectId, dto.teamId, dto.role);
+  }
+
+  @Get('projects/:id/teams')
+  async getProjectTeams(@Param('id') projectId: string) {
+    return this.visualRegressionService.getProjectTeams(projectId);
+  }
+
+  // Baseline Management
+  @Post('projects/:id/baselines')
+  async createBaseline(
+    @Param('id') projectId: string,
+    @Body() dto: { name: string; description?: string; runId: string },
+  ) {
+    return this.visualRegressionService.createBaseline(projectId, dto);
+  }
+
+  @Get('projects/:id/baselines')
+  async getBaselines(@Param('id') projectId: string) {
+    return this.visualRegressionService.getBaselines(projectId);
+  }
+
+  @Post('projects/:id/baselines/:baselineId/rollback')
+  async rollbackBaseline(
+    @Param('id') projectId: string,
+    @Param('baselineId') baselineId: string,
+  ) {
+    return this.visualRegressionService.rollbackBaseline(projectId, baselineId);
+  }
+
+  // Notifications
+  @Post('projects/:id/notifications')
+  async configureNotifications(
+    @Param('id') projectId: string,
+    @Body() dto: { type: 'email' | 'slack' | 'teams' | 'webhook'; config: any },
+  ) {
+    return this.visualRegressionService.configureNotifications(projectId, dto);
+  }
+
+  @Get('projects/:id/notifications')
+  async getNotificationConfig(@Param('id') projectId: string) {
+    return this.visualRegressionService.getNotificationConfig(projectId);
   }
 }

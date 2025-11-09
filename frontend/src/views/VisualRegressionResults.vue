@@ -6,10 +6,12 @@
       class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
       :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
     >
-      <div class="h-full p-8 overflow-y-auto">
-        <Breadcrumbs />
-
-        <!-- Loading State -->
+      <!-- Breadcrumbs -->
+      <Breadcrumbs />
+      
+      <div class="h-full overflow-y-auto">
+        <div class="p-8">
+          <!-- Loading State -->
         <div v-if="loading && !testRun" class="max-w-7xl mx-auto py-12 text-center">
           <div class="flex justify-center mb-4">
             <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
@@ -99,34 +101,111 @@
           </div>
 
           <!-- Search and Filters -->
-          <div class="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <!-- Search -->
-            <div class="flex-1 relative">
-              <input
-                v-model="searchQuery"
-                type="text"
-                placeholder="Search test names..."
-                class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                :class="isDarkMode 
-                  ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-400' 
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-              />
-              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+          <div class="mb-6 space-y-4">
+            <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <!-- Search -->
+              <div class="flex-1 relative">
+                <input
+                  v-model="searchQuery"
+                  type="text"
+                  placeholder="Search test names..."
+                  class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  :class="isDarkMode 
+                    ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-400' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
+                />
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+              </div>
+              
+              <!-- Status Filters -->
+              <div class="flex items-center gap-2 flex-wrap">
+                <button
+                  v-for="filter in filters"
+                  :key="filter"
+                  @click="activeFilter = filter"
+                  class="px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                  :class="activeFilter === filter
+                    ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
+                    : (isDarkMode ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200')"
+                >
+                  {{ filter }}
+                </button>
+              </div>
             </div>
-            
-            <!-- Filters -->
-            <div class="flex items-center gap-2 flex-wrap">
-              <button
-                v-for="filter in filters"
-                :key="filter"
-                @click="activeFilter = filter"
-                class="px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                :class="activeFilter === filter
-                  ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
-                  : (isDarkMode ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200')"
-              >
-                {{ filter }}
-              </button>
+
+            <!-- Advanced Filters -->
+            <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center flex-wrap">
+              <!-- Date Range -->
+              <div class="flex items-center gap-2">
+                <label class="text-sm whitespace-nowrap" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">From:</label>
+                <DatePicker
+                  v-model="dateRange.from"
+                  placeholder="Start date"
+                  :max="dateRange.to || undefined"
+                  :is-dark-mode="isDarkMode"
+                />
+              </div>
+              <div class="flex items-center gap-2">
+                <label class="text-sm whitespace-nowrap" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">To:</label>
+                <DatePicker
+                  v-model="dateRange.to"
+                  placeholder="End date"
+                  :min="dateRange.from || undefined"
+                  :is-dark-mode="isDarkMode"
+                />
+              </div>
+
+              <!-- Sort By -->
+              <div class="flex items-center gap-2">
+                <label class="text-sm whitespace-nowrap" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Sort:</label>
+                <div class="flex items-center gap-2">
+                  <Dropdown
+                    v-model="sortBy"
+                    :options="sortOptions"
+                    :is-dark-mode="isDarkMode"
+                  />
+                  <button
+                    @click="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'"
+                    class="p-1.5 rounded-lg transition-colors"
+                    :class="isDarkMode ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                    :title="sortOrder === 'asc' ? 'Ascending' : 'Descending'"
+                  >
+                    <span class="material-symbols-outlined text-base">
+                      {{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Bulk Operations -->
+              <div v-if="selectedResults.length > 0" class="flex items-center gap-2">
+                <span class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  {{ selectedResults.length }} selected
+                </span>
+                <button
+                  @click="bulkApprove"
+                  :disabled="processing"
+                  class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  <span class="material-symbols-outlined text-base">check</span>
+                  Approve All
+                </button>
+                <button
+                  @click="bulkReject"
+                  :disabled="processing"
+                  class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  <span class="material-symbols-outlined text-base">close</span>
+                  Reject All
+                </button>
+                <button
+                  @click="selectedResults = []"
+                  class="px-3 py-1.5 rounded-lg text-sm transition-colors"
+                  :class="isDarkMode ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                >
+                  Clear
+                </button>
+              </div>
             </div>
           </div>
 
@@ -157,11 +236,21 @@
                   : 'bg-white border-gray-200',
                 selectedIndex === index 
                   ? (isDarkMode ? 'ring-2 ring-indigo-400 border-indigo-400' : 'ring-2 ring-indigo-500 border-indigo-500')
+                  : '',
+                selectedResults.includes(result.id)
+                  ? (isDarkMode ? 'ring-2 ring-green-400 border-green-400' : 'ring-2 ring-green-500 border-green-500')
                   : ''
               ]"
             >
               <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
+                  <!-- Selection Checkbox -->
+                  <input
+                    type="checkbox"
+                    :checked="selectedResults.includes(result.id)"
+                    @change="toggleResultSelection(result.id)"
+                    class="w-4 h-4 rounded accent-indigo-600"
+                  />
                   <span 
                     class="px-3 py-1 text-sm rounded-full font-medium"
                     :class="getResultStatusClass(result.status)"
@@ -195,67 +284,23 @@
                 </div>
               </div>
 
-              <!-- View Mode Toggle -->
-              <div class="mb-4 flex items-center gap-2">
-                <button
-                  @click="viewModes[result.id] = 'slider'"
-                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                  :class="(viewModes[result.id] || 'slider') === 'slider'
-                    ? 'bg-indigo-600 text-white'
-                    : (isDarkMode ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                >
-                  <span class="material-symbols-outlined text-base align-middle">compare</span>
-                  Slider
-                </button>
-                <button
-                  @click="viewModes[result.id] = 'grid'"
-                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                  :class="(viewModes[result.id] || 'slider') === 'grid'
-                    ? 'bg-indigo-600 text-white'
-                    : (isDarkMode ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                >
-                  <span class="material-symbols-outlined text-base align-middle">grid_view</span>
-                  Grid
-                </button>
-              </div>
 
-              <!-- Image Comparison -->
-              <div v-if="(viewModes[result.id] || 'slider') === 'slider' && result.baselineImageUrl && result.currentImageUrl">
-                <ImageComparisonSlider
-                  :baseline-image="result.baselineImageUrl"
-                  :current-image="result.currentImageUrl"
-                  :diff-image="result.diffImageUrl"
-                  :alt-text="result.testName"
-                  :height="400"
-                />
-              </div>
-              
-              <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div v-if="result.baselineImageUrl" class="space-y-2">
-                  <div class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Baseline</div>
-                  <div class="rounded-lg border overflow-hidden" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <img :src="result.baselineImageUrl" :alt="`Baseline for ${result.testName}`" class="w-full h-auto" />
-                  </div>
-                </div>
-                <div v-if="result.diffImageUrl" class="space-y-2">
-                  <div class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Diff</div>
-                  <div class="rounded-lg border overflow-hidden" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <img :src="result.diffImageUrl" :alt="`Diff for ${result.testName}`" class="w-full h-auto" />
-                  </div>
-                </div>
-                <div v-if="result.currentImageUrl" class="space-y-2">
-                  <div class="text-sm font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Current</div>
-                  <div class="rounded-lg border overflow-hidden" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <img :src="result.currentImageUrl" :alt="`Current for ${result.testName}`" class="w-full h-auto" />
-                  </div>
-                </div>
-              </div>
+              <!-- Enhanced Image Comparison -->
+              <EnhancedDiffViewer
+                v-if="result.baselineImageUrl || result.currentImageUrl"
+                :baseline-image="result.baselineImageUrl"
+                :current-image="result.currentImageUrl"
+                :diff-image="result.diffImageUrl"
+                :alt-text="result.testName"
+                :height="500"
+              />
 
               <div v-if="result.diffPercentage !== undefined" class="mt-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Diff Percentage: <span class="font-semibold">{{ result.diffPercentage }}%</span>
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -268,6 +313,9 @@ import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ImageComparisonSlider from '../components/ImageComparisonSlider.vue';
+import EnhancedDiffViewer from '../components/EnhancedDiffViewer.vue';
+import DatePicker from '../components/DatePicker.vue';
+import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
 
 const route = useRoute();
@@ -284,10 +332,21 @@ const resultRefs = ref([]);
 const processing = ref(false);
 const autoRefresh = ref(false);
 const viewModes = ref({}); // Per-result view modes
+const dateRange = ref({ from: '', to: '' });
+const sortBy = ref('name');
+const sortOrder = ref('asc');
+const selectedResults = ref([]);
 let refreshInterval = null;
 let previousStatus = null;
 
 const filters = ['All', 'Passed', 'Failed', 'New', 'Removed'];
+
+const sortOptions = [
+  { value: 'name', label: 'Name' },
+  { value: 'diffPercentage', label: 'Diff %' },
+  { value: 'status', label: 'Status' },
+  { value: 'date', label: 'Date' },
+];
 
 const API_BASE_URL = 'http://localhost:3000/api/v1';
 
@@ -389,8 +448,85 @@ const filteredResults = computed(() => {
     filtered = filtered.filter(r => r.testName.toLowerCase().includes(query));
   }
   
+  // Apply date range filter (if testRun has dates)
+  if (dateRange.value.from || dateRange.value.to) {
+    const fromDate = dateRange.value.from ? new Date(dateRange.value.from) : null;
+    const toDate = dateRange.value.to ? new Date(dateRange.value.to) : null;
+    
+    filtered = filtered.filter(r => {
+      // Use testRun date if available, otherwise skip date filtering
+      if (!testRun.value?.startedAt) return true;
+      const resultDate = new Date(testRun.value.startedAt);
+      if (fromDate && resultDate < fromDate) return false;
+      if (toDate && resultDate > toDate) return false;
+      return true;
+    });
+  }
+  
+  // Apply sorting
+  filtered = [...filtered].sort((a, b) => {
+    let comparison = 0;
+    
+    switch (sortBy.value) {
+      case 'name':
+        comparison = a.testName.localeCompare(b.testName);
+        break;
+      case 'diffPercentage':
+        comparison = (a.diffPercentage || 0) - (b.diffPercentage || 0);
+        break;
+      case 'status':
+        comparison = a.status.localeCompare(b.status);
+        break;
+      case 'date':
+        // Use testRun date if available
+        if (testRun.value?.startedAt) {
+          comparison = 0; // All results from same run have same date
+        }
+        break;
+    }
+    
+    return sortOrder.value === 'asc' ? comparison : -comparison;
+  });
+  
   return filtered;
 });
+
+const bulkApprove = async () => {
+  if (selectedResults.value.length === 0 || processing.value) return;
+  processing.value = true;
+  try {
+    const promises = selectedResults.value.map(id => approveDiff(id));
+    await Promise.all(promises);
+    window.showToast?.(`Approved ${selectedResults.value.length} results`, 'success');
+    selectedResults.value = [];
+    await loadResults();
+  } catch (err) {
+    window.showToast?.('Failed to approve some results', 'error');
+  } finally {
+    processing.value = false;
+  }
+};
+
+const bulkReject = async () => {
+  if (selectedResults.value.length === 0 || processing.value) return;
+  processing.value = true;
+  try {
+    const promises = selectedResults.value
+      .map(id => {
+        const result = results.value.find(r => r.id === id);
+        return result && result.status === 'failed' ? rejectDiff(id) : Promise.resolve();
+      })
+      .filter(p => p);
+    await Promise.all(promises);
+    window.showToast?.(`Rejected ${selectedResults.value.length} results`, 'info');
+    selectedResults.value = [];
+    await loadResults();
+  } catch (err) {
+    window.showToast?.('Failed to reject some results', 'error');
+  } finally {
+    processing.value = false;
+  }
+};
 
 const getStatusClass = (status) => {
   const classes = {
@@ -545,6 +681,15 @@ const scrollToSelected = async () => {
       behavior: 'smooth',
       block: 'center',
     });
+  }
+};
+
+const toggleResultSelection = (resultId) => {
+  const index = selectedResults.value.indexOf(resultId);
+  if (index > -1) {
+    selectedResults.value.splice(index, 1);
+  } else {
+    selectedResults.value.push(resultId);
   }
 };
 
