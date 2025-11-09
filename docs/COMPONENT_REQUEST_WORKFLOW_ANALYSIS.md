@@ -51,8 +51,8 @@ You **already have** a basic Component Request/Feedback system implemented:
    - ✅ Request analytics (volume, status distribution, priority distribution, time metrics)
    - ✅ Duplicate detection with similarity checking
    - ✅ Request promotion to component system
+   - ✅ Roadmap integration - Approved requests automatically create roadmap items as "planned"
    - ⚠️ Integration with component creation (API ready, auto-linking pending)
-   - ⚠️ Roadmap integration (pending)
    - ⚠️ Email notifications (pending)
 
 ## What "Component Request Workflow" Would Add
@@ -118,8 +118,8 @@ Workflow (Implemented):
 6. ✅ Final approval → Approved for development
 7. ✅ Status transitions → in-progress → completed → released
 8. ✅ Request promotion to component system
-9. ⚠️ Auto-assigns to design system team (manual assignment only)
-10. ⚠️ Prioritization → Added to roadmap (pending)
+9. ✅ Prioritization → Added to roadmap (automatic when approved)
+10. ⚠️ Auto-assigns to design system team (manual assignment only)
 11. ⚠️ Notification → Requesters notified (in-app only, email pending)
 ```
 
