@@ -177,10 +177,8 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 - ✅ **In-app notification center** - Enhanced notification center with tabs for All, Breaking Changes, and Activity (IMPLEMENTED)
 
 ### Export/Import Capabilities (#23)
-**Current**: Some export in handoff tools, Storybook/PDF/Markdown/PenPot export  
-**Enhancements Needed**:
-- ✅ Adobe XD export format (design tokens and component specifications)
-- [ ] More export formats (Figma, Sketch)
+**Current**: Some export in handoff tools, Storybook/PDF/Markdown/PenPot/Adobe XD export  
+**Status**: ✅ All planned export formats completed
 
 ### Component Request & Approval Workflow (#2)
 **Current**: Full backend API with persistence, workflow states, approval process, comments, voting, analytics  
