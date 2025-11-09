@@ -68,6 +68,9 @@ export interface Component {
     notes?: string;
   };
   variants?: ComponentVariant[]; // Custom variants created via builder
+  workspaceId?: string; // Workspace/team this component belongs to
+  sharedWith?: string[]; // Workspace IDs this component is shared with
+  isGlobal?: boolean; // If true, available to all workspaces
 }
 
 export interface ComponentProp {
@@ -123,11 +126,89 @@ export interface Application {
   designSystemVersion?: string; // Design system version this application is using
   applicationUrl?: string;
   teamId?: string;
+  workspaceId?: string; // Workspace/team this application belongs to
   registeredAt: Date;
   updatedAt: Date;
   lastScanned?: Date;
   capabilities?: ApplicationCapabilities;
   metadata?: ApplicationMetadata;
+}
+
+export interface WorkspaceMember {
+  userId: string;
+  email: string;
+  role: 'owner' | 'admin' | 'editor' | 'viewer';
+  addedAt: Date;
+  addedBy: string;
+}
+
+export interface WorkspaceFont {
+  id: string;
+  name: string;
+  family: string;
+  weights: string[];
+  styles: string[];
+  source: 'google' | 'custom' | 'system';
+  url?: string; // For custom fonts
+  fallback?: string;
+  workspaceId: string;
+  sharedWith?: string[]; // Workspace IDs this font is shared with
+  isGlobal?: boolean; // If true, available to all workspaces
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceAsset {
+  id: string;
+  name: string;
+  type: 'image' | 'icon' | 'illustration' | 'logo' | 'other';
+  url: string;
+  thumbnailUrl?: string;
+  size?: number; // File size in bytes
+  format?: string; // e.g., 'svg', 'png', 'jpg'
+  workspaceId: string;
+  sharedWith?: string[]; // Workspace IDs this asset is shared with
+  isGlobal?: boolean; // If true, available to all workspaces
+  tags?: string[];
+  description?: string;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceToken {
+  id: string;
+  name: string;
+  value: string;
+  type: string;
+  category: string;
+  description?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[]; // Workspace IDs this token is shared with
+  isGlobal?: boolean; // If true, available to all workspaces
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface Workspace {
+  id: string;
+  name: string;
+  description?: string;
+  slug: string; // URL-friendly identifier
+  createdAt: Date;
+  updatedAt: Date;
+  ownerId: string; // User ID of workspace owner
+  members: WorkspaceMember[];
+  settings?: {
+    allowExternalSharing?: boolean;
+    requireApprovalForSharing?: boolean;
+    defaultComponentStatus?: 'production' | 'in-progress' | 'planned';
+  };
+  metadata?: {
+    teamSize?: number;
+    industry?: string;
+    tags?: string[];
+  };
 }
 
 export interface ComplianceCheck {
@@ -147,6 +228,10 @@ export interface ComplianceCheck {
 export class DesignSystemService {
   private apiKeys = new Map<string, { name: string; createdAt: Date }>();
   private applications = new Map<string, Application>();
+  private workspaces = new Map<string, Workspace>();
+  private workspaceFonts = new Map<string, WorkspaceFont>();
+  private workspaceAssets = new Map<string, WorkspaceAsset>();
+  private workspaceTokens = new Map<string, WorkspaceToken>();
   private scannerService: ComplianceScannerService;
   private applicationScanner: ApplicationScannerService;
   
@@ -1308,11 +1393,20 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
     return null;
   }
 
-  getAllComponents(status?: string): Component[] {
-    if (status) {
-      return this.components.filter(component => component.status === status);
+  getAllComponents(status?: string, workspaceId?: string): Component[] {
+    let filtered = this.components;
+
+    // Filter by workspace if provided
+    if (workspaceId) {
+      filtered = this.getComponentsForWorkspace(workspaceId);
     }
-    return this.components;
+
+    // Filter by status if provided
+    if (status) {
+      filtered = filtered.filter(component => component.status === status);
+    }
+
+    return filtered;
   }
 
   /**
@@ -1595,6 +1689,8 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
     examples?: string[];
     accessibility?: { wcag: string; notes?: string };
     linkedRequestId?: string; // Optional: explicitly link to a specific request
+    workspaceId?: string; // Optional: workspace this component belongs to
+    isGlobal?: boolean; // Optional: make component available to all workspaces
   }): Component {
     const component: Component = {
       id: data.id,
@@ -1610,6 +1706,8 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
       dependencies: data.dependencies || [],
       examples: data.examples || [],
       accessibility: data.accessibility,
+      workspaceId: data.workspaceId,
+      isGlobal: data.isGlobal || false,
     };
 
     this.components.push(component);
@@ -1639,6 +1737,7 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
       version?: string;
       applicationUrl?: string;
       teamId?: string;
+      workspaceId?: string; // Workspace/team this application belongs to
       capabilities?: ApplicationCapabilities;
       metadata?: ApplicationMetadata;
     }
@@ -1646,6 +1745,7 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
     const id = `app-${Date.now()}`;
     const now = new Date();
     const teamId = options?.teamId || 'default-team';
+    const workspaceId = options?.workspaceId;
     
     // Initialize capabilities
     const capabilities = options?.capabilities || {
@@ -1704,6 +1804,7 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
       version: options?.version,
       applicationUrl: options?.applicationUrl,
       teamId,
+      workspaceId,
       registeredAt: now,
       updatedAt: now,
       capabilities,
@@ -3269,5 +3370,797 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
     });
     
     return metadata;
+  }
+
+  // ==================== Workspace Management ====================
+
+  /**
+   * Create a new workspace
+   */
+  createWorkspace(data: {
+    name: string;
+    description?: string;
+    ownerId: string;
+    ownerEmail: string;
+    settings?: Workspace['settings'];
+    metadata?: Workspace['metadata'];
+  }): Workspace {
+    const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const workspace: Workspace = {
+      id: `workspace-${Date.now()}`,
+      name: data.name,
+      description: data.description,
+      slug,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ownerId: data.ownerId,
+      members: [{
+        userId: data.ownerId,
+        email: data.ownerEmail,
+        role: 'owner',
+        addedAt: new Date(),
+        addedBy: data.ownerId,
+      }],
+      settings: data.settings || {
+        allowExternalSharing: true,
+        requireApprovalForSharing: false,
+        defaultComponentStatus: 'in-progress',
+      },
+      metadata: data.metadata,
+    };
+
+    this.workspaces.set(workspace.id, workspace);
+    return workspace;
+  }
+
+  /**
+   * Get all workspaces
+   */
+  getAllWorkspaces(): Workspace[] {
+    return Array.from(this.workspaces.values());
+  }
+
+  /**
+   * Get workspace by ID
+   */
+  getWorkspaceById(workspaceId: string): Workspace | undefined {
+    return this.workspaces.get(workspaceId);
+  }
+
+  /**
+   * Get workspace by slug
+   */
+  getWorkspaceBySlug(slug: string): Workspace | undefined {
+    return Array.from(this.workspaces.values()).find(w => w.slug === slug);
+  }
+
+  /**
+   * Update workspace
+   */
+  updateWorkspace(workspaceId: string, updates: Partial<Pick<Workspace, 'name' | 'description' | 'settings' | 'metadata'>>): Workspace | null {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) return null;
+
+    if (updates.name) {
+      workspace.name = updates.name;
+      workspace.slug = updates.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+    if (updates.description !== undefined) workspace.description = updates.description;
+    if (updates.settings) workspace.settings = { ...workspace.settings, ...updates.settings };
+    if (updates.metadata) workspace.metadata = { ...workspace.metadata, ...updates.metadata };
+    workspace.updatedAt = new Date();
+
+    this.workspaces.set(workspaceId, workspace);
+    return workspace;
+  }
+
+  /**
+   * Delete workspace
+   */
+  deleteWorkspace(workspaceId: string): boolean {
+    return this.workspaces.delete(workspaceId);
+  }
+
+  /**
+   * Add member to workspace
+   */
+  addWorkspaceMember(workspaceId: string, member: {
+    userId: string;
+    email: string;
+    role: 'admin' | 'editor' | 'viewer';
+    addedBy: string;
+  }): Workspace | null {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) return null;
+
+    // Check if member already exists
+    if (workspace.members.some(m => m.userId === member.userId)) {
+      return null; // Member already exists
+    }
+
+    workspace.members.push({
+      ...member,
+      addedAt: new Date(),
+    });
+    workspace.updatedAt = new Date();
+
+    this.workspaces.set(workspaceId, workspace);
+    return workspace;
+  }
+
+  /**
+   * Remove member from workspace
+   */
+  removeWorkspaceMember(workspaceId: string, userId: string): Workspace | null {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) return null;
+
+    // Don't allow removing the owner
+    if (workspace.ownerId === userId) {
+      return null;
+    }
+
+    workspace.members = workspace.members.filter(m => m.userId !== userId);
+    workspace.updatedAt = new Date();
+
+    this.workspaces.set(workspaceId, workspace);
+    return workspace;
+  }
+
+  /**
+   * Update member role
+   */
+  updateWorkspaceMemberRole(workspaceId: string, userId: string, role: 'admin' | 'editor' | 'viewer'): Workspace | null {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) return null;
+
+    // Don't allow changing owner role
+    if (workspace.ownerId === userId) {
+      return null;
+    }
+
+    const member = workspace.members.find(m => m.userId === userId);
+    if (!member) return null;
+
+    member.role = role;
+    workspace.updatedAt = new Date();
+
+    this.workspaces.set(workspaceId, workspace);
+    return workspace;
+  }
+
+  /**
+   * Check if user has access to workspace
+   */
+  hasWorkspaceAccess(workspaceId: string, userId: string, requiredRole?: 'owner' | 'admin' | 'editor' | 'viewer'): boolean {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) return false;
+
+    // Owner has all access
+    if (workspace.ownerId === userId) return true;
+
+    const member = workspace.members.find(m => m.userId === userId);
+    if (!member) return false;
+
+    if (!requiredRole) return true;
+
+    const roleHierarchy = { owner: 4, admin: 3, editor: 2, viewer: 1 };
+    return roleHierarchy[member.role] >= roleHierarchy[requiredRole];
+  }
+
+  /**
+   * Get workspaces for a user
+   */
+  getWorkspacesForUser(userId: string): Workspace[] {
+    return Array.from(this.workspaces.values()).filter(workspace =>
+      workspace.ownerId === userId || workspace.members.some(m => m.userId === userId)
+    );
+  }
+
+  /**
+   * Get components for a workspace (including shared and global components)
+   */
+  getComponentsForWorkspace(workspaceId: string, userId?: string): Component[] {
+    // Check access
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+
+    return this.components.filter(component =>
+      // Component belongs to this workspace
+      component.workspaceId === workspaceId ||
+      // Component is global
+      component.isGlobal === true ||
+      // Component is shared with this workspace
+      (component.sharedWith && component.sharedWith.includes(workspaceId))
+    );
+  }
+
+  /**
+   * Share component with workspace(s)
+   */
+  shareComponentWithWorkspaces(componentId: string, workspaceIds: string[], requestingWorkspaceId: string): Component | null {
+    const component = this.getComponentById(componentId);
+    if (!component) return null;
+
+    // Verify component belongs to requesting workspace or is global
+    if (component.workspaceId !== requestingWorkspaceId && !component.isGlobal) {
+      return null; // Can't share components you don't own
+    }
+
+    // Add workspace IDs to sharedWith array
+    if (!component.sharedWith) {
+      component.sharedWith = [];
+    }
+
+    workspaceIds.forEach(wsId => {
+      if (!component.sharedWith!.includes(wsId)) {
+        component.sharedWith!.push(wsId);
+      }
+    });
+
+    // Update component in array
+    const index = this.components.findIndex(c => c.id === componentId);
+    if (index !== -1) {
+      this.components[index] = component;
+    }
+
+    return component;
+  }
+
+  /**
+   * Unshare component from workspace(s)
+   */
+  unshareComponentFromWorkspaces(componentId: string, workspaceIds: string[], requestingWorkspaceId: string): Component | null {
+    const component = this.getComponentById(componentId);
+    if (!component) return null;
+
+    // Verify component belongs to requesting workspace
+    if (component.workspaceId !== requestingWorkspaceId && !component.isGlobal) {
+      return null;
+    }
+
+    if (component.sharedWith) {
+      component.sharedWith = component.sharedWith.filter(wsId => !workspaceIds.includes(wsId));
+    }
+
+    // Update component in array
+    const index = this.components.findIndex(c => c.id === componentId);
+    if (index !== -1) {
+      this.components[index] = component;
+    }
+
+    return component;
+  }
+
+  /**
+   * Make component global (available to all workspaces)
+   */
+  makeComponentGlobal(componentId: string, requestingWorkspaceId: string): Component | null {
+    const component = this.getComponentById(componentId);
+    if (!component) return null;
+
+    // Verify component belongs to requesting workspace and user has admin access
+    if (component.workspaceId !== requestingWorkspaceId) {
+      return null;
+    }
+
+    component.isGlobal = true;
+    component.sharedWith = undefined; // No need to track individual shares if global
+
+    // Update component in array
+    const index = this.components.findIndex(c => c.id === componentId);
+    if (index !== -1) {
+      this.components[index] = component;
+    }
+
+    return component;
+  }
+
+  /**
+   * Get workspace analytics
+   */
+  getWorkspaceAnalytics(workspaceId: string): {
+    totalComponents: number;
+    componentsByStatus: Record<string, number>;
+    totalApplications: number;
+    adoptionRate: number;
+    designDebt: number;
+    mostUsedComponents: Array<{ id: string; name: string; usage: number }>;
+    healthScore: number;
+  } {
+    const components = this.getComponentsForWorkspace(workspaceId);
+    const applications = Array.from(this.applications.values()).filter(app => app.workspaceId === workspaceId);
+
+    const componentsByStatus: Record<string, number> = {};
+    components.forEach(comp => {
+      componentsByStatus[comp.status] = (componentsByStatus[comp.status] || 0) + 1;
+    });
+
+    // Calculate adoption rate (simplified - would need actual usage data)
+    const adoptionRate = applications.length > 0 ? 85 : 0; // Placeholder
+
+    // Calculate design debt (deprecated components)
+    const designDebt = componentsByStatus['deprecated'] || 0;
+
+    // Most used components (placeholder - would need actual usage tracking)
+    const mostUsedComponents = components.slice(0, 5).map(comp => ({
+      id: comp.id,
+      name: comp.name,
+      usage: Math.floor(Math.random() * 100), // Placeholder
+    })).sort((a, b) => b.usage - a.usage);
+
+    // Calculate health score (simplified)
+    const healthScore = Math.min(100, Math.max(0,
+      100 - (designDebt * 5) - ((componentsByStatus['in-progress'] || 0) * 2)
+    ));
+
+    return {
+      totalComponents: components.length,
+      componentsByStatus,
+      totalApplications: applications.length,
+      adoptionRate,
+      designDebt,
+      mostUsedComponents,
+      healthScore,
+    };
+  }
+
+  // ==================== Workspace Fonts ====================
+
+  /**
+   * Add font to workspace
+   */
+  addWorkspaceFont(workspaceId: string, data: {
+    name: string;
+    family: string;
+    weights: string[];
+    styles: string[];
+    source: 'google' | 'custom' | 'system';
+    url?: string;
+    fallback?: string;
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceFont {
+    const font: WorkspaceFont = {
+      id: `font-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+    };
+
+    this.workspaceFonts.set(font.id, font);
+    return font;
+  }
+
+  /**
+   * Get fonts for workspace (including shared and global)
+   */
+  getWorkspaceFonts(workspaceId: string, userId?: string): WorkspaceFont[] {
+    // Check access
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+
+    return Array.from(this.workspaceFonts.values()).filter(font =>
+      font.workspaceId === workspaceId ||
+      font.isGlobal === true ||
+      (font.sharedWith && font.sharedWith.includes(workspaceId))
+    );
+  }
+
+  /**
+   * Update workspace font
+   */
+  updateWorkspaceFont(fontId: string, updates: Partial<Pick<WorkspaceFont, 'name' | 'family' | 'weights' | 'styles' | 'url' | 'fallback'>>): WorkspaceFont | null {
+    const font = this.workspaceFonts.get(fontId);
+    if (!font) return null;
+
+    Object.assign(font, updates);
+    this.workspaceFonts.set(fontId, font);
+    return font;
+  }
+
+  /**
+   * Delete workspace font
+   */
+  deleteWorkspaceFont(fontId: string): boolean {
+    return this.workspaceFonts.delete(fontId);
+  }
+
+  /**
+   * Share font with workspace(s)
+   */
+  shareWorkspaceFont(fontId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceFont | null {
+    const font = this.workspaceFonts.get(fontId);
+    if (!font) return null;
+
+    if (font.workspaceId !== requestingWorkspaceId && !font.isGlobal) {
+      return null;
+    }
+
+    if (!font.sharedWith) {
+      font.sharedWith = [];
+    }
+
+    workspaceIds.forEach(wsId => {
+      if (!font.sharedWith!.includes(wsId)) {
+        font.sharedWith!.push(wsId);
+      }
+    });
+
+    this.workspaceFonts.set(fontId, font);
+    return font;
+  }
+
+  /**
+   * Make font global
+   */
+  makeWorkspaceFontGlobal(fontId: string, requestingWorkspaceId: string): WorkspaceFont | null {
+    const font = this.workspaceFonts.get(fontId);
+    if (!font) return null;
+
+    if (font.workspaceId !== requestingWorkspaceId) {
+      return null;
+    }
+
+    font.isGlobal = true;
+    font.sharedWith = undefined;
+    this.workspaceFonts.set(fontId, font);
+    return font;
+  }
+
+  // ==================== Workspace Assets ====================
+
+  /**
+   * Add asset to workspace
+   */
+  addWorkspaceAsset(workspaceId: string, data: {
+    name: string;
+    type: 'image' | 'icon' | 'illustration' | 'logo' | 'other';
+    url: string;
+    thumbnailUrl?: string;
+    size?: number;
+    format?: string;
+    tags?: string[];
+    description?: string;
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceAsset {
+    const asset: WorkspaceAsset = {
+      id: `asset-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+
+    this.workspaceAssets.set(asset.id, asset);
+    return asset;
+  }
+
+  /**
+   * Get assets for workspace (including shared and global)
+   */
+  getWorkspaceAssets(workspaceId: string, userId?: string, type?: string): WorkspaceAsset[] {
+    // Check access
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+
+    let assets = Array.from(this.workspaceAssets.values()).filter(asset =>
+      asset.workspaceId === workspaceId ||
+      asset.isGlobal === true ||
+      (asset.sharedWith && asset.sharedWith.includes(workspaceId))
+    );
+
+    if (type) {
+      assets = assets.filter(asset => asset.type === type);
+    }
+
+    return assets;
+  }
+
+  /**
+   * Update workspace asset
+   */
+  updateWorkspaceAsset(assetId: string, updates: Partial<Pick<WorkspaceAsset, 'name' | 'description' | 'tags'>>): WorkspaceAsset | null {
+    const asset = this.workspaceAssets.get(assetId);
+    if (!asset) return null;
+
+    Object.assign(asset, updates);
+    this.workspaceAssets.set(assetId, asset);
+    return asset;
+  }
+
+  /**
+   * Delete workspace asset
+   */
+  deleteWorkspaceAsset(assetId: string): boolean {
+    return this.workspaceAssets.delete(assetId);
+  }
+
+  /**
+   * Share asset with workspace(s)
+   */
+  shareWorkspaceAsset(assetId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceAsset | null {
+    const asset = this.workspaceAssets.get(assetId);
+    if (!asset) return null;
+
+    if (asset.workspaceId !== requestingWorkspaceId && !asset.isGlobal) {
+      return null;
+    }
+
+    if (!asset.sharedWith) {
+      asset.sharedWith = [];
+    }
+
+    workspaceIds.forEach(wsId => {
+      if (!asset.sharedWith!.includes(wsId)) {
+        asset.sharedWith!.push(wsId);
+      }
+    });
+
+    this.workspaceAssets.set(assetId, asset);
+    return asset;
+  }
+
+  /**
+   * Make asset global
+   */
+  makeWorkspaceAssetGlobal(assetId: string, requestingWorkspaceId: string): WorkspaceAsset | null {
+    const asset = this.workspaceAssets.get(assetId);
+    if (!asset) return null;
+
+    if (asset.workspaceId !== requestingWorkspaceId) {
+      return null;
+    }
+
+    asset.isGlobal = true;
+    asset.sharedWith = undefined;
+    this.workspaceAssets.set(assetId, asset);
+    return asset;
+  }
+
+  // ==================== Workspace Tokens ====================
+
+  /**
+   * Add token to workspace
+   */
+  addWorkspaceToken(workspaceId: string, data: {
+    name: string;
+    value: string;
+    type: string;
+    category: string;
+    description?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceToken {
+    const token: WorkspaceToken = {
+      id: `token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+
+    this.workspaceTokens.set(token.id, token);
+    return token;
+  }
+
+  /**
+   * Get tokens for workspace (including shared and global)
+   */
+  getWorkspaceTokens(workspaceId: string, userId?: string, category?: string): WorkspaceToken[] {
+    // Check access
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+
+    let tokens = Array.from(this.workspaceTokens.values()).filter(token =>
+      token.workspaceId === workspaceId ||
+      token.isGlobal === true ||
+      (token.sharedWith && token.sharedWith.includes(workspaceId))
+    );
+
+    if (category) {
+      tokens = tokens.filter(token => token.category === category);
+    }
+
+    return tokens;
+  }
+
+  /**
+   * Update workspace token
+   */
+  updateWorkspaceToken(tokenId: string, updates: Partial<Pick<WorkspaceToken, 'name' | 'value' | 'description' | 'tags'>>): WorkspaceToken | null {
+    const token = this.workspaceTokens.get(tokenId);
+    if (!token) return null;
+
+    Object.assign(token, updates);
+    this.workspaceTokens.set(tokenId, token);
+    return token;
+  }
+
+  /**
+   * Delete workspace token
+   */
+  deleteWorkspaceToken(tokenId: string): boolean {
+    return this.workspaceTokens.delete(tokenId);
+  }
+
+  /**
+   * Share token with workspace(s)
+   */
+  shareWorkspaceToken(tokenId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceToken | null {
+    const token = this.workspaceTokens.get(tokenId);
+    if (!token) return null;
+
+    if (token.workspaceId !== requestingWorkspaceId && !token.isGlobal) {
+      return null;
+    }
+
+    if (!token.sharedWith) {
+      token.sharedWith = [];
+    }
+
+    workspaceIds.forEach(wsId => {
+      if (!token.sharedWith!.includes(wsId)) {
+        token.sharedWith!.push(wsId);
+      }
+    });
+
+    this.workspaceTokens.set(tokenId, token);
+    return token;
+  }
+
+  /**
+   * Make token global
+   */
+  makeWorkspaceTokenGlobal(tokenId: string, requestingWorkspaceId: string): WorkspaceToken | null {
+    const token = this.workspaceTokens.get(tokenId);
+    if (!token) return null;
+
+    if (token.workspaceId !== requestingWorkspaceId) {
+      return null;
+    }
+
+    token.isGlobal = true;
+    token.sharedWith = undefined;
+    this.workspaceTokens.set(tokenId, token);
+    return token;
+  }
+
+  // ==================== User Management ====================
+
+  /**
+   * Get all users with their workspace memberships
+   */
+  getAllUsersWithWorkspaces(): Array<{
+    userId: string;
+    email: string;
+    workspaces: Array<{
+      workspaceId: string;
+      workspaceName: string;
+      role: 'owner' | 'admin' | 'editor' | 'viewer';
+    }>;
+  }> {
+    const userMap = new Map<string, {
+      userId: string;
+      email: string;
+      workspaces: Array<{
+        workspaceId: string;
+        workspaceName: string;
+        role: 'owner' | 'admin' | 'editor' | 'viewer';
+      }>;
+    }>();
+
+    // Iterate through all workspaces to collect user memberships
+    this.workspaces.forEach(workspace => {
+      // Add owner
+      if (!userMap.has(workspace.ownerId)) {
+        userMap.set(workspace.ownerId, {
+          userId: workspace.ownerId,
+          email: workspace.members.find(m => m.userId === workspace.ownerId)?.email || `${workspace.ownerId}@example.com`,
+          workspaces: [],
+        });
+      }
+      const owner = userMap.get(workspace.ownerId)!;
+      owner.workspaces.push({
+        workspaceId: workspace.id,
+        workspaceName: workspace.name,
+        role: 'owner',
+      });
+
+      // Add members
+      workspace.members.forEach(member => {
+        if (!userMap.has(member.userId)) {
+          userMap.set(member.userId, {
+            userId: member.userId,
+            email: member.email,
+            workspaces: [],
+          });
+        }
+        const user = userMap.get(member.userId)!;
+        // Only add if not already added as owner
+        if (!user.workspaces.some(ws => ws.workspaceId === workspace.id)) {
+          user.workspaces.push({
+            workspaceId: workspace.id,
+            workspaceName: workspace.name,
+            role: member.role,
+          });
+        }
+      });
+    });
+
+    return Array.from(userMap.values());
+  }
+
+  /**
+   * Get workspaces for a specific user
+   */
+  getUserWorkspaces(userId: string): Array<{
+    workspaceId: string;
+    workspaceName: string;
+    role: 'owner' | 'admin' | 'editor' | 'viewer';
+  }> {
+    const workspaces: Array<{
+      workspaceId: string;
+      workspaceName: string;
+      role: 'owner' | 'admin' | 'editor' | 'viewer';
+    }> = [];
+
+    this.workspaces.forEach(workspace => {
+      // Check if user is owner
+      if (workspace.ownerId === userId) {
+        workspaces.push({
+          workspaceId: workspace.id,
+          workspaceName: workspace.name,
+          role: 'owner',
+        });
+        return;
+      }
+
+      // Check if user is a member
+      const member = workspace.members.find(m => m.userId === userId);
+      if (member) {
+        workspaces.push({
+          workspaceId: workspace.id,
+          workspaceName: workspace.name,
+          role: member.role,
+        });
+      }
+    });
+
+    return workspaces;
+  }
+
+  /**
+   * Add user to workspace (alias for addWorkspaceMember)
+   */
+  addUserToWorkspace(workspaceId: string, userId: string, email: string, role: 'admin' | 'editor' | 'viewer', addedBy: string): Workspace | null {
+    return this.addWorkspaceMember(workspaceId, {
+      userId,
+      email,
+      role,
+      addedBy,
+    });
+  }
+
+  /**
+   * Remove user from workspace (alias for removeWorkspaceMember)
+   */
+  removeUserFromWorkspace(workspaceId: string, userId: string): Workspace | null {
+    return this.removeWorkspaceMember(workspaceId, userId);
   }
 }

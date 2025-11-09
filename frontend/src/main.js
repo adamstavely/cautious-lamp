@@ -330,6 +330,14 @@ const router = createRouter({
         path: '/admin/applications',
         component: () => import('./views/ApplicationManagement.vue'),
       },
+    {
+      path: '/admin/workspaces',
+      component: () => import('./views/WorkspaceManagement.vue'),
+    },
+    {
+      path: '/admin/users',
+      component: () => import('./views/UserManagement.vue'),
+    },
       {
         path: '/admin/applications/register',
         component: () => import('./views/ApplicationRegistration.vue'),

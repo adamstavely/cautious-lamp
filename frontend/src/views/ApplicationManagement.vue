@@ -90,6 +90,7 @@
               <thead :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
                 <tr>
                   <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Application</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Workspace</th>
                   <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Design System Version</th>
                   <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Capabilities</th>
                   <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Metadata</th>
@@ -112,6 +113,22 @@
                         <a :href="app.repository" target="_blank" class="text-indigo-600 hover:text-indigo-700">{{ app.repository }}</a>
                       </div>
                     </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span 
+                      v-if="app.workspaceId"
+                      class="px-2 py-1 text-xs rounded font-medium"
+                      :class="isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'"
+                    >
+                      {{ getWorkspaceName(app.workspaceId) }}
+                    </span>
+                    <span 
+                      v-else
+                      class="px-2 py-1 text-xs rounded font-medium"
+                      :class="isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-600'"
+                    >
+                      No workspace
+                    </span>
                   </td>
                   <td class="px-6 py-4">
                     <div class="flex items-center gap-2">
@@ -592,6 +609,7 @@ const isDarkMode = ref(false);
 const loading = ref(false);
 const isSaving = ref(false);
 const applications = ref([]);
+const workspaces = ref([]);
 const filterCapability = ref('');
 const editingApplication = ref(null);
 const migrationData = ref(null);
@@ -720,6 +738,24 @@ const getVersionStatusClass = (version) => {
   return isDarkMode.value ? 'text-yellow-400' : 'text-yellow-600';
 };
 
+const getWorkspaceName = (workspaceId) => {
+  if (!workspaceId) return 'Unknown';
+  const workspace = workspaces.value.find(w => w.id === workspaceId);
+  return workspace ? workspace.name : 'Unknown';
+};
+
+const loadWorkspaces = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/workspaces`, {
+      headers: { Authorization: `Bearer ${API_KEY}` }
+    });
+    workspaces.value = response.data || [];
+  } catch (error) {
+    console.error('Failed to load workspaces:', error);
+    workspaces.value = [];
+  }
+};
+
 const editApplication = (app) => {
     editingApplication.value = app;
     editForm.value = {
@@ -829,6 +865,9 @@ onMounted(async () => {
   const observer = new MutationObserver(() => {
     isDarkMode.value = document.documentElement.classList.contains('dark');
   });
+  
+  // Load workspaces and applications
+  await loadWorkspaces();
   
   observer.observe(document.documentElement, {
     attributes: true,

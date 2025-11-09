@@ -174,6 +174,7 @@ export class DesignSystemController {
       version: body.version,
       applicationUrl: body.applicationUrl,
       teamId: body.teamId,
+      workspaceId: body.workspaceId,
       capabilities: body.capabilities,
       metadata: body.metadata,
     });
@@ -871,5 +872,582 @@ export class DesignSystemController {
     // This would need to query ComponentRequestsService
     // For now, return empty array - this can be enhanced later
     return { requests: [] };
+  }
+
+  // ==================== Workspace Management ====================
+
+  @Post('workspaces')
+  createWorkspace(
+    @Body() data: {
+      name: string;
+      description?: string;
+      ownerId: string;
+      ownerEmail: string;
+      settings?: any;
+      metadata?: any;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.createWorkspace(data);
+  }
+
+  @Get('workspaces')
+  getAllWorkspaces(
+    @Query('userId') userId?: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    if (userId) {
+      return this.designSystemService.getWorkspacesForUser(userId);
+    }
+    return this.designSystemService.getAllWorkspaces();
+  }
+
+  @Get('workspaces/:id')
+  getWorkspace(
+    @Param('id') workspaceId: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const workspace = this.designSystemService.getWorkspaceById(workspaceId);
+    if (!workspace) {
+      throw new BadRequestException(`Workspace '${workspaceId}' not found`);
+    }
+    return workspace;
+  }
+
+  @Get('workspaces/slug/:slug')
+  getWorkspaceBySlug(
+    @Param('slug') slug: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const workspace = this.designSystemService.getWorkspaceBySlug(slug);
+    if (!workspace) {
+      throw new BadRequestException(`Workspace '${slug}' not found`);
+    }
+    return workspace;
+  }
+
+  @Put('workspaces/:id')
+  updateWorkspace(
+    @Param('id') workspaceId: string,
+    @Body() updates: {
+      name?: string;
+      description?: string;
+      settings?: any;
+      metadata?: any;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const workspace = this.designSystemService.updateWorkspace(workspaceId, updates);
+    if (!workspace) {
+      throw new BadRequestException(`Workspace '${workspaceId}' not found`);
+    }
+    return workspace;
+  }
+
+  @Delete('workspaces/:id')
+  deleteWorkspace(
+    @Param('id') workspaceId: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const deleted = this.designSystemService.deleteWorkspace(workspaceId);
+    if (!deleted) {
+      throw new BadRequestException(`Workspace '${workspaceId}' not found`);
+    }
+    return { message: 'Workspace deleted successfully' };
+  }
+
+  @Post('workspaces/:id/members')
+  addWorkspaceMember(
+    @Param('id') workspaceId: string,
+    @Body() member: {
+      userId: string;
+      email: string;
+      role: 'admin' | 'editor' | 'viewer';
+      addedBy: string;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const workspace = this.designSystemService.addWorkspaceMember(workspaceId, member);
+    if (!workspace) {
+      throw new BadRequestException(`Failed to add member to workspace '${workspaceId}'`);
+    }
+    return workspace;
+  }
+
+  @Delete('workspaces/:id/members/:userId')
+  removeWorkspaceMember(
+    @Param('id') workspaceId: string,
+    @Param('userId') userId: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const workspace = this.designSystemService.removeWorkspaceMember(workspaceId, userId);
+    if (!workspace) {
+      throw new BadRequestException(`Failed to remove member from workspace '${workspaceId}'`);
+    }
+    return workspace;
+  }
+
+  @Patch('workspaces/:id/members/:userId/role')
+  updateWorkspaceMemberRole(
+    @Param('id') workspaceId: string,
+    @Param('userId') userId: string,
+    @Body() body: { role: 'admin' | 'editor' | 'viewer' },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const workspace = this.designSystemService.updateWorkspaceMemberRole(workspaceId, userId, body.role);
+    if (!workspace) {
+      throw new BadRequestException(`Failed to update member role in workspace '${workspaceId}'`);
+    }
+    return workspace;
+  }
+
+  @Get('workspaces/:id/components')
+  getWorkspaceComponents(
+    @Param('id') workspaceId: string,
+    @Query('userId') userId?: string,
+    @Query('status') status?: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    let components = this.designSystemService.getComponentsForWorkspace(workspaceId, userId);
+    if (status) {
+      components = components.filter(c => c.status === status);
+    }
+    return { components, count: components.length };
+  }
+
+  @Get('workspaces/:id/analytics')
+  getWorkspaceAnalytics(
+    @Param('id') workspaceId: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getWorkspaceAnalytics(workspaceId);
+  }
+
+  @Post('components/:id/share')
+  shareComponent(
+    @Param('id') componentId: string,
+    @Body() body: {
+      workspaceIds: string[];
+      requestingWorkspaceId: string;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const component = this.designSystemService.shareComponentWithWorkspaces(
+      componentId,
+      body.workspaceIds,
+      body.requestingWorkspaceId
+    );
+    if (!component) {
+      throw new BadRequestException(`Failed to share component '${componentId}'`);
+    }
+    return component;
+  }
+
+  @Post('components/:id/unshare')
+  unshareComponent(
+    @Param('id') componentId: string,
+    @Body() body: {
+      workspaceIds: string[];
+      requestingWorkspaceId: string;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const component = this.designSystemService.unshareComponentFromWorkspaces(
+      componentId,
+      body.workspaceIds,
+      body.requestingWorkspaceId
+    );
+    if (!component) {
+      throw new BadRequestException(`Failed to unshare component '${componentId}'`);
+    }
+    return component;
+  }
+
+  @Post('components/:id/make-global')
+  makeComponentGlobal(
+    @Param('id') componentId: string,
+    @Body() body: { requestingWorkspaceId: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const component = this.designSystemService.makeComponentGlobal(componentId, body.requestingWorkspaceId);
+    if (!component) {
+      throw new BadRequestException(`Failed to make component '${componentId}' global`);
+    }
+    return component;
+  }
+
+  // ==================== Workspace Fonts ====================
+
+  @Post('workspaces/:id/fonts')
+  addWorkspaceFont(
+    @Param('id') workspaceId: string,
+    @Body() data: {
+      name: string;
+      family: string;
+      weights: string[];
+      styles: string[];
+      source: 'google' | 'custom' | 'system';
+      url?: string;
+      fallback?: string;
+      createdBy: string;
+      sharedWith?: string[];
+      isGlobal?: boolean;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.addWorkspaceFont(workspaceId, data);
+  }
+
+  @Get('workspaces/:id/fonts')
+  getWorkspaceFonts(
+    @Param('id') workspaceId: string,
+    @Query('userId') userId?: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getWorkspaceFonts(workspaceId, userId);
+  }
+
+  @Put('workspaces/:id/fonts/:fontId')
+  updateWorkspaceFont(
+    @Param('id') workspaceId: string,
+    @Param('fontId') fontId: string,
+    @Body() updates: {
+      name?: string;
+      family?: string;
+      weights?: string[];
+      styles?: string[];
+      url?: string;
+      fallback?: string;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const font = this.designSystemService.updateWorkspaceFont(fontId, updates);
+    if (!font) {
+      throw new BadRequestException(`Font '${fontId}' not found`);
+    }
+    return font;
+  }
+
+  @Delete('workspaces/:id/fonts/:fontId')
+  deleteWorkspaceFont(
+    @Param('id') workspaceId: string,
+    @Param('fontId') fontId: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const deleted = this.designSystemService.deleteWorkspaceFont(fontId);
+    if (!deleted) {
+      throw new BadRequestException(`Font '${fontId}' not found`);
+    }
+    return { message: 'Font deleted successfully' };
+  }
+
+  @Post('workspaces/:id/fonts/:fontId/share')
+  shareWorkspaceFont(
+    @Param('id') workspaceId: string,
+    @Param('fontId') fontId: string,
+    @Body() body: {
+      workspaceIds: string[];
+      requestingWorkspaceId: string;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const font = this.designSystemService.shareWorkspaceFont(fontId, body.workspaceIds, body.requestingWorkspaceId);
+    if (!font) {
+      throw new BadRequestException(`Failed to share font '${fontId}'`);
+    }
+    return font;
+  }
+
+  @Post('workspaces/:id/fonts/:fontId/make-global')
+  makeWorkspaceFontGlobal(
+    @Param('id') workspaceId: string,
+    @Param('fontId') fontId: string,
+    @Body() body: { requestingWorkspaceId: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const font = this.designSystemService.makeWorkspaceFontGlobal(fontId, body.requestingWorkspaceId);
+    if (!font) {
+      throw new BadRequestException(`Failed to make font '${fontId}' global`);
+    }
+    return font;
+  }
+
+  // ==================== Workspace Assets ====================
+
+  @Post('workspaces/:id/assets')
+  addWorkspaceAsset(
+    @Param('id') workspaceId: string,
+    @Body() data: {
+      name: string;
+      type: 'image' | 'icon' | 'illustration' | 'logo' | 'other';
+      url: string;
+      thumbnailUrl?: string;
+      size?: number;
+      format?: string;
+      tags?: string[];
+      description?: string;
+      createdBy: string;
+      sharedWith?: string[];
+      isGlobal?: boolean;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.addWorkspaceAsset(workspaceId, data);
+  }
+
+  @Get('workspaces/:id/assets')
+  getWorkspaceAssets(
+    @Param('id') workspaceId: string,
+    @Query('userId') userId?: string,
+    @Query('type') type?: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getWorkspaceAssets(workspaceId, userId, type);
+  }
+
+  @Put('workspaces/:id/assets/:assetId')
+  updateWorkspaceAsset(
+    @Param('id') workspaceId: string,
+    @Param('assetId') assetId: string,
+    @Body() updates: {
+      name?: string;
+      description?: string;
+      tags?: string[];
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const asset = this.designSystemService.updateWorkspaceAsset(assetId, updates);
+    if (!asset) {
+      throw new BadRequestException(`Asset '${assetId}' not found`);
+    }
+    return asset;
+  }
+
+  @Delete('workspaces/:id/assets/:assetId')
+  deleteWorkspaceAsset(
+    @Param('id') workspaceId: string,
+    @Param('assetId') assetId: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const deleted = this.designSystemService.deleteWorkspaceAsset(assetId);
+    if (!deleted) {
+      throw new BadRequestException(`Asset '${assetId}' not found`);
+    }
+    return { message: 'Asset deleted successfully' };
+  }
+
+  @Post('workspaces/:id/assets/:assetId/share')
+  shareWorkspaceAsset(
+    @Param('id') workspaceId: string,
+    @Param('assetId') assetId: string,
+    @Body() body: {
+      workspaceIds: string[];
+      requestingWorkspaceId: string;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const asset = this.designSystemService.shareWorkspaceAsset(assetId, body.workspaceIds, body.requestingWorkspaceId);
+    if (!asset) {
+      throw new BadRequestException(`Failed to share asset '${assetId}'`);
+    }
+    return asset;
+  }
+
+  @Post('workspaces/:id/assets/:assetId/make-global')
+  makeWorkspaceAssetGlobal(
+    @Param('id') workspaceId: string,
+    @Param('assetId') assetId: string,
+    @Body() body: { requestingWorkspaceId: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const asset = this.designSystemService.makeWorkspaceAssetGlobal(assetId, body.requestingWorkspaceId);
+    if (!asset) {
+      throw new BadRequestException(`Failed to make asset '${assetId}' global`);
+    }
+    return asset;
+  }
+
+  // ==================== Workspace Tokens ====================
+
+  @Post('workspaces/:id/tokens')
+  addWorkspaceToken(
+    @Param('id') workspaceId: string,
+    @Body() data: {
+      name: string;
+      value: string;
+      type: string;
+      category: string;
+      description?: string;
+      tags?: string[];
+      createdBy: string;
+      sharedWith?: string[];
+      isGlobal?: boolean;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.addWorkspaceToken(workspaceId, data);
+  }
+
+  @Get('workspaces/:id/tokens')
+  getWorkspaceTokens(
+    @Param('id') workspaceId: string,
+    @Query('userId') userId?: string,
+    @Query('category') category?: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getWorkspaceTokens(workspaceId, userId, category);
+  }
+
+  @Put('workspaces/:id/tokens/:tokenId')
+  updateWorkspaceToken(
+    @Param('id') workspaceId: string,
+    @Param('tokenId') tokenId: string,
+    @Body() updates: {
+      name?: string;
+      value?: string;
+      description?: string;
+      tags?: string[];
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const token = this.designSystemService.updateWorkspaceToken(tokenId, updates);
+    if (!token) {
+      throw new BadRequestException(`Token '${tokenId}' not found`);
+    }
+    return token;
+  }
+
+  @Delete('workspaces/:id/tokens/:tokenId')
+  deleteWorkspaceToken(
+    @Param('id') workspaceId: string,
+    @Param('tokenId') tokenId: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const deleted = this.designSystemService.deleteWorkspaceToken(tokenId);
+    if (!deleted) {
+      throw new BadRequestException(`Token '${tokenId}' not found`);
+    }
+    return { message: 'Token deleted successfully' };
+  }
+
+  @Post('workspaces/:id/tokens/:tokenId/share')
+  shareWorkspaceToken(
+    @Param('id') workspaceId: string,
+    @Param('tokenId') tokenId: string,
+    @Body() body: {
+      workspaceIds: string[];
+      requestingWorkspaceId: string;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const token = this.designSystemService.shareWorkspaceToken(tokenId, body.workspaceIds, body.requestingWorkspaceId);
+    if (!token) {
+      throw new BadRequestException(`Failed to share token '${tokenId}'`);
+    }
+    return token;
+  }
+
+  @Post('workspaces/:id/tokens/:tokenId/make-global')
+  makeWorkspaceTokenGlobal(
+    @Param('id') workspaceId: string,
+    @Param('tokenId') tokenId: string,
+    @Body() body: { requestingWorkspaceId: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const token = this.designSystemService.makeWorkspaceTokenGlobal(tokenId, body.requestingWorkspaceId);
+    if (!token) {
+      throw new BadRequestException(`Failed to make token '${tokenId}' global`);
+    }
+    return token;
+  }
+
+  // ==================== User Management ====================
+
+  @Get('users')
+  getAllUsers(
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getAllUsersWithWorkspaces();
+  }
+
+  @Get('users/:userId/workspaces')
+  getUserWorkspaces(
+    @Param('userId') userId: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getUserWorkspaces(userId);
+  }
+
+  @Post('users/:userId/workspaces')
+  addUserToWorkspace(
+    @Param('userId') userId: string,
+    @Body() body: {
+      workspaceId: string;
+      email: string;
+      role: 'admin' | 'editor' | 'viewer';
+      addedBy: string;
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const workspace = this.designSystemService.addUserToWorkspace(
+      body.workspaceId,
+      userId,
+      body.email,
+      body.role,
+      body.addedBy
+    );
+    if (!workspace) {
+      throw new BadRequestException(`Failed to add user to workspace`);
+    }
+    return workspace;
+  }
+
+  @Delete('users/:userId/workspaces/:workspaceId')
+  removeUserFromWorkspace(
+    @Param('userId') userId: string,
+    @Param('workspaceId') workspaceId: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const workspace = this.designSystemService.removeUserFromWorkspace(workspaceId, userId);
+    if (!workspace) {
+      throw new BadRequestException(`Failed to remove user from workspace`);
+    }
+    return workspace;
   }
 }

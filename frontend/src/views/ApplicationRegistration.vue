@@ -79,16 +79,13 @@
 
                 <div>
                   <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Team ID
+                    Workspace / Team
                   </label>
-                  <input
-                    v-model="form.teamId"
-                    type="text"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    :class="isDarkMode 
-                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                    placeholder="team-123"
+                  <Dropdown
+                    v-model="form.workspaceId"
+                    :options="workspaceOptions"
+                    :is-dark-mode="isDarkMode"
+                    placeholder="Select workspace (optional)"
                   />
                 </div>
 
@@ -453,6 +450,10 @@ const isSubmitting = ref(false);
 
 const defaultArgosUrl = 'https://app.argos-ci.com';
 
+const workspaces = ref([]);
+const workspaceOptions = ref([]);
+const loadingWorkspaces = ref(false);
+
 const form = ref({
   name: '',
   description: '',
@@ -460,6 +461,7 @@ const form = ref({
   version: '',
   applicationUrl: '',
   teamId: '',
+  workspaceId: '',
   capabilities: {
     governance: {
       enabled: false,
@@ -514,6 +516,7 @@ const registerApplication = async () => {
       version: form.value.version || undefined,
       applicationUrl: form.value.applicationUrl || undefined,
       teamId: form.value.teamId || undefined,
+      workspaceId: form.value.workspaceId || undefined,
       capabilities: {
         governance: form.value.capabilities.governance.enabled ? {
           enabled: true,

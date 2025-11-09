@@ -5,6 +5,7 @@ export class RegisterApplicationDto {
   version?: string;
   applicationUrl?: string;
   teamId?: string;
+  workspaceId?: string; // Workspace/team this application belongs to
   capabilities?: {
     governance?: {
       enabled: boolean;

@@ -227,7 +227,7 @@
                     {{ category.name }}
                   </span>
                   <div class="flex items-center gap-4">
-                    <div class="w-32 bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
+                    <div class="w-32 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
                       <div 
                         class="h-2 rounded-full transition-all bg-indigo-500"
                         :style="{ width: `${category.percentage}%` }"
@@ -1433,7 +1433,7 @@ const exportReport = (format) => {
 };
 
 // Get health grade color
-const getHealthGradeColor = (grade: string) => {
+const getHealthGradeColor = (grade) => {
   const colors = {
     'A': isDarkMode.value ? 'text-green-400' : 'text-green-600',
     'B': isDarkMode.value ? 'text-blue-400' : 'text-blue-600',
