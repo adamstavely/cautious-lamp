@@ -397,11 +397,12 @@
                     </label>
                     <div class="flex items-center gap-2">
                       <button
-                        @click="showScannerTemplates = !showScannerTemplates"
-                        class="text-xs px-2 py-1 rounded text-indigo-600 hover:bg-indigo-50"
+                        @click="showTemplateBrowser = true"
+                        class="text-xs px-2 py-1 rounded text-indigo-600 hover:bg-indigo-50 flex items-center gap-1"
                         :class="isDarkMode ? 'hover:bg-indigo-900/30' : ''"
                       >
-                        Templates
+                        <span class="material-symbols-outlined text-sm">library_books</span>
+                        Browse Templates
                       </button>
                       <button
                         @click="testScanner"
@@ -411,32 +412,6 @@
                           : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
                       >
                         Test
-                      </button>
-                    </div>
-                  </div>
-                  <div v-if="showScannerTemplates" class="mb-2 p-3 rounded-lg text-xs" :class="isDarkMode ? 'bg-slate-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'">
-                    <div class="mb-2 font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Quick Templates:</div>
-                    <div class="space-y-1">
-                      <button
-                        @click="loadScannerTemplate('basic')"
-                        class="text-left w-full px-2 py-1 rounded hover:bg-indigo-100 text-indigo-600"
-                        :class="isDarkMode ? 'hover:bg-indigo-900/30 text-indigo-400' : ''"
-                      >
-                        Basic Check
-                      </button>
-                      <button
-                        @click="loadScannerTemplate('regex')"
-                        class="text-left w-full px-2 py-1 rounded hover:bg-indigo-100 text-indigo-600"
-                        :class="isDarkMode ? 'hover:bg-indigo-900/30 text-indigo-400' : ''"
-                      >
-                        Regex Pattern
-                      </button>
-                      <button
-                        @click="loadScannerTemplate('component')"
-                        class="text-left w-full px-2 py-1 rounded hover:bg-indigo-100 text-indigo-600"
-                        :class="isDarkMode ? 'hover:bg-indigo-900/30 text-indigo-400' : ''"
-                      >
-                        Component Analysis
                       </button>
                     </div>
                   </div>
@@ -582,6 +557,199 @@ return checks;"
         </div>
       </div>
     </div>
+
+    <!-- Template Browser Modal -->
+    <div
+      v-if="showTemplateBrowser"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      @click.self="showTemplateBrowser = false"
+    >
+      <div 
+        class="rounded-lg shadow-xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col"
+        :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
+      >
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <span class="material-symbols-outlined text-indigo-600">library_books</span>
+            Rule Templates
+          </h3>
+          <button
+            @click="showTemplateBrowser = false"
+            class="text-gray-400 hover:text-gray-600"
+          >
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="mb-4 space-y-3">
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">search</span>
+            <input
+              v-model="templateSearchQuery"
+              type="text"
+              placeholder="Search templates..."
+              class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              :class="isDarkMode 
+                ? 'border-gray-600 bg-slate-700 text-white' 
+                : 'border-gray-300 bg-white text-gray-900'"
+            />
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-sm whitespace-nowrap" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Category:</label>
+            <Dropdown
+              v-model="templateCategoryFilter"
+              :options="[
+                { value: 'all', label: 'All Categories' },
+                { value: 'design-system', label: 'Design System' },
+                { value: 'accessibility', label: 'Accessibility' },
+                { value: 'ux-hcd', label: 'UX / HCD' }
+              ]"
+              :is-dark-mode="isDarkMode"
+            />
+          </div>
+        </div>
+
+        <!-- Templates List -->
+        <div class="flex-1 overflow-y-auto">
+          <div v-if="filteredTemplates.length === 0" class="text-center py-12">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">search_off</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">No templates found</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Try adjusting your search or filters</p>
+          </div>
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+              v-for="template in filteredTemplates"
+              :key="template.id"
+              @click="loadTemplate(template)"
+              class="p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md"
+              :class="isDarkMode 
+                ? 'bg-slate-700 border-gray-600 hover:border-indigo-500' 
+                : 'bg-white border-gray-200 hover:border-indigo-500'"
+            >
+              <div class="flex items-start justify-between mb-2">
+                <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ template.name }}</h4>
+                <span 
+                  class="px-2 py-0.5 text-xs rounded-full"
+                  :class="template.category === 'design-system' 
+                    ? (isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700')
+                    : template.category === 'accessibility'
+                    ? (isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700')
+                    : (isDarkMode ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-700')"
+                >
+                  {{ template.category === 'design-system' ? 'Design System' : template.category === 'accessibility' ? 'Accessibility' : 'UX/HCD' }}
+                </span>
+              </div>
+              <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ template.description }}</p>
+              <div class="flex flex-wrap gap-1 mb-2">
+                <span
+                  v-for="tag in template.tags.slice(0, 3)"
+                  :key="tag"
+                  class="px-2 py-0.5 text-xs rounded"
+                  :class="isDarkMode ? 'bg-slate-600 text-gray-300' : 'bg-gray-100 text-gray-600'"
+                >
+                  {{ tag }}
+                </span>
+              </div>
+              <div class="flex items-center gap-2 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                <span class="material-symbols-outlined text-sm">tune</span>
+                <span v-if="template.configurable && Object.keys(template.configurable).length > 0">
+                  {{ Object.keys(template.configurable).length }} customizable option(s)
+                </span>
+                <span v-else>Ready to use</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Template Customization Modal -->
+    <div
+      v-if="selectedTemplate"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      @click.self="selectedTemplate = null; templateCustomization = {}"
+    >
+      <div 
+        class="rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+        :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
+      >
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            <span class="material-symbols-outlined text-indigo-600">tune</span>
+            Customize Template: {{ selectedTemplate.name }}
+          </h3>
+          <button
+            @click="selectedTemplate = null; templateCustomization = {}"
+            class="text-gray-400 hover:text-gray-600"
+          >
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div class="mb-4">
+          <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ selectedTemplate.description }}</p>
+        </div>
+
+        <!-- Customization Options -->
+        <div v-if="selectedTemplate.configurable" class="space-y-4 mb-6">
+          <div
+            v-for="(config, key) in selectedTemplate.configurable"
+            :key="key"
+            class="space-y-2"
+          >
+            <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+              {{ config.label }}
+            </label>
+            <select
+              v-if="config.type === 'select'"
+              v-model="templateCustomization[key]"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              :class="isDarkMode 
+                ? 'border-gray-600 bg-slate-700 text-white' 
+                : 'border-gray-300 bg-white text-gray-900'"
+            >
+              <option
+                v-for="option in config.options"
+                :key="option"
+                :value="option"
+              >
+                {{ option }}
+              </option>
+            </select>
+            <div v-else-if="config.type === 'checkbox'" class="flex items-center gap-2">
+              <input
+                type="checkbox"
+                v-model="templateCustomization[key]"
+                class="w-4 h-4 rounded accent-indigo-600"
+              />
+              <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ config.label }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+          <button
+            @click="applyCustomizedTemplate"
+            class="px-4 py-2 rounded-lg font-medium transition-colors flex-1"
+            :class="isDarkMode 
+              ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
+              : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
+          >
+            Apply Template
+          </button>
+          <button
+            @click="selectedTemplate = null; templateCustomization = {}"
+            class="px-4 py-2 rounded-lg font-medium transition-colors"
+            :class="isDarkMode 
+              ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -600,6 +768,11 @@ const selectedApplicationId = ref('');
 const applications = ref([]);
 const showRegisterModal = ref(false);
 const showScannerTemplates = ref(false);
+const showTemplateBrowser = ref(false);
+const templateSearchQuery = ref('');
+const templateCategoryFilter = ref('all');
+const selectedTemplate = ref(null);
+const templateCustomization = ref({});
 const scannerTestResult = ref(null);
 const ruleFilter = ref('all');
 const newApplication = ref({ name: '', repository: '', version: '' });
@@ -2065,76 +2238,770 @@ const testScanner = async () => {
   }
 };
 
-const loadScannerTemplate = (template) => {
-  if (!selectedRule.value) return;
+// Rule Template Library
+const ruleTemplates = [
+  // Design System Templates
+  {
+    id: 'hardcoded-colors',
+    name: 'Hardcoded Color Detection',
+    description: 'Detects hardcoded color values (hex, rgb, rgba) that should use design tokens',
+    category: 'design-system',
+    severity: 'error',
+    tags: ['colors', 'tokens', 'hardcoded', 'design-system'],
+    configurable: {
+      tokenCategory: { type: 'select', label: 'Token Category', default: 'colors', options: ['colors', 'spacing', 'typography', 'all'] },
+      severity: { type: 'select', label: 'Severity', default: 'error', options: ['error', 'warning', 'info'] }
+    },
+    scannerCode: `const checks = [];
+const css = context.css || '';
+const tokens = context.tokens || [];
+const tokenCategory = '{{tokenCategory}}';
+const checkSeverity = '{{severity}}';
 
-  const templates = {
-    basic: `// Basic scanner template
-const checks = [];
+// Get tokens based on category
+let relevantTokens = tokens;
+if (tokenCategory !== 'all') {
+  relevantTokens = tokens.filter(t => t.category === tokenCategory);
+}
+const tokenValues = relevantTokens.map(t => t.value);
 
-// Iterate through components
-context.components.forEach(component => {
-  // Add your check logic here
-  // checks.push({
-  //   id: \`check-\${component.id}\`,
-  //   rule: '${selectedRule.value.name}',
-  //   status: 'pass', // 'pass' | 'warning' | 'error'
-  //   message: 'Check message',
-  //   component: component.name
-  // });
+// Find hardcoded colors
+const colorPattern = /#[0-9a-fA-F]{6}|rgb\\([^)]+\\)|rgba\\([^)]+\\)/gi;
+const matches = [...css.matchAll(colorPattern)];
+
+matches.forEach(match => {
+  const colorValue = match[0];
+  const isToken = tokenValues.some(tv => {
+    // Normalize for comparison
+    return normalizeColor(tv) === normalizeColor(colorValue);
+  });
+  
+  if (!isToken) {
+    checks.push({
+      id: \`hardcoded-color-\${match.index}\`,
+      rule: '{{ruleName}}',
+      status: checkSeverity,
+      message: \`Found hardcoded color: \${colorValue}. Use design tokens instead.\`,
+      file: context.file,
+      line: getLineNumber(css, match.index)
+    });
+  }
 });
+
+function normalizeColor(color) {
+  return color.toLowerCase().replace(/\\s/g, '');
+}
+
+function getLineNumber(content, index) {
+  return content.substring(0, index).split('\\n').length;
+}
 
 return checks.length > 0 ? checks : [{
-  id: 'overall',
-  rule: '${selectedRule.value.name}',
+  id: 'color-check-pass',
+  rule: '{{ruleName}}',
   status: 'pass',
-  message: 'All checks passed'
-}];`,
-    regex: `// Regex pattern scanner
-const checks = [];
-const pattern = /your-pattern-here/g;
+  message: 'All colors use design tokens'
+}];`
+  },
+  {
+    id: 'hardcoded-spacing',
+    name: 'Hardcoded Spacing Detection',
+    description: 'Detects hardcoded spacing values (px, rem, em) that should use design tokens',
+    category: 'design-system',
+    severity: 'warning',
+    tags: ['spacing', 'tokens', 'hardcoded', 'design-system'],
+    configurable: {
+      tokenCategory: { type: 'select', label: 'Token Category', default: 'spacing', options: ['spacing', 'all'] },
+      severity: { type: 'select', label: 'Severity', default: 'warning', options: ['error', 'warning', 'info'] }
+    },
+    scannerCode: `const checks = [];
+const css = context.css || '';
+const tokens = context.tokens || [];
+const tokenCategory = '{{tokenCategory}}';
+const checkSeverity = '{{severity}}';
 
-context.components.forEach(component => {
-  const code = component.code.vue || component.code.react || '';
-  const matches = [...code.matchAll(pattern)];
+// Get spacing tokens
+let spacingTokens = tokens;
+if (tokenCategory !== 'all') {
+  spacingTokens = tokens.filter(t => t.category === 'spacing');
+}
+const tokenValues = spacingTokens.map(t => t.value);
+
+// Find hardcoded spacing values
+const spacingPattern = /(?:margin|padding|gap|top|right|bottom|left|width|height|max-width|min-width|max-height|min-height):\\s*([0-9.]+(?:px|rem|em))/gi;
+const matches = [...css.matchAll(spacingPattern)];
+
+matches.forEach(match => {
+  const spacingValue = match[1];
+  const isToken = tokenValues.some(tv => tv.includes(spacingValue));
   
-  matches.forEach(match => {
+  if (!isToken) {
     checks.push({
-      id: \`match-\${component.id}-\${match.index}\`,
-      rule: '${selectedRule.value.name}',
-      status: 'warning',
-      message: \`Found match: \${match[0]}\`,
-      component: component.name
+      id: \`hardcoded-spacing-\${match.index}\`,
+      rule: '{{ruleName}}',
+      status: checkSeverity,
+      message: \`Found hardcoded spacing: \${match[0]}. Use design tokens instead.\`,
+      file: context.file,
+      line: getLineNumber(css, match.index)
     });
-  });
+  }
 });
 
-return checks;`,
-    component: `// Component analysis scanner
-const checks = [];
+function getLineNumber(content, index) {
+  return content.substring(0, index).split('\\n').length;
+}
 
-context.components.forEach(component => {
-  // Analyze component properties
-  if (!component.props || component.props.length === 0) {
+return checks.length > 0 ? checks : [{
+  id: 'spacing-check-pass',
+  rule: '{{ruleName}}',
+  status: 'pass',
+  message: 'All spacing uses design tokens'
+}];`
+  },
+  {
+    id: 'component-naming',
+    name: 'Component Naming Convention',
+    description: 'Validates that component names follow PascalCase convention',
+    category: 'design-system',
+    severity: 'warning',
+    tags: ['naming', 'convention', 'components', 'design-system'],
+    configurable: {
+      convention: { type: 'select', label: 'Naming Convention', default: 'pascal', options: ['pascal', 'kebab', 'camel'] },
+      severity: { type: 'select', label: 'Severity', default: 'warning', options: ['error', 'warning', 'info'] }
+    },
+    scannerCode: `const checks = [];
+const components = context.components || [];
+const checkSeverity = '{{severity}}';
+const convention = '{{convention}}';
+
+let regex;
+if (convention === 'pascal') {
+  regex = /^[A-Z][a-zA-Z0-9]*$/;
+} else if (convention === 'kebab') {
+  regex = /^[a-z]+(-[a-z]+)*$/;
+} else if (convention === 'camel') {
+  regex = /^[a-z][a-zA-Z0-9]*$/;
+}
+
+components.forEach(component => {
+  const isValid = regex.test(component.name);
+  
+  if (!isValid) {
     checks.push({
-      id: \`props-\${component.id}\`,
-      rule: '${selectedRule.value.name}',
-      status: 'warning',
-      message: \`Component "\${component.name}" has no props defined\`,
+      id: \`naming-\${component.id}\`,
+      rule: '{{ruleName}}',
+      status: checkSeverity,
+      message: \`Component "\${component.name}" does not follow \${convention}Case convention.\`,
       component: component.name
     });
   }
+});
+
+return checks.length > 0 ? checks : [{
+  id: 'naming-pass',
+  rule: '{{ruleName}}',
+  status: 'pass',
+  message: \`All components follow \${convention}Case convention\`
+}];`
+  },
+  {
+    id: 'aria-labels',
+    name: 'ARIA Label Requirements',
+    description: 'Checks that all interactive elements have ARIA labels or associated labels',
+    category: 'accessibility',
+    severity: 'error',
+    tags: ['aria', 'accessibility', 'labels', 'wcag'],
+    configurable: {
+      severity: { type: 'select', label: 'Severity', default: 'error', options: ['error', 'warning', 'info'] },
+      allowPlaceholder: { type: 'checkbox', label: 'Allow Placeholder as Label', default: false }
+    },
+    scannerCode: `const checks = [];
+const html = context.html || '';
+const checkSeverity = '{{severity}}';
+const allowPlaceholder = {{allowPlaceholder}};
+
+// Find all interactive elements
+const interactivePattern = /<(button|a|input|select|textarea)[^>]*>/gi;
+const elements = [...html.matchAll(interactivePattern)];
+
+elements.forEach((match, index) => {
+  const element = match[0];
+  const tagName = match[1].toLowerCase();
   
-  // Check component code
-  const code = component.code.vue || component.code.react || '';
-  // Add your analysis logic here
+  // Check for ARIA label
+  const hasAriaLabel = /aria-label|aria-labelledby/i.test(element);
+  const hasLabel = /<label[^>]*>/i.test(html);
+  const hasPlaceholder = /placeholder/i.test(element);
+  const isHidden = /type=['"]hidden['"]/i.test(element);
+  
+  if (!hasAriaLabel && !hasLabel && (!hasPlaceholder || !allowPlaceholder) && !isHidden) {
+    checks.push({
+      id: \`aria-missing-\${index}\`,
+      rule: '{{ruleName}}',
+      status: checkSeverity,
+      message: \`\${tagName} element missing ARIA label or associated label\`,
+      file: context.file,
+      element: element.substring(0, 50)
+    });
+  }
+});
+
+return checks.length > 0 ? checks : [{
+  id: 'aria-pass',
+  rule: '{{ruleName}}',
+  status: 'pass',
+  message: 'All interactive elements have ARIA labels'
+}];`
+  },
+  {
+    id: 'image-alt-text',
+    name: 'Image Alt Text Requirements',
+    description: 'Ensures all images have alt text attributes for accessibility',
+    category: 'accessibility',
+    severity: 'error',
+    tags: ['images', 'alt-text', 'accessibility', 'wcag'],
+    configurable: {
+      severity: { type: 'select', label: 'Severity', default: 'error', options: ['error', 'warning', 'info'] },
+      allowEmpty: { type: 'checkbox', label: 'Allow Empty Alt for Decorative Images', default: true }
+    },
+    scannerCode: `const checks = [];
+const html = context.html || '';
+const checkSeverity = '{{severity}}';
+const allowEmpty = {{allowEmpty}};
+
+// Find all image elements
+const imagePattern = /<img[^>]*>/gi;
+const images = [...html.matchAll(imagePattern)];
+
+images.forEach((match, index) => {
+  const img = match[0];
+  const hasAlt = /alt=/i.test(img);
+  const hasEmptyAlt = /alt=['"]\s*['"]/i.test(img);
+  
+  if (!hasAlt) {
+    checks.push({
+      id: \`alt-missing-\${index}\`,
+      rule: '{{ruleName}}',
+      status: checkSeverity,
+      message: 'Image missing alt attribute',
+      file: context.file,
+      element: img.substring(0, 50)
+    });
+  } else if (!allowEmpty && hasEmptyAlt) {
+    checks.push({
+      id: \`alt-empty-\${index}\`,
+      rule: '{{ruleName}}',
+      status: checkSeverity,
+      message: 'Image has empty alt attribute (should have descriptive text or be marked as decorative)',
+      file: context.file,
+      element: img.substring(0, 50)
+    });
+  }
+});
+
+return checks.length > 0 ? checks : [{
+  id: 'alt-pass',
+  rule: '{{ruleName}}',
+  status: 'pass',
+  message: 'All images have appropriate alt text'
+}];`
+  },
+  {
+    id: 'form-labels',
+    name: 'Form Label Requirements',
+    description: 'Ensures all form inputs have associated labels',
+    category: 'ux-hcd',
+    severity: 'error',
+    tags: ['forms', 'labels', 'ux', 'accessibility'],
+    configurable: {
+      severity: { type: 'select', label: 'Severity', default: 'error', options: ['error', 'warning', 'info'] },
+      allowPlaceholder: { type: 'checkbox', label: 'Allow Placeholder as Label', default: false }
+    },
+    scannerCode: `const checks = [];
+const html = context.html || '';
+const checkSeverity = '{{severity}}';
+const allowPlaceholder = {{allowPlaceholder}};
+
+// Find all form inputs
+const inputPattern = /<(input|select|textarea)[^>]*>/gi;
+const inputs = [...html.matchAll(inputPattern)];
+
+inputs.forEach((match, index) => {
+  const input = match[0];
+  const tagName = match[1].toLowerCase();
+  const inputId = /id=['"]([^'"]+)['"]/i.exec(input)?.[1];
+  const hasPlaceholder = /placeholder=/i.test(input);
+  const isHidden = /type=['"]hidden['"]/i.test(input);
+  
+  if (isHidden) return;
+  
+  // Check for associated label
+  let hasLabel = false;
+  if (inputId) {
+    hasLabel = new RegExp(\`<label[^>]*for=['"]\${inputId}['"]\`, 'i').test(html);
+  }
+  
+  // Check for wrapping label
+  if (!hasLabel) {
+    const inputIndex = html.indexOf(input);
+    const beforeInput = html.substring(Math.max(0, inputIndex - 200), inputIndex);
+    hasLabel = /<label[^>]*>/i.test(beforeInput);
+  }
+  
+  if (!hasLabel && (!hasPlaceholder || !allowPlaceholder)) {
+    checks.push({
+      id: \`form-label-\${index}\`,
+      rule: '{{ruleName}}',
+      status: checkSeverity,
+      message: \`\${tagName} element missing associated label\`,
+      file: context.file,
+      element: input.substring(0, 50)
+    });
+  }
+});
+
+return checks.length > 0 ? checks : [{
+  id: 'form-label-pass',
+  rule: '{{ruleName}}',
+  status: 'pass',
+  message: 'All form inputs have associated labels'
+}];`
+  },
+  {
+    id: 'loading-states',
+    name: 'Loading State Indicators',
+    description: 'Checks that async operations have loading state indicators',
+    category: 'ux-hcd',
+    severity: 'warning',
+    tags: ['loading', 'async', 'ux', 'states'],
+    configurable: {
+      severity: { type: 'select', label: 'Severity', default: 'warning', options: ['error', 'warning', 'info'] }
+    },
+    scannerCode: `const checks = [];
+const html = context.html || '';
+const javascript = context.javascript || '';
+const checkSeverity = '{{severity}}';
+
+// Check for async operations
+const asyncPatterns = [
+  /fetch\\s*\\(/i,
+  /axios\\./i,
+  /async\\s+function/i,
+  /await\\s+/i,
+  /\\.then\\s*\\(/i,
+  /\\.catch\\s*\\(/i
+];
+
+const hasAsyncOperations = asyncPatterns.some(pattern => 
+  pattern.test(javascript));
+
+// Check for loading indicators
+const loadingPatterns = [
+  /loading/i,
+  /spinner/i,
+  /skeleton/i,
+  /aria-busy/i,
+  /aria-live/i,
+  /isLoading/i,
+  /is_loading/i
+];
+
+const hasLoadingIndicators = loadingPatterns.some(pattern =>
+  pattern.test(html) || pattern.test(javascript)
+);
+
+if (hasAsyncOperations && !hasLoadingIndicators) {
+  checks.push({
+    id: 'loading-states',
+    rule: '{{ruleName}}',
+    status: checkSeverity,
+    message: 'Async operations detected but no loading indicators found. Users need feedback during async operations.',
+    application: context.applicationName,
+    file: context.file
+  });
+}
+
+return checks.length > 0 ? checks : [{
+  id: 'loading-pass',
+  rule: '{{ruleName}}',
+  status: 'pass',
+  message: 'Loading states are properly handled'
+}];`
+  },
+  {
+    id: 'error-handling',
+    name: 'Error Message Handling',
+    description: 'Validates that error states have proper error messages',
+    category: 'ux-hcd',
+    severity: 'warning',
+    tags: ['errors', 'validation', 'ux', 'messages'],
+    configurable: {
+      severity: { type: 'select', label: 'Severity', default: 'warning', options: ['error', 'warning', 'info'] }
+    },
+    scannerCode: `const checks = [];
+const html = context.html || '';
+const javascript = context.javascript || '';
+const checkSeverity = '{{severity}}';
+
+// Check for form validation patterns
+const validationPatterns = [
+  /required/i,
+  /validate/i,
+  /invalid/i,
+  /error/i,
+  /aria-invalid/i
+];
+
+const hasValidation = validationPatterns.some(pattern =>
+  pattern.test(html) || pattern.test(javascript)
+);
+
+// Check for error message patterns
+const errorMessagePatterns = [
+  /error-message/i,
+  /errorMessage/i,
+  /error_text/i,
+  /aria-errormessage/i,
+  /role=['"]alert['"]/i,
+  /class.*error/i
+];
+
+const hasErrorMessages = errorMessagePatterns.some(pattern =>
+  pattern.test(html) || pattern.test(javascript)
+);
+
+if (hasValidation && !hasErrorMessages) {
+  checks.push({
+    id: 'error-handling',
+    rule: '{{ruleName}}',
+    status: checkSeverity,
+    message: 'Form validation detected but no error message handling found. Users need clear error feedback.',
+    application: context.applicationName,
+    file: context.file
+  });
+}
+
+return checks.length > 0 ? checks : [{
+  id: 'error-handling-pass',
+  rule: '{{ruleName}}',
+  status: 'pass',
+  message: 'Error handling is properly implemented'
+}];`
+  },
+  {
+    id: 'heading-hierarchy',
+    name: 'Heading Hierarchy',
+    description: 'Validates proper heading hierarchy (h1-h6) structure',
+    category: 'accessibility',
+    severity: 'warning',
+    tags: ['headings', 'hierarchy', 'accessibility', 'semantic'],
+    configurable: {
+      severity: { type: 'select', label: 'Severity', default: 'warning', options: ['error', 'warning', 'info'] }
+    },
+    scannerCode: `const checks = [];
+const html = context.html || '';
+const checkSeverity = '{{severity}}';
+
+// Extract all headings
+const headingPattern = /<h([1-6])[^>]*>([^<]*)<\\/h[1-6]>/gi;
+const headings = [...html.matchAll(headingPattern)];
+
+if (headings.length === 0) {
+  checks.push({
+    id: 'heading-none',
+    rule: '{{ruleName}}',
+    status: checkSeverity,
+    message: 'No headings found. Pages should have proper heading structure for accessibility.',
+    file: context.file
+  });
+  return checks;
+}
+
+// Check for h1
+const hasH1 = headings.some(h => h[1] === '1');
+if (!hasH1) {
+  checks.push({
+    id: 'heading-no-h1',
+    rule: '{{ruleName}}',
+    status: checkSeverity,
+    message: 'Page missing h1 heading. Each page should have exactly one h1.',
+    file: context.file
+  });
+}
+
+// Check hierarchy (no skipping levels)
+let previousLevel = 0;
+headings.forEach((heading, index) => {
+  const level = parseInt(heading[1]);
+  if (previousLevel > 0 && level > previousLevel + 1) {
+    checks.push({
+      id: \`heading-skip-\${index}\`,
+      rule: '{{ruleName}}',
+      status: checkSeverity,
+      message: \`Heading hierarchy skipped from h\${previousLevel} to h\${level}. Headings should not skip levels.\`,
+      file: context.file,
+      element: heading[0].substring(0, 50)
+    });
+  }
+  previousLevel = level;
+});
+
+return checks.length > 0 ? checks : [{
+  id: 'heading-pass',
+  rule: '{{ruleName}}',
+  status: 'pass',
+  message: 'Heading hierarchy is correct'
+}];`
+  },
+  {
+    id: 'color-contrast',
+    name: 'Color Contrast Check',
+    description: 'Validates color contrast ratios meet WCAG AA standards',
+    category: 'accessibility',
+    severity: 'error',
+    tags: ['color', 'contrast', 'wcag', 'accessibility'],
+    configurable: {
+      level: { type: 'select', label: 'WCAG Level', default: 'AA', options: ['AA', 'AAA'] },
+      severity: { type: 'select', label: 'Severity', default: 'error', options: ['error', 'warning', 'info'] }
+    },
+    scannerCode: `const checks = [];
+const css = context.css || '';
+const checkSeverity = '{{severity}}';
+const wcagLevel = '{{level}}';
+
+// Find color and background-color declarations
+const colorPattern = /(?:color|background-color):\\s*([^;]+)/gi;
+const colorMatches = [...css.matchAll(colorPattern)];
+
+// This is a simplified check - in production, use a color contrast library
+colorMatches.forEach((match, index) => {
+  const colorValue = match[1].trim();
+  
+  // Check if it's a design token (would need token lookup)
+  // For now, just flag potential issues
+  if (colorValue === '#ffffff' || colorValue === '#000000') {
+    // These are common and usually fine, but could flag if used together
+    // In a real implementation, you'd calculate actual contrast ratios
+  }
+});
+
+// Placeholder - real implementation would calculate contrast ratios
+checks.push({
+  id: 'contrast-check-info',
+  rule: '{{ruleName}}',
+  status: 'info',
+  message: \`Color contrast validation requires full color pair analysis. This template provides a starting point.\`
 });
 
 return checks;`
-  };
+  },
+  {
+    id: 'empty-states',
+    name: 'Empty State Handling',
+    description: 'Checks for proper empty state components or messages',
+    category: 'ux-hcd',
+    severity: 'info',
+    tags: ['empty', 'states', 'ux', 'feedback'],
+    configurable: {
+      severity: { type: 'select', label: 'Severity', default: 'info', options: ['error', 'warning', 'info'] }
+    },
+    scannerCode: `const checks = [];
+const html = context.html || '';
+const javascript = context.javascript || '';
+const checkSeverity = '{{severity}}';
 
-  selectedRule.value.scannerCode = templates[template] || selectedRule.value.scannerCode;
-  showScannerTemplates.value = false;
+// Check for empty state patterns
+const emptyStatePatterns = [
+  /empty.*state/i,
+  /no.*data/i,
+  /no.*results/i,
+  /nothing.*found/i,
+  /emptyState/i,
+  /empty_state/i,
+  /EmptyState/i
+];
+
+const hasEmptyStates = emptyStatePatterns.some(pattern =>
+  pattern.test(html) || pattern.test(javascript)
+);
+
+// Check for lists/tables that might need empty states
+const hasLists = /<(ul|ol|table|tbody)[^>]*>/i.test(html);
+const hasDataBinding = /v-for|\\{\\{.*\\}\\}|map\\(/i.test(html + javascript);
+
+if ((hasLists || hasDataBinding) && !hasEmptyStates) {
+  checks.push({
+    id: 'empty-states',
+    rule: '{{ruleName}}',
+    status: checkSeverity,
+    message: 'Lists or data-bound content detected but no empty state handling found. Users need feedback when content is empty.',
+    application: context.applicationName,
+    file: context.file
+  });
+}
+
+return checks.length > 0 ? checks : [{
+  id: 'empty-states-pass',
+  rule: '{{ruleName}}',
+  status: 'pass',
+  message: 'Empty states are properly handled'
+}];`
+  },
+  {
+    id: 'destructive-actions',
+    name: 'Destructive Action Confirmation',
+    description: 'Validates that destructive actions have confirmation dialogs',
+    category: 'ux-hcd',
+    severity: 'warning',
+    tags: ['destructive', 'confirmation', 'safety', 'ux'],
+    configurable: {
+      severity: { type: 'select', label: 'Severity', default: 'warning', options: ['error', 'warning', 'info'] }
+    },
+    scannerCode: `const checks = [];
+const html = context.html || '';
+const javascript = context.javascript || '';
+const checkSeverity = '{{severity}}';
+
+// Find destructive action patterns
+const destructivePatterns = [
+  /delete/i,
+  /remove/i,
+  /destroy/i,
+  /clear/i,
+  /reset/i,
+  /type=['"]submit['"].*delete/i
+];
+
+const hasDestructiveActions = destructivePatterns.some(pattern =>
+  pattern.test(html) || pattern.test(javascript)
+);
+
+// Check for confirmation patterns
+const confirmationPatterns = [
+  /confirm/i,
+  /are.*you.*sure/i,
+  /confirmDialog/i,
+  /confirm.*dialog/i,
+  /window\\.confirm/i,
+  /confirm\\(/i
+];
+
+const hasConfirmation = confirmationPatterns.some(pattern =>
+  pattern.test(html) || pattern.test(javascript)
+);
+
+if (hasDestructiveActions && !hasConfirmation) {
+  checks.push({
+    id: 'destructive-actions',
+    rule: '{{ruleName}}',
+    status: checkSeverity,
+    message: 'Destructive actions detected but no confirmation dialogs found. Destructive actions should require user confirmation.',
+    application: context.applicationName,
+    file: context.file
+  });
+}
+
+return checks.length > 0 ? checks : [{
+  id: 'destructive-pass',
+  rule: '{{ruleName}}',
+  status: 'pass',
+  message: 'Destructive actions have proper confirmation'
+}];`
+  }
+];
+
+// Filtered templates based on search and category
+const filteredTemplates = computed(() => {
+  let filtered = ruleTemplates;
+  
+  // Filter by category
+  if (templateCategoryFilter.value !== 'all') {
+    filtered = filtered.filter(t => t.category === templateCategoryFilter.value);
+  }
+  
+  // Filter by search query
+  if (templateSearchQuery.value.trim()) {
+    const query = templateSearchQuery.value.toLowerCase();
+    filtered = filtered.filter(t => 
+      t.name.toLowerCase().includes(query) ||
+      t.description.toLowerCase().includes(query) ||
+      t.tags.some(tag => tag.toLowerCase().includes(query))
+    );
+  }
+  
+  return filtered;
+});
+
+// Load template with variable substitution
+const loadTemplate = (template) => {
+  if (!selectedRule.value) {
+    // Create new rule if none selected
+    addRule();
+  }
+  
+  // Initialize customization with defaults
+  const customization = {};
+  if (template.configurable) {
+    Object.keys(template.configurable).forEach(key => {
+      const config = template.configurable[key];
+      customization[key] = config.default;
+    });
+  }
+  
+  // If template has configurable options, show customization modal
+  if (template.configurable && Object.keys(template.configurable).length > 0) {
+    selectedTemplate.value = template;
+    templateCustomization.value = customization;
+    showTemplateBrowser.value = false;
+    // Template will be applied after customization via applyCustomizedTemplate
+  } else {
+    // Apply template directly if no customization needed
+    applyTemplate(template, customization);
+    showTemplateBrowser.value = false;
+  }
+};
+
+// Apply template with customization
+const applyTemplate = (template, customization) => {
+  if (!selectedRule.value) return;
+  
+  let code = template.scannerCode;
+  
+  // Replace template variables
+  code = code.replace(/\{\{ruleName\}\}/g, selectedRule.value.name || template.name);
+  
+  // Replace configurable variables
+  if (template.configurable) {
+    Object.keys(template.configurable).forEach(key => {
+      const value = customization[key] || template.configurable[key].default;
+      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+      
+      // Handle boolean values
+      if (typeof value === 'boolean') {
+        code = code.replace(regex, value.toString());
+      } else {
+        code = code.replace(regex, value);
+      }
+    });
+  }
+  
+  // Update rule with template values
+  selectedRule.value.scannerCode = code;
+  selectedRule.value.category = template.category;
+  selectedRule.value.severity = customization.severity || template.severity;
+  selectedRule.value.description = template.description;
+  
+  // Close modals
+  showTemplateBrowser.value = false;
+  selectedTemplate.value = null;
+  templateCustomization.value = {};
+};
+
+// Apply customized template
+const applyCustomizedTemplate = () => {
+  if (selectedTemplate.value) {
+    applyTemplate(selectedTemplate.value, templateCustomization.value);
+  }
 };
 
 const runComplianceCheck = async () => {
