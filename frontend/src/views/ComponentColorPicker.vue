@@ -67,6 +67,13 @@
             </div>
           </div>
 
+          <!-- Breaking Change Alert -->
+          <BreakingChangeAlert 
+            :component-versions="componentVersions" 
+            :component-id="getComponentId()"
+            @dismiss="() => {}"
+          />
+
           <!-- Interactive Playground Section -->
           <div class="max-w-7xl mx-auto mb-16">
             <div class="mb-8">
@@ -1077,6 +1084,7 @@ import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
 import Dropdown from '../components/Dropdown.vue';
 import ComponentDependencyGraphCard from '../components/ComponentDependencyGraphCard.vue';
+import BreakingChangeAlert from '../components/BreakingChangeAlert.vue';
 import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
 import axios from 'axios';
 

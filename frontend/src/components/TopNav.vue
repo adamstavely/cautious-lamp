@@ -208,18 +208,20 @@
               ? 'text-gray-300 hover:text-indigo-400 hover:bg-indigo-900/20' 
               : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'"
             title="Notifications"
-            :aria-label="`Notifications${recentActivity.length > 0 ? `, ${recentActivity.length} unread` : ''}`"
+            :aria-label="`Notifications${totalNotificationCount > 0 ? `, ${totalNotificationCount} unread` : ''}`"
             :aria-expanded="showNotifications"
             aria-haspopup="true"
           >
             <span class="material-symbols-outlined flex items-center justify-center" aria-hidden="true">notifications</span>
             <span 
-              v-if="recentActivity.length > 0"
+              v-if="totalNotificationCount > 0"
               class="absolute top-1 right-1 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-xs font-semibold px-1"
-              :class="isDarkMode ? 'bg-indigo-400 text-indigo-900' : 'bg-indigo-600 text-white'"
+              :class="breakingChangeNotifications.length > 0 
+                ? (isDarkMode ? 'bg-red-400 text-red-900' : 'bg-red-600 text-white')
+                : (isDarkMode ? 'bg-indigo-400 text-indigo-900' : 'bg-indigo-600 text-white')"
               aria-hidden="true"
             >
-              {{ recentActivity.length > 9 ? '9+' : recentActivity.length }}
+              {{ totalNotificationCount > 9 ? '9+' : totalNotificationCount }}
             </span>
           </button>
           
@@ -237,7 +239,7 @@
             <div class="px-4 py-3 border-b flex items-center justify-between"
               :class="isDarkMode ? 'border-slate-700' : 'border-gray-200'"
             >
-              <h3 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="font-semibold text-lg">Recent Activity</h3>
+              <h3 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="font-semibold text-lg">Notifications</h3>
               <button
                 @click="closeNotifications"
                 class="p-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
@@ -247,9 +249,89 @@
               </button>
             </div>
             
-            <!-- Activity List -->
+            <!-- Tabs -->
+            <div class="flex border-b" :class="isDarkMode ? 'border-slate-700' : 'border-gray-200'">
+              <button
+                @click="notificationTab = 'all'"
+                class="flex-1 px-4 py-2 text-sm font-medium transition-colors border-b-2"
+                :class="notificationTab === 'all'
+                  ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                  : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-500 hover:text-gray-700')"
+              >
+                All
+                <span v-if="totalNotificationCount > 0" class="ml-2 px-1.5 py-0.5 rounded text-xs"
+                  :class="isDarkMode ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-700'"
+                >
+                  {{ totalNotificationCount }}
+                </span>
+              </button>
+              <button
+                @click="notificationTab = 'breaking'"
+                class="flex-1 px-4 py-2 text-sm font-medium transition-colors border-b-2"
+                :class="notificationTab === 'breaking'
+                  ? (isDarkMode ? 'border-red-400 text-red-400' : 'border-red-600 text-red-600')
+                  : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-500 hover:text-gray-700')"
+              >
+                Breaking Changes
+                <span v-if="breakingChangeNotifications.length > 0" class="ml-2 px-1.5 py-0.5 rounded text-xs"
+                  :class="isDarkMode ? 'bg-red-900/50 text-red-300' : 'bg-red-100 text-red-700'"
+                >
+                  {{ breakingChangeNotifications.length }}
+                </span>
+              </button>
+              <button
+                @click="notificationTab = 'activity'"
+                class="flex-1 px-4 py-2 text-sm font-medium transition-colors border-b-2"
+                :class="notificationTab === 'activity'
+                  ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                  : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-500 hover:text-gray-700')"
+              >
+                Activity
+                <span v-if="recentActivity.length > 0" class="ml-2 px-1.5 py-0.5 rounded text-xs"
+                  :class="isDarkMode ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-700'"
+                >
+                  {{ recentActivity.length }}
+                </span>
+              </button>
+            </div>
+            
+            <!-- Notification List -->
             <div class="overflow-y-auto max-h-[500px]">
-              <div v-if="recentActivity.length === 0" class="p-8 text-center">
+              <!-- Breaking Changes Tab -->
+              <div v-if="notificationTab === 'breaking'">
+                <div v-if="breakingChangeNotifications.length === 0" class="p-8 text-center">
+                  <span class="material-symbols-outlined text-4xl mb-3 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">check_circle</span>
+                  <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-sm">No breaking changes</p>
+                </div>
+                <div v-else class="divide-y" :class="isDarkMode ? 'divide-slate-700' : 'divide-gray-200'">
+                  <div
+                    v-for="notification in breakingChangeNotifications"
+                    :key="notification.id"
+                    @click="goToComponent(notification.componentId)"
+                    class="p-4 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-slate-700"
+                  >
+                    <div class="flex items-start gap-3">
+                      <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-red-100 dark:bg-red-900/30">
+                        <span class="material-symbols-outlined text-base text-red-600 dark:text-red-400">warning</span>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                          <h4 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-sm font-semibold">Breaking Change</h4>
+                          <span class="px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+                            {{ notification.componentName }}
+                          </span>
+                        </div>
+                        <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="text-sm mb-1 line-clamp-2">{{ notification.message }}</p>
+                        <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-xs">{{ formatRelativeTime(notification.timestamp) }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Activity Tab -->
+              <div v-else-if="notificationTab === 'activity'">
+                <div v-if="recentActivity.length === 0" class="p-8 text-center">
                 <svg :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" class="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -297,6 +379,85 @@
                       </div>
                       <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="text-sm mb-1 line-clamp-2">{{ activity.description }}</p>
                       <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-xs">{{ formatRelativeTime(activity.timestamp) }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              </div>
+              
+              <!-- All Tab -->
+              <div v-else>
+                <div v-if="totalNotificationCount === 0" class="p-8 text-center">
+                  <span class="material-symbols-outlined text-4xl mb-3 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">notifications_off</span>
+                  <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-sm">No notifications</p>
+                </div>
+                <div v-else class="divide-y" :class="isDarkMode ? 'divide-slate-700' : 'divide-gray-200'">
+                  <!-- Breaking Changes First -->
+                  <div
+                    v-for="notification in breakingChangeNotifications"
+                    :key="`breaking-${notification.id}`"
+                    @click="goToComponent(notification.componentId)"
+                    class="p-4 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-slate-700 border-l-4"
+                    :class="isDarkMode ? 'border-red-500 bg-red-900/10' : 'border-red-500 bg-red-50'"
+                  >
+                    <div class="flex items-start gap-3">
+                      <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-red-100 dark:bg-red-900/30">
+                        <span class="material-symbols-outlined text-base text-red-600 dark:text-red-400">warning</span>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                          <h4 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-sm font-semibold">Breaking Change</h4>
+                          <span class="px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+                            {{ notification.componentName }}
+                          </span>
+                        </div>
+                        <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="text-sm mb-1 line-clamp-2">{{ notification.message }}</p>
+                        <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-xs">{{ formatRelativeTime(notification.timestamp) }}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Then Activity -->
+                  <div
+                    v-for="activity in recentActivity"
+                    :key="activity.id"
+                    @click="goToReview(activity.reviewId)"
+                    class="p-4 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-slate-700"
+                  >
+                    <div class="flex items-start gap-3">
+                      <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" :class="getActivityIconBg(activity.type, activity.action)">
+                        <svg v-if="activity.type === 'comment'" class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        <svg v-else-if="activity.action === 'uploaded' || activity.action === 'created_from_url'" class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <span v-else-if="activity.action === 'version_uploaded'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">difference</span>
+                        <span v-else-if="activity.action === 'approved'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">approval</span>
+                        <span v-else-if="activity.action === 'completed'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">done_all</span>
+                        <span v-else-if="activity.action === 'rejected'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">source_notes</span>
+                        <span v-else-if="activity.action === 'moved_to_review'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">graph_1</span>
+                        <svg v-else-if="activity.type === 'workflow'" class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <svg v-else class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                          <h4 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-sm font-semibold truncate">{{ activity.reviewName }}</h4>
+                          <v-chip
+                            :color="getWorkflowColor(activity.workflowState)"
+                            size="x-small"
+                            class="font-medium"
+                          >
+                            {{ getWorkflowLabel(activity.workflowState) }}
+                          </v-chip>
+                        </div>
+                        <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="text-sm mb-1 line-clamp-2">{{ activity.description }}</p>
+                        <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-xs">{{ formatRelativeTime(activity.timestamp) }}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -511,6 +672,13 @@ const selectSearchResult = () => {
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const showNotifications = ref(false);
 const recentActivity = ref([]);
+const breakingChangeNotifications = ref([]);
+const systemNotifications = ref([]);
+const notificationTab = ref('all');
+
+const totalNotificationCount = computed(() => {
+  return breakingChangeNotifications.value.length + recentActivity.value.length;
+});
 
 // Get current user (in real app, this would come from auth)
 const currentUser = ref(localStorage.getItem('currentDesigner') || 'Sarah Johnson');
@@ -544,6 +712,39 @@ const handleClickOutside = (event) => {
   if (showSearchResults.value && searchContainer.value && !searchContainer.value.contains(event.target)) {
     closeSearch();
   }
+};
+
+// Load breaking change notifications
+const loadBreakingChangeNotifications = async () => {
+  try {
+    // Mock breaking change notifications - in real app, this would come from an API
+    breakingChangeNotifications.value = [
+      {
+        id: 'breaking-button-2.0.0',
+        componentId: 'button',
+        componentName: 'Button',
+        version: '2.0.0',
+        message: 'Breaking changes in Button v2.0.0: "type" prop renamed to "variant"',
+        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        link: '/components/buttons'
+      }
+    ];
+  } catch (error) {
+    console.error('Failed to load breaking change notifications:', error);
+  }
+};
+
+// Navigate to component page
+const goToComponent = (componentId) => {
+  const routeMap = {
+    'button': '/components/buttons',
+    'color-picker': '/components/color-picker',
+    'input': '/components/forms',
+    'card': '/components/cards'
+  };
+  const route = routeMap[componentId] || `/components/${componentId}`;
+  router.push(route);
+  closeNotifications();
 };
 
 // Load recent activity for designer
@@ -741,6 +942,9 @@ onMounted(() => {
   
   // Load recent activity
   loadRecentActivity();
+  
+  // Load breaking change notifications
+  loadBreakingChangeNotifications();
   
   // Add click outside listener
   document.addEventListener('click', handleClickOutside);

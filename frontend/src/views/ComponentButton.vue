@@ -65,6 +65,13 @@
             </div>
           </div>
 
+          <!-- Breaking Change Alert -->
+          <BreakingChangeAlert 
+            :component-versions="componentVersions" 
+            :component-id="getComponentId()"
+            @dismiss="() => {}"
+          />
+
           <!-- Interactive Playground Section -->
           <div class="max-w-7xl mx-auto mb-16">
             <div class="mb-8">
@@ -856,10 +863,13 @@
           </div>
 
           <!-- Component Migration Setup -->
-          <div class="max-w-7xl mx-auto mb-16">
+          <div class="max-w-7xl mx-auto mb-16" data-migration-section>
             <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Component Migration</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Migrate this component from one version to another with step-by-step guidance.</p>
+              <h2 class="text-3xl font-bold mb-2 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">swap_horiz</span>
+                Component Migration Guide
+              </h2>
+              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Auto-generated migration guide to help you update from one version to another.</p>
             </div>
 
             <div 
@@ -1078,6 +1088,7 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ComponentPreview from '../components/ComponentPreview.vue';
 import ComponentDependencyGraphCard from '../components/ComponentDependencyGraphCard.vue';
+import BreakingChangeAlert from '../components/BreakingChangeAlert.vue';
 import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
 import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
@@ -1572,51 +1583,175 @@ const analyzeComponentMigration = () => {
   const fromVersion = componentMigration.value.fromVersion;
   const toVersion = componentMigration.value.toVersion;
   
+  // Find versions in the changelog
+  const fromVersionData = componentVersions.value.find(v => v.version === fromVersion);
+  const toVersionData = componentVersions.value.find(v => v.version === toVersion);
+  
+  // Collect all changes between versions
+  const allVersions = componentVersions.value
+    .filter(v => {
+      const vNum = parseVersion(v.version);
+      const fromNum = parseVersion(fromVersion);
+      const toNum = parseVersion(toVersion);
+      return vNum > fromNum && vNum <= toNum;
+    })
+    .sort((a, b) => {
+      const aNum = parseVersion(a.version);
+      const bNum = parseVersion(b.version);
+      return aNum - bNum;
+    });
+  
+  const steps = [];
+  
+  // Step 1: Update import path
+  steps.push({
+    title: 'Update Import Path',
+    description: `Update the import statement from v${fromVersion} to v${toVersion}`,
+    type: 'standard',
+    code: `// Old\nimport Button from '@/components/v${fromVersion}/Button';\n\n// New\nimport Button from '@/components/v${toVersion}/Button';`
+  });
+  
+  // Step 2: Collect breaking changes
+  const breakingChanges = [];
+  allVersions.forEach(version => {
+    if (version.breaking && version.changelog) {
+      version.changelog
+        .filter(c => c.type === 'breaking')
+        .forEach(change => {
+          breakingChanges.push({
+            version: version.version,
+            description: change.description,
+            migrationGuide: version.migrationGuide
+          });
+        });
+    }
+  });
+  
+  if (breakingChanges.length > 0) {
+    breakingChanges.forEach((change, idx) => {
+      steps.push({
+        title: `Breaking Change: ${change.description.split(':')[0] || 'Update Required'}`,
+        description: change.description,
+        type: 'breaking',
+        version: change.version,
+        code: change.migrationGuide ? generateCodeExample(change.migrationGuide) : null
+      });
+    });
+  }
+  
+  // Step 3: Collect deprecated items
+  const deprecatedItems = [];
+  allVersions.forEach(version => {
+    if (version.changelog) {
+      version.changelog
+        .filter(c => c.type === 'deprecated' || c.type === 'removed')
+        .forEach(change => {
+          deprecatedItems.push({
+            version: version.version,
+            description: change.description
+          });
+        });
+    }
+  });
+  
+  if (deprecatedItems.length > 0) {
+    steps.push({
+      title: 'Review Deprecated Features',
+      description: `The following features have been deprecated or removed: ${deprecatedItems.map(i => i.description).join(', ')}`,
+      type: 'warning',
+      items: deprecatedItems
+    });
+  }
+  
+  // Step 4: New features
+  const newFeatures = [];
+  allVersions.forEach(version => {
+    if (version.changelog) {
+      version.changelog
+        .filter(c => c.type === 'added')
+        .forEach(change => {
+          newFeatures.push({
+            version: version.version,
+            description: change.description
+          });
+        });
+    }
+  });
+  
+  if (newFeatures.length > 0) {
+    steps.push({
+      title: 'New Features Available',
+      description: `Consider using these new features: ${newFeatures.map(f => f.description).join(', ')}`,
+      type: 'info',
+      items: newFeatures
+    });
+  }
+  
+  // Step 5: Final review
+  steps.push({
+    title: 'Test Your Changes',
+    description: 'After making the updates, test your component thoroughly to ensure everything works as expected.',
+    type: 'standard'
+  });
+  
   componentMigrationPlan.value = {
     component: componentName.value,
     fromVersion: fromVersion,
     toVersion: toVersion,
-    steps: [
-      {
-        title: 'Update Import Path',
-        description: `Update the import statement from v${fromVersion} to v${toVersion}`,
-        type: 'standard',
-        code: `// Old\nimport Button from '@/components/v${fromVersion}/Button';\n\n// New\nimport Button from '@/components/v${toVersion}/Button';`
-      },
-      {
-        title: 'Review Breaking Changes',
-        description: 'Check the changelog above for any breaking changes between versions',
-        type: 'breaking'
-      },
-      {
-        title: 'Update Component Usage',
-        description: 'Review and update any deprecated props or APIs based on the version changelog',
-        type: 'standard'
-      }
-    ]
+    steps: steps
   };
-
+  
+  // Auto-generate codemod if requested
   if (componentMigration.value.generateCodemod) {
-    componentCodemodScript.value = `// Codemod for ${componentName.value} ${fromVersion} → ${toVersion}
-// This codemod helps automate the migration process
+    generateCodemod();
+  }
+};
 
-export default function transformer(file, api) {
+const parseVersion = (version) => {
+  const parts = version.split('.').map(Number);
+  return parts[0] * 10000 + (parts[1] || 0) * 100 + (parts[2] || 0);
+};
+
+const generateCodeExample = (migrationGuide) => {
+  if (!migrationGuide) return null;
+  
+  // Extract code examples from migration guide
+  const codeMatch = migrationGuide.match(/(?:→|->|to|use)\s*["']?([^"'\n]+)["']?/i);
+  if (codeMatch) {
+    return `// Before\n${migrationGuide.split(/→|->|to|use/i)[0].trim()}\n\n// After\n${codeMatch[1]}`;
+  }
+  return migrationGuide;
+};
+
+const generateCodemod = () => {
+  if (!componentMigrationPlan.value) return;
+  
+  const fromVersion = componentMigration.value.fromVersion;
+  const toVersion = componentMigration.value.toVersion;
+  
+  // Generate a simple codemod script
+  componentCodemodScript.value = `// Codemod: Migrate ${componentName.value} from v${fromVersion} to v${toVersion}
+// Run with: jscodeshift -t migration.js --component=${componentName.value} src/
+
+module.exports = function transformer(file, api) {
   const j = api.jscodeshift;
   const root = j(file.source);
   
   // Update import paths
   root.find(j.ImportDeclaration)
-    .filter(path => path.value.source.value.includes('v${fromVersion}'))
+    .filter(path => path.value.source.value.includes('${fromVersion}'))
     .replaceWith(path => {
       return j.importDeclaration(
         path.value.specifiers,
-        j.literal(path.value.source.value.replace('v${fromVersion}', 'v${toVersion}'))
+        j.literal(path.value.source.value.replace('${fromVersion}', '${toVersion}'))
       );
     });
   
+  // Add breaking change transformations here based on changelog
+  
   return root.toSource();
-}`;
-  }
+};
+`;
 };
 
 const downloadComponentCodemod = () => {
