@@ -42,17 +42,17 @@ const initDarkMode = () => {
   return isDark ? 'dark' : 'light';
 };
 
-// Initialize user role to design_system_admin for full access
+// Initialize user role to design_system_manager for full access
 const initUserRole = () => {
-  // Allow override via query param, otherwise set to design_system_admin
+  // Allow override via query param, otherwise set to design_system_manager
   const urlParams = new URLSearchParams(window.location.search);
   const overrideRole = urlParams.get('role');
   
   if (overrideRole) {
     localStorage.setItem('userRole', overrideRole);
   } else {
-    // Always set to design_system_admin for full access to all pages
-    localStorage.setItem('userRole', 'design_system_admin');
+    // Always set to design_system_manager for full access to all pages
+    localStorage.setItem('userRole', 'design_system_manager');
   }
   
   // Set userId if not already set (required for RBAC guards)
@@ -501,6 +501,46 @@ const router = createRouter({
     {
       path: '/research/user-personas',
       component: () => import('./views/UserPersonaGenerator.vue'),
+    },
+    {
+      path: '/research/journey-maps',
+      component: () => import('./views/JourneyMaps.vue'),
+    },
+    {
+      path: '/research/hcd-reports',
+      component: () => import('./views/HcdReports.vue'),
+    },
+    {
+      path: '/research/user-studies',
+      component: () => import('./views/UserStudies.vue'),
+    },
+    {
+      path: '/research/artifacts',
+      component: () => import('./views/ResearchArtifacts.vue'),
+    },
+    {
+      path: '/research/insights',
+      component: () => import('./views/ResearchInsights.vue'),
+    },
+    {
+      path: '/hcd/principles',
+      component: () => import('./views/HcdPrinciples.vue'),
+    },
+    {
+      path: '/hcd/research',
+      component: () => import('./views/HcdResearch.vue'),
+    },
+    {
+      path: '/hcd/accessibility',
+      component: () => import('./views/HcdAccessibility.vue'),
+    },
+    {
+      path: '/hcd/laws-of-ux',
+      component: () => import('./views/LawsOfUX.vue'),
+    },
+    {
+      path: '/hcd/laws-of-ux/:id',
+      component: () => import('./views/LawDetail.vue'),
     },
     {
       path: '/design-assets',

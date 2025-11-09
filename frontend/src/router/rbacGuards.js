@@ -27,10 +27,10 @@ export async function checkRbacGuard(to) {
     return true;
   }
   
-  // Check if user has design_system_admin role in localStorage (bypasses API check)
+  // Check if user has design_system_manager role in localStorage (bypasses API check)
   const userRole = localStorage.getItem('userRole');
-  if (userRole === 'design_system_admin') {
-    // Design system admin has all permissions
+  if (userRole === 'design_system_manager') {
+    // Design system manager has all permissions
     return true;
   }
   

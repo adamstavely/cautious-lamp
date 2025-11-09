@@ -827,7 +827,8 @@ const artificialIntelligence = [
 const humanCenteredDesign = [
   { text: 'HCD Principles', link: '/hcd/principles', icon: 'people' },
   { text: 'User Research', link: '/hcd/research', icon: 'search' },
-  { text: 'Accessibility', link: '/hcd/accessibility', icon: 'accessibility' }
+  { text: 'Accessibility', link: '/hcd/accessibility', icon: 'accessibility' },
+  { text: 'Laws of UX', link: '/hcd/laws-of-ux', icon: 'rule' }
 ];
 
 const designPatterns = [
