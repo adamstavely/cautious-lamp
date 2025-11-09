@@ -190,6 +190,230 @@ export interface WorkspaceToken {
   createdBy: string;
 }
 
+export interface WorkspaceReview {
+  id: string;
+  title: string;
+  description?: string;
+  status?: 'pending' | 'in-review' | 'approved' | 'rejected';
+  url?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceSessionReplay {
+  id: string;
+  name: string;
+  description?: string;
+  projectId?: string;
+  sessionId?: string;
+  url?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceJourneyMap {
+  id: string;
+  title: string;
+  description?: string;
+  persona?: string;
+  stages?: Array<{ name: string; description?: string }>;
+  url?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceHcdReport {
+  id: string;
+  title: string;
+  description?: string;
+  reportType?: 'usability' | 'accessibility' | 'heuristic' | 'user-research' | 'other';
+  url?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceUserPersona {
+  id: string;
+  name: string;
+  description?: string;
+  demographics?: Record<string, any>;
+  goals?: string[];
+  painPoints?: string[];
+  behaviors?: string[];
+  url?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceResearchArtifact {
+  id: string;
+  title: string;
+  description?: string;
+  artifactType?: 'interview' | 'survey' | 'observation' | 'workshop' | 'other';
+  url?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceInsight {
+  id: string;
+  title: string;
+  description?: string;
+  category?: 'user-need' | 'pain-point' | 'opportunity' | 'finding' | 'other';
+  priority?: 'high' | 'medium' | 'low';
+  url?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspacePattern {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  url?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceIcon {
+  id: string;
+  name: string;
+  description?: string;
+  iconSet?: string;
+  svg?: string;
+  url?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceInteractive {
+  id: string;
+  name: string;
+  description?: string;
+  type?: 'prototype' | 'demo' | 'sandbox' | 'other';
+  url?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceStockPhoto {
+  id: string;
+  name: string;
+  description?: string;
+  url: string;
+  thumbnailUrl?: string;
+  photographer?: string;
+  license?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceIllustration {
+  id: string;
+  name: string;
+  description?: string;
+  url: string;
+  thumbnailUrl?: string;
+  style?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceCapabilityLogo {
+  id: string;
+  name: string;
+  description?: string;
+  capability?: string;
+  url: string;
+  thumbnailUrl?: string;
+  format?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceStyleDictionary {
+  id: string;
+  name: string;
+  description?: string;
+  format?: 'json' | 'css' | 'scss' | 'less' | 'js' | 'ts';
+  tokens?: Record<string, any>;
+  url?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
+export interface WorkspaceGuideline {
+  id: string;
+  title: string;
+  description?: string;
+  category?: 'design' | 'accessibility' | 'content' | 'interaction' | 'visual' | 'technical' | 'other';
+  content?: string; // Markdown or HTML content
+  url?: string;
+  tags?: string[];
+  workspaceId: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
+  createdAt: Date;
+  createdBy: string;
+}
+
 export interface Workspace {
   id: string;
   name: string;
@@ -232,6 +456,21 @@ export class DesignSystemService {
   private workspaceFonts = new Map<string, WorkspaceFont>();
   private workspaceAssets = new Map<string, WorkspaceAsset>();
   private workspaceTokens = new Map<string, WorkspaceToken>();
+  private workspaceReviews = new Map<string, WorkspaceReview>();
+  private workspaceSessionReplays = new Map<string, WorkspaceSessionReplay>();
+  private workspaceJourneyMaps = new Map<string, WorkspaceJourneyMap>();
+  private workspaceHcdReports = new Map<string, WorkspaceHcdReport>();
+  private workspaceUserPersonas = new Map<string, WorkspaceUserPersona>();
+  private workspaceResearchArtifacts = new Map<string, WorkspaceResearchArtifact>();
+  private workspaceInsights = new Map<string, WorkspaceInsight>();
+  private workspacePatterns = new Map<string, WorkspacePattern>();
+  private workspaceIcons = new Map<string, WorkspaceIcon>();
+  private workspaceInteractives = new Map<string, WorkspaceInteractive>();
+  private workspaceStockPhotos = new Map<string, WorkspaceStockPhoto>();
+  private workspaceIllustrations = new Map<string, WorkspaceIllustration>();
+  private workspaceCapabilityLogos = new Map<string, WorkspaceCapabilityLogo>();
+  private workspaceStyleDictionaries = new Map<string, WorkspaceStyleDictionary>();
+  private workspaceGuidelines = new Map<string, WorkspaceGuideline>();
   private scannerService: ComplianceScannerService;
   private applicationScanner: ApplicationScannerService;
   
@@ -4039,6 +4278,1125 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
     token.sharedWith = undefined;
     this.workspaceTokens.set(tokenId, token);
     return token;
+  }
+
+  // ==================== Workspace Reviews ====================
+
+  addWorkspaceReview(workspaceId: string, data: {
+    title: string;
+    description?: string;
+    status?: 'pending' | 'in-review' | 'approved' | 'rejected';
+    url?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceReview {
+    const review: WorkspaceReview = {
+      id: `review-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspaceReviews.set(review.id, review);
+    return review;
+  }
+
+  getWorkspaceReviews(workspaceId: string, userId?: string): WorkspaceReview[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    return Array.from(this.workspaceReviews.values()).filter(review =>
+      review.workspaceId === workspaceId ||
+      review.isGlobal === true ||
+      (review.sharedWith && review.sharedWith.includes(workspaceId))
+    );
+  }
+
+  updateWorkspaceReview(reviewId: string, updates: Partial<Pick<WorkspaceReview, 'title' | 'description' | 'status' | 'url' | 'tags'>>): WorkspaceReview | null {
+    const review = this.workspaceReviews.get(reviewId);
+    if (!review) return null;
+    Object.assign(review, updates);
+    this.workspaceReviews.set(reviewId, review);
+    return review;
+  }
+
+  deleteWorkspaceReview(reviewId: string): boolean {
+    return this.workspaceReviews.delete(reviewId);
+  }
+
+  shareWorkspaceReview(reviewId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceReview | null {
+    const review = this.workspaceReviews.get(reviewId);
+    if (!review) return null;
+    if (review.workspaceId !== requestingWorkspaceId && !review.isGlobal) return null;
+    if (!review.sharedWith) review.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!review.sharedWith!.includes(wsId)) {
+        review.sharedWith!.push(wsId);
+      }
+    });
+    this.workspaceReviews.set(reviewId, review);
+    return review;
+  }
+
+  makeWorkspaceReviewGlobal(reviewId: string, requestingWorkspaceId: string): WorkspaceReview | null {
+    const review = this.workspaceReviews.get(reviewId);
+    if (!review || review.workspaceId !== requestingWorkspaceId) return null;
+    review.isGlobal = true;
+    review.sharedWith = undefined;
+    this.workspaceReviews.set(reviewId, review);
+    return review;
+  }
+
+  // ==================== Workspace Session Replays ====================
+
+  addWorkspaceSessionReplay(workspaceId: string, data: {
+    name: string;
+    description?: string;
+    projectId?: string;
+    sessionId?: string;
+    url?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceSessionReplay {
+    const replay: WorkspaceSessionReplay = {
+      id: `session-replay-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspaceSessionReplays.set(replay.id, replay);
+    return replay;
+  }
+
+  getWorkspaceSessionReplays(workspaceId: string, userId?: string): WorkspaceSessionReplay[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    return Array.from(this.workspaceSessionReplays.values()).filter(replay =>
+      replay.workspaceId === workspaceId ||
+      replay.isGlobal === true ||
+      (replay.sharedWith && replay.sharedWith.includes(workspaceId))
+    );
+  }
+
+  updateWorkspaceSessionReplay(replayId: string, updates: Partial<Pick<WorkspaceSessionReplay, 'name' | 'description' | 'projectId' | 'sessionId' | 'url' | 'tags'>>): WorkspaceSessionReplay | null {
+    const replay = this.workspaceSessionReplays.get(replayId);
+    if (!replay) return null;
+    Object.assign(replay, updates);
+    this.workspaceSessionReplays.set(replayId, replay);
+    return replay;
+  }
+
+  deleteWorkspaceSessionReplay(replayId: string): boolean {
+    return this.workspaceSessionReplays.delete(replayId);
+  }
+
+  shareWorkspaceSessionReplay(replayId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceSessionReplay | null {
+    const replay = this.workspaceSessionReplays.get(replayId);
+    if (!replay) return null;
+    if (replay.workspaceId !== requestingWorkspaceId && !replay.isGlobal) return null;
+    if (!replay.sharedWith) replay.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!replay.sharedWith!.includes(wsId)) {
+        replay.sharedWith!.push(wsId);
+      }
+    });
+    this.workspaceSessionReplays.set(replayId, replay);
+    return replay;
+  }
+
+  makeWorkspaceSessionReplayGlobal(replayId: string, requestingWorkspaceId: string): WorkspaceSessionReplay | null {
+    const replay = this.workspaceSessionReplays.get(replayId);
+    if (!replay || replay.workspaceId !== requestingWorkspaceId) return null;
+    replay.isGlobal = true;
+    replay.sharedWith = undefined;
+    this.workspaceSessionReplays.set(replayId, replay);
+    return replay;
+  }
+
+  // ==================== Workspace Journey Maps ====================
+
+  addWorkspaceJourneyMap(workspaceId: string, data: {
+    title: string;
+    description?: string;
+    persona?: string;
+    stages?: Array<{ name: string; description?: string }>;
+    url?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceJourneyMap {
+    const map: WorkspaceJourneyMap = {
+      id: `journey-map-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspaceJourneyMaps.set(map.id, map);
+    return map;
+  }
+
+  getWorkspaceJourneyMaps(workspaceId: string, userId?: string): WorkspaceJourneyMap[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    return Array.from(this.workspaceJourneyMaps.values()).filter(map =>
+      map.workspaceId === workspaceId ||
+      map.isGlobal === true ||
+      (map.sharedWith && map.sharedWith.includes(workspaceId))
+    );
+  }
+
+  updateWorkspaceJourneyMap(mapId: string, updates: Partial<Pick<WorkspaceJourneyMap, 'title' | 'description' | 'persona' | 'stages' | 'url' | 'tags'>>): WorkspaceJourneyMap | null {
+    const map = this.workspaceJourneyMaps.get(mapId);
+    if (!map) return null;
+    Object.assign(map, updates);
+    this.workspaceJourneyMaps.set(mapId, map);
+    return map;
+  }
+
+  deleteWorkspaceJourneyMap(mapId: string): boolean {
+    return this.workspaceJourneyMaps.delete(mapId);
+  }
+
+  shareWorkspaceJourneyMap(mapId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceJourneyMap | null {
+    const map = this.workspaceJourneyMaps.get(mapId);
+    if (!map) return null;
+    if (map.workspaceId !== requestingWorkspaceId && !map.isGlobal) return null;
+    if (!map.sharedWith) map.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!map.sharedWith!.includes(wsId)) {
+        map.sharedWith!.push(wsId);
+      }
+    });
+    this.workspaceJourneyMaps.set(mapId, map);
+    return map;
+  }
+
+  makeWorkspaceJourneyMapGlobal(mapId: string, requestingWorkspaceId: string): WorkspaceJourneyMap | null {
+    const map = this.workspaceJourneyMaps.get(mapId);
+    if (!map || map.workspaceId !== requestingWorkspaceId) return null;
+    map.isGlobal = true;
+    map.sharedWith = undefined;
+    this.workspaceJourneyMaps.set(mapId, map);
+    return map;
+  }
+
+  // ==================== Workspace HCD Reports ====================
+
+  addWorkspaceHcdReport(workspaceId: string, data: {
+    title: string;
+    description?: string;
+    reportType?: 'usability' | 'accessibility' | 'heuristic' | 'user-research' | 'other';
+    url?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceHcdReport {
+    const report: WorkspaceHcdReport = {
+      id: `hcd-report-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspaceHcdReports.set(report.id, report);
+    return report;
+  }
+
+  getWorkspaceHcdReports(workspaceId: string, userId?: string, reportType?: string): WorkspaceHcdReport[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    let reports = Array.from(this.workspaceHcdReports.values()).filter(report =>
+      report.workspaceId === workspaceId ||
+      report.isGlobal === true ||
+      (report.sharedWith && report.sharedWith.includes(workspaceId))
+    );
+    if (reportType) {
+      reports = reports.filter(report => report.reportType === reportType);
+    }
+    return reports;
+  }
+
+  updateWorkspaceHcdReport(reportId: string, updates: Partial<Pick<WorkspaceHcdReport, 'title' | 'description' | 'reportType' | 'url' | 'tags'>>): WorkspaceHcdReport | null {
+    const report = this.workspaceHcdReports.get(reportId);
+    if (!report) return null;
+    Object.assign(report, updates);
+    this.workspaceHcdReports.set(reportId, report);
+    return report;
+  }
+
+  deleteWorkspaceHcdReport(reportId: string): boolean {
+    return this.workspaceHcdReports.delete(reportId);
+  }
+
+  shareWorkspaceHcdReport(reportId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceHcdReport | null {
+    const report = this.workspaceHcdReports.get(reportId);
+    if (!report) return null;
+    if (report.workspaceId !== requestingWorkspaceId && !report.isGlobal) return null;
+    if (!report.sharedWith) report.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!report.sharedWith!.includes(wsId)) {
+        report.sharedWith!.push(wsId);
+      }
+    });
+    this.workspaceHcdReports.set(reportId, report);
+    return report;
+  }
+
+  makeWorkspaceHcdReportGlobal(reportId: string, requestingWorkspaceId: string): WorkspaceHcdReport | null {
+    const report = this.workspaceHcdReports.get(reportId);
+    if (!report || report.workspaceId !== requestingWorkspaceId) return null;
+    report.isGlobal = true;
+    report.sharedWith = undefined;
+    this.workspaceHcdReports.set(reportId, report);
+    return report;
+  }
+
+  // ==================== Workspace User Personas ====================
+
+  addWorkspaceUserPersona(workspaceId: string, data: {
+    name: string;
+    description?: string;
+    demographics?: Record<string, any>;
+    goals?: string[];
+    painPoints?: string[];
+    behaviors?: string[];
+    url?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceUserPersona {
+    const persona: WorkspaceUserPersona = {
+      id: `persona-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspaceUserPersonas.set(persona.id, persona);
+    return persona;
+  }
+
+  getWorkspaceUserPersonas(workspaceId: string, userId?: string): WorkspaceUserPersona[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    return Array.from(this.workspaceUserPersonas.values()).filter(persona =>
+      persona.workspaceId === workspaceId ||
+      persona.isGlobal === true ||
+      (persona.sharedWith && persona.sharedWith.includes(workspaceId))
+    );
+  }
+
+  updateWorkspaceUserPersona(personaId: string, updates: Partial<Pick<WorkspaceUserPersona, 'name' | 'description' | 'demographics' | 'goals' | 'painPoints' | 'behaviors' | 'url' | 'tags'>>): WorkspaceUserPersona | null {
+    const persona = this.workspaceUserPersonas.get(personaId);
+    if (!persona) return null;
+    Object.assign(persona, updates);
+    this.workspaceUserPersonas.set(personaId, persona);
+    return persona;
+  }
+
+  deleteWorkspaceUserPersona(personaId: string): boolean {
+    return this.workspaceUserPersonas.delete(personaId);
+  }
+
+  shareWorkspaceUserPersona(personaId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceUserPersona | null {
+    const persona = this.workspaceUserPersonas.get(personaId);
+    if (!persona) return null;
+    if (persona.workspaceId !== requestingWorkspaceId && !persona.isGlobal) return null;
+    if (!persona.sharedWith) persona.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!persona.sharedWith!.includes(wsId)) {
+        persona.sharedWith!.push(wsId);
+      }
+    });
+    this.workspaceUserPersonas.set(personaId, persona);
+    return persona;
+  }
+
+  makeWorkspaceUserPersonaGlobal(personaId: string, requestingWorkspaceId: string): WorkspaceUserPersona | null {
+    const persona = this.workspaceUserPersonas.get(personaId);
+    if (!persona || persona.workspaceId !== requestingWorkspaceId) return null;
+    persona.isGlobal = true;
+    persona.sharedWith = undefined;
+    this.workspaceUserPersonas.set(personaId, persona);
+    return persona;
+  }
+
+  // ==================== Workspace Research Artifacts ====================
+
+  addWorkspaceResearchArtifact(workspaceId: string, data: {
+    title: string;
+    description?: string;
+    artifactType?: 'interview' | 'survey' | 'observation' | 'workshop' | 'other';
+    url?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceResearchArtifact {
+    const artifact: WorkspaceResearchArtifact = {
+      id: `research-artifact-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspaceResearchArtifacts.set(artifact.id, artifact);
+    return artifact;
+  }
+
+  getWorkspaceResearchArtifacts(workspaceId: string, userId?: string, artifactType?: string): WorkspaceResearchArtifact[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    let artifacts = Array.from(this.workspaceResearchArtifacts.values()).filter(artifact =>
+      artifact.workspaceId === workspaceId ||
+      artifact.isGlobal === true ||
+      (artifact.sharedWith && artifact.sharedWith.includes(workspaceId))
+    );
+    if (artifactType) {
+      artifacts = artifacts.filter(artifact => artifact.artifactType === artifactType);
+    }
+    return artifacts;
+  }
+
+  updateWorkspaceResearchArtifact(artifactId: string, updates: Partial<Pick<WorkspaceResearchArtifact, 'title' | 'description' | 'artifactType' | 'url' | 'tags'>>): WorkspaceResearchArtifact | null {
+    const artifact = this.workspaceResearchArtifacts.get(artifactId);
+    if (!artifact) return null;
+    Object.assign(artifact, updates);
+    this.workspaceResearchArtifacts.set(artifactId, artifact);
+    return artifact;
+  }
+
+  deleteWorkspaceResearchArtifact(artifactId: string): boolean {
+    return this.workspaceResearchArtifacts.delete(artifactId);
+  }
+
+  shareWorkspaceResearchArtifact(artifactId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceResearchArtifact | null {
+    const artifact = this.workspaceResearchArtifacts.get(artifactId);
+    if (!artifact) return null;
+    if (artifact.workspaceId !== requestingWorkspaceId && !artifact.isGlobal) return null;
+    if (!artifact.sharedWith) artifact.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!artifact.sharedWith!.includes(wsId)) {
+        artifact.sharedWith!.push(wsId);
+      }
+    });
+    this.workspaceResearchArtifacts.set(artifactId, artifact);
+    return artifact;
+  }
+
+  makeWorkspaceResearchArtifactGlobal(artifactId: string, requestingWorkspaceId: string): WorkspaceResearchArtifact | null {
+    const artifact = this.workspaceResearchArtifacts.get(artifactId);
+    if (!artifact || artifact.workspaceId !== requestingWorkspaceId) return null;
+    artifact.isGlobal = true;
+    artifact.sharedWith = undefined;
+    this.workspaceResearchArtifacts.set(artifactId, artifact);
+    return artifact;
+  }
+
+  // ==================== Workspace Insights ====================
+
+  addWorkspaceInsight(workspaceId: string, data: {
+    title: string;
+    description?: string;
+    category?: 'user-need' | 'pain-point' | 'opportunity' | 'finding' | 'other';
+    priority?: 'high' | 'medium' | 'low';
+    url?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceInsight {
+    const insight: WorkspaceInsight = {
+      id: `insight-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspaceInsights.set(insight.id, insight);
+    return insight;
+  }
+
+  getWorkspaceInsights(workspaceId: string, userId?: string, category?: string): WorkspaceInsight[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    let insights = Array.from(this.workspaceInsights.values()).filter(insight =>
+      insight.workspaceId === workspaceId ||
+      insight.isGlobal === true ||
+      (insight.sharedWith && insight.sharedWith.includes(workspaceId))
+    );
+    if (category) {
+      insights = insights.filter(insight => insight.category === category);
+    }
+    return insights;
+  }
+
+  updateWorkspaceInsight(insightId: string, updates: Partial<Pick<WorkspaceInsight, 'title' | 'description' | 'category' | 'priority' | 'url' | 'tags'>>): WorkspaceInsight | null {
+    const insight = this.workspaceInsights.get(insightId);
+    if (!insight) return null;
+    Object.assign(insight, updates);
+    this.workspaceInsights.set(insightId, insight);
+    return insight;
+  }
+
+  deleteWorkspaceInsight(insightId: string): boolean {
+    return this.workspaceInsights.delete(insightId);
+  }
+
+  shareWorkspaceInsight(insightId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceInsight | null {
+    const insight = this.workspaceInsights.get(insightId);
+    if (!insight) return null;
+    if (insight.workspaceId !== requestingWorkspaceId && !insight.isGlobal) return null;
+    if (!insight.sharedWith) insight.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!insight.sharedWith!.includes(wsId)) {
+        insight.sharedWith!.push(wsId);
+      }
+    });
+    this.workspaceInsights.set(insightId, insight);
+    return insight;
+  }
+
+  makeWorkspaceInsightGlobal(insightId: string, requestingWorkspaceId: string): WorkspaceInsight | null {
+    const insight = this.workspaceInsights.get(insightId);
+    if (!insight || insight.workspaceId !== requestingWorkspaceId) return null;
+    insight.isGlobal = true;
+    insight.sharedWith = undefined;
+    this.workspaceInsights.set(insightId, insight);
+    return insight;
+  }
+
+  // ==================== Workspace Patterns ====================
+
+  addWorkspacePattern(workspaceId: string, data: {
+    name: string;
+    description?: string;
+    category?: string;
+    url?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspacePattern {
+    const pattern: WorkspacePattern = {
+      id: `pattern-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspacePatterns.set(pattern.id, pattern);
+    return pattern;
+  }
+
+  getWorkspacePatterns(workspaceId: string, userId?: string, category?: string): WorkspacePattern[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    let patterns = Array.from(this.workspacePatterns.values()).filter(pattern =>
+      pattern.workspaceId === workspaceId ||
+      pattern.isGlobal === true ||
+      (pattern.sharedWith && pattern.sharedWith.includes(workspaceId))
+    );
+    if (category) {
+      patterns = patterns.filter(pattern => pattern.category === category);
+    }
+    return patterns;
+  }
+
+  updateWorkspacePattern(patternId: string, updates: Partial<Pick<WorkspacePattern, 'name' | 'description' | 'category' | 'url' | 'tags'>>): WorkspacePattern | null {
+    const pattern = this.workspacePatterns.get(patternId);
+    if (!pattern) return null;
+    Object.assign(pattern, updates);
+    this.workspacePatterns.set(patternId, pattern);
+    return pattern;
+  }
+
+  deleteWorkspacePattern(patternId: string): boolean {
+    return this.workspacePatterns.delete(patternId);
+  }
+
+  shareWorkspacePattern(patternId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspacePattern | null {
+    const pattern = this.workspacePatterns.get(patternId);
+    if (!pattern) return null;
+    if (pattern.workspaceId !== requestingWorkspaceId && !pattern.isGlobal) return null;
+    if (!pattern.sharedWith) pattern.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!pattern.sharedWith!.includes(wsId)) {
+        pattern.sharedWith!.push(wsId);
+      }
+    });
+    this.workspacePatterns.set(patternId, pattern);
+    return pattern;
+  }
+
+  makeWorkspacePatternGlobal(patternId: string, requestingWorkspaceId: string): WorkspacePattern | null {
+    const pattern = this.workspacePatterns.get(patternId);
+    if (!pattern || pattern.workspaceId !== requestingWorkspaceId) return null;
+    pattern.isGlobal = true;
+    pattern.sharedWith = undefined;
+    this.workspacePatterns.set(patternId, pattern);
+    return pattern;
+  }
+
+  // ==================== Workspace Icons ====================
+
+  addWorkspaceIcon(workspaceId: string, data: {
+    name: string;
+    description?: string;
+    iconSet?: string;
+    svg?: string;
+    url?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceIcon {
+    const icon: WorkspaceIcon = {
+      id: `icon-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspaceIcons.set(icon.id, icon);
+    return icon;
+  }
+
+  getWorkspaceIcons(workspaceId: string, userId?: string, iconSet?: string): WorkspaceIcon[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    let icons = Array.from(this.workspaceIcons.values()).filter(icon =>
+      icon.workspaceId === workspaceId ||
+      icon.isGlobal === true ||
+      (icon.sharedWith && icon.sharedWith.includes(workspaceId))
+    );
+    if (iconSet) {
+      icons = icons.filter(icon => icon.iconSet === iconSet);
+    }
+    return icons;
+  }
+
+  updateWorkspaceIcon(iconId: string, updates: Partial<Pick<WorkspaceIcon, 'name' | 'description' | 'iconSet' | 'svg' | 'url' | 'tags'>>): WorkspaceIcon | null {
+    const icon = this.workspaceIcons.get(iconId);
+    if (!icon) return null;
+    Object.assign(icon, updates);
+    this.workspaceIcons.set(iconId, icon);
+    return icon;
+  }
+
+  deleteWorkspaceIcon(iconId: string): boolean {
+    return this.workspaceIcons.delete(iconId);
+  }
+
+  shareWorkspaceIcon(iconId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceIcon | null {
+    const icon = this.workspaceIcons.get(iconId);
+    if (!icon) return null;
+    if (icon.workspaceId !== requestingWorkspaceId && !icon.isGlobal) return null;
+    if (!icon.sharedWith) icon.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!icon.sharedWith!.includes(wsId)) {
+        icon.sharedWith!.push(wsId);
+      }
+    });
+    this.workspaceIcons.set(iconId, icon);
+    return icon;
+  }
+
+  makeWorkspaceIconGlobal(iconId: string, requestingWorkspaceId: string): WorkspaceIcon | null {
+    const icon = this.workspaceIcons.get(iconId);
+    if (!icon || icon.workspaceId !== requestingWorkspaceId) return null;
+    icon.isGlobal = true;
+    icon.sharedWith = undefined;
+    this.workspaceIcons.set(iconId, icon);
+    return icon;
+  }
+
+  // ==================== Workspace Interactives ====================
+
+  addWorkspaceInteractive(workspaceId: string, data: {
+    name: string;
+    description?: string;
+    type?: 'prototype' | 'demo' | 'sandbox' | 'other';
+    url?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceInteractive {
+    const interactive: WorkspaceInteractive = {
+      id: `interactive-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspaceInteractives.set(interactive.id, interactive);
+    return interactive;
+  }
+
+  getWorkspaceInteractives(workspaceId: string, userId?: string, type?: string): WorkspaceInteractive[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    let interactives = Array.from(this.workspaceInteractives.values()).filter(interactive =>
+      interactive.workspaceId === workspaceId ||
+      interactive.isGlobal === true ||
+      (interactive.sharedWith && interactive.sharedWith.includes(workspaceId))
+    );
+    if (type) {
+      interactives = interactives.filter(interactive => interactive.type === type);
+    }
+    return interactives;
+  }
+
+  updateWorkspaceInteractive(interactiveId: string, updates: Partial<Pick<WorkspaceInteractive, 'name' | 'description' | 'type' | 'url' | 'tags'>>): WorkspaceInteractive | null {
+    const interactive = this.workspaceInteractives.get(interactiveId);
+    if (!interactive) return null;
+    Object.assign(interactive, updates);
+    this.workspaceInteractives.set(interactiveId, interactive);
+    return interactive;
+  }
+
+  deleteWorkspaceInteractive(interactiveId: string): boolean {
+    return this.workspaceInteractives.delete(interactiveId);
+  }
+
+  shareWorkspaceInteractive(interactiveId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceInteractive | null {
+    const interactive = this.workspaceInteractives.get(interactiveId);
+    if (!interactive) return null;
+    if (interactive.workspaceId !== requestingWorkspaceId && !interactive.isGlobal) return null;
+    if (!interactive.sharedWith) interactive.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!interactive.sharedWith!.includes(wsId)) {
+        interactive.sharedWith!.push(wsId);
+      }
+    });
+    this.workspaceInteractives.set(interactiveId, interactive);
+    return interactive;
+  }
+
+  makeWorkspaceInteractiveGlobal(interactiveId: string, requestingWorkspaceId: string): WorkspaceInteractive | null {
+    const interactive = this.workspaceInteractives.get(interactiveId);
+    if (!interactive || interactive.workspaceId !== requestingWorkspaceId) return null;
+    interactive.isGlobal = true;
+    interactive.sharedWith = undefined;
+    this.workspaceInteractives.set(interactiveId, interactive);
+    return interactive;
+  }
+
+  // ==================== Workspace Stock Photos ====================
+
+  addWorkspaceStockPhoto(workspaceId: string, data: {
+    name: string;
+    description?: string;
+    url: string;
+    thumbnailUrl?: string;
+    photographer?: string;
+    license?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceStockPhoto {
+    const photo: WorkspaceStockPhoto = {
+      id: `stock-photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspaceStockPhotos.set(photo.id, photo);
+    return photo;
+  }
+
+  getWorkspaceStockPhotos(workspaceId: string, userId?: string): WorkspaceStockPhoto[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    return Array.from(this.workspaceStockPhotos.values()).filter(photo =>
+      photo.workspaceId === workspaceId ||
+      photo.isGlobal === true ||
+      (photo.sharedWith && photo.sharedWith.includes(workspaceId))
+    );
+  }
+
+  updateWorkspaceStockPhoto(photoId: string, updates: Partial<Pick<WorkspaceStockPhoto, 'name' | 'description' | 'photographer' | 'license' | 'tags'>>): WorkspaceStockPhoto | null {
+    const photo = this.workspaceStockPhotos.get(photoId);
+    if (!photo) return null;
+    Object.assign(photo, updates);
+    this.workspaceStockPhotos.set(photoId, photo);
+    return photo;
+  }
+
+  deleteWorkspaceStockPhoto(photoId: string): boolean {
+    return this.workspaceStockPhotos.delete(photoId);
+  }
+
+  shareWorkspaceStockPhoto(photoId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceStockPhoto | null {
+    const photo = this.workspaceStockPhotos.get(photoId);
+    if (!photo) return null;
+    if (photo.workspaceId !== requestingWorkspaceId && !photo.isGlobal) return null;
+    if (!photo.sharedWith) photo.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!photo.sharedWith!.includes(wsId)) {
+        photo.sharedWith!.push(wsId);
+      }
+    });
+    this.workspaceStockPhotos.set(photoId, photo);
+    return photo;
+  }
+
+  makeWorkspaceStockPhotoGlobal(photoId: string, requestingWorkspaceId: string): WorkspaceStockPhoto | null {
+    const photo = this.workspaceStockPhotos.get(photoId);
+    if (!photo || photo.workspaceId !== requestingWorkspaceId) return null;
+    photo.isGlobal = true;
+    photo.sharedWith = undefined;
+    this.workspaceStockPhotos.set(photoId, photo);
+    return photo;
+  }
+
+  // ==================== Workspace Illustrations ====================
+
+  addWorkspaceIllustration(workspaceId: string, data: {
+    name: string;
+    description?: string;
+    url: string;
+    thumbnailUrl?: string;
+    style?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceIllustration {
+    const illustration: WorkspaceIllustration = {
+      id: `illustration-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspaceIllustrations.set(illustration.id, illustration);
+    return illustration;
+  }
+
+  getWorkspaceIllustrations(workspaceId: string, userId?: string, style?: string): WorkspaceIllustration[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    let illustrations = Array.from(this.workspaceIllustrations.values()).filter(illustration =>
+      illustration.workspaceId === workspaceId ||
+      illustration.isGlobal === true ||
+      (illustration.sharedWith && illustration.sharedWith.includes(workspaceId))
+    );
+    if (style) {
+      illustrations = illustrations.filter(illustration => illustration.style === style);
+    }
+    return illustrations;
+  }
+
+  updateWorkspaceIllustration(illustrationId: string, updates: Partial<Pick<WorkspaceIllustration, 'name' | 'description' | 'style' | 'tags'>>): WorkspaceIllustration | null {
+    const illustration = this.workspaceIllustrations.get(illustrationId);
+    if (!illustration) return null;
+    Object.assign(illustration, updates);
+    this.workspaceIllustrations.set(illustrationId, illustration);
+    return illustration;
+  }
+
+  deleteWorkspaceIllustration(illustrationId: string): boolean {
+    return this.workspaceIllustrations.delete(illustrationId);
+  }
+
+  shareWorkspaceIllustration(illustrationId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceIllustration | null {
+    const illustration = this.workspaceIllustrations.get(illustrationId);
+    if (!illustration) return null;
+    if (illustration.workspaceId !== requestingWorkspaceId && !illustration.isGlobal) return null;
+    if (!illustration.sharedWith) illustration.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!illustration.sharedWith!.includes(wsId)) {
+        illustration.sharedWith!.push(wsId);
+      }
+    });
+    this.workspaceIllustrations.set(illustrationId, illustration);
+    return illustration;
+  }
+
+  makeWorkspaceIllustrationGlobal(illustrationId: string, requestingWorkspaceId: string): WorkspaceIllustration | null {
+    const illustration = this.workspaceIllustrations.get(illustrationId);
+    if (!illustration || illustration.workspaceId !== requestingWorkspaceId) return null;
+    illustration.isGlobal = true;
+    illustration.sharedWith = undefined;
+    this.workspaceIllustrations.set(illustrationId, illustration);
+    return illustration;
+  }
+
+  // ==================== Workspace Capability Logos ====================
+
+  addWorkspaceCapabilityLogo(workspaceId: string, data: {
+    name: string;
+    description?: string;
+    capability?: string;
+    url: string;
+    thumbnailUrl?: string;
+    format?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceCapabilityLogo {
+    const logo: WorkspaceCapabilityLogo = {
+      id: `capability-logo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspaceCapabilityLogos.set(logo.id, logo);
+    return logo;
+  }
+
+  getWorkspaceCapabilityLogos(workspaceId: string, userId?: string, capability?: string): WorkspaceCapabilityLogo[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    let logos = Array.from(this.workspaceCapabilityLogos.values()).filter(logo =>
+      logo.workspaceId === workspaceId ||
+      logo.isGlobal === true ||
+      (logo.sharedWith && logo.sharedWith.includes(workspaceId))
+    );
+    if (capability) {
+      logos = logos.filter(logo => logo.capability === capability);
+    }
+    return logos;
+  }
+
+  updateWorkspaceCapabilityLogo(logoId: string, updates: Partial<Pick<WorkspaceCapabilityLogo, 'name' | 'description' | 'capability' | 'tags'>>): WorkspaceCapabilityLogo | null {
+    const logo = this.workspaceCapabilityLogos.get(logoId);
+    if (!logo) return null;
+    Object.assign(logo, updates);
+    this.workspaceCapabilityLogos.set(logoId, logo);
+    return logo;
+  }
+
+  deleteWorkspaceCapabilityLogo(logoId: string): boolean {
+    return this.workspaceCapabilityLogos.delete(logoId);
+  }
+
+  shareWorkspaceCapabilityLogo(logoId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceCapabilityLogo | null {
+    const logo = this.workspaceCapabilityLogos.get(logoId);
+    if (!logo) return null;
+    if (logo.workspaceId !== requestingWorkspaceId && !logo.isGlobal) return null;
+    if (!logo.sharedWith) logo.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!logo.sharedWith!.includes(wsId)) {
+        logo.sharedWith!.push(wsId);
+      }
+    });
+    this.workspaceCapabilityLogos.set(logoId, logo);
+    return logo;
+  }
+
+  makeWorkspaceCapabilityLogoGlobal(logoId: string, requestingWorkspaceId: string): WorkspaceCapabilityLogo | null {
+    const logo = this.workspaceCapabilityLogos.get(logoId);
+    if (!logo || logo.workspaceId !== requestingWorkspaceId) return null;
+    logo.isGlobal = true;
+    logo.sharedWith = undefined;
+    this.workspaceCapabilityLogos.set(logoId, logo);
+    return logo;
+  }
+
+  // ==================== Workspace Style Dictionaries ====================
+
+  addWorkspaceStyleDictionary(workspaceId: string, data: {
+    name: string;
+    description?: string;
+    format?: 'json' | 'css' | 'scss' | 'less' | 'js' | 'ts';
+    tokens?: Record<string, any>;
+    url?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceStyleDictionary {
+    const dict: WorkspaceStyleDictionary = {
+      id: `style-dict-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspaceStyleDictionaries.set(dict.id, dict);
+    return dict;
+  }
+
+  getWorkspaceStyleDictionaries(workspaceId: string, userId?: string, format?: string): WorkspaceStyleDictionary[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    let dicts = Array.from(this.workspaceStyleDictionaries.values()).filter(dict =>
+      dict.workspaceId === workspaceId ||
+      dict.isGlobal === true ||
+      (dict.sharedWith && dict.sharedWith.includes(workspaceId))
+    );
+    if (format) {
+      dicts = dicts.filter(dict => dict.format === format);
+    }
+    return dicts;
+  }
+
+  updateWorkspaceStyleDictionary(dictId: string, updates: Partial<Pick<WorkspaceStyleDictionary, 'name' | 'description' | 'format' | 'tokens' | 'url' | 'tags'>>): WorkspaceStyleDictionary | null {
+    const dict = this.workspaceStyleDictionaries.get(dictId);
+    if (!dict) return null;
+    Object.assign(dict, updates);
+    this.workspaceStyleDictionaries.set(dictId, dict);
+    return dict;
+  }
+
+  deleteWorkspaceStyleDictionary(dictId: string): boolean {
+    return this.workspaceStyleDictionaries.delete(dictId);
+  }
+
+  shareWorkspaceStyleDictionary(dictId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceStyleDictionary | null {
+    const dict = this.workspaceStyleDictionaries.get(dictId);
+    if (!dict) return null;
+    if (dict.workspaceId !== requestingWorkspaceId && !dict.isGlobal) return null;
+    if (!dict.sharedWith) dict.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!dict.sharedWith!.includes(wsId)) {
+        dict.sharedWith!.push(wsId);
+      }
+    });
+    this.workspaceStyleDictionaries.set(dictId, dict);
+    return dict;
+  }
+
+  makeWorkspaceStyleDictionaryGlobal(dictId: string, requestingWorkspaceId: string): WorkspaceStyleDictionary | null {
+    const dict = this.workspaceStyleDictionaries.get(dictId);
+    if (!dict || dict.workspaceId !== requestingWorkspaceId) return null;
+    dict.isGlobal = true;
+    dict.sharedWith = undefined;
+    this.workspaceStyleDictionaries.set(dictId, dict);
+    return dict;
+  }
+
+  // ==================== Workspace Guidelines ====================
+
+  addWorkspaceGuideline(workspaceId: string, data: {
+    title: string;
+    description?: string;
+    category?: 'design' | 'accessibility' | 'content' | 'interaction' | 'visual' | 'technical' | 'other';
+    content?: string;
+    url?: string;
+    tags?: string[];
+    createdBy: string;
+    sharedWith?: string[];
+    isGlobal?: boolean;
+  }): WorkspaceGuideline {
+    const guideline: WorkspaceGuideline = {
+      id: `guideline-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...data,
+      workspaceId,
+      createdAt: new Date(),
+      sharedWith: data.sharedWith || [],
+      isGlobal: data.isGlobal || false,
+      tags: data.tags || [],
+    };
+    this.workspaceGuidelines.set(guideline.id, guideline);
+    return guideline;
+  }
+
+  getWorkspaceGuidelines(workspaceId: string, userId?: string, category?: string): WorkspaceGuideline[] {
+    if (userId && !this.hasWorkspaceAccess(workspaceId, userId, 'viewer')) {
+      return [];
+    }
+    let guidelines = Array.from(this.workspaceGuidelines.values()).filter(guideline =>
+      guideline.workspaceId === workspaceId ||
+      guideline.isGlobal === true ||
+      (guideline.sharedWith && guideline.sharedWith.includes(workspaceId))
+    );
+    if (category) {
+      guidelines = guidelines.filter(guideline => guideline.category === category);
+    }
+    return guidelines;
+  }
+
+  updateWorkspaceGuideline(guidelineId: string, updates: Partial<Pick<WorkspaceGuideline, 'title' | 'description' | 'category' | 'content' | 'url' | 'tags'>>): WorkspaceGuideline | null {
+    const guideline = this.workspaceGuidelines.get(guidelineId);
+    if (!guideline) return null;
+    Object.assign(guideline, updates);
+    this.workspaceGuidelines.set(guidelineId, guideline);
+    return guideline;
+  }
+
+  deleteWorkspaceGuideline(guidelineId: string): boolean {
+    return this.workspaceGuidelines.delete(guidelineId);
+  }
+
+  shareWorkspaceGuideline(guidelineId: string, workspaceIds: string[], requestingWorkspaceId: string): WorkspaceGuideline | null {
+    const guideline = this.workspaceGuidelines.get(guidelineId);
+    if (!guideline) return null;
+    if (guideline.workspaceId !== requestingWorkspaceId && !guideline.isGlobal) return null;
+    if (!guideline.sharedWith) guideline.sharedWith = [];
+    workspaceIds.forEach(wsId => {
+      if (!guideline.sharedWith!.includes(wsId)) {
+        guideline.sharedWith!.push(wsId);
+      }
+    });
+    this.workspaceGuidelines.set(guidelineId, guideline);
+    return guideline;
+  }
+
+  makeWorkspaceGuidelineGlobal(guidelineId: string, requestingWorkspaceId: string): WorkspaceGuideline | null {
+    const guideline = this.workspaceGuidelines.get(guidelineId);
+    if (!guideline || guideline.workspaceId !== requestingWorkspaceId) return null;
+    guideline.isGlobal = true;
+    guideline.sharedWith = undefined;
+    this.workspaceGuidelines.set(guidelineId, guideline);
+    return guideline;
   }
 
   // ==================== User Management ====================

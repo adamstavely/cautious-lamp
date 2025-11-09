@@ -334,7 +334,7 @@
 
         <!-- Tabs -->
         <div class="border-b mb-6" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-4 overflow-x-auto">
             <button
               @click="workspaceTab = 'overview'"
               class="px-4 py-2 border-b-2 transition-colors font-medium"
@@ -379,6 +379,141 @@
                 : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
             >
               Tokens
+            </button>
+            <button
+              @click="workspaceTab = 'reviews'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'reviews'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              Reviews
+            </button>
+            <button
+              @click="workspaceTab = 'session-replays'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'session-replays'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              Session Replays
+            </button>
+            <button
+              @click="workspaceTab = 'journey-maps'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'journey-maps'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              Journey Maps
+            </button>
+            <button
+              @click="workspaceTab = 'hcd-reports'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'hcd-reports'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              HCD Reports
+            </button>
+            <button
+              @click="workspaceTab = 'user-personas'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'user-personas'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              User Personas
+            </button>
+            <button
+              @click="workspaceTab = 'research-artifacts'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'research-artifacts'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              Research Artifacts
+            </button>
+            <button
+              @click="workspaceTab = 'insights'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'insights'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              Insights
+            </button>
+            <button
+              @click="workspaceTab = 'patterns'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'patterns'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              Patterns
+            </button>
+            <button
+              @click="workspaceTab = 'icons'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'icons'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              Icons
+            </button>
+            <button
+              @click="workspaceTab = 'interactives'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'interactives'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              Interactives
+            </button>
+            <button
+              @click="workspaceTab = 'stock-photos'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'stock-photos'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              Stock Photos
+            </button>
+            <button
+              @click="workspaceTab = 'illustrations'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'illustrations'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              Illustrations
+            </button>
+            <button
+              @click="workspaceTab = 'capability-logos'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'capability-logos'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              Capability Logos
+            </button>
+            <button
+              @click="workspaceTab = 'style-dictionaries'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'style-dictionaries'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              Style Dictionaries
+            </button>
+            <button
+              @click="workspaceTab = 'guidelines'"
+              class="px-4 py-2 border-b-2 transition-colors font-medium"
+              :class="workspaceTab === 'guidelines'
+                ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
+                : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-600 hover:text-gray-900')"
+            >
+              Guidelines
             </button>
             <button
               @click="workspaceTab = 'members'"
@@ -776,6 +911,186 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Reviews Tab -->
+        <div v-if="workspaceTab === 'reviews'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace Reviews</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">rate_review</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Reviews coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage design reviews and feedback</p>
+          </div>
+        </div>
+
+        <!-- Session Replays Tab -->
+        <div v-if="workspaceTab === 'session-replays'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace Session Replays</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">videocam</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Session replays coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage user session recordings</p>
+          </div>
+        </div>
+
+        <!-- Journey Maps Tab -->
+        <div v-if="workspaceTab === 'journey-maps'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace Journey Maps</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">map</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Journey maps coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage user journey maps</p>
+          </div>
+        </div>
+
+        <!-- HCD Reports Tab -->
+        <div v-if="workspaceTab === 'hcd-reports'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace HCD Reports</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">description</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">HCD reports coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage human-centered design reports</p>
+          </div>
+        </div>
+
+        <!-- User Personas Tab -->
+        <div v-if="workspaceTab === 'user-personas'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace User Personas</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">person</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">User personas coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage user personas and profiles</p>
+          </div>
+        </div>
+
+        <!-- Research Artifacts Tab -->
+        <div v-if="workspaceTab === 'research-artifacts'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace Research Artifacts</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">science</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Research artifacts coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage research interviews, surveys, and observations</p>
+          </div>
+        </div>
+
+        <!-- Insights Tab -->
+        <div v-if="workspaceTab === 'insights'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace Insights</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">lightbulb</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Insights coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage user insights and findings</p>
+          </div>
+        </div>
+
+        <!-- Patterns Tab -->
+        <div v-if="workspaceTab === 'patterns'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace Patterns</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">pattern</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Patterns coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage design patterns</p>
+          </div>
+        </div>
+
+        <!-- Icons Tab -->
+        <div v-if="workspaceTab === 'icons'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace Icons</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">image</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Icons coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage icon sets and individual icons</p>
+          </div>
+        </div>
+
+        <!-- Interactives Tab -->
+        <div v-if="workspaceTab === 'interactives'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace Interactives</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">interactive_space</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Interactives coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage prototypes, demos, and sandboxes</p>
+          </div>
+        </div>
+
+        <!-- Stock Photos Tab -->
+        <div v-if="workspaceTab === 'stock-photos'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace Stock Photos</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">photo_library</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Stock photos coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage stock photography library</p>
+          </div>
+        </div>
+
+        <!-- Illustrations Tab -->
+        <div v-if="workspaceTab === 'illustrations'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace Illustrations</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">draw</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Illustrations coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage illustration library</p>
+          </div>
+        </div>
+
+        <!-- Capability Logos Tab -->
+        <div v-if="workspaceTab === 'capability-logos'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace Capability Logos</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">workspace_premium</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Capability logos coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage capability and service logos</p>
+          </div>
+        </div>
+
+        <!-- Style Dictionaries Tab -->
+        <div v-if="workspaceTab === 'style-dictionaries'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace Style Dictionaries</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">book</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Style dictionaries coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage style dictionaries and token collections</p>
+          </div>
+        </div>
+
+        <!-- Guidelines Tab -->
+        <div v-if="workspaceTab === 'guidelines'" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Workspace Guidelines</h4>
+          </div>
+          <div class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'">
+            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">rule</span>
+            <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Guidelines coming soon</p>
+            <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Manage design guidelines and standards</p>
           </div>
         </div>
 
