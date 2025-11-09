@@ -574,6 +574,280 @@ const selectedColor = ref('#4f46e5');
             </div>
           </div>
 
+          <!-- Best Practices -->
+          <div class="max-w-7xl mx-auto mb-16">
+            <div class="mb-8">
+              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Best Practices</h2>
+              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Recommended patterns and guidelines for using the ColorPicker component effectively.</p>
+            </div>
+            
+            <div class="space-y-6">
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-green-900/20 border-green-800' 
+                  : 'bg-green-50 border-green-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Provide Clear Color Preview</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Always show a visual preview of the selected color so users can see what they're choosing. Use a color swatch or preview area that updates in real-time.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Visual preview --&gt;
+&lt;button
+  @click="showPicker = true"
+  class="w-16 h-16 rounded-lg border-2"
+  :style="{ backgroundColor: selectedColor }"
+&gt;&lt;/button&gt;
+
+&lt;ColorPicker
+  :show="showPicker"
+  :initial-color="selectedColor"
+  @apply="selectedColor = $event"
+/&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-green-900/20 border-green-800' 
+                  : 'bg-green-50 border-green-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Support Multiple Color Formats</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Allow users to input and view colors in multiple formats (hex, RGB, HSL, CMYK) to accommodate different use cases and user preferences.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Multiple format support --&gt;
+&lt;ColorPicker
+  :show="showPicker"
+  :initial-color="selectedColor"
+  :formats="['hex', 'rgb', 'hsl', 'cmyk']"
+  @apply="handleColorChange"
+/&gt;
+
+&lt;script setup&gt;
+const handleColorChange = (color) => {
+  // Store in preferred format
+  selectedColor.value = color.hex;
+  rgbValue.value = color.rgb;
+  hslValue.value = color.hsl;
+};
+&lt;/script&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-green-900/20 border-green-800' 
+                  : 'bg-green-50 border-green-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Handle Positioning Properly</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Position the color picker relative to the trigger element and ensure it doesn't go off-screen. Adjust position dynamically based on available space.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Dynamic positioning --&gt;
+const openColorPicker = (event) => {
+  const rect = event.target.getBoundingClientRect();
+  const pickerWidth = 280;
+  
+  let left = rect.right + 16;
+  let top = rect.top;
+  
+  // Adjust if picker would go off screen
+  if (left + pickerWidth > window.innerWidth) {
+    left = rect.left - pickerWidth - 16;
+  }
+  
+  pickerPosition.value = { left, top };
+  showPicker.value = true;
+};</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-green-900/20 border-green-800' 
+                  : 'bg-green-50 border-green-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Provide Cancel and Apply Actions</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Always provide clear Cancel and Apply buttons so users can confirm or discard their color selection. This prevents accidental changes.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Clear actions --&gt;
+&lt;ColorPicker
+  :show="showPicker"
+  :initial-color="selectedColor"
+  @apply="selectedColor = $event; showPicker = false"
+  @cancel="showPicker = false"
+/&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Anti-Patterns -->
+          <div class="max-w-7xl mx-auto mb-16">
+            <div class="mb-8">
+              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Anti-Patterns</h2>
+              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Common mistakes to avoid when using the ColorPicker component.</p>
+            </div>
+            
+            <div class="space-y-6">
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-red-900/20 border-red-800' 
+                  : 'bg-red-50 border-red-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Don't Auto-Apply Changes</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Avoid applying color changes immediately as the user moves sliders. This can cause performance issues and makes it difficult to cancel changes.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: Auto-applying on every change --&gt;
+&lt;ColorPicker
+  :show="showPicker"
+  @change="selectedColor = $event"  &lt;!-- Applied immediately --&gt;
+/&gt;
+
+&lt;!-- Good: Preview only, apply on confirm --&gt;
+&lt;ColorPicker
+  :show="showPicker"
+  @change="previewColor = $event"  &lt;!-- Preview only --&gt;
+  @apply="selectedColor = $event"  &lt;!-- Apply on confirm --&gt;
+/&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-red-900/20 border-red-800' 
+                  : 'bg-red-50 border-red-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Don't Ignore Screen Boundaries</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Never position the color picker in a fixed location without checking if it fits on screen. Always adjust position dynamically to prevent it from being cut off.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: Fixed position --&gt;
+&lt;ColorPicker
+  :show="showPicker"
+  :position="{ left: 200, top: 200 }"  &lt;!-- May go off screen --&gt;
+/&gt;
+
+&lt;!-- Good: Dynamic positioning --&gt;
+&lt;ColorPicker
+  :show="showPicker"
+  :position="calculatePosition(triggerElement)"  &lt;!-- Adjusts to fit --&gt;
+/&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-red-900/20 border-red-800' 
+                  : 'bg-red-50 border-red-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Don't Hide the Selected Color</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Always display the currently selected color prominently. Users need to see what color is active, especially when reopening the picker.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: No visible color indicator --&gt;
+&lt;button @click="showPicker = true"&gt;
+  Choose Color
+&lt;/button&gt;
+&lt;!-- User can't see current selection --&gt;
+
+&lt;!-- Good: Visible color swatch --&gt;
+&lt;button
+  @click="showPicker = true"
+  class="w-16 h-16 rounded-lg border-2"
+  :style="{ backgroundColor: selectedColor }"
+  :aria-label="`Current color: ${selectedColor}`"
+&gt;&lt;/button&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-red-900/20 border-red-800' 
+                  : 'bg-red-50 border-red-200'"
+              >
+                <div class="flex items-start gap-4">
+                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
+                  <div class="flex-1">
+                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Don't Use Only Text Input</h3>
+                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      While text input for color values is useful, don't rely solely on it. Provide visual color selection tools (gradient canvas, hue slider) for better UX.
+                    </p>
+                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: Text input only --&gt;
+&lt;input
+  type="text"
+  v-model="selectedColor"
+  placeholder="#000000"
+/&gt;
+&lt;!-- No visual selection --&gt;
+
+&lt;!-- Good: Visual picker with text input --&gt;
+&lt;ColorPicker
+  :show="showPicker"
+  :initial-color="selectedColor"
+  @apply="selectedColor = $event"
+/&gt;
+&lt;!-- Visual selection + text input for precision --&gt;</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Performance Section -->
           <div class="max-w-7xl mx-auto mb-16">
             <div 

@@ -335,6 +335,10 @@ const router = createRouter({
       component: () => import('./views/WorkspaceManagement.vue'),
     },
     {
+      path: '/admin/workspaces/:id',
+      component: () => import('./views/WorkspaceDetail.vue'),
+    },
+    {
       path: '/admin/users',
       component: () => import('./views/UserManagement.vue'),
     },

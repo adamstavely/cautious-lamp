@@ -40,12 +40,24 @@ The component page template (`ComponentButton.vue`) includes the following secti
 - Common patterns and use cases
 - Code snippets showing real-world implementations
 
-### 7. **Accessibility Section**
+### 7. **Best Practices**
+- Recommended patterns and guidelines
+- Multiple examples with explanations
+- Code snippets showing correct usage
+- Green-themed cards with check icons
+
+### 8. **Anti-Patterns**
+- Common mistakes to avoid
+- Examples of incorrect usage
+- Explanations of why patterns are problematic
+- Red-themed cards with error icons
+
+### 9. **Accessibility Section**
 - Accessibility guidelines
 - Best practices
 - WCAG compliance notes
 
-### 8. **Related Components**
+### 10. **Related Components**
 - Links to related components
 - Cards showing how components work together
 
@@ -235,7 +247,86 @@ Add real-world usage examples:
 </div>
 ```
 
-### Step 9: Update Accessibility Section
+### Step 9: Add Best Practices Section
+
+Add a Best Practices section after Usage Examples and before Accessibility:
+
+```vue
+<!-- Best Practices -->
+<div class="max-w-7xl mx-auto mb-16">
+  <div class="mb-8">
+    <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Best Practices</h2>
+    <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Recommended patterns and guidelines for using the [Component] component effectively.</p>
+  </div>
+  
+  <div class="space-y-6">
+    <div 
+      class="rounded-2xl border p-8"
+      :class="isDarkMode 
+        ? 'bg-green-900/20 border-green-800' 
+        : 'bg-green-50 border-green-200'"
+    >
+      <div class="flex items-start gap-4">
+        <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
+        <div class="flex-1">
+          <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Practice Title</h3>
+          <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+            Explanation of the best practice and why it's important.
+          </p>
+          <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+            <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Example code --&gt;
+&lt;YourComponent prop="value" /&gt;</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Add more best practices... -->
+  </div>
+</div>
+```
+
+### Step 10: Add Anti-Patterns Section
+
+Add an Anti-Patterns section after Best Practices:
+
+```vue
+<!-- Anti-Patterns -->
+<div class="max-w-7xl mx-auto mb-16">
+  <div class="mb-8">
+    <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Anti-Patterns</h2>
+    <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Common mistakes to avoid when using the [Component] component.</p>
+  </div>
+  
+  <div class="space-y-6">
+    <div 
+      class="rounded-2xl border p-8"
+      :class="isDarkMode 
+        ? 'bg-red-900/20 border-red-800' 
+        : 'bg-red-50 border-red-200'"
+    >
+      <div class="flex items-start gap-4">
+        <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
+        <div class="flex-1">
+          <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Anti-Pattern Title</h3>
+          <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+            Explanation of the anti-pattern and why it's problematic.
+          </p>
+          <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+            <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: Anti-pattern example --&gt;
+&lt;YourComponent prop="bad-value" /&gt;
+
+&lt;!-- Good: Correct usage --&gt;
+&lt;YourComponent prop="good-value" /&gt;</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Add more anti-patterns... -->
+  </div>
+</div>
+```
+
+### Step 11: Update Accessibility Section
 
 Customize accessibility guidelines for your component:
 
@@ -246,7 +337,7 @@ Customize accessibility guidelines for your component:
 </li>
 ```
 
-### Step 10: Update Related Components
+### Step 12: Update Related Components
 
 Update the related components section with relevant links:
 
@@ -256,7 +347,7 @@ Update the related components section with relevant links:
 </router-link>
 ```
 
-### Step 11: Add Route
+### Step 13: Add Route
 
 Add the route in `main.js`:
 
@@ -267,7 +358,7 @@ Add the route in `main.js`:
 },
 ```
 
-### Step 12: Update Breadcrumbs
+### Step 14: Update Breadcrumbs
 
 Add the route to the Breadcrumbs component's path labels:
 
@@ -278,7 +369,7 @@ const pathLabels = {
 };
 ```
 
-### Step 13: Update Documentation Drawer
+### Step 15: Update Documentation Drawer
 
 Add the component to the componentItems array in `DocumentationDrawer.vue`:
 

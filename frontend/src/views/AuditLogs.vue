@@ -8,7 +8,11 @@
       class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
       :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
     >
-      <div class="h-full p-8 overflow-auto">
+      <!-- Breadcrumbs -->
+      <Breadcrumbs />
+      
+      <div class="h-full overflow-y-auto">
+        <div class="p-8">
         <!-- Hero Section -->
         <div class="max-w-7xl mx-auto mb-8">
           <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
@@ -438,6 +442,7 @@
             <div class="mt-1" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">{{ selectedLog.errorMessage }}</div>
           </div>
         </div>
+        </div>
       </div>
     </div>
   </div>
@@ -447,6 +452,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
 
 const route = useRoute();

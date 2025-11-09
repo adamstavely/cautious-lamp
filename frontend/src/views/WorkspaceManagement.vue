@@ -1601,16 +1601,7 @@ const resetCreateForm = () => {
 };
 
 const viewWorkspace = async (workspaceId) => {
-  const workspace = workspaces.value.find(w => w.id === workspaceId);
-  if (!workspace) return;
-
-  selectedWorkspace.value = workspace;
-  workspaceTab.value = 'overview';
-  await loadWorkspaceComponents(workspaceId);
-  await loadWorkspaceFonts(workspaceId);
-  await loadWorkspaceAssets(workspaceId);
-  await loadWorkspaceTokens(workspaceId);
-  await loadWorkspaceAnalytics(workspaceId);
+  router.push(`/admin/workspaces/${workspaceId}`);
 };
 
 const editWorkspace = (workspace) => {
