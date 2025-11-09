@@ -314,17 +314,6 @@
                 <p class="text-white/80 text-sm">Inspect design system components on any page.</p>
               </router-link>
 
-              <!-- Dependency Graph Card -->
-              <router-link 
-                to="/components/dependencies" 
-                class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
-              >
-                <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
-                  <span class="material-symbols-outlined text-5xl">account_tree</span>
-                </div>
-                <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">Dependency Graph</h3>
-                <p class="text-white/80 text-sm">Visualize component relationships and dependencies.</p>
-              </router-link>
             </div>
           </div>
         </div>

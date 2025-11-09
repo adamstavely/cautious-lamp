@@ -263,7 +263,7 @@
                 <option value="/components/documentation">Documentation Generator</option>
                 <option value="/review/handoff">Design-Dev Handoff</option>
                 <option value="/components/composition">Component Composition</option>
-                <option value="/components/dependencies">Dependency Graph</option>
+                <option value="/admin/dependencies">Dependency Graph</option>
               </optgroup>
               <optgroup label="Tokens">
                 <option value="/tokens">Tokens Overview</option>
@@ -560,7 +560,7 @@ const routeToFlagKey = {
   '/components/documentation': 'component-documentation',
   '/review/handoff': 'component-handoff',
   '/components/composition': 'component-composition',
-  '/components/dependencies': 'component-dependencies',
+  '/admin/dependencies': 'component-dependencies',
   '/tokens': 'token-studio',
   '/tokens/studio': 'token-studio',
   '/tokens/playground': 'token-playground',
@@ -614,7 +614,7 @@ const routeToName = {
   '/components/documentation': 'Documentation Generator',
   '/review/handoff': 'Design-Dev Handoff',
   '/components/composition': 'Component Composition',
-  '/components/dependencies': 'Dependency Graph',
+  '/admin/dependencies': 'Dependency Graph',
   '/tokens': 'Tokens Overview',
   '/tokens/studio': 'Token Studio',
   '/tokens/playground': 'Token Playground',

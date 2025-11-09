@@ -9,7 +9,7 @@ const routeToFlagMap = {
   '/components/documentation': 'component-documentation',
   '/review/handoff': 'component-handoff',
   '/components/composition': 'component-composition',
-  '/components/dependencies': 'component-dependencies',
+  '/admin/dependencies': 'component-dependencies',
   '/tokens': 'token-studio',
   '/tokens/studio': 'token-studio',
   '/tokens/playground': 'token-playground',

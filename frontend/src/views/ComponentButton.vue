@@ -718,6 +718,9 @@
             </div>
           </div>
 
+          <!-- Component Dependencies -->
+          <ComponentDependencyGraphCard :component-id="getComponentId()" />
+
           <!-- Version History -->
           <div class="max-w-7xl mx-auto mb-16">
             <div class="mb-8">
@@ -1074,6 +1077,7 @@ import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ComponentPreview from '../components/ComponentPreview.vue';
+import ComponentDependencyGraphCard from '../components/ComponentDependencyGraphCard.vue';
 import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
 import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';

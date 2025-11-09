@@ -260,6 +260,10 @@ const router = createRouter({
     },
     {
       path: '/components/dependencies',
+      redirect: '/admin/dependencies',
+    },
+    {
+      path: '/admin/dependencies',
       component: () => import('./views/ComponentDependencyGraph.vue'),
     },
     {
