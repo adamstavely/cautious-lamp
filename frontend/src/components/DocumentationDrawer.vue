@@ -419,32 +419,6 @@
             </div>
           </div>
 
-          <!-- Development -->
-          <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Development</h4>
-            <div class="space-y-1">
-              <router-link
-                v-for="item in filteredToolGroups.development"
-                :key="item.link"
-                :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
-                    : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-                ]"
-              >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-                <span class="font-medium">{{ item.text }}</span>
-              </router-link>
-            </div>
-          </div>
-
-
           <!-- Image & Video -->
           <div>
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Image & Video</h4>
@@ -507,6 +481,31 @@
             <span class="font-medium">{{ item.text }}</span>
           </router-link>
         </nav>
+
+        <!-- Utilities -->
+        <div class="mt-6">
+          <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Utilities</h4>
+          <nav class="space-y-1">
+            <router-link
+              v-for="item in filteredReviewUtilities"
+              :key="item.link"
+              :to="item.link"
+              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              :class="[
+                isActive(item.link)
+                  ? (isDarkMode 
+                    ? 'text-indigo-400 bg-indigo-900/20' 
+                    : 'text-indigo-600 bg-indigo-50')
+                  : (isDarkMode
+                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+              ]"
+            >
+              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+              <span class="font-medium">{{ item.text }}</span>
+            </router-link>
+          </nav>
+        </div>
       </div>
       
       <!-- HCD - only show when on research route -->
@@ -854,8 +853,14 @@ const codePatterns = [
 const reviewItems = [
   { text: 'Overview', link: '/review', icon: 'rate_review' },
   { text: 'My Requested Reviews', link: '/review/my-requests', icon: 'view_module' },
-  { text: 'Review Management', link: '/review/management', icon: 'folder-kanban' },
-  { text: 'Handoff Tools', link: '/review/handoff', icon: 'swap_horiz' }
+  { text: 'Review Management', link: '/review/management', icon: 'folder-kanban' }
+];
+
+const reviewUtilities = [
+  { text: 'Handoff Tools', link: '/review/handoff', icon: 'swap_horiz' },
+  { text: 'Design-to-Code Sync', link: '/design-sync', icon: 'sync' },
+  { text: 'Visual Regression Testing', link: '/tools/visual-regression', icon: 'compare' },
+  { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' }
 ];
 
 const tools = [
@@ -892,8 +897,6 @@ const toolGroups = computed(() => ({
     { text: 'Font Stack & Subsetting', link: '/tools/font-stack', icon: 'layers' }
   ],
   development: [
-    { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' },
-    { text: 'Visual Regression Testing', link: '/tools/visual-regression', icon: 'compare' }
   ],
   image: [
     { text: 'PNG to ICO Converter', link: '/tools/png-to-ico', icon: 'image' },
@@ -1023,7 +1026,7 @@ const showTokens = computed(() => {
 });
 
 const showReview = computed(() => {
-  return route.path === '/review' || route.path.startsWith('/review/');
+  return route.path === '/review' || route.path.startsWith('/review/') || route.path === '/design-sync' || route.path.startsWith('/design-sync/') || route.path === '/theme-builder' || route.path === '/tools/visual-regression';
 });
 
 const showPatterns = computed(() => {
@@ -1034,10 +1037,11 @@ const showPatterns = computed(() => {
 const showTools = computed(() => {
   const path = route.path;
   // Exclude UX Research tools (they're now in HCD)
-  if (path === '/tools/nasa-tlx' || path === '/tools/sus' || path === '/tools/heuristic-evaluation') {
+  // Exclude Theme Builder and Visual Regression (they're now in Review Utilities)
+  if (path === '/tools/nasa-tlx' || path === '/tools/sus' || path === '/tools/heuristic-evaluation' || path === '/theme-builder' || path === '/tools/visual-regression') {
     return false;
   }
-  return path === '/tools' || path.startsWith('/tools/') || path === '/palette-builder' || path === '/theme-builder';
+  return path === '/tools' || path.startsWith('/tools/') || path === '/palette-builder';
 });
 
 const showDesignAssets = computed(() => {
@@ -1160,6 +1164,10 @@ const filteredReviewItems = computed(() => {
   return reviewItems.filter(item => isRouteEnabled(item.link));
 });
 
+const filteredReviewUtilities = computed(() => {
+  return reviewUtilities.filter(item => isRouteEnabled(item.link));
+});
+
 // Watch for dark mode changes and Escape key
 let darkModeObserver = null;
 let darkModeInterval = null;
@@ -1185,6 +1193,7 @@ const getAllDrawerFlagKeys = () => {
     ...tokenItems.map(t => t.link),
     ...designAssets.map(d => d.link),
     ...reviewItems.map(r => r.link),
+    ...reviewUtilities.map(r => r.link),
     ...toolGroups.value.overview.map(t => t.link),
     ...toolGroups.value.color.map(t => t.link),
     ...toolGroups.value.text.map(t => t.link),
