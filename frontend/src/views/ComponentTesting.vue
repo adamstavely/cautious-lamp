@@ -74,12 +74,31 @@
                   : 'border-gray-300 bg-white text-gray-900'"
               >
                 <option value="">Choose a component...</option>
-                <option value="button">Button</option>
-                <option value="card">Card</option>
-                <option value="input">Input</option>
-                <option value="select">Select</option>
-                <option value="modal">Modal</option>
+                <option 
+                  v-for="comp in availableComponents" 
+                  :key="comp.id" 
+                  :value="comp.id"
+                >
+                  {{ comp.name }}
+                </option>
               </select>
+              <div v-if="loadingComponent" class="mt-2 text-sm text-indigo-600 flex items-center gap-2">
+                <span class="material-symbols-outlined text-base animate-spin">refresh</span>
+                Loading component data...
+              </div>
+              <div v-if="componentData && componentData.props" class="mt-3 p-3 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                <div class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Component Props:</div>
+                <div class="text-xs space-y-1" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  <div v-for="prop in componentData.props" :key="prop.name" class="flex items-center gap-2">
+                    <code class="text-indigo-600">{{ prop.name }}</code>
+                    <span class="text-gray-500">({{ prop.type }})</span>
+                    <span v-if="prop.required" class="text-red-500 text-xs">required</span>
+                    <span v-if="prop.options" class="text-xs text-gray-500">
+                      [{{ prop.options.join(', ') }}]
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Test Type Selector -->
@@ -581,12 +600,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:3000/api/v1';
+const API_KEY = 'test-api-key-123';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
 const selectedComponent = ref('');
+const componentData = ref(null);
+const loadingComponent = ref(false);
+const availableComponents = ref([]);
 const testFramework = ref('vitest');
 const testTypes = ref({
   unit: true,
@@ -613,8 +639,51 @@ const visualTestResults = ref(null);
 const a11yTestResults = ref(null);
 const performanceResults = ref(null);
 
+// Load available components
+const loadComponents = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/components`, {
+      headers: { Authorization: `Bearer ${API_KEY}` }
+    });
+    availableComponents.value = response.data.components || [];
+  } catch (error) {
+    console.error('Error loading components:', error);
+    // Fallback to hardcoded list
+    availableComponents.value = [
+      { id: 'button', name: 'Button' },
+      { id: 'card', name: 'Card' },
+      { id: 'input', name: 'Input' },
+      { id: 'select', name: 'Select' },
+      { id: 'modal', name: 'Modal' }
+    ];
+  }
+};
+
+// Load component data when selected
+watch(selectedComponent, async (newValue) => {
+  if (newValue) {
+    loadingComponent.value = true;
+    try {
+      const response = await axios.get(`${API_BASE_URL}/components/${newValue}`, {
+        headers: { Authorization: `Bearer ${API_KEY}` }
+      });
+      componentData.value = response.data;
+    } catch (error) {
+      console.error('Error loading component data:', error);
+      componentData.value = null;
+    } finally {
+      loadingComponent.value = false;
+    }
+  } else {
+    componentData.value = null;
+  }
+});
+
 const generateTests = () => {
-  if (!selectedComponent.value) return;
+  if (!selectedComponent.value) {
+    alert('Please select a component first');
+    return;
+  }
 
   const activeTypes = Object.entries(testTypes.value)
     .filter(([_, active]) => active)
@@ -627,12 +696,19 @@ const generateTests = () => {
 
   let testCode = '';
 
+  // Use component data if available, otherwise fall back to component name only
+  const componentInfo = componentData.value || { 
+    id: selectedComponent.value, 
+    name: selectedComponent.value.charAt(0).toUpperCase() + selectedComponent.value.slice(1),
+    props: []
+  };
+
   if (testFramework.value === 'vitest' || testFramework.value === 'jest') {
-    testCode = generateJestTests(selectedComponent.value, activeTypes);
+    testCode = generateJestTests(componentInfo, activeTypes);
   } else if (testFramework.value === 'cypress') {
-    testCode = generateCypressTests(selectedComponent.value, activeTypes);
+    testCode = generateCypressTests(componentInfo, activeTypes);
   } else if (testFramework.value === 'playwright') {
-    testCode = generatePlaywrightTests(selectedComponent.value, activeTypes);
+    testCode = generatePlaywrightTests(componentInfo, activeTypes);
   }
 
   generatedTests.value = testCode;
@@ -649,98 +725,481 @@ const generateTests = () => {
   }
 };
 
-const generateJestTests = (component, types) => {
-  let code = `import { describe, it, expect, beforeEach } from '${testFramework.value === 'vitest' ? 'vitest' : '@jest/globals'}';
-import { mount } from '@vue/test-utils';
-import ${component.charAt(0).toUpperCase() + component.slice(1)} from './${component}.vue';
+// Analyze component props to generate intelligent tests
+const analyzeProps = (props) => {
+  if (!props || props.length === 0) return { hasProps: false, props: [] };
+  
+  return {
+    hasProps: true,
+    props: props.map(prop => ({
+      name: prop.name,
+      type: prop.type,
+      required: prop.required || false,
+      defaultValue: prop.default,
+      options: prop.options || [],
+      description: prop.description || '',
+      isEnum: !!(prop.options && prop.options.length > 0),
+      isBoolean: prop.type === 'boolean' || prop.type === 'Boolean',
+      isString: prop.type === 'string' || prop.type === 'String',
+      isNumber: prop.type === 'number' || prop.type === 'Number',
+      isFunction: prop.type === 'function' || prop.type === 'Function' || prop.name.toLowerCase().includes('on') || prop.name.toLowerCase().includes('handle'),
+    }))
+  };
+};
 
-describe('${component.charAt(0).toUpperCase() + component.slice(1)} Component', () => {
+const generateJestTests = (componentInfo, types) => {
+  const componentName = componentInfo.name || componentInfo.id.charAt(0).toUpperCase() + componentInfo.id.slice(1);
+  const componentId = componentInfo.id || componentInfo.name?.toLowerCase();
+  const props = analyzeProps(componentInfo.props || []);
+  
+  let code = `import { describe, it, expect, beforeEach, vi } from '${testFramework.value === 'vitest' ? 'vitest' : '@jest/globals'}';
+import { mount } from '@vue/test-utils';
+import ${componentName} from './${componentId}.vue';
+
+describe('${componentName} Component', () => {
 `;
 
   if (types.includes('unit')) {
     code += `  describe('Unit Tests', () => {
     it('should render correctly', () => {
-      const wrapper = mount(${component.charAt(0).toUpperCase() + component.slice(1)});
+      const wrapper = mount(${componentName});
       expect(wrapper.exists()).toBe(true);
     });
 
-    it('should accept props', () => {
-      const wrapper = mount(${component.charAt(0).toUpperCase() + component.slice(1)}, {
-        props: {
-          // Add component-specific props here
-        }
-      });
-      expect(wrapper.props()).toBeDefined();
+    it('should render with default props', () => {
+      const wrapper = mount(${componentName});
+      expect(wrapper.exists()).toBe(true);
+`;
+
+    // Test default values
+    props.props.forEach(prop => {
+      if (prop.defaultValue !== undefined && prop.defaultValue !== null) {
+        code += `      expect(wrapper.props('${prop.name}')).toBe(${JSON.stringify(prop.defaultValue)});\n`;
+      }
     });
-  });
+
+    code += `    });
+
+`;
+
+    // Test each prop individually
+    props.props.forEach(prop => {
+      if (prop.isEnum && prop.options.length > 0) {
+        // Test each enum value
+        prop.options.forEach(option => {
+          code += `    it('should render with ${prop.name}="${option}"', () => {
+      const wrapper = mount(${componentName}, {
+        props: { ${prop.name}: '${option}' }
+      });
+      expect(wrapper.props('${prop.name}')).toBe('${option}');
+    });
+
+`;
+        });
+      } else if (prop.isBoolean) {
+        // Test boolean props
+        code += `    it('should handle ${prop.name} prop', () => {
+      const wrapper = mount(${componentName}, {
+        props: { ${prop.name}: true }
+      });
+      expect(wrapper.props('${prop.name}')).toBe(true);
+    });
+
+    it('should handle ${prop.name} prop when false', () => {
+      const wrapper = mount(${componentName}, {
+        props: { ${prop.name}: false }
+      });
+      expect(wrapper.props('${prop.name}')).toBe(false);
+    });
+
+`;
+      } else if (prop.isString) {
+        // Test string props
+        code += `    it('should accept ${prop.name} prop', () => {
+      const wrapper = mount(${componentName}, {
+        props: { ${prop.name}: 'test-value' }
+      });
+      expect(wrapper.props('${prop.name}')).toBe('test-value');
+    });
+
+`;
+      } else if (prop.isNumber) {
+        // Test number props
+        code += `    it('should accept ${prop.name} prop', () => {
+      const wrapper = mount(${componentName}, {
+        props: { ${prop.name}: 42 }
+      });
+      expect(wrapper.props('${prop.name}')).toBe(42);
+    });
+
+`;
+      }
+
+      // Test required props
+      if (prop.required) {
+        code += `    it('should require ${prop.name} prop', () => {
+      // Component should handle missing required prop or show warning
+      const wrapper = mount(${componentName});
+      // Add assertion based on component behavior
+    });
+
+`;
+      }
+    });
+
+    // Test prop combinations (for important combinations)
+    const booleanProps = props.props.filter(p => p.isBoolean);
+    const enumProps = props.props.filter(p => p.isEnum && p.options.length > 0);
+    
+    if (booleanProps.length > 0 && enumProps.length > 0) {
+      // Test combination of first enum and first boolean
+      const firstEnum = enumProps[0];
+      const firstBool = booleanProps[0];
+      if (firstEnum && firstBool) {
+        code += `    it('should handle ${firstEnum.name} and ${firstBool.name} combination', () => {
+      const wrapper = mount(${componentName}, {
+        props: { ${firstEnum.name}: '${firstEnum.options[0]}', ${firstBool.name}: true }
+      });
+      expect(wrapper.props('${firstEnum.name}')).toBe('${firstEnum.options[0]}');
+      expect(wrapper.props('${firstBool.name}')).toBe(true);
+    });
+
+`;
+      }
+    }
+
+    code += `  });
 
 `;
   }
 
   if (types.includes('integration')) {
     code += `  describe('Integration Tests', () => {
-    it('should handle user interactions', async () => {
-      const wrapper = mount(${component.charAt(0).toUpperCase() + component.slice(1)});
-      // Add interaction tests
-      await wrapper.trigger('click');
-      expect(wrapper.emitted()).toBeDefined();
+`;
+
+    // Test event handlers (functions that start with 'on' or 'handle')
+    const eventHandlers = props.props.filter(p => p.isFunction);
+    eventHandlers.forEach(handler => {
+      const eventName = handler.name.replace(/^on|^handle/, '').toLowerCase();
+      code += `    it('should handle ${handler.name} event', async () => {
+      const ${handler.name} = vi.fn();
+      const wrapper = mount(${componentName}, {
+        props: { ${handler.name} }
+      });
+      await wrapper.trigger('${eventName}');
+      expect(${handler.name}).toHaveBeenCalled();
     });
-  });
+
+`;
+    });
+
+    // Test interactions with boolean props (like disabled, loading)
+    const interactiveBooleans = props.props.filter(p => 
+      p.isBoolean && (p.name.toLowerCase().includes('disabled') || 
+                     p.name.toLowerCase().includes('loading') ||
+                     p.name.toLowerCase().includes('readonly'))
+    );
+    
+    interactiveBooleans.forEach(prop => {
+      code += `    it('should handle interactions when ${prop.name} is true', async () => {
+      const wrapper = mount(${componentName}, {
+        props: { ${prop.name}: true }
+      });
+      // Component should prevent interaction when ${prop.name} is true
+      await wrapper.trigger('click');
+      // Add assertions based on component behavior
+    });
+
+`;
+    });
+
+    // Test prop changes
+    if (props.props.length > 0) {
+      const firstProp = props.props[0];
+      code += `    it('should update when props change', async () => {
+      const wrapper = mount(${componentName});
+      await wrapper.setProps({ ${firstProp.name}: ${firstProp.isBoolean ? 'true' : firstProp.isEnum && firstProp.options.length > 0 ? `'${firstProp.options[0]}'` : firstProp.isNumber ? '42' : "'new-value'"}});
+      expect(wrapper.props('${firstProp.name}')).toBe(${firstProp.isBoolean ? 'true' : firstProp.isEnum && firstProp.options.length > 0 ? `'${firstProp.options[0]}'` : firstProp.isNumber ? '42' : "'new-value'"});
+    });
+
+`;
+    }
+
+    code += `  });
 
 `;
   }
 
   if (types.includes('visual')) {
     code += `  describe('Visual Regression Tests', () => {
-    it('should match visual snapshot', () => {
-      const wrapper = mount(${component.charAt(0).toUpperCase() + component.slice(1)});
+    it('should match visual snapshot with default props', () => {
+      const wrapper = mount(${componentName});
       expect(wrapper.html()).toMatchSnapshot();
     });
-  });
+
+`;
+
+    // Generate visual snapshots for each enum prop value
+    props.props.filter(p => p.isEnum && p.options.length > 0).forEach(prop => {
+      prop.options.forEach(option => {
+        code += `    it('should match visual snapshot with ${prop.name}="${option}"', () => {
+      const wrapper = mount(${componentName}, {
+        props: { ${prop.name}: '${option}' }
+      });
+      expect(wrapper.html()).toMatchSnapshot();
+    });
+
+`;
+      });
+    });
+
+    code += `  });
 
 `;
   }
 
   if (types.includes('e2e')) {
     code += `  describe('E2E Tests', () => {
-    it('should work in full user flow', async () => {
-      const wrapper = mount(${component.charAt(0).toUpperCase() + component.slice(1)});
-      // Simulate full user interaction flow
-      await wrapper.trigger('click');
-      await wrapper.setProps({ disabled: true });
-      expect(wrapper.props('disabled')).toBe(true);
+    it('should complete full user interaction flow', async () => {
+      const wrapper = mount(${componentName});
+`;
+
+    // Add interactions based on props
+    const hasClickHandler = props.props.some(p => p.isFunction && (p.name.toLowerCase().includes('click') || p.name.toLowerCase().includes('onclick')));
+    if (hasClickHandler) {
+      code += `      await wrapper.trigger('click');
+`;
+    }
+
+    // Test prop changes during interaction
+    const interactiveProps = props.props.filter(p => 
+      p.isBoolean && !p.name.toLowerCase().includes('disabled') && !p.name.toLowerCase().includes('loading')
+    );
+    
+    if (interactiveProps.length > 0) {
+      const firstInteractive = interactiveProps[0];
+      code += `      await wrapper.setProps({ ${firstInteractive.name}: true });
+      expect(wrapper.props('${firstInteractive.name}')).toBe(true);
+`;
+    }
+
+    code += `    });
+
+`;
+
+    // Test edge cases
+    const disabledProp = props.props.find(p => p.name.toLowerCase().includes('disabled'));
+    const loadingProp = props.props.find(p => p.name.toLowerCase().includes('loading'));
+    
+    if (disabledProp || loadingProp) {
+      code += `    it('should handle edge case: disabled and loading states', async () => {
+      const wrapper = mount(${componentName}, {
+        props: { ${disabledProp ? `${disabledProp.name}: true` : ''}${disabledProp && loadingProp ? ', ' : ''}${loadingProp ? `${loadingProp.name}: true` : ''} }
+      });
+      // Component should handle both states appropriately
+      expect(wrapper.exists()).toBe(true);
     });
-  });
+
+`;
+    }
+
+    code += `  });
 
 `;
   }
 
   if (types.includes('snapshot')) {
     code += `  describe('Snapshot Tests', () => {
-    it('should match component snapshot', () => {
-      const wrapper = mount(${component.charAt(0).toUpperCase() + component.slice(1)});
+    it('should match component snapshot with default props', () => {
+      const wrapper = mount(${componentName});
       expect(wrapper).toMatchSnapshot();
     });
 
-    it('should match snapshot with props', () => {
-      const wrapper = mount(${component.charAt(0).toUpperCase() + component.slice(1)}, {
-        props: { variant: 'primary' }
+`;
+
+    // Generate snapshots for each enum prop value
+    props.props.filter(p => p.isEnum && p.options.length > 0).forEach(prop => {
+      prop.options.forEach(option => {
+        code += `    it('should match snapshot with ${prop.name}="${option}"', () => {
+      const wrapper = mount(${componentName}, {
+        props: { ${prop.name}: '${option}' }
       });
       expect(wrapper).toMatchSnapshot();
     });
-  });
+
+`;
+      });
+    });
+
+    // Generate snapshot for boolean combinations
+    const booleanProps = props.props.filter(p => p.isBoolean);
+    if (booleanProps.length > 0) {
+      code += `    it('should match snapshot with boolean props', () => {
+      const wrapper = mount(${componentName}, {
+        props: { ${booleanProps.map(p => `${p.name}: true`).join(', ')} }
+      });
+      expect(wrapper).toMatchSnapshot();
+    });
+
+`;
+    }
+
+    code += `  });
 
 `;
   }
 
   if (types.includes('api')) {
     code += `  describe('API Integration Tests', () => {
-    it('should handle API responses', async () => {
-      const wrapper = mount(${component.charAt(0).toUpperCase() + component.slice(1)});
-      // Mock API call
-      const mockResponse = { data: 'test' };
-      await wrapper.vm.fetchData();
-      expect(wrapper.vm.data).toEqual(mockResponse);
+`;
+
+    // Check if component has any async/data-fetching props
+    const asyncProps = props.props.filter(p => 
+      p.name.toLowerCase().includes('data') || 
+      p.name.toLowerCase().includes('fetch') ||
+      p.name.toLowerCase().includes('load')
+    );
+
+    if (asyncProps.length > 0) {
+      asyncProps.forEach(prop => {
+        code += `    it('should handle ${prop.name} data', async () => {
+      const wrapper = mount(${componentName}, {
+        props: { ${prop.name}: 'test-data' }
+      });
+      // Add API integration assertions
+      expect(wrapper.exists()).toBe(true);
+    });
+
+`;
+      });
+    } else {
+      code += `    it('should handle API responses', async () => {
+      const wrapper = mount(${componentName});
+      // Mock API call if component has data fetching
+      // const mockResponse = { data: 'test' };
+      // await wrapper.vm.fetchData();
+      // expect(wrapper.vm.data).toEqual(mockResponse);
+      expect(wrapper.exists()).toBe(true);
+    });
+
+`;
+    }
+
+    code += `  });
+
+`;
+  }
+
+  code += '});';
+  return code;
+};
+
+const generateCypressTests = (componentInfo, types) => {
+  const componentName = componentInfo.name || componentInfo.id.charAt(0).toUpperCase() + componentInfo.id.slice(1);
+  const componentId = componentInfo.id || componentInfo.name?.toLowerCase();
+  const props = analyzeProps(componentInfo.props || []);
+  
+  let code = `describe('${componentName} Component', () => {
+  beforeEach(() => {
+    cy.visit('/components/${componentId}');
+  });
+
+`;
+
+  if (types.includes('unit')) {
+    code += `  describe('Rendering', () => {
+    it('should render correctly', () => {
+      cy.get('[data-testid="${componentId}"]').should('exist');
+    });
+
+`;
+
+    // Test each prop value
+    props.props.forEach(prop => {
+      if (prop.isEnum && prop.options.length > 0) {
+        prop.options.forEach(option => {
+          code += `    it('should render with ${prop.name}="${option}"', () => {
+      cy.get('[data-testid="${componentId}"]').should('have.attr', 'data-${prop.name}', '${option}');
+    });
+
+`;
+        });
+      }
+    });
+
+    code += `  });
+
+`;
+  }
+
+  if (types.includes('integration')) {
+    code += `  describe('Interactions', () => {
+`;
+
+    // Test event handlers
+    const eventHandlers = props.props.filter(p => p.isFunction);
+    eventHandlers.forEach(handler => {
+      code += `    it('should handle ${handler.name} event', () => {
+      cy.get('[data-testid="${componentId}"]').click();
+      // Verify ${handler.name} was called
+    });
+
+`;
+    });
+
+    code += `  });
+
+`;
+  }
+
+  if (types.includes('crossBrowser')) {
+    code += `  describe('Cross-Browser Compatibility', () => {
+    it('should work in Chrome', () => {
+      cy.visit('/components/${componentId}', { browser: 'chrome' });
+      cy.get('[data-testid="${componentId}"]').should('exist');
+    });
+
+    it('should work in Firefox', () => {
+      cy.visit('/components/${componentId}', { browser: 'firefox' });
+      cy.get('[data-testid="${componentId}"]').should('exist');
+    });
+
+    it('should work in Safari', () => {
+      cy.visit('/components/${componentId}', { browser: 'webkit' });
+      cy.get('[data-testid="${componentId}"]').should('exist');
+    });
+  });
+
+`;
+  }
+
+  if (types.includes('e2e')) {
+    code += `  describe('End-to-End Tests', () => {
+    it('should complete full user journey', () => {
+      cy.get('[data-testid="${componentId}"]').click();
+`;
+
+    // Add prop-specific interactions
+    const clickableProps = props.props.filter(p => p.isFunction && p.name.toLowerCase().includes('click'));
+    if (clickableProps.length > 0) {
+      code += `      cy.get('[data-testid="${componentId}"]').should('be.visible');
+`;
+    }
+
+    code += `      // Add more E2E steps based on component behavior
+    });
+  });
+
+`;
+  }
+
+  if (types.includes('api')) {
+    code += `  describe('API Integration', () => {
+    it('should handle API calls', () => {
+      cy.intercept('GET', '/api/data', { fixture: 'data.json' }).as('getData');
+      cy.visit('/components/${componentId}');
+      cy.wait('@getData');
+      cy.get('[data-testid="${componentId}"]').should('be.visible');
     });
   });
 
@@ -751,126 +1210,91 @@ describe('${component.charAt(0).toUpperCase() + component.slice(1)} Component', 
   return code;
 };
 
-const generateCypressTests = (component, types) => {
-  let code = `describe('${component.charAt(0).toUpperCase() + component.slice(1)} Component', () => {
-`;
-
-  if (types.includes('unit')) {
-    code += `  it('should render correctly', () => {
-    cy.visit('/components/${component}');
-    cy.get('[data-testid="${component}"]').should('exist');
-  });
-
-`;
-  }
-
-  if (types.includes('integration')) {
-    code += `  it('should handle user interactions', () => {
-    cy.visit('/components/${component}');
-    cy.get('[data-testid="${component}"]').click();
-    // Add interaction assertions
-  });
-
-`;
-  }
-
-  if (types.includes('crossBrowser')) {
-    code += `  it('should work in Chrome', () => {
-    cy.visit('/components/${component}', { browser: 'chrome' });
-    cy.get('[data-testid="${component}"]').should('exist');
-  });
-
-  it('should work in Firefox', () => {
-    cy.visit('/components/${component}', { browser: 'firefox' });
-    cy.get('[data-testid="${component}"]').should('exist');
-  });
-
-  it('should work in Safari', () => {
-    cy.visit('/components/${component}', { browser: 'webkit' });
-    cy.get('[data-testid="${component}"]').should('exist');
-  });
-
-`;
-  }
-
-  if (types.includes('e2e')) {
-    code += `  it('should complete full user journey', () => {
-    cy.visit('/components/${component}');
-    cy.get('[data-testid="${component}"]').click();
-    cy.get('[data-testid="result"]').should('be.visible');
-    // Add more E2E steps
-  });
-
-`;
-  }
-
-  if (types.includes('api')) {
-    code += `  it('should handle API calls', () => {
-    cy.intercept('GET', '/api/data', { fixture: 'data.json' }).as('getData');
-    cy.visit('/components/${component}');
-    cy.wait('@getData');
-    cy.get('[data-testid="${component}"]').should('contain', 'Data loaded');
-  });
-
-`;
-  }
-
-  code += '});';
-  return code;
-};
-
-const generatePlaywrightTests = (component, types) => {
+const generatePlaywrightTests = (componentInfo, types) => {
+  const componentName = componentInfo.name || componentInfo.id.charAt(0).toUpperCase() + componentInfo.id.slice(1);
+  const componentId = componentInfo.id || componentInfo.name?.toLowerCase();
+  const props = analyzeProps(componentInfo.props || []);
+  
   let code = `import { test, expect } from '@playwright/test';
 
-test.describe('${component.charAt(0).toUpperCase() + component.slice(1)} Component', () => {
+test.describe('${componentName} Component', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/components/${componentId}');
+  });
+
 `;
 
   if (types.includes('unit')) {
     code += `  test('should render correctly', async ({ page }) => {
-    await page.goto('/components/${component}');
-    await expect(page.locator('[data-testid="${component}"]')).toBeVisible();
+    await expect(page.locator('[data-testid="${componentId}"]')).toBeVisible();
   });
 
+`;
+
+    // Test each enum prop
+    props.props.forEach(prop => {
+      if (prop.isEnum && prop.options.length > 0) {
+        prop.options.forEach(option => {
+          code += `  test('should render with ${prop.name}="${option}"', async ({ page }) => {
+    await expect(page.locator('[data-testid="${componentId}"][data-${prop.name}="${option}"]')).toBeVisible();
+  });
+
+`;
+        });
+      }
+    });
+
+    code += `
 `;
   }
 
   if (types.includes('crossBrowser')) {
-    code += `  test('should work in Chrome', async ({ page, browserName }) => {
-    test.skip(browserName !== 'chromium');
-    await page.goto('/components/${component}');
-    await expect(page.locator('[data-testid="${component}"]')).toBeVisible();
-  });
+    code += `  test.describe('Cross-Browser Compatibility', () => {
+    test('should work in Chrome', async ({ page, browserName }) => {
+      test.skip(browserName !== 'chromium');
+      await expect(page.locator('[data-testid="${componentId}"]')).toBeVisible();
+    });
 
-  test('should work in Firefox', async ({ page, browserName }) => {
-    test.skip(browserName !== 'firefox');
-    await page.goto('/components/${component}');
-    await expect(page.locator('[data-testid="${component}"]')).toBeVisible();
-  });
+    test('should work in Firefox', async ({ page, browserName }) => {
+      test.skip(browserName !== 'firefox');
+      await expect(page.locator('[data-testid="${componentId}"]')).toBeVisible();
+    });
 
-  test('should work in WebKit', async ({ page, browserName }) => {
-    test.skip(browserName !== 'webkit');
-    await page.goto('/components/${component}');
-    await expect(page.locator('[data-testid="${component}"]')).toBeVisible();
+    test('should work in WebKit', async ({ page, browserName }) => {
+      test.skip(browserName !== 'webkit');
+      await expect(page.locator('[data-testid="${componentId}"]')).toBeVisible();
+    });
   });
 
 `;
   }
 
   if (types.includes('e2e')) {
-    code += `  test('should complete full user flow', async ({ page }) => {
-    await page.goto('/components/${component}');
-    await page.click('[data-testid="${component}"]');
-    await expect(page.locator('[data-testid="result"]')).toBeVisible();
+    code += `  test.describe('End-to-End Tests', () => {
+    test('should complete full user flow', async ({ page }) => {
+      await page.click('[data-testid="${componentId}"]');
+`;
+
+    // Add prop-specific assertions
+    const eventHandlers = props.props.filter(p => p.isFunction);
+    if (eventHandlers.length > 0) {
+      code += `      // Verify event handlers were triggered
+`;
+    }
+
+    code += `      await expect(page.locator('[data-testid="${componentId}"]')).toBeVisible();
+    });
   });
 
 `;
   }
 
   if (types.includes('api')) {
-    code += `  test('should handle API integration', async ({ page }) => {
-    await page.route('**/api/data', route => route.fulfill({ json: { data: 'test' } }));
-    await page.goto('/components/${component}');
-    await expect(page.locator('[data-testid="${component}"]')).toContainText('test');
+    code += `  test.describe('API Integration', () => {
+    test('should handle API integration', async ({ page }) => {
+      await page.route('**/api/data', route => route.fulfill({ json: { data: 'test' } }));
+      await expect(page.locator('[data-testid="${componentId}"]')).toBeVisible();
+    });
   });
 
 `;
@@ -1107,7 +1531,9 @@ const toggleDrawer = () => {
 let darkModeObserver = null;
 let darkModeInterval = null;
 
-onMounted(() => {
+onMounted(async () => {
+  // Load available components
+  await loadComponents();
   darkModeObserver = new MutationObserver(() => {
     isDarkMode.value = document.documentElement.classList.contains('dark');
   });
