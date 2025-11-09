@@ -794,4 +794,40 @@ export class DesignSystemController {
     this.validateRequest(authHeader);
     return this.designSystemService.getTokenImpactAnalysis(tokenName);
   }
+
+  // Component Variant Builder endpoints
+  @Get('components/:id/variants')
+  getComponentVariants(
+    @Param('id') componentId: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return {
+      variants: this.designSystemService.getComponentVariants(componentId),
+    };
+  }
+
+  @Post('components/:id/variants')
+  saveComponentVariant(
+    @Param('id') componentId: string,
+    @Body() variant: any,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.saveComponentVariant(componentId, variant);
+  }
+
+  @Delete('components/:id/variants/:variantName')
+  deleteComponentVariant(
+    @Param('id') componentId: string,
+    @Param('variantName') variantName: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const deleted = this.designSystemService.deleteComponentVariant(componentId, variantName);
+    if (!deleted) {
+      throw new BadRequestException(`Variant '${variantName}' not found for component '${componentId}'`);
+    }
+    return { success: true };
+  }
 }

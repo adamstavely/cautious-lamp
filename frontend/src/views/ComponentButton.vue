@@ -300,9 +300,210 @@
 
           <!-- Variants Section -->
           <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Variants</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Explore different button styles and use cases.</p>
+            <div class="mb-8 flex items-center justify-between">
+              <div>
+                <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Variants</h2>
+                <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Explore different button styles and use cases.</p>
+              </div>
+              <button
+                @click="showVariantBuilder = !showVariantBuilder"
+                class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                :class="showVariantBuilder
+                  ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
+                  : (isDarkMode ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')"
+              >
+                <span class="material-symbols-outlined text-base">add</span>
+                {{ showVariantBuilder ? 'Hide Builder' : 'Create Variant' }}
+              </button>
+            </div>
+
+            <!-- Variant Builder -->
+            <div 
+              v-if="showVariantBuilder"
+              class="mb-8 rounded-lg shadow-sm border p-6"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">tune</span>
+                Variant Builder
+              </h3>
+
+              <div class="grid lg:grid-cols-2 gap-6">
+                <!-- Configuration Panel -->
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Variant Name *
+                    </label>
+                    <input
+                      v-model="newVariant.name"
+                      type="text"
+                      placeholder="e.g., success, danger, outline"
+                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      :class="isDarkMode 
+                        ? 'border-gray-600 bg-slate-800 text-white' 
+                        : 'border-gray-300 bg-white text-gray-900'"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Description
+                    </label>
+                    <textarea
+                      v-model="newVariant.description"
+                      rows="2"
+                      placeholder="Describe when to use this variant..."
+                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      :class="isDarkMode 
+                        ? 'border-gray-600 bg-slate-800 text-white' 
+                        : 'border-gray-300 bg-white text-gray-900'"
+                    />
+                  </div>
+
+                  <!-- Properties -->
+                  <div class="space-y-4 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                    <h4 class="text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Properties</h4>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                      <div>
+                        <label class="block text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Background</label>
+                        <input
+                          v-model="newVariant.properties.backgroundColor"
+                          type="text"
+                          placeholder="indigo-600 or {color.primary}"
+                          class="w-full px-3 py-1.5 text-sm border rounded focus:ring-2 focus:ring-indigo-500"
+                          :class="isDarkMode 
+                            ? 'border-gray-600 bg-slate-800 text-white' 
+                            : 'border-gray-300 bg-white text-gray-900'"
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Text Color</label>
+                        <input
+                          v-model="newVariant.properties.textColor"
+                          type="text"
+                          placeholder="white or {color.text}"
+                          class="w-full px-3 py-1.5 text-sm border rounded focus:ring-2 focus:ring-indigo-500"
+                          :class="isDarkMode 
+                            ? 'border-gray-600 bg-slate-800 text-white' 
+                            : 'border-gray-300 bg-white text-gray-900'"
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Border Radius</label>
+                        <select
+                          v-model="newVariant.properties.borderRadius"
+                          class="w-full px-3 py-1.5 text-sm border rounded focus:ring-2 focus:ring-indigo-500"
+                          :class="isDarkMode 
+                            ? 'border-gray-600 bg-slate-800 text-white' 
+                            : 'border-gray-300 bg-white text-gray-900'"
+                        >
+                          <option value="">None</option>
+                          <option value="sm">Small</option>
+                          <option value="md">Medium</option>
+                          <option value="lg">Large</option>
+                          <option value="xl">Extra Large</option>
+                          <option value="full">Full</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Padding</label>
+                        <select
+                          v-model="newVariant.properties.padding"
+                          class="w-full px-3 py-1.5 text-sm border rounded focus:ring-2 focus:ring-indigo-500"
+                          :class="isDarkMode 
+                            ? 'border-gray-600 bg-slate-800 text-white' 
+                            : 'border-gray-300 bg-white text-gray-900'"
+                        >
+                          <option value="">Default</option>
+                          <option value="sm">Small</option>
+                          <option value="md">Medium</option>
+                          <option value="lg">Large</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Hover State -->
+                    <div class="pt-2 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                      <label class="flex items-center gap-2 mb-2 cursor-pointer">
+                        <input
+                          v-model="showHoverState"
+                          type="checkbox"
+                          class="w-4 h-4 rounded accent-indigo-600"
+                        />
+                        <span class="text-xs font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Configure Hover State</span>
+                      </label>
+                      <div v-if="showHoverState" class="grid grid-cols-2 gap-4 mt-2">
+                        <div>
+                          <label class="block text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Hover BG</label>
+                          <input
+                            v-model="newVariant.properties.hover.backgroundColor"
+                            type="text"
+                            placeholder="indigo-700"
+                            class="w-full px-3 py-1.5 text-sm border rounded"
+                            :class="isDarkMode 
+                              ? 'border-gray-600 bg-slate-800 text-white' 
+                              : 'border-gray-300 bg-white text-gray-900'"
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Hover Text</label>
+                          <input
+                            v-model="newVariant.properties.hover.textColor"
+                            type="text"
+                            placeholder="white"
+                            class="w-full px-3 py-1.5 text-sm border rounded"
+                            :class="isDarkMode 
+                              ? 'border-gray-600 bg-slate-800 text-white' 
+                              : 'border-gray-300 bg-white text-gray-900'"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="flex gap-3 pt-4">
+                    <button
+                      @click="saveVariant"
+                      :disabled="!newVariant.name || savingVariant"
+                      class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                      :class="!newVariant.name || savingVariant
+                        ? (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-500 cursor-not-allowed')
+                        : (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')"
+                    >
+                      <span v-if="savingVariant" class="material-symbols-outlined text-sm animate-spin">refresh</span>
+                      <span v-else class="material-symbols-outlined text-sm">save</span>
+                      {{ savingVariant ? 'Saving...' : 'Save Variant' }}
+                    </button>
+                    <button
+                      @click="resetVariantBuilder"
+                      class="px-4 py-2 rounded-lg font-medium transition-colors"
+                      :class="isDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Live Preview -->
+                <div>
+                  <h4 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Live Preview</h4>
+                  <div class="rounded-lg p-8 mb-4" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                    <button
+                      :style="getVariantStyles(newVariant.properties)"
+                      class="transition-all"
+                    >
+                      {{ newVariant.name || 'New Variant' }}
+                    </button>
+                  </div>
+                  <div v-if="newVariant.generatedCode" class="rounded-lg p-4 overflow-x-auto" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                    <pre class="text-green-400 text-xs font-mono"><code>{{ newVariant.generatedCode.html || newVariant.generatedCode.vue }}</code></pre>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <div class="space-y-8">
@@ -388,6 +589,54 @@
 
 &lt;!-- Large --&gt;
 &lt;button class="px-8 py-4 text-lg bg-indigo-600 text-white rounded-lg"&gt;Large&lt;/button&gt;</code></pre>
+                </div>
+              </div>
+
+              <!-- Custom Variants -->
+              <div
+                v-for="variant in customVariants"
+                :key="variant.name"
+                class="rounded-2xl border p-8"
+                :class="isDarkMode 
+                  ? 'bg-slate-900 border-gray-700' 
+                  : 'bg-white border-gray-200'"
+              >
+                <div class="mb-6 flex items-center justify-between">
+                  <div>
+                    <div class="flex items-center gap-2 mb-2">
+                      <h3 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                        {{ variant.name.charAt(0).toUpperCase() + variant.name.slice(1) }}
+                      </h3>
+                      <span 
+                        class="px-2 py-0.5 rounded text-xs font-medium"
+                        :class="isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'"
+                      >
+                        Custom
+                      </span>
+                    </div>
+                    <p v-if="variant.description" class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      {{ variant.description }}
+                    </p>
+                  </div>
+                  <button
+                    @click="deleteVariant(variant.name)"
+                    class="p-2 rounded-lg transition-colors"
+                    :class="isDarkMode ? 'hover:bg-slate-800 text-gray-400 hover:text-red-400' : 'hover:bg-gray-100 text-gray-500 hover:text-red-600'"
+                    title="Delete variant"
+                  >
+                    <span class="material-symbols-outlined text-base">delete</span>
+                  </button>
+                </div>
+                <div class="rounded-lg p-6 mb-4" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <button
+                    :style="getVariantStyles(variant.properties)"
+                    class="transition-all"
+                  >
+                    {{ variant.name.charAt(0).toUpperCase() + variant.name.slice(1) }} Button
+                  </button>
+                </div>
+                <div v-if="variant.generatedCode" class="rounded-lg p-4 overflow-x-auto" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
+                  <pre class="text-green-400 text-sm font-mono"><code>{{ variant.generatedCode.html || variant.generatedCode.vue }}</code></pre>
                 </div>
               </div>
             </div>
@@ -1101,6 +1350,32 @@ const drawerOpen = ref(false);
 const previewDarkMode = ref(false);
 const codeFormat = ref('vue');
 
+// Variant Builder
+const showVariantBuilder = ref(false);
+const showHoverState = ref(false);
+const savingVariant = ref(false);
+const customVariants = ref([]);
+const newVariant = reactive({
+  name: '',
+  description: '',
+  properties: {
+    backgroundColor: '',
+    textColor: '',
+    borderColor: '',
+    borderWidth: '',
+    borderRadius: '',
+    padding: '',
+    fontSize: '',
+    fontWeight: '',
+    hover: {
+      backgroundColor: '',
+      textColor: '',
+      borderColor: '',
+    },
+  },
+  generatedCode: null,
+});
+
 // Get component status from shared store
 const componentStatus = computed(() => {
   const component = getComponent('Button');
@@ -1776,6 +2051,206 @@ const toggleDrawer = () => {
   drawerOpen.value = !drawerOpen.value;
 };
 
+// Variant Builder Methods
+const getVariantStyles = (properties) => {
+  const styles = {};
+  
+  // Resolve token references or use direct values
+  const resolveValue = (value) => {
+    if (!value) return '';
+    if (value.startsWith('{')) {
+      // Token reference - for now, use a placeholder
+      return '';
+    }
+    return value;
+  };
+  
+  // Background color
+  if (properties.backgroundColor) {
+    if (properties.backgroundColor.startsWith('{')) {
+      // Would need to resolve token
+      styles.backgroundColor = '#6366f1'; // Placeholder
+    } else {
+      // Try to map Tailwind class to color
+      const colorMap = {
+        'indigo-600': '#4f46e5',
+        'green-600': '#16a34a',
+        'red-600': '#dc2626',
+        'blue-600': '#2563eb',
+      };
+      styles.backgroundColor = colorMap[properties.backgroundColor] || properties.backgroundColor;
+    }
+  }
+  
+  // Text color
+  if (properties.textColor) {
+    if (properties.textColor.startsWith('{')) {
+      styles.color = '#ffffff'; // Placeholder
+    } else {
+      const colorMap = {
+        'white': '#ffffff',
+        'gray-900': '#111827',
+        'indigo-600': '#4f46e5',
+      };
+      styles.color = colorMap[properties.textColor] || properties.textColor;
+    }
+  }
+  
+  // Border
+  if (properties.borderColor) {
+    styles.borderColor = properties.borderColor.startsWith('{') ? '#4f46e5' : properties.borderColor;
+    styles.borderStyle = 'solid';
+    styles.borderWidth = properties.borderWidth || '1px';
+  }
+  
+  // Border radius
+  const radiusMap = {
+    'sm': '0.25rem',
+    'md': '0.5rem',
+    'lg': '0.75rem',
+    'xl': '1rem',
+    'full': '9999px',
+  };
+  if (properties.borderRadius) {
+    styles.borderRadius = radiusMap[properties.borderRadius] || properties.borderRadius;
+  }
+  
+  // Padding
+  const paddingMap = {
+    'sm': '0.5rem 1rem',
+    'md': '0.75rem 1.5rem',
+    'lg': '1rem 2rem',
+  };
+  if (properties.padding) {
+    styles.padding = paddingMap[properties.padding] || properties.padding;
+  } else {
+    styles.padding = '0.75rem 1.5rem';
+  }
+  
+  // Font size
+  if (properties.fontSize) {
+    const fontSizeMap = {
+      'sm': '0.875rem',
+      'md': '1rem',
+      'lg': '1.125rem',
+    };
+    styles.fontSize = fontSizeMap[properties.fontSize] || properties.fontSize;
+  }
+  
+  // Font weight
+  if (properties.fontWeight) {
+    styles.fontWeight = properties.fontWeight;
+  }
+  
+  return styles;
+};
+
+const saveVariant = async () => {
+  if (!newVariant.name) return;
+  
+  savingVariant.value = true;
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/components/button/variants`,
+      newVariant,
+      { headers: { Authorization: `Bearer ${API_KEY}` } }
+    );
+    
+    window.showToast?.('Variant saved successfully', 'success');
+    customVariants.value.push(response.data);
+    resetVariantBuilder();
+    showVariantBuilder.value = false;
+    
+    // Reload variants
+    await loadVariants();
+  } catch (error) {
+    console.error('Error saving variant:', error);
+    window.showToast?.('Failed to save variant', 'error');
+  } finally {
+    savingVariant.value = false;
+  }
+};
+
+const resetVariantBuilder = () => {
+  newVariant.name = '';
+  newVariant.description = '';
+  newVariant.properties = {
+    backgroundColor: '',
+    textColor: '',
+    borderColor: '',
+    borderWidth: '',
+    borderRadius: '',
+    padding: '',
+    fontSize: '',
+    fontWeight: '',
+    hover: {
+      backgroundColor: '',
+      textColor: '',
+      borderColor: '',
+    },
+  };
+  newVariant.generatedCode = null;
+  showHoverState.value = false;
+};
+
+const loadVariants = async () => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/components/button/variants`,
+      { headers: { Authorization: `Bearer ${API_KEY}` } }
+    );
+    customVariants.value = response.data.variants.filter(v => 
+      !['primary', 'secondary', 'tertiary'].includes(v.name)
+    );
+  } catch (error) {
+    console.error('Error loading variants:', error);
+  }
+};
+
+const deleteVariant = async (variantName) => {
+  if (!confirm(`Are you sure you want to delete the "${variantName}" variant?`)) {
+    return;
+  }
+  
+  try {
+    await axios.delete(
+      `${API_BASE_URL}/components/button/variants/${variantName}`,
+      { headers: { Authorization: `Bearer ${API_KEY}` } }
+    );
+    
+    window.showToast?.('Variant deleted successfully', 'success');
+    customVariants.value = customVariants.value.filter(v => v.name !== variantName);
+  } catch (error) {
+    console.error('Error deleting variant:', error);
+    window.showToast?.('Failed to delete variant', 'error');
+  }
+};
+
+// Watch for property changes to generate code preview
+watch(() => newVariant.properties, () => {
+  if (newVariant.name) {
+    // Generate preview code
+    const classes = [];
+    if (newVariant.properties.backgroundColor) {
+      classes.push(`bg-${newVariant.properties.backgroundColor}`);
+    }
+    if (newVariant.properties.textColor) {
+      classes.push(`text-${newVariant.properties.textColor}`);
+    }
+    if (newVariant.properties.borderRadius) {
+      classes.push(`rounded-${newVariant.properties.borderRadius}`);
+    }
+    if (newVariant.properties.hover?.backgroundColor) {
+      classes.push(`hover:bg-${newVariant.properties.hover.backgroundColor}`);
+    }
+    
+    newVariant.generatedCode = {
+      html: `<button class="${classes.join(' ')}">${newVariant.name}</button>`,
+      vue: `<button class="${classes.join(' ')}">${newVariant.name}</button>`,
+    };
+  }
+}, { deep: true });
+
 let darkModeObserver = null;
 let darkModeInterval = null;
 
@@ -1798,6 +2273,9 @@ onMounted(() => {
   
   // Load performance data
   loadPerformanceData();
+  
+  // Load custom variants
+  loadVariants();
 });
 
 onBeforeUnmount(() => {

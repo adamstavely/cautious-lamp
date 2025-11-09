@@ -18,7 +18,7 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 - ✅ **Design System Analytics** - Analytics integrated into System Health Dashboard (basic)
 - ✅ **Component Feedback/Request System** - Request new components, report issues, vote on features (full backend API with persistence, workflow states, approval process, comments, voting, analytics)
 - ✅ **Design System API** - REST API for tokens/components with SDK and CLI
-- ✅ **Component Library Export** - Export to Storybook, PDF, Markdown, PenPot
+- ✅ **Component Library Export** - Export to Storybook, PDF, Markdown, PenPot, Adobe XD
 
 ### Developer Experience
 - ✅ **Design Tokens Playground** - Visual editor for testing token combinations
@@ -179,7 +179,8 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 ### Export/Import Capabilities (#23)
 **Current**: Some export in handoff tools, Storybook/PDF/Markdown/PenPot export  
 **Enhancements Needed**:
-- [ ] More export formats (Figma, Sketch, Adobe XD)
+- ✅ Adobe XD export format (design tokens and component specifications)
+- [ ] More export formats (Figma, Sketch)
 
 ### Component Request & Approval Workflow (#2)
 **Current**: Full backend API with persistence, workflow states, approval process, comments, voting, analytics  

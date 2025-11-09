@@ -199,6 +199,10 @@ const router = createRouter({
       component: () => import('./views/ComponentButton.vue'),
     },
     {
+      path: '/components/export',
+      component: () => import('./views/ComponentLibraryExport.vue'),
+    },
+    {
       path: '/components/color-picker',
       component: () => import('./views/ComponentColorPicker.vue'),
     },

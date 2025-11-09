@@ -15,6 +15,41 @@ export interface Token {
   tags?: string[];
 }
 
+export interface ComponentVariant {
+  name: string;
+  description?: string;
+  properties: {
+    backgroundColor?: string; // Token reference or color value
+    textColor?: string;
+    borderColor?: string;
+    borderWidth?: string;
+    borderRadius?: string;
+    padding?: string;
+    fontSize?: string;
+    fontWeight?: string;
+    hover?: {
+      backgroundColor?: string;
+      textColor?: string;
+      borderColor?: string;
+    };
+    active?: {
+      backgroundColor?: string;
+      textColor?: string;
+      borderColor?: string;
+    };
+    disabled?: {
+      backgroundColor?: string;
+      textColor?: string;
+      opacity?: string;
+    };
+  };
+  generatedCode?: {
+    vue?: string;
+    react?: string;
+    html?: string;
+  };
+}
+
 export interface Component {
   id: string;
   name: string;
@@ -32,6 +67,7 @@ export interface Component {
     wcag: string;
     notes?: string;
   };
+  variants?: ComponentVariant[]; // Custom variants created via builder
 }
 
 export interface ComponentProp {
@@ -1277,6 +1313,161 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
       return this.components.filter(component => component.status === status);
     }
     return this.components;
+  }
+
+  /**
+   * Get component variants (both built-in and custom)
+   */
+  getComponentVariants(componentId: string): ComponentVariant[] {
+    const component = this.getComponentById(componentId);
+    if (!component) {
+      return [];
+    }
+    
+    // Extract built-in variants from props
+    const variantProp = component.props.find(p => p.name === 'variant');
+    const builtInVariants: ComponentVariant[] = [];
+    
+    if (variantProp && variantProp.options) {
+      variantProp.options.forEach(option => {
+        builtInVariants.push({
+          name: option,
+          description: `Built-in ${option} variant`,
+          properties: {}, // Will be generated from code
+        });
+      });
+    }
+    
+    // Merge with custom variants
+    const customVariants = component.variants || [];
+    
+    return [...builtInVariants, ...customVariants];
+  }
+
+  /**
+   * Add or update a component variant
+   */
+  saveComponentVariant(componentId: string, variant: ComponentVariant): ComponentVariant {
+    const component = this.getComponentById(componentId);
+    if (!component) {
+      throw new Error(`Component ${componentId} not found`);
+    }
+    
+    if (!component.variants) {
+      component.variants = [];
+    }
+    
+    // Generate code for the variant
+    variant.generatedCode = this.generateVariantCode(component, variant);
+    
+    // Update or add variant
+    const existingIndex = component.variants.findIndex(v => v.name === variant.name);
+    if (existingIndex >= 0) {
+      component.variants[existingIndex] = variant;
+    } else {
+      component.variants.push(variant);
+    }
+    
+    // Update variant prop options if needed
+    const variantProp = component.props.find(p => p.name === 'variant');
+    if (variantProp && !variantProp.options?.includes(variant.name)) {
+      if (!variantProp.options) {
+        variantProp.options = [];
+      }
+      variantProp.options.push(variant.name);
+    }
+    
+    return variant;
+  }
+
+  /**
+   * Delete a component variant
+   */
+  deleteComponentVariant(componentId: string, variantName: string): boolean {
+    const component = this.getComponentById(componentId);
+    if (!component || !component.variants) {
+      return false;
+    }
+    
+    const index = component.variants.findIndex(v => v.name === variantName);
+    if (index >= 0) {
+      component.variants.splice(index, 1);
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Generate code for a variant
+   */
+  private generateVariantCode(component: Component, variant: ComponentVariant): {
+    vue?: string;
+    react?: string;
+    html?: string;
+  } {
+    const props = variant.properties;
+    const classes: string[] = [];
+    
+    // Build Tailwind classes from properties
+    if (props.backgroundColor) {
+      if (props.backgroundColor.startsWith('{')) {
+        // Token reference - would need to resolve
+        classes.push(`bg-[var(--${props.backgroundColor.slice(1, -1).replace(/\./g, '-')})]`);
+      } else {
+        classes.push(`bg-${props.backgroundColor}`);
+      }
+    }
+    
+    if (props.textColor) {
+      if (props.textColor.startsWith('{')) {
+        classes.push(`text-[var(--${props.textColor.slice(1, -1).replace(/\./g, '-')})]`);
+      } else {
+        classes.push(`text-${props.textColor}`);
+      }
+    }
+    
+    if (props.borderColor) {
+      classes.push(`border-${props.borderColor}`);
+    }
+    
+    if (props.borderWidth) {
+      classes.push(`border-${props.borderWidth}`);
+    }
+    
+    if (props.borderRadius) {
+      classes.push(`rounded-${props.borderRadius}`);
+    }
+    
+    if (props.padding) {
+      classes.push(`p-${props.padding}`);
+    }
+    
+    if (props.fontSize) {
+      classes.push(`text-${props.fontSize}`);
+    }
+    
+    if (props.fontWeight) {
+      classes.push(`font-${props.fontWeight}`);
+    }
+    
+    // Hover states
+    if (props.hover) {
+      if (props.hover.backgroundColor) {
+        classes.push(`hover:bg-${props.hover.backgroundColor}`);
+      }
+      if (props.hover.textColor) {
+        classes.push(`hover:text-${props.hover.textColor}`);
+      }
+    }
+    
+    const classString = classes.join(' ');
+    
+    return {
+      vue: `<button class="${classString}">${variant.name}</button>`,
+      react: `<button className="${classString}">${variant.name}</button>`,
+      html: `<button class="${classString}">${variant.name}</button>`,
+    };
   }
 
   getComponentById(id: string): Component | undefined {

@@ -253,6 +253,38 @@
                 Export PenPot
               </button>
             </div>
+
+            <!-- Adobe XD -->
+            <div 
+              class="rounded-lg shadow-sm border p-6 cursor-pointer transition-all hover:shadow-md"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
+                : 'bg-white border-gray-200 hover:border-indigo-500'"
+              @click="exportFormat = 'adobe-xd'"
+            >
+              <div class="flex items-center gap-3 mb-4">
+                <div class="p-2 rounded-lg" :class="isDarkMode ? 'bg-purple-900/30' : 'bg-purple-50'">
+                  <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-purple-400' : 'text-purple-600'">
+                    palette
+                  </span>
+                </div>
+                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  Adobe XD
+                </h3>
+              </div>
+              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Export design tokens and component specifications for Adobe XD.
+              </p>
+              <button
+                @click.stop="exportAdobeXD"
+                class="w-full px-4 py-2 rounded-lg font-medium transition-colors"
+                :class="isDarkMode 
+                  ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+                  : 'bg-purple-600 hover:bg-purple-700 text-white'"
+              >
+                Export Adobe XD
+              </button>
+            </div>
           </div>
         </div>
 
@@ -796,6 +828,152 @@ ${mockTokens.map(t => `- ${t.name}: ${t.value}`).join('\n')}
     files.push({ name: 'README.md', content: readme, type: 'text/markdown' });
     
     await downloadZip(files, 'penpot-design-system.zip');
+    exportStatus.value = 'success';
+    setTimeout(() => { exportStatus.value = ''; }, 3000);
+  } catch (error) {
+    console.error('Export error:', error);
+    exportStatus.value = '';
+  }
+};
+
+const exportAdobeXD = async () => {
+  exportFormat.value = 'adobe-xd';
+  exportStatus.value = 'processing';
+  
+  try {
+    const files = [];
+    
+    // Adobe XD uses a JSON format for design specifications
+    // Format based on Adobe XD's design spec format
+    const adobeXDData = {
+      version: '1.0.0',
+      name: 'Design System',
+      metadata: {
+        exportedAt: new Date().toISOString(),
+        exportedBy: 'Design System Platform',
+        format: 'adobe-xd-spec'
+      },
+      designTokens: exportSettings.value.includeTokens ? {
+        colors: mockTokens
+          .filter(t => t.type === 'color' || t.category === 'colors')
+          .map(token => ({
+            name: token.name.replace(/\./g, '_'),
+            value: token.value,
+            type: 'color',
+            description: token.name
+          })),
+        spacing: mockTokens
+          .filter(t => t.type === 'dimension' && t.category === 'spacing')
+          .map(token => ({
+            name: token.name.replace(/\./g, '_'),
+            value: token.value,
+            type: 'spacing',
+            description: token.name
+          })),
+        typography: mockTokens
+          .filter(t => t.category === 'typography')
+          .map(token => ({
+            name: token.name.replace(/\./g, '_'),
+            value: token.value,
+            type: token.type,
+            description: token.name
+          }))
+      } : {},
+      components: exportSettings.value.includeComponents ? mockComponents.map(comp => ({
+        name: comp.name,
+        description: comp.description,
+        type: 'component',
+        properties: comp.props.map(prop => ({
+          name: prop.name,
+          type: prop.type,
+          defaultValue: prop.default || null,
+          description: prop.description || ''
+        })),
+        specifications: {
+          code: comp.code,
+          framework: ['vue', 'react']
+        }
+      })) : [],
+      documentation: exportSettings.value.includeDocs ? {
+        overview: 'Design System exported from Design System Platform',
+        components: mockComponents.map(c => ({
+          name: c.name,
+          description: c.description,
+          usage: `Use the ${c.name} component for ${c.description.toLowerCase()}`
+        }))
+      } : {}
+    };
+    
+    // Main specification file
+    files.push({ 
+      name: 'design-system-xd-spec.json', 
+      content: JSON.stringify(adobeXDData, null, 2), 
+      type: 'application/json' 
+    });
+    
+    // Adobe XD plugin manifest (for potential plugin integration)
+    const pluginManifest = {
+      id: 'design-system-sync',
+      name: 'Design System Sync',
+      version: '1.0.0',
+      description: 'Sync design tokens and components from Design System Platform',
+      author: 'Design System Platform',
+      entrypoints: {
+        'plugin': './plugin.js'
+      },
+      permissions: ['read', 'write']
+    };
+    files.push({ 
+      name: 'manifest.json', 
+      content: JSON.stringify(pluginManifest, null, 2), 
+      type: 'application/json' 
+    });
+    
+    // README with import instructions
+    const readme = `# Adobe XD Design System Import
+
+## How to Use
+
+### Option 1: Manual Import (Design Tokens)
+
+1. Open Adobe XD
+2. Go to **Plugins > Discover Plugins** and search for "Design Tokens" or "Design Specs"
+3. Use a plugin that supports JSON token import
+4. Import the \`design-system-xd-spec.json\` file
+
+### Option 2: Component Specifications
+
+The exported JSON contains component specifications that can be used to:
+- Create component libraries in Adobe XD
+- Reference design tokens for consistent styling
+- Document component properties and usage
+
+## File Structure
+
+- \`design-system-xd-spec.json\` - Main specification file with tokens and components
+- \`manifest.json\` - Plugin manifest (for future plugin development)
+- \`README.md\` - This file
+
+## Design Tokens
+
+${exportSettings.value.includeTokens ? mockTokens.map(t => `- **${t.name}**: \`${t.value}\` (${t.type})`).join('\n') : 'No tokens included'}
+
+## Components
+
+${exportSettings.value.includeComponents ? mockComponents.map(c => `- **${c.name}**: ${c.description}`).join('\n') : 'No components included'}
+
+## Notes
+
+- Color values are in hex format
+- Spacing values use CSS units (rem, px, etc.)
+- Component specifications include props and code examples
+- This export is compatible with Adobe XD's design spec format
+
+For more information, visit the Design System Platform documentation.
+`;
+    files.push({ name: 'README.md', content: readme, type: 'text/markdown' });
+    
+    await downloadZip(files, 'adobe-xd-design-system.zip');
     exportStatus.value = 'success';
     setTimeout(() => { exportStatus.value = ''; }, 3000);
   } catch (error) {
