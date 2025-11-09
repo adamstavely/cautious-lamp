@@ -930,6 +930,7 @@ const componentUtilities = [
 ];
 
 const componentItems = [
+  { text: 'Component Scaffolding Wizard', link: '/components/scaffold', icon: 'auto_fix_high' },
   { text: 'Buttons', link: '/components/buttons', icon: 'smart_button' },
   { text: 'Color Picker', link: '/components/color-picker', icon: 'pipette' },
   { text: 'Forms', link: '/components/forms', icon: 'description' },

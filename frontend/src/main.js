@@ -319,6 +319,10 @@ const router = createRouter({
         component: () => import('./views/ContentManagement.vue'),
       },
       {
+        path: '/components/scaffold',
+        component: () => import('./views/ComponentScaffoldingWizard.vue'),
+      },
+      {
         path: '/admin/applications',
         component: () => import('./views/ApplicationManagement.vue'),
       },

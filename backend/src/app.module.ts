@@ -12,6 +12,7 @@ import { SystemHealthModule } from './system-health/system-health.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { TokenSyncModule } from './token-sync/token-sync.module';
 import { DesignSyncModule } from './design-sync/design-sync.module';
+import { ComponentScaffoldingModule } from './component-scaffolding/component-scaffolding.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
@@ -40,6 +41,7 @@ import { ElasticsearchModule } from '@nestjs/elasticsearch';
     AnalyticsModule,
     TokenSyncModule,
     DesignSyncModule,
+    ComponentScaffoldingModule,
   ],
 })
 export class AppModule {}
