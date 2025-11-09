@@ -195,10 +195,7 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 - ✅ Request analytics - Request volume, fulfillment rates, time to completion, trends
 - ✅ Roadmap integration - Approved requests automatically create roadmap items as "planned" features
 - [ ] Email notifications - Automated email notifications for status changes
-- [ ] Auto-assignment rules - Automated assignment based on category/priority
 - [ ] Integration with component creation - Auto-link requests to created components
-- [ ] Advanced filtering - More filter options (date range, assignee, etc.)
-- [ ] Request templates - Pre-filled templates for different request types
 
 ### Visual Regression Testing (Argos) Enhancements
 **Current**: Phase 1 & Quick Wins completed  
