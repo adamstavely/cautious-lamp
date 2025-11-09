@@ -639,7 +639,7 @@ export const config: Config = {
       return `'${value}'`;
     }
     if (type === 'boolean') {
-      return value === 'true';
+      return value === 'true' ? 'true' : 'false';
     }
     if (type === 'number') {
       return value;

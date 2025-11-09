@@ -783,16 +783,46 @@
           </div>
           <div>
             <label for="request-use-case" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Use Case
+              Detailed Use Case
             </label>
             <textarea
               id="request-use-case"
               v-model="requestForm.useCase"
-              rows="3"
+              rows="5"
               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-              placeholder="How would you use this component?"
+              placeholder="Provide a detailed use case: What problem does this solve? Where would it be used? What are the specific requirements?"
             ></textarea>
+            <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+              Include: Problem statement, use cases, specific requirements, and any design considerations.
+            </p>
+          </div>
+          <div>
+            <label for="request-estimated-effort" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+              Estimated Effort (hours)
+            </label>
+            <input
+              id="request-estimated-effort"
+              v-model.number="requestForm.estimatedEffort"
+              type="number"
+              min="0"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+              placeholder="e.g., 40"
+            />
+          </div>
+          <div>
+            <label for="request-target-release" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+              Target Release (optional)
+            </label>
+            <input
+              id="request-target-release"
+              v-model="requestForm.targetRelease"
+              type="text"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+              placeholder="e.g., Q2 2024, v2.5.0"
+            />
           </div>
           <div>
             <label for="request-category" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -994,6 +1024,103 @@
               </span>
             </div>
           </div>
+
+          <!-- Approval Workflow -->
+          <div v-if="selectedRequest.metadata && (selectedRequest.status === 'under-review' || selectedRequest.status === 'approved')" 
+            class="p-4 rounded-lg border"
+            :class="isDarkMode ? 'bg-slate-700 border-gray-600' : 'bg-gray-50 border-gray-200'"
+          >
+            <h3 class="text-sm font-medium mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Approval Workflow</h3>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-lg" :class="selectedRequest.metadata.designApproved ? 'text-green-500' : (isDarkMode ? 'text-gray-500' : 'text-gray-400')">
+                    {{ selectedRequest.metadata.designApproved ? 'check_circle' : 'radio_button_unchecked' }}
+                  </span>
+                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Design Review</span>
+                </div>
+                <span v-if="selectedRequest.metadata.designApproved" class="text-xs text-green-500">Approved</span>
+                <button
+                  v-else-if="canApprove"
+                  @click="approveRequest(selectedRequest.id, 'design')"
+                  class="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+                >
+                  Approve
+                </button>
+              </div>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-lg" :class="selectedRequest.metadata.technicalApproved ? 'text-green-500' : (isDarkMode ? 'text-gray-500' : 'text-gray-400')">
+                    {{ selectedRequest.metadata.technicalApproved ? 'check_circle' : 'radio_button_unchecked' }}
+                  </span>
+                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Technical Review</span>
+                </div>
+                <span v-if="selectedRequest.metadata.technicalApproved" class="text-xs text-green-500">Approved</span>
+                <button
+                  v-else-if="canApprove"
+                  @click="approveRequest(selectedRequest.id, 'technical')"
+                  class="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+                >
+                  Approve
+                </button>
+              </div>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-lg" :class="selectedRequest.metadata.designApproved && selectedRequest.metadata.technicalApproved && selectedRequest.status === 'approved' ? 'text-green-500' : (isDarkMode ? 'text-gray-500' : 'text-gray-400')">
+                    {{ selectedRequest.metadata.designApproved && selectedRequest.metadata.technicalApproved && selectedRequest.status === 'approved' ? 'check_circle' : 'radio_button_unchecked' }}
+                  </span>
+                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Final Approval</span>
+                </div>
+                <span v-if="selectedRequest.status === 'approved'" class="text-xs text-green-500">Approved</span>
+                <button
+                  v-else-if="canApprove && selectedRequest.metadata.designApproved && selectedRequest.metadata.technicalApproved"
+                  @click="approveRequest(selectedRequest.id, 'final')"
+                  class="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+                >
+                  Final Approve
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status Transition Actions -->
+          <div v-if="canApprove" class="flex gap-2 flex-wrap">
+            <button
+              v-if="selectedRequest.status === 'submitted'"
+              @click="transitionStatus(selectedRequest.id, 'under-review')"
+              class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors text-sm"
+            >
+              Start Review
+            </button>
+            <button
+              v-if="selectedRequest.status === 'approved'"
+              @click="transitionStatus(selectedRequest.id, 'in-progress')"
+              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors text-sm"
+            >
+              Start Implementation
+            </button>
+            <button
+              v-if="selectedRequest.status === 'in-progress'"
+              @click="transitionStatus(selectedRequest.id, 'completed')"
+              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors text-sm"
+            >
+              Mark Complete
+            </button>
+            <button
+              v-if="selectedRequest.status === 'completed'"
+              @click="transitionStatus(selectedRequest.id, 'released')"
+              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors text-sm"
+            >
+              Release
+            </button>
+            <button
+              v-if="['submitted', 'under-review', 'needs-more-info'].includes(selectedRequest.status)"
+              @click="showRejectModal = true"
+              class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors text-sm"
+            >
+              Reject
+            </button>
+          </div>
           <div v-if="selectedRequest.comments && selectedRequest.comments.length > 0">
             <h3 class="text-sm font-medium mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Comments</h3>
             <div class="space-y-4">
@@ -1033,6 +1160,59 @@
         </div>
       </div>
     </div>
+
+    <!-- Reject Request Modal -->
+    <div
+      v-if="showRejectModal"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      @click.self="showRejectModal = false"
+    >
+      <div 
+        class="rounded-lg shadow-xl max-w-md w-full"
+        :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+          <h2 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+            Reject Request
+          </h2>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+              Reason for Rejection *
+            </label>
+            <textarea
+              v-model="rejectReason"
+              rows="4"
+              required
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+              placeholder="Please provide a reason for rejecting this request..."
+            ></textarea>
+          </div>
+          <div class="flex gap-3">
+            <button
+              @click="showRejectModal = false"
+              class="flex-1 px-4 py-2 border rounded-lg font-medium transition-colors"
+              :class="isDarkMode 
+                ? 'border-gray-600 bg-slate-700 hover:bg-slate-600 text-gray-300' 
+                : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700'"
+            >
+              Cancel
+            </button>
+            <button
+              @click="rejectRequest(selectedRequest?.id, rejectReason)"
+              :disabled="!rejectReason.trim()"
+              class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Reject Request
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1061,6 +1241,11 @@ const selectedRequest = ref(null);
 const newComment = ref('');
 const canEditRoadmap = ref(false);
 const canEditReleaseNotes = ref(false);
+const canApprove = ref(false);
+const showRejectModal = ref(false);
+const rejectReason = ref('');
+const requestAnalytics = ref(null);
+const loadingAnalytics = ref(false);
 
 const API_BASE_URL = 'http://localhost:3000/api/v1';
 const API_KEY = 'test-api-key-123';
@@ -1069,11 +1254,16 @@ const API_KEY = 'test-api-key-123';
 const checkPermissions = async () => {
   try {
     const userId = localStorage.getItem('userId');
+    const userRole = localStorage.getItem('userRole');
     if (!userId) {
       canEditRoadmap.value = false;
       canEditReleaseNotes.value = false;
+      canApprove.value = false;
       return;
     }
+    
+    // Check if user has approval permissions (design_system_manager, review_manager, etc.)
+    canApprove.value = ['design_system_manager', 'review_manager', 'system_owner'].includes(userRole);
     
     const roadmapEditResponse = await axios.get(
       `http://localhost:3000/api/v1/rbac/users/${userId}/permissions/roadmap:edit`
@@ -1086,6 +1276,7 @@ const checkPermissions = async () => {
     // Fail open - allow viewing but not editing
     canEditRoadmap.value = false;
     canEditReleaseNotes.value = false;
+    canApprove.value = false;
   }
 };
 
@@ -1319,7 +1510,7 @@ const closeRoadmapModal = () => {
 const loadRequests = async () => {
   loadingRequests.value = true;
   try {
-    const response = await axios.get(`${API_BASE_URL}/requests`, {
+    const response = await axios.get(`${API_BASE_URL}/component-requests`, {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
     requests.value = response.data || [];
@@ -1330,6 +1521,8 @@ const loadRequests = async () => {
     });
   } catch (error) {
     console.error('Error loading requests:', error);
+    // Fallback to empty array if API fails
+    requests.value = [];
   } finally {
     loadingRequests.value = false;
   }
@@ -1357,23 +1550,62 @@ const submitRequest = async () => {
 
   submittingRequest.value = true;
   try {
+    // Check for duplicates first (optional - don't fail if endpoint isn't available)
+    try {
+      const duplicateCheck = await axios.get(
+        `${API_BASE_URL}/component-requests/duplicates`,
+        {
+          params: {
+            title: requestForm.value.title,
+            description: requestForm.value.description,
+          },
+          headers: { Authorization: `Bearer ${API_KEY}` }
+        }
+      );
+
+      // If duplicates found, show warning but allow submission
+      if (duplicateCheck.data.similar && duplicateCheck.data.similar.length > 0) {
+        const similarTitles = duplicateCheck.data.similar.map(s => s.title).join(', ');
+        const proceed = confirm(
+          `Similar requests found:\n${similarTitles}\n\nDo you want to submit anyway?`
+        );
+        if (!proceed) {
+          submittingRequest.value = false;
+          return;
+        }
+      }
+    } catch (duplicateError) {
+      // Silently continue if duplicate check fails (endpoint might not be available yet)
+      console.warn('Duplicate check failed, continuing with submission:', duplicateError);
+    }
+
     const response = await axios.post(
-      `${API_BASE_URL}/requests`,
+      `${API_BASE_URL}/component-requests`,
       {
         title: requestForm.value.title,
         description: requestForm.value.description,
         useCase: requestForm.value.useCase || undefined,
         requestedBy: 'current-user',
         category: requestForm.value.category,
-        priority: requestForm.value.priority || 'medium'
+        priority: requestForm.value.priority || 'medium',
+        estimatedEffort: requestForm.value.estimatedEffort,
+        targetRelease: requestForm.value.targetRelease || undefined
       },
       {
         headers: { Authorization: `Bearer ${API_KEY}` }
       }
     );
 
-    requests.value.unshift(response.data);
-    requestForm.value = { title: '', description: '', useCase: '', category: '', priority: 'medium' };
+    // Handle duplicate warning response
+    if (response.data.duplicateWarning) {
+      const similarTitles = response.data.similarRequests.map(s => s.title).join(', ');
+      alert(`Request submitted, but similar requests exist: ${similarTitles}`);
+      requests.value.unshift(response.data.request);
+    } else {
+      requests.value.unshift(response.data);
+    }
+
+    requestForm.value = { title: '', description: '', useCase: '', category: '', priority: 'medium', estimatedEffort: undefined, targetRelease: '' };
     showRequestModal.value = false;
   } catch (error) {
     console.error('Error submitting request:', error);
@@ -1419,7 +1651,7 @@ const submitIssue = async () => {
 const voteRequest = async (requestId) => {
   try {
     const response = await axios.post(
-      `${API_BASE_URL}/requests/${requestId}/vote`,
+      `${API_BASE_URL}/component-requests/${requestId}/vote`,
       { userId: 'current-user' },
       {
         headers: { Authorization: `Bearer ${API_KEY}` }
@@ -1448,7 +1680,7 @@ const isUserVoted = (requestId) => {
 
 const openRequestDetails = async (request) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/requests/${request.id}`, {
+    const response = await axios.get(`${API_BASE_URL}/component-requests/${request.id}`, {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
     selectedRequest.value = response.data;
@@ -1463,7 +1695,7 @@ const addComment = async (requestId) => {
 
   try {
     const response = await axios.post(
-      `${API_BASE_URL}/requests/${requestId}/comments`,
+      `${API_BASE_URL}/component-requests/${requestId}/comments`,
       {
         author: 'current-user',
         content: newComment.value
@@ -1491,6 +1723,122 @@ const addComment = async (requestId) => {
     newComment.value = '';
   } catch (error) {
     console.error('Error adding comment:', error);
+  }
+};
+
+// Status transition
+const transitionStatus = async (requestId, newStatus) => {
+  try {
+    const response = await axios.patch(
+      `${API_BASE_URL}/component-requests/${requestId}/status`,
+      {
+        status: newStatus,
+        userId: 'current-user',
+        comment: `Status changed to ${newStatus}`
+      },
+      {
+        headers: { Authorization: `Bearer ${API_KEY}` }
+      }
+    );
+
+    // Update in list
+    const request = requests.value.find(r => r.id === requestId);
+    if (request) {
+      request.status = response.data.status;
+      request.updatedAt = response.data.updatedAt;
+    }
+
+    // Update in selected request
+    if (selectedRequest.value && selectedRequest.value.id === requestId) {
+      selectedRequest.value = response.data;
+    }
+  } catch (error) {
+    console.error('Error transitioning status:', error);
+    alert(error.response?.data?.message || 'Failed to change status');
+  }
+};
+
+// Approve request
+const approveRequest = async (requestId, stage) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/component-requests/${requestId}/approve`,
+      {
+        userId: 'current-user',
+        stage: stage
+      },
+      {
+        headers: { Authorization: `Bearer ${API_KEY}` }
+      }
+    );
+
+    // Update in list
+    const request = requests.value.find(r => r.id === requestId);
+    if (request) {
+      request.status = response.data.status;
+      request.metadata = response.data.metadata;
+      request.updatedAt = response.data.updatedAt;
+    }
+
+    // Update in selected request
+    if (selectedRequest.value && selectedRequest.value.id === requestId) {
+      selectedRequest.value = response.data;
+    }
+  } catch (error) {
+    console.error('Error approving request:', error);
+    alert(error.response?.data?.message || 'Failed to approve request');
+  }
+};
+
+// Reject request
+const rejectRequest = async (requestId, reason) => {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/component-requests/${requestId}/reject`,
+      {
+        userId: 'current-user',
+        reason: reason
+      },
+      {
+        headers: { Authorization: `Bearer ${API_KEY}` }
+      }
+    );
+
+    // Update in list
+    const request = requests.value.find(r => r.id === requestId);
+    if (request) {
+      request.status = response.data.status;
+      request.updatedAt = response.data.updatedAt;
+    }
+
+    // Update in selected request
+    if (selectedRequest.value && selectedRequest.value.id === requestId) {
+      selectedRequest.value = response.data;
+    }
+
+    showRejectModal.value = false;
+    rejectReason.value = '';
+  } catch (error) {
+    console.error('Error rejecting request:', error);
+    alert(error.response?.data?.message || 'Failed to reject request');
+  }
+};
+
+// Load analytics
+const loadAnalytics = async () => {
+  loadingAnalytics.value = true;
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/component-requests/analytics`,
+      {
+        headers: { Authorization: `Bearer ${API_KEY}` }
+      }
+    );
+    requestAnalytics.value = response.data;
+  } catch (error) {
+    console.error('Error loading analytics:', error);
+  } finally {
+    loadingAnalytics.value = false;
   }
 };
 
@@ -1584,6 +1932,7 @@ onMounted(async () => {
   loadRoadmap();
   loadRequests();
   loadIssues();
+  loadAnalytics();
   
   darkModeObserver = new MutationObserver(() => {
     isDarkMode.value = document.documentElement.classList.contains('dark');

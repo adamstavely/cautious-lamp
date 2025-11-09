@@ -23,6 +23,9 @@ export interface ComponentRequest {
     technicalReview?: boolean;
     designApproved?: boolean;
     technicalApproved?: boolean;
+    targetRelease?: string;
+    roadmapItemId?: string;
+    roadmapItemCreatedAt?: string;
   };
 }
 

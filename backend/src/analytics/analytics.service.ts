@@ -487,58 +487,64 @@ export class AnalyticsService {
   private initializeMockHistory(): void {
     if (this.usageHistory.length > 0) return;
 
-    const allComponents = this.designSystemService.getAllComponents();
-    const applications = Array.from(this.designSystemService.getAllApplications({}).applications);
+    try {
+      const allComponents = this.designSystemService.getAllComponents();
+      const appsResult = this.designSystemService.getAllApplications({});
+      const applications = appsResult && appsResult.applications ? Array.from(appsResult.applications) : [];
 
-    // Generate mock history for last 90 days
-    const today = new Date();
-    for (let i = 90; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      const dateStr = date.toISOString();
+      // Generate mock history for last 90 days
+      const today = new Date();
+      for (let i = 90; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        const dateStr = date.toISOString();
 
-      // Randomly assign component usage
-      allComponents.forEach(component => {
-        if (Math.random() > 0.3) { // 70% chance component is used
-          const appCount = Math.floor(Math.random() * applications.length) + 1;
-          const selectedApps = applications.slice(0, appCount);
-          const totalUsage = Math.floor(Math.random() * 100) + 10;
+        // Randomly assign component usage
+        allComponents.forEach(component => {
+          if (Math.random() > 0.3) { // 70% chance component is used
+            const appCount = Math.floor(Math.random() * applications.length) + 1;
+            const selectedApps = applications.slice(0, appCount);
+            const totalUsage = Math.floor(Math.random() * 100) + 10;
 
-          this.usageHistory.push({
-            date: dateStr,
-            componentId: component.id,
-            componentName: component.name,
-            totalUsage,
-            applicationCount: appCount,
-            applications: selectedApps.map(app => ({
-              applicationId: app.id,
-              applicationName: app.name,
-              usageCount: Math.floor(totalUsage / appCount),
-            })),
-          });
-
-          // Also update current usage
-          selectedApps.forEach(app => {
-            if (!this.componentUsage.has(component.id)) {
-              this.componentUsage.set(component.id, []);
-            }
-            const usageRecords = this.componentUsage.get(component.id)!;
-            const existing = usageRecords.find(r => r.applicationId === app.id);
-            if (!existing) {
-              usageRecords.push({
-                componentId: component.id,
-                componentName: component.name,
+            this.usageHistory.push({
+              date: dateStr,
+              componentId: component.id,
+              componentName: component.name,
+              totalUsage,
+              applicationCount: appCount,
+              applications: selectedApps.map(app => ({
                 applicationId: app.id,
                 applicationName: app.name,
                 usageCount: Math.floor(totalUsage / appCount),
-                files: [`src/components/${component.name}.vue`],
-                firstSeen: date,
-                lastSeen: date,
-              });
-            }
-          });
-        }
-      });
+              })),
+            });
+
+            // Also update current usage
+            selectedApps.forEach(app => {
+              if (!this.componentUsage.has(component.id)) {
+                this.componentUsage.set(component.id, []);
+              }
+              const usageRecords = this.componentUsage.get(component.id)!;
+              const existing = usageRecords.find(r => r.applicationId === app.id);
+              if (!existing) {
+                usageRecords.push({
+                  componentId: component.id,
+                  componentName: component.name,
+                  applicationId: app.id,
+                  applicationName: app.name,
+                  usageCount: Math.floor(totalUsage / appCount),
+                  files: [`src/components/${component.name}.vue`],
+                  firstSeen: date,
+                  lastSeen: date,
+                });
+              }
+            });
+          }
+        });
+      }
+    } catch (error) {
+      // Silently fail if initialization fails - will retry later if needed
+      console.warn('Failed to initialize mock history:', error);
     }
   }
 }

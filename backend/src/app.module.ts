@@ -13,6 +13,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { TokenSyncModule } from './token-sync/token-sync.module';
 import { DesignSyncModule } from './design-sync/design-sync.module';
 import { ComponentScaffoldingModule } from './component-scaffolding/component-scaffolding.module';
+import { ComponentRequestsModule } from './component-requests/component-requests.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
@@ -42,6 +43,7 @@ import { ElasticsearchModule } from '@nestjs/elasticsearch';
     TokenSyncModule,
     DesignSyncModule,
     ComponentScaffoldingModule,
+    ComponentRequestsModule,
   ],
 })
 export class AppModule {}
