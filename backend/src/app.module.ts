@@ -10,6 +10,7 @@ import { PhotosensitivityModule } from './photosensitivity/photosensitivity.modu
 import { AccessibilityReportsModule } from './accessibility-reports/accessibility-reports.module';
 import { SystemHealthModule } from './system-health/system-health.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { TokenSyncModule } from './token-sync/token-sync.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
@@ -36,6 +37,7 @@ import { ElasticsearchModule } from '@nestjs/elasticsearch';
     AccessibilityReportsModule,
     SystemHealthModule,
     AnalyticsModule,
+    TokenSyncModule,
   ],
 })
 export class AppModule {}

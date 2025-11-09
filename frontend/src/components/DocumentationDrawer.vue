@@ -997,7 +997,8 @@ const tokenItems = [
 ];
 
 const tokenUtilities = [
-  { text: 'Token Migration', link: '/tokens/migration', icon: 'swap_horiz' }
+  { text: 'Token Migration', link: '/tokens/migration', icon: 'swap_horiz' },
+  { text: 'Token Sync', link: '/tokens/sync', icon: 'sync' }
 ];
 
 const showAdmin = computed(() => {

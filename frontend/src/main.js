@@ -347,6 +347,10 @@ const router = createRouter({
       component: () => import('./views/TokenMigration.vue'),
     },
     {
+      path: '/tokens/sync',
+      component: () => import('./views/TokenSync.vue'),
+    },
+    {
       path: '/patterns',
       component: () => import('./views/Patterns.vue'),
     },
