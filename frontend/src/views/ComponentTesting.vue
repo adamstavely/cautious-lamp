@@ -86,17 +86,130 @@
                 <span class="material-symbols-outlined text-base animate-spin">refresh</span>
                 Loading component data...
               </div>
-              <div v-if="componentData && componentData.props" class="mt-3 p-3 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                <div class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Component Props:</div>
-                <div class="text-xs space-y-1" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  <div v-for="prop in componentData.props" :key="prop.name" class="flex items-center gap-2">
-                    <code class="text-indigo-600">{{ prop.name }}</code>
-                    <span class="text-gray-500">({{ prop.type }})</span>
-                    <span v-if="prop.required" class="text-red-500 text-xs">required</span>
-                    <span v-if="prop.options" class="text-xs text-gray-500">
-                      [{{ prop.options.join(', ') }}]
+              <div v-if="componentData && componentData.props && componentData.props.length > 0" class="mt-3 p-3 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                <div class="text-xs font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  <span class="material-symbols-outlined text-base text-indigo-600">tune</span>
+                  Component Props ({{ componentData.props.length }})
+                </div>
+                <div class="space-y-2">
+                  <div 
+                    v-for="prop in componentData.props" 
+                    :key="prop.name" 
+                    class="flex items-start gap-2 p-2 rounded"
+                    :class="isDarkMode ? 'bg-slate-700/50' : 'bg-white'"
+                  >
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2 mb-1">
+                        <code class="text-sm font-semibold" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">{{ prop.name }}</code>
+                        <span class="text-xs px-1.5 py-0.5 rounded" :class="isDarkMode ? 'bg-slate-600 text-gray-300' : 'bg-gray-200 text-gray-600'">{{ prop.type }}</span>
+                        <span v-if="prop.required" class="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">required</span>
+                        <span v-if="prop.default !== undefined && prop.default !== null" class="text-xs text-gray-500">
+                          default: {{ typeof prop.default === 'string' ? `"${prop.default}"` : prop.default }}
+                        </span>
+                      </div>
+                      <div v-if="prop.description" class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                        {{ prop.description }}
+                      </div>
+                      <div v-if="prop.options && prop.options.length > 0" class="mt-1 flex flex-wrap gap-1">
+                        <span 
+                          v-for="option in prop.options" 
+                          :key="option"
+                          class="text-xs px-2 py-0.5 rounded"
+                          :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-700'"
+                        >
+                          {{ option }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="componentData.props.length === 0" class="text-xs text-center py-2" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
+                  No props defined for this component
+                </div>
+              </div>
+              <div v-else-if="componentData && (!componentData.props || componentData.props.length === 0)" class="mt-3 p-3 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                  No props available for this component. Tests will be generated with basic structure.
+                </div>
+              </div>
+            </div>
+
+            <!-- Component Props Info Banner -->
+            <div 
+              v-if="componentData && componentData.props && componentData.props.length > 0"
+              class="rounded-lg border p-4 mb-4"
+              :class="isDarkMode 
+                ? 'bg-indigo-900/20 border-indigo-700/50' 
+                : 'bg-indigo-50 border-indigo-200'"
+            >
+              <div class="flex items-center gap-2 mb-2">
+                <span class="material-symbols-outlined text-base text-indigo-600">info</span>
+                <span class="text-sm font-semibold" :class="isDarkMode ? 'text-indigo-300' : 'text-indigo-900'">
+                  Prop-Aware Test Generation Active
+                </span>
+              </div>
+              <p class="text-xs" :class="isDarkMode ? 'text-indigo-200' : 'text-indigo-700'">
+                Tests will be generated for {{ componentData.props.length }} props including all enum values, boolean states, and combinations.
+              </p>
+            </div>
+
+            <!-- Generation Summary -->
+            <div 
+              v-if="generationSummary"
+              class="rounded-lg border p-4 mb-4"
+              :class="isDarkMode 
+                ? 'bg-green-900/20 border-green-700/50' 
+                : 'bg-green-50 border-green-200'"
+            >
+              <div class="flex items-center gap-2 mb-3">
+                <span class="material-symbols-outlined text-base text-green-600">check_circle</span>
+                <span class="text-sm font-semibold" :class="isDarkMode ? 'text-green-300' : 'text-green-900'">
+                  Tests Generated Successfully
+                </span>
+              </div>
+              <div class="space-y-2 text-xs" :class="isDarkMode ? 'text-green-200' : 'text-green-700'">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium">Component:</span>
+                  <span>{{ generationSummary.component }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="font-medium">Framework:</span>
+                  <span class="px-2 py-0.5 rounded" :class="isDarkMode ? 'bg-green-800/50' : 'bg-green-100'">
+                    {{ generationSummary.framework === 'vitest' ? 'Vitest' : generationSummary.framework === 'jest' ? 'Jest' : generationSummary.framework === 'cypress' ? 'Cypress' : 'Playwright' }}
+                  </span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="font-medium">Test Types:</span>
+                  <div class="flex flex-wrap gap-1">
+                    <span 
+                      v-for="type in generationSummary.testTypes" 
+                      :key="type"
+                      class="px-2 py-0.5 rounded capitalize"
+                      :class="isDarkMode ? 'bg-green-800/50' : 'bg-green-100'"
+                    >
+                      {{ type.replace('-', ' ') }}
                     </span>
                   </div>
+                </div>
+                <div v-if="generationSummary.cicd.length > 0" class="flex items-center gap-2">
+                  <span class="font-medium">CI/CD:</span>
+                  <div class="flex flex-wrap gap-1">
+                    <span 
+                      v-for="cd in generationSummary.cicd" 
+                      :key="cd"
+                      class="px-2 py-0.5 rounded capitalize"
+                      :class="isDarkMode ? 'bg-green-800/50' : 'bg-green-100'"
+                    >
+                      {{ cd === 'github' ? 'GitHub Actions' : cd === 'gitlab' ? 'GitLab CI' : cd === 'jenkins' ? 'Jenkins' : 'CircleCI' }}
+                    </span>
+                  </div>
+                </div>
+                <div v-if="generationSummary.propsCount > 0" class="flex items-center gap-2">
+                  <span class="font-medium">Props Analyzed:</span>
+                  <span>{{ generationSummary.propsCount }} props</span>
+                </div>
+                <div class="text-xs pt-2 border-t" :class="isDarkMode ? 'text-green-300/70 border-green-700/50' : 'text-green-600 border-green-200'">
+                  Generated at {{ new Date(generationSummary.timestamp).toLocaleTimeString() }}
                 </div>
               </div>
             </div>
@@ -549,47 +662,101 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">checklist</span>
-                Test Coverage
-              </h3>
-              <div class="space-y-4">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  <span class="material-symbols-outlined text-indigo-600">checklist</span>
+                  Test Coverage
+                </h3>
+                <button
+                  v-if="selectedComponent && !loadingCoverage"
+                  @click="loadTestCoverage"
+                  class="text-xs px-2 py-1 rounded text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                  title="Refresh coverage"
+                >
+                  <span class="material-symbols-outlined text-sm">refresh</span>
+                </button>
+              </div>
+              
+              <div v-if="loadingCoverage" class="flex items-center justify-center py-8">
+                <span class="material-symbols-outlined text-indigo-600 animate-spin text-xl">refresh</span>
+              </div>
+              
+              <div v-else-if="testCoverage" class="space-y-4">
                 <div>
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Statements</span>
-                    <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">85%</span>
+                    <span class="text-sm font-semibold" :class="getCoverageColorClass(testCoverage.statements)">
+                      {{ testCoverage.statements }}%
+                    </span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                    <div class="bg-indigo-500 h-2 rounded-full" style="width: 85%"></div>
+                    <div 
+                      class="h-2 rounded-full transition-all duration-300" 
+                      :class="getCoverageBarColor(testCoverage.statements)"
+                      :style="`width: ${testCoverage.statements}%`"
+                    ></div>
                   </div>
                 </div>
                 <div>
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Branches</span>
-                    <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">78%</span>
+                    <span class="text-sm font-semibold" :class="getCoverageColorClass(testCoverage.branches)">
+                      {{ testCoverage.branches }}%
+                    </span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                    <div class="bg-indigo-500 h-2 rounded-full" style="width: 78%"></div>
+                    <div 
+                      class="h-2 rounded-full transition-all duration-300" 
+                      :class="getCoverageBarColor(testCoverage.branches)"
+                      :style="`width: ${testCoverage.branches}%`"
+                    ></div>
                   </div>
                 </div>
                 <div>
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Functions</span>
-                    <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">92%</span>
+                    <span class="text-sm font-semibold" :class="getCoverageColorClass(testCoverage.functions)">
+                      {{ testCoverage.functions }}%
+                    </span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                    <div class="bg-indigo-500 h-2 rounded-full" style="width: 92%"></div>
+                    <div 
+                      class="h-2 rounded-full transition-all duration-300" 
+                      :class="getCoverageBarColor(testCoverage.functions)"
+                      :style="`width: ${testCoverage.functions}%`"
+                    ></div>
                   </div>
                 </div>
                 <div>
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Lines</span>
-                    <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">88%</span>
+                    <span class="text-sm font-semibold" :class="getCoverageColorClass(testCoverage.lines)">
+                      {{ testCoverage.lines }}%
+                    </span>
                   </div>
                   <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                    <div class="bg-indigo-500 h-2 rounded-full" style="width: 88%"></div>
+                    <div 
+                      class="h-2 rounded-full transition-all duration-300" 
+                      :class="getCoverageBarColor(testCoverage.lines)"
+                      :style="`width: ${testCoverage.lines}%`"
+                    ></div>
                   </div>
                 </div>
+                <div v-if="testCoverage.lastUpdated" class="text-xs pt-2 border-t" :class="isDarkMode ? 'text-gray-500 border-gray-700' : 'text-gray-400 border-gray-200'">
+                  Last updated: {{ new Date(testCoverage.lastUpdated).toLocaleString() }}
+                </div>
+              </div>
+              
+              <div v-else-if="selectedComponent" class="text-center py-8">
+                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
+                  No coverage data available. Generate tests to calculate coverage.
+                </p>
+              </div>
+              
+              <div v-else class="text-center py-8">
+                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
+                  Select a component to view test coverage
+                </p>
               </div>
             </div>
           </div>
@@ -638,6 +805,9 @@ const testResults = ref(null);
 const visualTestResults = ref(null);
 const a11yTestResults = ref(null);
 const performanceResults = ref(null);
+const testCoverage = ref(null);
+const loadingCoverage = ref(false);
+const generationSummary = ref(null);
 
 // Load available components
 const loadComponents = async () => {
@@ -663,19 +833,37 @@ const loadComponents = async () => {
 watch(selectedComponent, async (newValue) => {
   if (newValue) {
     loadingComponent.value = true;
+    loadingCoverage.value = true;
     try {
-      const response = await axios.get(`${API_BASE_URL}/components/${newValue}`, {
-        headers: { Authorization: `Bearer ${API_KEY}` }
-      });
-      componentData.value = response.data;
+      const [componentResponse, coverageResponse] = await Promise.all([
+        axios.get(`${API_BASE_URL}/components/${newValue}`, {
+          headers: { Authorization: `Bearer ${API_KEY}` }
+        }),
+        axios.get(`${API_BASE_URL}/components/${newValue}/test-coverage`, {
+          headers: { Authorization: `Bearer ${API_KEY}` }
+        }).catch(() => ({ data: null })) // Coverage is optional
+      ]);
+      
+      componentData.value = componentResponse.data;
+      testCoverage.value = coverageResponse.data;
+      console.log('Loaded component data:', componentData.value);
+      console.log('Loaded test coverage:', testCoverage.value);
     } catch (error) {
       console.error('Error loading component data:', error);
-      componentData.value = null;
+      // Fallback: create mock data structure for testing
+      componentData.value = {
+        id: newValue,
+        name: newValue.charAt(0).toUpperCase() + newValue.slice(1),
+        props: []
+      };
+      testCoverage.value = null;
     } finally {
       loadingComponent.value = false;
+      loadingCoverage.value = false;
     }
   } else {
     componentData.value = null;
+    testCoverage.value = null;
   }
 });
 
@@ -723,6 +911,16 @@ const generateTests = () => {
   } else {
     cicdConfig.value = '';
   }
+
+  // Create generation summary
+  generationSummary.value = {
+    component: componentInfo.name || componentInfo.id,
+    framework: testFramework.value,
+    testTypes: activeTypes,
+    cicd: activeCicd,
+    propsCount: componentInfo.props?.length || 0,
+    timestamp: new Date().toISOString(),
+  };
 };
 
 // Analyze component props to generate intelligent tests
@@ -1368,6 +1566,35 @@ const runPerformanceTests = async () => {
   };
 };
 
+const loadTestCoverage = async () => {
+  if (!selectedComponent.value) return;
+  
+  loadingCoverage.value = true;
+  try {
+    const response = await axios.get(`${API_BASE_URL}/components/${selectedComponent.value}/test-coverage`, {
+      headers: { Authorization: `Bearer ${API_KEY}` }
+    });
+    testCoverage.value = response.data;
+  } catch (error) {
+    console.error('Error loading test coverage:', error);
+    testCoverage.value = null;
+  } finally {
+    loadingCoverage.value = false;
+  }
+};
+
+const getCoverageColorClass = (percentage) => {
+  if (percentage >= 80) return isDarkMode.value ? 'text-green-400' : 'text-green-600';
+  if (percentage >= 60) return isDarkMode.value ? 'text-yellow-400' : 'text-yellow-600';
+  return isDarkMode.value ? 'text-red-400' : 'text-red-600';
+};
+
+const getCoverageBarColor = (percentage) => {
+  if (percentage >= 80) return 'bg-green-500';
+  if (percentage >= 60) return 'bg-yellow-500';
+  return 'bg-red-500';
+};
+
 const generateCicdConfig = (activeCicd, framework, testTypes) => {
   let configs = [];
   
@@ -1566,4 +1793,5 @@ onBeforeUnmount(() => {
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 </style>
+
 

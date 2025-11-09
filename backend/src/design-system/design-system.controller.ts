@@ -117,6 +117,15 @@ export class DesignSystemController {
     };
   }
 
+  @Get('components/:id/test-coverage')
+  getComponentTestCoverage(
+    @Param('id') id: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.calculateTestCoverage(id);
+  }
+
   @Get('components/:id')
   getComponent(
     @Param('id') id: string,

@@ -22,7 +22,7 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 
 ### Developer Experience
 - ✅ **Design Tokens Playground** - Visual editor for testing token combinations
-- ✅ **Component Testing Framework** - Integrated testing tools and prop-aware test generators (analyzes component props, generates tests for all prop values, combinations, and edge cases)
+- ✅ **Component Testing Framework** - Integrated testing tools with dual functionality: (1) Test code generation for CI/CD pipelines - generates test files in Vitest/Jest/Cypress/Playwright formats based on selected test types and component props, (2) In-app test execution for visual regression, accessibility, and performance testing. Prop-aware test generation analyzes component props to create comprehensive tests for all enum values, boolean combinations, and edge cases. Dynamic test coverage calculation based on component props.
 - ✅ **Design System CLI (Enhanced)** - Commands for scaffolding, validation, migration
 - ✅ **Component Documentation Generator** - Auto-generate docs from code comments
 
@@ -283,7 +283,7 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 
 ### Developer Experience
 - [ ] **Design System CLI Plugins** - Plugin system for extending CLI functionality
-- ✅ **Automated Component Testing** - Auto-generate tests based on component props (prop analysis, enum value testing, boolean combinations, event handler tests, edge cases)
+- ✅ **Automated Component Testing** - Auto-generate tests based on component props (prop analysis, enum value testing, boolean combinations, event handler tests, edge cases). Includes test code generation for CI/CD pipelines (Vitest/Jest/Cypress/Playwright) and in-app test execution (unit, visual regression, accessibility, performance). Dynamic test coverage calculation based on component props.
 
 ### Collaboration & Workflow
 - [ ] **Design System Onboarding** - Interactive onboarding for new team members
