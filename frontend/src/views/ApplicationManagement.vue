@@ -90,6 +90,7 @@
               <thead :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
                 <tr>
                   <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Application</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Design System Version</th>
                   <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Capabilities</th>
                   <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Metadata</th>
                   <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Registered</th>
@@ -111,6 +112,45 @@
                         <a :href="app.repository" target="_blank" class="text-indigo-600 hover:text-indigo-700">{{ app.repository }}</a>
                       </div>
                     </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-2">
+                      <span 
+                        v-if="app.designSystemVersion"
+                        class="text-sm font-medium"
+                        :class="getVersionStatusClass(app.designSystemVersion)"
+                      >
+                        v{{ app.designSystemVersion }}
+                      </span>
+                      <span 
+                        v-else
+                        class="text-sm"
+                        :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
+                      >
+                        Not set
+                      </span>
+                      <span 
+                        v-if="app.designSystemVersion && needsUpgrade(app.designSystemVersion)"
+                        class="material-symbols-outlined text-sm text-yellow-500"
+                        title="Needs upgrade"
+                      >
+                        warning
+                      </span>
+                      <span 
+                        v-if="app.designSystemVersion === currentDesignSystemVersion"
+                        class="material-symbols-outlined text-sm text-green-500"
+                        title="Up to date"
+                      >
+                        check_circle
+                      </span>
+                    </div>
+                    <button
+                      v-if="app.designSystemVersion && needsUpgrade(app.designSystemVersion)"
+                      @click="showVersionUpdateModal(app)"
+                      class="text-xs mt-1 text-indigo-600 hover:text-indigo-700"
+                    >
+                      Update to v{{ currentDesignSystemVersion }}
+                    </button>
                   </td>
                   <td class="px-6 py-4">
                     <div class="flex flex-wrap gap-2">
@@ -190,6 +230,147 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Migration Planning Section -->
+        <div class="max-w-7xl mx-auto mt-8 mb-8">
+          <div 
+            class="rounded-lg shadow-sm border"
+            :class="isDarkMode 
+              ? 'bg-slate-900 border-gray-700' 
+              : 'bg-white border-gray-200'"
+          >
+            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">upgrade</span>
+                Migration Planning
+              </h3>
+              <p class="text-sm mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Track design system versions and plan upgrades across applications
+              </p>
+            </div>
+            <div class="p-6">
+              <!-- Summary Cards -->
+              <div class="grid md:grid-cols-4 gap-4 mb-6">
+                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <div class="text-xs mb-1 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Current DS Version</div>
+                  <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    v{{ currentDesignSystemVersion }}
+                  </div>
+                </div>
+                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <div class="text-xs mb-1 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Up to Date</div>
+                  <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    {{ migrationData?.upgradeSummary?.upToDate || 0 }}
+                  </div>
+                </div>
+                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <div class="text-xs mb-1 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Needs Upgrade</div>
+                  <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    {{ migrationData?.upgradeSummary?.needsUpgrade || 0 }}
+                  </div>
+                </div>
+                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <div class="text-xs mb-1 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Major Upgrades</div>
+                  <div class="text-2xl font-bold" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">
+                    {{ migrationData?.upgradeSummary?.needsMajorUpgrade || 0 }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Recommended Actions -->
+              <div v-if="migrationData?.recommendedActions?.length > 0" class="mb-6">
+                <h4 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Recommended Actions</h4>
+                <div class="space-y-2">
+                  <div
+                    v-for="action in migrationData.recommendedActions.slice(0, 5)"
+                    :key="action.applicationId"
+                    class="p-3 rounded-lg border flex items-center justify-between"
+                    :class="action.priority === 'high'
+                      ? (isDarkMode ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200')
+                      : (isDarkMode ? 'bg-yellow-900/20 border-yellow-700' : 'bg-yellow-50 border-yellow-200')"
+                  >
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                          {{ action.applicationName }}
+                        </span>
+                        <span 
+                          class="px-2 py-0.5 rounded text-xs font-medium"
+                          :class="action.priority === 'high'
+                            ? (isDarkMode ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-700')
+                            : (isDarkMode ? 'bg-yellow-900/30 text-yellow-300' : 'bg-yellow-100 text-yellow-700')"
+                        >
+                          {{ action.priority }}
+                        </span>
+                      </div>
+                      <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                        {{ action.reason }}
+                      </p>
+                      <div class="flex items-center gap-2 mt-1 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                        <span>v{{ action.currentVersion }}</span>
+                        <span class="material-symbols-outlined text-base">arrow_forward</span>
+                        <span>v{{ action.targetVersion }}</span>
+                      </div>
+                    </div>
+                    <button
+                      @click="updateApplicationVersion(action.applicationId, action.targetVersion)"
+                      :disabled="updatingVersion === action.applicationId"
+                      class="px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-2 ml-4"
+                      :class="updatingVersion === action.applicationId
+                        ? (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-500 cursor-not-allowed')
+                        : (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')"
+                    >
+                      <span v-if="updatingVersion === action.applicationId" class="material-symbols-outlined text-sm animate-spin">refresh</span>
+                      <span v-else class="material-symbols-outlined text-sm">update</span>
+                      Update
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Applications by Version -->
+              <div>
+                <h4 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Applications by Version</h4>
+                <div class="space-y-4">
+                  <div
+                    v-for="(apps, version) in migrationData?.applicationsByVersion"
+                    :key="version"
+                    class="border-b last:border-b-0 pb-4 last:pb-0"
+                    :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
+                  >
+                    <div class="flex items-center justify-between mb-2">
+                      <div class="flex items-center gap-2">
+                        <span class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                          v{{ version }}
+                        </span>
+                        <span 
+                          v-if="version === currentDesignSystemVersion"
+                          class="px-2 py-0.5 rounded text-xs font-medium"
+                          :class="isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700'"
+                        >
+                          Current
+                        </span>
+                      </div>
+                      <span class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                        {{ apps.length }} app{{ apps.length !== 1 ? 's' : '' }}
+                      </span>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <span
+                        v-for="app in apps"
+                        :key="app.id"
+                        class="text-xs px-2 py-1 rounded"
+                        :class="isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'"
+                      >
+                        {{ app.name }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -413,6 +594,9 @@ const isSaving = ref(false);
 const applications = ref([]);
 const filterCapability = ref('');
 const editingApplication = ref(null);
+const migrationData = ref(null);
+const currentDesignSystemVersion = ref('2.1.0');
+const updatingVersion = ref(null);
 
 const defaultArgosUrl = 'https://app.argos-ci.com';
 
@@ -473,12 +657,67 @@ const loadApplications = async () => {
       headers: { Authorization: `Bearer ${API_KEY}` }
     });
     applications.value = response.data.applications || [];
+    // Also load migration data
+    await loadMigrationData();
   } catch (error) {
     console.error('Failed to load applications:', error);
     window.showToast?.('Failed to load applications', 'error');
   } finally {
     loading.value = false;
   }
+};
+
+const loadMigrationData = async () => {
+  try {
+    const [migrationResponse, versionResponse] = await Promise.all([
+      axios.get(`${API_BASE_URL}/applications/version-tracking`, {
+        headers: { Authorization: `Bearer ${API_KEY}` }
+      }),
+      axios.get(`${API_BASE_URL}/design-system/current-version`, {
+        headers: { Authorization: `Bearer ${API_KEY}` }
+      })
+    ]);
+    migrationData.value = migrationResponse.data;
+    currentDesignSystemVersion.value = versionResponse.data.version;
+  } catch (error) {
+    console.error('Failed to load migration data:', error);
+  }
+};
+
+const updateApplicationVersion = async (applicationId, version) => {
+  updatingVersion.value = applicationId;
+  try {
+    await axios.patch(`${API_BASE_URL}/applications/${applicationId}/design-system-version`, 
+      { version },
+      { headers: { Authorization: `Bearer ${API_KEY}` } }
+    );
+    window.showToast?.('Application version updated successfully', 'success');
+    await loadApplications();
+  } catch (error) {
+    console.error('Error updating application version:', error);
+    window.showToast?.('Failed to update application version', 'error');
+  } finally {
+    updatingVersion.value = null;
+  }
+};
+
+const showVersionUpdateModal = (app) => {
+  if (confirm(`Update ${app.name} from v${app.designSystemVersion} to v${currentDesignSystemVersion.value}?`)) {
+    updateApplicationVersion(app.id, currentDesignSystemVersion.value);
+  }
+};
+
+const needsUpgrade = (version) => {
+  if (!version) return true;
+  return version !== currentDesignSystemVersion.value;
+};
+
+const getVersionStatusClass = (version) => {
+  if (!version) return isDarkMode.value ? 'text-gray-500' : 'text-gray-400';
+  if (version === currentDesignSystemVersion.value) {
+    return isDarkMode.value ? 'text-green-400' : 'text-green-600';
+  }
+  return isDarkMode.value ? 'text-yellow-400' : 'text-yellow-600';
 };
 
 const editApplication = (app) => {

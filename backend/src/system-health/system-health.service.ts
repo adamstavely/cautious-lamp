@@ -379,5 +379,238 @@ export class SystemHealthService {
       });
     }
   }
+
+  /**
+   * Generate comprehensive audit report
+   */
+  generateAuditReport(): any {
+    const healthScore = this.calculateHealthScore();
+    const components = this.designSystemService.getAllComponents();
+    const trends = this.getHealthScoreTrends(90);
+    const recommendations = this.generateRecommendations(healthScore);
+    const alerts = this.checkHealthScoreAlerts(healthScore.score);
+
+    // Calculate detailed metrics
+    const componentMetrics = this.calculateComponentMetrics(components);
+    const tokenMetrics = this.calculateTokenMetrics();
+    const complianceMetrics = this.calculateComplianceMetrics();
+    const adoptionMetrics = this.calculateAdoptionMetrics(components);
+
+    return {
+      reportId: `audit-${Date.now()}`,
+      generatedAt: new Date().toISOString(),
+      executiveSummary: {
+        overallHealthScore: healthScore.score,
+        healthGrade: this.getHealthGrade(healthScore.score),
+        trend: healthScore.trend,
+        keyFindings: this.generateKeyFindings(healthScore, components, alerts),
+        recommendations: recommendations.slice(0, 5), // Top 5
+      },
+      detailedMetrics: {
+        components: componentMetrics,
+        tokens: tokenMetrics,
+        compliance: complianceMetrics,
+        adoption: adoptionMetrics,
+        accessibility: {
+          score: healthScore.factors.accessibility,
+          wcagLevel: this.getWCAGLevel(healthScore.factors.accessibility),
+        },
+      },
+      healthScoreFactors: healthScore.factors,
+      trends: {
+        current: healthScore,
+        historical: trends,
+        period: '90 days',
+      },
+      alerts: alerts,
+      recommendations: recommendations,
+      components: {
+        total: components.length,
+        byStatus: this.groupComponentsByStatus(components),
+        topUsed: this.getTopUsedComponents(components),
+        deprecated: components.filter(c => c.status === 'deprecated'),
+      },
+      nextSteps: this.generateNextSteps(recommendations, alerts),
+    };
+  }
+
+  /**
+   * Calculate component metrics
+   */
+  private calculateComponentMetrics(components: any[]): any {
+    const total = components.length;
+    const production = components.filter(c => c.status === 'production').length;
+    const inProgress = components.filter(c => c.status === 'in-progress').length;
+    const planned = components.filter(c => c.status === 'planned').length;
+    const deprecated = components.filter(c => c.status === 'deprecated').length;
+
+    return {
+      total,
+      production,
+      inProgress,
+      planned,
+      deprecated,
+      productionPercentage: total > 0 ? (production / total) * 100 : 0,
+      healthScore: total > 0 ? ((production / total) * 100) - (deprecated / total * 20) : 0,
+    };
+  }
+
+  /**
+   * Calculate token metrics
+   */
+  private calculateTokenMetrics(): any {
+    // Mock implementation - would integrate with actual token service
+    return {
+      total: 156,
+      categories: 8,
+      usage: {
+        high: 45,
+        medium: 67,
+        low: 32,
+        unused: 12,
+      },
+    };
+  }
+
+  /**
+   * Calculate compliance metrics
+   */
+  private calculateComplianceMetrics(): any {
+    const compliance = this.calculateComplianceScore();
+    return {
+      score: compliance,
+      level: compliance >= 95 ? 'excellent' : compliance >= 85 ? 'good' : compliance >= 70 ? 'fair' : 'needs-improvement',
+      wcagCompliance: compliance >= 90,
+    };
+  }
+
+  /**
+   * Calculate adoption metrics
+   */
+  private calculateAdoptionMetrics(components: any[]): any {
+    const adoptionRate = this.calculateAdoptionRate(components);
+    return {
+      overallRate: adoptionRate,
+      byComponent: this.getComponentAdoptionRates(components),
+      trend: 'stable', // Would calculate from historical data
+    };
+  }
+
+  /**
+   * Get health grade from score
+   */
+  private getHealthGrade(score: number): string {
+    if (score >= 90) return 'A';
+    if (score >= 80) return 'B';
+    if (score >= 70) return 'C';
+    if (score >= 60) return 'D';
+    return 'F';
+  }
+
+  /**
+   * Get WCAG level from accessibility score
+   */
+  private getWCAGLevel(score: number): string {
+    if (score >= 95) return 'AAA';
+    if (score >= 90) return 'AA';
+    if (score >= 80) return 'A';
+    return 'Below A';
+  }
+
+  /**
+   * Generate key findings for executive summary
+   */
+  private generateKeyFindings(healthScore: HealthScore, components: any[], alerts: any[]): string[] {
+    const findings: string[] = [];
+
+    if (healthScore.score >= 85) {
+      findings.push('Design system is in excellent health with strong adoption and compliance.');
+    } else if (healthScore.score >= 70) {
+      findings.push('Design system is in good health with room for improvement in specific areas.');
+    } else {
+      findings.push('Design system requires attention to improve overall health score.');
+    }
+
+    if (healthScore.factors.componentCoverage < 80) {
+      findings.push(`${(100 - healthScore.factors.componentCoverage).toFixed(1)}% of components are not production-ready.`);
+    }
+
+    if (healthScore.factors.adoptionRate < 70) {
+      findings.push(`Component adoption rate is ${healthScore.factors.adoptionRate.toFixed(1)}%, below optimal levels.`);
+    }
+
+    if (alerts.length > 0) {
+      findings.push(`${alerts.length} active alert${alerts.length > 1 ? 's' : ''} require attention.`);
+    }
+
+    const deprecated = components.filter(c => c.status === 'deprecated').length;
+    if (deprecated > 0) {
+      findings.push(`${deprecated} deprecated component${deprecated > 1 ? 's' : ''} should be migrated or removed.`);
+    }
+
+    return findings;
+  }
+
+  /**
+   * Group components by status
+   */
+  private groupComponentsByStatus(components: any[]): any {
+    return {
+      production: components.filter(c => c.status === 'production'),
+      inProgress: components.filter(c => c.status === 'in-progress'),
+      planned: components.filter(c => c.status === 'planned'),
+      deprecated: components.filter(c => c.status === 'deprecated'),
+    };
+  }
+
+  /**
+   * Get top used components (mock - would need real usage data)
+   */
+  private getTopUsedComponents(components: any[]): any[] {
+    return components
+      .filter(c => c.status === 'production')
+      .slice(0, 10)
+      .map(c => ({
+        name: c.name,
+        usage: Math.floor(Math.random() * 1000) + 100, // Mock usage
+      }))
+      .sort((a, b) => b.usage - a.usage);
+  }
+
+  /**
+   * Get component adoption rates (mock)
+   */
+  private getComponentAdoptionRates(components: any[]): any[] {
+    return components
+      .filter(c => c.status === 'production')
+      .map(c => ({
+        name: c.name,
+        adoptionRate: Math.random() * 30 + 60, // Mock 60-90%
+      }));
+  }
+
+  /**
+   * Generate next steps from recommendations and alerts
+   */
+  private generateNextSteps(recommendations: HealthRecommendation[], alerts: any[]): string[] {
+    const steps: string[] = [];
+
+    const highPriorityRecs = recommendations.filter(r => r.priority === 'high');
+    if (highPriorityRecs.length > 0) {
+      steps.push(`Address ${highPriorityRecs.length} high-priority recommendation${highPriorityRecs.length > 1 ? 's' : ''}.`);
+    }
+
+    const highSeverityAlerts = alerts.filter(a => a.severity === 'high');
+    if (highSeverityAlerts.length > 0) {
+      steps.push(`Resolve ${highSeverityAlerts.length} high-severity alert${highSeverityAlerts.length > 1 ? 's' : ''}.`);
+    }
+
+    if (steps.length === 0) {
+      steps.push('Continue monitoring health metrics and maintain current standards.');
+      steps.push('Focus on increasing component adoption across applications.');
+    }
+
+    return steps;
+  }
 }
 

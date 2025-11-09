@@ -84,6 +84,7 @@ export interface Application {
   description?: string;
   repository?: string;
   version?: string;
+  designSystemVersion?: string; // Design system version this application is using
   applicationUrl?: string;
   teamId?: string;
   registeredAt: Date;
@@ -137,6 +138,7 @@ export class DesignSystemService {
       name: 'Marketing Site',
       repository: 'https://github.com/company/marketing-site',
       version: '2.1.0',
+      designSystemVersion: '2.0.0', // Using older design system version
       registeredAt: new Date('2024-01-15'),
       updatedAt: new Date('2024-01-20'),
       lastScanned: new Date('2024-01-20')
@@ -146,6 +148,7 @@ export class DesignSystemService {
       name: 'Admin Dashboard',
       repository: 'https://github.com/company/admin-dashboard',
       version: '1.5.3',
+      designSystemVersion: '2.1.0', // Using latest design system version
       registeredAt: new Date('2024-01-10'),
       updatedAt: new Date('2024-01-18'),
       lastScanned: new Date('2024-01-18')
@@ -155,6 +158,7 @@ export class DesignSystemService {
       name: 'Mobile App',
       repository: 'https://github.com/company/mobile-app',
       version: '3.0.1',
+      designSystemVersion: '1.5.0', // Using older design system version
       applicationUrl: 'https://mobile.example.com',
       registeredAt: new Date('2024-01-05'),
       updatedAt: new Date('2024-01-05'),
@@ -1120,6 +1124,228 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
 
   getApplication(id: string): Application | undefined {
     return this.applications.get(id);
+  }
+
+  /**
+   * Get current design system version (latest from release notes)
+   */
+  getCurrentDesignSystemVersion(): string {
+    // In a real system, this would come from release notes or package.json
+    // For now, return the latest version from sample data
+    return '2.1.0';
+  }
+
+  /**
+   * Update application's design system version
+   */
+  updateApplicationDesignSystemVersion(applicationId: string, version: string): Application {
+    const application = this.applications.get(applicationId);
+    if (!application) {
+      throw new Error(`Application ${applicationId} not found`);
+    }
+    
+    const updated = {
+      ...application,
+      designSystemVersion: version,
+      updatedAt: new Date(),
+    };
+    
+    this.applications.set(applicationId, updated);
+    return updated;
+  }
+
+  /**
+   * Get applications that need to upgrade their design system version
+   */
+  getApplicationsNeedingUpgrade(currentVersion?: string): {
+    applications: Application[];
+    currentVersion: string;
+    upgradeRequired: number;
+  } {
+    const latestVersion = currentVersion || this.getCurrentDesignSystemVersion();
+    const allApps = Array.from(this.applications.values());
+    
+    const needingUpgrade = allApps.filter(app => {
+      if (!app.designSystemVersion) return true; // Apps without version need upgrade
+      return this.compareVersions(app.designSystemVersion, latestVersion) < 0;
+    });
+
+    return {
+      applications: needingUpgrade,
+      currentVersion: latestVersion,
+      upgradeRequired: needingUpgrade.length,
+    };
+  }
+
+  /**
+   * Get applications affected by breaking changes in a specific version
+   */
+  getApplicationsAffectedByBreakingChanges(targetVersion: string): {
+    applications: Application[];
+    affectedCount: number;
+    breakingChanges: string[];
+  } {
+    const allApps = Array.from(this.applications.values());
+    const currentVersion = this.getCurrentDesignSystemVersion();
+    
+    // Apps using versions before the target version are affected
+    const affected = allApps.filter(app => {
+      if (!app.designSystemVersion) return true;
+      const appVersion = app.designSystemVersion;
+      // If target version has breaking changes and app is on older version
+      return this.compareVersions(appVersion, targetVersion) < 0;
+    });
+
+    // Mock breaking changes - in real system, this would come from release notes
+    const breakingChanges = this.getBreakingChangesForVersion(targetVersion);
+
+    return {
+      applications: affected,
+      affectedCount: affected.length,
+      breakingChanges,
+    };
+  }
+
+  /**
+   * Compare two semantic versions
+   * Returns: -1 if v1 < v2, 0 if v1 === v2, 1 if v1 > v2
+   */
+  private compareVersions(v1: string, v2: string): number {
+    const parts1 = v1.split('.').map(Number);
+    const parts2 = v2.split('.').map(Number);
+    
+    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+      const part1 = parts1[i] || 0;
+      const part2 = parts2[i] || 0;
+      
+      if (part1 < part2) return -1;
+      if (part1 > part2) return 1;
+    }
+    
+    return 0;
+  }
+
+  /**
+   * Get breaking changes for a specific version
+   * In a real system, this would query release notes
+   */
+  private getBreakingChangesForVersion(version: string): string[] {
+    // Mock breaking changes based on version
+    if (version.startsWith('2.0')) {
+      return [
+        'Button component: "type" prop renamed to "variant"',
+        'Card component: Removed "outline" variant',
+        'Token naming: Updated color token structure',
+      ];
+    }
+    if (version.startsWith('3.0')) {
+      return [
+        'Major API changes across all components',
+        'New token system implementation',
+      ];
+    }
+    return [];
+  }
+
+  /**
+   * Get migration planning data
+   */
+  getMigrationPlanningData(): {
+    currentVersion: string;
+    applicationsByVersion: Record<string, Application[]>;
+    upgradeSummary: {
+      total: number;
+      upToDate: number;
+      needsUpgrade: number;
+      needsMajorUpgrade: number;
+    };
+    recommendedActions: Array<{
+      applicationId: string;
+      applicationName: string;
+      currentVersion: string;
+      targetVersion: string;
+      priority: 'high' | 'medium' | 'low';
+      reason: string;
+    }>;
+  } {
+    const currentVersion = this.getCurrentDesignSystemVersion();
+    const allApps = Array.from(this.applications.values());
+    
+    // Group applications by version
+    const byVersion: Record<string, Application[]> = {};
+    allApps.forEach(app => {
+      const version = app.designSystemVersion || 'unknown';
+      if (!byVersion[version]) {
+        byVersion[version] = [];
+      }
+      byVersion[version].push(app);
+    });
+
+    // Calculate upgrade summary
+    const upToDate = allApps.filter(app => 
+      app.designSystemVersion === currentVersion
+    ).length;
+    
+    const needsUpgrade = allApps.filter(app => {
+      if (!app.designSystemVersion) return true;
+      return this.compareVersions(app.designSystemVersion, currentVersion) < 0;
+    }).length;
+
+    // Apps that need major version upgrade (more than 1 major version behind)
+    const needsMajorUpgrade = allApps.filter(app => {
+      if (!app.designSystemVersion) return true;
+      const appMajor = parseInt(app.designSystemVersion.split('.')[0]);
+      const currentMajor = parseInt(currentVersion.split('.')[0]);
+      return currentMajor - appMajor >= 1;
+    }).length;
+
+    // Generate recommended actions
+    const recommendedActions = allApps
+      .filter(app => {
+        if (!app.designSystemVersion) return true;
+        return this.compareVersions(app.designSystemVersion, currentVersion) < 0;
+      })
+      .map(app => {
+        const appVersion = app.designSystemVersion || '0.0.0';
+        const appMajor = parseInt(appVersion.split('.')[0]);
+        const currentMajor = parseInt(currentVersion.split('.')[0]);
+        
+        let priority: 'high' | 'medium' | 'low' = 'medium';
+        let reason = '';
+
+        if (currentMajor - appMajor >= 1) {
+          priority = 'high';
+          reason = `Major version upgrade required (${appVersion} → ${currentVersion}). Breaking changes may affect this application.`;
+        } else if (this.compareVersions(appVersion, currentVersion) < 0) {
+          priority = 'medium';
+          reason = `Minor/patch update available (${appVersion} → ${currentVersion}).`;
+        }
+
+        return {
+          applicationId: app.id,
+          applicationName: app.name,
+          currentVersion: appVersion,
+          targetVersion: currentVersion,
+          priority,
+          reason,
+        };
+      })
+      .sort((a, b) => {
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      });
+
+    return {
+      currentVersion,
+      applicationsByVersion: byVersion,
+      upgradeSummary: {
+        total: allApps.length,
+        upToDate,
+        needsUpgrade,
+        needsMajorUpgrade,
+      },
+      recommendedActions,
+    };
   }
 
   getAllApplications(filters?: {

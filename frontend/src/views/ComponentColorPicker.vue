@@ -992,84 +992,6 @@ const selectedColor = ref('#4f46e5');
             </div>
           </div>
 
-          <!-- Related Components -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Related Components</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Components that work well with ColorPicker or serve similar purposes.</p>
-            </div>
-            
-            <div class="grid md:grid-cols-3 gap-6">
-              <router-link 
-                to="/components/forms" 
-                class="rounded-2xl border p-6 transition-all group"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-400' 
-                  : 'bg-white border-gray-200 hover:border-indigo-500'"
-              >
-                <div class="flex items-center gap-3 mb-3">
-                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">description</span>
-                  <h3 
-                    class="text-lg font-semibold transition-colors"
-                    :class="isDarkMode 
-                      ? 'text-white group-hover:text-indigo-400' 
-                      : 'text-gray-900 group-hover:text-indigo-600'"
-                  >
-                    Forms
-                  </h3>
-                </div>
-                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Form components often use color pickers for theme customization and color input fields.
-                </p>
-              </router-link>
-
-              <router-link 
-                to="/components/buttons" 
-                class="rounded-2xl border p-6 transition-all group"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-400' 
-                  : 'bg-white border-gray-200 hover:border-indigo-500'"
-              >
-                <div class="flex items-center gap-3 mb-3">
-                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">smart_button</span>
-                  <h3 
-                    class="text-lg font-semibold transition-colors"
-                    :class="isDarkMode 
-                      ? 'text-white group-hover:text-indigo-400' 
-                      : 'text-gray-900 group-hover:text-indigo-600'"
-                  >
-                    Buttons
-                  </h3>
-                </div>
-                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Buttons can trigger color pickers for theme customization and color selection workflows.
-                </p>
-              </router-link>
-
-              <router-link 
-                to="/theme-builder" 
-                class="rounded-2xl border p-6 transition-all group"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-400' 
-                  : 'bg-white border-gray-200 hover:border-indigo-500'"
-              >
-                <div class="flex items-center gap-3 mb-3">
-                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">palette</span>
-                  <h3 
-                    class="text-lg font-semibold transition-colors"
-                    :class="isDarkMode 
-                      ? 'text-white group-hover:text-indigo-400' 
-                      : 'text-gray-900 group-hover:text-indigo-600'"
-                  >
-                    Theme Builder
-                  </h3>
-                </div>
-                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Theme Builder uses color pickers extensively for customizing design system colors and themes.
-                </p>
-              </router-link>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -1274,6 +1196,7 @@ const componentVersions = ref([
 const currentVersion = computed(() => {
   return componentVersions.value.find(v => v.status === 'Current') || componentVersions.value[0] || {};
 });
+
 
 const formatDate = (dateString) => {
   if (!dateString) return '';

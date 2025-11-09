@@ -1075,6 +1075,7 @@
               </router-link>
             </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -1431,6 +1432,7 @@ const componentVersions = ref([
 const currentVersion = computed(() => {
   return componentVersions.value.find(v => v.status === 'Current') || componentVersions.value[0] || {};
 });
+
 
 const formatDate = (dateString) => {
   if (!dateString) return '';

@@ -859,6 +859,208 @@
             </div>
           </div>
         </div>
+
+        <!-- Audit Reports Section -->
+        <div class="max-w-7xl mx-auto mb-8">
+          <div 
+            class="rounded-lg shadow-sm border"
+            :class="isDarkMode 
+              ? 'bg-slate-900 border-gray-700' 
+              : 'bg-white border-gray-200'"
+          >
+            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    <span class="material-symbols-outlined text-indigo-600">description</span>
+                    Audit Reports
+                  </h3>
+                  <p class="text-sm mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    Generate comprehensive audit reports for stakeholders, compliance, and planning
+                  </p>
+                </div>
+                <button
+                  @click="generateAuditReport"
+                  :disabled="generatingReport"
+                  class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  :class="generatingReport
+                    ? (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-500 cursor-not-allowed')
+                    : (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')"
+                >
+                  <span v-if="generatingReport" class="material-symbols-outlined text-base animate-spin">refresh</span>
+                  <span v-else class="material-symbols-outlined text-base">add</span>
+                  {{ generatingReport ? 'Generating...' : 'Generate Report' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Executive Summary -->
+            <div v-if="auditReport" class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+              <h4 class="text-md font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-base text-indigo-600">summarize</span>
+                Executive Summary
+              </h4>
+              <div class="grid md:grid-cols-3 gap-4 mb-6">
+                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <div class="text-xs mb-1 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Overall Health Score</div>
+                  <div class="text-3xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    {{ auditReport.executiveSummary.overallHealthScore.toFixed(1) }}%
+                  </div>
+                  <div class="text-sm font-semibold" :class="getHealthGradeColor(auditReport.executiveSummary.healthGrade)">
+                    Grade: {{ auditReport.executiveSummary.healthGrade }}
+                  </div>
+                </div>
+                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <div class="text-xs mb-1 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Components</div>
+                  <div class="text-3xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    {{ auditReport.components.total }}
+                  </div>
+                  <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    {{ auditReport.components.byStatus.production.length }} production ready
+                  </div>
+                </div>
+                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <div class="text-xs mb-1 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Accessibility</div>
+                  <div class="text-3xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                    {{ auditReport.detailedMetrics.accessibility.score.toFixed(1) }}%
+                  </div>
+                  <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    WCAG {{ auditReport.detailedMetrics.accessibility.wcagLevel }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Key Findings -->
+              <div class="mb-6">
+                <h5 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Key Findings</h5>
+                <ul class="space-y-2">
+                  <li 
+                    v-for="(finding, idx) in auditReport.executiveSummary.keyFindings" 
+                    :key="idx"
+                    class="flex items-start gap-2 text-sm"
+                    :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+                  >
+                    <span class="material-symbols-outlined text-base text-indigo-600 mt-0.5">check_circle</span>
+                    {{ finding }}
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Export Options -->
+              <div class="flex items-center gap-3 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Export Report:</span>
+                <button
+                  @click="exportReport('json')"
+                  class="px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-2"
+                  :class="isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-white border border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'"
+                >
+                  <span class="material-symbols-outlined text-base">code</span>
+                  JSON
+                </button>
+                <button
+                  @click="exportReport('csv')"
+                  class="px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-2"
+                  :class="isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-white border border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'"
+                >
+                  <span class="material-symbols-outlined text-base">table_chart</span>
+                  CSV
+                </button>
+                <button
+                  @click="exportReport('pdf')"
+                  class="px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-2"
+                  :class="isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-white border border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'"
+                >
+                  <span class="material-symbols-outlined text-base">picture_as_pdf</span>
+                  PDF
+                </button>
+              </div>
+            </div>
+
+            <!-- Detailed Report Sections -->
+            <div v-if="auditReport && showDetailedReport" class="p-6 space-y-6">
+              <!-- Detailed Metrics -->
+              <div>
+                <h4 class="text-md font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Detailed Metrics</h4>
+                <div class="grid md:grid-cols-2 gap-4">
+                  <div class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                    <h5 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Component Metrics</h5>
+                    <div class="space-y-2 text-sm">
+                      <div class="flex justify-between">
+                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Production Ready:</span>
+                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ auditReport.detailedMetrics.components.production }}</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">In Progress:</span>
+                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ auditReport.detailedMetrics.components.inProgress }}</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Deprecated:</span>
+                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ auditReport.detailedMetrics.components.deprecated }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                    <h5 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Compliance Metrics</h5>
+                    <div class="space-y-2 text-sm">
+                      <div class="flex justify-between">
+                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Compliance Score:</span>
+                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ auditReport.detailedMetrics.compliance.score.toFixed(1) }}%</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Level:</span>
+                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ auditReport.detailedMetrics.compliance.level }}</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">WCAG Compliant:</span>
+                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ auditReport.detailedMetrics.compliance.wcagCompliance ? 'Yes' : 'No' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Next Steps -->
+              <div>
+                <h4 class="text-md font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Recommended Next Steps</h4>
+                <ul class="space-y-2">
+                  <li 
+                    v-for="(step, idx) in auditReport.nextSteps" 
+                    :key="idx"
+                    class="flex items-start gap-2 text-sm p-3 rounded-lg"
+                    :class="isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-indigo-50 text-gray-700'"
+                  >
+                    <span class="material-symbols-outlined text-base text-indigo-600 mt-0.5">arrow_forward</span>
+                    {{ step }}
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Toggle Detailed Report -->
+            <div v-if="auditReport" class="p-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+              <button
+                @click="showDetailedReport = !showDetailedReport"
+                class="text-sm font-medium flex items-center gap-2 transition-colors"
+                :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'"
+              >
+                <span class="material-symbols-outlined text-base">
+                  {{ showDetailedReport ? 'expand_less' : 'expand_more' }}
+                </span>
+                {{ showDetailedReport ? 'Hide' : 'Show' }} Detailed Report
+              </button>
+            </div>
+
+            <!-- Empty State -->
+            <div v-if="!auditReport && !generatingReport" class="p-12 text-center">
+              <span class="material-symbols-outlined text-5xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
+                description
+              </span>
+              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Generate a comprehensive audit report to document your design system's current state
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -951,6 +1153,11 @@ const healthScoreTrends = ref([]);
 const healthScoreAlerts = ref([]);
 const healthScoreRecommendations = ref([]);
 const loadingHealthScore = ref(false);
+
+// Audit report state
+const auditReport = ref(null);
+const generatingReport = ref(false);
+const showDetailedReport = ref(false);
 
 // Load health score data from API
 const loadHealthScore = async () => {
@@ -1163,6 +1370,79 @@ onBeforeUnmount(() => {
     clearInterval(darkModeInterval);
   }
 });
+
+// Generate audit report
+const generateAuditReport = async () => {
+  generatingReport.value = true;
+  try {
+    const response = await axios.get('/api/v1/system-health/audit-report');
+    auditReport.value = response.data;
+    showDetailedReport.value = false; // Start with summary view
+  } catch (error) {
+    console.error('Error generating audit report:', error);
+    alert('Failed to generate audit report. Please try again.');
+  } finally {
+    generatingReport.value = false;
+  }
+};
+
+// Export report in different formats
+const exportReport = (format: string) => {
+  if (!auditReport.value) return;
+
+  const timestamp = new Date().toISOString().split('T')[0];
+  const filename = `design-system-audit-${timestamp}`;
+
+  if (format === 'json') {
+    const dataStr = JSON.stringify(auditReport.value, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${filename}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  } else if (format === 'csv') {
+    // Convert key metrics to CSV
+    const csvRows = [
+      ['Metric', 'Value'],
+      ['Overall Health Score', auditReport.value.executiveSummary.overallHealthScore.toFixed(1) + '%'],
+      ['Health Grade', auditReport.value.executiveSummary.healthGrade],
+      ['Total Components', auditReport.value.components.total],
+      ['Production Ready', auditReport.value.components.byStatus.production.length],
+      ['In Progress', auditReport.value.components.byStatus.inProgress.length],
+      ['Deprecated', auditReport.value.components.byStatus.deprecated.length],
+      ['Accessibility Score', auditReport.value.detailedMetrics.accessibility.score.toFixed(1) + '%'],
+      ['WCAG Level', auditReport.value.detailedMetrics.accessibility.wcagLevel],
+      ['Compliance Score', auditReport.value.detailedMetrics.compliance.score.toFixed(1) + '%'],
+      ['Adoption Rate', auditReport.value.detailedMetrics.adoption.overallRate.toFixed(1) + '%'],
+    ];
+    const csvContent = csvRows.map(row => row.join(',')).join('\n');
+    const dataBlob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${filename}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  } else if (format === 'pdf') {
+    // For PDF, we'd need a library like jsPDF or html2pdf
+    // For now, show a message that PDF export requires additional setup
+    alert('PDF export requires additional setup. Please use JSON or CSV export for now.');
+  }
+};
+
+// Get health grade color
+const getHealthGradeColor = (grade: string) => {
+  const colors = {
+    'A': isDarkMode.value ? 'text-green-400' : 'text-green-600',
+    'B': isDarkMode.value ? 'text-blue-400' : 'text-blue-600',
+    'C': isDarkMode.value ? 'text-yellow-400' : 'text-yellow-600',
+    'D': isDarkMode.value ? 'text-orange-400' : 'text-orange-600',
+    'F': isDarkMode.value ? 'text-red-400' : 'text-red-600',
+  };
+  return colors[grade] || (isDarkMode.value ? 'text-gray-400' : 'text-gray-600');
+};
 </script>
 
 <style scoped>

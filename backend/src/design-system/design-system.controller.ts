@@ -729,4 +729,50 @@ export class DesignSystemController {
     return this.designSystemService.submitHeuristicEvaluation(body);
   }
 
+  // Application Version Tracking endpoints
+  @Get('applications/version-tracking')
+  getVersionTracking(
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getMigrationPlanningData();
+  }
+
+  @Get('applications/needing-upgrade')
+  getApplicationsNeedingUpgrade(
+    @Query('currentVersion') currentVersion?: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getApplicationsNeedingUpgrade(currentVersion);
+  }
+
+  @Get('applications/affected-by-breaking-changes')
+  getApplicationsAffectedByBreakingChanges(
+    @Query('version') version: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getApplicationsAffectedByBreakingChanges(version);
+  }
+
+  @Patch('applications/:id/design-system-version')
+  updateApplicationDesignSystemVersion(
+    @Param('id') id: string,
+    @Body() body: { version: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.updateApplicationDesignSystemVersion(id, body.version);
+  }
+
+  @Get('design-system/current-version')
+  getCurrentDesignSystemVersion(
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return {
+      version: this.designSystemService.getCurrentDesignSystemVersion(),
+    };
+  }
 }

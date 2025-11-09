@@ -225,9 +225,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 
+const route = useRoute();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
 const selectedComponent = ref('');
@@ -327,6 +329,22 @@ const loadComponentVersions = () => {
   }
   componentVersions.value = versionData[selectedComponent.value] || [];
 };
+
+// Support query parameter to pre-select component
+onMounted(() => {
+  if (route.query.component) {
+    selectedComponent.value = route.query.component;
+    loadComponentVersions();
+  }
+});
+
+// Watch for route changes
+watch(() => route.query.component, (newComponent) => {
+  if (newComponent) {
+    selectedComponent.value = newComponent;
+    loadComponentVersions();
+  }
+});
 
 const formatDate = (dateString) => {
   if (!dateString) return '';

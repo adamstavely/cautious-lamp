@@ -38,5 +38,10 @@ export class SystemHealthController {
     const healthScore = this.systemHealthService.calculateHealthScore();
     return this.systemHealthService.checkHealthScoreAlerts(healthScore.score);
   }
+
+  @Get('audit-report')
+  getAuditReport() {
+    return this.systemHealthService.generateAuditReport();
+  }
 }
 
