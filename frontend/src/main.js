@@ -346,10 +346,14 @@ const router = createRouter({
       path: '/tokens/playground',
       component: () => import('./views/TokenPlayground.vue'),
     },
-    {
-      path: '/tokens/migration',
-      component: () => import('./views/TokenMigration.vue'),
-    },
+      {
+        path: '/tokens/migration',
+        component: () => import('./views/TokenMigration.vue'),
+      },
+      {
+        path: '/tokens/relationships',
+        component: () => import('./views/TokenRelationships.vue'),
+      },
     {
       path: '/tokens/sync',
       component: () => import('./views/TokenSync.vue'),

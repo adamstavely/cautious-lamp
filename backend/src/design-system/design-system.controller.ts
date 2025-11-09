@@ -775,4 +775,23 @@ export class DesignSystemController {
       version: this.designSystemService.getCurrentDesignSystemVersion(),
     };
   }
+
+  // Token Relationship Mapping endpoints
+  @Get('tokens/relationships')
+  getTokenRelationships(
+    @Query('token') tokenName?: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getTokenRelationships(tokenName);
+  }
+
+  @Get('tokens/:name/impact')
+  getTokenImpactAnalysis(
+    @Param('name') tokenName: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    return this.designSystemService.getTokenImpactAnalysis(tokenName);
+  }
 }

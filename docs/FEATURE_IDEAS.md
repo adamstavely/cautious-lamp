@@ -280,7 +280,7 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 
 ### Design System Features
 - [ ] **Component Variant Builder** - Visual builder for creating component variants
-- [ ] **Token Relationship Mapping** - Visualize relationships between tokens
+- ✅ **Token Relationship Mapping** - Visualize relationships between tokens (reference chains, semantic relationships, impact analysis, tree/table/network views)
 - ✅ **Design System Versioning - Application Tracking** - Track which applications use which design system version, identify apps needing upgrades, identify apps affected by breaking changes, and migration planning dashboard (integrated into Application Management)
 - ✅ **Design System Audit Reports** - Generate comprehensive audit reports (integrated into System Health)
 
@@ -342,6 +342,7 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 - **Accessibility Reports Enhancements** - Multi-application dashboard, SLA tracking, automated fix suggestions with code examples
 - **Change Notifications Enhancements** - Breaking change alerts, auto-generated migration guides, and enhanced in-app notification center with tabs
 - **Application Version Tracking** - Track design system versions across applications, identify upgrade needs, breaking change impact analysis, and migration planning dashboard (integrated into Application Management)
+- **Token Relationship Mapping** - Visualize token relationships with tree/table/network views, reference chains, semantic relationships, and impact analysis
 
 ### Medium Priority (Next Month)
 1. **Team Workspaces** - Isolated team environments

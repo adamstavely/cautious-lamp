@@ -212,6 +212,8 @@ export class DesignSystemService {
 
   private tokens: Token[] = [
     { name: 'color.primary', value: '#4f46e5', type: 'color', category: 'colors', description: 'Primary brand color', tags: ['brand', 'primary'] },
+    { name: 'color.primary.500', value: '{color.primary}', type: 'color', category: 'colors', description: 'Primary color at 500 scale', tags: ['brand', 'primary', 'scale'] },
+    { name: 'color.button.primary', value: '{color.primary.500}', type: 'color', category: 'colors', description: 'Primary button color', tags: ['button', 'primary'] },
     { name: 'color.secondary', value: '#6366f1', type: 'color', category: 'colors', description: 'Secondary brand color', tags: ['brand', 'secondary'] },
     { name: 'color.success', value: '#10b981', type: 'color', category: 'colors', description: 'Success state color', tags: ['semantic', 'success'] },
     { name: 'color.error', value: '#ef4444', type: 'color', category: 'colors', description: 'Error state color', tags: ['semantic', 'error'] },
@@ -917,6 +919,357 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
 
   getTokensByCategory(category: string): Token[] {
     return this.tokens.filter(token => token.category === category);
+  }
+
+  /**
+   * Get token relationships - analyzes references, aliases, semantic relationships, and dependencies
+   */
+  getTokenRelationships(tokenName?: string): {
+    nodes: Array<{
+      id: string;
+      name: string;
+      category: string;
+      type: string;
+      value: string;
+      isBase: boolean;
+      isAlias: boolean;
+    }>;
+    edges: Array<{
+      from: string;
+      to: string;
+      type: 'reference' | 'semantic' | 'category' | 'scale';
+      strength: number;
+    }>;
+    relationships: {
+      references: Record<string, string[]>;
+      referencedBy: Record<string, string[]>;
+      semantic: Record<string, string[]>;
+      category: Record<string, string[]>;
+      scale: Record<string, string[]>;
+    };
+  } {
+    const allTokens = this.getAllTokens();
+    const nodes: Array<{
+      id: string;
+      name: string;
+      category: string;
+      type: string;
+      value: string;
+      isBase: boolean;
+      isAlias: boolean;
+    }> = [];
+    const edges: Array<{
+      from: string;
+      to: string;
+      type: 'reference' | 'semantic' | 'category' | 'scale';
+      strength: number;
+    }> = [];
+    const references: Record<string, string[]> = {};
+    const referencedBy: Record<string, string[]> = {};
+    const semantic: Record<string, string[]> = {};
+    const category: Record<string, string[]> = {};
+    const scale: Record<string, string[]> = {};
+
+    // Build nodes
+    allTokens.forEach(token => {
+      const isAlias = this.isTokenReference(token.value);
+      const isBase = !isAlias;
+      
+      nodes.push({
+        id: token.name,
+        name: token.name,
+        category: token.category,
+        type: token.type,
+        value: token.value,
+        isBase,
+        isAlias,
+      });
+
+      // Initialize relationship maps
+      references[token.name] = [];
+      referencedBy[token.name] = [];
+      semantic[token.name] = [];
+      category[token.name] = [];
+      scale[token.name] = [];
+    });
+
+    // Analyze references/aliases
+    allTokens.forEach(token => {
+      const referencedTokens = this.extractTokenReferences(token.value);
+      referencedTokens.forEach(refTokenName => {
+        if (allTokens.find(t => t.name === refTokenName)) {
+          references[token.name].push(refTokenName);
+          if (!referencedBy[refTokenName]) {
+            referencedBy[refTokenName] = [];
+          }
+          referencedBy[refTokenName].push(token.name);
+          
+          edges.push({
+            from: token.name,
+            to: refTokenName,
+            type: 'reference',
+            strength: 1.0,
+          });
+        }
+      });
+    });
+
+    // Analyze semantic relationships (same semantic meaning across categories)
+    const semanticGroups: Record<string, string[]> = {};
+    allTokens.forEach(token => {
+      const semanticKey = this.extractSemanticKey(token.name);
+      if (semanticKey) {
+        if (!semanticGroups[semanticKey]) {
+          semanticGroups[semanticKey] = [];
+        }
+        semanticGroups[semanticKey].push(token.name);
+      }
+    });
+
+    Object.values(semanticGroups).forEach(group => {
+      if (group.length > 1) {
+        for (let i = 0; i < group.length; i++) {
+          for (let j = i + 1; j < group.length; j++) {
+            semantic[group[i]].push(group[j]);
+            semantic[group[j]].push(group[i]);
+            
+            edges.push({
+              from: group[i],
+              to: group[j],
+              type: 'semantic',
+              strength: 0.5,
+            });
+          }
+        }
+      }
+    });
+
+    // Analyze category relationships (same category)
+    const categoryGroups: Record<string, string[]> = {};
+    allTokens.forEach(token => {
+      if (!categoryGroups[token.category]) {
+        categoryGroups[token.category] = [];
+      }
+      categoryGroups[token.category].push(token.name);
+    });
+
+    Object.entries(categoryGroups).forEach(([cat, tokens]) => {
+      if (tokens.length > 1) {
+        for (let i = 0; i < tokens.length; i++) {
+          for (let j = i + 1; j < tokens.length; j++) {
+            category[tokens[i]].push(tokens[j]);
+            category[tokens[j]].push(tokens[i]);
+            
+            edges.push({
+              from: tokens[i],
+              to: tokens[j],
+              type: 'category',
+              strength: 0.3,
+            });
+          }
+        }
+      }
+    });
+
+    // Analyze scale relationships (same scale progression)
+    const scaleGroups: Record<string, string[]> = {};
+    allTokens.forEach(token => {
+      const scaleKey = this.extractScaleKey(token.name);
+      if (scaleKey) {
+        if (!scaleGroups[scaleKey]) {
+          scaleGroups[scaleKey] = [];
+        }
+        scaleGroups[scaleKey].push(token.name);
+      }
+    });
+
+    Object.values(scaleGroups).forEach(group => {
+      if (group.length > 1) {
+        // Sort by scale value if possible
+        const sorted = group.sort((a, b) => {
+          const aValue = this.extractScaleValue(a);
+          const bValue = this.extractScaleValue(b);
+          if (aValue !== null && bValue !== null) {
+            return aValue - bValue;
+          }
+          return a.localeCompare(b);
+        });
+
+        for (let i = 0; i < sorted.length - 1; i++) {
+          scale[sorted[i]].push(sorted[i + 1]);
+          scale[sorted[i + 1]].push(sorted[i]);
+          
+          edges.push({
+            from: sorted[i],
+            to: sorted[i + 1],
+            type: 'scale',
+            strength: 0.4,
+          });
+        }
+      }
+    });
+
+    // Filter by tokenName if provided
+    if (tokenName) {
+      const relatedTokens = new Set<string>();
+      relatedTokens.add(tokenName);
+      
+      // Add all related tokens
+      [references, referencedBy, semantic, category, scale].forEach(relMap => {
+        if (relMap[tokenName]) {
+          relMap[tokenName].forEach(t => relatedTokens.add(t));
+        }
+      });
+
+      const filteredNodes = nodes.filter(n => relatedTokens.has(n.id));
+      const filteredEdges = edges.filter(e => 
+        relatedTokens.has(e.from) && relatedTokens.has(e.to)
+      );
+
+      return {
+        nodes: filteredNodes,
+        edges: filteredEdges,
+        relationships: {
+          references,
+          referencedBy,
+          semantic,
+          category,
+          scale,
+        },
+      };
+    }
+
+    return {
+      nodes,
+      edges,
+      relationships: {
+        references,
+        referencedBy,
+        semantic,
+        category,
+        scale,
+      },
+    };
+  }
+
+  /**
+   * Get impact analysis for a token - what tokens/components would be affected if this token changes
+   */
+  getTokenImpactAnalysis(tokenName: string): {
+    token: Token | null;
+    directlyAffected: string[];
+    indirectlyAffected: string[];
+    affectedComponents: string[];
+    totalImpact: number;
+  } {
+    const token = this.tokens.find(t => t.name === tokenName);
+    if (!token) {
+      return {
+        token: null,
+        directlyAffected: [],
+        indirectlyAffected: [],
+        affectedComponents: [],
+        totalImpact: 0,
+      };
+    }
+
+    const relationships = this.getTokenRelationships();
+    const directlyAffected = relationships.relationships.referencedBy[tokenName] || [];
+    
+    // Get indirectly affected (tokens that reference the directly affected tokens)
+    const indirectlyAffected = new Set<string>();
+    directlyAffected.forEach(affectedToken => {
+      const subAffected = relationships.relationships.referencedBy[affectedToken] || [];
+      subAffected.forEach(t => indirectlyAffected.add(t));
+    });
+
+    // Find components that use this token (simplified - in real system would scan component code)
+    const affectedComponents: string[] = [];
+    this.components.forEach(component => {
+      const code = component.code.vue || component.code.react || '';
+      if (code.includes(tokenName) || code.includes(`{${tokenName}}`)) {
+        affectedComponents.push(component.name);
+      }
+    });
+
+    return {
+      token,
+      directlyAffected,
+      indirectlyAffected: Array.from(indirectlyAffected),
+      affectedComponents,
+      totalImpact: directlyAffected.length + indirectlyAffected.size + affectedComponents.length,
+    };
+  }
+
+  /**
+   * Helper: Check if a value is a token reference
+   */
+  private isTokenReference(value: string): boolean {
+    return value.startsWith('{') && value.endsWith('}');
+  }
+
+  /**
+   * Helper: Extract token references from a value
+   */
+  private extractTokenReferences(value: string): string[] {
+    const references: string[] = [];
+    const regex = /\{([^}]+)\}/g;
+    let match;
+    while ((match = regex.exec(value)) !== null) {
+      references.push(match[1]);
+    }
+    return references;
+  }
+
+  /**
+   * Helper: Extract semantic key from token name (e.g., "primary", "secondary")
+   */
+  private extractSemanticKey(tokenName: string): string | null {
+    const parts = tokenName.split('.');
+    const semanticKeywords = ['primary', 'secondary', 'tertiary', 'success', 'error', 'warning', 'info', 'neutral'];
+    for (const part of parts) {
+      if (semanticKeywords.includes(part.toLowerCase())) {
+        return part.toLowerCase();
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Helper: Extract scale key from token name (e.g., "color.neutral" from "color.neutral.500")
+   */
+  private extractScaleKey(tokenName: string): string | null {
+    const parts = tokenName.split('.');
+    if (parts.length >= 3) {
+      // Check if last part is a scale value (number or size like xs, sm, md, lg)
+      const lastPart = parts[parts.length - 1];
+      const scaleValues = ['xs', 'sm', 'md', 'lg', 'xl', '2xl', '50', '100', '200', '300', '400', '500', '600', '700', '800', '900'];
+      if (scaleValues.includes(lastPart.toLowerCase()) || /^\d+$/.test(lastPart)) {
+        return parts.slice(0, -1).join('.');
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Helper: Extract scale value for sorting
+   */
+  private extractScaleValue(tokenName: string): number | null {
+    const parts = tokenName.split('.');
+    const lastPart = parts[parts.length - 1];
+    const scaleMap: Record<string, number> = {
+      'xs': 1, 'sm': 2, 'md': 3, 'lg': 4, 'xl': 5, '2xl': 6,
+      '50': 50, '100': 100, '200': 200, '300': 300, '400': 400,
+      '500': 500, '600': 600, '700': 700, '800': 800, '900': 900,
+    };
+    if (scaleMap[lastPart.toLowerCase()]) {
+      return scaleMap[lastPart.toLowerCase()];
+    }
+    const numMatch = lastPart.match(/^\d+$/);
+    if (numMatch) {
+      return parseInt(numMatch[0], 10);
+    }
+    return null;
   }
 
   getAllComponents(status?: string): Component[] {

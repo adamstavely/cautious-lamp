@@ -997,7 +997,8 @@ const tokenItems = [
   { text: 'Overview', link: '/tokens', icon: 'style' },
   { text: 'Token Studio', link: '/tokens/studio', icon: 'tune' },
   { text: 'Token Playground', link: '/tokens/playground', icon: 'palette' },
-  { text: 'Style Library', link: '/tokens/library', icon: 'library_books' }
+  { text: 'Style Library', link: '/tokens/library', icon: 'library_books' },
+  { text: 'Token Relationships', link: '/tokens/relationships', icon: 'account_tree' }
 ];
 
 const tokenUtilities = [
