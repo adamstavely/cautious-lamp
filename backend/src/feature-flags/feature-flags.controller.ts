@@ -82,5 +82,11 @@ export class FeatureFlagsController {
     }
     return { success: true };
   }
+
+  @Post('enable-all')
+  async enableAllFeatures() {
+    await this.featureFlagsService.ensureAllFeaturesEnabled();
+    return { success: true, message: 'All features have been enabled' };
+  }
 }
 

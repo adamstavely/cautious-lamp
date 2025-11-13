@@ -32,7 +32,12 @@ export class FeatureFlagsService {
     @Optional() @Inject(ElasticsearchService) private readonly elasticsearchService?: ElasticsearchService,
   ) {
     // Initialize with some default feature flags
-    this.initializeDefaultFlags();
+    this.initializeDefaultFlags().then(() => {
+      // Ensure all features are enabled after initialization
+      this.ensureAllFeaturesEnabled().catch(err => {
+        console.error('Failed to ensure all features are enabled:', err);
+      });
+    });
   }
 
   private async initializeDefaultFlags() {
@@ -991,6 +996,26 @@ export class FeatureFlagsService {
     }
 
     return flag.enabled;
+  }
+
+  /**
+   * Ensure all features are enabled
+   */
+  async ensureAllFeaturesEnabled(): Promise<void> {
+    try {
+      const allFlags = await this.getAllFlags();
+      
+      for (const flag of allFlags) {
+        if (!flag.enabled) {
+          await this.updateFlag(flag.id, { enabled: true });
+          console.log(`Enabled feature flag: ${flag.key}`);
+        }
+      }
+      
+      console.log(`All ${allFlags.length} feature flags are enabled`);
+    } catch (error) {
+      console.error('Failed to ensure all features are enabled:', error);
+    }
   }
 
   private hashString(str: string): number {
