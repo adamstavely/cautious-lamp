@@ -811,13 +811,34 @@ export class FeatureFlagsService {
           this.inMemoryFlags.set(flag.id, flag);
         });
 
+        // Ensure all flags are enabled
+        const flagsToEnable = flags.filter(flag => !flag.enabled);
+        if (flagsToEnable.length > 0) {
+          // Enable all disabled flags in background (don't await to avoid blocking)
+          // Pass skipAutoCheck=true to avoid recursion
+          this.ensureAllFeaturesEnabled(true).catch(err => {
+            console.warn('Failed to auto-enable flags:', err);
+          });
+        }
+
         return flags;
       } catch (error) {
         console.warn('Failed to fetch feature flags from Elasticsearch, using in-memory:', error);
       }
     }
 
-    return Array.from(this.inMemoryFlags.values());
+    const inMemoryFlags = Array.from(this.inMemoryFlags.values());
+    
+    // Ensure all in-memory flags are enabled
+    const flagsToEnable = inMemoryFlags.filter(flag => !flag.enabled);
+    if (flagsToEnable.length > 0) {
+      flagsToEnable.forEach(flag => {
+        flag.enabled = true;
+        this.inMemoryFlags.set(flag.id, flag);
+      });
+    }
+
+    return inMemoryFlags;
   }
 
   async getFlag(id: string): Promise<FeatureFlag | null> {
@@ -1001,17 +1022,25 @@ export class FeatureFlagsService {
   /**
    * Ensure all features are enabled
    */
-  async ensureAllFeaturesEnabled(): Promise<void> {
+  async ensureAllFeaturesEnabled(skipAutoCheck = false): Promise<void> {
     try {
-      const allFlags = await this.getAllFlags();
+      // Get flags directly from cache to avoid recursion
+      const allFlags = skipAutoCheck 
+        ? Array.from(this.inMemoryFlags.values())
+        : await this.getAllFlags();
+      let enabledCount = 0;
       
       for (const flag of allFlags) {
         if (!flag.enabled) {
           await this.updateFlag(flag.id, { enabled: true });
           console.log(`Enabled feature flag: ${flag.key}`);
+          enabledCount++;
         }
       }
       
+      if (enabledCount > 0) {
+        console.log(`Enabled ${enabledCount} feature flag(s)`);
+      }
       console.log(`All ${allFlags.length} feature flags are enabled`);
     } catch (error) {
       console.error('Failed to ensure all features are enabled:', error);
