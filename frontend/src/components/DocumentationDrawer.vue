@@ -851,11 +851,9 @@ const artificialIntelligence = [
 const humanCenteredDesign = [
   { text: 'HCD Principles', link: '/hcd/principles', icon: 'people' },
   { text: 'HCD Process', link: '/hcd/process', icon: 'timeline' },
-  { text: 'User Research', link: '/hcd/research', icon: 'search' },
   { text: 'Research Methods', link: '/hcd/research-methods', icon: 'science' },
   { text: 'Recruiting Users', link: '/hcd/recruiting-users', icon: 'group_add' },
   { text: 'Conducting Interviews', link: '/hcd/conducting-interviews', icon: 'record_voice_over' },
-  { text: 'Research Reports', link: '/hcd/research-reports', icon: 'description' },
   { text: 'Accessibility', link: '/hcd/accessibility', icon: 'accessibility' },
   { text: 'Laws of UX', link: '/hcd/laws-of-ux', icon: 'rule' }
 ];
