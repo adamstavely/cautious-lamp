@@ -24,7 +24,7 @@ async function bootstrap() {
   app.useGlobalGuards(app.get(CustomThrottlerGuard));
   
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:5174'], // Allow both common Vite ports
+    origin: ['http://localhost:5174', 'http://localhost:5175'], // Main app on 5174, VitePress on 5175
     credentials: true,
   });
 

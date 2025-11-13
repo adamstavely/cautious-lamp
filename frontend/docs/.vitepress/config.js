@@ -7,12 +7,14 @@ export default defineConfig({
   
   // Server configuration
   server: {
-    port: 5174,
+    port: 5175,
     host: 'localhost'
   },
   
   themeConfig: {
     logo: '/logo.svg',
+    // Disable VitePress default appearance toggle - we'll handle it ourselves
+    appearance: false,
     
     nav: [
       { text: 'Home', link: '/' },
@@ -73,10 +75,73 @@ export default defineConfig({
     }
   },
   
-  // Inject script immediately to hide sidebar/nav before Vue renders
+  // Inject script immediately to hide sidebar/nav before Vue renders and sync dark mode
   head: [
     ['script', {}, `
       (function() {
+        // Sync dark mode immediately and continuously
+        let lastDarkMode = null;
+        const syncDarkMode = () => {
+          try {
+            let isDark = false;
+            try {
+              if (window.parent !== window.self) {
+                isDark = window.parent.document.documentElement.classList.contains('dark');
+              }
+            } catch (e) {
+              // Cross-origin or other error, fall back to localStorage
+            }
+            
+            if (!isDark) {
+              const saved = localStorage.getItem('darkMode');
+              if (saved !== null) {
+                isDark = saved === 'true';
+              } else {
+                isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+              }
+            }
+            
+            // Only update if changed to avoid flicker
+            if (lastDarkMode !== isDark) {
+              lastDarkMode = isDark;
+              if (isDark) {
+                document.documentElement.classList.add('dark');
+              } else {
+                document.documentElement.classList.remove('dark');
+              }
+            }
+          } catch (e) {
+            console.error('Error syncing dark mode:', e);
+          }
+        };
+        
+        // Run immediately
+        syncDarkMode();
+        
+        // Also run on DOM ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', syncDarkMode);
+        } else {
+          syncDarkMode();
+        }
+        
+        // Poll continuously for changes (every 200ms)
+        setInterval(syncDarkMode, 200);
+        
+        // Listen for postMessage from parent window
+        window.addEventListener('message', (event) => {
+          if (event.data && event.data.type === 'darkModeChange') {
+            syncDarkMode();
+          }
+        });
+        
+        // Listen for localStorage changes
+        window.addEventListener('storage', (e) => {
+          if (e.key === 'darkMode') {
+            syncDarkMode();
+          }
+        });
+        
         const isEmbedded = () => {
           const params = new URLSearchParams(window.location.search);
           if (params.get('embedded') === 'true') return true;

@@ -1,7 +1,7 @@
 <template>
   <div class="markdown-viewer-container h-full flex">
     <!-- Main Content Area -->
-    <div class="markdown-viewer flex-1 h-full overflow-y-auto p-8 bg-white dark:bg-slate-900" :class="isDarkMode ? 'dark' : ''">
+    <div class="markdown-viewer flex-1 h-full overflow-y-auto p-8" :class="isDarkMode ? 'bg-slate-900 dark' : 'bg-white'">
       <div v-if="loading" class="flex items-center justify-center h-full">
         <div class="text-center">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
@@ -251,7 +251,7 @@ const getHeroCardHTML = () => {
   svgWithUniqueIds = svgWithUniqueIds.replace(/url\(#([^)]+Filter)\)/g, `url(#$1-${uniqueId})`);
   
   return `
-    <div class="mb-12 -mx-8">
+    <div class="mb-12 -mx-4">
       <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
         <div class="absolute inset-0 opacity-10 texture-pattern"></div>
         <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
@@ -482,22 +482,43 @@ onBeforeUnmount(() => {
 <style scoped>
 .markdown-viewer-container {
   max-width: 100%;
+  transition: background-color 0.3s ease;
 }
 
 .markdown-viewer {
   max-width: 100%;
+  transition: background-color 0.3s ease;
+}
+
+.markdown-viewer.bg-white {
+  background-color: #ffffff !important;
+}
+
+.markdown-viewer.bg-slate-900 {
+  background-color: #0f172a !important;
 }
 
 .toc-sidebar {
   height: 100%;
+  transition: background-color 0.3s ease;
+}
+
+.toc-sidebar.bg-white {
+  background-color: #ffffff !important;
+}
+
+.toc-sidebar.bg-slate-900 {
+  background-color: #0f172a !important;
 }
 
 /* Prose styles for markdown content */
 .markdown-viewer :deep(.prose) {
   color: #1f2937;
+  transition: color 0.3s ease;
 }
 
-.markdown-viewer.dark :deep(.prose) {
+.markdown-viewer.dark :deep(.prose),
+.markdown-viewer.bg-slate-900 :deep(.prose) {
   color: #e5e7eb;
 }
 
@@ -508,9 +529,11 @@ onBeforeUnmount(() => {
   margin-bottom: 0.8888889em;
   line-height: 1.1111111;
   color: #111827;
+  transition: color 0.3s ease;
 }
 
-.markdown-viewer.dark :deep(.prose h1) {
+.markdown-viewer.dark :deep(.prose h1),
+.markdown-viewer.bg-slate-900 :deep(.prose h1) {
   color: #f9fafb;
 }
 
@@ -521,9 +544,11 @@ onBeforeUnmount(() => {
   margin-bottom: 1em;
   line-height: 1.3333333;
   color: #111827;
+  transition: color 0.3s ease;
 }
 
-.markdown-viewer.dark :deep(.prose h2) {
+.markdown-viewer.dark :deep(.prose h2),
+.markdown-viewer.bg-slate-900 :deep(.prose h2) {
   color: #f9fafb;
 }
 
@@ -534,9 +559,11 @@ onBeforeUnmount(() => {
   margin-bottom: 0.6em;
   line-height: 1.6;
   color: #111827;
+  transition: color 0.3s ease;
 }
 
-.markdown-viewer.dark :deep(.prose h3) {
+.markdown-viewer.dark :deep(.prose h3),
+.markdown-viewer.bg-slate-900 :deep(.prose h3) {
   color: #f9fafb;
 }
 
@@ -565,9 +592,11 @@ onBeforeUnmount(() => {
   background-color: #f3f4f6;
   padding: 0.125em 0.375em;
   border-radius: 0.25rem;
+  transition: color 0.3s ease, background-color 0.3s ease;
 }
 
-.markdown-viewer.dark :deep(.prose code) {
+.markdown-viewer.dark :deep(.prose code),
+.markdown-viewer.bg-slate-900 :deep(.prose code) {
   color: #f9fafb;
   background-color: #374151;
 }
@@ -585,7 +614,8 @@ onBeforeUnmount(() => {
   padding: 0.8571429em 1.1428571em;
 }
 
-.markdown-viewer.dark :deep(.prose pre) {
+.markdown-viewer.dark :deep(.prose pre),
+.markdown-viewer.bg-slate-900 :deep(.prose pre) {
   background-color: #111827;
 }
 
@@ -605,9 +635,11 @@ onBeforeUnmount(() => {
   color: #4f46e5;
   text-decoration: underline;
   font-weight: 500;
+  transition: color 0.3s ease;
 }
 
-.markdown-viewer.dark :deep(.prose a) {
+.markdown-viewer.dark :deep(.prose a),
+.markdown-viewer.bg-slate-900 :deep(.prose a) {
   color: #818cf8;
 }
 
@@ -615,16 +647,19 @@ onBeforeUnmount(() => {
   color: #4338ca;
 }
 
-.markdown-viewer.dark :deep(.prose a:hover) {
+.markdown-viewer.dark :deep(.prose a:hover),
+.markdown-viewer.bg-slate-900 :deep(.prose a:hover) {
   color: #a5b4fc;
 }
 
 .markdown-viewer :deep(.prose strong) {
   color: #111827;
   font-weight: 600;
+  transition: color 0.3s ease;
 }
 
-.markdown-viewer.dark :deep(.prose strong) {
+.markdown-viewer.dark :deep(.prose strong),
+.markdown-viewer.bg-slate-900 :deep(.prose strong) {
   color: #f9fafb;
 }
 
@@ -638,9 +673,11 @@ onBeforeUnmount(() => {
   margin-top: 1.6em;
   margin-bottom: 1.6em;
   padding-left: 1em;
+  transition: color 0.3s ease, border-color 0.3s ease;
 }
 
-.markdown-viewer.dark :deep(.prose blockquote) {
+.markdown-viewer.dark :deep(.prose blockquote),
+.markdown-viewer.bg-slate-900 :deep(.prose blockquote) {
   color: #e5e7eb;
   border-left-color: #374151;
 }
@@ -650,9 +687,11 @@ onBeforeUnmount(() => {
   border-top-width: 1px;
   margin-top: 3em;
   margin-bottom: 3em;
+  transition: border-color 0.3s ease;
 }
 
-.markdown-viewer.dark :deep(.prose hr) {
+.markdown-viewer.dark :deep(.prose hr),
+.markdown-viewer.bg-slate-900 :deep(.prose hr) {
   border-color: #374151;
 }
 
@@ -669,9 +708,11 @@ onBeforeUnmount(() => {
 .markdown-viewer :deep(.prose thead) {
   border-bottom-width: 1px;
   border-bottom-color: #e5e7eb;
+  transition: border-color 0.3s ease;
 }
 
-.markdown-viewer.dark :deep(.prose thead) {
+.markdown-viewer.dark :deep(.prose thead),
+.markdown-viewer.bg-slate-900 :deep(.prose thead) {
   border-bottom-color: #374151;
 }
 
@@ -682,18 +723,22 @@ onBeforeUnmount(() => {
   padding-right: 0.5714286em;
   padding-bottom: 0.5714286em;
   padding-left: 0.5714286em;
+  transition: color 0.3s ease;
 }
 
-.markdown-viewer.dark :deep(.prose thead th) {
+.markdown-viewer.dark :deep(.prose thead th),
+.markdown-viewer.bg-slate-900 :deep(.prose thead th) {
   color: #f9fafb;
 }
 
 .markdown-viewer :deep(.prose tbody tr) {
   border-bottom-width: 1px;
   border-bottom-color: #e5e7eb;
+  transition: border-color 0.3s ease;
 }
 
-.markdown-viewer.dark :deep(.prose tbody tr) {
+.markdown-viewer.dark :deep(.prose tbody tr),
+.markdown-viewer.bg-slate-900 :deep(.prose tbody tr) {
   border-bottom-color: #374151;
 }
 

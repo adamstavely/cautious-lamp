@@ -830,7 +830,7 @@ const navigateToDoc = (link) => {
 
 const getDocUrl = (link) => {
   if (import.meta.env.DEV) {
-    return `http://localhost:5173/guidelines${link === '/' ? '' : link}`;
+    return `http://localhost:5175/guidelines${link === '/' ? '' : link}`;
   }
   return `/guidelines${link === '/' ? '/index.html' : link}.html`;
 };
