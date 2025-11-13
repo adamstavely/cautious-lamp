@@ -129,17 +129,6 @@ if (typeof window !== 'undefined') {
   });
 }
 
-// Get current user context (can be enhanced with actual user data)
-const getUserContext = () => {
-  // In a real app, this would get from auth service
-  const userId = localStorage.getItem('userId') || undefined;
-  const userGroups = localStorage.getItem('userGroups') 
-    ? JSON.parse(localStorage.getItem('userGroups'))
-    : undefined;
-  
-  return { userId, userGroups };
-};
-
 /**
  * Composable for checking feature flags
  * @param {string} flagKey - The feature flag key
