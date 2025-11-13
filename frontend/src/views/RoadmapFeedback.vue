@@ -798,33 +798,6 @@
             </p>
           </div>
           <div>
-            <label for="request-estimated-effort" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Estimated Effort (hours)
-            </label>
-            <input
-              id="request-estimated-effort"
-              v-model.number="requestForm.estimatedEffort"
-              type="number"
-              min="0"
-              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-              placeholder="e.g., 40"
-            />
-          </div>
-          <div>
-            <label for="request-target-release" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Target Release (optional)
-            </label>
-            <input
-              id="request-target-release"
-              v-model="requestForm.targetRelease"
-              type="text"
-              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-              placeholder="e.g., Q2 2024, v2.5.0"
-            />
-          </div>
-          <div>
             <label for="request-category" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
               Category *
             </label>
@@ -1588,8 +1561,6 @@ const submitRequest = async () => {
         requestedBy: 'current-user',
         category: requestForm.value.category,
         priority: requestForm.value.priority || 'medium',
-        estimatedEffort: requestForm.value.estimatedEffort,
-        targetRelease: requestForm.value.targetRelease || undefined
       },
       {
         headers: { Authorization: `Bearer ${API_KEY}` }
@@ -1605,7 +1576,7 @@ const submitRequest = async () => {
       requests.value.unshift(response.data);
     }
 
-    requestForm.value = { title: '', description: '', useCase: '', category: '', priority: 'medium', estimatedEffort: undefined, targetRelease: '' };
+    requestForm.value = { title: '', description: '', useCase: '', category: '', priority: 'medium' };
     showRequestModal.value = false;
   } catch (error) {
     console.error('Error submitting request:', error);
