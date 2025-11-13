@@ -31,6 +31,13 @@ export class DesignSystemModule {
   ) {
     // Inject notification service into component request service
     this.componentRequestService.setNotificationService(this.notificationService);
+    
+    // Set up auto-linking callback: when a component is created, automatically link to matching requests
+    this.designSystemService.setComponentCreatedCallback(
+      (componentId: string, componentName: string, linkedRequestId?: string) => {
+        this.componentRequestService.onComponentCreated(componentId, componentName, linkedRequestId);
+      }
+    );
   }
 
   // This will be called by AnalyticsModule to set the analytics service

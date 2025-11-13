@@ -704,6 +704,66 @@ export class DesignSystemController {
     return this.componentRequestService.getRequestAnalytics();
   }
 
+  // Request Templates
+  @Get('requests/templates')
+  getRequestTemplates(@Headers('authorization') authHeader?: string) {
+    this.validateRequest(authHeader);
+    return this.componentRequestService.getRequestTemplates();
+  }
+
+  @Get('requests/templates/:id')
+  getRequestTemplate(
+    @Param('id') id: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const template = this.componentRequestService.getRequestTemplate(id);
+    if (!template) {
+      throw new BadRequestException(`Template ${id} not found`);
+    }
+    return template;
+  }
+
+  // Duplicate Detection
+  @Get('requests/:id/duplicates')
+  findDuplicateRequests(
+    @Param('id') id: string,
+    @Query('threshold') threshold?: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const thresholdValue = threshold ? parseFloat(threshold) : 0.7;
+    return this.componentRequestService.findDuplicateRequests(id, thresholdValue);
+  }
+
+  // Merge Requests
+  @Post('requests/:id/merge')
+  mergeRequests(
+    @Param('id') sourceRequestId: string,
+    @Body() body: {
+      targetRequestId: string;
+      mergeOptions?: {
+        keepTitle?: 'source' | 'target';
+        keepDescription?: 'source' | 'target' | 'merge';
+        keepVotes?: 'source' | 'target' | 'combine';
+        keepComments?: 'source' | 'target' | 'combine';
+        keepStatus?: 'source' | 'target' | 'highest';
+      };
+    },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    this.validateRequest(authHeader);
+    const mergedRequest = this.componentRequestService.mergeRequests(
+      sourceRequestId,
+      body.targetRequestId,
+      body.mergeOptions,
+    );
+    if (!mergedRequest) {
+      throw new BadRequestException('Failed to merge requests. One or both requests not found.');
+    }
+    return mergedRequest;
+  }
+
   // Notification endpoints
   @Get('notifications')
   getNotifications(
