@@ -227,6 +227,30 @@ const foundationHeroCards = {
       <rect x="60" y="60" width="100" height="100" rx="8" fill="url(#shadowsGradient)" opacity="0.7" filter="url(#shadowFilter)"/>
       <rect x="70" y="70" width="100" height="100" rx="8" fill="url(#shadowsGradient)" opacity="0.5" filter="url(#shadowFilter)"/>
     </svg>`
+  },
+  '/accessibility': {
+    title: 'Accessibility',
+    description: 'Guidelines and best practices for creating accessible, inclusive experiences that work for everyone. Ensure your designs meet WCAG standards and provide equal access to all users.',
+    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="accessibilityGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <!-- Accessibility icon - person with arms raised in circle -->
+      <circle cx="100" cy="100" r="50" fill="none" stroke="url(#accessibilityGradient)" stroke-width="4" opacity="0.6"/>
+      <circle cx="100" cy="80" r="15" fill="url(#accessibilityGradient)" opacity="0.6"/>
+      <path d="M 100 95 Q 70 95 70 125 L 70 150 L 130 150 L 130 125 Q 130 95 100 95" fill="url(#accessibilityGradient)" opacity="0.5"/>
+      <!-- Arms raised -->
+      <line x1="70" y1="110" x2="50" y2="90" stroke="url(#accessibilityGradient)" stroke-width="4" opacity="0.6" stroke-linecap="round"/>
+      <line x1="130" y1="110" x2="150" y2="90" stroke="url(#accessibilityGradient)" stroke-width="4" opacity="0.6" stroke-linecap="round"/>
+      <!-- Accessibility indicators -->
+      <circle cx="50" cy="50" r="8" fill="url(#accessibilityGradient)" opacity="0.4"/>
+      <circle cx="150" cy="50" r="8" fill="url(#accessibilityGradient)" opacity="0.4"/>
+      <circle cx="50" cy="150" r="8" fill="url(#accessibilityGradient)" opacity="0.4"/>
+      <circle cx="150" cy="150" r="8" fill="url(#accessibilityGradient)" opacity="0.4"/>
+    </svg>`
   }
 };
 
@@ -293,6 +317,7 @@ const getFilePath = (docPath) => {
     '/typography': '/docs/typography.md',
     '/spacing': '/docs/spacing.md',
     '/shadows': '/docs/shadows.md',
+    '/accessibility': '/docs/hcd/accessibility.md',
     '/ai/overview': '/docs/ai/overview.md',
     '/ai/patterns': '/docs/ai/patterns.md',
     '/ai/components': '/docs/ai/components.md',
