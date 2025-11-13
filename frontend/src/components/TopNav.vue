@@ -245,14 +245,12 @@
       <div class="flex items-center gap-4 px-4 sm:px-6 lg:px-8 flex-shrink-0">
         <!-- Live Chat -->
         <button
-          v-if="aiAssistantEnabled"
-          @click="toggleChat"
           class="relative flex items-center justify-center p-2 rounded-lg transition-colors"
           :class="isDarkMode 
             ? 'text-gray-300 hover:text-indigo-400 hover:bg-indigo-900/20' 
             : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'"
           title="Live Chat"
-          aria-label="Open live chat with Eero"
+          aria-label="Live Chat"
         >
           <span class="material-symbols-outlined flex items-center justify-center" aria-hidden="true">live_help</span>
         </button>
@@ -573,7 +571,6 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { mockAPI, isMockMode, mockReviews } from '../mockData.js';
-import { useFeatureFlag } from '../composables/useFeatureFlags';
 
 const router = useRouter();
 const notificationsContainer = ref(null);
@@ -878,15 +875,6 @@ const totalNotificationCount = computed(() => {
 const currentUser = ref(localStorage.getItem('currentDesigner') || 'Sarah Johnson');
 const currentUserEmail = ref(localStorage.getItem('currentUserEmail') || 'sarah@example.com');
 const currentUserRole = ref(localStorage.getItem('userRole') || 'designer');
-const { isEnabled: aiAssistantEnabled } = useFeatureFlag('ai-assistant', false);
-
-// Toggle chat (opens Eero chatbot via FAB)
-const toggleChat = () => {
-  // Emit event to parent to open chat
-  // This will be handled by App.vue which controls the FAB
-  const event = new CustomEvent('open-eero-chat');
-  window.dispatchEvent(event);
-};
 
 // Toggle notifications dropdown
 const toggleNotifications = () => {
