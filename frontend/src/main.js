@@ -587,6 +587,10 @@ const router = createRouter({
       component: () => import('./views/ResearchMethods.vue'),
     },
     {
+      path: '/hcd/council',
+      component: () => import('./views/HcdCouncil.vue'),
+    },
+    {
       path: '/design-assets',
       component: () => import('./views/DesignAssets.vue'),
     },

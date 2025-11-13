@@ -547,6 +547,26 @@
           </button>
         </div>
         <nav class="space-y-6">
+          <!-- HCD Overview -->
+          <div class="space-y-1">
+            <router-link
+              to="/research"
+              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              :class="[
+                isActive('/research')
+                  ? (isDarkMode 
+                    ? 'text-indigo-400 bg-indigo-900/20' 
+                    : 'text-indigo-600 bg-indigo-50')
+                  : (isDarkMode
+                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+              ]"
+            >
+              <span class="material-symbols-outlined text-lg">home</span>
+              <span class="font-medium">Overview</span>
+            </router-link>
+          </div>
+          
           <!-- HCD Guidelines -->
           <div>
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">HCD Guidelines</h4>
@@ -851,6 +871,7 @@ const artificialIntelligence = [
 const humanCenteredDesign = [
   { text: 'HCD Principles', link: '/hcd/principles', icon: 'people' },
   { text: 'HCD Process', link: '/hcd/process', icon: 'timeline' },
+  { text: 'HCD Council', link: '/hcd/council', icon: 'groups' },
   { text: 'Research Methods', link: '/hcd/research-methods', icon: 'science' },
   { text: 'Recruiting Users', link: '/hcd/recruiting-users', icon: 'group_add' },
   { text: 'Conducting Interviews', link: '/hcd/conducting-interviews', icon: 'record_voice_over' },
