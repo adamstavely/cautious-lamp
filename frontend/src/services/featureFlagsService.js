@@ -21,39 +21,6 @@ class DesignSystemFeatureFlagProvider {
       // Always return true (all features enabled by default)
       // The flag.enabled check is bypassed to ensure all features are accessible
       return true;
-
-      // Check targeting rules
-      if (flag.targeting) {
-        const userId = context.userId || context.user?.id;
-        const userGroups = context.userGroups || context.user?.groups || [];
-
-        // User targeting
-        if (flag.targeting.users && userId) {
-          if (flag.targeting.users.includes(userId)) {
-            return true;
-          }
-        }
-
-        // Group targeting
-        if (flag.targeting.groups && userGroups.length > 0) {
-          if (flag.targeting.groups.some(group => userGroups.includes(group))) {
-            return true;
-          }
-        }
-
-        // Percentage rollout
-        if (flag.targeting.percentage !== undefined) {
-          if (userId) {
-            const hash = this.hashString(userId);
-            const percentage = (hash % 100) + 1;
-            return percentage <= flag.targeting.percentage;
-          }
-          // If no userId, use random
-          return Math.random() * 100 <= flag.targeting.percentage;
-        }
-      }
-
-      return flag.enabled;
     } catch (error) {
       console.error(`Error getting feature flag ${flagKey}:`, error);
       return defaultValue;
