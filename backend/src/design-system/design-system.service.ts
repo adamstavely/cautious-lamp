@@ -1273,6 +1273,481 @@ export const ColorPicker = ({ show = false, initialColor = '#000000', position =
         notes: 'Fully WCAG 2.1 AA compliant with keyboard navigation, ARIA labels, and focus management',
       },
     },
+    {
+      id: 'navigation',
+      name: 'Navigation',
+      description: 'Navigation component with tabs, breadcrumbs, and pagination support',
+      status: 'production',
+      props: [
+        { name: 'type', type: 'string', default: 'tabs', options: ['tabs', 'breadcrumbs', 'pagination', 'menu'], description: 'Navigation type', required: false },
+        { name: 'items', type: 'array', default: [], description: 'Navigation items', required: true },
+        { name: 'activeItem', type: 'string', default: '', description: 'Active navigation item ID', required: false },
+        { name: 'orientation', type: 'string', default: 'horizontal', options: ['horizontal', 'vertical'], description: 'Navigation orientation', required: false },
+        { name: 'variant', type: 'string', default: 'default', options: ['default', 'underline', 'pills', 'minimal'], description: 'Visual variant', required: false },
+      ],
+      code: {
+        vue: `<template>
+  <nav :class="[
+    'flex',
+    orientation === 'vertical' ? 'flex-col' : 'flex-row',
+    'gap-2'
+  ]">
+    <template v-if="type === 'tabs'">
+      <button
+        v-for="item in items"
+        :key="item.id"
+        :class="[
+          'px-4 py-2 rounded-lg font-medium transition-colors',
+          activeItem === item.id
+            ? variant === 'underline' 
+              ? 'border-b-2 border-indigo-600 text-indigo-600'
+              : variant === 'pills'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-indigo-50 text-indigo-700'
+            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+        ]"
+        @click="$emit('item-click', item.id)"
+      >
+        {{ item.label }}
+      </button>
+    </template>
+    <template v-else-if="type === 'breadcrumbs'">
+      <ol class="flex items-center space-x-2">
+        <li v-for="(item, index) in items" :key="item.id" class="flex items-center">
+          <a
+            v-if="index < items.length - 1"
+            :href="item.href"
+            class="text-gray-500 hover:text-gray-700"
+            @click.prevent="$emit('item-click', item.id)"
+          >
+            {{ item.label }}
+          </a>
+          <span v-else class="text-gray-900 font-medium">{{ item.label }}</span>
+          <span v-if="index < items.length - 1" class="mx-2 text-gray-400">/</span>
+        </li>
+      </ol>
+    </template>
+    <template v-else-if="type === 'pagination'">
+      <div class="flex items-center gap-2">
+        <button
+          :disabled="currentPage === 1"
+          class="px-3 py-2 rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed"
+          @click="$emit('page-change', currentPage - 1)"
+        >
+          Previous
+        </button>
+        <button
+          v-for="page in pages"
+          :key="page"
+          :class="[
+            'px-4 py-2 rounded-lg border',
+            page === currentPage ? 'bg-indigo-600 text-white' : 'hover:bg-gray-50'
+          ]"
+          @click="$emit('page-change', page)"
+        >
+          {{ page }}
+        </button>
+        <button
+          :disabled="currentPage === totalPages"
+          class="px-3 py-2 rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed"
+          @click="$emit('page-change', currentPage + 1)"
+        >
+          Next
+        </button>
+      </div>
+    </template>
+  </nav>
+</template>
+
+<script setup>
+defineProps({
+  type: { type: String, default: 'tabs' },
+  items: { type: Array, default: () => [] },
+  activeItem: { type: String, default: '' },
+  orientation: { type: String, default: 'horizontal' },
+  variant: { type: String, default: 'default' },
+  currentPage: { type: Number, default: 1 },
+  totalPages: { type: Number, default: 1 }
+});
+
+defineEmits(['item-click', 'page-change']);
+</script>`,
+        react: `import React from 'react';
+
+export const Navigation = ({ 
+  type = 'tabs', 
+  items = [], 
+  activeItem = '', 
+  orientation = 'horizontal',
+  variant = 'default',
+  currentPage = 1,
+  totalPages = 1,
+  onItemClick,
+  onPageChange
+}) => {
+  const baseClasses = \`flex gap-2 \${orientation === 'vertical' ? 'flex-col' : 'flex-row'}\`;
+  
+  if (type === 'tabs') {
+    return (
+      <nav className={baseClasses}>
+        {items.map(item => (
+          <button
+            key={item.id}
+            className={\`px-4 py-2 rounded-lg font-medium transition-colors \${
+              activeItem === item.id
+                ? variant === 'underline'
+                  ? 'border-b-2 border-indigo-600 text-indigo-600'
+                  : variant === 'pills'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-indigo-50 text-indigo-700'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }\`}
+            onClick={() => onItemClick?.(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
+    );
+  }
+  
+  if (type === 'breadcrumbs') {
+    return (
+      <nav>
+        <ol className="flex items-center space-x-2">
+          {items.map((item, index) => (
+            <li key={item.id} className="flex items-center">
+              {index < items.length - 1 ? (
+                <a
+                  href={item.href}
+                  className="text-gray-500 hover:text-gray-700"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onItemClick?.(item.id);
+                  }}
+                >
+                  {item.label}
+                </a>
+              ) : (
+                <span className="text-gray-900 font-medium">{item.label}</span>
+              )}
+              {index < items.length - 1 && <span className="mx-2 text-gray-400">/</span>}
+            </li>
+          ))}
+        </ol>
+      </nav>
+    );
+  }
+  
+  if (type === 'pagination') {
+    const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+    return (
+      <nav className="flex items-center gap-2">
+        <button
+          disabled={currentPage === 1}
+          className="px-3 py-2 rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => onPageChange?.(currentPage - 1)}
+        >
+          Previous
+        </button>
+        {pages.map(page => (
+          <button
+            key={page}
+            className={\`px-4 py-2 rounded-lg border \${
+              page === currentPage ? 'bg-indigo-600 text-white' : 'hover:bg-gray-50'
+            }\`}
+            onClick={() => onPageChange?.(page)}
+          >
+            {page}
+          </button>
+        ))}
+        <button
+          disabled={currentPage === totalPages}
+          className="px-3 py-2 rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => onPageChange?.(currentPage + 1)}
+        >
+          Next
+        </button>
+      </nav>
+    );
+  }
+  
+  return null;
+};`,
+      },
+      dependencies: ['button'],
+      examples: [
+        '<Navigation type="tabs" :items="[{id: \'tab1\', label: \'Tab 1\'}]" :active-item="\'tab1\'" />',
+        '<Navigation type="breadcrumbs" :items="breadcrumbItems" />',
+        '<Navigation type="pagination" :current-page="1" :total-pages="10" />'
+      ],
+      accessibility: {
+        wcag: 'AA',
+        notes: 'Navigation has proper ARIA labels, keyboard navigation, and focus management',
+      },
+    },
+    {
+      id: 'table',
+      name: 'Table',
+      description: 'Data table component with sorting, filtering, and pagination',
+      status: 'production',
+      props: [
+        { name: 'columns', type: 'array', default: [], description: 'Table column definitions', required: true },
+        { name: 'data', type: 'array', default: [], description: 'Table data rows', required: true },
+        { name: 'sortable', type: 'boolean', default: false, description: 'Enable column sorting', required: false },
+        { name: 'filterable', type: 'boolean', default: false, description: 'Enable row filtering', required: false },
+        { name: 'paginated', type: 'boolean', default: false, description: 'Enable pagination', required: false },
+        { name: 'pageSize', type: 'number', default: 10, description: 'Rows per page', required: false },
+        { name: 'stripe', type: 'boolean', default: false, description: 'Alternating row colors', required: false },
+        { name: 'hover', type: 'boolean', default: true, description: 'Row hover effect', required: false },
+      ],
+      code: {
+        vue: `<template>
+  <div class="overflow-x-auto">
+    <table :class="[
+      'min-w-full divide-y divide-gray-200',
+      stripe ? 'bg-white' : 'bg-gray-50'
+    ]">
+      <thead class="bg-gray-50">
+        <tr>
+          <th
+            v-for="column in columns"
+            :key="column.key"
+            :class="[
+              'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+              sortable && column.sortable !== false ? 'cursor-pointer hover:bg-gray-100' : ''
+            ]"
+            @click="sortable && column.sortable !== false ? handleSort(column.key) : null"
+          >
+            <div class="flex items-center gap-2">
+              {{ column.label }}
+              <span v-if="sortable && column.sortable !== false && sortColumn === column.key" class="material-symbols-outlined text-sm">
+                {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+              </span>
+            </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody :class="[
+        'bg-white divide-y divide-gray-200',
+        stripe ? '' : ''
+      ]">
+        <tr
+          v-for="(row, index) in paginatedData"
+          :key="index"
+          :class="[
+            hover ? 'hover:bg-gray-50' : '',
+            stripe && index % 2 === 0 ? 'bg-gray-50' : ''
+          ]"
+        >
+          <td
+            v-for="column in columns"
+            :key="column.key"
+            class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+          >
+            <slot :name="\`cell-\${column.key}\`" :row="row" :value="row[column.key]">
+              {{ row[column.key] }}
+            </slot>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div v-if="paginated" class="mt-4 flex items-center justify-between">
+      <div class="text-sm text-gray-700">
+        Showing {{ (currentPage - 1) * pageSize + 1 }} to {{ Math.min(currentPage * pageSize, data.length) }} of {{ data.length }} results
+      </div>
+      <div class="flex gap-2">
+        <button
+          :disabled="currentPage === 1"
+          class="px-3 py-2 rounded-lg border disabled:opacity-50"
+          @click="currentPage--"
+        >
+          Previous
+        </button>
+        <button
+          :disabled="currentPage >= totalPages"
+          class="px-3 py-2 rounded-lg border disabled:opacity-50"
+          @click="currentPage++"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue';
+
+const props = defineProps({
+  columns: { type: Array, default: () => [] },
+  data: { type: Array, default: () => [] },
+  sortable: { type: Boolean, default: false },
+  filterable: { type: Boolean, default: false },
+  paginated: { type: Boolean, default: false },
+  pageSize: { type: Number, default: 10 },
+  stripe: { type: Boolean, default: false },
+  hover: { type: Boolean, default: true }
+});
+
+const currentPage = ref(1);
+const sortColumn = ref(null);
+const sortDirection = ref('asc');
+
+const sortedData = computed(() => {
+  if (!props.sortable || !sortColumn.value) return props.data;
+  
+  return [...props.data].sort((a, b) => {
+    const aVal = a[sortColumn.value];
+    const bVal = b[sortColumn.value];
+    const modifier = sortDirection.value === 'asc' ? 1 : -1;
+    return aVal > bVal ? modifier : aVal < bVal ? -modifier : 0;
+  });
+});
+
+const totalPages = computed(() => Math.ceil(sortedData.value.length / props.pageSize));
+
+const paginatedData = computed(() => {
+  if (!props.paginated) return sortedData.value;
+  const start = (currentPage.value - 1) * props.pageSize;
+  return sortedData.value.slice(start, start + props.pageSize);
+});
+
+const handleSort = (columnKey) => {
+  if (sortColumn.value === columnKey) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = columnKey;
+    sortDirection.value = 'asc';
+  }
+};
+</script>`,
+        react: `import React, { useState, useMemo } from 'react';
+
+export const Table = ({
+  columns = [],
+  data = [],
+  sortable = false,
+  filterable = false,
+  paginated = false,
+  pageSize = 10,
+  stripe = false,
+  hover = true
+}) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState(null);
+  const [sortDirection, setSortDirection] = useState('asc');
+
+  const sortedData = useMemo(() => {
+    if (!sortable || !sortColumn) return data;
+    
+    return [...data].sort((a, b) => {
+      const aVal = a[sortColumn];
+      const bVal = b[sortColumn];
+      const modifier = sortDirection === 'asc' ? 1 : -1;
+      return aVal > bVal ? modifier : aVal < bVal ? -modifier : 0;
+    });
+  }, [data, sortable, sortColumn, sortDirection]);
+
+  const totalPages = Math.ceil(sortedData.length / pageSize);
+
+  const paginatedData = useMemo(() => {
+    if (!paginated) return sortedData;
+    const start = (currentPage - 1) * pageSize;
+    return sortedData.slice(start, start + pageSize);
+  }, [sortedData, paginated, currentPage, pageSize]);
+
+  const handleSort = (columnKey) => {
+    if (sortColumn === columnKey) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(columnKey);
+      setSortDirection('asc');
+    }
+  };
+
+  return (
+    <div className="overflow-x-auto">
+      <table className={\`min-w-full divide-y divide-gray-200 \${stripe ? 'bg-white' : 'bg-gray-50'}\`}>
+        <thead className="bg-gray-50">
+          <tr>
+            {columns.map(column => (
+              <th
+                key={column.key}
+                className={\`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider \${
+                  sortable && column.sortable !== false ? 'cursor-pointer hover:bg-gray-100' : ''
+                }\`}
+                onClick={sortable && column.sortable !== false ? () => handleSort(column.key) : undefined}
+              >
+                <div className="flex items-center gap-2">
+                  {column.label}
+                  {sortable && column.sortable !== false && sortColumn === column.key && (
+                    <span className="material-symbols-outlined text-sm">
+                      {sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+                    </span>
+                  )}
+                </div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {paginatedData.map((row, index) => (
+            <tr
+              key={index}
+              className={\`\${
+                hover ? 'hover:bg-gray-50' : ''
+              } \${
+                stripe && index % 2 === 0 ? 'bg-gray-50' : ''
+              }\`}
+            >
+              {columns.map(column => (
+                <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {row[column.key]}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {paginated && (
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-sm text-gray-700">
+            Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, data.length)} of {data.length} results
+          </div>
+          <div className="flex gap-2">
+            <button
+              disabled={currentPage === 1}
+              className="px-3 py-2 rounded-lg border disabled:opacity-50"
+              onClick={() => setCurrentPage(currentPage - 1)}
+            >
+              Previous
+            </button>
+            <button
+              disabled={currentPage >= totalPages}
+              className="px-3 py-2 rounded-lg border disabled:opacity-50"
+              onClick={() => setCurrentPage(currentPage + 1)}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};`,
+      },
+      dependencies: ['navigation', 'button'],
+      examples: [
+        '<Table :columns="columns" :data="tableData" :sortable="true" />',
+        '<Table :columns="columns" :data="tableData" :paginated="true" :page-size="20" />',
+        '<Table :columns="columns" :data="tableData" :stripe="true" :hover="true" />'
+      ],
+      accessibility: {
+        wcag: 'AA',
+        notes: 'Table has proper ARIA labels, keyboard navigation, and screen reader support',
+      },
+    },
   ];
 
   getAllTokens(category?: string, type?: string, tag?: string): Token[] {
