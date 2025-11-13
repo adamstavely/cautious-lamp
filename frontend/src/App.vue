@@ -30,7 +30,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import Sidebar from './components/Sidebar.vue';
 import TopNav from './components/TopNav.vue';
 import InfoBanner from './components/InfoBanner.vue';
@@ -40,9 +41,42 @@ import LoupeTool from './components/LoupeTool.vue';
 import Toast from './components/Toast.vue';
 import { useFeatureFlag } from './composables/useFeatureFlags';
 
+const route = useRoute();
+const router = useRouter();
 const chatOpen = ref(false);
 const { isEnabled: aiAssistantEnabled } = useFeatureFlag('ai-assistant', false);
 const { isEnabled: loupeToolEnabled } = useFeatureFlag('component-loupe', false);
+
+// Handle featureDisabled query parameter
+watch(() => route.query.featureDisabled, (featureKey) => {
+  if (featureKey) {
+    // Refresh feature flag cache and try to enable the feature
+    if (window.OpenFeature) {
+      window.OpenFeature.refreshCache().then(() => {
+        // Show notification using window.showToast (exposed by Toast component)
+        if (window.showToast) {
+          window.showToast(
+            `The feature "${featureKey}" is currently disabled. Please contact an administrator to enable it.`,
+            'warning',
+            5000
+          );
+        }
+        
+        // Remove the query parameter after showing the message
+        router.replace({ query: {} });
+      });
+    } else {
+      if (window.showToast) {
+        window.showToast(
+          `The feature "${featureKey}" is currently disabled.`,
+          'warning',
+          5000
+        );
+      }
+      router.replace({ query: {} });
+    }
+  }
+}, { immediate: true });
 
 const handleToggleChat = () => {
   chatOpen.value = !chatOpen.value;
@@ -61,6 +95,13 @@ const handleOpenChatEvent = () => {
 
 onMounted(() => {
   window.addEventListener('open-eero-chat', handleOpenChatEvent);
+  
+  // Refresh feature flags cache on mount to ensure we have latest values
+  if (window.OpenFeature) {
+    window.OpenFeature.refreshCache().catch(err => {
+      console.warn('Failed to refresh feature flags cache:', err);
+    });
+  }
 });
 
 onBeforeUnmount(() => {
