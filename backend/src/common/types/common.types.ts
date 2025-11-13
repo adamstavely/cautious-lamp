@@ -51,6 +51,14 @@ export interface CreateProjectDto {
   argosBaseUrl?: string;
   argosBranch?: string;
   argosToken?: string;
+  oauthEnabled?: boolean;
+  oauthConfig?: {
+    clientId?: string;
+    clientSecret?: string;
+    authorizationURL?: string;
+    tokenURL?: string;
+    callbackURL?: string;
+  };
   config?: ProjectConfig;
 }
 

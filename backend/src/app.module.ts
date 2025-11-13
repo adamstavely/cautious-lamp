@@ -19,10 +19,14 @@ import { ChangelogAggregationModule } from './changelog-aggregation/changelog-ag
 import { ContributionWorkflowModule } from './contribution-workflow/contribution-workflow.module';
 import { ApiVersioningModule } from './api-versioning/api-versioning.module';
 import { SearchModule } from './search/search.module';
+import { SecurityModule } from './common/security/security.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { rateLimitConfig } from './common/rate-limiting/rate-limit.config';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot(rateLimitConfig),
     ElasticsearchModule.registerAsync({
       useFactory: () => {
         const node = process.env.ELASTICSEARCH_NODE || 'http://localhost:9200';
@@ -54,6 +58,7 @@ import { ElasticsearchModule } from '@nestjs/elasticsearch';
     ContributionWorkflowModule,
     ApiVersioningModule,
     SearchModule,
+    SecurityModule,
   ],
 })
 export class AppModule {}

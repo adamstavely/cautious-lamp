@@ -77,6 +77,12 @@ export class AuditInterceptor implements NestInterceptor {
           success: false,
           errorMessage: error.message,
         });
+
+        // Log security events for specific error types
+        if (error.status === 401 || error.status === 403) {
+          // This will be handled by SecurityAuditService if injected
+        }
+
         throw error;
       }),
     );

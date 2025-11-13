@@ -12,6 +12,8 @@ import {
 import { ErrorHandler } from '../common/errors/error-handler';
 import { VisualRegressionGateway } from './visual-regression.gateway';
 import { PaginationParams, PaginatedResponse, parsePaginationParams, createPaginatedResponse } from '../common/pagination/pagination.types';
+import { EncryptionService } from '../common/security/encryption.service';
+import { Optional, Inject } from '@nestjs/common';
 
 export interface Project {
   id: string;
@@ -22,6 +24,8 @@ export interface Project {
   argosBaseUrl?: string; // Self-hosted Argos instance URL
   argosBranch: string;
   argosToken?: string; // Encrypted token (not returned in API responses)
+  oauthEnabled?: boolean; // Whether OAuth is used instead of token
+  oauthServiceId?: string; // OAuth service ID if using OAuth
   config: {
     testDirectories?: string[];
     viewports?: string[];
@@ -75,9 +79,26 @@ export class VisualRegressionService {
   private projects: Map<string, Project> = new Map();
   private testRuns: Map<string, TestRun> = new Map();
   private testResults: Map<string, TestResult[]> = new Map();
-  private webhookSecrets: Map<string, string> = new Map(); // projectId -> webhookSecret
+  private webhookSecrets: Map<string, string> = new Map(); // projectId -> webhookSecret (encrypted)
   private webhookEvents: Array<{ projectId: string; event: string; payload: WebhookPayload; timestamp: Date }> = [];
   private gateway?: VisualRegressionGateway; // Injected via setter to avoid circular dependency
+
+  constructor(
+    @Optional() @Inject(EncryptionService) private readonly encryptionService?: EncryptionService,
+  ) {}
+
+  /**
+   * Helper method to decrypt token if encrypted
+   */
+  private decryptToken(encryptedToken: string | undefined): string | undefined {
+    if (!encryptedToken) {
+      return undefined;
+    }
+    if (this.encryptionService?.isEncrypted(encryptedToken)) {
+      return this.encryptionService.decrypt(encryptedToken);
+    }
+    return encryptedToken; // Not encrypted, return as-is (backward compatibility)
+  }
 
   // Project Management
   async createProject(teamId: string, dto: CreateProjectDto): Promise<Project> {
@@ -101,6 +122,9 @@ export class VisualRegressionService {
       throw ErrorHandler.handleError(error, 'VisualRegressionService.createProject');
     }
 
+    // Encrypt token before storing
+    const encryptedToken = dto.argosToken ? this.encryptionService?.encrypt(dto.argosToken) : undefined;
+
     const project: Project = {
       id: `vr-project-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       teamId,
@@ -109,7 +133,7 @@ export class VisualRegressionService {
       argosProjectId: dto.argosProjectId,
       argosBaseUrl,
       argosBranch: dto.argosBranch || 'develop',
-      argosToken: dto.argosToken, // In production, this should be encrypted
+      argosToken: encryptedToken, // Encrypted token stored at rest
       config: dto.config || {},
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -149,7 +173,12 @@ export class VisualRegressionService {
     // If updating Argos connection details, verify them
     if (dto.argosProjectId || dto.argosToken || dto.argosBaseUrl) {
       const argosBaseUrl = dto.argosBaseUrl || project.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
-      const argosToken = dto.argosToken || project.argosToken;
+      // Decrypt stored token if using existing, or use new token from DTO
+      const storedToken = project.argosToken;
+      const decryptedToken = storedToken && this.encryptionService?.isEncrypted(storedToken)
+        ? this.encryptionService.decrypt(storedToken)
+        : storedToken;
+      const argosToken = dto.argosToken || decryptedToken;
       const argosProjectId = dto.argosProjectId || project.argosProjectId;
 
       if (argosToken) {
@@ -163,9 +192,15 @@ export class VisualRegressionService {
       }
     }
 
+    // Encrypt new token if provided
+    const encryptedToken = dto.argosToken 
+      ? this.encryptionService?.encrypt(dto.argosToken)
+      : project.argosToken; // Keep existing encrypted token
+
     const updated: Project = {
       ...project,
       ...dto,
+      argosToken: encryptedToken,
       updatedAt: new Date(),
     };
 
@@ -201,7 +236,11 @@ export class VisualRegressionService {
     }
 
     const argosBaseUrl = project.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
-    const argosClient = new ArgosApiClient(argosBaseUrl, project.argosToken);
+    const decryptedToken = this.decryptToken(project.argosToken);
+    if (!decryptedToken) {
+      throw new BadRequestException('Failed to decrypt Argos token');
+    }
+    const argosClient = new ArgosApiClient(argosBaseUrl, decryptedToken);
 
     const branch = dto.branch || project.argosBranch;
     const commitSha = dto.commitSha || `commit-${Date.now()}`;
@@ -407,7 +446,11 @@ export class VisualRegressionService {
 
   private async syncRunsFromArgos(projectId: string, project: Project): Promise<void> {
     const argosBaseUrl = project.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
-    const argosClient = new ArgosApiClient(argosBaseUrl, project.argosToken!);
+    const decryptedToken = this.decryptToken(project.argosToken);
+    if (!decryptedToken) {
+      throw new Error('Failed to decrypt Argos token for sync');
+    }
+    const argosClient = new ArgosApiClient(argosBaseUrl, decryptedToken);
 
     try {
       const argosBuilds = await argosClient.getBuilds(project.argosProjectId, {
@@ -476,7 +519,11 @@ export class VisualRegressionService {
     if (project.argosToken && run.argosBuildId && run.status === 'completed') {
       try {
         const argosBaseUrl = project.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
-        const argosClient = new ArgosApiClient(argosBaseUrl, project.argosToken);
+        const decryptedToken = this.decryptToken(project.argosToken);
+        if (!decryptedToken) {
+          throw new Error('Failed to decrypt Argos token');
+        }
+        const argosClient = new ArgosApiClient(argosBaseUrl, decryptedToken);
         const build = await argosClient.getBuild(project.argosProjectId, run.argosBuildId);
         await this.fetchBuildResults(runId, project, argosClient, build);
       } catch (error) {
@@ -527,7 +574,11 @@ export class VisualRegressionService {
 
     // Approve in Argos
     const argosBaseUrl = project.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
-    const argosClient = new ArgosApiClient(argosBaseUrl, project.argosToken);
+    const decryptedToken = this.decryptToken(project.argosToken);
+    if (!decryptedToken) {
+      throw new BadRequestException('Failed to decrypt Argos token');
+    }
+    const argosClient = new ArgosApiClient(argosBaseUrl, decryptedToken);
 
     try {
       await argosClient.approveScreenshot(project.argosProjectId, run.argosBuildId!, argosScreenshotId);
@@ -568,7 +619,11 @@ export class VisualRegressionService {
 
     // Reject in Argos
     const argosBaseUrl = project.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
-    const argosClient = new ArgosApiClient(argosBaseUrl, project.argosToken);
+    const decryptedToken = this.decryptToken(project.argosToken);
+    if (!decryptedToken) {
+      throw new BadRequestException('Failed to decrypt Argos token');
+    }
+    const argosClient = new ArgosApiClient(argosBaseUrl, decryptedToken);
 
     try {
       await argosClient.rejectScreenshot(project.argosProjectId, run.argosBuildId!, argosScreenshotId);
@@ -693,7 +748,12 @@ export class VisualRegressionService {
     if (existingRun) {
       // Update run status
       const argosBaseUrl = project.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
-      const argosClient = new ArgosApiClient(argosBaseUrl, project.argosToken);
+      const decryptedToken = this.decryptToken(project.argosToken);
+      if (!decryptedToken) {
+        console.error('Failed to decrypt Argos token for webhook update');
+        return;
+      }
+      const argosClient = new ArgosApiClient(argosBaseUrl, decryptedToken);
       
       try {
         const build = await argosClient.getBuild(project.argosProjectId, buildId);

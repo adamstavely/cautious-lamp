@@ -28,6 +28,12 @@ export interface AuditLog {
   metadata?: Record<string, unknown>;
   success: boolean;
   errorMessage?: string;
+  geolocation?: {
+    country?: string;
+    region?: string;
+    city?: string;
+  };
+  riskScore?: number; // 0-100, higher = more risky
 }
 
 export enum AuditAction {
@@ -52,6 +58,16 @@ export enum AuditAction {
   UNPUBLISH = 'UNPUBLISH',
   ARCHIVE = 'ARCHIVE',
   RESTORE = 'RESTORE',
+  // Security events
+  AUTH_FAILED = 'AUTH_FAILED',
+  AUTH_SUCCESS = 'AUTH_SUCCESS',
+  TOKEN_ROTATED = 'TOKEN_ROTATED',
+  TOKEN_REVOKED = 'TOKEN_REVOKED',
+  TOKEN_CREATED = 'TOKEN_CREATED',
+  ENCRYPTION_OPERATION = 'ENCRYPTION_OPERATION',
+  RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
+  SUSPICIOUS_ACTIVITY = 'SUSPICIOUS_ACTIVITY',
+  PERMISSION_DENIED = 'PERMISSION_DENIED',
 }
 
 @Injectable()
@@ -79,6 +95,9 @@ export class AuditService {
 
     try {
       const index = this.getIndexName();
+      // Calculate risk score based on various factors
+      const riskScore = this.calculateRiskScore(log);
+
       await this.elasticsearchService.index({
         index,
         document: {
@@ -100,6 +119,8 @@ export class AuditService {
           metadata: log.metadata,
           success: log.success,
           errorMessage: log.errorMessage,
+          geolocation: log.geolocation,
+          riskScore: riskScore,
         },
       });
     } catch (error) {
@@ -292,6 +313,56 @@ export class AuditService {
   private getIndexName(): string {
     const date = new Date().toISOString().split('T')[0].replace(/-/g, '.');
     return `${this.indexPrefix}-${date}`;
+  }
+
+  /**
+   * Calculate risk score for an audit log entry
+   */
+  private calculateRiskScore(log: AuditLog): number {
+    let score = 0;
+
+    // Failed operations increase risk
+    if (!log.success) {
+      score += 20;
+    }
+
+    // Authentication failures
+    if (log.action === AuditAction.AUTH_FAILED) {
+      score += 30;
+    }
+
+    // Permission denied
+    if (log.action === AuditAction.PERMISSION_DENIED) {
+      score += 25;
+    }
+
+    // Rate limit exceeded
+    if (log.action === AuditAction.RATE_LIMIT_EXCEEDED) {
+      score += 15;
+    }
+
+    // Suspicious activity
+    if (log.action === AuditAction.SUSPICIOUS_ACTIVITY) {
+      score += 40;
+    }
+
+    // Delete operations
+    if (log.action === AuditAction.DELETE) {
+      score += 10;
+    }
+
+    // High-value resources
+    if (log.resourceType === 'workspace' || log.resourceType === 'application') {
+      score += 5;
+    }
+
+    // Multiple failed attempts from same IP
+    // (This would require querying recent logs - simplified for now)
+    if (log.metadata?.recentFailures) {
+      score += (log.metadata.recentFailures as number) * 5;
+    }
+
+    return Math.min(100, score);
   }
 }
 

@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Optional, Inject } from '@nestjs/common';
 import { OpenReplayApiClient } from './openreplay-api.client';
+import { EncryptionService } from '../common/security/encryption.service';
 
 export interface Project {
   id: string;
@@ -50,9 +51,24 @@ export interface Session {
 export class SessionReplayService {
   private projects: Map<string, Project> = new Map();
 
-  constructor() {
+  constructor(
+    @Optional() @Inject(EncryptionService) private readonly encryptionService?: EncryptionService,
+  ) {
     // Initialize with mock project for testing
     this.initializeMockData();
+  }
+
+  /**
+   * Helper method to decrypt token if encrypted
+   */
+  private decryptToken(encryptedToken: string | undefined): string | undefined {
+    if (!encryptedToken) {
+      return undefined;
+    }
+    if (this.encryptionService?.isEncrypted(encryptedToken)) {
+      return this.encryptionService.decrypt(encryptedToken);
+    }
+    return encryptedToken; // Not encrypted, return as-is (backward compatibility)
   }
 
   private initializeMockData() {
@@ -93,6 +109,9 @@ export class SessionReplayService {
       }
     }
 
+    // Encrypt API key before storing
+    const encryptedApiKey = dto.openreplayApiKey ? this.encryptionService?.encrypt(dto.openreplayApiKey) : undefined;
+
     const project: Project = {
       id: `sr-project-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       teamId,
@@ -101,7 +120,7 @@ export class SessionReplayService {
       applicationUrl: dto.applicationUrl,
       openreplayProjectKey: dto.openreplayProjectKey,
       openreplayBaseUrl: dto.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com',
-      openreplayApiKey: dto.openreplayApiKey, // In production, this should be encrypted
+      openreplayApiKey: encryptedApiKey, // Encrypted API key stored at rest
       privacySettings: dto.privacySettings || {},
       config: dto.config || {},
       createdAt: new Date(),
@@ -148,7 +167,12 @@ export class SessionReplayService {
     // If updating OpenReplay connection details, verify them
     if (dto.openreplayProjectKey || dto.openreplayApiKey || dto.openreplayBaseUrl) {
       const openreplayBaseUrl = dto.openreplayBaseUrl || project.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com';
-      const openreplayApiKey = dto.openreplayApiKey || project.openreplayApiKey;
+      // Decrypt stored API key if using existing, or use new API key from DTO
+      const storedApiKey = project.openreplayApiKey;
+      const decryptedApiKey = storedApiKey && this.encryptionService?.isEncrypted(storedApiKey)
+        ? this.decryptToken(storedApiKey)
+        : storedApiKey;
+      const openreplayApiKey = dto.openreplayApiKey || decryptedApiKey;
 
       if (openreplayApiKey) {
         const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, openreplayApiKey);
@@ -160,9 +184,15 @@ export class SessionReplayService {
       }
     }
 
+    // Encrypt new API key if provided
+    const encryptedApiKey = dto.openreplayApiKey 
+      ? this.encryptionService?.encrypt(dto.openreplayApiKey)
+      : project.openreplayApiKey; // Keep existing encrypted API key
+
     const updated: Project = {
       ...project,
       ...dto,
+      openreplayApiKey: encryptedApiKey,
       updatedAt: new Date(),
     };
 
@@ -187,9 +217,10 @@ export class SessionReplayService {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
 
+    const decryptedApiKey = this.decryptToken(project.openreplayApiKey) || '';
     const openreplayClient = new OpenReplayApiClient(
       project.openreplayBaseUrl || 'https://api.openreplay.com',
-      project.openreplayApiKey || ''
+      decryptedApiKey
     );
 
     return openreplayClient.getIntegrationCode(
@@ -221,7 +252,8 @@ export class SessionReplayService {
     }
 
     // If no API key is configured, return mock sessions for development/demo purposes
-    if (!project.openreplayApiKey || (typeof project.openreplayApiKey === 'string' && project.openreplayApiKey.trim() === '')) {
+    const decryptedApiKey = this.decryptToken(project.openreplayApiKey);
+    if (!decryptedApiKey || (typeof decryptedApiKey === 'string' && decryptedApiKey.trim() === '')) {
       const mockSessions: Session[] = [
         {
           sessionId: 'mock-session-001',
@@ -312,7 +344,11 @@ export class SessionReplayService {
     }
 
     const openreplayBaseUrl = project.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com';
-    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, project.openreplayApiKey);
+    const decryptedApiKey = this.decryptToken(project.openreplayApiKey);
+    if (!decryptedApiKey) {
+      throw new BadRequestException('OpenReplay API key not configured or failed to decrypt');
+    }
+    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, decryptedApiKey);
 
     try {
       // Parse project key to get numeric project ID (OpenReplay uses numeric IDs)
@@ -361,7 +397,8 @@ export class SessionReplayService {
     }
 
     // If no API key is configured, return mock session for development/demo purposes
-    if (!project.openreplayApiKey || (typeof project.openreplayApiKey === 'string' && project.openreplayApiKey.trim() === '')) {
+    const decryptedApiKey = this.decryptToken(project.openreplayApiKey);
+    if (!decryptedApiKey || (typeof decryptedApiKey === 'string' && decryptedApiKey.trim() === '')) {
       // Find the mock session by ID or return a default one
       const mockSessions = [
         {
@@ -428,7 +465,11 @@ export class SessionReplayService {
     }
 
     const openreplayBaseUrl = project.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com';
-    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, project.openreplayApiKey);
+    const decryptedApiKey = this.decryptToken(project.openreplayApiKey);
+    if (!decryptedApiKey) {
+      throw new BadRequestException('OpenReplay API key not configured or failed to decrypt');
+    }
+    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, decryptedApiKey);
 
     try {
       const numericProjectId = parseInt(project.openreplayProjectKey) || 1;

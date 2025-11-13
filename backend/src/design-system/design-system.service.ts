@@ -5,6 +5,7 @@ import { ApplicationScannerService, ApplicationScanContext } from './application
 import { VisualRegressionService } from '../visual-regression/visual-regression.service';
 import { SessionReplayService } from '../session-replay/session-replay.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { EncryptionService } from '../common/security/encryption.service';
 
 export interface Token {
   name: string;
@@ -450,7 +451,8 @@ export interface ComplianceCheck {
 
 @Injectable()
 export class DesignSystemService {
-  private apiKeys = new Map<string, { name: string; createdAt: Date }>();
+  private apiKeys = new Map<string, { name: string; createdAt: Date; encryptedKey?: string }>();
+  private encryptionService?: EncryptionService;
   private applications = new Map<string, Application>();
   private workspaces = new Map<string, Workspace>();
   private workspaceFonts = new Map<string, WorkspaceFont>();
@@ -481,11 +483,23 @@ export class DesignSystemService {
     @Optional() @Inject(ElasticsearchService) private readonly elasticsearchService?: ElasticsearchService,
     @Optional() @Inject(forwardRef(() => VisualRegressionService)) private readonly visualRegressionService?: VisualRegressionService,
     @Optional() @Inject(forwardRef(() => SessionReplayService)) private readonly sessionReplayService?: SessionReplayService,
+    @Optional() @Inject(EncryptionService) private readonly encryptionService?: EncryptionService,
   ) {
     this.scannerService = new ComplianceScannerService();
     this.applicationScanner = new ApplicationScannerService();
-    this.apiKeys.set('test-api-key-123', { name: 'Default Test Key', createdAt: new Date() });
-    this.apiKeys.set('dev-key', { name: 'Development Key', createdAt: new Date() });
+    // Store encrypted keys for test keys
+    const testKey = 'test-api-key-123';
+    const devKey = 'dev-key';
+    this.apiKeys.set(testKey, { 
+      name: 'Default Test Key', 
+      createdAt: new Date(),
+      encryptedKey: this.encryptionService?.encrypt(testKey) || undefined,
+    });
+    this.apiKeys.set(devKey, { 
+      name: 'Development Key', 
+      createdAt: new Date(),
+      encryptedKey: this.encryptionService?.encrypt(devKey) || undefined,
+    });
   }
 
   // Set analytics service (called by module to avoid circular dependency)
@@ -557,7 +571,13 @@ export class DesignSystemService {
 
   createApiKey(name: string): string {
     const apiKey = `ds_${this.generateRandomString(32)}`;
-    this.apiKeys.set(apiKey, { name, createdAt: new Date() });
+    // Encrypt the key before storing
+    const encryptedKey = this.encryptionService?.encrypt(apiKey);
+    this.apiKeys.set(apiKey, { 
+      name, 
+      createdAt: new Date(),
+      encryptedKey,
+    });
     return apiKey;
   }
 

@@ -12,11 +12,17 @@ if (process.env.OTEL_ENABLED !== 'false') {
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { APP_GUARD } from '@nestjs/core';
+import { CustomThrottlerGuard } from './common/rate-limiting/rate-limit.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
   app.useGlobalPipes(new ValidationPipe());
+  
+  // Apply rate limiting globally
+  app.useGlobalGuards(app.get(CustomThrottlerGuard));
+  
   app.enableCors({
     origin: ['http://localhost:5173', 'http://localhost:5174'], // Allow both common Vite ports
     credentials: true,

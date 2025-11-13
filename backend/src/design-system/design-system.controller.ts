@@ -1,10 +1,12 @@
-import { Controller, Get, Post, Put, Patch, Delete, Query, Param, Headers, Body, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Query, Param, Headers, Body, UnauthorizedException, BadRequestException, Request } from '@nestjs/common';
 import { DesignSystemService } from './design-system.service';
 import { ComponentRequestService } from './component-request.service';
 import { NotificationService } from './notification.service';
 import { RegisterApplicationDto } from './dto/register-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 import { UpdateCapabilitiesDto } from './dto/update-capabilities.dto';
+import { TokenRotationService } from '../common/security/token-rotation.service';
+import { KeyManagementService } from '../common/security/key-management.service';
 
 @Controller('api/v1')
 export class DesignSystemController {
@@ -19,7 +21,9 @@ export class DesignSystemController {
   constructor(
     private readonly designSystemService: DesignSystemService,
     private readonly componentRequestService: ComponentRequestService,
-    private readonly notificationService: NotificationService
+    private readonly notificationService: NotificationService,
+    private readonly tokenRotationService: TokenRotationService,
+    private readonly keyManagementService: KeyManagementService,
   ) {}
 
   private extractApiKey(authHeader: string | undefined): string | null {
@@ -38,12 +42,75 @@ export class DesignSystemController {
   }
 
   @Post('auth/api-keys')
-  createApiKey(@Body() body: { name: string }) {
+  createApiKey(@Body() body: { name: string; expiresInDays?: number; scopes?: string[] }) {
     if (!body.name) {
       throw new BadRequestException('API key name is required');
     }
-    const apiKey = this.designSystemService.createApiKey(body.name);
-    return { apiKey, name: body.name, createdAt: new Date() };
+    const { key, metadata } = this.keyManagementService.createKey(body.name, {
+      expiresInDays: body.expiresInDays,
+      scopes: body.scopes,
+    });
+    return { apiKey: key, metadata };
+  }
+
+  @Get('auth/api-keys')
+  getApiKeys() {
+    return this.keyManagementService.getAllKeys();
+  }
+
+  @Get('auth/api-keys/:id')
+  getApiKey(@Param('id') id: string) {
+    const metadata = this.keyManagementService.getKeyMetadata(id);
+    if (!metadata) {
+      throw new BadRequestException(`API key with ID ${id} not found`);
+    }
+    return metadata;
+  }
+
+  @Post('auth/api-keys/:id/rotate')
+  async rotateApiKey(
+    @Param('id') id: string,
+    @Body() body: { revokeOld?: boolean; reason?: 'manual' | 'automatic' | 'expired' | 'compromised' },
+    @Request() req: any,
+  ) {
+    const userId = req.user?.id || 'anonymous';
+    const ipAddress = req.ip;
+    const userAgent = req.headers['user-agent'];
+
+    const result = await this.tokenRotationService.rotateToken(
+      id,
+      userId,
+      body.reason || 'manual',
+      body.revokeOld !== false,
+      ipAddress,
+      userAgent,
+    );
+
+    return {
+      message: 'Token rotated successfully',
+      newApiKey: result.newKey,
+      newMetadata: result.newMetadata,
+    };
+  }
+
+  @Post('auth/api-keys/:id/revoke')
+  revokeApiKey(@Param('id') id: string, @Request() req: any) {
+    const userId = req.user?.id || 'anonymous';
+    const success = this.keyManagementService.revokeKey(id);
+    if (!success) {
+      throw new BadRequestException(`API key with ID ${id} not found`);
+    }
+    return { message: 'API key revoked successfully' };
+  }
+
+  @Get('auth/api-keys/:id/rotation-history')
+  getRotationHistory(@Param('id') id: string) {
+    return this.tokenRotationService.getRotationHistory(id);
+  }
+
+  @Get('auth/api-keys/needing-rotation')
+  getTokensNeedingRotation() {
+    return this.tokenRotationService.getTokensNeedingRotation();
   }
 
   @Get('tokens')

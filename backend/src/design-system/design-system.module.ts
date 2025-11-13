@@ -8,10 +8,11 @@ import { ApplicationScannerService } from './application-scanner.service';
 import { VisualRegressionModule } from '../visual-regression/visual-regression.module';
 import { SessionReplayModule } from '../session-replay/session-replay.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
+import { SecurityModule } from '../common/security/security.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
-  imports: [VisualRegressionModule, SessionReplayModule, forwardRef(() => AnalyticsModule)],
+  imports: [VisualRegressionModule, SessionReplayModule, forwardRef(() => AnalyticsModule), SecurityModule],
   controllers: [DesignSystemController],
   providers: [
     DesignSystemService,
