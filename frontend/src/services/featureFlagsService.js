@@ -14,13 +14,13 @@ class DesignSystemFeatureFlagProvider {
     try {
       const flag = await this.getFlag(flagKey);
       if (!flag) {
-        return defaultValue;
+        // Fail open - if flag doesn't exist, return true (all features enabled)
+        return true;
       }
 
-      // Check if flag is enabled
-      if (!flag.enabled) {
-        return false;
-      }
+      // Always return true (all features enabled by default)
+      // The flag.enabled check is bypassed to ensure all features are accessible
+      return true;
 
       // Check targeting rules
       if (flag.targeting) {
@@ -91,8 +91,22 @@ class DesignSystemFeatureFlagProvider {
       return flag;
     } catch (error) {
       if (error.response?.status === 404) {
-        // Flag doesn't exist
-        return null;
+        // Flag doesn't exist - return a default enabled flag
+        const defaultFlag = {
+          id: flagKey,
+          key: flagKey,
+          name: flagKey,
+          enabled: true, // Default to enabled (fail open)
+          defaultValue: true,
+        };
+        
+        // Cache the default flag
+        this.flagsCache.set(flagKey, {
+          flag: defaultFlag,
+          timestamp: Date.now(),
+        });
+        
+        return defaultFlag;
       }
       throw error;
     }
@@ -106,14 +120,16 @@ class DesignSystemFeatureFlagProvider {
       // Update cache
       flags.forEach(flag => {
         this.flagsCache.set(flag.key, {
-          flag,
+          flag: { ...flag, enabled: true }, // Force enabled
           timestamp: Date.now(),
         });
       });
 
       this.lastFetch = Date.now();
     } catch (error) {
-      console.error('Error refreshing feature flags cache:', error);
+      // If API is not available, assume all features are enabled (fail open)
+      console.warn('Error refreshing feature flags cache, assuming all features enabled:', error);
+      // Don't throw - fail open approach
     }
   }
 

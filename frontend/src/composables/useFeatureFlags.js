@@ -19,6 +19,18 @@ const flagCache = reactive(loadFlagCache());
 const loadingFlags = ref(new Set());
 const activeFlagRefreshers = new Map(); // Track active flag refreshers
 
+// Get current user context (can be enhanced with actual user data)
+// Defined early to avoid hoisting issues
+const getUserContext = () => {
+  // In a real app, this would get from auth service
+  const userId = localStorage.getItem('userId') || undefined;
+  const userGroups = localStorage.getItem('userGroups') 
+    ? JSON.parse(localStorage.getItem('userGroups'))
+    : undefined;
+  
+  return { userId, userGroups };
+};
+
 // Preload all flags from API on initialization
 const preloadAllFlags = async () => {
   try {
