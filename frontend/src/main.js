@@ -583,6 +583,26 @@ const router = createRouter({
       component: () => import('./views/LawDetail.vue'),
     },
     {
+      path: '/hcd/process',
+      component: () => import('./views/HcdProcess.vue'),
+    },
+    {
+      path: '/hcd/recruiting-users',
+      component: () => import('./views/RecruitingUsers.vue'),
+    },
+    {
+      path: '/hcd/conducting-interviews',
+      component: () => import('./views/ConductingInterviews.vue'),
+    },
+    {
+      path: '/hcd/research-reports',
+      component: () => import('./views/ResearchReports.vue'),
+    },
+    {
+      path: '/hcd/research-methods',
+      component: () => import('./views/ResearchMethods.vue'),
+    },
+    {
       path: '/design-assets',
       component: () => import('./views/DesignAssets.vue'),
     },
@@ -665,6 +685,42 @@ const router = createRouter({
     {
       path: '/getting-started/support',
       component: () => import('./views/Support.vue'),
+    },
+    {
+      path: '/getting-started/foundations/atomic-design',
+      component: () => import('./views/AtomicDesign.vue'),
+    },
+    {
+      path: '/getting-started/foundations/building-trust',
+      component: () => import('./views/BuildingTrust.vue'),
+    },
+    {
+      path: '/getting-started/foundations/responsiveness',
+      component: () => import('./views/Responsiveness.vue'),
+    },
+    {
+      path: '/getting-started/foundations/usability',
+      component: () => import('./views/Usability.vue'),
+    },
+    {
+      path: '/getting-started/foundations/writing-content',
+      component: () => import('./views/WritingContent.vue'),
+    },
+    {
+      path: '/getting-started/purpose-and-benefits',
+      component: () => import('./views/PurposeAndBenefits.vue'),
+    },
+    {
+      path: '/getting-started/get-in-touch',
+      component: () => import('./views/GetInTouch.vue'),
+    },
+    {
+      path: '/getting-started/adopt',
+      component: () => import('./views/Adopt.vue'),
+    },
+    {
+      path: '/getting-started/improving-ux-through-acquisition',
+      component: () => import('./views/ImprovingUXThroughAcquisition.vue'),
     },
     {
       path: '/guidelines',

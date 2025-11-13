@@ -300,6 +300,31 @@
             </div>
           </div>
 
+          <!-- Foundations -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Foundations</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in filteredGettingStartedFoundations"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
           <!-- Resources & Support -->
           <div>
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Resources & Support</h4>
@@ -825,7 +850,12 @@ const artificialIntelligence = [
 
 const humanCenteredDesign = [
   { text: 'HCD Principles', link: '/hcd/principles', icon: 'people' },
+  { text: 'HCD Process', link: '/hcd/process', icon: 'timeline' },
   { text: 'User Research', link: '/hcd/research', icon: 'search' },
+  { text: 'Research Methods', link: '/hcd/research-methods', icon: 'science' },
+  { text: 'Recruiting Users', link: '/hcd/recruiting-users', icon: 'group_add' },
+  { text: 'Conducting Interviews', link: '/hcd/conducting-interviews', icon: 'record_voice_over' },
+  { text: 'Research Reports', link: '/hcd/research-reports', icon: 'description' },
   { text: 'Accessibility', link: '/hcd/accessibility', icon: 'accessibility' },
   { text: 'Laws of UX', link: '/hcd/laws-of-ux', icon: 'rule' }
 ];
@@ -969,6 +999,14 @@ const gettingStartedSetup = [
   { text: 'Installation', link: '/getting-started/installation', icon: 'download' },
   { text: 'Best Practices', link: '/getting-started/best-practices', icon: 'check_circle' },
   { text: 'Contribute', link: '/getting-started/contribute', icon: 'groups' }
+];
+
+const gettingStartedFoundations = [
+  { text: 'Atomic Design', link: '/getting-started/foundations/atomic-design', icon: 'science' },
+  { text: 'Building Trust', link: '/getting-started/foundations/building-trust', icon: 'verified' },
+  { text: 'Responsiveness', link: '/getting-started/foundations/responsiveness', icon: 'devices' },
+  { text: 'Usability', link: '/getting-started/foundations/usability', icon: 'accessibility' },
+  { text: 'Writing & Content', link: '/getting-started/foundations/writing-content', icon: 'edit_note' }
 ];
 
 const gettingStartedResources = [
@@ -1128,6 +1166,10 @@ const filteredGettingStartedSetup = computed(() => {
   return gettingStartedSetup.filter(item => isRouteEnabled(item.link));
 });
 
+const filteredGettingStartedFoundations = computed(() => {
+  return gettingStartedFoundations.filter(item => isRouteEnabled(item.link));
+});
+
 const filteredGettingStartedResources = computed(() => {
   return gettingStartedResources.filter(item => isRouteEnabled(item.link));
 });
@@ -1189,6 +1231,7 @@ const getAllDrawerFlagKeys = () => {
     ...gettingStartedBasics.map(g => g.link),
     ...gettingStartedPrinciples.map(g => g.link),
     ...gettingStartedSetup.map(g => g.link),
+    ...gettingStartedFoundations.map(g => g.link),
     ...gettingStartedResources.map(g => g.link),
     ...researchArtifacts.map(r => r.link),
     ...uxResearchTools.map(u => u.link),
