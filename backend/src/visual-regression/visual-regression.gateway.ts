@@ -82,7 +82,7 @@ export class VisualRegressionGateway implements OnGatewayConnection, OnGatewayDi
   }
 
   // Emit events to clients
-  emitRunStatusUpdate(runId: string, status: string, data?: any) {
+  emitRunStatusUpdate(runId: string, status: string, data?: Record<string, unknown>) {
     this.server.to(`run:${runId}`).emit('run:status-update', {
       runId,
       status,
@@ -91,7 +91,7 @@ export class VisualRegressionGateway implements OnGatewayConnection, OnGatewayDi
     });
   }
 
-  emitRunCompleted(runId: string, results: any) {
+  emitRunCompleted(runId: string, results: unknown) {
     this.server.to(`run:${runId}`).emit('run:completed', {
       runId,
       results,
@@ -99,7 +99,7 @@ export class VisualRegressionGateway implements OnGatewayConnection, OnGatewayDi
     });
   }
 
-  emitProjectUpdate(projectId: string, event: string, data: any) {
+  emitProjectUpdate(projectId: string, event: string, data: Record<string, unknown>) {
     this.server.to(`project:${projectId}`).emit('project:update', {
       projectId,
       event,
@@ -108,7 +108,7 @@ export class VisualRegressionGateway implements OnGatewayConnection, OnGatewayDi
     });
   }
 
-  emitResultUpdate(runId: string, resultId: string, update: any) {
+  emitResultUpdate(runId: string, resultId: string, update: Record<string, unknown>) {
     this.server.to(`run:${runId}`).emit('result:update', {
       runId,
       resultId,

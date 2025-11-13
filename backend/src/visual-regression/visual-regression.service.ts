@@ -1,6 +1,17 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ArgosApiClient } from './argos-api.client';
 import * as crypto from 'crypto';
+import { 
+  CreateProjectDto, 
+  UpdateProjectDto, 
+  WebhookPayload, 
+  BuildPayload, 
+  ScreenshotPayload,
+  NotificationConfig 
+} from '../common/types/common.types';
+import { ErrorHandler } from '../common/errors/error-handler';
+import { VisualRegressionGateway } from './visual-regression.gateway';
+import { PaginationParams, PaginatedResponse, parsePaginationParams, createPaginatedResponse } from '../common/pagination/pagination.types';
 
 export interface Project {
   id: string;
@@ -65,11 +76,11 @@ export class VisualRegressionService {
   private testRuns: Map<string, TestRun> = new Map();
   private testResults: Map<string, TestResult[]> = new Map();
   private webhookSecrets: Map<string, string> = new Map(); // projectId -> webhookSecret
-  private webhookEvents: Array<{ projectId: string; event: string; payload: any; timestamp: Date }> = [];
-  private gateway: any; // VisualRegressionGateway (injected via setter to avoid circular dependency)
+  private webhookEvents: Array<{ projectId: string; event: string; payload: WebhookPayload; timestamp: Date }> = [];
+  private gateway?: VisualRegressionGateway; // Injected via setter to avoid circular dependency
 
   // Project Management
-  async createProject(teamId: string, dto: any): Promise<Project> {
+  async createProject(teamId: string, dto: CreateProjectDto): Promise<Project> {
     // Verify Argos connection before creating project
     const argosBaseUrl = dto.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
     const argosClient = new ArgosApiClient(argosBaseUrl, dto.argosToken);
@@ -83,11 +94,11 @@ export class VisualRegressionService {
 
       // Verify project exists in Argos
       await argosClient.getProject(dto.argosProjectId);
-    } catch (error: any) {
+    } catch (error) {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException(`Failed to verify Argos project: ${error.message}`);
+      throw ErrorHandler.handleError(error, 'VisualRegressionService.createProject');
     }
 
     const project: Project = {
@@ -129,7 +140,7 @@ export class VisualRegressionService {
     return projectWithoutToken as Project;
   }
 
-  async updateProject(id: string, dto: any): Promise<Project> {
+  async updateProject(id: string, dto: UpdateProjectDto): Promise<Project> {
     const project = this.projects.get(id);
     if (!project) {
       throw new NotFoundException(`Project with ID ${id} not found`);
@@ -146,8 +157,8 @@ export class VisualRegressionService {
         try {
           await argosClient.verifyConnection();
           await argosClient.getProject(argosProjectId);
-        } catch (error: any) {
-          throw new BadRequestException(`Failed to verify Argos connection: ${error.message}`);
+        } catch (error) {
+          throw ErrorHandler.handleError(error, 'VisualRegressionService.updateProject');
         }
       }
     }
@@ -179,7 +190,7 @@ export class VisualRegressionService {
   }
 
   // Test Execution
-  async triggerTest(projectId: string, userId: string, dto: any): Promise<TestRun> {
+  async triggerTest(projectId: string, userId: string, dto: { branch?: string; commitSha?: string }): Promise<TestRun> {
     const project = this.projects.get(projectId);
     if (!project) {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
@@ -225,8 +236,8 @@ export class VisualRegressionService {
       this.pollBuildStatus(testRun.id, project, argosClient);
 
       return testRun;
-    } catch (error: any) {
-      throw new BadRequestException(`Failed to trigger Argos test: ${error.message}`);
+    } catch (error) {
+      throw ErrorHandler.handleError(error, 'VisualRegressionService.triggerTest');
     }
   }
 
@@ -290,16 +301,32 @@ export class VisualRegressionService {
     setTimeout(poll, pollInterval);
   }
 
+  interface ArgosBuild {
+    id: string;
+    status: string;
+    createdAt: string;
+  }
+
+  interface ArgosScreenshot {
+    id: string;
+    name: string;
+    status: string;
+    baselineUrl?: string;
+    compareUrl?: string;
+    diffUrl?: string;
+    diffPercentage?: number;
+  }
+
   private async fetchBuildResults(
     runId: string,
     project: Project,
     argosClient: ArgosApiClient,
-    build: any
+    build: ArgosBuild
   ): Promise<void> {
     try {
-      const screenshots = await argosClient.getBuildScreenshots(project.argosProjectId, build.id);
+      const screenshots = await argosClient.getBuildScreenshots(project.argosProjectId, build.id) as ArgosScreenshot[];
       
-      const results: TestResult[] = screenshots.map((screenshot: any) => ({
+      const results: TestResult[] = screenshots.map((screenshot: ArgosScreenshot) => ({
         id: `result-${screenshot.id}-${runId}`,
         runId,
         testName: screenshot.name,
@@ -347,7 +374,7 @@ export class VisualRegressionService {
     return run;
   }
 
-  async getTestRuns(projectId: string): Promise<TestRun[]> {
+  async getTestRuns(projectId: string, pagination?: PaginationParams): Promise<PaginatedResponse<TestRun>> {
     const project = this.projects.get(projectId);
     if (!project) {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
@@ -363,9 +390,19 @@ export class VisualRegressionService {
       }
     }
 
-    return Array.from(this.testRuns.values())
+    const allRuns = Array.from(this.testRuns.values())
       .filter(run => run.projectId === projectId)
       .sort((a, b) => (b.startedAt?.getTime() || 0) - (a.startedAt?.getTime() || 0));
+
+    if (pagination) {
+      const paginated = allRuns.slice(pagination.offset, pagination.offset + pagination.limit);
+      return createPaginatedResponse(paginated, allRuns.length, pagination);
+    }
+
+    // Default pagination if not provided
+    const defaultPagination = { page: 1, limit: 20, offset: 0 };
+    const paginated = allRuns.slice(0, defaultPagination.limit);
+    return createPaginatedResponse(paginated, allRuns.length, defaultPagination);
   }
 
   private async syncRunsFromArgos(projectId: string, project: Project): Promise<void> {
@@ -424,7 +461,7 @@ export class VisualRegressionService {
   }
 
   // Results Management
-  async getTestResults(runId: string): Promise<TestResult[]> {
+  async getTestResults(runId: string, pagination?: PaginationParams): Promise<PaginatedResponse<TestResult>> {
     const run = this.testRuns.get(runId);
     if (!run) {
       throw new NotFoundException(`Test run with ID ${runId} not found`);
@@ -448,11 +485,18 @@ export class VisualRegressionService {
       }
     }
 
-    const results = this.testResults.get(runId);
-    if (!results) {
-      return [];
+    const allResults = (this.testResults.get(runId) || [])
+      .sort((a, b) => a.testName.localeCompare(b.testName));
+
+    if (pagination) {
+      const paginated = allResults.slice(pagination.offset, pagination.offset + pagination.limit);
+      return createPaginatedResponse(paginated, allResults.length, pagination);
     }
-    return results;
+
+    // Default pagination if not provided
+    const defaultPagination = { page: 1, limit: 50, offset: 0 };
+    const paginated = allResults.slice(0, defaultPagination.limit);
+    return createPaginatedResponse(paginated, allResults.length, defaultPagination);
   }
 
   async approveDiff(resultId: string, userId: string): Promise<void> {
@@ -533,13 +577,13 @@ export class VisualRegressionService {
       result.approved = false;
       result.approvedBy = userId;
       result.approvedAt = new Date();
-    } catch (error: any) {
-      throw new BadRequestException(`Failed to reject in Argos: ${error.message}`);
+    } catch (error) {
+      throw ErrorHandler.handleError(error, 'VisualRegressionService.rejectDiff');
     }
   }
 
   // Webhook Handling
-  async handleWebhook(payload: any, signature?: string, event?: string): Promise<{ message: string; processed: boolean }> {
+  async handleWebhook(payload: WebhookPayload, signature?: string, event?: string): Promise<{ message: string; processed: boolean }> {
     // Log webhook event
     const webhookLog = {
       event: event || 'unknown',
@@ -587,13 +631,14 @@ export class VisualRegressionService {
     try {
       await this.processWebhookEvent(project.id, event || 'build.updated', payload);
       return { message: 'Webhook processed successfully', processed: true };
-    } catch (error: any) {
+    } catch (error) {
+      const handledError = ErrorHandler.handleError(error);
       console.error(`Failed to process webhook for project ${project.id}:`, error);
-      return { message: `Webhook received but processing failed: ${error.message}`, processed: false };
+      return { message: `Webhook received but processing failed: ${handledError.message}`, processed: false };
     }
   }
 
-  private verifyWebhookSignature(payload: any, signature: string, secret: string): boolean {
+  private verifyWebhookSignature(payload: WebhookPayload, signature: string, secret: string): boolean {
     try {
       // Common webhook signature verification (HMAC SHA256)
       const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
@@ -612,7 +657,7 @@ export class VisualRegressionService {
     }
   }
 
-  private async processWebhookEvent(projectId: string, event: string, payload: any): Promise<void> {
+  private async processWebhookEvent(projectId: string, event: string, payload: WebhookPayload): Promise<void> {
     const project = this.projects.get(projectId);
     if (!project) return;
 
@@ -633,7 +678,7 @@ export class VisualRegressionService {
     }
   }
 
-  private async handleBuildUpdate(projectId: string, payload: any): Promise<void> {
+  private async handleBuildUpdate(projectId: string, payload: BuildPayload | WebhookPayload): Promise<void> {
     const project = this.projects.get(projectId);
     if (!project || !project.argosToken) return;
 
@@ -667,7 +712,7 @@ export class VisualRegressionService {
     }
   }
 
-  private async handleScreenshotUpdate(projectId: string, payload: any): Promise<void> {
+  private async handleScreenshotUpdate(projectId: string, payload: ScreenshotPayload | WebhookPayload): Promise<void> {
     // Update screenshot approval status if needed
     const screenshotId = payload.screenshotId || payload.screenshot?.id;
     const buildId = payload.buildId || payload.build?.id;
@@ -705,7 +750,7 @@ export class VisualRegressionService {
   }
 
   // Get webhook events for a project
-  async getWebhookEvents(projectId: string, limit: number = 50): Promise<any[]> {
+  async getWebhookEvents(projectId: string, limit: number = 50): Promise<Array<{ event: string; payload: WebhookPayload; timestamp: Date }>> {
     return this.webhookEvents
       .filter(e => e.projectId === projectId)
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
@@ -718,12 +763,18 @@ export class VisualRegressionService {
   }
 
   // Set WebSocket gateway (called from module to avoid circular dependency)
-  setGateway(gateway: any) {
+  setGateway(gateway: VisualRegressionGateway) {
     this.gateway = gateway;
   }
 
   // Analytics & Reporting
-  async getProjectAnalytics(projectId: string, startDate?: string, endDate?: string): Promise<any> {
+  async getProjectAnalytics(projectId: string, startDate?: string, endDate?: string): Promise<{
+    totalRuns: number;
+    passedRuns: number;
+    failedRuns: number;
+    averageDuration: number;
+    trends: Array<{ date: string; passed: number; failed: number }>;
+  }> {
     const project = this.projects.get(projectId);
     if (!project) {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
@@ -936,11 +987,11 @@ export class VisualRegressionService {
   // Notifications
   private notificationConfigs: Map<string, Array<{
     type: 'email' | 'slack' | 'teams' | 'webhook';
-    config: any;
+    config: NotificationConfig;
     enabled: boolean;
   }>> = new Map();
 
-  async configureNotifications(projectId: string, dto: { type: 'email' | 'slack' | 'teams' | 'webhook'; config: any }): Promise<any> {
+  async configureNotifications(projectId: string, dto: { type: 'email' | 'slack' | 'teams' | 'webhook'; config: NotificationConfig }): Promise<{ type: string; enabled: boolean; config: NotificationConfig }> {
     const project = this.projects.get(projectId);
     if (!project) {
       throw new NotFoundException(`Project with ID ${projectId} not found`);

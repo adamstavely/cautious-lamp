@@ -1,5 +1,12 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
+import { ChangeValue, RequestBody, ElasticsearchQuery, ElasticsearchRange } from '../common/types/common.types';
+
+export interface AuditChange {
+  field: string;
+  oldValue: ChangeValue;
+  newValue: ChangeValue;
+}
 
 export interface AuditLog {
   id?: string;
@@ -15,14 +22,10 @@ export interface AuditLog {
   endpoint?: string;
   ipAddress?: string;
   userAgent?: string;
-  requestBody?: any;
+  requestBody?: RequestBody;
   responseStatus?: number;
-  changes?: {
-    field: string;
-    oldValue: any;
-    newValue: any;
-  }[];
-  metadata?: Record<string, any>;
+  changes?: AuditChange[];
+  metadata?: Record<string, unknown>;
   success: boolean;
   errorMessage?: string;
 }
@@ -123,7 +126,7 @@ export class AuditService {
     }
 
     try {
-      const must: any[] = [];
+      const must: Array<Record<string, unknown>> = [];
 
       if (filters.userId) {
         must.push({ term: { userId: filters.userId } });
@@ -142,7 +145,7 @@ export class AuditService {
       }
 
       if (filters.startDate || filters.endDate) {
-        const range: any = {};
+        const range: ElasticsearchRange = {};
         if (filters.startDate) {
           range.gte = filters.startDate.toISOString();
         }
@@ -152,7 +155,7 @@ export class AuditService {
         must.push({ range: { '@timestamp': range } });
       }
 
-      const query: any = {
+      const query: ElasticsearchQuery = {
         index: `${this.indexPrefix}-*`,
         body: {
           query: {
@@ -168,7 +171,35 @@ export class AuditService {
 
       const result = await this.elasticsearchService.search(query);
 
-      const logs: AuditLog[] = (result.hits.hits as any[]).map((hit) => ({
+      interface ElasticsearchHit {
+        _id: string;
+        _source: {
+          '@timestamp': string;
+          userId: string;
+          userName?: string;
+          userEmail?: string;
+          action: AuditAction;
+          resourceType: string;
+          resourceId?: string;
+          resourceName?: string;
+          method?: string;
+          endpoint?: string;
+          ipAddress?: string;
+          userAgent?: string;
+          requestBody?: RequestBody;
+          responseStatus?: number;
+          changes?: AuditChange[];
+          metadata?: Record<string, unknown>;
+          success: boolean;
+          errorMessage?: string;
+        };
+      }
+
+      interface ElasticsearchTotal {
+        value?: number;
+      }
+
+      const logs: AuditLog[] = (result.hits.hits as ElasticsearchHit[]).map((hit) => ({
         id: hit._id,
         timestamp: new Date(hit._source['@timestamp']),
         userId: hit._source.userId,
@@ -190,9 +221,12 @@ export class AuditService {
         errorMessage: hit._source.errorMessage,
       }));
 
+      const total = (result.hits.total as ElasticsearchTotal)?.value || 
+                    (typeof result.hits.total === 'number' ? result.hits.total : 0);
+
       return {
         logs,
-        total: (result.hits.total as any)?.value || result.hits.total || 0,
+        total,
       };
     } catch (error) {
       console.error('Failed to query audit logs:', error);

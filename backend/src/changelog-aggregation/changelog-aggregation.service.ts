@@ -1,5 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { DesignSystemService } from '../design-system/design-system.service';
+import { ChangeValue } from '../common/types/common.types';
+
+export interface ChangelogChange {
+  field?: string;
+  oldValue?: ChangeValue;
+  newValue?: ChangeValue;
+  description?: string;
+}
 
 export interface ChangelogEntry {
   id: string;
@@ -8,12 +16,7 @@ export interface ChangelogEntry {
   entityName: string;
   action: 'created' | 'updated' | 'deprecated' | 'deleted' | 'status-changed';
   version?: string;
-  changes: {
-    field?: string;
-    oldValue?: any;
-    newValue?: any;
-    description?: string;
-  }[];
+  changes: ChangelogChange[];
   breaking?: boolean;
   timestamp: Date;
   author?: string;
@@ -235,4 +238,7 @@ export class ChangelogAggregationService {
     };
   }
 }
+
+
+
 

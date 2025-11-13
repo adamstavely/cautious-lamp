@@ -3,6 +3,7 @@ import { VisualRegressionService } from './visual-regression.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { TriggerTestDto } from './dto/trigger-test.dto';
+import { parsePaginationParams } from '../common/pagination/pagination.types';
 
 @Controller('api/v1/visual-regression')
 export class VisualRegressionController {
@@ -47,8 +48,12 @@ export class VisualRegressionController {
   }
 
   @Get('projects/:id/runs')
-  async getTestRuns(@Param('id') projectId: string) {
-    return this.visualRegressionService.getTestRuns(projectId);
+  async getTestRuns(
+    @Param('id') projectId: string,
+    @Query() query: { page?: string; limit?: string; offset?: string },
+  ) {
+    const pagination = parsePaginationParams(query);
+    return this.visualRegressionService.getTestRuns(projectId, pagination);
   }
 
   @Get('runs/:id')
@@ -57,8 +62,12 @@ export class VisualRegressionController {
   }
 
   @Get('runs/:id/results')
-  async getTestResults(@Param('id') runId: string) {
-    return this.visualRegressionService.getTestResults(runId);
+  async getTestResults(
+    @Param('id') runId: string,
+    @Query() query: { page?: string; limit?: string; offset?: string },
+  ) {
+    const pagination = parsePaginationParams(query);
+    return this.visualRegressionService.getTestResults(runId, pagination);
   }
 
   @Post('results/:id/approve')
@@ -142,7 +151,7 @@ export class VisualRegressionController {
   @Post('projects/:id/notifications')
   async configureNotifications(
     @Param('id') projectId: string,
-    @Body() dto: { type: 'email' | 'slack' | 'teams' | 'webhook'; config: any },
+    @Body() dto: { type: 'email' | 'slack' | 'teams' | 'webhook'; config: Record<string, unknown> },
   ) {
     return this.visualRegressionService.configureNotifications(projectId, dto);
   }
