@@ -247,22 +247,6 @@ const router = createRouter({
       component: () => import('./views/DeprecationManager.vue'),
     },
     {
-      path: '/code-quality',
-      redirect: '/admin/code-quality',
-    },
-    {
-      path: '/security',
-      redirect: '/admin/security',
-    },
-    {
-      path: '/admin/code-quality',
-      component: () => import('./views/CodeQuality.vue'),
-    },
-    {
-      path: '/admin/security',
-      component: () => import('./views/VulnerabilityScanner.vue'),
-    },
-    {
       path: '/components/dependencies',
       redirect: '/admin/dependencies',
     },

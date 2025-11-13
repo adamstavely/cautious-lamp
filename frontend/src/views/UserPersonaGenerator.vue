@@ -79,278 +79,101 @@
                     Basic Information
                   </h3>
                   
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Persona Name *
-                      </label>
-                      <input
-                        v-model="form.name"
-                        type="text"
-                        required
-                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        :class="isDarkMode 
-                          ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                        placeholder="e.g., Sarah, The Busy Professional"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Age Range
-                      </label>
-                      <input
-                        v-model="form.age"
-                        type="text"
-                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        :class="isDarkMode 
-                          ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                        placeholder="e.g., 28-35"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Occupation
-                      </label>
-                      <input
-                        v-model="form.occupation"
-                        type="text"
-                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        :class="isDarkMode 
-                          ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                        placeholder="e.g., Marketing Manager"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Location
-                      </label>
-                      <input
-                        v-model="form.location"
-                        type="text"
-                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        :class="isDarkMode 
-                          ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                        placeholder="e.g., San Francisco, CA"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Demographics -->
-                <div class="space-y-4">
-                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-gray-200' : 'text-gray-900'">
-                    Demographics & Background
-                  </h3>
-                  
                   <div>
                     <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Education
+                      Persona Name *
                     </label>
                     <input
-                      v-model="form.education"
+                      v-model="form.name"
                       type="text"
+                      required
                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       :class="isDarkMode 
                         ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
                         : 'border-gray-300 bg-white text-gray-900'"
-                      placeholder="e.g., Bachelor's in Business Administration"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Family Status
-                    </label>
-                    <input
-                      v-model="form.familyStatus"
-                      type="text"
-                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                      placeholder="e.g., Married, 2 children"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Income Level
-                    </label>
-                    <input
-                      v-model="form.income"
-                      type="text"
-                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                      placeholder="e.g., $75,000 - $100,000"
+                      placeholder="e.g., Sarah, The Busy Professional"
                     />
                   </div>
                 </div>
 
-                <!-- Goals & Motivations -->
+                <!-- Persona Details -->
                 <div class="space-y-4">
                   <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-gray-200' : 'text-gray-900'">
-                    Goals & Motivations
+                    Persona Details
                   </h3>
                   
                   <div>
                     <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Primary Goals
+                      How They See Themselves
                     </label>
                     <textarea
-                      v-model="form.goals"
+                      v-model="form.howTheySeeThemselves"
                       rows="3"
                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       :class="isDarkMode 
                         ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
                         : 'border-gray-300 bg-white text-gray-900'"
-                      placeholder="What are their primary goals? What are they trying to achieve?"
+                      placeholder="How does this persona see themselves? What is their self-perception?"
                     ></textarea>
                   </div>
                   
                   <div>
                     <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Motivations
+                      Great Enablers
                     </label>
                     <textarea
-                      v-model="form.motivations"
+                      v-model="form.greatEnablers"
                       rows="3"
                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       :class="isDarkMode 
                         ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
                         : 'border-gray-300 bg-white text-gray-900'"
-                      placeholder="What motivates them? What drives their decisions?"
+                      placeholder="What are the great enablers for this persona? What helps them succeed?"
                     ></textarea>
                   </div>
-                </div>
-
-                <!-- Pain Points & Frustrations -->
-                <div class="space-y-4">
-                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-gray-200' : 'text-gray-900'">
-                    Pain Points & Frustrations
-                  </h3>
                   
                   <div>
                     <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Pain Points
+                      Greatest Pain Points
                     </label>
                     <textarea
-                      v-model="form.painPoints"
+                      v-model="form.greatestPainPoints"
                       rows="3"
                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       :class="isDarkMode 
                         ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
                         : 'border-gray-300 bg-white text-gray-900'"
-                      placeholder="What challenges do they face? What frustrates them?"
+                      placeholder="What are their greatest pain points? What causes them the most frustration?"
                     ></textarea>
                   </div>
                   
                   <div>
                     <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Current Solutions
+                      How They Described Their Needs
                     </label>
                     <textarea
-                      v-model="form.currentSolutions"
-                      rows="2"
-                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                      placeholder="How do they currently solve these problems?"
-                    ></textarea>
-                  </div>
-                </div>
-
-                <!-- Behaviors & Preferences -->
-                <div class="space-y-4">
-                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-gray-200' : 'text-gray-900'">
-                    Behaviors & Preferences
-                  </h3>
-                  
-                  <div>
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Technology Comfort Level
-                    </label>
-                    <Dropdown
-                      v-model="form.techComfort"
-                      :options="techComfortOptions"
-                      placeholder="Select comfort level"
-                      class="w-full"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Preferred Communication Channels
-                    </label>
-                    <textarea
-                      v-model="form.communicationChannels"
-                      rows="2"
-                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                      placeholder="e.g., Email, Slack, Phone calls"
-                    ></textarea>
-                  </div>
-                  
-                  <div>
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Typical Day / Routine
-                    </label>
-                    <textarea
-                      v-model="form.typicalDay"
+                      v-model="form.howTheyDescribedNeeds"
                       rows="3"
                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       :class="isDarkMode 
                         ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
                         : 'border-gray-300 bg-white text-gray-900'"
-                      placeholder="Describe their typical day or routine..."
-                    ></textarea>
-                  </div>
-                </div>
-
-                <!-- Quote & Bio -->
-                <div class="space-y-4">
-                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-gray-200' : 'text-gray-900'">
-                    Quote & Bio
-                  </h3>
-                  
-                  <div>
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Representative Quote
-                    </label>
-                    <textarea
-                      v-model="form.quote"
-                      rows="2"
-                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                      placeholder="A quote that represents this persona's perspective..."
+                      placeholder="How did they describe their needs? What did they say they need?"
                     ></textarea>
                   </div>
                   
                   <div>
                     <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Bio / Summary
+                      Current Experience
                     </label>
                     <textarea
-                      v-model="form.bio"
-                      rows="4"
+                      v-model="form.currentExperience"
+                      rows="3"
                       class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       :class="isDarkMode 
                         ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
                         : 'border-gray-300 bg-white text-gray-900'"
-                      placeholder="A brief summary or bio of this persona..."
+                      placeholder="What is their current experience? How do they currently interact with similar products or services?"
                     ></textarea>
                   </div>
                 </div>
@@ -424,36 +247,18 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
-import Dropdown from '../components/Dropdown.vue';
 
 const drawerOpen = ref(false);
 const isDarkMode = ref(false);
 const personaGenerated = ref(false);
 
-const techComfortOptions = [
-  { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Intermediate' },
-  { value: 'advanced', label: 'Advanced' },
-  { value: 'expert', label: 'Expert' }
-];
-
 const form = reactive({
   name: '',
-  age: '',
-  occupation: '',
-  location: '',
-  education: '',
-  familyStatus: '',
-  income: '',
-  goals: '',
-  motivations: '',
-  painPoints: '',
-  currentSolutions: '',
-  techComfort: '',
-  communicationChannels: '',
-  typicalDay: '',
-  quote: '',
-  bio: ''
+  howTheySeeThemselves: '',
+  greatEnablers: '',
+  greatestPainPoints: '',
+  howTheyDescribedNeeds: '',
+  currentExperience: ''
 });
 
 const generatedPersonaHTML = computed(() => {
@@ -463,75 +268,40 @@ const generatedPersonaHTML = computed(() => {
     <div class="persona-card">
       <div class="persona-header mb-6">
         <h2 class="text-3xl font-bold mb-2">${form.name || 'Persona Name'}</h2>
-        ${form.occupation ? `<p class="text-xl text-gray-600 dark:text-gray-400">${form.occupation}</p>` : ''}
       </div>
       
-      ${form.quote ? `
-        <blockquote class="border-l-4 border-indigo-500 pl-4 py-2 mb-6 italic text-lg">
-          "${form.quote}"
-        </blockquote>
-      ` : ''}
-      
-      ${form.bio ? `
+      ${form.howTheySeeThemselves ? `
         <div class="mb-6">
-          <h3 class="text-xl font-semibold mb-2">About</h3>
-          <p>${form.bio}</p>
+          <h3 class="text-xl font-semibold mb-2">How They See Themselves</h3>
+          <p>${form.howTheySeeThemselves}</p>
         </div>
       ` : ''}
       
-      <div class="grid md:grid-cols-2 gap-6 mb-6">
-        <div>
-          <h3 class="text-xl font-semibold mb-3">Demographics</h3>
-          <ul class="space-y-2">
-            ${form.age ? `<li><strong>Age:</strong> ${form.age}</li>` : ''}
-            ${form.location ? `<li><strong>Location:</strong> ${form.location}</li>` : ''}
-            ${form.education ? `<li><strong>Education:</strong> ${form.education}</li>` : ''}
-            ${form.familyStatus ? `<li><strong>Family:</strong> ${form.familyStatus}</li>` : ''}
-            ${form.income ? `<li><strong>Income:</strong> ${form.income}</li>` : ''}
-          </ul>
-        </div>
-        
-        <div>
-          <h3 class="text-xl font-semibold mb-3">Behaviors</h3>
-          <ul class="space-y-2">
-            ${form.techComfort ? `<li><strong>Tech Comfort:</strong> ${techComfortOptions.find(o => o.value === form.techComfort)?.label || form.techComfort}</li>` : ''}
-            ${form.communicationChannels ? `<li><strong>Communication:</strong> ${form.communicationChannels}</li>` : ''}
-          </ul>
-        </div>
-      </div>
-      
-      ${form.goals ? `
+      ${form.greatEnablers ? `
         <div class="mb-6">
-          <h3 class="text-xl font-semibold mb-2">Goals</h3>
-          <p>${form.goals}</p>
+          <h3 class="text-xl font-semibold mb-2">Great Enablers</h3>
+          <p>${form.greatEnablers}</p>
         </div>
       ` : ''}
       
-      ${form.motivations ? `
+      ${form.greatestPainPoints ? `
         <div class="mb-6">
-          <h3 class="text-xl font-semibold mb-2">Motivations</h3>
-          <p>${form.motivations}</p>
+          <h3 class="text-xl font-semibold mb-2">Greatest Pain Points</h3>
+          <p>${form.greatestPainPoints}</p>
         </div>
       ` : ''}
       
-      ${form.painPoints ? `
+      ${form.howTheyDescribedNeeds ? `
         <div class="mb-6">
-          <h3 class="text-xl font-semibold mb-2">Pain Points</h3>
-          <p>${form.painPoints}</p>
+          <h3 class="text-xl font-semibold mb-2">How They Described Their Needs</h3>
+          <p>${form.howTheyDescribedNeeds}</p>
         </div>
       ` : ''}
       
-      ${form.currentSolutions ? `
+      ${form.currentExperience ? `
         <div class="mb-6">
-          <h3 class="text-xl font-semibold mb-2">Current Solutions</h3>
-          <p>${form.currentSolutions}</p>
-        </div>
-      ` : ''}
-      
-      ${form.typicalDay ? `
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold mb-2">Typical Day</h3>
-          <p>${form.typicalDay}</p>
+          <h3 class="text-xl font-semibold mb-2">Current Experience</h3>
+          <p>${form.currentExperience}</p>
         </div>
       ` : ''}
     </div>
@@ -565,50 +335,26 @@ const exportPersona = () => {
   // Create a formatted text version
   let text = `USER PERSONA\n`;
   text += `============\n\n`;
-  text += `Name: ${form.name}\n`;
-  if (form.occupation) text += `Occupation: ${form.occupation}\n`;
-  if (form.age) text += `Age: ${form.age}\n`;
-  if (form.location) text += `Location: ${form.location}\n\n`;
+  text += `Name: ${form.name}\n\n`;
   
-  if (form.quote) {
-    text += `Quote: "${form.quote}"\n\n`;
+  if (form.howTheySeeThemselves) {
+    text += `How They See Themselves:\n${form.howTheySeeThemselves}\n\n`;
   }
   
-  if (form.bio) {
-    text += `About:\n${form.bio}\n\n`;
+  if (form.greatEnablers) {
+    text += `Great Enablers:\n${form.greatEnablers}\n\n`;
   }
   
-  text += `Demographics:\n`;
-  if (form.education) text += `- Education: ${form.education}\n`;
-  if (form.familyStatus) text += `- Family: ${form.familyStatus}\n`;
-  if (form.income) text += `- Income: ${form.income}\n\n`;
-  
-  if (form.goals) {
-    text += `Goals:\n${form.goals}\n\n`;
+  if (form.greatestPainPoints) {
+    text += `Greatest Pain Points:\n${form.greatestPainPoints}\n\n`;
   }
   
-  if (form.motivations) {
-    text += `Motivations:\n${form.motivations}\n\n`;
+  if (form.howTheyDescribedNeeds) {
+    text += `How They Described Their Needs:\n${form.howTheyDescribedNeeds}\n\n`;
   }
   
-  if (form.painPoints) {
-    text += `Pain Points:\n${form.painPoints}\n\n`;
-  }
-  
-  if (form.currentSolutions) {
-    text += `Current Solutions:\n${form.currentSolutions}\n\n`;
-  }
-  
-  if (form.techComfort) {
-    text += `Technology Comfort: ${techComfortOptions.find(o => o.value === form.techComfort)?.label || form.techComfort}\n`;
-  }
-  
-  if (form.communicationChannels) {
-    text += `Communication Channels: ${form.communicationChannels}\n`;
-  }
-  
-  if (form.typicalDay) {
-    text += `\nTypical Day:\n${form.typicalDay}\n`;
+  if (form.currentExperience) {
+    text += `Current Experience:\n${form.currentExperience}\n`;
   }
   
   // Create and download file

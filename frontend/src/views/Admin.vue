@@ -270,53 +270,6 @@
               </p>
             </router-link>
 
-            <!-- Code Quality Card -->
-            <router-link 
-              to="/admin/code-quality"
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">check_circle</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Code Quality
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Lint, format, and enforce best practices to maintain high code quality standards across the design system.
-              </p>
-            </router-link>
-
-            <!-- Vulnerability Scanner Card -->
-            <router-link 
-              to="/admin/security"
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">security</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Vulnerability Scanner
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Scan dependencies for security vulnerabilities and get recommendations for updates to keep the design system secure.
-              </p>
-            </router-link>
 
             <!-- Performance Analysis Card -->
             <router-link 

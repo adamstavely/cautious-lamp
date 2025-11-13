@@ -34,8 +34,6 @@ export enum Permission {
   ADMIN_AUDIT = 'admin:audit',
   ADMIN_BANNERS = 'admin:banners',
   ADMIN_RBAC = 'admin:rbac',
-  ADMIN_CODE_QUALITY = 'admin:code_quality',
-  ADMIN_VULNERABILITY_SCANNER = 'admin:vulnerability_scanner',
   ADMIN_PERFORMANCE_ANALYSIS = 'admin:performance_analysis',
   
   // Roadmap & Feedback permissions
@@ -194,7 +192,6 @@ export class RbacService {
       Permission.ROADMAP_VIEW,
       Permission.FEEDBACK_CREATE,
       Permission.FEEDBACK_VOTE,
-      Permission.ADMIN_CODE_QUALITY,
       Permission.ADMIN_PERFORMANCE_ANALYSIS,
     ],
     [Role.SYSTEM_OWNER]: [
@@ -218,8 +215,6 @@ export class RbacService {
       Permission.ADMIN_SYSTEM_HEALTH,
       Permission.ADMIN_GOVERNANCE,
       Permission.ADMIN_AUDIT,
-      Permission.ADMIN_CODE_QUALITY,
-      Permission.ADMIN_VULNERABILITY_SCANNER,
       Permission.ADMIN_PERFORMANCE_ANALYSIS,
       Permission.ROADMAP_VIEW,
       Permission.ROADMAP_EDIT,
@@ -630,8 +625,6 @@ export class RbacService {
       { value: Permission.ADMIN_AUDIT, label: 'Audit Logs', category: 'Administration' },
       { value: Permission.ADMIN_BANNERS, label: 'Site Banners', category: 'Administration' },
       { value: Permission.ADMIN_RBAC, label: 'Role Management', category: 'Administration' },
-      { value: Permission.ADMIN_CODE_QUALITY, label: 'Code Quality', category: 'Administration' },
-      { value: Permission.ADMIN_VULNERABILITY_SCANNER, label: 'Vulnerability Scanner', category: 'Administration' },
       
       // Roadmap & Feedback permissions
       { value: Permission.ROADMAP_VIEW, label: 'View Roadmap', category: 'Roadmap & Feedback' },

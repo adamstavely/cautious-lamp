@@ -35,8 +35,6 @@ const routeToFlagMap = {
   '/tools/visual-regression': 'visual-regression',
   '/palette-builder': 'palette-builder',
   '/theme-builder': 'theme-builder',
-  '/admin/code-quality': 'code-quality',
-  '/admin/security': 'vulnerability-scanner',
   '/fonts': 'font-library',
   '/design-assets/font-library': 'font-library',
   '/tools/font-scale': 'font-scale',

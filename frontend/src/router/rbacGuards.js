@@ -5,8 +5,6 @@ const API_BASE_URL = 'http://localhost:3000';
 // Map routes to required permissions
 // Note: Routes without permissions here are viewable by all users
 const routeToPermissionMap = {
-  '/admin/code-quality': 'admin:code_quality',
-  '/admin/security': 'admin:vulnerability_scanner',
   '/admin/health': 'admin:system_health',
   '/admin/governance': 'admin:governance',
   '/admin/audit': 'admin:audit',

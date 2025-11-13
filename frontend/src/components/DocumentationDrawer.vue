@@ -976,8 +976,6 @@ const adminItems = [
   { text: 'Feature Flags', link: '/admin/feature-flags', icon: 'flag' },
   { text: 'Component and Pattern Lifecycle Management', link: '/admin/content', icon: 'edit_document' },
   { text: 'Application Management', link: '/admin/applications', icon: 'apps' },
-  { text: 'Code Quality', link: '/admin/code-quality', icon: 'check_circle' },
-  { text: 'Vulnerability Scanner', link: '/admin/security', icon: 'security' },
   { text: 'Performance Analysis', link: '/admin/performance', icon: 'speed' },
   { text: 'Accessibility Reports', link: '/admin/accessibility-reports', icon: 'accessibility' }
 ];

@@ -301,8 +301,6 @@
                 <option value="/tools/heuristic-evaluation">Heuristic Evaluation</option>
                 <option value="/palette-builder">Palette Builder</option>
                 <option value="/theme-builder">Theme Builder</option>
-                <option value="/admin/code-quality">Code Quality Checks</option>
-                <option value="/admin/security">Vulnerability Scanner</option>
               </optgroup>
               <optgroup label="Fonts">
                 <option value="/fonts">Fonts Overview</option>
@@ -591,8 +589,6 @@ const routeToFlagKey = {
   '/tools/heuristic-evaluation': 'heuristic-evaluation',
   '/palette-builder': 'palette-builder',
   '/theme-builder': 'theme-builder',
-  '/admin/code-quality': 'code-quality',
-  '/admin/security': 'vulnerability-scanner',
   '/fonts': 'font-library',
   '/fonts/library': 'font-library',
   '/fonts/scale': 'font-scale',
@@ -645,8 +641,6 @@ const routeToName = {
   '/tools/heuristic-evaluation': 'Heuristic Evaluation',
   '/palette-builder': 'Palette Builder',
   '/theme-builder': 'Theme Builder',
-  '/admin/code-quality': 'Code Quality Checks',
-  '/admin/security': 'Vulnerability Scanner',
   '/fonts': 'Fonts Overview',
   '/fonts/library': 'Font Library',
   '/fonts/scale': 'Font Scale',

@@ -150,7 +150,12 @@ const crumbs = computed(() => {
     '/ai/patterns': 'AI Patterns',
     '/ai/components': 'AI Components',
     '/hcd/principles': 'HCD Principles',
+    '/hcd/process': 'HCD Process',
     '/hcd/research': 'User Research',
+    '/hcd/research-methods': 'Research Methods',
+    '/hcd/recruiting-users': 'Recruiting Users',
+    '/hcd/conducting-interviews': 'Conducting Interviews',
+    '/hcd/research-reports': 'Research Reports',
     '/hcd/accessibility': 'Accessibility',
   };
   

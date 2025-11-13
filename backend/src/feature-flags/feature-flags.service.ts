@@ -490,32 +490,6 @@ export class FeatureFlagsService {
         },
       },
       {
-        id: 'code-quality',
-        key: 'code-quality',
-        name: 'Code Quality Checks',
-        description: 'Enable linting, formatting, and best practices enforcement',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'code', 'quality'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'vulnerability-scanner',
-        key: 'vulnerability-scanner',
-        name: 'Vulnerability Scanner',
-        description: 'Enable dependency security vulnerability scanning',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'security', 'vulnerabilities'],
-          createdAt: new Date(),
-        },
-      },
-      {
         id: 'migration-assistant',
         key: 'migration-assistant',
         name: 'Deprecation & Migration Assistant',
