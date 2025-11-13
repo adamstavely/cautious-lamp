@@ -539,10 +539,6 @@ const router = createRouter({
       component: () => import('./views/UserStudies.vue'),
     },
     {
-      path: '/research/artifacts',
-      component: () => import('./views/ResearchArtifacts.vue'),
-    },
-    {
       path: '/research/insights',
       component: () => import('./views/ResearchInsights.vue'),
     },

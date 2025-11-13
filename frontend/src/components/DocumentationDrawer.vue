@@ -592,6 +592,31 @@
             </div>
           </div>
 
+          <!-- Research Artifacts -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Research Artifacts</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in filteredResearchArtifacts"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
           <!-- UX Research Tools -->
           <div>
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">UX Research Tools</h4>
@@ -1010,7 +1035,6 @@ const researchArtifacts = [
   { text: 'Journey Maps', link: '/research/journey-maps', icon: 'map' },
   { text: 'HCD Reports', link: '/research/hcd-reports', icon: 'description' },
   { text: 'User Personas', link: '/research/user-studies', icon: 'groups' },
-  { text: 'Research Artifacts', link: '/research/artifacts', icon: 'folder' },
   { text: 'Insights & Findings', link: '/research/insights', icon: 'insights' }
 ];
 
