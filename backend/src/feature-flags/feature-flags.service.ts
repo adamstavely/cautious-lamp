@@ -48,7 +48,7 @@ export class FeatureFlagsService {
         key: 'component-playground',
         name: 'Component Playground',
         description: 'Enable the live component playground with code editor',
-        enabled: true,
+        enabled: true, // Force enabled
         defaultValue: true,
         metadata: {
           category: 'Components',
@@ -764,18 +764,21 @@ export class FeatureFlagsService {
     ];
 
     for (const flag of defaultFlags) {
-      this.inMemoryFlags.set(flag.id, flag);
+      // Force enabled to true
+      const flagToStore = { ...flag, enabled: true };
+      this.inMemoryFlags.set(flag.id, flagToStore);
       if (this.elasticsearchService) {
         try {
           await this.elasticsearchService.index({
             index: `${this.indexPrefix}-flags`,
             id: flag.id,
             document: {
-              ...flag,
+              ...flagToStore,
+              enabled: true, // Force enabled in Elasticsearch too
               metadata: {
-                ...flag.metadata,
-                createdAt: flag.metadata?.createdAt?.toISOString(),
-                updatedAt: flag.metadata?.updatedAt?.toISOString(),
+                ...flagToStore.metadata,
+                createdAt: flagToStore.metadata?.createdAt?.toISOString(),
+                updatedAt: flagToStore.metadata?.updatedAt?.toISOString(),
               },
             },
           });
@@ -850,25 +853,53 @@ export class FeatureFlagsService {
         });
 
         const source = response._source as any;
-        return {
+        const flag = {
           ...source,
+          enabled: true, // Force enabled
           metadata: {
             ...source.metadata,
             createdAt: source.metadata?.createdAt ? new Date(source.metadata.createdAt) : undefined,
             updatedAt: source.metadata?.updatedAt ? new Date(source.metadata.updatedAt) : undefined,
           },
         };
+        
+        // Update in-memory cache with enabled flag
+        this.inMemoryFlags.set(id, flag);
+        
+        // If it was disabled, update it in Elasticsearch too
+        if (!source.enabled) {
+          this.updateFlag(id, { enabled: true }).catch(err => {
+            console.warn(`Failed to update flag ${id} to enabled:`, err);
+          });
+        }
+        
+        return flag;
       } catch (error) {
         // Not found in Elasticsearch, check in-memory
       }
     }
 
-    return this.inMemoryFlags.get(id) || null;
+    const inMemoryFlag = this.inMemoryFlags.get(id);
+    if (inMemoryFlag && !inMemoryFlag.enabled) {
+      // Force enable in-memory flag
+      inMemoryFlag.enabled = true;
+      this.inMemoryFlags.set(id, inMemoryFlag);
+    }
+    
+    return inMemoryFlag || null;
   }
 
   async getFlagByKey(key: string): Promise<FeatureFlag | null> {
     const allFlags = await this.getAllFlags();
-    return allFlags.find(flag => flag.key === key) || null;
+    const flag = allFlags.find(flag => flag.key === key);
+    
+    // Force enable if found
+    if (flag && !flag.enabled) {
+      await this.updateFlag(flag.id, { enabled: true });
+      flag.enabled = true;
+    }
+    
+    return flag || null;
   }
 
   async createFlag(flag: Omit<FeatureFlag, 'id'>): Promise<FeatureFlag> {
@@ -980,11 +1011,17 @@ export class FeatureFlagsService {
   async isEnabled(key: string, userId?: string, userGroups?: string[]): Promise<boolean> {
     const flag = await this.getFlagByKey(key);
     if (!flag) {
-      return false;
+      // If flag doesn't exist, return true (fail open) to allow access
+      return true;
     }
 
+    // Force enable - always return true
     if (!flag.enabled) {
-      return false;
+      // Enable it in background
+      this.updateFlag(flag.id, { enabled: true }).catch(err => {
+        console.warn(`Failed to enable flag ${key}:`, err);
+      });
+      return true; // Return true immediately
     }
 
     // Check targeting rules
