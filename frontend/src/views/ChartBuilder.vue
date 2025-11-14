@@ -133,8 +133,8 @@
                     />
                   </div>
 
-                  <!-- Multi-Dataset Input (for stacked/grouped/combo) -->
-                  <div v-if="selectedChartType === 'stackedBar' || selectedChartType === 'groupedBar' || selectedChartType === 'combo'" class="mb-4">
+                  <!-- Multi-Dataset Input (for stacked/grouped/combo/multi-line) -->
+                  <div v-if="selectedChartType === 'stackedBar' || selectedChartType === 'groupedBar' || selectedChartType === 'combo' || selectedChartType === 'line'" class="mb-4">
                     <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                       Datasets
                     </label>
@@ -331,21 +331,32 @@
 
                   <!-- Candlestick Chart Input -->
                   <div v-else-if="selectedChartType === 'candlestick'" class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    <label class="block text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                       OHLC Data
                     </label>
-                    <div class="space-y-2">
+                    <div class="space-y-3">
+                      <!-- Header Row -->
+                      <div class="grid grid-cols-12 gap-2 text-xs font-semibold px-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                        <div class="col-span-3">Date</div>
+                        <div class="col-span-2">Open</div>
+                        <div class="col-span-2">High</div>
+                        <div class="col-span-2">Low</div>
+                        <div class="col-span-2">Close</div>
+                        <div class="col-span-1"></div>
+                      </div>
+                      
+                      <!-- Data Rows -->
                       <div 
                         v-for="(item, index) in candlestickData"
                         :key="index"
-                        class="border rounded-lg p-2"
+                        class="border rounded-lg p-3"
                         :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'"
                       >
-                        <div class="grid grid-cols-5 gap-2">
+                        <div class="grid grid-cols-12 gap-2 items-center">
                           <input
                             v-model="item.date"
                             type="date"
-                            class="col-span-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                            class="col-span-3 px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
                             :class="isDarkMode 
                               ? 'bg-slate-700 border-gray-600 text-white' 
                               : 'bg-white border-gray-300 text-gray-900'"
@@ -354,7 +365,8 @@
                             v-model.number="item.open"
                             type="number"
                             placeholder="Open"
-                            class="px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                            step="0.01"
+                            class="col-span-2 px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
                             :class="isDarkMode 
                               ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
                               : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
@@ -363,7 +375,8 @@
                             v-model.number="item.high"
                             type="number"
                             placeholder="High"
-                            class="px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                            step="0.01"
+                            class="col-span-2 px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
                             :class="isDarkMode 
                               ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
                               : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
@@ -372,34 +385,36 @@
                             v-model.number="item.low"
                             type="number"
                             placeholder="Low"
-                            class="px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                            step="0.01"
+                            class="col-span-2 px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
                             :class="isDarkMode 
                               ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
                               : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
                           />
-                          <div class="flex gap-1">
-                            <input
-                              v-model.number="item.close"
-                              type="number"
-                              placeholder="Close"
-                              class="flex-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                            />
-                            <button
-                              @click="candlestickData.splice(index, 1)"
-                              class="px-1.5 py-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                              :disabled="candlestickData.length <= 1"
-                            >
-                              <span class="material-symbols-outlined text-sm">close</span>
-                            </button>
-                          </div>
+                          <input
+                            v-model.number="item.close"
+                            type="number"
+                            placeholder="Close"
+                            step="0.01"
+                            class="col-span-2 px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                            :class="isDarkMode 
+                              ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
+                              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
+                          />
+                          <button
+                            @click="candlestickData.splice(index, 1)"
+                            class="col-span-1 px-2 py-2 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center justify-center"
+                            :disabled="candlestickData.length <= 1"
+                            title="Remove row"
+                          >
+                            <span class="material-symbols-outlined text-base">delete</span>
+                          </button>
                         </div>
                       </div>
+                      
                       <button
                         @click="candlestickData.push({ date: new Date().toISOString().split('T')[0], open: 100, high: 110, low: 95, close: 105 })"
-                        class="w-full px-4 py-2 rounded-lg border border-dashed text-sm font-medium transition-colors"
+                        class="w-full px-4 py-2.5 rounded-lg border border-dashed text-sm font-medium transition-colors"
                         :class="isDarkMode 
                           ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
                           : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
@@ -419,7 +434,7 @@
                       <div>
                         <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Rows:</label>
                         <input
-                          v-model="heatmapData.rows.join(',')"
+                          :value="heatmapData.rows.join(',')"
                           @input="heatmapData.rows = $event.target.value.split(',').map(r => r.trim()).filter(r => r)"
                           type="text"
                           placeholder="Mon, Tue, Wed, Thu, Fri"
@@ -432,7 +447,7 @@
                       <div>
                         <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Columns:</label>
                         <input
-                          v-model="heatmapData.columns.join(',')"
+                          :value="heatmapData.columns.join(',')"
                           @input="heatmapData.columns = $event.target.value.split(',').map(c => c.trim()).filter(c => c)"
                           type="text"
                           placeholder="Week 1, Week 2, Week 3, Week 4"
@@ -706,22 +721,60 @@
                     <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                       Color Scheme
                     </label>
-                    <select
+                    <Dropdown
                       v-model="chartConfig.colorScheme"
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                      :class="isDarkMode 
-                        ? 'bg-slate-800 border-gray-600 text-white' 
-                        : 'bg-white border-gray-300 text-gray-900'"
-                    >
-                      <option value="default">Default</option>
-                      <option value="indigo">Indigo</option>
-                      <option value="blue">Blue</option>
-                      <option value="green">Green</option>
-                      <option value="red">Red</option>
-                      <option value="purple">Purple</option>
-                      <option value="orange">Orange</option>
-                      <option value="custom">Custom</option>
-                    </select>
+                      :options="colorSchemeOptions"
+                      :is-dark-mode="isDarkMode"
+                      @update:modelValue="initializeCustomColors"
+                    />
+                  </div>
+
+                  <!-- Custom Colors - Always show when custom is selected, or show for all schemes -->
+                  <div v-if="chartConfig.colorScheme === 'custom' || getDataForColors().length > 0" class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                      <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        {{ chartConfig.colorScheme === 'custom' ? 'Custom Colors' : 'Chart Colors' }}
+                      </label>
+                      <button
+                        v-if="chartConfig.colorScheme !== 'custom'"
+                        @click="chartConfig.colorScheme = 'custom'; initializeCustomColors()"
+                        class="text-xs px-2 py-1 rounded text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                      >
+                        Customize
+                      </button>
+                    </div>
+                    <div v-if="chartConfig.colorScheme === 'custom'" class="space-y-2 max-h-64 overflow-y-auto">
+                      <div 
+                        v-for="(item, index) in getDataForColors()"
+                        :key="index"
+                        class="flex items-center gap-2"
+                      >
+                        <span class="text-xs w-24 truncate" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                          {{ item.label || `Item ${index + 1}` }}
+                        </span>
+                        <input
+                          v-model="customColors[index]"
+                          type="color"
+                          class="w-12 h-8 rounded border cursor-pointer flex-shrink-0"
+                          :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
+                        />
+                        <input
+                          v-model="customColors[index]"
+                          type="text"
+                          placeholder="#6366f1"
+                          class="flex-1 px-2 py-1.5 rounded border text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                          :class="isDarkMode 
+                            ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
+                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
+                        />
+                      </div>
+                      <div v-if="getDataForColors().length === 0" class="text-xs text-center py-2" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
+                        Add data points to customize colors
+                      </div>
+                    </div>
+                    <div v-else class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      Using {{ chartConfig.colorScheme }} color scheme. Click "Customize" to set individual colors.
+                    </div>
                   </div>
 
                   <!-- Show Legend -->
@@ -908,10 +961,12 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, h } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import Dropdown from '../components/Dropdown.vue';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
+  RadialLinearScale,
   PointElement,
   LineElement,
   BarElement,
@@ -929,6 +984,7 @@ import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
 ChartJS.register(
   CategoryScale,
   LinearScale,
+  RadialLinearScale,
   PointElement,
   LineElement,
   BarElement,
@@ -1075,15 +1131,59 @@ const chartConfig = ref({
   showLegend: true
 });
 
+// Custom colors for individual data points
+const customColors = ref([]);
+
+// Get data items for color customization
+const getDataForColors = () => {
+  const chartType = selectedChartType.value;
+  
+  // For multi-dataset charts, use first dataset
+  if (chartType === 'stackedBar' || chartType === 'groupedBar' || chartType === 'combo' || chartType === 'line') {
+    if (multiDatasetData.value.length > 0 && multiDatasetData.value[0].data.length > 0) {
+      return multiDatasetData.value[0].data;
+    }
+    return [];
+  }
+  
+  // For single dataset charts
+  if (chartData.value && chartData.value.length > 0) {
+    return chartData.value;
+  }
+  
+  return [];
+};
+
+// Initialize custom colors array
+const initializeCustomColors = () => {
+  if (chartConfig.value.colorScheme !== 'custom') {
+    return;
+  }
+  
+  const dataItems = getDataForColors();
+  const defaultColors = colorSchemes.default;
+  
+  // Initialize or resize customColors array
+  while (customColors.value.length < dataItems.length) {
+    const colorIndex = customColors.value.length % defaultColors.length;
+    customColors.value.push(defaultColors[colorIndex]);
+  }
+  
+  // Trim if too long
+  if (customColors.value.length > dataItems.length) {
+    customColors.value = customColors.value.slice(0, dataItems.length);
+  }
+};
+
 const chartTypes = [
-  { value: 'line', label: 'Line Graph', icon: 'show_chart', description: 'Display trends over time' },
+  { value: 'line', label: 'Line Graph', icon: 'show_chart', description: 'Display trends over time (supports multiple lines)' },
   { value: 'area', label: 'Area Chart', icon: 'area_chart', description: 'Filled line chart showing cumulative values' },
   { value: 'bar', label: 'Bar Graph', icon: 'bar_chart', description: 'Compare categories' },
   { value: 'horizontalBar', label: 'Horizontal Bar', icon: 'horizontal_rule', description: 'Bar chart rotated horizontally' },
   { value: 'stackedBar', label: 'Stacked Bar', icon: 'stacked_bar_chart', description: 'Multiple datasets stacked vertically' },
   { value: 'groupedBar', label: 'Grouped Bar', icon: 'grouped_bar_chart', description: 'Multiple datasets side by side' },
   { value: 'combo', label: 'Combo Chart', icon: 'multiline_chart', description: 'Mix of bar and line charts' },
-  { value: 'gauge', label: 'Gauge Chart', icon: 'gauge', description: 'Single metric with min/max/target' },
+  { value: 'gauge', label: 'Gauge Chart', icon: 'speed', description: 'Single metric with min/max/target' },
   { value: 'waterfall', label: 'Waterfall Chart', icon: 'waterfall_chart', description: 'Shows cumulative changes' },
   { value: 'candlestick', label: 'Candlestick', icon: 'candlestick_chart', description: 'Financial OHLC data' },
   { value: 'heatmap', label: 'Heatmap', icon: 'grid_on', description: 'Matrix visualization' },
@@ -1108,8 +1208,22 @@ const colorSchemes = {
   orange: ['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7', '#fffbeb']
 };
 
+const colorSchemeOptions = [
+  { value: 'default', label: 'Default' },
+  { value: 'indigo', label: 'Indigo' },
+  { value: 'blue', label: 'Blue' },
+  { value: 'green', label: 'Green' },
+  { value: 'red', label: 'Red' },
+  { value: 'purple', label: 'Purple' },
+  { value: 'orange', label: 'Orange' },
+  { value: 'custom', label: 'Custom Colors' }
+];
+
 const chartDataForDisplay = computed(() => {
-  const colors = colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default;
+  // Use custom colors if custom scheme is selected, otherwise use predefined scheme
+  const colors = chartConfig.value.colorScheme === 'custom' 
+    ? (customColors.value.length > 0 ? customColors.value : colorSchemes.default)
+    : (colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default);
   const chartType = selectedChartType.value;
   
   // Handle gauge chart (custom doughnut-based)
@@ -1174,10 +1288,11 @@ const chartDataForDisplay = computed(() => {
   // Handle candlestick chart
   if (chartType === 'candlestick') {
     return {
+      labels: candlestickData.value.map(item => item.date),
       datasets: [{
         label: chartConfig.value.title || 'OHLC',
-        data: candlestickData.value.map(item => ({
-          x: new Date(item.date).getTime(),
+        data: candlestickData.value.map((item, index) => ({
+          x: index,
           o: item.open,
           h: item.high,
           l: item.low,
@@ -1245,19 +1360,21 @@ const chartDataForDisplay = computed(() => {
     return { type: 'sankey', data: sankeyData.value };
   }
   
-  // Handle multi-dataset charts (stacked, grouped, combo)
-  if (chartType === 'stackedBar' || chartType === 'groupedBar' || chartType === 'combo') {
+  // Handle multi-dataset charts (stacked, grouped, combo, multi-line)
+  if (chartType === 'stackedBar' || chartType === 'groupedBar' || chartType === 'combo' || chartType === 'line') {
     const labels = multiDatasetData.value[0]?.data.map(item => item.label) || [];
     const datasets = multiDatasetData.value.map((dataset, index) => {
       const isLine = chartType === 'combo' && index === multiDatasetData.value.length - 1;
+      const isMultiLine = chartType === 'line';
       return {
         label: dataset.label,
         data: dataset.data.map(item => item.value),
-        backgroundColor: isLine ? 'transparent' : (colors[index % colors.length] + '80'),
+        backgroundColor: isLine || isMultiLine ? 'transparent' : (colors[index % colors.length] + '80'),
         borderColor: colors[index % colors.length],
         borderWidth: 2,
-        type: isLine ? 'line' : 'bar',
-        fill: false
+        type: isLine ? 'line' : (isMultiLine ? 'line' : 'bar'),
+        fill: isMultiLine ? false : (isLine ? false : undefined),
+        tension: isMultiLine ? 0.4 : undefined // Smooth curves for multi-line
       };
     });
     
@@ -1298,7 +1415,9 @@ const chartDataForDisplay = computed(() => {
 });
 
 const scatterDataForDisplay = computed(() => {
-  const colors = colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default;
+  const colors = chartConfig.value.colorScheme === 'custom' 
+    ? (customColors.value.length > 0 ? customColors.value : colorSchemes.default)
+    : (colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default);
   
   return {
     datasets: [{
@@ -1315,7 +1434,9 @@ const scatterDataForDisplay = computed(() => {
 });
 
 const bubbleDataForDisplay = computed(() => {
-  const colors = colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default;
+  const colors = chartConfig.value.colorScheme === 'custom' 
+    ? (customColors.value.length > 0 ? customColors.value : colorSchemes.default)
+    : (colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default);
   
   return {
     datasets: [{
@@ -1389,10 +1510,12 @@ const chartOptions = computed(() => {
       ...baseOptions,
       scales: {
         x: {
+          type: 'category',
           ticks: { color: textColor },
           grid: { color: gridColor }
         },
         y: {
+          type: 'linear',
           ticks: { color: textColor },
           grid: { color: gridColor }
         }
@@ -1696,10 +1819,10 @@ const loadSampleData = () => {
   }
   
   // Handle multi-dataset charts
-  if (chartType === 'stackedBar' || chartType === 'groupedBar' || chartType === 'combo') {
+  if (chartType === 'stackedBar' || chartType === 'groupedBar' || chartType === 'combo' || chartType === 'line') {
     multiDatasetData.value = [
       {
-        label: 'Sales',
+        label: chartType === 'line' ? 'Series 1' : 'Sales',
         data: [
           { label: 'Q1', value: 45 },
           { label: 'Q2', value: 78 },
@@ -1708,7 +1831,7 @@ const loadSampleData = () => {
         ]
       },
       {
-        label: 'Revenue',
+        label: chartType === 'line' ? 'Series 2' : 'Revenue',
         data: [
           { label: 'Q1', value: 35 },
           { label: 'Q2', value: 68 },
@@ -1723,6 +1846,15 @@ const loadSampleData = () => {
           { label: 'Q2', value: 75 },
           { label: 'Q3', value: 90 },
           { label: 'Q4', value: 70 }
+        ]
+      }] : []),
+      ...(chartType === 'line' ? [{
+        label: 'Series 3',
+        data: [
+          { label: 'Q1', value: 55 },
+          { label: 'Q2', value: 72 },
+          { label: 'Q3', value: 88 },
+          { label: 'Q4', value: 60 }
         ]
       }] : [])
     ];
@@ -2223,6 +2355,8 @@ onMounted(() => {
   
   // Load sample data on mount
   loadSampleData();
+  // Initialize custom colors if custom scheme is selected
+  initializeCustomColors();
 });
 
 onBeforeUnmount(() => {
@@ -2238,23 +2372,38 @@ onBeforeUnmount(() => {
 watch(selectedChartType, () => {
   chartKey.value++;
   loadSampleData();
+  initializeCustomColors();
 });
+
+// Watch for data changes to update custom colors
+watch([chartData, multiDatasetData], () => {
+  if (chartConfig.value.colorScheme === 'custom') {
+    initializeCustomColors();
+  }
+}, { deep: true });
 
 // Treemap SVG Component
 const TreemapSVG = {
   props: ['data', 'colors'],
-  setup(props) {
-    const width = 400;
-    const height = 300;
+  setup(props, { expose }) {
+    const containerRef = ref(null);
+    const width = ref(400);
+    const height = ref(300);
     
-    const flattenTree = (node, level = 0) => {
+    // Flatten tree to get all leaf nodes
+    const flattenTree = (node, level = 0, path = '') => {
       const result = [];
-      if (node.children) {
-        node.children.forEach(child => {
-          result.push(...flattenTree(child, level + 1));
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child, idx) => {
+          result.push(...flattenTree(child, level + 1, path ? `${path}.${idx}` : `${idx}`));
         });
       } else {
-        result.push({ ...node, level });
+        result.push({ 
+          name: node.name || 'Item',
+          value: node.value || 0,
+          level,
+          path
+        });
       }
       return result;
     };
@@ -2262,89 +2411,244 @@ const TreemapSVG = {
     const items = computed(() => {
       const flat = flattenTree(props.data);
       const total = flat.reduce((sum, item) => sum + item.value, 0);
-      return flat.map((item, index) => ({
-        ...item,
-        ratio: item.value / total,
-        color: props.colors[index % props.colors.length]
-      }));
+      if (total === 0) return [];
+      
+      // Sort by value descending for better layout
+      return flat
+        .map((item, index) => ({
+          ...item,
+          ratio: item.value / total,
+          color: props.colors[index % props.colors.length]
+        }))
+        .sort((a, b) => b.value - a.value);
     });
     
+    // Squarified treemap layout algorithm
     const layout = computed(() => {
-      const rects = [];
-      let x = 0, y = 0;
-      let rowHeight = 0;
-      let rowWidth = 0;
-      const rowItems = [];
+      if (items.value.length === 0) return [];
       
-      items.value.forEach((item, index) => {
-        const itemWidth = width * item.ratio;
-        const itemHeight = height / items.value.length;
-        
-        if (rowWidth + itemWidth > width) {
-          // Start new row
-          rowItems.forEach((ri, riIndex) => {
-            rects.push({
-              ...ri,
-              x: (width / rowItems.length) * riIndex,
-              y: y,
-              width: width / rowItems.length,
-              height: rowHeight
-            });
+      const rects = [];
+      const w = width.value;
+      const h = height.value;
+      
+      // Squarified treemap algorithm
+      const squarify = (items, x, y, w, h) => {
+        if (items.length === 0) return;
+        if (items.length === 1) {
+          const item = items[0];
+          rects.push({
+            ...item,
+            x,
+            y,
+            width: w,
+            height: h
           });
-          y += rowHeight;
-          rowWidth = 0;
-          rowHeight = 0;
-          rowItems.length = 0;
+          return;
         }
         
-        rowItems.push({ ...item, width: itemWidth, height: itemHeight });
-        rowWidth += itemWidth;
-        rowHeight = Math.max(rowHeight, itemHeight);
-      });
+        const total = items.reduce((sum, item) => sum + item.value, 0);
+        const area = w * h;
+        
+        // Determine if we should layout horizontally or vertically
+        const shouldLayoutHorizontally = w >= h;
+        
+        if (shouldLayoutHorizontally) {
+          // Layout horizontally (rows)
+          let currentY = y;
+          let remainingHeight = h;
+          let itemIndex = 0;
+          
+          while (itemIndex < items.length && remainingHeight > 0) {
+            const rowItems = [];
+            let rowSum = 0;
+            let bestRow = [];
+            let bestWorst = Infinity;
+            
+            // Build the best row
+            for (let i = itemIndex; i < items.length; i++) {
+              const testRow = items.slice(itemIndex, i + 1);
+              const testSum = testRow.reduce((sum, item) => sum + item.value, 0);
+              const rowHeight = (testSum / total) * h;
+              const rowWidth = w;
+              
+              // Calculate worst aspect ratio
+              let worst = 0;
+              testRow.forEach(item => {
+                const itemWidth = (item.value / testSum) * rowWidth;
+                const itemHeight = rowHeight;
+                const aspectRatio = Math.max(itemWidth / itemHeight, itemHeight / itemWidth);
+                worst = Math.max(worst, aspectRatio);
+              });
+              
+              if (worst < bestWorst) {
+                bestWorst = worst;
+                bestRow = testRow;
+                rowSum = testSum;
+              } else {
+                break;
+              }
+            }
+            
+            const rowHeight = (rowSum / total) * h;
+            let currentX = x;
+            
+            bestRow.forEach((item, idx) => {
+              const itemWidth = (item.value / rowSum) * w;
+              rects.push({
+                ...item,
+                x: currentX,
+                y: currentY,
+                width: itemWidth,
+                height: rowHeight
+              });
+              currentX += itemWidth;
+            });
+            
+            currentY += rowHeight;
+            remainingHeight -= rowHeight;
+            itemIndex += bestRow.length;
+          }
+        } else {
+          // Layout vertically (columns)
+          let currentX = x;
+          let remainingWidth = w;
+          let itemIndex = 0;
+          
+          while (itemIndex < items.length && remainingWidth > 0) {
+            const colItems = [];
+            let colSum = 0;
+            let bestCol = [];
+            let bestWorst = Infinity;
+            
+            // Build the best column
+            for (let i = itemIndex; i < items.length; i++) {
+              const testCol = items.slice(itemIndex, i + 1);
+              const testSum = testCol.reduce((sum, item) => sum + item.value, 0);
+              const colWidth = (testSum / total) * w;
+              const colHeight = h;
+              
+              // Calculate worst aspect ratio
+              let worst = 0;
+              testCol.forEach(item => {
+                const itemHeight = (item.value / testSum) * colHeight;
+                const itemWidth = colWidth;
+                const aspectRatio = Math.max(itemWidth / itemHeight, itemHeight / itemWidth);
+                worst = Math.max(worst, aspectRatio);
+              });
+              
+              if (worst < bestWorst) {
+                bestWorst = worst;
+                bestCol = testCol;
+                colSum = testSum;
+              } else {
+                break;
+              }
+            }
+            
+            const colWidth = (colSum / total) * w;
+            let currentY = y;
+            
+            bestCol.forEach((item, idx) => {
+              const itemHeight = (item.value / colSum) * h;
+              rects.push({
+                ...item,
+                x: currentX,
+                y: currentY,
+                width: colWidth,
+                height: itemHeight
+              });
+              currentY += itemHeight;
+            });
+            
+            currentX += colWidth;
+            remainingWidth -= colWidth;
+            itemIndex += bestCol.length;
+          }
+        }
+      };
       
-      // Add remaining items
-      rowItems.forEach((ri, riIndex) => {
-        rects.push({
-          ...ri,
-          x: (width / rowItems.length) * riIndex,
-          y: y,
-          width: width / rowItems.length,
-          height: rowHeight || height / items.value.length
-        });
-      });
-      
+      squarify(items.value, 0, 0, w, h);
       return rects;
     });
     
-    return () => h('svg', {
-      width: width,
-      height: height,
-      viewBox: `0 0 ${width} ${height}`,
-      class: 'w-full h-full'
+    let resizeObserver = null;
+    let handleResize = null;
+    
+    onMounted(() => {
+      const updateSize = () => {
+        if (containerRef.value) {
+          const rect = containerRef.value.getBoundingClientRect();
+          width.value = rect.width || 400;
+          height.value = rect.height || 300;
+        }
+      };
+      updateSize();
+      
+      handleResize = () => updateSize();
+      window.addEventListener('resize', handleResize);
+      
+      // Use ResizeObserver to watch for container size changes
+      resizeObserver = new ResizeObserver(updateSize);
+      if (containerRef.value) {
+        resizeObserver.observe(containerRef.value);
+      }
+    });
+    
+    onBeforeUnmount(() => {
+      if (handleResize) {
+        window.removeEventListener('resize', handleResize);
+      }
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    });
+    
+    return () => h('div', {
+      ref: containerRef,
+      class: 'w-full h-full min-h-[400px]'
     }, [
-      ...layout.value.map((rect, index) => 
-        h('g', { key: index }, [
-          h('rect', {
-            x: rect.x,
-            y: rect.y,
-            width: rect.width,
-            height: rect.height,
-            fill: rect.color,
-            stroke: '#fff',
-            'stroke-width': 2,
-            rx: 2
-          }),
-          h('text', {
-            x: rect.x + rect.width / 2,
-            y: rect.y + rect.height / 2,
-            'text-anchor': 'middle',
-            'dominant-baseline': 'middle',
-            fill: '#fff',
-            'font-size': Math.min(rect.width, rect.height) / 8,
-            'font-weight': 'bold'
-          }, rect.name)
-        ])
-      )
+      h('svg', {
+        width: width.value,
+        height: height.value,
+        viewBox: `0 0 ${width.value} ${height.value}`,
+        class: 'w-full h-full'
+      }, [
+        ...layout.value.map((rect, index) => 
+          h('g', { key: index }, [
+            h('rect', {
+              x: Math.max(0, rect.x),
+              y: Math.max(0, rect.y),
+              width: Math.max(1, rect.width),
+              height: Math.max(1, rect.height),
+              fill: rect.color,
+              stroke: '#fff',
+              'stroke-width': 2,
+              rx: 2,
+              style: { cursor: 'pointer' }
+            }),
+            rect.width > 40 && rect.height > 20 ? h('text', {
+              x: rect.x + rect.width / 2,
+              y: rect.y + rect.height / 2,
+              'text-anchor': 'middle',
+              'dominant-baseline': 'middle',
+              fill: '#fff',
+              'font-size': Math.min(rect.width, rect.height) / 8,
+              'font-weight': 'bold',
+              style: { pointerEvents: 'none' }
+            }, [
+              h('tspan', {
+                x: rect.x + rect.width / 2,
+                dy: rect.height > 40 ? '-0.3em' : '0'
+              }, rect.name),
+              rect.height > 40 ? h('tspan', {
+                x: rect.x + rect.width / 2,
+                dy: '1.2em',
+                'font-size': Math.min(rect.width, rect.height) / 10
+              }, rect.value) : null
+            ]) : null
+          ])
+        )
+      ])
     ]);
   }
 };
