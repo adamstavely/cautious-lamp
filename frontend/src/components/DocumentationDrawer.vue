@@ -444,6 +444,56 @@
             </div>
           </div>
 
+          <!-- Data Visualization -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Data Visualization</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in filteredToolGroups.dataVisualization"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Development -->
+          <div v-if="filteredToolGroups.development.length > 0">
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Development</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in filteredToolGroups.development"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
           <!-- Image & Video -->
           <div>
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Image & Video</h4>
@@ -935,24 +985,34 @@ const toolGroups = computed(() => ({
   color: [
     { text: 'Gradient Generator', link: '/tools/gradient-generator', icon: 'gradient' },
     { text: 'Palette Builder', link: '/palette-builder', icon: 'swatch-book' },
-    { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'format_color_fill' },
     { text: 'Color Converter', link: '/tools/color-converter', icon: 'swap_horiz' },
     { text: 'Color Contrast Checker', link: '/tools/color-contrast', icon: 'contrast' }
+  ],
+  dataVisualization: [
+    { text: 'Chart Builder', link: '/tools/chart-builder', icon: 'bar_chart' },
+    { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'format_color_fill' }
   ],
   text: [
     { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'text-initial' },
     { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'tag' },
     { text: 'Font Scale', link: '/tools/font-scale', icon: 'format_size' },
     { text: 'Font Stack & Subsetting', link: '/tools/font-stack', icon: 'layers' },
+    { text: 'Spacing Scale Generator', link: '/tools/spacing-scale', icon: 'space_dashboard' },
+    { text: 'Box Shadow Generator', link: '/tools/box-shadow', icon: 'layers' },
+    { text: 'Border Radius Generator', link: '/tools/border-radius', icon: 'rounded_corner' }
+  ],
+  development: [
+    { text: 'HTML Viewer', link: '/tools/html-viewer', icon: 'preview' },
+    { text: 'HTML Escaper', link: '/tools/html-escaper', icon: 'lock' },
     { text: 'PX Unit Converter', link: '/tools/px-converter', icon: 'straighten' },
     { text: 'CSS Converter', link: '/tools/css-converter', icon: 'code' }
   ],
-  development: [
-  ],
   image: [
-    { text: 'PNG to ICO Converter', link: '/tools/png-to-ico', icon: 'image' },
+    { text: 'Image Converter', link: '/tools/png-to-ico', icon: 'image' },
+    { text: 'Image Compressor', link: '/tools/image-compressor', icon: 'compress' },
     { text: 'Alt Text Generator', link: '/tools/alt-text-generator', icon: 'captions' },
-    { text: 'Photosensitivity Analysis', link: '/tools/photosensitivity', icon: 'visibility' }
+    { text: 'Photosensitivity Analysis', link: '/tools/photosensitivity', icon: 'visibility' },
+    { text: 'CSS Animation Generator', link: '/tools/css-animation', icon: 'animation' }
   ]
 }));
 
@@ -1216,6 +1276,7 @@ const filteredToolGroups = computed(() => {
     overview: toolGroups.value.overview.filter(item => isRouteEnabled(item.link)),
     color: toolGroups.value.color.filter(item => isRouteEnabled(item.link)),
     text: toolGroups.value.text.filter(item => isRouteEnabled(item.link)),
+    dataVisualization: toolGroups.value.dataVisualization.filter(item => isRouteEnabled(item.link)),
     development: toolGroups.value.development.filter(item => isRouteEnabled(item.link)),
     image: toolGroups.value.image.filter(item => isRouteEnabled(item.link))
   };

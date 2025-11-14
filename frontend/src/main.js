@@ -527,6 +527,38 @@ const router = createRouter({
       component: () => import('./views/CssConverter.vue'),
     },
     {
+      path: '/tools/html-viewer',
+      component: () => import('./views/HTMLViewer.vue'),
+    },
+    {
+      path: '/tools/html-escaper',
+      component: () => import('./views/HTMLEscaper.vue'),
+    },
+    {
+      path: '/tools/image-compressor',
+      component: () => import('./views/ImageCompressor.vue'),
+    },
+    {
+      path: '/tools/chart-builder',
+      component: () => import('./views/ChartBuilder.vue'),
+    },
+    {
+      path: '/tools/spacing-scale',
+      component: () => import('./views/SpacingScaleGenerator.vue'),
+    },
+    {
+      path: '/tools/box-shadow',
+      component: () => import('./views/BoxShadowGenerator.vue'),
+    },
+    {
+      path: '/tools/border-radius',
+      component: () => import('./views/BorderRadiusGenerator.vue'),
+    },
+    {
+      path: '/tools/css-animation',
+      component: () => import('./views/CSSAnimationGenerator.vue'),
+    },
+    {
       path: '/research',
       component: () => import('./views/ResearchRepo.vue'),
     },

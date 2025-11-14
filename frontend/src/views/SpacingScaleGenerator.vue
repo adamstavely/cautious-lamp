@@ -23,19 +23,19 @@
                 <div class="flex-1">
                   <div class="flex items-center gap-4 mb-4">
                     <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Font Scale Generator
+                      Spacing Scale Generator
                     </h1>
                     <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
                       Production Ready
                     </span>
                   </div>
                   <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Generate consistent typography scales using mathematical ratios. Create harmonious heading and body text sizes for your design system.
+                    Generate consistent spacing scales using mathematical ratios. Create harmonious padding, margin, and gap values for your design system.
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">label</span>
-                      Typography Tool
+                      Design Tool
                     </span>
                     <span class="flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">update</span>
@@ -47,17 +47,16 @@
                   <div class="w-64 h-64 relative">
                     <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
                       <defs>
-                        <linearGradient id="fontScaleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <linearGradient id="spacingScaleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                           <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
                           <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
                         </linearGradient>
                       </defs>
-                      <!-- Stylized font scale icon -->
-                      <line x1="40" y1="40" x2="40" y2="160" stroke="url(#fontScaleGradient)" stroke-width="4" opacity="0.6"/>
-                      <text x="50" y="50" font-family="Arial" font-size="24" font-weight="bold" fill="url(#fontScaleGradient)" opacity="0.8">H1</text>
-                      <text x="50" y="80" font-family="Arial" font-size="18" font-weight="bold" fill="url(#fontScaleGradient)" opacity="0.7">H2</text>
-                      <text x="50" y="110" font-family="Arial" font-size="14" fill="url(#fontScaleGradient)" opacity="0.6">Body</text>
-                      <text x="50" y="140" font-family="Arial" font-size="12" fill="url(#fontScaleGradient)" opacity="0.5">Small</text>
+                      <!-- Stylized spacing scale icon -->
+                      <rect x="40" y="40" width="120" height="20" rx="4" fill="url(#spacingScaleGradient)" opacity="0.6"/>
+                      <rect x="40" y="70" width="100" height="20" rx="4" fill="url(#spacingScaleGradient)" opacity="0.5"/>
+                      <rect x="40" y="100" width="80" height="20" rx="4" fill="url(#spacingScaleGradient)" opacity="0.4"/>
+                      <rect x="40" y="130" width="60" height="20" rx="4" fill="url(#spacingScaleGradient)" opacity="0.3"/>
                     </svg>
                   </div>
                 </div>
@@ -68,7 +67,7 @@
           <div class="max-w-6xl mx-auto">
             <!-- Configuration Section -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <!-- Base Font Size Input -->
+              <!-- Base Spacing Input -->
               <div 
                 class="rounded-lg border p-6" 
                 :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
@@ -77,14 +76,14 @@
                   class="text-sm font-medium mb-2 block flex items-center gap-2" 
                   :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
                 >
-                  <span class="material-symbols-outlined text-indigo-600">text_fields</span>
-                  Base Font Size (px)
+                  <span class="material-symbols-outlined text-indigo-600">straighten</span>
+                  Base Spacing (px)
                 </label>
                 <input 
-                  v-model.number="fontSize" 
+                  v-model.number="baseSpacing" 
                   type="number" 
-                  min="12" 
-                  max="72"
+                  min="2" 
+                  max="32"
                   step="1"
                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                   :class="isDarkMode 
@@ -92,7 +91,7 @@
                     : 'border-gray-300 bg-white text-gray-900'"
                 />
                 <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  Starting value for your typography scale
+                  Starting value for your spacing scale
                 </p>
               </div>
 
@@ -131,7 +130,7 @@
 
             <!-- Two Column Layout -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <!-- Left Column: Font Scale Values -->
+              <!-- Left Column: Spacing Scale Values -->
               <div 
                 class="rounded-lg border p-6" 
                 :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
@@ -141,56 +140,52 @@
                   :class="isDarkMode ? 'text-white' : 'text-gray-900'"
                 >
                   <span class="material-symbols-outlined text-indigo-600">list</span>
-                  Font Scale
+                  Spacing Scale
                 </h4>
                 <div class="space-y-3">
                   <div 
-                    v-for="(size, name) in computedTypographyScale" 
+                    v-for="(value, name) in computedSpacingScale" 
                     :key="name" 
                     class="flex items-center justify-between p-3 rounded-lg border"
                     :class="isDarkMode ? 'bg-slate-700 border-gray-600' : 'bg-gray-50 border-gray-200'"
                   >
-                    <div class="flex items-center gap-3 flex-1">
+                    <div class="flex items-center gap-3">
                       <div 
-                        class="flex-shrink-0 rounded border-2 flex items-center justify-center font-semibold text-xs"
+                        class="w-12 h-12 rounded border-2 flex items-center justify-center font-semibold text-xs"
                         :style="{ 
-                          width: Math.min(size / 2, 48) + 'px',
-                          height: Math.min(size / 2, 48) + 'px',
+                          padding: value + 'px',
                           backgroundColor: isDarkMode ? '#1e293b' : '#f1f5f9',
                           borderColor: isDarkMode ? '#475569' : '#cbd5e1'
                         }"
                       >
                         <div 
-                          class="w-full h-full rounded flex items-center justify-center"
+                          class="w-full h-full rounded"
                           :style="{ 
-                            fontSize: Math.min(size / 3, 16) + 'px',
-                            color: isDarkMode ? '#6366f1' : '#6366f1',
-                            fontWeight: 'bold'
+                            backgroundColor: isDarkMode ? '#6366f1' : '#6366f1',
+                            opacity: 0.3
                           }"
-                        >
-                          {{ name.charAt(0).toUpperCase() }}
-                        </div>
+                        ></div>
                       </div>
-                      <div class="flex-1 min-w-0">
+                      <div>
                         <div 
-                          class="font-medium truncate" 
+                          class="font-medium" 
                           :class="isDarkMode ? 'text-white' : 'text-gray-900'"
                         >
-                          {{ getSizeLabel(name) }}
+                          {{ name.toUpperCase() }}
                         </div>
                         <div 
-                          class="text-xs truncate" 
+                          class="text-xs" 
                           :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
                         >
-                          {{ size }}px
+                          {{ value }}px
                         </div>
                       </div>
                     </div>
                     <div 
-                      class="text-xs font-mono px-2 py-1 rounded flex-shrink-0"
+                      class="text-xs font-mono px-2 py-1 rounded"
                       :class="isDarkMode ? 'bg-slate-600 text-gray-300' : 'bg-gray-200 text-gray-700'"
                     >
-                      {{ size }}px
+                      {{ value }}px
                     </div>
                   </div>
                 </div>
@@ -209,96 +204,91 @@
                   Visual Preview
                 </h4>
                 <div class="space-y-4">
-                  <!-- Article Example -->
+                  <!-- Card Example -->
                   <div 
                     class="rounded-lg border p-4"
                     :style="{ 
-                      padding: '24px',
+                      padding: computedSpacingScale.md + 'px',
                       borderColor: isDarkMode ? '#475569' : '#cbd5e1'
                     }"
                     :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-50'"
                   >
                     <h5 
                       class="font-semibold mb-2"
-                      :style="{ 
-                        fontSize: computedTypographyScale.h1 + 'px',
-                        fontWeight: 'bold',
-                        lineHeight: lineHeight
-                      }"
                       :class="isDarkMode ? 'text-white' : 'text-gray-900'"
                     >
-                      Article Title
+                      Card Example
                     </h5>
                     <p 
                       class="text-sm mb-3"
-                      :style="{ 
-                        fontSize: computedTypographyScale.body + 'px',
-                        lineHeight: lineHeight
-                      }"
                       :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'"
                     >
-                      This is body text using <code class="px-1 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/30">{{ computedTypographyScale.body }}px</code> font size. The quick brown fox jumps over the lazy dog.
+                      This card uses <code class="px-1 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/30">{{ computedSpacingScale.md }}px</code> padding.
                     </p>
                     <div 
-                      class="text-xs"
-                      :style="{ 
-                        fontSize: computedTypographyScale.small + 'px',
-                        lineHeight: lineHeight
-                      }"
-                      :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
+                      class="flex gap-2"
+                      :style="{ gap: computedSpacingScale.sm + 'px' }"
                     >
-                      Small caption text
+                      <button 
+                        class="px-3 py-1.5 rounded text-sm font-medium transition-colors"
+                        :style="{ 
+                          paddingLeft: computedSpacingScale.md + 'px',
+                          paddingRight: computedSpacingScale.md + 'px',
+                          paddingTop: computedSpacingScale.sm + 'px',
+                          paddingBottom: computedSpacingScale.sm + 'px'
+                        }"
+                        :class="isDarkMode 
+                          ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
+                          : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
+                      >
+                        Button
+                      </button>
+                      <button 
+                        class="px-3 py-1.5 rounded text-sm font-medium border transition-colors"
+                        :style="{ 
+                          paddingLeft: computedSpacingScale.md + 'px',
+                          paddingRight: computedSpacingScale.md + 'px',
+                          paddingTop: computedSpacingScale.sm + 'px',
+                          paddingBottom: computedSpacingScale.sm + 'px'
+                        }"
+                        :class="isDarkMode 
+                          ? 'border-gray-600 hover:bg-slate-600 text-gray-300' 
+                          : 'border-gray-300 hover:bg-gray-100 text-gray-700'"
+                      >
+                        Secondary
+                      </button>
                     </div>
                   </div>
 
-                  <!-- Heading Hierarchy Example -->
+                  <!-- Grid Example -->
                   <div>
                     <h6 
                       class="text-xs font-medium mb-2 uppercase tracking-wide"
                       :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
                     >
-                      Heading Hierarchy
+                      Grid with Gap
                     </h6>
-                    <div class="space-y-2" :style="{ fontFamily: 'system-ui, sans-serif' }">
+                    <div 
+                      class="grid grid-cols-3 rounded-lg p-2 border"
+                      :style="{ 
+                        gap: computedSpacingScale.base + 'px',
+                        padding: computedSpacingScale.sm + 'px'
+                      }"
+                      :class="isDarkMode ? 'bg-slate-700 border-gray-600' : 'bg-gray-50 border-gray-200'"
+                    >
                       <div 
-                        :class="isDarkMode ? 'text-white' : 'text-gray-900'" 
+                        v-for="i in 6" 
+                        :key="i"
+                        class="rounded"
                         :style="{ 
-                          fontSize: computedTypographyScale.h1 + 'px', 
-                          fontWeight: 'bold', 
-                          lineHeight: lineHeight 
+                          padding: computedSpacingScale.xs + 'px',
+                          backgroundColor: isDarkMode ? '#475569' : '#cbd5e1'
                         }"
                       >
-                        Heading 1
-                      </div>
-                      <div 
-                        :class="isDarkMode ? 'text-white' : 'text-gray-900'" 
-                        :style="{ 
-                          fontSize: computedTypographyScale.h2 + 'px', 
-                          fontWeight: 'bold', 
-                          lineHeight: lineHeight 
-                        }"
-                      >
-                        Heading 2
-                      </div>
-                      <div 
-                        :class="isDarkMode ? 'text-white' : 'text-gray-900'" 
-                        :style="{ 
-                          fontSize: computedTypographyScale.h3 + 'px', 
-                          fontWeight: 'bold', 
-                          lineHeight: lineHeight 
-                        }"
-                      >
-                        Heading 3
-                      </div>
-                      <div 
-                        :class="isDarkMode ? 'text-white' : 'text-gray-900'" 
-                        :style="{ 
-                          fontSize: computedTypographyScale.h4 + 'px', 
-                          fontWeight: 'bold', 
-                          lineHeight: lineHeight 
-                        }"
-                      >
-                        Heading 4
+                        <div 
+                          class="w-full h-12 rounded"
+                          :style="{ backgroundColor: '#6366f1', opacity: 0.3 }"
+                        ></div>
                       </div>
                     </div>
                   </div>
@@ -366,9 +356,7 @@ import Dropdown from '../components/Dropdown.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
-const fontSize = ref(16);
-const lineHeight = ref(1.4);
-const letterSpacing = ref(0);
+const baseSpacing = ref(4);
 const selectedRatio = ref('major-third');
 const customRatio = ref(1.333);
 
@@ -395,58 +383,56 @@ const currentRatio = computed(() => {
   return ratios[selectedRatio.value];
 });
 
-const computedTypographyScale = computed(() => {
+const computedSpacingScale = computed(() => {
   const ratio = currentRatio.value;
-  const baseSize = fontSize.value;
+  const base = baseSpacing.value;
+  
+  // Generate scale: xs, sm, base, md, lg, xl, 2xl, 3xl, 4xl, 5xl
+  // Using negative powers for smaller values and positive for larger
   return {
-    h1: Math.round(baseSize * Math.pow(ratio, 3)),
-    h2: Math.round(baseSize * Math.pow(ratio, 2)),
-    h3: Math.round(baseSize * ratio),
-    h4: baseSize,
-    h5: Math.round(baseSize / ratio),
-    h6: Math.round(baseSize / Math.pow(ratio, 2)),
-    body: baseSize,
-    small: Math.round(baseSize * 0.875)
+    xs: Math.round(base / Math.pow(ratio, 2)),
+    sm: Math.round(base / ratio),
+    base: base,
+    md: Math.round(base * ratio),
+    lg: Math.round(base * Math.pow(ratio, 2)),
+    xl: Math.round(base * Math.pow(ratio, 3)),
+    '2xl': Math.round(base * Math.pow(ratio, 4)),
+    '3xl': Math.round(base * Math.pow(ratio, 5)),
+    '4xl': Math.round(base * Math.pow(ratio, 6)),
+    '5xl': Math.round(base * Math.pow(ratio, 7))
   };
 });
 
-const getSizeLabel = (name) => {
-  const labels = {
-    'h1': 'Heading 1',
-    'h2': 'Heading 2',
-    'h3': 'Heading 3',
-    'h4': 'Heading 4',
-    'h5': 'Heading 5',
-    'h6': 'Heading 6',
-    'body': 'Body Text',
-    'small': 'Small Text'
-  };
-  return labels[name] || name;
-};
+// Watch for ratio changes
+watch(selectedRatio, (newValue) => {
+  if (newValue === 'custom' && customRatio.value === 1.333) {
+    // Custom ratio is already initialized, no action needed
+  }
+});
 
 const exportFormat = (format) => {
-  const scale = computedTypographyScale.value;
+  const scale = computedSpacingScale.value;
   
   if (format === 'css') {
     let css = ':root {\n';
     Object.entries(scale).forEach(([name, value]) => {
-      css += `  --font-size-${name}: ${value}px;\n`;
+      css += `  --spacing-${name}: ${value}px;\n`;
     });
     css += '}\n\n';
     css += '/* Usage example */\n';
-    css += '.text-h1 { font-size: var(--font-size-h1); }\n';
-    css += '.text-h2 { font-size: var(--font-size-h2); }\n';
-    css += '.text-body { font-size: var(--font-size-body); }\n';
+    css += '.spacing-xs { padding: var(--spacing-xs); }\n';
+    css += '.spacing-sm { padding: var(--spacing-sm); }\n';
+    css += '.spacing-base { padding: var(--spacing-base); }\n';
     
     const blob = new Blob([css], { type: 'text/css' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `font-scale-${Date.now()}.css`;
+    a.download = `spacing-scale-${Date.now()}.css`;
     a.click();
     URL.revokeObjectURL(url);
   } else if (format === 'tailwind') {
-    let config = `// tailwind.config.js\nmodule.exports = {\n  theme: {\n    extend: {\n      fontSize: {\n`;
+    let config = `// tailwind.config.js\nmodule.exports = {\n  theme: {\n    extend: {\n      spacing: {\n`;
     Object.entries(scale).forEach(([name, value]) => {
       config += `        '${name}': '${value}px',\n`;
     });
@@ -456,17 +442,15 @@ const exportFormat = (format) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `font-scale-tailwind-${Date.now()}.js`;
+    a.download = `spacing-scale-tailwind-${Date.now()}.js`;
     a.click();
     URL.revokeObjectURL(url);
   } else if (format === 'json') {
     const config = {
-      type: 'font-scale',
-      base: fontSize.value,
+      type: 'spacing-scale',
+      base: baseSpacing.value,
       ratio: currentRatio.value,
       ratioName: selectedRatio.value,
-      lineHeight: lineHeight.value,
-      letterSpacing: letterSpacing.value,
       scale: scale
     };
     
@@ -474,18 +458,11 @@ const exportFormat = (format) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `font-scale-${Date.now()}.json`;
+    a.download = `spacing-scale-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
 };
-
-// Watch for ratio changes
-watch(selectedRatio, (newValue) => {
-  if (newValue === 'custom' && customRatio.value === 1.333) {
-    // Custom ratio is already initialized, no action needed
-  }
-});
 
 const closeDrawer = () => {
   drawerOpen.value = false;

@@ -23,11 +23,11 @@
                 <div class="flex-1">
                   <div class="flex items-center gap-4 mb-4">
                     <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      PNG to ICO Converter
+                      Image Converter
                     </h1>
                   </div>
                   <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Convert PNG images to ICO format for use as favicons, app icons, and system icons. Supports multiple sizes in a single ICO file.
+                    Convert images between different formats: PNG to ICO, BMP to PNG, and WebP to PNG/JPG. Supports multiple sizes in ICO files.
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
@@ -63,6 +63,74 @@
 
           <!-- Main Content -->
           <div class="max-w-7xl mx-auto">
+            <!-- Conversion Mode Selector -->
+            <div 
+              class="rounded-lg shadow-sm border p-6 mb-6"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
+              <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">swap_horiz</span>
+                Conversion Mode
+              </h2>
+              
+              <div class="flex flex-wrap gap-2">
+                <button
+                  @click="switchMode('png-to-ico')"
+                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  :class="conversionMode === 'png-to-ico'
+                    ? (isDarkMode 
+                      ? 'bg-indigo-600 text-white' 
+                      : 'bg-indigo-600 text-white')
+                    : (isDarkMode
+                      ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
+                >
+                  PNG → ICO
+                </button>
+                <button
+                  @click="switchMode('bmp-to-png')"
+                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  :class="conversionMode === 'bmp-to-png'
+                    ? (isDarkMode 
+                      ? 'bg-indigo-600 text-white' 
+                      : 'bg-indigo-600 text-white')
+                    : (isDarkMode
+                      ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
+                >
+                  BMP → PNG
+                </button>
+                <button
+                  @click="switchMode('webp-to-png')"
+                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  :class="conversionMode === 'webp-to-png'
+                    ? (isDarkMode 
+                      ? 'bg-indigo-600 text-white' 
+                      : 'bg-indigo-600 text-white')
+                    : (isDarkMode
+                      ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
+                >
+                  WebP → PNG
+                </button>
+                <button
+                  @click="switchMode('webp-to-jpg')"
+                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  :class="conversionMode === 'webp-to-jpg'
+                    ? (isDarkMode 
+                      ? 'bg-indigo-600 text-white' 
+                      : 'bg-indigo-600 text-white')
+                    : (isDarkMode
+                      ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
+                >
+                  WebP → JPG
+                </button>
+              </div>
+            </div>
+
             <div class="grid lg:grid-cols-2 gap-6">
               <!-- Left Column: Upload and Settings -->
               <div 
@@ -73,7 +141,7 @@
               >
                 <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   <span class="material-symbols-outlined text-indigo-600">upload</span>
-                  Upload PNG Image
+                  {{ getUploadLabel() }}
                 </h2>
                 
                 <!-- File Upload -->
@@ -93,7 +161,7 @@
                   <input
                     ref="fileInput"
                     type="file"
-                    accept="image/png"
+                    :accept="getAcceptType()"
                     @change="handleFileSelect"
                     class="hidden"
                   />
@@ -103,7 +171,7 @@
                     </span>
                     <div>
                       <p class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Drag and drop a PNG image here, or
+                        Drag and drop {{ getFileTypeLabel() }} here, or
                       </p>
                       <button
                         @click="$refs.fileInput.click()"
@@ -156,8 +224,45 @@
                   </div>
                 </div>
 
-                <!-- ICO Sizes -->
-                <div class="mb-4">
+                <!-- Output Format (only for WebP conversions) -->
+                <div v-if="conversionMode === 'webp-to-png' || conversionMode === 'webp-to-jpg'" class="mb-4">
+                  <label class="block text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    Output Format
+                  </label>
+                  <div class="grid grid-cols-2 gap-2">
+                    <button
+                      v-if="conversionMode === 'webp-to-png'"
+                      @click="webpOutputFormat = 'png'"
+                      class="px-3 py-2 rounded border text-sm font-medium transition-colors"
+                      :class="webpOutputFormat === 'png'
+                        ? (isDarkMode 
+                          ? 'border-indigo-400 bg-indigo-900/20 text-indigo-400' 
+                          : 'border-indigo-500 bg-indigo-50 text-indigo-600')
+                        : (isDarkMode 
+                          ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' 
+                          : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100')"
+                    >
+                      PNG
+                    </button>
+                    <button
+                      v-if="conversionMode === 'webp-to-jpg'"
+                      @click="webpOutputFormat = 'jpg'"
+                      class="px-3 py-2 rounded border text-sm font-medium transition-colors"
+                      :class="webpOutputFormat === 'jpg'
+                        ? (isDarkMode 
+                          ? 'border-indigo-400 bg-indigo-900/20 text-indigo-400' 
+                          : 'border-indigo-500 bg-indigo-50 text-indigo-600')
+                        : (isDarkMode 
+                          ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' 
+                          : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100')"
+                    >
+                      JPG
+                    </button>
+                  </div>
+                </div>
+
+                <!-- ICO Sizes (only for PNG to ICO) -->
+                <div v-if="conversionMode === 'png-to-ico'" class="mb-4">
                   <label class="block text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                     ICO Sizes (select multiple)
                   </label>
@@ -190,10 +295,10 @@
 
                 <!-- Convert Button -->
                 <button
-                  @click="convertToICO"
-                  :disabled="!selectedFile || selectedSizes.length === 0 || isConverting"
+                  @click="handleConvert()"
+                  :disabled="!selectedFile || (conversionMode === 'png-to-ico' && selectedSizes.length === 0) || isConverting"
                   class="w-full px-6 py-3 rounded-lg transition-colors text-sm font-medium"
-                  :class="(!selectedFile || selectedSizes.length === 0 || isConverting)
+                  :class="(!selectedFile || (conversionMode === 'png-to-ico' && selectedSizes.length === 0) || isConverting)
                     ? (isDarkMode 
                       ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed')
@@ -207,7 +312,7 @@
                   </span>
                   <span v-else class="flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined">download</span>
-                    Convert to ICO
+                    {{ getConvertButtonText() }}
                   </span>
                 </button>
               </div>
@@ -235,7 +340,7 @@
                 </div>
                 <div v-else class="flex items-center justify-center p-12 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
                   <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
-                    Upload a PNG image to see preview
+                    Upload {{ getFileTypeLabel() }} to see preview
                   </p>
                 </div>
               </div>
@@ -251,7 +356,6 @@
 import { ref, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
-import axios from 'axios';
 
 const drawerOpen = ref(false);
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
@@ -262,6 +366,8 @@ const previewUrl = ref(null);
 const imageWidth = ref(0);
 const imageHeight = ref(0);
 const fileInput = ref(null);
+const conversionMode = ref('png-to-ico');
+const webpOutputFormat = ref('png');
 
 const icoSizes = [16, 32, 48, 64, 128, 256];
 const selectedSizes = ref([16, 32, 48]);
@@ -274,22 +380,102 @@ const closeDrawer = () => {
   drawerOpen.value = false;
 };
 
+const switchMode = (mode) => {
+  if (conversionMode.value !== mode) {
+    conversionMode.value = mode;
+    if (mode === 'webp-to-png') {
+      webpOutputFormat.value = 'png';
+    } else if (mode === 'webp-to-jpg') {
+      webpOutputFormat.value = 'jpg';
+    }
+    clearFile();
+  }
+};
+
+const getUploadLabel = () => {
+  if (conversionMode.value === 'png-to-ico') return 'Upload PNG Image';
+  if (conversionMode.value === 'bmp-to-png') return 'Upload BMP Image';
+  if (conversionMode.value === 'webp-to-png' || conversionMode.value === 'webp-to-jpg') return 'Upload WebP Image';
+  return 'Upload Image';
+};
+
+const getAcceptType = () => {
+  if (conversionMode.value === 'png-to-ico') return 'image/png';
+  if (conversionMode.value === 'bmp-to-png') return 'image/bmp';
+  if (conversionMode.value === 'webp-to-png' || conversionMode.value === 'webp-to-jpg') return 'image/webp';
+  return 'image/*';
+};
+
+const getFileTypeLabel = () => {
+  if (conversionMode.value === 'png-to-ico') return 'a PNG';
+  if (conversionMode.value === 'bmp-to-png') return 'a BMP';
+  if (conversionMode.value === 'webp-to-png' || conversionMode.value === 'webp-to-jpg') return 'a WebP';
+  return 'an image';
+};
+
+const getConvertButtonText = () => {
+  if (conversionMode.value === 'png-to-ico') return 'Convert to ICO';
+  if (conversionMode.value === 'bmp-to-png') return 'Convert to PNG';
+  if (conversionMode.value === 'webp-to-png') return 'Convert to PNG';
+  if (conversionMode.value === 'webp-to-jpg') return 'Convert to JPG';
+  return 'Convert';
+};
+
+const handleConvert = () => {
+  if (conversionMode.value === 'png-to-ico') {
+    convertToICO();
+  } else if (conversionMode.value === 'bmp-to-png') {
+    convertBmpToPng();
+  } else if (conversionMode.value === 'webp-to-png' || conversionMode.value === 'webp-to-jpg') {
+    convertWebP();
+  }
+};
+
 const handleDrop = (e) => {
   isDragging.value = false;
   const files = e.dataTransfer.files;
-  if (files.length > 0 && files[0].type === 'image/png') {
-    processFile(files[0]);
-  } else {
-    alert('Please upload a PNG image file.');
+  if (files.length > 0) {
+    const file = files[0];
+    let isValid = false;
+    
+    if (conversionMode.value === 'png-to-ico') {
+      isValid = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
+    } else if (conversionMode.value === 'bmp-to-png') {
+      isValid = file.type === 'image/bmp' || file.name.toLowerCase().endsWith('.bmp');
+    } else if (conversionMode.value === 'webp-to-png' || conversionMode.value === 'webp-to-jpg') {
+      isValid = file.type === 'image/webp' || file.name.toLowerCase().endsWith('.webp');
+    }
+    
+    if (isValid) {
+      processFile(file);
+    } else {
+      const expectedType = conversionMode.value === 'png-to-ico' ? 'PNG' : 
+                           conversionMode.value === 'bmp-to-png' ? 'BMP' : 'WebP';
+      alert(`Please upload a ${expectedType} image file.`);
+    }
   }
 };
 
 const handleFileSelect = (e) => {
   const file = e.target.files[0];
-  if (file && file.type === 'image/png') {
-    processFile(file);
-  } else {
-    alert('Please select a PNG image file.');
+  if (file) {
+    let isValid = false;
+    
+    if (conversionMode.value === 'png-to-ico') {
+      isValid = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
+    } else if (conversionMode.value === 'bmp-to-png') {
+      isValid = file.type === 'image/bmp' || file.name.toLowerCase().endsWith('.bmp');
+    } else if (conversionMode.value === 'webp-to-png' || conversionMode.value === 'webp-to-jpg') {
+      isValid = file.type === 'image/webp' || file.name.toLowerCase().endsWith('.webp');
+    }
+    
+    if (isValid) {
+      processFile(file);
+    } else {
+      const expectedType = conversionMode.value === 'png-to-ico' ? 'PNG' : 
+                           conversionMode.value === 'bmp-to-png' ? 'BMP' : 'WebP';
+      alert(`Please select a ${expectedType} image file.`);
+    }
   }
 };
 
@@ -324,6 +510,62 @@ const clearFile = () => {
   imageHeight.value = 0;
   if (fileInput.value) {
     fileInput.value.value = '';
+  }
+};
+
+const convertBmpToPng = async () => {
+  if (!selectedFile.value) {
+    return;
+  }
+
+  isConverting.value = true;
+
+  try {
+    // Read the BMP file
+    const arrayBuffer = await selectedFile.value.arrayBuffer();
+    
+    // Create an image from the BMP data
+    const blob = new Blob([arrayBuffer], { type: 'image/bmp' });
+    const url = URL.createObjectURL(blob);
+    
+    const img = new Image();
+    img.onload = () => {
+      // Create a canvas and draw the image
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      
+      // Convert canvas to PNG blob
+      canvas.toBlob((pngBlob) => {
+        if (pngBlob) {
+          // Download the PNG file
+          const downloadUrl = URL.createObjectURL(pngBlob);
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = selectedFile.value.name.replace(/\.bmp$/i, '.png');
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(downloadUrl);
+        }
+        URL.revokeObjectURL(url);
+        isConverting.value = false;
+      }, 'image/png');
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      alert('Failed to convert BMP image. Please try again.');
+      isConverting.value = false;
+    };
+    
+    img.src = url;
+  } catch (error) {
+    console.error('Conversion error:', error);
+    alert('Failed to convert image. Please try again.');
+    isConverting.value = false;
   }
 };
 
@@ -448,6 +690,79 @@ const createICOFile = async (pngData, sizes) => {
     const blob = new Blob([pngData], { type: 'image/png' });
     img.src = URL.createObjectURL(blob);
   });
+};
+
+const convertWebP = async () => {
+  if (!selectedFile.value) {
+    return;
+  }
+
+  isConverting.value = true;
+
+  try {
+    // Read the WebP file
+    const arrayBuffer = await selectedFile.value.arrayBuffer();
+    
+    // Create an image from the WebP data
+    const blob = new Blob([arrayBuffer], { type: 'image/webp' });
+    const url = URL.createObjectURL(blob);
+    
+    const img = new Image();
+    img.onload = () => {
+      // Create a canvas and draw the image
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      
+      // Determine MIME type and format
+      let mimeType = 'image/png';
+      let quality = undefined;
+      let extension = 'png';
+      
+      if (webpOutputFormat.value === 'jpg' || conversionMode.value === 'webp-to-jpg') {
+        mimeType = 'image/jpeg';
+        quality = 0.92;
+        extension = 'jpg';
+      }
+      
+      // Convert canvas to blob
+      const blobCallback = (convertedBlob) => {
+        if (convertedBlob) {
+          // Download the converted file
+          const downloadUrl = URL.createObjectURL(convertedBlob);
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = selectedFile.value.name.replace(/\.webp$/i, `.${extension}`);
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(downloadUrl);
+        }
+        URL.revokeObjectURL(url);
+        isConverting.value = false;
+      };
+      
+      if (mimeType === 'image/jpeg') {
+        canvas.toBlob(blobCallback, mimeType, quality);
+      } else {
+        canvas.toBlob(blobCallback, mimeType);
+      }
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      alert('Failed to convert WebP image. Please try again.');
+      isConverting.value = false;
+    };
+    
+    img.src = url;
+  } catch (error) {
+    console.error('Conversion error:', error);
+    alert('Failed to convert image. Please try again.');
+    isConverting.value = false;
+  }
 };
 
 onMounted(() => {

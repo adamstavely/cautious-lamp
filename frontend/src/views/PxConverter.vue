@@ -1408,6 +1408,51 @@
               </div>
             </div>
 
+            <!-- CSS Style Properties -->
+            <div 
+              class="rounded-lg shadow-sm border p-6 mb-6"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
+              <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                <span class="material-symbols-outlined text-indigo-600">code</span>
+                CSS Style Properties
+              </h2>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                <!-- EM -->
+                <div class="p-4 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  <div class="text-xs font-semibold mb-2 text-blue-800 dark:text-blue-300">EM</div>
+                  <code class="text-sm font-mono text-gray-800 dark:text-gray-200 block whitespace-pre-wrap">h1 { font-size: 2em; }</code>
+                </div>
+                
+                <!-- Pixel -->
+                <div class="p-4 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                  <div class="text-xs font-semibold mb-2 text-purple-800 dark:text-purple-300">Pixel</div>
+                  <code class="text-sm font-mono text-gray-800 dark:text-gray-200 block whitespace-pre-wrap">h1 { font-size: 32px; }</code>
+                </div>
+                
+                <!-- REM -->
+                <div class="p-4 rounded-lg bg-green-100 dark:bg-green-900/30">
+                  <div class="text-xs font-semibold mb-2 text-green-800 dark:text-green-300">REM</div>
+                  <code class="text-sm font-mono text-gray-800 dark:text-gray-200 block whitespace-pre-wrap">h1 { font-size: 2rem; }</code>
+                </div>
+                
+                <!-- Percent -->
+                <div class="p-4 rounded-lg bg-red-100 dark:bg-red-900/30">
+                  <div class="text-xs font-semibold mb-2 text-red-800 dark:text-red-300">Percent</div>
+                  <code class="text-sm font-mono text-gray-800 dark:text-gray-200 block whitespace-pre-wrap">h1 { font-size: 200%; }</code>
+                </div>
+                
+                <!-- Point -->
+                <div class="p-4 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  <div class="text-xs font-semibold mb-2 text-blue-800 dark:text-blue-300">Point</div>
+                  <code class="text-sm font-mono text-gray-800 dark:text-gray-200 block whitespace-pre-wrap">h1 { font-size: 24pt; }</code>
+                </div>
+              </div>
+            </div>
+
             <!-- Conversion Tables -->
             <div 
               class="rounded-lg shadow-sm border p-6 mb-6"
@@ -1417,144 +1462,34 @@
             >
               <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                 <span class="material-symbols-outlined text-indigo-600">table_chart</span>
-                Conversion Tables
+                Unit Conversion Table for PX to REM
               </h2>
 
-              <!-- Table Mode Selector -->
-              <div class="flex flex-wrap gap-2 mb-4">
-                <button
-                  v-for="tableMode in tableModes"
-                  :key="tableMode.value"
-                  @click="selectedTableMode = tableMode.value"
-                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                  :class="selectedTableMode === tableMode.value
-                    ? (isDarkMode 
-                      ? 'bg-indigo-600 text-white' 
-                      : 'bg-indigo-600 text-white')
-                    : (isDarkMode
-                      ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                >
-                  {{ tableMode.label }}
-                </button>
-              </div>
-
-              <!-- PX to REM Table -->
-              <div v-if="selectedTableMode === 'px-to-rem'" class="overflow-x-auto">
+              <!-- Unified Conversion Table -->
+              <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                   <thead>
-                    <tr :class="isDarkMode ? 'border-b border-gray-700' : 'border-b border-gray-200'">
-                      <th class="text-left py-2 px-4 font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</th>
-                      <th class="text-left py-2 px-4 font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">REM</th>
+                    <tr class="bg-gray-200 dark:bg-gray-700">
+                      <th class="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">EM</th>
+                      <th class="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 bg-gray-300 dark:bg-gray-600">Pixel</th>
+                      <th class="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 bg-gray-300 dark:bg-gray-600">REM</th>
+                      <th class="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Percent</th>
+                      <th class="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Point</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr 
-                      v-for="(row, index) in pxToRemTable" 
+                      v-for="(row, index) in unifiedConversionTable" 
                       :key="index"
-                      :class="[
-                        isDarkMode ? 'border-b border-gray-800 hover:bg-slate-800' : 'border-b border-gray-100 hover:bg-gray-50',
-                        row.highlight ? (isDarkMode ? 'bg-indigo-900/20' : 'bg-indigo-50') : ''
-                      ]"
+                      :class="index % 2 === 0 
+                        ? 'bg-gray-50 dark:bg-gray-800/50' 
+                        : 'bg-white dark:bg-gray-900'"
                     >
-                      <td class="py-2 px-4 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ row.px }}px</td>
-                      <td class="py-2 px-4 font-mono text-indigo-600 font-semibold">{{ row.rem }}rem</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- REM to PX Table -->
-              <div v-if="selectedTableMode === 'rem-to-px'" class="overflow-x-auto">
-                <table class="w-full text-sm">
-                  <thead>
-                    <tr :class="isDarkMode ? 'border-b border-gray-700' : 'border-b border-gray-200'">
-                      <th class="text-left py-2 px-4 font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">REM</th>
-                      <th class="text-left py-2 px-4 font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr 
-                      v-for="(row, index) in remToPxTable" 
-                      :key="index"
-                      :class="[
-                        isDarkMode ? 'border-b border-gray-800 hover:bg-slate-800' : 'border-b border-gray-100 hover:bg-gray-50',
-                        row.highlight ? (isDarkMode ? 'bg-indigo-900/20' : 'bg-indigo-50') : ''
-                      ]"
-                    >
-                      <td class="py-2 px-4 font-mono text-indigo-600 font-semibold">{{ row.rem }}rem</td>
-                      <td class="py-2 px-4 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ row.px }}px</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- PX to EM Table -->
-              <div v-if="selectedTableMode === 'px-to-em'" class="overflow-x-auto">
-                <table class="w-full text-sm">
-                  <thead>
-                    <tr :class="isDarkMode ? 'border-b border-gray-700' : 'border-b border-gray-200'">
-                      <th class="text-left py-2 px-4 font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</th>
-                      <th class="text-left py-2 px-4 font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">EM</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr 
-                      v-for="(row, index) in pxToEmTable" 
-                      :key="index"
-                      :class="[
-                        isDarkMode ? 'border-b border-gray-800 hover:bg-slate-800' : 'border-b border-gray-100 hover:bg-gray-50',
-                        row.highlight ? (isDarkMode ? 'bg-indigo-900/20' : 'bg-indigo-50') : ''
-                      ]"
-                    >
-                      <td class="py-2 px-4 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ row.px }}px</td>
-                      <td class="py-2 px-4 font-mono text-indigo-600 font-semibold">{{ row.em }}em</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- PX to Percentage Table -->
-              <div v-if="selectedTableMode === 'px-to-percent'" class="overflow-x-auto">
-                <table class="w-full text-sm">
-                  <thead>
-                    <tr :class="isDarkMode ? 'border-b border-gray-700' : 'border-b border-gray-200'">
-                      <th class="text-left py-2 px-4 font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</th>
-                      <th class="text-left py-2 px-4 font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Percentage</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr 
-                      v-for="(row, index) in pxToPercentTable" 
-                      :key="index"
-                      :class="isDarkMode ? 'border-b border-gray-800 hover:bg-slate-800' : 'border-b border-gray-100 hover:bg-gray-50'"
-                    >
-                      <td class="py-2 px-4 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ row.px }}px</td>
-                      <td class="py-2 px-4 font-mono text-indigo-600 font-semibold">{{ row.percent }}%</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- PX to Tailwind Table -->
-              <div v-if="selectedTableMode === 'px-to-tailwind'" class="overflow-x-auto">
-                <table class="w-full text-sm">
-                  <thead>
-                    <tr :class="isDarkMode ? 'border-b border-gray-700' : 'border-b border-gray-200'">
-                      <th class="text-left py-2 px-4 font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</th>
-                      <th class="text-left py-2 px-4 font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Tailwind Value</th>
-                      <th class="text-left py-2 px-4 font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Class Example</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr 
-                      v-for="(row, index) in pxToTailwindTable" 
-                      :key="index"
-                      :class="isDarkMode ? 'border-b border-gray-800 hover:bg-slate-800' : 'border-b border-gray-100 hover:bg-gray-50'"
-                    >
-                      <td class="py-2 px-4 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ row.px }}px</td>
-                      <td class="py-2 px-4 font-mono text-indigo-600 font-semibold">{{ row.tw }}</td>
-                      <td class="py-2 px-4 font-mono text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">p-{{ row.tw }}</td>
+                      <td class="py-2 px-4 font-mono text-gray-700 dark:text-gray-300">{{ row.em }}em</td>
+                      <td class="py-2 px-4 font-mono text-gray-700 dark:text-gray-300">{{ row.px }}px</td>
+                      <td class="py-2 px-4 font-mono text-gray-700 dark:text-gray-300">{{ row.rem }}rem</td>
+                      <td class="py-2 px-4 font-mono text-gray-700 dark:text-gray-300">{{ row.percent }}%</td>
+                      <td class="py-2 px-4 font-mono text-gray-700 dark:text-gray-300">{{ row.point }}pt</td>
                     </tr>
                   </tbody>
                 </table>
@@ -2179,6 +2114,36 @@ const pxToTailwindTable = computed(() => {
     }
     table.push({ px, tw: closest.toString() });
   }
+  return table;
+});
+
+// Unified conversion table with all units
+const unifiedConversionTable = computed(() => {
+  const table = [];
+  const baseSize = parentFontSize.value || rootFontSize.value;
+  
+  // Generate values starting from 8px and incrementing
+  // Based on the reference image, we'll generate a comprehensive table
+  const pxValues = [];
+  for (let px = 8; px <= 100; px++) {
+    pxValues.push(px);
+  }
+  
+  for (const px of pxValues) {
+    const em = parseFloat((px / baseSize).toFixed(4));
+    const rem = parseFloat((px / rootFontSize.value).toFixed(4));
+    const percent = parseFloat(((px / baseSize) * 100).toFixed(2));
+    const point = parseFloat((px * 0.75).toFixed(2));
+    
+    table.push({
+      em,
+      px,
+      rem,
+      percent,
+      point
+    });
+  }
+  
   return table;
 });
 

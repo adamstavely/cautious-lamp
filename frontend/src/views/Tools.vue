@@ -258,7 +258,7 @@
               </p>
             </router-link>
 
-            <!-- Tool Card 12: PNG to ICO Converter -->
+            <!-- Tool Card 12: Image Converter -->
             <router-link 
               to="/tools/png-to-ico" 
               class="group rounded-2xl p-6 border transition-all"
@@ -275,7 +275,7 @@
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
-                PNG to ICO Converter
+                Image Converter
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Convert PNG images to ICO format for favicons and app icons.
@@ -353,6 +353,198 @@
                 Convert CSS to LESS, SASS, and SCSS preprocessor formats with nesting and variable support.
               </p>
             </router-link>
+
+            <!-- Tool Card 16: HTML Viewer -->
+            <router-link 
+              to="/tools/html-viewer" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">preview</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                HTML Viewer
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                View and render HTML, CSS, and JavaScript code in real-time with live preview.
+              </p>
+            </router-link>
+
+            <!-- Tool Card 17: HTML Escaper -->
+            <router-link 
+              to="/tools/html-escaper" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">lock</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                HTML Escaper
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Escape and unescape HTML special characters to prevent XSS attacks and display HTML as text.
+              </p>
+            </router-link>
+
+            <!-- Tool Card 18: Image Compressor -->
+            <router-link 
+              to="/tools/image-compressor" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">compress</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Image Compressor
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Compress PNG, JPG, and GIF images to reduce file size while maintaining quality.
+              </p>
+            </router-link>
+
+            <!-- Tool Card 19: Chart Builder -->
+            <router-link 
+              to="/tools/chart-builder" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">bar_chart</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Chart Builder
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Create beautiful charts and graphs including line, bar, pie, doughnut, scatter plots, and more.
+              </p>
+            </router-link>
+
+            <!-- Tool Card 20: Spacing Scale Generator -->
+            <router-link 
+              to="/tools/spacing-scale" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">space_dashboard</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Spacing Scale Generator
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Generate consistent spacing scales using mathematical ratios for padding, margin, and gaps.
+              </p>
+            </router-link>
+
+            <!-- Tool Card 21: Box Shadow Generator -->
+            <router-link 
+              to="/tools/box-shadow" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">layers</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Box Shadow Generator
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Create beautiful box shadows with custom offsets, blur, spread, and color. Support for multiple shadows.
+              </p>
+            </router-link>
+
+            <!-- Tool Card 22: Border Radius Generator -->
+            <router-link 
+              to="/tools/border-radius" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">rounded_corner</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Border Radius Generator
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Generate border radius values with individual corner controls. Perfect for rounded corners on UI elements.
+              </p>
+            </router-link>
+
+            <!-- Tool Card 23: CSS Animation Generator -->
+            <router-link 
+              to="/tools/css-animation" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">animation</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                CSS Animation Generator
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Create smooth CSS animations with keyframe editor. Generate animations for transform, opacity, colors, and more.
+              </p>
+            </router-link>
           </div>
         </div>
 
@@ -392,6 +584,10 @@
               <router-link to="/tools/color-contrast" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
                 <h3 class="text-white font-semibold text-xl mb-2">Color Contrast Checker</h3>
                 <p class="text-white/80 text-sm">Ensure your color combinations meet WCAG accessibility standards for text readability.</p>
+              </router-link>
+              <router-link to="/tools/html-viewer" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">HTML Viewer</h3>
+                <p class="text-white/80 text-sm">View and render HTML, CSS, and JavaScript code in real-time, showing exactly how the code would appear in a web browser.</p>
               </router-link>
             </div>
           </div>

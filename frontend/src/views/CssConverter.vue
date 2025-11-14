@@ -27,7 +27,7 @@
                     </h1>
                   </div>
                   <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Convert CSS to LESS, SASS, and SCSS preprocessor formats with nesting and variable support.
+                    Bidirectional conversion between CSS and LESS, SASS, and SCSS preprocessor formats with nesting and variable support.
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
@@ -111,14 +111,27 @@
                 <!-- Input Section -->
                 <div>
                   <div class="flex items-center justify-between mb-2">
-                    <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">CSS Input</label>
-                    <button
-                      @click="clearInput"
-                      class="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700"
-                      :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-                    >
-                      Clear
-                    </button>
+                    <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      {{ selectedMode.startsWith('css-to') ? 'CSS' : selectedMode.includes('less') ? 'LESS' : selectedMode.includes('sass') && !selectedMode.includes('scss') ? 'SASS' : 'SCSS' }} Input
+                    </label>
+                    <div class="flex gap-2">
+                      <button
+                        @click="swapInputs"
+                        class="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-1"
+                        :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+                        title="Swap input and output"
+                      >
+                        <span class="material-symbols-outlined text-sm">swap_horiz</span>
+                        Swap
+                      </button>
+                      <button
+                        @click="clearInput"
+                        class="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700"
+                        :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+                      >
+                        Clear
+                      </button>
+                    </div>
                   </div>
                   <div class="relative">
                     <textarea
@@ -144,7 +157,7 @@
                 <div>
                   <div class="flex items-center justify-between mb-2">
                     <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      {{ selectedMode === 'css-to-less' ? 'LESS' : selectedMode === 'css-to-sass' ? 'SASS' : 'SCSS' }} Output
+                      {{ selectedMode.startsWith('css-to') ? (selectedMode === 'css-to-less' ? 'LESS' : selectedMode === 'css-to-sass' ? 'SASS' : 'SCSS') : 'CSS' }} Output
                     </label>
                     <button
                       @click="copyToClipboard(convertedOutput)"
@@ -159,8 +172,7 @@
                   </div>
                   <div class="relative">
                     <textarea
-                      :value="convertedOutput"
-                      readonly
+                      v-model="convertedOutput"
                       placeholder="Converted code will appear here..."
                       class="w-full h-96 px-4 py-3 border rounded-lg text-sm font-mono resize-none"
                       :class="isDarkMode 
@@ -248,8 +260,11 @@ const drawerOpen = ref(false);
 // Conversion modes
 const conversionModes = [
   { label: 'CSS → LESS', value: 'css-to-less' },
+  { label: 'LESS → CSS', value: 'less-to-css' },
   { label: 'CSS → SASS', value: 'css-to-sass' },
-  { label: 'CSS → SCSS', value: 'css-to-scss' }
+  { label: 'SASS → CSS', value: 'sass-to-css' },
+  { label: 'CSS → SCSS', value: 'css-to-scss' },
+  { label: 'SCSS → CSS', value: 'scss-to-css' }
 ];
 const selectedMode = ref('css-to-less');
 
@@ -354,6 +369,146 @@ const convertToScss = (css) => {
   return scss.trim();
 };
 
+// Reverse conversion: LESS to CSS
+const convertFromLess = (less) => {
+  if (!less.trim()) return '';
+  
+  // LESS syntax is very similar to CSS, mainly need to handle variables and mixins
+  let css = less;
+  
+  // Remove LESS variable declarations (@variable: value;)
+  css = css.replace(/@[\w-]+\s*:\s*[^;]+;/g, '');
+  
+  // Remove LESS mixin calls (but keep the content)
+  // This is a simplified approach - full LESS parsing would be more complex
+  css = css.replace(/\.([\w-]+)\s*\([^)]*\)\s*;/g, '');
+  
+  // Clean up formatting
+  css = css.replace(/\s*{\s*/g, ' {\n  ');
+  css = css.replace(/;\s*/g, ';\n  ');
+  css = css.replace(/\s*}\s*/g, '\n}\n');
+  css = css.replace(/\n\s*\n+/g, '\n');
+  
+  return css.trim();
+};
+
+// Reverse conversion: SASS to CSS
+const convertFromSass = (sass) => {
+  if (!sass.trim()) return '';
+  
+  // Remove SASS variable declarations first
+  let cleanedSass = sass.replace(/\$[\w-]+\s*:\s*[^;\n]+/g, '');
+  
+  let css = '';
+  const lines = cleanedSass.split('\n');
+  const stack = []; // Stack to track nested selectors and their properties
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    
+    // Skip empty lines
+    if (!trimmed) continue;
+    
+    // Skip comments
+    if (trimmed.startsWith('//') || trimmed.startsWith('/*')) continue;
+    
+    // Calculate indent level (assuming 2 spaces per level)
+    const indent = (line.match(/^\s*/) || [''])[0].length;
+    const level = Math.floor(indent / 2);
+    
+    // Close blocks that are at a higher indent level
+    while (stack.length > level && stack.length > 0) {
+      const block = stack.pop();
+      if (block.selector) {
+        css += block.selector + ' {\n';
+        for (const prop of block.properties) {
+          css += '  ' + prop + ';\n';
+        }
+        css += '}\n\n';
+      }
+    }
+    
+    // Check if it's a property (contains colon but not ::)
+    const isProperty = trimmed.includes(':') && 
+                       !trimmed.includes('::') && 
+                       trimmed.match(/^\s*[\w-]+\s*:/);
+    
+    if (isProperty) {
+      // It's a property
+      let prop = trimmed;
+      // Ensure semicolon at the end
+      if (!prop.endsWith(';')) {
+        prop += ';';
+      }
+      // Add to current block or create new one
+      if (stack.length === 0 || stack[stack.length - 1].level !== level) {
+        stack.push({ level, selector: null, properties: [prop] });
+      } else {
+        stack[stack.length - 1].properties.push(prop);
+      }
+    } else {
+      // It's a selector
+      // Close current block if it has properties
+      if (stack.length > 0 && stack[stack.length - 1].properties.length > 0 && stack[stack.length - 1].selector) {
+        const block = stack.pop();
+        css += block.selector + ' {\n';
+        for (const prop of block.properties) {
+          css += '  ' + prop + ';\n';
+        }
+        css += '}\n\n';
+      }
+      
+      // Remove SASS variable references
+      const selector = trimmed.replace(/\$[\w-]+/g, '');
+      stack.push({ level, selector, properties: [] });
+    }
+  }
+  
+  // Close remaining blocks
+  while (stack.length > 0) {
+    const block = stack.pop();
+    if (block.selector) {
+      css += block.selector + ' {\n';
+      for (const prop of block.properties) {
+        css += '  ' + prop + ';\n';
+      }
+      css += '}\n\n';
+    }
+  }
+  
+  // Clean up extra newlines
+  css = css.replace(/\n\s*\n+/g, '\n\n');
+  
+  return css.trim();
+};
+
+// Reverse conversion: SCSS to CSS
+const convertFromScss = (scss) => {
+  if (!scss.trim()) return '';
+  
+  let css = scss;
+  
+  // Remove SCSS variable declarations ($variable: value;)
+  css = css.replace(/\$[\w-]+\s*:\s*[^;]+;/g, '');
+  
+  // Remove SCSS mixin calls (but keep the content)
+  // This is a simplified approach - full SCSS parsing would be more complex
+  css = css.replace(/@include\s+[\w-]+\s*\([^)]*\)\s*;/g, '');
+  css = css.replace(/@mixin\s+[\w-]+[^{]*\{[^}]*\}/g, '');
+  
+  // Remove @extend directives
+  css = css.replace(/@extend\s+[^;]+;/g, '');
+  
+  // Clean up formatting
+  css = css.replace(/\s*{\s*/g, ' {\n  ');
+  css = css.replace(/;\s*/g, ';\n  ');
+  css = css.replace(/\s*}\s*/g, '\n}\n');
+  css = css.replace(/\n\s*\n+/g, '\n');
+  
+  return css.trim();
+};
+
 // Main conversion function
 const convertCss = () => {
   if (!cssInput.value.trim()) {
@@ -366,11 +521,20 @@ const convertCss = () => {
       case 'css-to-less':
         convertedOutput.value = convertToLess(cssInput.value);
         break;
+      case 'less-to-css':
+        convertedOutput.value = convertFromLess(cssInput.value);
+        break;
       case 'css-to-sass':
         convertedOutput.value = convertToSass(cssInput.value);
         break;
+      case 'sass-to-css':
+        convertedOutput.value = convertFromSass(cssInput.value);
+        break;
       case 'css-to-scss':
         convertedOutput.value = convertToScss(cssInput.value);
+        break;
+      case 'scss-to-css':
+        convertedOutput.value = convertFromScss(cssInput.value);
         break;
       default:
         convertedOutput.value = '';
@@ -384,6 +548,39 @@ const clearInput = () => {
   cssInput.value = '';
   convertedOutput.value = '';
 };
+
+const swapInputs = () => {
+  // Swap the input and output
+  const temp = cssInput.value;
+  cssInput.value = convertedOutput.value;
+  convertedOutput.value = temp;
+  
+  // Toggle the conversion direction
+  switch (selectedMode.value) {
+    case 'css-to-less':
+      selectedMode.value = 'less-to-css';
+      break;
+    case 'less-to-css':
+      selectedMode.value = 'css-to-less';
+      break;
+    case 'css-to-sass':
+      selectedMode.value = 'sass-to-css';
+      break;
+    case 'sass-to-css':
+      selectedMode.value = 'css-to-sass';
+      break;
+    case 'css-to-scss':
+      selectedMode.value = 'scss-to-css';
+      break;
+    case 'scss-to-css':
+      selectedMode.value = 'css-to-scss';
+      break;
+  }
+  
+  // Convert with swapped inputs
+  convertCss();
+};
+
 
 const copyToClipboard = async (text) => {
   try {
