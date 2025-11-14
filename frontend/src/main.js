@@ -555,6 +555,14 @@ const router = createRouter({
       component: () => import('./views/ChartBuilder.vue'),
     },
     {
+      path: '/tools/timeline-generator',
+      component: () => import('./views/TimelineGenerator.vue'),
+    },
+    {
+      path: '/tools/table-generator',
+      component: () => import('./views/TableGenerator.vue'),
+    },
+    {
       path: '/tools/spacing-scale',
       component: () => import('./views/SpacingScaleGenerator.vue'),
     },
