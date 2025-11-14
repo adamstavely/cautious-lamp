@@ -251,6 +251,41 @@ const foundationHeroCards = {
       <circle cx="50" cy="150" r="8" fill="url(#accessibilityGradient)" opacity="0.4"/>
       <circle cx="150" cy="150" r="8" fill="url(#accessibilityGradient)" opacity="0.4"/>
     </svg>`
+  },
+  '/tui-guidance': {
+    title: 'Terminal UI (TUI) Guidance',
+    description: 'Design standards for Terminal User Interfaces (TUIs) across command-line and console-based applications. Ensure consistency, accessibility, and scriptability in all terminal interfaces.',
+    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="tuiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <!-- Terminal window frame -->
+      <rect x="30" y="40" width="140" height="120" rx="4" fill="url(#tuiGradient)" opacity="0.2" stroke="url(#tuiGradient)" stroke-width="2"/>
+      <!-- Terminal header bar -->
+      <rect x="30" y="40" width="140" height="20" rx="4" fill="url(#tuiGradient)" opacity="0.4"/>
+      <!-- Terminal window dots (close, minimize, maximize) -->
+      <circle cx="42" cy="50" r="3" fill="url(#tuiGradient)" opacity="0.6"/>
+      <circle cx="52" cy="50" r="3" fill="url(#tuiGradient)" opacity="0.6"/>
+      <circle cx="62" cy="50" r="3" fill="url(#tuiGradient)" opacity="0.6"/>
+      <!-- Terminal prompt and text lines -->
+      <text x="40" y="75" font-family="monospace" font-size="10" fill="url(#tuiGradient)" opacity="0.8">$ tool deploy</text>
+      <text x="40" y="95" font-family="monospace" font-size="10" fill="url(#tuiGradient)" opacity="0.6">✓ Deployment complete</text>
+      <text x="40" y="115" font-family="monospace" font-size="10" fill="url(#tuiGradient)" opacity="0.6">> service-api [running]</text>
+      <!-- Cursor blinking indicator -->
+      <rect x="120" y="68" width="8" height="10" fill="url(#tuiGradient)" opacity="0.8">
+        <animate attributeName="opacity" values="0.8;0.2;0.8" dur="1s" repeatCount="indefinite"/>
+      </rect>
+      <!-- Command line prompt symbol -->
+      <text x="40" y="135" font-family="monospace" font-size="10" fill="url(#tuiGradient)" opacity="0.7">$</text>
+      <!-- Keyboard keys representation -->
+      <rect x="50" y="150" width="20" height="12" rx="2" fill="url(#tuiGradient)" opacity="0.3"/>
+      <rect x="75" y="150" width="20" height="12" rx="2" fill="url(#tuiGradient)" opacity="0.3"/>
+      <rect x="100" y="150" width="20" height="12" rx="2" fill="url(#tuiGradient)" opacity="0.3"/>
+      <rect x="125" y="150" width="20" height="12" rx="2" fill="url(#tuiGradient)" opacity="0.3"/>
+    </svg>`
   }
 };
 
@@ -330,6 +365,7 @@ const getFilePath = (docPath) => {
     '/patterns/layout': '/docs/patterns/layout.md',
     '/patterns/forms': '/docs/patterns/forms.md',
     '/patterns/feedback': '/docs/patterns/feedback.md',
+    '/tui-guidance': '/docs/guidelines/tui-guidance.md',
     '/': '/docs/index.md'
   };
   
@@ -341,6 +377,11 @@ const getFilePath = (docPath) => {
   // Otherwise, try to construct the path dynamically
   // Handle pattern paths: /patterns/xyz -> /docs/patterns/xyz.md
   if (docPath.startsWith('/patterns/')) {
+    return `/docs${docPath}.md`;
+  }
+  
+  // Handle guidelines paths: /guidelines/xyz -> /docs/guidelines/xyz.md
+  if (docPath.startsWith('/guidelines/')) {
     return `/docs${docPath}.md`;
   }
   

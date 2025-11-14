@@ -694,6 +694,94 @@
         </nav>
       </div>
       
+      <!-- Guidelines - only show when on guidelines route -->
+      <div v-if="showGuidelines" class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Guidelines</h3>
+          <button
+            @click="toggle"
+            class="p-2 rounded-lg transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            title="Close drawer"
+          >
+            <span class="material-symbols-outlined">left_panel_close</span>
+          </button>
+        </div>
+        <nav class="space-y-6">
+          <!-- Guidelines Overview -->
+          <div class="space-y-1">
+            <router-link
+              to="/guidelines"
+              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              :class="[
+                isActive('/guidelines') && route.path === '/guidelines'
+                  ? (isDarkMode 
+                    ? 'text-indigo-400 bg-indigo-900/20' 
+                    : 'text-indigo-600 bg-indigo-50')
+                  : (isDarkMode
+                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+              ]"
+            >
+              <span class="material-symbols-outlined text-lg">home</span>
+              <span class="font-medium">Overview</span>
+            </router-link>
+          </div>
+          
+          <!-- Foundations -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Foundations</h4>
+            <div class="space-y-1">
+              <a
+                v-for="item in filteredFoundations"
+                :key="item.link"
+                href="#"
+                @click.prevent="navigateToDoc(item.link)"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </a>
+            </div>
+          </div>
+          
+          <!-- Guidelines -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Guidelines</h4>
+            <div class="space-y-1">
+              <a
+                v-for="item in filteredGuidelines.filter(item => item.link !== '/colors' && item.link !== '/typography' && item.link !== '/spacing' && item.link !== '/shadows' && item.link !== '/accessibility')"
+                :key="item.link"
+                href="#"
+                @click.prevent="navigateToDoc(item.link)"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </a>
+            </div>
+          </div>
+        </nav>
+      </div>
+      
       <!-- AI - only show when on AI route -->
       <div v-if="showAI" class="mb-8">
         <div class="flex items-center justify-between mb-4">
@@ -929,6 +1017,15 @@ const humanCenteredDesign = [
   { text: 'Laws of UX', link: '/hcd/laws-of-ux', icon: 'rule' }
 ];
 
+const guidelines = [
+  { text: 'Colors', link: '/colors', icon: 'palette' },
+  { text: 'Typography', link: '/typography', icon: 'text_fields' },
+  { text: 'Spacing', link: '/spacing', icon: 'space_dashboard' },
+  { text: 'Shadows', link: '/shadows', icon: 'layers' },
+  { text: 'Accessibility', link: '/accessibility', icon: 'accessibility' },
+  { text: 'Terminal UI (TUI) Guidance', link: '/tui-guidance', icon: 'terminal' }
+];
+
 const designPatterns = [
   { text: 'Overview', link: '/patterns', icon: 'view_quilt' },
   { text: 'Pattern Status', link: '/patterns/status', icon: 'check_circle' },
@@ -1143,6 +1240,17 @@ const showResearch = computed(() => {
          route.path === '/tools/heuristic-evaluation';
 });
 
+const showGuidelines = computed(() => {
+  return route.path === '/guidelines' || 
+         route.path.startsWith('/guidelines/') ||
+         route.path === '/tui-guidance' ||
+         route.path === '/colors' ||
+         route.path === '/typography' ||
+         route.path === '/spacing' ||
+         route.path === '/shadows' ||
+         route.path === '/accessibility';
+});
+
 const showTokens = computed(() => {
   return route.path === '/tokens' || route.path.startsWith('/tokens/');
 });
@@ -1179,7 +1287,7 @@ const showAI = computed(() => {
 });
 
 const showMainSections = computed(() => {
-  return !showPatterns.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value && !showTokens.value && !showAdmin.value && !showGettingStarted.value && !showResearch.value && !showAI.value;
+  return !showPatterns.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value && !showTokens.value && !showAdmin.value && !showGettingStarted.value && !showResearch.value && !showAI.value && !showGuidelines.value;
 });
 
 const isActive = (path) => {
@@ -1214,6 +1322,10 @@ const filteredArtificialIntelligence = computed(() => {
 
 const filteredHumanCenteredDesign = computed(() => {
   return humanCenteredDesign.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredGuidelines = computed(() => {
+  return guidelines.filter(item => isRouteEnabled(item.link));
 });
 
 const filteredDesignPatterns = computed(() => {
@@ -1306,6 +1418,7 @@ const getAllDrawerFlagKeys = () => {
     ...foundations.map(f => f.link),
     ...artificialIntelligence.map(a => a.link),
     ...humanCenteredDesign.map(h => h.link),
+    ...guidelines.map(g => g.link),
     ...designPatterns.map(d => d.link),
     ...codePatterns.map(c => c.link),
     ...componentUtilities.map(c => c.link),
