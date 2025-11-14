@@ -943,7 +943,8 @@ const toolGroups = computed(() => ({
     { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'text-initial' },
     { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'tag' },
     { text: 'Font Scale', link: '/tools/font-scale', icon: 'format_size' },
-    { text: 'Font Stack & Subsetting', link: '/tools/font-stack', icon: 'layers' }
+    { text: 'Font Stack & Subsetting', link: '/tools/font-stack', icon: 'layers' },
+    { text: 'PX Unit Converter', link: '/tools/px-converter', icon: 'straighten' }
   ],
   development: [
   ],

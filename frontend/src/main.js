@@ -519,6 +519,10 @@ const router = createRouter({
       component: () => import('./views/Tools.vue'),
     },
     {
+      path: '/tools/px-converter',
+      component: () => import('./views/PxConverter.vue'),
+    },
+    {
       path: '/research',
       component: () => import('./views/ResearchRepo.vue'),
     },
