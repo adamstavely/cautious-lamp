@@ -944,7 +944,8 @@ const toolGroups = computed(() => ({
     { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'tag' },
     { text: 'Font Scale', link: '/tools/font-scale', icon: 'format_size' },
     { text: 'Font Stack & Subsetting', link: '/tools/font-stack', icon: 'layers' },
-    { text: 'PX Unit Converter', link: '/tools/px-converter', icon: 'straighten' }
+    { text: 'PX Unit Converter', link: '/tools/px-converter', icon: 'straighten' },
+    { text: 'CSS Converter', link: '/tools/css-converter', icon: 'code' }
   ],
   development: [
   ],

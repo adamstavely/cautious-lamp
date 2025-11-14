@@ -73,27 +73,119 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+              <h2 class="text-lg font-semibold mb-6 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                 <span class="material-symbols-outlined text-indigo-600">swap_horiz</span>
                 Conversion Mode
               </h2>
               
-              <div class="flex flex-wrap gap-2">
-                <button
-                  v-for="mode in conversionModes"
-                  :key="mode.value"
-                  @click="selectedMode = mode.value"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  :class="selectedMode === mode.value
-                    ? (isDarkMode 
-                      ? 'bg-indigo-600 text-white' 
-                      : 'bg-indigo-600 text-white')
-                    : (isDarkMode
-                      ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Typography Units Card -->
+                <div 
+                  class="rounded-lg border p-4"
+                  :class="isDarkMode 
+                    ? 'bg-slate-800 border-gray-700' 
+                    : 'bg-gray-50 border-gray-200'"
                 >
-                  {{ mode.label }}
-                </button>
+                  <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-200' : 'text-gray-800'">Typography Units</h3>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="mode in typographyModes"
+                      :key="mode.value"
+                      @click="selectedMode = mode.value"
+                      class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                      :class="selectedMode === mode.value
+                        ? (isDarkMode 
+                          ? 'bg-indigo-600 text-white' 
+                          : 'bg-indigo-600 text-white')
+                        : (isDarkMode
+                          ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
+                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200')"
+                    >
+                      {{ mode.label }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Physical Units Card -->
+                <div 
+                  class="rounded-lg border p-4"
+                  :class="isDarkMode 
+                    ? 'bg-slate-800 border-gray-700' 
+                    : 'bg-gray-50 border-gray-200'"
+                >
+                  <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-200' : 'text-gray-800'">Physical Units</h3>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="mode in physicalModes"
+                      :key="mode.value"
+                      @click="selectedMode = mode.value"
+                      class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                      :class="selectedMode === mode.value
+                        ? (isDarkMode 
+                          ? 'bg-indigo-600 text-white' 
+                          : 'bg-indigo-600 text-white')
+                        : (isDarkMode
+                          ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
+                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200')"
+                    >
+                      {{ mode.label }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Viewport Units Card -->
+                <div 
+                  class="rounded-lg border p-4"
+                  :class="isDarkMode 
+                    ? 'bg-slate-800 border-gray-700' 
+                    : 'bg-gray-50 border-gray-200'"
+                >
+                  <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-200' : 'text-gray-800'">Viewport Units</h3>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="mode in viewportModes"
+                      :key="mode.value"
+                      @click="selectedMode = mode.value"
+                      class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                      :class="selectedMode === mode.value
+                        ? (isDarkMode 
+                          ? 'bg-indigo-600 text-white' 
+                          : 'bg-indigo-600 text-white')
+                        : (isDarkMode
+                          ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
+                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200')"
+                    >
+                      {{ mode.label }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Frameworks Card -->
+                <div 
+                  class="rounded-lg border p-4"
+                  :class="isDarkMode 
+                    ? 'bg-slate-800 border-gray-700' 
+                    : 'bg-gray-50 border-gray-200'"
+                >
+                  <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-200' : 'text-gray-800'">Frameworks</h3>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="mode in frameworkModes"
+                      :key="mode.value"
+                      @click="selectedMode = mode.value"
+                      class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                      :class="selectedMode === mode.value
+                        ? (isDarkMode 
+                          ? 'bg-indigo-600 text-white' 
+                          : 'bg-indigo-600 text-white')
+                        : (isDarkMode
+                          ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
+                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200')"
+                    >
+                      {{ mode.label }}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1618,29 +1710,47 @@ import Breadcrumbs from '../components/Breadcrumbs.vue';
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const drawerOpen = ref(false);
 
-// Conversion mode
-const conversionModes = [
+// Conversion modes grouped by category
+const typographyModes = [
   { label: 'PX → REM', value: 'px-to-rem' },
   { label: 'PX → EM', value: 'px-to-em' },
-  { label: 'PX → VH', value: 'px-to-vh' },
+  { label: 'PX → %', value: 'px-to-percent' },
+  { label: 'Base → PX', value: 'base-to-px' }
+];
+
+const physicalModes = [
   { label: 'PX → PT', value: 'px-to-pt' },
   { label: 'PX → IN', value: 'px-to-in' },
   { label: 'PX → PC', value: 'px-to-pc' },
   { label: 'PX → CM', value: 'px-to-cm' },
-  { label: 'PX → MM', value: 'px-to-mm' },
-  { label: 'PX → %', value: 'px-to-percent' },
+  { label: 'PX → MM', value: 'px-to-mm' }
+];
+
+const viewportModes = [
+  { label: 'PX → VH', value: 'px-to-vh' },
+  { label: 'VH → VW', value: 'vh-to-vw' },
   { label: 'REM → VW', value: 'rem-to-vw' },
   { label: 'EM → VW', value: 'em-to-vw' },
-  { label: 'VH → VW', value: 'vh-to-vw' },
+  { label: '% → VW', value: 'percent-to-vw' },
   { label: 'PT → VW', value: 'pt-to-vw' },
   { label: 'IN → VW', value: 'in-to-vw' },
   { label: 'PC → VW', value: 'pc-to-vw' },
   { label: 'CM → VW', value: 'cm-to-vw' },
-  { label: 'MM → VW', value: 'mm-to-vw' },
-  { label: '% → VW', value: 'percent-to-vw' },
-  { label: 'Base → PX', value: 'base-to-px' },
+  { label: 'MM → VW', value: 'mm-to-vw' }
+];
+
+const frameworkModes = [
   { label: 'PX → Tailwind', value: 'px-to-tailwind' }
 ];
+
+// Combined array for backward compatibility
+const conversionModes = [
+  ...typographyModes,
+  ...physicalModes,
+  ...viewportModes,
+  ...frameworkModes
+];
+
 const selectedMode = ref('px-to-rem');
 
 // Configuration

@@ -523,6 +523,10 @@ const router = createRouter({
       component: () => import('./views/PxConverter.vue'),
     },
     {
+      path: '/tools/css-converter',
+      component: () => import('./views/CssConverter.vue'),
+    },
+    {
       path: '/research',
       component: () => import('./views/ResearchRepo.vue'),
     },
