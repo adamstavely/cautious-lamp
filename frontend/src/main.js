@@ -247,6 +247,18 @@ const router = createRouter({
       component: () => import('./views/DeprecationManager.vue'),
     },
     {
+      path: '/components/badge-generator',
+      component: () => import('./views/BadgeGenerator.vue'),
+    },
+    {
+      path: '/components/progress-generator',
+      component: () => import('./views/ProgressGenerator.vue'),
+    },
+    {
+      path: '/components/loading-generator',
+      component: () => import('./views/LoadingSpinnerGenerator.vue'),
+    },
+    {
       path: '/components/dependencies',
       redirect: '/admin/dependencies',
     },

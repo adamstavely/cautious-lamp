@@ -338,7 +338,7 @@
                             stroke-width="8"
                             :stroke-dasharray="getCircularCircumference()"
                             :stroke-dashoffset="getCircularOffset()"
-                            :class="{ 'transition-all duration-300': !config.animated }"
+                            :style="config.animated ? { transition: 'stroke-dashoffset 0.3s ease' } : {}"
                           />
                         </svg>
                         <div v-if="config.labelPosition !== 'none'" 
@@ -547,9 +547,13 @@ const getLinearProgressFillStyles = () => {
     width: `${config.value.value}%`,
     backgroundColor: colors.fill,
     height: '100%',
-    borderRadius: '9999px',
-    transition: config.value.animated ? 'width 0.3s ease' : 'none'
+    borderRadius: '9999px'
   };
+  
+  // Add transition for smooth value changes when animated
+  if (config.value.animated) {
+    styles.transition = 'width 0.3s ease';
+  }
   
   if (config.value.striped) {
     styles.backgroundImage = `linear-gradient(45deg, ${colors.fill} 25%, transparent 25%, transparent 50%, ${colors.fill} 50%, ${colors.fill} 75%, transparent 75%, transparent)`;

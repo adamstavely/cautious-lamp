@@ -1037,7 +1037,10 @@ const componentUtilities = [
   { text: 'Testing Framework', link: '/components/testing', icon: 'bug_report' },
   { text: 'Documentation Generator', link: '/components/documentation', icon: 'description' },
   { text: 'Component Composition', link: '/components/composition', icon: 'view_quilt' },
-  { text: 'Deprecation Manager', link: '/components/deprecation', icon: 'warning' }
+  { text: 'Deprecation Manager', link: '/components/deprecation', icon: 'warning' },
+  { text: 'Badge Generator', link: '/components/badge-generator', icon: 'label' },
+  { text: 'Progress Generator', link: '/components/progress-generator', icon: 'trending_up' },
+  { text: 'Loading Spinner Generator', link: '/components/loading-generator', icon: 'refresh' }
 ];
 
 const componentItems = [

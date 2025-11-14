@@ -471,24 +471,55 @@ const getBadgeClasses = (stateOverride = null) => {
     xl: 'text-lg px-5 py-2.5'
   };
   
+  // Medal needs special sizing since it's circular
+  if (config.value.style === 'medal') {
+    const medalSizeMap = {
+      xs: 'text-xs w-8 h-8',
+      sm: 'text-sm w-10 h-10',
+      md: 'text-base w-12 h-12',
+      lg: 'text-lg w-14 h-14',
+      xl: 'text-xl w-16 h-16'
+    };
+    return `inline-flex items-center justify-center font-medium ${medalSizeMap[config.value.size]} rounded-full`;
+  }
+  
   const styleMap = {
     rounded: 'rounded-lg',
     pill: 'rounded-full',
-    ribbon: 'rounded-lg',
-    medal: 'rounded-full',
+    ribbon: '', // Ribbon styling handled in getBadgeStyles with clip-path
     tag: 'rounded'
   };
   
-  return `inline-flex items-center font-medium ${sizeMap[config.value.size]} ${styleMap[config.value.style]}`;
+  return `inline-flex items-center font-medium ${sizeMap[config.value.size]} ${styleMap[config.value.style] || ''}`;
 };
 
 const getBadgeStyles = (stateOverride = null) => {
   const colors = getStateColors(stateOverride);
   const styles = {
     backgroundColor: colors.bg,
-    color: colors.text,
-    borderRadius: config.value.style === 'pill' ? '9999px' : `${config.value.borderRadius}px`
+    color: colors.text
   };
+  
+  // Handle different badge styles
+  if (config.value.style === 'pill') {
+    styles.borderRadius = '9999px';
+  } else if (config.value.style === 'medal') {
+    styles.borderRadius = '50%';
+    styles.aspectRatio = '1';
+    styles.minWidth = '40px';
+    styles.minHeight = '40px';
+    styles.display = 'inline-flex';
+    styles.alignItems = 'center';
+    styles.justifyContent = 'center';
+  } else if (config.value.style === 'ribbon') {
+    styles.borderRadius = `${config.value.borderRadius}px`;
+    styles.position = 'relative';
+    // Add ribbon tail effect with clip-path - creates a diagonal cut on the right
+    styles.clipPath = 'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)';
+    styles.paddingRight = '12px';
+  } else {
+    styles.borderRadius = `${config.value.borderRadius}px`;
+  }
   
   if (config.value.hasShadow) {
     styles.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)';
@@ -569,7 +600,13 @@ export const Badge: React.FC<BadgeProps> = ({
   );
 };`;
   } else if (selectedExportFormat.value === 'vue') {
-    return `<template>
+    // Use String.fromCharCode to avoid Vue compiler parsing template/script tags
+    const templateOpen = String.fromCharCode(60) + 'template' + String.fromCharCode(62);
+    const templateClose = String.fromCharCode(60) + '/' + 'template' + String.fromCharCode(62);
+    const scriptSetupOpen = String.fromCharCode(60) + 'script setup' + String.fromCharCode(62);
+    const scriptClose = String.fromCharCode(60) + '/' + 'script' + String.fromCharCode(62);
+    
+    return templateOpen + `
   <span
     :class="badgeClasses"
     :style="badgeStyles"
@@ -582,9 +619,9 @@ export const Badge: React.FC<BadgeProps> = ({
       {{ iconName }}
     </span>
   </span>
-</template>
+` + templateClose + `
 
-<script setup>
+` + scriptSetupOpen + `
 import { computed } from 'vue';
 
 const props = defineProps({
@@ -675,7 +712,7 @@ const badgeStyles = computed(() => {
 const iconName = computed(() => {
   return props.icon ? iconMap[props.icon] : '';
 });
-</script>`;
+` + scriptClose;
   } else {
     return `.badge {
   display: inline-flex;
