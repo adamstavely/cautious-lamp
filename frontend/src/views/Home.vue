@@ -61,18 +61,10 @@
 
         <!-- Browse Sections Section -->
         <div class="max-w-7xl mx-auto mb-8">
-          <div class="flex items-center justify-between mb-8">
+          <div class="mb-8">
             <h2 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
               Explore sections
             </h2>
-            <button 
-              class="px-6 py-2 rounded-full border transition-colors text-sm font-medium"
-              :class="isDarkMode 
-                ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'"
-            >
-              View all
-            </button>
           </div>
           
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">

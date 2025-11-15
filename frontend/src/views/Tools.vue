@@ -51,18 +51,10 @@
 
         <!-- Browse Tools Section -->
         <div class="max-w-7xl mx-auto mb-16">
-          <div class="flex items-center justify-between mb-8">
+          <div class="mb-8">
             <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
               Browse tools
             </h2>
-            <button 
-              class="px-6 py-2 rounded-full border transition-colors text-sm font-medium"
-              :class="isDarkMode 
-                ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'"
-            >
-              View all tools
-            </button>
           </div>
           
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -551,13 +543,10 @@
         <!-- Featured Tools Section -->
         <div class="max-w-7xl mx-auto">
           <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-950 dark:via-indigo-900 dark:to-indigo-800">
-            <div class="flex items-center justify-between mb-8">
+            <div class="mb-8">
               <h2 class="text-4xl md:text-5xl font-bold text-white">
                 Popular tools
               </h2>
-              <button class="px-6 py-2 rounded-full border border-white/30 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-                View all tools
-              </button>
             </div>
             
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
