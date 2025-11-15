@@ -130,7 +130,31 @@
               </p>
             </router-link>
 
-            <!-- Tool Card 4: SEO Tagging Generator -->
+            <!-- Tool Card 4: SVG Placeholder Text Generator -->
+            <router-link 
+              to="/tools/svg-placeholder-text" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">image</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                SVG Placeholder Text
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Generate placeholder SVG text with customizable styling.
+              </p>
+            </router-link>
+
+            <!-- Tool Card 5: SEO Tagging Generator -->
             <router-link 
               to="/tools/seo-tagging" 
               class="group rounded-2xl p-6 border transition-all"
@@ -154,7 +178,7 @@
               </p>
             </router-link>
 
-            <!-- Tool Card 5: Color Scale Generator -->
+            <!-- Tool Card 6: Color Scale Generator -->
             <router-link 
               to="/tools/color-scale" 
               class="group rounded-2xl p-6 border transition-all"
@@ -561,6 +585,10 @@
               <router-link to="/tools/lorem-ipsum" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
                 <h3 class="text-white font-semibold text-xl mb-2">Lorem Ipsum Generator</h3>
                 <p class="text-white/80 text-sm">Generate placeholder text for your designs with customizable paragraphs, words, sentences, or lists.</p>
+              </router-link>
+              <router-link to="/tools/svg-placeholder-text" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">SVG Placeholder Text</h3>
+                <p class="text-white/80 text-sm">Generate placeholder SVG text with customizable alignment, spacing, colors, and styling options.</p>
               </router-link>
               <router-link to="/tools/seo-tagging" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
                 <h3 class="text-white font-semibold text-xl mb-2">SEO Tagging Generator</h3>

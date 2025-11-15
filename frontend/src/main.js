@@ -443,6 +443,10 @@ const router = createRouter({
       component: () => import('./views/LoremIpsumGenerator.vue'),
     },
     {
+      path: '/tools/svg-placeholder-text',
+      component: () => import('./views/SVGPlaceholderTextGenerator.vue'),
+    },
+    {
       path: '/tools/seo-tagging',
       component: () => import('./views/SEOTaggingGenerator.vue'),
     },
