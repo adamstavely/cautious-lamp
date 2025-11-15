@@ -300,9 +300,12 @@
                     <!-- Linear Progress -->
                     <div v-if="config.type === 'linear'">
                       <div class="relative" :style="getLinearProgressStyles()">
-                        <div class="h-full rounded-full" :style="getLinearProgressFillStyles()">
+                        <div 
+                          class="h-full rounded-full relative"
+                          :style="getLinearProgressFillStyles()"
+                        >
                           <span v-if="config.labelPosition === 'inside' && config.label" 
-                            class="absolute inset-0 flex items-center justify-center text-xs font-medium"
+                            class="absolute inset-0 flex items-center justify-center text-xs font-medium z-10"
                             :style="{ color: getTextColor() }"
                           >
                             {{ config.label }} {{ config.showPercentage ? `${config.value}%` : '' }}
@@ -545,22 +548,34 @@ const getLinearProgressFillStyles = () => {
   const colors = getStateColors();
   const styles = {
     width: `${config.value.value}%`,
-    backgroundColor: colors.fill,
     height: '100%',
-    borderRadius: '9999px'
+    borderRadius: '9999px',
+    transition: config.value.animated ? 'width 0.3s ease' : 'none',
+    backgroundColor: colors.fill
   };
   
-  // Add transition for smooth value changes when animated
-  if (config.value.animated) {
-    styles.transition = 'width 0.3s ease';
-  }
-  
+  // Apply striped pattern via inline styles to ensure it works
   if (config.value.striped) {
-    styles.backgroundImage = `linear-gradient(45deg, ${colors.fill} 25%, transparent 25%, transparent 50%, ${colors.fill} 50%, ${colors.fill} 75%, transparent 75%, transparent)`;
+    // Subtle white semi-transparent stripes at 45 degrees (matching screenshot style)
+    styles.backgroundImage = `linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.15) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.15) 50%,
+      rgba(255, 255, 255, 0.15) 75%,
+      transparent 75%,
+      transparent
+    )`;
     styles.backgroundSize = '1rem 1rem';
+    styles.backgroundRepeat = 'repeat';
+    
+    // Add animation when both striped and animated are enabled
     if (config.value.animated) {
       styles.animation = 'progress-stripes 1s linear infinite';
     }
+  } else {
+    styles.backgroundImage = 'none';
   }
   
   return styles;
@@ -881,18 +896,41 @@ onBeforeUnmount(() => {
 });
 </script>
 
+<style>
+/* Global keyframes for progress animations */
+@keyframes progress-stripes {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 1rem 0;
+  }
+}
+
+/* Global styles for progress striped pattern */
+.progress-striped {
+  background-image: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.15) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.15) 75%,
+    transparent 75%,
+    transparent
+  ) !important;
+  background-size: 1rem 1rem !important;
+  background-repeat: repeat !important;
+}
+
+.progress-animated {
+  animation: progress-stripes 1s linear infinite !important;
+}
+</style>
+
 <style scoped>
 .texture-pattern {
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-
-@keyframes progress-stripes {
-  from {
-    background-position: 0 0;
-  }
-  to {
-    background-position: 1rem 0;
-  }
 }
 </style>
 
