@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+  <div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 transition-colors duration-300">
     <!-- Breadcrumbs -->
     <Breadcrumbs />
     
@@ -43,49 +43,124 @@
 
     <!-- Overview Card -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+      <div 
+        class="rounded-2xl shadow-lg border p-6 transition-colors duration-300"
+        :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+      >
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
           <!-- Total Colors -->
           <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
-              <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-2xl">palette</span>
+            <div 
+              class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors duration-300"
+              :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'"
+            >
+              <span 
+                class="material-symbols-outlined text-2xl transition-colors duration-300"
+                :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
+              >
+                palette
+              </span>
             </div>
             <div>
-              <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Colors</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ paletteColorsCount }}</p>
+              <p 
+                class="text-sm font-medium transition-colors duration-300"
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
+              >
+                Total Colors
+              </p>
+              <p 
+                class="text-2xl font-bold transition-colors duration-300"
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                {{ paletteColorsCount }}
+              </p>
             </div>
           </div>
 
           <!-- Color Scales -->
           <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
-              <span class="material-symbols-outlined text-purple-600 dark:text-purple-400 text-2xl">format_color_fill</span>
+            <div 
+              class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors duration-300"
+              :class="isDarkMode ? 'bg-purple-900/30' : 'bg-purple-100'"
+            >
+              <span 
+                class="material-symbols-outlined text-2xl transition-colors duration-300"
+                :class="isDarkMode ? 'text-purple-400' : 'text-purple-600'"
+              >
+                format_color_fill
+              </span>
             </div>
             <div>
-              <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Color Scales</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ colorScalesCount }}</p>
+              <p 
+                class="text-sm font-medium transition-colors duration-300"
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
+              >
+                Color Scales
+              </p>
+              <p 
+                class="text-2xl font-bold transition-colors duration-300"
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                {{ colorScalesCount }}
+              </p>
             </div>
           </div>
 
           <!-- Variants -->
           <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-              <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-2xl">tune</span>
+            <div 
+              class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors duration-300"
+              :class="isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'"
+            >
+              <span 
+                class="material-symbols-outlined text-2xl transition-colors duration-300"
+                :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'"
+              >
+                tune
+              </span>
             </div>
             <div>
-              <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Variants</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ variantsCount }}</p>
+              <p 
+                class="text-sm font-medium transition-colors duration-300"
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
+              >
+                Variants
+              </p>
+              <p 
+                class="text-2xl font-bold transition-colors duration-300"
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                {{ variantsCount }}
+              </p>
             </div>
           </div>
 
           <!-- Dark Mode Colors -->
           <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-              <span class="material-symbols-outlined text-slate-600 dark:text-slate-300 text-2xl">dark_mode</span>
+            <div 
+              class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors duration-300"
+              :class="isDarkMode ? 'bg-slate-700' : 'bg-slate-100'"
+            >
+              <span 
+                class="material-symbols-outlined text-2xl transition-colors duration-300"
+                :class="isDarkMode ? 'text-slate-300' : 'text-slate-600'"
+              >
+                dark_mode
+              </span>
             </div>
             <div>
-              <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Dark Mode</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ darkModeColorsCount }}</p>
+              <p 
+                class="text-sm font-medium transition-colors duration-300"
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
+              >
+                Dark Mode
+              </p>
+              <p 
+                class="text-2xl font-bold transition-colors duration-300"
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                {{ darkModeColorsCount }}
+              </p>
             </div>
           </div>
         </div>
@@ -105,14 +180,17 @@
             >
               <div class="flex items-center justify-center shrink-0">
                 <div
-                  class="flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all"
-                  :class="
+                  class="flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300"
+                  :class="[
                     currentStep > index
                       ? 'bg-indigo-600 border-indigo-600 text-white'
                       : currentStep === index
-                      ? 'border-indigo-600 text-indigo-600 bg-white'
-                      : 'border-gray-300 text-gray-400 bg-white'
-                  "
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-gray-300 text-gray-400',
+                    currentStep > index
+                      ? ''
+                      : isDarkMode ? 'bg-slate-700' : 'bg-white'
+                  ]"
                 >
                   <span class="text-sm font-semibold">{{ currentStep > index ? '✓' : index + 1 }}</span>
                 </div>
@@ -136,9 +214,11 @@
             >
               <div class="flex items-center justify-center shrink-0 w-10">
                 <div
-                  class="text-sm font-medium text-center"
+                  class="text-sm font-medium text-center transition-colors duration-300"
                   :class="
-                    currentStep >= index ? 'text-gray-900' : 'text-gray-500'
+                    currentStep >= index 
+                      ? (isDarkMode ? 'text-white' : 'text-gray-900')
+                      : (isDarkMode ? 'text-gray-400' : 'text-gray-500')
                   "
                 >
                   {{ step.title }}
@@ -154,13 +234,27 @@
       </div>
 
       <!-- Step Content -->
-      <div class="bg-white rounded-lg shadow-lg">
+      <div 
+        class="rounded-lg shadow-lg transition-colors duration-300"
+        :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
+      >
         <!-- Header with Palette Title and Health Score -->
-        <div class="border-b border-gray-200 px-8 py-6">
+        <div 
+          class="border-b px-8 py-6 transition-colors duration-300"
+          :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
+        >
           <div class="flex items-center justify-between">
             <div>
-              <h2 class="text-2xl font-bold text-gray-900">{{ palette.name || 'My Color Palette' }}</h2>
-              <p class="text-sm text-gray-600 mt-1">
+              <h2 
+                class="text-2xl font-bold transition-colors duration-300"
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                {{ palette.name || 'My Color Palette' }}
+              </h2>
+              <p 
+                class="text-sm mt-1 transition-colors duration-300"
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+              >
                 {{ steps[currentStep].fullTitle }}
               </p>
             </div>
@@ -223,7 +317,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import Step1Build from '../components/Step1Build.vue';
 import Step2Harmony from '../components/Step2Harmony.vue';
 import Step3Contrast from '../components/Step3Contrast.vue';
@@ -231,6 +325,8 @@ import Step4Roles from '../components/Step4Roles.vue';
 import Step5Use from '../components/Step5Use.vue';
 import PaletteHealthScore from '../components/PaletteHealthScore.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+
+const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 
 const currentStep = ref(0);
 const steps = [
@@ -295,11 +391,94 @@ const exportPalette = async () => {
   console.log('Exporting palette:', palette.value);
   alert('Palette exported successfully!');
 };
+
+// Watch for dark mode changes and force update
+watch(isDarkMode, () => {
+  // Force a reactive update when dark mode changes
+  nextTick(() => {
+    // Trigger any necessary re-renders
+  });
+});
+
+let darkModeObserver = null;
+let darkModeInterval = null;
+
+onMounted(() => {
+  // Improved dark mode detection with immediate callback
+  const updateDarkMode = () => {
+    const wasDark = isDarkMode.value;
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+    // Force update if state changed
+    if (wasDark !== isDarkMode.value) {
+      // Trigger reactivity
+      nextTick(() => {});
+    }
+  };
+  
+  darkModeObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+        updateDarkMode();
+      }
+    });
+  });
+  
+  darkModeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+    attributeOldValue: true
+  });
+  
+  // Initial check
+  updateDarkMode();
+  
+  // Fallback interval check
+  darkModeInterval = setInterval(updateDarkMode, 50);
+});
+
+onBeforeUnmount(() => {
+  if (darkModeObserver) {
+    darkModeObserver.disconnect();
+  }
+  if (darkModeInterval) {
+    clearInterval(darkModeInterval);
+  }
+});
 </script>
 
 <style scoped>
 .texture-pattern {
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+</style>
+
+<style>
+/* Force transitions on all background color changes */
+[class*="bg-white"][class*="bg-slate-800"],
+[class*="bg-slate-800"][class*="bg-white"],
+[class*="bg-indigo-100"][class*="bg-indigo-900"],
+[class*="bg-purple-100"][class*="bg-purple-900"],
+[class*="bg-blue-100"][class*="bg-blue-900"],
+[class*="bg-slate-100"][class*="bg-slate-700"] {
+  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Force transitions on text colors */
+[class*="text-gray-900"][class*="text-white"],
+[class*="text-white"][class*="text-gray-900"],
+[class*="text-gray-500"][class*="text-gray-400"],
+[class*="text-gray-400"][class*="text-gray-500"],
+[class*="text-indigo-600"][class*="text-indigo-400"],
+[class*="text-purple-600"][class*="text-purple-400"],
+[class*="text-blue-600"][class*="text-blue-400"],
+[class*="text-slate-600"][class*="text-slate-300"] {
+  transition: color 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Force transitions on border colors */
+[class*="border-gray-200"][class*="border-gray-700"],
+[class*="border-gray-700"][class*="border-gray-200"] {
+  transition: border-color 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 </style>
 

@@ -3,18 +3,25 @@
     <!-- Actions Bar -->
     <div class="flex items-center justify-end gap-3 mb-6">
       <div class="flex items-center gap-2 mr-auto">
-        <label class="text-sm text-gray-600">Palette Name:</label>
+        <label 
+          class="text-sm transition-colors duration-300"
+          :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+        >
+          Palette Name:
+        </label>
         <input
           v-model="paletteName"
           @input="updatePaletteName"
           type="text"
           placeholder="My Palette"
-          class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          class="px-3 py-1.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-300"
+          :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'"
         />
       </div>
       <button
         @click="triggerFileInput"
-        class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700"
+        class="flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors duration-300"
+        :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-gray-300 hover:bg-slate-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -23,7 +30,8 @@
       </button>
       <button
         @click="clearPalette"
-        class="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors duration-300"
+        :class="isDarkMode ? 'text-red-400 hover:bg-red-900/20' : 'text-red-600 hover:bg-red-50'"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -48,15 +56,19 @@
         :ref="el => { if (el) cardRefs[index] = el }"
         @dragover.prevent="handleDragOver(index, $event)"
         @drop="handleDrop(index, $event)"
-        class="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow relative"
-        :class="{ 'opacity-50': draggedIndex === index, 'border-indigo-400': dragOverIndex === index }"
+        class="rounded-lg shadow-md overflow-hidden border hover:shadow-lg transition-all duration-300 relative"
+        :class="[
+          isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200',
+          { 'opacity-50': draggedIndex === index, 'border-indigo-400': dragOverIndex === index }
+        ]"
       >
         <!-- Drag Handle -->
         <div
           draggable="true"
           @dragstart="handleDragStart(index, $event)"
           @dragend="handleDragEnd"
-          class="absolute top-2 right-2 cursor-move p-1 bg-white bg-opacity-80 rounded hover:bg-opacity-100 z-10"
+          class="absolute top-2 right-2 cursor-move p-1 rounded hover:bg-opacity-100 z-10 transition-colors duration-300"
+          :class="isDarkMode ? 'bg-slate-700 bg-opacity-80' : 'bg-white bg-opacity-80'"
           title="Drag to reorder"
         >
           <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,17 +93,24 @@
             @click.stop
             type="text"
             placeholder="Color name..."
-            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white mb-2"
+            class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-2 transition-colors duration-300"
+            :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'"
           />
           
           <!-- Hex Code -->
           <div class="flex items-center justify-between mb-3">
-            <div class="font-mono text-sm font-semibold text-gray-900">{{ color.hex }}</div>
+            <div 
+              class="font-mono text-sm font-semibold transition-colors duration-300"
+              :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+            >
+              {{ color.hex }}
+            </div>
             <div class="flex items-center gap-2">
               <!-- Copy Icon -->
               <button
                 @click.stop="copyToClipboard(color.hex)"
-                class="p-1 hover:bg-gray-100 rounded transition-colors"
+                class="p-1 rounded transition-colors duration-300"
+                :class="isDarkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'"
                 title="Copy hex code"
               >
                 <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,7 +121,8 @@
               <!-- Delete Icon -->
               <button
                 @click.stop="removeColor(index)"
-                class="p-1 hover:bg-red-50 rounded transition-colors text-red-600"
+                class="p-1 rounded transition-colors duration-300"
+                :class="isDarkMode ? 'hover:bg-red-900/20 text-red-400' : 'hover:bg-red-50 text-red-600'"
                 title="Delete color"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -116,7 +136,8 @@
           <select
             :value="color.role || ''"
             @change="updateRole(index, $event.target.value)"
-            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+            class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
+            :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
             @click.stop
           >
             <option value="">Select role...</option>
@@ -130,18 +151,35 @@
       <!-- Add New Color Card -->
       <div
         ref="addCardRef"
-        class="bg-gray-50 rounded-lg shadow-md border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-gray-100 transition-all cursor-pointer overflow-hidden"
+        class="rounded-lg shadow-md border-2 border-dashed hover:border-indigo-400 transition-all duration-300 cursor-pointer overflow-hidden"
+        :class="isDarkMode ? 'bg-slate-800/50 border-gray-600 hover:bg-slate-800' : 'bg-gray-50 border-gray-300 hover:bg-gray-100'"
         @click="openColorPicker(null, $event)"
       >
         <!-- Color Picker Placeholder -->
         <div class="w-full h-32 flex items-center justify-center relative">
           <div class="absolute inset-0 bg-checkered opacity-20"></div>
           <div class="relative z-10 text-center">
-            <svg class="w-12 h-12 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg 
+              class="w-12 h-12 mx-auto mb-2 transition-colors duration-300" 
+              :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
             </svg>
-            <p class="text-sm font-medium text-gray-600">Click to Pick Color</p>
-            <p class="text-xs text-gray-500 mt-1">Colors auto-add when selected</p>
+            <p 
+              class="text-sm font-medium transition-colors duration-300"
+              :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'"
+            >
+              Click to Pick Color
+            </p>
+            <p 
+              class="text-xs mt-1 transition-colors duration-300"
+              :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
+            >
+              Colors auto-add when selected
+            </p>
           </div>
         </div>
         
@@ -151,7 +189,8 @@
             v-model="colorInput"
             type="text"
             placeholder="#ffffff"
-            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+            class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono transition-colors duration-300"
+            :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'"
             @keyup.enter="addColor"
             @click.stop
           />
@@ -162,10 +201,16 @@
     <!-- Smart Suggestions -->
     <div v-if="suggestions.length > 0" class="mb-8">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-gray-900">✨ Smart Suggestions</h3>
+        <h3 
+          class="text-lg font-semibold transition-colors duration-300"
+          :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+        >
+          ✨ Smart Suggestions
+        </h3>
         <button
           @click="regenerateSuggestions"
-          class="px-3 py-1.5 text-sm bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2"
+          class="px-3 py-1.5 text-sm rounded-lg transition-colors duration-300 flex items-center gap-2"
+          :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300 hover:bg-indigo-900/50' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -176,7 +221,12 @@
       
       <!-- Non-Neutral Suggestions -->
       <div v-if="colorSuggestions.length > 0" class="mb-6">
-        <h4 class="text-sm font-medium text-gray-700 mb-3">Color Harmony</h4>
+        <h4 
+          class="text-sm font-medium mb-3 transition-colors duration-300"
+          :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+        >
+          Color Harmony
+        </h4>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div
             v-for="(suggestion, index) in colorSuggestions"
@@ -200,14 +250,24 @@
                 </svg>
               </button>
             </div>
-            <div class="text-xs text-gray-500">{{ suggestion.reason }}</div>
+            <div 
+              class="text-xs transition-colors duration-300"
+              :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'"
+            >
+              {{ suggestion.reason }}
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Neutral Suggestions -->
       <div v-if="neutralSuggestions.length > 0">
-        <h4 class="text-sm font-medium text-gray-700 mb-3">Neutrals</h4>
+        <h4 
+          class="text-sm font-medium mb-3 transition-colors duration-300"
+          :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
+        >
+          Neutrals
+        </h4>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div
             v-for="(suggestion, index) in neutralSuggestions"
@@ -231,7 +291,12 @@
                 </svg>
               </button>
             </div>
-            <div class="text-xs text-gray-500">{{ suggestion.reason }}</div>
+            <div 
+              class="text-xs transition-colors duration-300"
+              :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'"
+            >
+              {{ suggestion.reason }}
+            </div>
           </div>
         </div>
       </div>
@@ -245,8 +310,14 @@
     />
 
     <!-- Instructions -->
-    <div class="mt-8 pt-6 border-t border-gray-200">
-      <p class="text-sm text-gray-600">
+    <div 
+      class="mt-8 pt-6 border-t transition-colors duration-300"
+      :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
+    >
+      <p 
+        class="text-sm transition-colors duration-300"
+        :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+      >
         Click any color or the + box to open the native color spectrum. Use hex codes or the eyedropper tool. Drag colors to reorder them.
       </p>
     </div>
@@ -255,7 +326,8 @@
     <div
       v-if="showColorPicker"
       ref="colorPickerContainerRef"
-      class="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-4"
+      class="fixed z-50 rounded-lg shadow-xl border p-4 transition-colors duration-300"
+      :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
       :style="colorPickerStyle"
     >
       <div class="w-64">
@@ -304,7 +376,8 @@
               type="number"
               min="0"
               max="255"
-              class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
+              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
             />
           </div>
           <div>
@@ -315,7 +388,8 @@
               type="number"
               min="0"
               max="255"
-              class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
+              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
             />
           </div>
           <div>
@@ -326,7 +400,8 @@
               type="number"
               min="0"
               max="255"
-              class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
+              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
             />
           </div>
         </div>
@@ -338,7 +413,8 @@
             v-model="hexInput"
             @input="updateFromHex"
             type="text"
-            class="w-full px-2 py-1 text-sm border border-gray-300 rounded font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            class="w-full px-2 py-1 text-sm border rounded font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
+            :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'"
             placeholder="#000000"
           />
         </div>
@@ -354,7 +430,8 @@
               min="0"
               max="100"
               step="0.1"
-              class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
+              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
             />
           </div>
           <div>
@@ -366,7 +443,8 @@
               min="0"
               max="100"
               step="0.1"
-              class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
+              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
             />
           </div>
           <div>
@@ -378,7 +456,8 @@
               min="0"
               max="100"
               step="0.1"
-              class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
+              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
             />
           </div>
           <div>
@@ -390,7 +469,8 @@
               min="0"
               max="100"
               step="0.1"
-              class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
+              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
             />
           </div>
         </div>
@@ -402,9 +482,24 @@
             :style="{ backgroundColor: currentHex }"
           ></div>
           <div class="flex-1">
-            <div class="text-sm font-mono font-semibold text-gray-900">{{ currentHex }}</div>
-            <div class="text-xs text-gray-500">RGB({{ rgbValues.r }}, {{ rgbValues.g }}, {{ rgbValues.b }})</div>
-            <div class="text-xs text-gray-500">CMYK({{ Math.round(cmykValues.c) }}, {{ Math.round(cmykValues.m) }}, {{ Math.round(cmykValues.y) }}, {{ Math.round(cmykValues.k) }})</div>
+            <div 
+              class="text-sm font-mono font-semibold transition-colors duration-300"
+              :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+            >
+              {{ currentHex }}
+            </div>
+            <div 
+              class="text-xs transition-colors duration-300"
+              :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
+            >
+              RGB({{ rgbValues.r }}, {{ rgbValues.g }}, {{ rgbValues.b }})
+            </div>
+            <div 
+              class="text-xs transition-colors duration-300"
+              :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
+            >
+              CMYK({{ Math.round(cmykValues.c) }}, {{ Math.round(cmykValues.m) }}, {{ Math.round(cmykValues.y) }}, {{ Math.round(cmykValues.k) }})
+            </div>
           </div>
         </div>
         
@@ -412,7 +507,8 @@
         <div class="mb-4">
           <button
             @click="toggleEyedropper"
-            class="w-full px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+            class="w-full px-4 py-2 text-sm border rounded-lg transition-colors duration-300 flex items-center justify-center gap-2"
+            :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-gray-300 hover:bg-slate-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
           >
             <span class="material-symbols-outlined eyedropper-icon">colorize</span>
             Use Eyedropper
@@ -429,7 +525,8 @@
           </button>
           <button
             @click="closeColorPicker"
-            class="flex-1 px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            class="flex-1 px-4 py-2 text-sm rounded-lg transition-colors duration-300"
+            :class="isDarkMode ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
           >
             Cancel
           </button>
@@ -451,9 +548,11 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import axios from 'axios';
 import AdvancedPaletteTools from './AdvancedPaletteTools.vue';
+
+const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 
 const props = defineProps({
   palette: {
@@ -732,27 +831,38 @@ const openColorPicker = (index, event) => {
   
   if (!cardElement) return;
   
-  // Get card position
+  // Get card position (getBoundingClientRect returns viewport coordinates)
   const rect = cardElement.getBoundingClientRect();
-  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
   
   // Calculate position - place it to the right of the card
-  const cardWidth = rect.width;
   const gap = 16; // gap-4 = 16px
   const pickerWidth = 280; // Width of color picker
+  const pickerHeight = 600; // Approximate height of color picker (including padding)
   
-  let left = rect.right + scrollLeft + gap;
-  let top = rect.top + scrollTop;
+  let left = rect.right + gap;
+  let top = rect.top;
   
   // If there's not enough space on the right, show on the left
-  if (left + pickerWidth > window.innerWidth + scrollLeft) {
-    left = rect.left + scrollLeft - pickerWidth - gap;
+  if (left + pickerWidth > window.innerWidth) {
+    left = rect.left - pickerWidth - gap;
   }
   
-  // Ensure it doesn't go off-screen
-  left = Math.max(16, Math.min(left, window.innerWidth + scrollLeft - pickerWidth - 16));
-  top = Math.max(16, Math.min(top, window.innerHeight + scrollTop - 400));
+  // Ensure it doesn't go off-screen horizontally
+  left = Math.max(16, Math.min(left, window.innerWidth - pickerWidth - 16));
+  
+  // Ensure it doesn't go off-screen vertically
+  const viewportHeight = window.innerHeight;
+  const maxTop = viewportHeight - pickerHeight - 16; // 16px padding from bottom
+  top = Math.max(16, Math.min(top, maxTop));
+  
+  // If it would still go off the bottom, position it above the card instead
+  if (top + pickerHeight > viewportHeight) {
+    top = rect.top - pickerHeight - gap;
+    // If that would go off the top, center it vertically in the viewport
+    if (top < 16) {
+      top = Math.max(16, (viewportHeight - pickerHeight) / 2);
+    }
+  }
   
   colorPickerStyle.value = {
     left: `${left}px`,
@@ -1150,12 +1260,43 @@ const handleClickOutside = (event) => {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
-});
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', handleClickOutside);
-  document.removeEventListener('mousemove', handleGradientDrag);
-  document.removeEventListener('mouseup', endGradientDrag);
+  
+  // Dark mode detection
+  const updateDarkMode = () => {
+    const wasDark = isDarkMode.value;
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+    if (wasDark !== isDarkMode.value) {
+      nextTick(() => {});
+    }
+  };
+  
+  const darkModeObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+        updateDarkMode();
+      }
+    });
+  });
+  
+  darkModeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+    attributeOldValue: true
+  });
+  
+  updateDarkMode();
+  
+  const darkModeInterval = setInterval(updateDarkMode, 50);
+  
+  const cleanup = () => {
+    darkModeObserver.disconnect();
+    clearInterval(darkModeInterval);
+    document.removeEventListener('click', handleClickOutside);
+    document.removeEventListener('mousemove', handleGradientDrag);
+    document.removeEventListener('mouseup', endGradientDrag);
+  };
+  
+  onBeforeUnmount(cleanup);
 });
 </script>
 

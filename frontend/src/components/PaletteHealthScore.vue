@@ -3,43 +3,87 @@
     <!-- Palette Quality Score Widget (not sticky, inline) -->
     <button
       @click="showModal = true"
-      class="bg-white rounded-lg shadow-sm border-2 border-indigo-500 px-4 py-3 hover:shadow-md transition-shadow flex items-center gap-3 w-full"
+      class="rounded-lg shadow-sm border-2 border-indigo-500 px-4 py-3 hover:shadow-md transition-all duration-300 flex items-center gap-3 w-full"
+      :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
     >
       <div class="text-left flex-1 self-center">
-        <div class="text-xs font-medium text-gray-600 flex items-center gap-2">
-          <span class="material-symbols-outlined text-sm text-indigo-600 flex-shrink-0">show_chart</span>
+        <div 
+          class="text-xs font-medium flex items-center gap-2 transition-colors duration-300"
+          :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+        >
+          <span 
+            class="material-symbols-outlined text-sm flex-shrink-0 transition-colors duration-300"
+            :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
+          >
+            show_chart
+          </span>
           <span class="flex-1">Palette Quality Score</span>
-          <span class="text-sm font-semibold text-indigo-700 bg-indigo-50 px-2 py-1 rounded flex items-center justify-center h-6">{{ healthScore }}</span>
+          <span 
+            class="text-sm font-semibold px-2 py-1 rounded flex items-center justify-center h-6 transition-colors duration-300"
+            :class="isDarkMode ? 'text-indigo-300 bg-indigo-900/30' : 'text-indigo-700 bg-indigo-50'"
+          >
+            {{ healthScore }}
+          </span>
         </div>
-        <div class="text-xs text-gray-500 mt-0.5">{{ metCriteria }}/{{ totalCriteria }} criteria met</div>
+        <div 
+          class="text-xs mt-0.5 transition-colors duration-300"
+          :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'"
+        >
+          {{ metCriteria }}/{{ totalCriteria }} criteria met
+        </div>
       </div>
     </button>
 
   <!-- Palette Quality Score Modal -->
   <div
     v-if="showModal"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
+    class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm transition-colors duration-300"
+    :class="isDarkMode ? 'bg-black/60' : 'bg-black/50'"
     @click.self="showModal = false"
   >
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 relative">
+    <div 
+      class="rounded-lg shadow-xl max-w-md w-full mx-4 relative transition-colors duration-300"
+      :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
+    >
       <!-- Header -->
-      <div class="flex items-start justify-between p-6 border-b border-gray-200">
+      <div 
+        class="flex items-start justify-between p-6 border-b transition-colors duration-300"
+        :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
+      >
         <div class="flex items-start gap-3 flex-1">
           <div class="flex-1">
-            <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <span class="material-symbols-outlined text-xl text-indigo-600">show_chart</span>
+            <h2 
+              class="text-xl font-bold flex items-center gap-2 transition-colors duration-300"
+              :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+            >
+              <span 
+                class="material-symbols-outlined text-xl transition-colors duration-300"
+                :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
+              >
+                show_chart
+              </span>
               Palette Quality Score
             </h2>
-            <p class="text-sm text-gray-600 mt-1">
+            <p 
+              class="text-sm mt-1 transition-colors duration-300"
+              :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+            >
               Your palette quality score measures how complete and accessible your color palette is.
             </p>
           </div>
         </div>
         <button
           @click="showModal = false"
-          class="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          class="p-2 rounded-lg transition-colors duration-300"
+          :class="isDarkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'"
         >
-          <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg 
+            class="w-5 h-5 transition-colors duration-300" 
+            :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -70,8 +114,16 @@
               </svg>
             </div>
             <div class="flex-1">
-              <div class="font-semibold text-gray-900">Add 3+ colors</div>
-              <div class="text-sm text-gray-600 mt-0.5">
+              <div 
+                class="font-semibold transition-colors duration-300"
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                Add 3+ colors
+              </div>
+              <div 
+                class="text-sm mt-0.5 transition-colors duration-300"
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+              >
                 {{ (palette?.colors || []).length }} color{{ (palette?.colors || []).length !== 1 ? 's' : '' }} added
               </div>
             </div>
@@ -99,8 +151,16 @@
               </svg>
             </div>
             <div class="flex-1">
-              <div class="font-semibold text-gray-900">Add a light neutral</div>
-              <div class="text-sm text-gray-600 mt-0.5">
+              <div 
+                class="font-semibold transition-colors duration-300"
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                Add a light neutral
+              </div>
+              <div 
+                class="text-sm mt-0.5 transition-colors duration-300"
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+              >
                 For backgrounds and light UI elements
               </div>
             </div>
@@ -128,8 +188,16 @@
               </svg>
             </div>
             <div class="flex-1">
-              <div class="font-semibold text-gray-900">Add a dark neutral</div>
-              <div class="text-sm text-gray-600 mt-0.5">
+              <div 
+                class="font-semibold transition-colors duration-300"
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                Add a dark neutral
+              </div>
+              <div 
+                class="text-sm mt-0.5 transition-colors duration-300"
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+              >
                 For text and dark UI elements
               </div>
             </div>
@@ -157,8 +225,16 @@
               </svg>
             </div>
             <div class="flex-1">
-              <div class="font-semibold text-gray-900">Every color has at least 1 accessible pairing</div>
-              <div class="text-sm text-gray-600 mt-0.5">
+              <div 
+                class="font-semibold transition-colors duration-300"
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                Every color has at least 1 accessible pairing
+              </div>
+              <div 
+                class="text-sm mt-0.5 transition-colors duration-300"
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+              >
                 <span v-if="(palette?.colors || []).length < 2">
                   Requires at least 2 colors
                 </span>
@@ -194,8 +270,16 @@
               </svg>
             </div>
             <div class="flex-1">
-              <div class="font-semibold text-gray-900">Select 4+ contrast pairings</div>
-              <div class="text-sm text-gray-600 mt-0.5">
+              <div 
+                class="font-semibold transition-colors duration-300"
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                Select 4+ contrast pairings
+              </div>
+              <div 
+                class="text-sm mt-0.5 transition-colors duration-300"
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+              >
                 {{ healthMetrics.passingPairings }} pairings selected
               </div>
             </div>
@@ -223,8 +307,16 @@
               </svg>
             </div>
             <div class="flex-1">
-              <div class="font-semibold text-gray-900">Define 4 semantic colors</div>
-              <div class="text-sm text-gray-600 mt-0.5">
+              <div 
+                class="font-semibold transition-colors duration-300"
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                Define 4 semantic colors
+              </div>
+              <div 
+                class="text-sm mt-0.5 transition-colors duration-300"
+                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+              >
                 <span v-if="healthMetrics.hasAllSemanticColors">
                   Success, Error, Warning, and Info colors defined
                 </span>
@@ -242,8 +334,10 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import axios from 'axios';
+
+const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 
 const props = defineProps({
   palette: {
@@ -458,5 +552,39 @@ const fetchContrastResults = async () => {
 };
 
 watch(() => props.palette?.colors, fetchContrastResults, { immediate: true, deep: true });
+
+onMounted(() => {
+  // Dark mode detection
+  const updateDarkMode = () => {
+    const wasDark = isDarkMode.value;
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+    if (wasDark !== isDarkMode.value) {
+      nextTick(() => {});
+    }
+  };
+  
+  const darkModeObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+        updateDarkMode();
+      }
+    });
+  });
+  
+  darkModeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+    attributeOldValue: true
+  });
+  
+  updateDarkMode();
+  
+  const darkModeInterval = setInterval(updateDarkMode, 50);
+  
+  onBeforeUnmount(() => {
+    darkModeObserver.disconnect();
+    clearInterval(darkModeInterval);
+  });
+});
 </script>
 

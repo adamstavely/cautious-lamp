@@ -1,12 +1,28 @@
 <template>
   <div class="space-y-6">
     <!-- Color Variants Generator -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-xl text-indigo-600">auto_fix_high</span>
+    <div 
+      class="rounded-lg shadow-sm border p-6 transition-colors duration-300"
+      :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+    >
+      <h3 
+        class="text-lg font-semibold mb-4 flex items-center gap-2 transition-colors duration-300"
+        :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+      >
+        <span 
+          class="material-symbols-outlined text-xl transition-colors duration-300"
+          :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
+        >
+          auto_fix_high
+        </span>
         Color Variants
       </h3>
-      <p class="text-sm text-gray-600 mb-4">Generate tints, shades, and dark variants for each color</p>
+      <p 
+        class="text-sm mb-4 transition-colors duration-300"
+        :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+      >
+        Generate tints, shades, and dark variants for each color
+      </p>
       <button
         v-if="variants.length === 0"
         @click.prevent="generateVariants"
@@ -16,7 +32,12 @@
       </button>
       
       <div v-if="variants.length > 0" class="mt-4">
-        <p class="text-sm text-gray-600 mb-2">{{ variants.length }} variants generated</p>
+        <p 
+          class="text-sm mb-2 transition-colors duration-300"
+          :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+        >
+          {{ variants.length }} variants generated
+        </p>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div
             v-for="(variant, index) in variants"
@@ -25,61 +46,114 @@
             @click="addVariant(variant)"
           >
             <div
-              class="w-full h-20 rounded-lg shadow-md mb-2 border border-gray-200"
+              class="w-full h-20 rounded-lg shadow-md mb-2 border transition-colors duration-300"
+              :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
               :style="{ backgroundColor: variant.hex }"
             ></div>
-            <div class="text-xs text-gray-600 text-center">{{ variant.type }}</div>
-            <div class="text-xs text-gray-500 text-center font-mono">{{ variant.hex }}</div>
+            <div 
+              class="text-xs text-center transition-colors duration-300"
+              :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+            >
+              {{ variant.type }}
+            </div>
+            <div 
+              class="text-xs text-center font-mono transition-colors duration-300"
+              :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'"
+            >
+              {{ variant.hex }}
+            </div>
           </div>
         </div>
       </div>
-      <div v-else-if="variants.length === 0 && palette && palette.colors && palette.colors.length > 0" class="mt-4 text-sm text-gray-500">
+      <div 
+        v-else-if="variants.length === 0 && palette && palette.colors && palette.colors.length > 0" 
+        class="mt-4 text-sm transition-colors duration-300"
+        :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'"
+      >
         Click "Generate Variants" to create tints and shades
       </div>
     </div>
 
     <!-- Semantic Color Validation -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-xl text-indigo-600">label</span>
+    <div 
+      class="rounded-lg shadow-sm border p-6 transition-colors duration-300"
+      :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+    >
+      <h3 
+        class="text-lg font-semibold mb-4 flex items-center gap-2 transition-colors duration-300"
+        :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+      >
+        <span 
+          class="material-symbols-outlined text-xl transition-colors duration-300"
+          :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
+        >
+          label
+        </span>
         Semantic Color Validation
       </h3>
       <div class="grid grid-cols-4 gap-4">
         <div
           v-for="semantic in semanticTypes"
           :key="semantic.type"
-          class="border border-gray-200 rounded-lg p-4"
+          class="border rounded-lg p-4 transition-colors duration-300"
+          :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
         >
           <div class="flex items-center gap-2 mb-2">
             <span class="material-symbols-outlined text-lg" :style="{ color: semantic.color }">
               {{ semantic.icon }}
             </span>
-            <span class="font-semibold text-gray-900">{{ semantic.label }}</span>
+            <span 
+              class="font-semibold transition-colors duration-300"
+              :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+            >
+              {{ semantic.label }}
+            </span>
           </div>
           <div v-if="semanticMatches[semantic.type]" class="text-sm text-green-600 flex items-center gap-1 mb-2">
             <span class="material-symbols-outlined text-sm">check</span>
             {{ semanticMatches[semantic.type].name || semanticMatches[semantic.type].hex }}
           </div>
           <div v-else class="mb-2">
-            <div class="text-sm text-gray-500 mb-2">No suitable color found</div>
+            <div 
+              class="text-sm mb-2 transition-colors duration-300"
+              :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
+            >
+              No suitable color found
+            </div>
             <button
               @click="generateSemanticSuggestion(semantic.type)"
-              class="text-xs px-2 py-1 bg-indigo-50 text-indigo-700 rounded hover:bg-indigo-100 transition-colors"
+              class="text-xs px-2 py-1 rounded hover:bg-indigo-100 transition-colors duration-300"
+              :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300 hover:bg-indigo-900/50' : 'bg-indigo-50 text-indigo-700'"
             >
               Suggest Color
             </button>
           </div>
           
           <!-- Show suggestion if available -->
-          <div v-if="semanticSuggestions[semantic.type]" class="mt-2 p-2 bg-gray-50 rounded border border-gray-200">
+          <div 
+            v-if="semanticSuggestions[semantic.type]" 
+            class="mt-2 p-2 rounded border transition-colors duration-300"
+            :class="isDarkMode ? 'bg-slate-700 border-gray-600' : 'bg-gray-50 border-gray-200'"
+          >
             <div class="flex items-center gap-2 mb-2">
               <div
-                class="w-12 h-12 rounded border border-gray-300"
+                class="w-12 h-12 rounded border transition-colors duration-300"
+                :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
                 :style="{ backgroundColor: semanticSuggestions[semantic.type].hex }"
               ></div>
               <div class="flex-1">
-                <div class="text-xs font-mono text-gray-900">{{ semanticSuggestions[semantic.type].hex }}</div>
-                <div class="text-xs text-gray-600">{{ semanticSuggestions[semantic.type].name }}</div>
+                <div 
+                  class="text-xs font-mono transition-colors duration-300"
+                  :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+                >
+                  {{ semanticSuggestions[semantic.type].hex }}
+                </div>
+                <div 
+                  class="text-xs transition-colors duration-300"
+                  :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+                >
+                  {{ semanticSuggestions[semantic.type].name }}
+                </div>
               </div>
               <button
                 @click="addSemanticSuggestion(semantic.type)"
@@ -90,7 +164,8 @@
             </div>
             <button
               @click="generateSemanticSuggestion(semantic.type)"
-              class="text-xs text-gray-600 hover:text-gray-800"
+              class="text-xs transition-colors duration-300"
+              :class="isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-800'"
             >
               Generate Another
             </button>
@@ -100,12 +175,28 @@
     </div>
 
     <!-- Color Scale Generator -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-xl text-indigo-600">format_color_fill</span>
+    <div 
+      class="rounded-lg shadow-sm border p-6 transition-colors duration-300"
+      :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+    >
+      <h3 
+        class="text-lg font-semibold mb-4 flex items-center gap-2 transition-colors duration-300"
+        :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+      >
+        <span 
+          class="material-symbols-outlined text-xl transition-colors duration-300"
+          :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
+        >
+          format_color_fill
+        </span>
         Color Scale Generator
       </h3>
-      <p class="text-sm text-gray-600 mb-4">Generate complete color scales (50-900) for all colors in your palette, similar to Tailwind CSS</p>
+      <p 
+        class="text-sm mb-4 transition-colors duration-300"
+        :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+      >
+        Generate complete color scales (50-900) for all colors in your palette, similar to Tailwind CSS
+      </p>
       <button
         v-if="colorScales.length === 0"
         @click.prevent="generateColorScale"
@@ -116,7 +207,12 @@
       </button>
       
       <div v-if="colorScales.length > 0" class="mt-4 relative">
-        <p class="text-sm text-gray-600 mb-2">{{ colorScales.length }} color scale(s) generated</p>
+        <p 
+          class="text-sm mb-2 transition-colors duration-300"
+          :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+        >
+          {{ colorScales.length }} color scale(s) generated
+        </p>
         <!-- Transparent blue background for the 500 column - spans full height -->
         <div 
           v-if="colorScales.length > 0 && colorScales[0].shades.some(s => s.weight === 500)"
@@ -136,7 +232,12 @@
           class="mb-6 relative"
         >
           <div class="mb-2">
-            <div class="text-sm font-semibold text-gray-900">{{ scale.baseColor.name || scale.baseColor.hex }}</div>
+            <div 
+              class="text-sm font-semibold transition-colors duration-300"
+              :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+            >
+              {{ scale.baseColor.name || scale.baseColor.hex }}
+            </div>
           </div>
           <div class="relative mb-8">
             <!-- Title above the 500 column - only show on first scale -->
@@ -153,7 +254,10 @@
                 </div>
               </div>
             </div>
-            <div class="flex rounded-lg border border-gray-200 overflow-hidden">
+            <div 
+              class="flex rounded-lg border overflow-hidden transition-colors duration-300"
+              :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
+            >
               <div
                 v-for="(shade, shadeIndex) in scale.shades"
                 :key="shadeIndex"
@@ -176,12 +280,28 @@
     </div>
 
     <!-- Dark Mode Generator -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-xl text-indigo-600">dark_mode</span>
+    <div 
+      class="rounded-lg shadow-sm border p-6 transition-colors duration-300"
+      :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+    >
+      <h3 
+        class="text-lg font-semibold mb-4 flex items-center gap-2 transition-colors duration-300"
+        :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+      >
+        <span 
+          class="material-symbols-outlined text-xl transition-colors duration-300"
+          :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
+        >
+          dark_mode
+        </span>
         Dark Mode Palette Generator
       </h3>
-      <p class="text-sm text-gray-600 mb-4">Generate dark mode variants optimized for dark backgrounds</p>
+      <p 
+        class="text-sm mb-4 transition-colors duration-300"
+        :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
+      >
+        Generate dark mode variants optimized for dark backgrounds
+      </p>
       <button
         v-if="darkModeColors.length === 0"
         @click.prevent="generateDarkModePalette"
@@ -219,7 +339,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+
+const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 
 const props = defineProps({
   palette: {
@@ -972,6 +1094,38 @@ watch(() => props.palette?.colors, () => {
 
 onMounted(() => {
   validateSemanticColors();
+  
+  // Dark mode detection
+  const updateDarkMode = () => {
+    const wasDark = isDarkMode.value;
+    isDarkMode.value = document.documentElement.classList.contains('dark');
+    if (wasDark !== isDarkMode.value) {
+      nextTick(() => {});
+    }
+  };
+  
+  const darkModeObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+        updateDarkMode();
+      }
+    });
+  });
+  
+  darkModeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+    attributeOldValue: true
+  });
+  
+  updateDarkMode();
+  
+  const darkModeInterval = setInterval(updateDarkMode, 50);
+  
+  onBeforeUnmount(() => {
+    darkModeObserver.disconnect();
+    clearInterval(darkModeInterval);
+  });
 });
 </script>
 
