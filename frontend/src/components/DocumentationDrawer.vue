@@ -1127,7 +1127,6 @@ const toolGroups = computed(() => ({
     { text: 'Chart Builder', link: '/tools/chart-builder', icon: 'bar_chart' },
     { text: 'Timeline Generator', link: '/tools/timeline-generator', icon: 'timeline' },
     { text: 'Table Generator', link: '/tools/table-generator', icon: 'table_chart' },
-    { text: 'Map Generator', link: '/tools/map-generator', icon: 'map' },
     { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'format_color_fill' }
   ],
   text: [

@@ -575,10 +575,6 @@ const router = createRouter({
       component: () => import('./views/TableGenerator.vue'),
     },
     {
-      path: '/tools/map-generator',
-      component: () => import('./views/MapGenerator.vue'),
-    },
-    {
       path: '/tools/spacing-scale',
       component: () => import('./views/SpacingScaleGenerator.vue'),
     },
