@@ -210,24 +210,24 @@
               </h2>
             </div>
             
-            <div class="grid md:grid-cols-2 gap-6">
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <!-- For Designers Card -->
               <router-link 
                 to="/for-designers" 
                 class="group relative bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 md:p-8 border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 overflow-hidden"
               >
-                <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-pink-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
+                <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
                 <div class="relative z-10">
                   <div class="w-12 h-12 mb-4 text-white">
                     <span class="material-symbols-outlined text-5xl">palette</span>
                   </div>
-                  <h3 class="text-white font-bold text-xl md:text-2xl mb-3 group-hover:text-pink-200 transition-colors">
+                  <h3 class="text-white font-bold text-xl md:text-2xl mb-3 group-hover:text-indigo-200 transition-colors">
                     For Designers
                   </h3>
                   <p class="text-white/80 text-sm mb-4 leading-relaxed">
                     Everything you need to create, iterate, and collaborate on design systems. Visual tools, design assets, and seamless design-to-code workflows.
                   </p>
-                  <div class="flex items-center text-white/90 font-medium text-xs group-hover:text-pink-200 transition-colors">
+                  <div class="flex items-center text-white/90 font-medium text-xs group-hover:text-indigo-200 transition-colors">
                     <span>Explore designer tools</span>
                     <span class="material-symbols-outlined ml-2 text-base group-hover:translate-x-1 transition-transform">arrow_forward</span>
                   </div>
@@ -239,19 +239,42 @@
                 to="/for-developers" 
                 class="group relative bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 md:p-8 border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 overflow-hidden"
               >
-                <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-full blur-3xl"></div>
+                <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-indigo-500/20 to-blue-500/20 rounded-full blur-3xl"></div>
                 <div class="relative z-10">
                   <div class="w-12 h-12 mb-4 text-white">
                     <span class="material-symbols-outlined text-5xl">code</span>
                   </div>
-                  <h3 class="text-white font-bold text-xl md:text-2xl mb-3 group-hover:text-cyan-200 transition-colors">
+                  <h3 class="text-white font-bold text-xl md:text-2xl mb-3 group-hover:text-indigo-200 transition-colors">
                     For Developers
                   </h3>
                   <p class="text-white/80 text-sm mb-4 leading-relaxed">
                     Build faster with our component library, APIs, and developer tools. Code snippets, testing frameworks, and seamless integrations.
                   </p>
-                  <div class="flex items-center text-white/90 font-medium text-xs group-hover:text-cyan-200 transition-colors">
+                  <div class="flex items-center text-white/90 font-medium text-xs group-hover:text-indigo-200 transition-colors">
                     <span>Explore developer tools</span>
+                    <span class="material-symbols-outlined ml-2 text-base group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                  </div>
+                </div>
+              </router-link>
+
+              <!-- For Researchers Card -->
+              <router-link 
+                to="/for-researchers" 
+                class="group relative bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 md:p-8 border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 overflow-hidden"
+              >
+                <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-indigo-500/20 to-blue-500/20 rounded-full blur-3xl"></div>
+                <div class="relative z-10">
+                  <div class="w-12 h-12 mb-4 text-white">
+                    <span class="material-symbols-outlined text-5xl">psychology</span>
+                  </div>
+                  <h3 class="text-white font-bold text-xl md:text-2xl mb-3 group-hover:text-indigo-200 transition-colors">
+                    For Researchers
+                  </h3>
+                  <p class="text-white/80 text-sm mb-4 leading-relaxed">
+                    Comprehensive research tools, HCD methodologies, and user insights to inform design decisions and improve user experiences.
+                  </p>
+                  <div class="flex items-center text-white/90 font-medium text-xs group-hover:text-indigo-200 transition-colors">
+                    <span>Explore research tools</span>
                     <span class="material-symbols-outlined ml-2 text-base group-hover:translate-x-1 transition-transform">arrow_forward</span>
                   </div>
                 </div>

@@ -123,6 +123,10 @@ const router = createRouter({
       component: () => import('./views/ForDevelopers.vue'),
     },
     {
+      path: '/for-researchers',
+      component: () => import('./views/ForResearchers.vue'),
+    },
+    {
       path: '/fonts',
       component: () => import('./views/Fonts.vue'),
     },
