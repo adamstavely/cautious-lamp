@@ -217,19 +217,16 @@
                   >
                     <!-- Spinner -->
                     <div v-if="config.style === 'spinner'" 
-                      class="spinner"
                       :style="getSpinnerStyles()"
                     ></div>
 
                     <!-- Dots -->
                     <div v-if="config.style === 'dots'" 
                       class="flex gap-2"
-                      :style="{ '--spinner-color': config.color, '--spinner-speed': `${config.speed}s` }"
                     >
                       <div 
                         v-for="i in 3"
                         :key="i"
-                        class="spinner-dot"
                         :style="getDotStyles(i)"
                       ></div>
                     </div>
@@ -237,12 +234,10 @@
                     <!-- Bars -->
                     <div v-if="config.style === 'bars'" 
                       class="flex gap-1 items-end"
-                      :style="{ '--spinner-color': config.color, '--spinner-speed': `${config.speed}s` }"
                     >
                       <div 
                         v-for="i in 5"
                         :key="i"
-                        class="spinner-bar"
                         :style="getBarStyles(i)"
                       ></div>
                     </div>
@@ -250,7 +245,6 @@
                     <!-- Skeleton -->
                     <div v-if="config.style === 'skeleton'" 
                       class="w-full space-y-3"
-                      :style="{ '--spinner-color': config.color, '--spinner-speed': `${config.speed}s` }"
                     >
                       <div 
                         v-for="row in config.skeletonRows"
@@ -260,7 +254,6 @@
                         <div 
                           v-for="col in config.skeletonColumns"
                           :key="col"
-                          class="skeleton-box"
                           :style="getSkeletonStyles()"
                         ></div>
                       </div>
@@ -268,7 +261,6 @@
 
                     <!-- Pulse -->
                     <div v-if="config.style === 'pulse'" 
-                      class="spinner-pulse"
                       :style="getPulseStyles()"
                     ></div>
                   </div>
@@ -680,48 +672,8 @@ onBeforeUnmount(() => {
 });
 </script>
 
-<style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-
-.spinner {
-  border: 4px solid;
-  border-top-color: var(--spinner-color, #6366f1);
-  border-right-color: transparent;
-  border-bottom-color: transparent;
-  border-left-color: transparent;
-  border-radius: 50%;
-  animation: spinner-rotate var(--spinner-speed, 1s) linear infinite;
-}
-
-.spinner-dot {
-  width: 12px;
-  height: 12px;
-  background-color: var(--spinner-color, #6366f1);
-  border-radius: 50%;
-  animation: spinner-dot-bounce var(--spinner-speed, 1s) ease-in-out infinite;
-}
-
-.spinner-bar {
-  width: 6px;
-  background-color: var(--spinner-color, #6366f1);
-  border-radius: 2px;
-  animation: spinner-bar-bounce var(--spinner-speed, 1s) ease-in-out infinite;
-}
-
-.skeleton-box {
-  flex: 1;
-  border-radius: 4px;
-  animation: skeleton-pulse var(--spinner-speed, 1s) ease-in-out infinite;
-}
-
-.spinner-pulse {
-  background-color: var(--spinner-color, #6366f1);
-  border-radius: 50%;
-  animation: spinner-pulse-scale var(--spinner-speed, 1s) ease-in-out infinite;
-}
-
+<style>
+/* Global keyframes for loading animations - must be global for inline styles to work */
 @keyframes spinner-rotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -745,6 +697,12 @@ onBeforeUnmount(() => {
 @keyframes spinner-pulse-scale {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.2); opacity: 0.7; }
+}
+</style>
+
+<style scoped>
+.texture-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 </style>
 
