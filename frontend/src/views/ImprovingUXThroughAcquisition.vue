@@ -30,34 +30,113 @@
                 </div>
                 <div class="hidden md:block flex-shrink-0">
                   <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+                    <svg 
+                      viewBox="0 0 200 200" 
+                      class="w-full h-full" 
+                      preserveAspectRatio="xMidYMid meet"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="256"
+                      height="256"
+                    >
                       <defs>
                         <linearGradient id="uxAcquisitionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                           <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
                           <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
                         </linearGradient>
+                        <linearGradient id="uxAcquisitionGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:0.8" />
+                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:0.4" />
+                        </linearGradient>
+                        <marker 
+                          id="arrowhead" 
+                          markerWidth="10" 
+                          markerHeight="10" 
+                          refX="9" 
+                          refY="3" 
+                          orient="auto"
+                        >
+                          <polygon points="0 0, 10 3, 0 6" fill="url(#uxAcquisitionGradient)" opacity="0.7"/>
+                        </marker>
                       </defs>
-                      <!-- User journey/flow icon -->
-                      <path d="M30 100 Q50 50, 100 50 T170 100" 
-                            stroke="url(#uxAcquisitionGradient)" stroke-width="4" fill="none" opacity="0.6"/>
-                      <path d="M30 100 Q50 150, 100 150 T170 100" 
-                            stroke="url(#uxAcquisitionGradient)" stroke-width="4" fill="none" opacity="0.4"/>
-                      <!-- User nodes -->
-                      <circle cx="30" cy="100" r="12" fill="url(#uxAcquisitionGradient)" opacity="0.7"/>
-                      <circle cx="100" cy="50" r="14" fill="url(#uxAcquisitionGradient)" opacity="0.8"/>
-                      <circle cx="100" cy="150" r="14" fill="url(#uxAcquisitionGradient)" opacity="0.8"/>
-                      <circle cx="170" cy="100" r="12" fill="url(#uxAcquisitionGradient)" opacity="0.7"/>
-                      <!-- Growth indicators -->
-                      <path d="M170 100 L185 85 M185 85 L200 85 M185 85 L185 100" 
-                            stroke="url(#uxAcquisitionGradient)" stroke-width="2" fill="none" opacity="0.5"/>
-                      <!-- Connection points -->
-                      <circle cx="100" cy="50" r="6" fill="white" opacity="0.9"/>
-                      <circle cx="100" cy="150" r="6" fill="white" opacity="0.9"/>
-                      <!-- Engagement indicators -->
-                      <circle cx="60" cy="75" r="4" fill="url(#uxAcquisitionGradient)" opacity="0.6"/>
-                      <circle cx="140" cy="75" r="4" fill="url(#uxAcquisitionGradient)" opacity="0.6"/>
-                      <circle cx="60" cy="125" r="4" fill="url(#uxAcquisitionGradient)" opacity="0.6"/>
-                      <circle cx="140" cy="125" r="4" fill="url(#uxAcquisitionGradient)" opacity="0.6"/>
+                      
+                      <!-- Background circle representing user base -->
+                      <circle cx="100" cy="100" r="75" fill="url(#uxAcquisitionGradient2)" opacity="0.2"/>
+                      
+                      <!-- Central hub representing design system -->
+                      <circle cx="100" cy="100" r="20" fill="url(#uxAcquisitionGradient)" opacity="0.9"/>
+                      <circle cx="100" cy="100" r="12" fill="white" opacity="0.9"/>
+                      
+                      <!-- User acquisition flow - arrows pointing inward -->
+                      <path 
+                        d="M 30 50 L 85 85" 
+                        stroke="url(#uxAcquisitionGradient)" 
+                        stroke-width="3" 
+                        fill="none" 
+                        opacity="0.7"
+                        stroke-linecap="round"
+                        marker-end="url(#arrowhead)"
+                      />
+                      <path 
+                        d="M 170 50 L 115 85" 
+                        stroke="url(#uxAcquisitionGradient)" 
+                        stroke-width="3" 
+                        fill="none" 
+                        opacity="0.7"
+                        stroke-linecap="round"
+                        marker-end="url(#arrowhead)"
+                      />
+                      <path 
+                        d="M 30 150 L 85 115" 
+                        stroke="url(#uxAcquisitionGradient)" 
+                        stroke-width="3" 
+                        fill="none" 
+                        opacity="0.7"
+                        stroke-linecap="round"
+                        marker-end="url(#arrowhead)"
+                      />
+                      <path 
+                        d="M 170 150 L 115 115" 
+                        stroke="url(#uxAcquisitionGradient)" 
+                        stroke-width="3" 
+                        fill="none" 
+                        opacity="0.7"
+                        stroke-linecap="round"
+                        marker-end="url(#arrowhead)"
+                      />
+                      
+                      <!-- User nodes at entry points -->
+                      <circle cx="30" cy="50" r="10" fill="url(#uxAcquisitionGradient)" opacity="0.8"/>
+                      <circle cx="170" cy="50" r="10" fill="url(#uxAcquisitionGradient)" opacity="0.8"/>
+                      <circle cx="30" cy="150" r="10" fill="url(#uxAcquisitionGradient)" opacity="0.8"/>
+                      <circle cx="170" cy="150" r="10" fill="url(#uxAcquisitionGradient)" opacity="0.8"/>
+                      
+                      <!-- Growth/engagement indicators - small circles along paths -->
+                      <circle cx="57" cy="67" r="4" fill="url(#uxAcquisitionGradient)" opacity="0.6"/>
+                      <circle cx="143" cy="67" r="4" fill="url(#uxAcquisitionGradient)" opacity="0.6"/>
+                      <circle cx="57" cy="133" r="4" fill="url(#uxAcquisitionGradient)" opacity="0.6"/>
+                      <circle cx="143" cy="133" r="4" fill="url(#uxAcquisitionGradient)" opacity="0.6"/>
+                      
+                      <!-- Growth arrow pointing upward -->
+                      <path 
+                        d="M 100 30 L 100 15 M 95 20 L 100 15 L 105 20" 
+                        stroke="url(#uxAcquisitionGradient)" 
+                        stroke-width="2.5" 
+                        fill="none" 
+                        opacity="0.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      
+                      <!-- Success indicators - checkmarks -->
+                      <path 
+                        d="M 88 100 L 95 107 L 112 90" 
+                        stroke="white" 
+                        stroke-width="2.5" 
+                        fill="none" 
+                        opacity="0.9"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
                     </svg>
                   </div>
                 </div>
