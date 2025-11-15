@@ -183,10 +183,6 @@ const router = createRouter({
       component: () => import('./views/AI.vue'),
     },
     {
-      path: '/ai/overview',
-      component: () => import('./views/AIOverview.vue'),
-    },
-    {
       path: '/ai/patterns',
       component: () => import('./views/AIPatterns.vue'),
     },

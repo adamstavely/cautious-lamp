@@ -353,7 +353,7 @@ const getFilePath = (docPath) => {
     '/spacing': '/docs/spacing.md',
     '/shadows': '/docs/shadows.md',
     '/accessibility': '/docs/hcd/accessibility.md',
-    '/ai/overview': '/docs/ai/overview.md',
+    '/ai': '/docs/ai/overview.md',
     '/ai/patterns': '/docs/ai/patterns.md',
     '/ai/components': '/docs/ai/components.md',
     '/hcd/principles': '/docs/hcd/principles.md',

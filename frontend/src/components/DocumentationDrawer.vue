@@ -67,12 +67,34 @@
           </button>
         </div>
         <nav class="space-y-6">
+          <!-- Overview -->
+          <div class="space-y-1">
+            <router-link
+              v-for="item in filteredDesignPatterns.filter(item => item.link === '/patterns')"
+              :key="item.link"
+              :to="item.link"
+              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              :class="[
+                isActive(item.link)
+                  ? (isDarkMode 
+                    ? 'text-indigo-400 bg-indigo-900/20' 
+                    : 'text-indigo-600 bg-indigo-50')
+                  : (isDarkMode
+                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+              ]"
+            >
+              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+              <span class="font-medium">{{ item.text }}</span>
+            </router-link>
+          </div>
+
           <!-- Design Patterns -->
           <div>
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Design Patterns</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in filteredDesignPatterns"
+                v-for="item in filteredDesignPatterns.filter(item => item.link !== '/patterns')"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -134,26 +156,23 @@
         </div>
         <nav class="space-y-6">
           <!-- Overview -->
-          <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Overview</h4>
-            <div class="space-y-1">
-              <router-link
-                to="/components"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-                :class="[
-                  isActive('/components')
-                    ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
-                    : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-                ]"
-              >
-                <span class="material-symbols-outlined text-lg">widgets</span>
-                <span class="font-medium">Overview</span>
-              </router-link>
-            </div>
+          <div class="space-y-1">
+            <router-link
+              to="/components"
+              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              :class="[
+                isActive('/components')
+                  ? (isDarkMode 
+                    ? 'text-indigo-400 bg-indigo-900/20' 
+                    : 'text-indigo-600 bg-indigo-50')
+                  : (isDarkMode
+                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+              ]"
+            >
+              <span class="material-symbols-outlined text-lg">widgets</span>
+              <span class="font-medium">Overview</span>
+            </router-link>
           </div>
 
           <!-- Utilities -->
@@ -225,12 +244,34 @@
           </button>
         </div>
         <nav class="space-y-6">
-          <!-- Overview & Basics -->
+          <!-- Overview -->
+          <div class="space-y-1">
+            <router-link
+              v-for="item in filteredGettingStartedBasics.filter(item => item.link === '/getting-started')"
+              :key="item.link"
+              :to="item.link"
+              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              :class="[
+                isActive(item.link)
+                  ? (isDarkMode 
+                    ? 'text-indigo-400 bg-indigo-900/20' 
+                    : 'text-indigo-600 bg-indigo-50')
+                  : (isDarkMode
+                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+              ]"
+            >
+              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+              <span class="font-medium">{{ item.text }}</span>
+            </router-link>
+          </div>
+
+          <!-- About -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Overview & Basics</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">About</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in filteredGettingStartedBasics"
+                v-for="item in filteredGettingStartedBasics.filter(item => item.link !== '/getting-started')"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -367,28 +408,25 @@
         </div>
         <nav class="space-y-6">
           <!-- Overview -->
-          <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Overview</h4>
-            <div class="space-y-1">
-              <router-link
-                v-for="item in filteredToolGroups.overview"
-                :key="item.link"
-                :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
-                    : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-                ]"
-              >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-                <span class="font-medium">{{ item.text }}</span>
-              </router-link>
-            </div>
+          <div class="space-y-1">
+            <router-link
+              v-for="item in filteredToolGroups.overview"
+              :key="item.link"
+              :to="item.link"
+              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              :class="[
+                isActive(item.link)
+                  ? (isDarkMode 
+                    ? 'text-indigo-400 bg-indigo-900/20' 
+                    : 'text-indigo-600 bg-indigo-50')
+                  : (isDarkMode
+                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+              ]"
+            >
+              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+              <span class="font-medium">{{ item.text }}</span>
+            </router-link>
           </div>
 
           <!-- Color -->
@@ -1002,7 +1040,7 @@ const foundations = [
 ];
 
 const artificialIntelligence = [
-  { text: 'AI Overview', link: '/ai/overview', icon: 'psychology' },
+  { text: 'Overview', link: '/ai', icon: 'psychology' },
   { text: 'AI Patterns', link: '/ai/patterns', icon: 'auto_awesome' },
   { text: 'AI Components', link: '/ai/components', icon: 'smart_toy' }
 ];
@@ -1153,8 +1191,8 @@ const componentItems = [
 ];
 
 const adminItems = [
-  { text: 'Audit Logs', link: '/admin/audit', icon: 'history' },
   { text: 'Overview', link: '/admin', icon: 'admin_panel_settings' },
+  { text: 'Audit Logs', link: '/admin/audit', icon: 'history' },
   { text: 'System Health', link: '/admin/health', icon: 'space_dashboard' },
   { text: 'Governance', link: '/admin/governance', icon: 'gavel' },
   { text: 'Role Management', link: '/admin/roles', icon: 'admin_panel_settings' },
@@ -1168,7 +1206,10 @@ const adminItems = [
 const gettingStartedBasics = [
   { text: 'Overview', link: '/getting-started', icon: 'rocket_launch' },
   { text: 'Why a Design System?', link: '/getting-started/why-design-system', icon: 'help_outline' },
-  { text: 'Quick Start', link: '/getting-started/quick-start', icon: 'play_arrow' }
+  { text: 'Quick Start', link: '/getting-started/quick-start', icon: 'play_arrow' },
+  { text: 'Get in Touch', link: '/getting-started/get-in-touch', icon: 'mail' },
+  { text: 'Adopt', link: '/getting-started/adopt', icon: 'trending_up' },
+  { text: 'Improving UX Through Acquisition', link: '/getting-started/improving-ux-through-acquisition', icon: 'insights' }
 ];
 
 const gettingStartedPrinciples = [
@@ -1214,13 +1255,13 @@ const tokenItems = [
   { text: 'Overview', link: '/tokens', icon: 'style' },
   { text: 'Token Studio', link: '/tokens/studio', icon: 'tune' },
   { text: 'Token Playground', link: '/tokens/playground', icon: 'palette' },
-  { text: 'Style Library', link: '/tokens/library', icon: 'library_books' },
-  { text: 'Token Relationships', link: '/tokens/relationships', icon: 'account_tree' }
+  { text: 'Style Library', link: '/tokens/library', icon: 'library_books' }
 ];
 
 const tokenUtilities = [
   { text: 'Token Migration', link: '/tokens/migration', icon: 'swap_horiz' },
-  { text: 'Token Sync', link: '/tokens/sync', icon: 'sync' }
+  { text: 'Token Sync', link: '/tokens/sync', icon: 'sync' },
+  { text: 'Token Relationships', link: '/tokens/relationships', icon: 'account_tree' }
 ];
 
 const showAdmin = computed(() => {

@@ -147,7 +147,7 @@ const crumbs = computed(() => {
     '/spacing': 'Spacing',
     '/shadows': 'Shadows',
     '/accessibility': 'Accessibility',
-    '/ai/overview': 'AI Overview',
+    '/ai': 'AI Overview',
     '/ai/patterns': 'AI Patterns',
     '/ai/components': 'AI Components',
     '/hcd/principles': 'HCD Principles',

@@ -70,7 +70,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- AI Overview Card -->
             <router-link 
-              to="/ai/overview" 
+              to="/ai" 
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
