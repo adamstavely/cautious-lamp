@@ -47,14 +47,21 @@ The following features were recently implemented:
 ## 🚧 High Priority Features (Core Functionality)
 
 ### 1. Enhanced Diff Viewer
-**Status**: ✅ Core slider implemented, additional features pending
+**Status**: ✅ Fully implemented
 - [x] Image comparison slider (drag to compare baseline vs current)
-- [x] Per-result view mode toggle (slider/grid)
-- [ ] Zoom and pan functionality
-- [ ] Side-by-side view option
-- [ ] Overlay diff view (highlight differences)
+- [x] Per-result view mode toggle (slider/side-by-side/overlay/grid)
+- [x] Zoom and pan functionality (mouse wheel zoom, drag to pan, keyboard shortcuts +/-)
+- [x] Side-by-side view option
+- [x] Overlay diff view (highlight differences with adjustable opacity)
 - [x] Keyboard navigation (j/k to navigate between diffs)
-- [ ] Full-screen diff view
+- [x] Full-screen diff view (F key shortcut)
+
+**Additional implemented features:**
+- Grid view mode (fallback display)
+- Keyboard shortcuts for zoom (+/-), reset (0), fullscreen (F)
+- Touch support for slider on mobile devices
+- Pan indicator when panning
+- Dark mode support
 
 ### 2. Webhook Handling
 **Status**: Placeholder exists, needs full implementation

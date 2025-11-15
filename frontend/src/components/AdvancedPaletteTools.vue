@@ -55,14 +55,14 @@
               :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
             >
               {{ variant.type }}
-            </div>
+          </div>
             <div 
               class="text-xs text-center font-mono transition-colors duration-300"
               :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'"
             >
               {{ variant.hex }}
-            </div>
-          </div>
+        </div>
+      </div>
         </div>
       </div>
       <div 

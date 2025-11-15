@@ -156,23 +156,23 @@
         </div>
         <nav class="space-y-6">
           <!-- Overview -->
-          <div class="space-y-1">
-            <router-link
-              to="/components"
-              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-              :class="[
-                isActive('/components')
-                  ? (isDarkMode 
-                    ? 'text-indigo-400 bg-indigo-900/20' 
-                    : 'text-indigo-600 bg-indigo-50')
-                  : (isDarkMode
-                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-              ]"
-            >
-              <span class="material-symbols-outlined text-lg">widgets</span>
-              <span class="font-medium">Overview</span>
-            </router-link>
+            <div class="space-y-1">
+              <router-link
+                to="/components"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive('/components')
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">widgets</span>
+                <span class="font-medium">Overview</span>
+              </router-link>
           </div>
 
           <!-- Utilities -->
@@ -408,25 +408,25 @@
         </div>
         <nav class="space-y-6">
           <!-- Overview -->
-          <div class="space-y-1">
-            <router-link
-              v-for="item in filteredToolGroups.overview"
-              :key="item.link"
-              :to="item.link"
-              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-              :class="[
-                isActive(item.link)
-                  ? (isDarkMode 
-                    ? 'text-indigo-400 bg-indigo-900/20' 
-                    : 'text-indigo-600 bg-indigo-50')
-                  : (isDarkMode
-                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-              ]"
-            >
-              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-              <span class="font-medium">{{ item.text }}</span>
-            </router-link>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in filteredToolGroups.overview"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
           </div>
 
           <!-- Color -->
@@ -1127,6 +1127,7 @@ const toolGroups = computed(() => ({
     { text: 'Chart Builder', link: '/tools/chart-builder', icon: 'bar_chart' },
     { text: 'Timeline Generator', link: '/tools/timeline-generator', icon: 'timeline' },
     { text: 'Table Generator', link: '/tools/table-generator', icon: 'table_chart' },
+    { text: 'Map Generator', link: '/tools/map-generator', icon: 'map' },
     { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'format_color_fill' }
   ],
   text: [

@@ -466,7 +466,31 @@
               </p>
             </router-link>
 
-            <!-- Tool Card 20: Spacing Scale Generator -->
+            <!-- Tool Card 20: Map Generator -->
+            <router-link 
+              to="/tools/map-generator" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">map</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Map Generator
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Create interactive maps with markers, regions, and tooltips. Generate React or Vue components with Leaflet integration.
+              </p>
+            </router-link>
+
+            <!-- Tool Card 21: Spacing Scale Generator -->
             <router-link 
               to="/tools/spacing-scale" 
               class="group rounded-2xl p-6 border transition-all"
@@ -490,7 +514,7 @@
               </p>
             </router-link>
 
-            <!-- Tool Card 21: Box Shadow Generator -->
+            <!-- Tool Card 22: Box Shadow Generator -->
             <router-link 
               to="/tools/box-shadow" 
               class="group rounded-2xl p-6 border transition-all"
@@ -514,7 +538,7 @@
               </p>
             </router-link>
 
-            <!-- Tool Card 22: Border Radius Generator -->
+            <!-- Tool Card 23: Border Radius Generator -->
             <router-link 
               to="/tools/border-radius" 
               class="group rounded-2xl p-6 border transition-all"
@@ -538,7 +562,7 @@
               </p>
             </router-link>
 
-            <!-- Tool Card 23: CSS Animation Generator -->
+            <!-- Tool Card 24: CSS Animation Generator -->
             <router-link 
               to="/tools/css-animation" 
               class="group rounded-2xl p-6 border transition-all"

@@ -124,12 +124,44 @@ Components make sense when:
     - Export as SVG or component
     - **Rationale:** Custom diagrams, visual creation needed
 
-12. **Interactive Map Generator**
-    - Create interactive maps
-    - Add markers, regions, tooltips
-    - Configure zoom and controls
-    - Export as component
-    - **Rationale:** Complex configurations, custom content
+12. **Interactive Map Generator** ✅ *Implemented*
+    - Create interactive maps with visual builder
+    - **Map Configuration:**
+      - Center coordinates (lat/lng input or map click)
+      - Initial zoom level (1-18)
+      - Multiple map styles (street, satellite, terrain, dark theme)
+      - Map dimensions and responsive options
+    - **Marker Management:**
+      - Add markers by clicking map or entering coordinates
+      - Custom marker icons (default, custom image, emoji)
+      - Marker colors, sizes, and labels
+      - Drag-and-drop repositioning
+      - Delete and edit markers
+      - Marker clustering option for large datasets
+    - **Region/Area Drawing:**
+      - Draw polygons, circles, and rectangles
+      - Custom fill colors and opacity
+      - Border colors and widths
+      - Region labels and descriptions
+      - Edit and delete regions
+    - **Tooltips & Popups:**
+      - Configure popup content (HTML/text)
+      - Popup positioning options
+      - Auto-open on load option
+      - Custom styling and formatting
+    - **Controls & Interactions:**
+      - Zoom controls (show/hide, position)
+      - Attribution control
+      - Fullscreen control
+      - Scale control
+      - Enable/disable dragging, zoom, double-click zoom
+      - Touch interactions for mobile
+    - **Export Options:**
+      - React component with Leaflet integration
+      - Vue component with Vue-Leaflet integration
+      - Standalone HTML with embedded Leaflet
+      - All dependencies included in export
+    - **Rationale:** Complex configurations, custom content, many visual variations, helps non-developers create interactive maps
 
 13. **Interactive Calendar Generator**
     - Create calendar components

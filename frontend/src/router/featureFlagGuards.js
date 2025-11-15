@@ -33,6 +33,7 @@ const routeToFlagMap = {
   '/tools/png-to-ico': 'png-to-ico',
   '/tools/heuristic-evaluation': 'heuristic-evaluation',
   '/tools/visual-regression': 'visual-regression',
+  '/tools/map-generator': 'map-generator',
   '/palette-builder': 'palette-builder',
   '/theme-builder': 'theme-builder',
   '/fonts': 'font-library',

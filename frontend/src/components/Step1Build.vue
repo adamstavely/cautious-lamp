@@ -1291,9 +1291,9 @@ onMounted(() => {
   const cleanup = () => {
     darkModeObserver.disconnect();
     clearInterval(darkModeInterval);
-    document.removeEventListener('click', handleClickOutside);
-    document.removeEventListener('mousemove', handleGradientDrag);
-    document.removeEventListener('mouseup', endGradientDrag);
+  document.removeEventListener('click', handleClickOutside);
+  document.removeEventListener('mousemove', handleGradientDrag);
+  document.removeEventListener('mouseup', endGradientDrag);
   };
   
   onBeforeUnmount(cleanup);
