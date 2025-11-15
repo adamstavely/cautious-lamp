@@ -115,6 +115,14 @@ const router = createRouter({
       component: () => import('./views/Home.vue'),
     },
     {
+      path: '/for-designers',
+      component: () => import('./views/ForDesigners.vue'),
+    },
+    {
+      path: '/for-developers',
+      component: () => import('./views/ForDevelopers.vue'),
+    },
+    {
       path: '/fonts',
       component: () => import('./views/Fonts.vue'),
     },

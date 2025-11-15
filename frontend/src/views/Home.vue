@@ -5,20 +5,20 @@
       class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
       :style="'margin-left: 48px;'"
     >
-      <div class="h-full p-8 overflow-hidden">
+      <div class="h-full p-6 overflow-hidden">
         <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-16">
+        <div class="max-w-7xl mx-auto mb-8">
           <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
             <!-- Background texture/grain effect -->
             <div class="absolute inset-0 opacity-10 texture-pattern"></div>
             
             <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
               <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
+                <h1 class="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
                   Design.com
-                  <span class="block text-indigo-400 mt-2">Unifying the Mission; by Design</span>
+                  <span class="block text-indigo-400 mt-2 text-3xl md:text-4xl">Unifying the Mission; by Design</span>
                 </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
+                <p class="text-base md:text-lg text-white/90 leading-relaxed max-w-2xl">
                   The Agency's Design System for Digital Experiences. Guidelines, components, tokens, patterns, assets; everything you need in one powerful platform.
                 </p>
               </div>
@@ -60,9 +60,9 @@
         </div>
 
         <!-- Browse Sections Section -->
-        <div class="max-w-7xl mx-auto mb-16">
+        <div class="max-w-7xl mx-auto mb-8">
           <div class="flex items-center justify-between mb-8">
-            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
               Explore sections
             </h2>
             <button 
@@ -79,7 +79,7 @@
             <!-- Guidelines -->
             <router-link 
               to="/guidelines" 
-              class="group rounded-2xl p-6 border transition-all"
+              class="group rounded-2xl p-5 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
@@ -88,14 +88,14 @@
                 <span class="material-symbols-outlined text-5xl">menu_book</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors mb-2"
+                class="font-semibold text-base transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Guidelines
               </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+              <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Design principles and best practices for building consistent interfaces.
               </p>
             </router-link>
@@ -103,7 +103,7 @@
             <!-- Components -->
             <router-link 
               to="/components" 
-              class="group rounded-2xl p-6 border transition-all"
+              class="group rounded-2xl p-5 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
@@ -112,14 +112,14 @@
                 <span class="material-symbols-outlined text-5xl">widgets</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors mb-2"
+                class="font-semibold text-base transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Components
               </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+              <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Reusable UI components built with accessibility and consistency in mind.
               </p>
             </router-link>
@@ -127,7 +127,7 @@
             <!-- Tokens -->
             <router-link 
               to="/tokens" 
-              class="group rounded-2xl p-6 border transition-all"
+              class="group rounded-2xl p-5 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
@@ -136,14 +136,14 @@
                 <span class="material-symbols-outlined text-5xl">style</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors mb-2"
+                class="font-semibold text-base transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Tokens
               </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+              <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Design tokens for colors, spacing, typography, and more.
               </p>
             </router-link>
@@ -151,7 +151,7 @@
             <!-- Patterns -->
             <router-link 
               to="/patterns" 
-              class="group rounded-2xl p-6 border transition-all"
+              class="group rounded-2xl p-5 border transition-all"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
@@ -160,14 +160,14 @@
                 <span class="material-symbols-outlined text-5xl">pattern</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors mb-2"
+                class="font-semibold text-base transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Patterns
               </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+              <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Proven design patterns and reusable UI solutions.
               </p>
             </router-link>
@@ -175,7 +175,7 @@
             <!-- Fonts -->
             <router-link 
               to="/fonts" 
-              class="group rounded-2xl p-6 border transition-all relative"
+              class="group rounded-2xl p-5 border transition-all relative"
               :class="isDarkMode 
                 ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
@@ -184,17 +184,17 @@
                 <span class="material-symbols-outlined text-5xl">text_fields</span>
               </div>
               <h3 
-                class="font-semibold text-lg transition-colors mb-2"
+                class="font-semibold text-base transition-colors mb-2"
                 :class="isDarkMode 
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
                 Fonts
               </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+              <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Typography system with font libraries and scale tools.
               </p>
-              <span class="material-symbols-outlined absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
+              <span class="material-symbols-outlined absolute top-4 right-4 text-base" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
                 chevron_right
               </span>
             </router-link>
@@ -202,33 +202,59 @@
         </div>
 
         <!-- Featured Tools Section -->
-        <div class="max-w-7xl mx-auto">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-950 dark:via-indigo-900 dark:to-indigo-800">
-            <div class="flex items-center justify-between mb-8">
-              <h2 class="text-4xl md:text-5xl font-bold text-white">
+        <div class="max-w-7xl mx-auto mb-0">
+          <div class="rounded-3xl p-6 md:p-8 bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-950 dark:via-indigo-900 dark:to-indigo-800">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-2xl md:text-3xl font-bold text-white">
                 Powerful tools
               </h2>
-              <button class="px-6 py-2 rounded-full border border-white/30 text-white hover:bg-white/10 transition-colors text-sm font-medium">
-                View all tools
-              </button>
             </div>
             
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-              <router-link to="/tokens/studio" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">Token Studio</h3>
-                <p class="text-white/80 text-sm">Create, manage, and export design tokens compliant with the Design Token Community Group specification.</p>
+            <div class="grid md:grid-cols-2 gap-6">
+              <!-- For Designers Card -->
+              <router-link 
+                to="/for-designers" 
+                class="group relative bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 md:p-8 border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 overflow-hidden"
+              >
+                <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-pink-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
+                <div class="relative z-10">
+                  <div class="w-12 h-12 mb-4 text-white">
+                    <span class="material-symbols-outlined text-5xl">palette</span>
+                  </div>
+                  <h3 class="text-white font-bold text-xl md:text-2xl mb-3 group-hover:text-pink-200 transition-colors">
+                    For Designers
+                  </h3>
+                  <p class="text-white/80 text-sm mb-4 leading-relaxed">
+                    Everything you need to create, iterate, and collaborate on design systems. Visual tools, design assets, and seamless design-to-code workflows.
+                  </p>
+                  <div class="flex items-center text-white/90 font-medium text-xs group-hover:text-pink-200 transition-colors">
+                    <span>Explore designer tools</span>
+                    <span class="material-symbols-outlined ml-2 text-base group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                  </div>
+                </div>
               </router-link>
-              <router-link to="/tools/gradient-generator" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">Gradient Generator</h3>
-                <p class="text-white/80 text-sm">Create stunning CSS gradients with an intuitive visual editor and multiple gradient types.</p>
-              </router-link>
-              <router-link to="/fonts/library" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">Font Library</h3>
-                <p class="text-white/80 text-sm">Browse and preview hundreds of Google Fonts with advanced filtering and comparison tools.</p>
-              </router-link>
-              <router-link to="/api" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">Design System API</h3>
-                <p class="text-white/80 text-sm">Access design tokens and components programmatically via REST and GraphQL APIs.</p>
+
+              <!-- For Developers Card -->
+              <router-link 
+                to="/for-developers" 
+                class="group relative bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 md:p-8 border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 overflow-hidden"
+              >
+                <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-full blur-3xl"></div>
+                <div class="relative z-10">
+                  <div class="w-12 h-12 mb-4 text-white">
+                    <span class="material-symbols-outlined text-5xl">code</span>
+                  </div>
+                  <h3 class="text-white font-bold text-xl md:text-2xl mb-3 group-hover:text-cyan-200 transition-colors">
+                    For Developers
+                  </h3>
+                  <p class="text-white/80 text-sm mb-4 leading-relaxed">
+                    Build faster with our component library, APIs, and developer tools. Code snippets, testing frameworks, and seamless integrations.
+                  </p>
+                  <div class="flex items-center text-white/90 font-medium text-xs group-hover:text-cyan-200 transition-colors">
+                    <span>Explore developer tools</span>
+                    <span class="material-symbols-outlined ml-2 text-base group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                  </div>
+                </div>
               </router-link>
             </div>
           </div>
