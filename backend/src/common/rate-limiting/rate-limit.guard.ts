@@ -8,7 +8,7 @@ import { Request, Response } from 'express';
  */
 @Injectable()
 export class CustomThrottlerGuard extends ThrottlerGuard {
-  protected throwThrottlingException(context: ExecutionContext): void {
+  protected async throwThrottlingException(context: ExecutionContext): Promise<void> {
     const request = context.switchToHttp().getRequest<Request>();
     const response = context.switchToHttp().getResponse<Response>();
     
@@ -29,7 +29,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     );
   }
 
-  protected getTracker(req: Record<string, any>): string {
+  protected async getTracker(req: Record<string, any>): Promise<string> {
     // Use API key if available, otherwise use IP address
     const authHeader = req.headers?.authorization;
     if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {

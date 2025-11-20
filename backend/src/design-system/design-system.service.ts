@@ -452,7 +452,6 @@ export interface ComplianceCheck {
 @Injectable()
 export class DesignSystemService {
   private apiKeys = new Map<string, { name: string; createdAt: Date; encryptedKey?: string }>();
-  private encryptionService?: EncryptionService;
   private applications = new Map<string, Application>();
   private workspaces = new Map<string, Workspace>();
   private workspaceFonts = new Map<string, WorkspaceFont>();

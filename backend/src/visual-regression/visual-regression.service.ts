@@ -3,12 +3,12 @@ import { ArgosApiClient } from './argos-api.client';
 import * as crypto from 'crypto';
 import { 
   CreateProjectDto, 
-  UpdateProjectDto, 
   WebhookPayload, 
   BuildPayload, 
   ScreenshotPayload,
   NotificationConfig 
 } from '../common/types/common.types';
+import { UpdateProjectDto } from './dto/update-project.dto';
 import { ErrorHandler } from '../common/errors/error-handler';
 import { VisualRegressionGateway } from './visual-regression.gateway';
 import { PaginationParams, PaginatedResponse, parsePaginationParams, createPaginatedResponse } from '../common/pagination/pagination.types';
@@ -72,6 +72,22 @@ export interface TestResult {
   approved: boolean;
   approvedBy?: string;
   approvedAt?: Date;
+}
+
+interface ArgosBuild {
+  id: string;
+  status: string;
+  createdAt: string;
+}
+
+interface ArgosScreenshot {
+  id: string;
+  name: string;
+  status: string;
+  baselineUrl?: string;
+  compareUrl?: string;
+  diffUrl?: string;
+  diffPercentage?: number;
 }
 
 @Injectable()
@@ -268,7 +284,7 @@ export class VisualRegressionService {
 
       // Emit WebSocket update
       if (this.gateway) {
-        this.gateway.emitRunStatusUpdate(testRun.id, testRun.status, testRun);
+        this.gateway.emitRunStatusUpdate(testRun.id, testRun.status, testRun as any);
       }
 
       // Poll for build completion in background
@@ -325,7 +341,7 @@ export class VisualRegressionService {
           attempts++;
           // Emit status update
           if (this.gateway) {
-            this.gateway.emitRunStatusUpdate(runId, run.status, run);
+            this.gateway.emitRunStatusUpdate(runId, run.status, run as any);
           }
           setTimeout(poll, pollInterval);
         }
@@ -338,22 +354,6 @@ export class VisualRegressionService {
 
     // Start polling
     setTimeout(poll, pollInterval);
-  }
-
-  interface ArgosBuild {
-    id: string;
-    status: string;
-    createdAt: string;
-  }
-
-  interface ArgosScreenshot {
-    id: string;
-    name: string;
-    status: string;
-    baselineUrl?: string;
-    compareUrl?: string;
-    diffUrl?: string;
-    diffPercentage?: number;
   }
 
   private async fetchBuildResults(
@@ -510,7 +510,8 @@ export class VisualRegressionService {
       throw new NotFoundException(`Test run with ID ${runId} not found`);
     }
 
-    const project = this.projects.get(run.projectId);
+    const projectId = run.projectId;
+    const project = this.projects.get(projectId);
     if (!project) {
       throw new NotFoundException(`Project not found`);
     }
@@ -648,7 +649,7 @@ export class VisualRegressionService {
     };
 
     // Try to identify project from payload
-    const projectId = payload.projectId || payload.project?.id;
+    const projectId = payload.projectId || (payload.project as any)?.id;
     if (!projectId) {
       console.warn('Webhook received without project identifier', webhookLog);
       return { message: 'Webhook received but project not identified', processed: false };
@@ -737,7 +738,7 @@ export class VisualRegressionService {
     const project = this.projects.get(projectId);
     if (!project || !project.argosToken) return;
 
-    const buildId = payload.buildId || payload.build?.id;
+    const buildId = payload.buildId || (payload.build as any)?.id;
     if (!buildId) return;
 
     // Find existing test run
@@ -774,8 +775,8 @@ export class VisualRegressionService {
 
   private async handleScreenshotUpdate(projectId: string, payload: ScreenshotPayload | WebhookPayload): Promise<void> {
     // Update screenshot approval status if needed
-    const screenshotId = payload.screenshotId || payload.screenshot?.id;
-    const buildId = payload.buildId || payload.build?.id;
+    const screenshotId = payload.screenshotId || (payload.screenshot as any)?.id;
+    const buildId = payload.buildId || (payload.build as any)?.id;
     
     if (!screenshotId || !buildId) return;
 
@@ -865,12 +866,21 @@ export class VisualRegressionService {
     const newTests = allResults.filter(r => r.status === 'new').length;
 
     // Calculate trends
-    const runsByDate = runs.reduce((acc, run) => {
+    const trendsMap = runs.reduce((acc, run) => {
       if (!run.startedAt) return acc;
       const date = new Date(run.startedAt).toISOString().split('T')[0];
-      acc[date] = (acc[date] || 0) + 1;
+      if (!acc[date]) {
+        acc[date] = { date, passed: 0, failed: 0 };
+      }
+      if (run.status === 'completed') {
+        acc[date].passed++;
+      } else if (run.status === 'failed') {
+        acc[date].failed++;
+      }
       return acc;
-    }, {} as Record<string, number>);
+    }, {} as Record<string, { date: string; passed: number; failed: number }>);
+    
+    const trends = Object.values(trendsMap).sort((a, b) => a.date.localeCompare(b.date));
 
     const failureRate = totalRuns > 0 ? (failedRuns / totalRuns) * 100 : 0;
     const testPassRate = totalTests > 0 ? (passedTests / totalTests) * 100 : 0;
@@ -892,33 +902,11 @@ export class VisualRegressionService {
       : 0;
 
     return {
-      projectId,
-      period: {
-        startDate: startDate || null,
-        endDate: endDate || null,
-      },
-      summary: {
-        totalRuns,
-        completedRuns,
-        failedRuns,
-        successRate: 100 - failureRate,
-        failureRate,
-      },
-      testMetrics: {
-        totalTests,
-        passedTests,
-        failedTests,
-        newTests,
-        testPassRate,
-        avgDiffPercentage: Math.round(avgDiffPercentage * 100) / 100,
-      },
-      performance: {
-        avgDurationMs: Math.round(avgDuration),
-        avgDurationMinutes: Math.round(avgDuration / 60000 * 100) / 100,
-      },
-      trends: {
-        runsByDate,
-      },
+      totalRuns,
+      passedRuns: completedRuns,
+      failedRuns,
+      averageDuration: Math.round(avgDuration),
+      trends,
     };
   }
 
@@ -1076,7 +1064,8 @@ export class VisualRegressionService {
     }
 
     this.notificationConfigs.set(projectId, configs);
-    return { message: `Notification ${dto.type} configured successfully` };
+    const updated = configs.find(c => c.type === dto.type)!;
+    return { type: updated.type, enabled: updated.enabled, config: updated.config };
   }
 
   async getNotificationConfig(projectId: string): Promise<any[]> {

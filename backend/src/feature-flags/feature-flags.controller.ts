@@ -19,15 +19,6 @@ export class FeatureFlagsController {
     return this.featureFlagsService.getAllFlags();
   }
 
-  @Get(':id')
-  async getFlag(@Param('id') id: string) {
-    const flag = await this.featureFlagsService.getFlag(id);
-    if (!flag) {
-      return { error: 'Feature flag not found' };
-    }
-    return flag;
-  }
-
   @Get('key/:key')
   async getFlagByKey(@Param('key') key: string) {
     const flag = await this.featureFlagsService.getFlagByKey(key);
@@ -46,6 +37,15 @@ export class FeatureFlagsController {
     const groups = userGroups ? userGroups.split(',') : undefined;
     const enabled = await this.featureFlagsService.isEnabled(key, userId, groups);
     return { key, enabled };
+  }
+
+  @Get(':id')
+  async getFlag(@Param('id') id: string) {
+    const flag = await this.featureFlagsService.getFlag(id);
+    if (!flag) {
+      return { error: 'Feature flag not found' };
+    }
+    return flag;
   }
 
   @Post()

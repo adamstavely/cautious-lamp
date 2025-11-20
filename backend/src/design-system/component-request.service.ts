@@ -26,6 +26,8 @@ export interface ComponentRequest {
     targetRelease?: string;
     roadmapItemId?: string;
     roadmapItemCreatedAt?: string;
+    mergedInto?: string;
+    mergedAt?: string;
   };
 }
 

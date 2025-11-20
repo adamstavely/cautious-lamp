@@ -23,6 +23,8 @@ import { SecurityModule } from './common/security/security.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { rateLimitConfig } from './common/rate-limiting/rate-limit.config';
+import { APP_GUARD } from '@nestjs/core';
+import { CustomThrottlerGuard } from './common/rate-limiting/rate-limit.guard';
 
 @Module({
   imports: [
@@ -59,6 +61,12 @@ import { rateLimitConfig } from './common/rate-limiting/rate-limit.config';
     ApiVersioningModule,
     SearchModule,
     SecurityModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: CustomThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

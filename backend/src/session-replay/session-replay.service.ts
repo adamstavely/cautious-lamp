@@ -344,11 +344,11 @@ export class SessionReplayService {
     }
 
     const openreplayBaseUrl = project.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com';
-    const decryptedApiKey = this.decryptToken(project.openreplayApiKey);
-    if (!decryptedApiKey) {
+    const apiKey = this.decryptToken(project.openreplayApiKey);
+    if (!apiKey) {
       throw new BadRequestException('OpenReplay API key not configured or failed to decrypt');
     }
-    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, decryptedApiKey);
+    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, apiKey);
 
     try {
       // Parse project key to get numeric project ID (OpenReplay uses numeric IDs)
@@ -465,11 +465,11 @@ export class SessionReplayService {
     }
 
     const openreplayBaseUrl = project.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com';
-    const decryptedApiKey = this.decryptToken(project.openreplayApiKey);
-    if (!decryptedApiKey) {
+    const apiKey = this.decryptToken(project.openreplayApiKey);
+    if (!apiKey) {
       throw new BadRequestException('OpenReplay API key not configured or failed to decrypt');
     }
-    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, decryptedApiKey);
+    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, apiKey);
 
     try {
       const numericProjectId = parseInt(project.openreplayProjectKey) || 1;

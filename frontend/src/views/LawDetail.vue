@@ -114,7 +114,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h2 class="text-2xl font-bold mb-6 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">example</span>
+                <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">auto_awesome</span>
                 Examples
               </h2>
               <ul class="space-y-3">

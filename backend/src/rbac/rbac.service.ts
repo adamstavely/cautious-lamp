@@ -507,7 +507,7 @@ export class RbacService {
         const userRoles = (this as any).inMemoryUserRoles.get(userId);
         if (userRoles && userRoles.size > 0) {
           const roleIds = Array.from(userRoles);
-          const roles = await Promise.all(roleIds.map(id => this.getRole(id)));
+          const roles = await Promise.all(roleIds.map((id: any) => this.getRole(String(id))));
           return roles.filter((role): role is RoleDefinition => role !== null);
         }
       }
@@ -534,7 +534,7 @@ export class RbacService {
         const userRoles = (this as any).inMemoryUserRoles.get(userId);
         if (userRoles && userRoles.size > 0) {
           const roleIds = Array.from(userRoles);
-          const roles = await Promise.all(roleIds.map(id => this.getRole(id)));
+          const roles = await Promise.all(roleIds.map((id: any) => this.getRole(String(id))));
           return roles.filter((role): role is RoleDefinition => role !== null);
         }
       }

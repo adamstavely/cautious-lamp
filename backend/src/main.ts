@@ -20,9 +20,6 @@ async function bootstrap() {
   
   app.useGlobalPipes(new ValidationPipe());
   
-  // Apply rate limiting globally
-  app.useGlobalGuards(app.get(CustomThrottlerGuard));
-  
   app.enableCors({
     origin: ['http://localhost:5174', 'http://localhost:5175'], // Main app on 5174, VitePress on 5175
     credentials: true,
