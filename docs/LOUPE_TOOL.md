@@ -18,6 +18,10 @@ The Loupe Tool is designed to work in **any application** that uses design syste
     - Style Guide / Documentation
     - GitHub source code
     - Figma design file
+- **Breakpoint Ruler**: Visual ruler at the top of the page showing all breakpoints with clickable markers
+- **Breakpoint Tracking**: Real-time viewport size display and active breakpoint detection
+- **Breakpoint List**: View all breakpoints with their ranges and active/inactive status
+- **Layout Inspector**: Detect and inspect CSS Grid and Flexbox containers on the page
 
 ## Usage
 
@@ -28,7 +32,46 @@ The Loupe Tool is designed to work in **any application** that uses design syste
    - Documentation in a new tab
    - GitHub source code in a new tab
    - Figma design file in a new tab
-5. **Deactivate**: Press `Ctrl+Shift+L` again or `Escape` to close
+5. **Use Breakpoint Features**:
+   - **Breakpoint Ruler**: Toggle the "Breakpoint Ruler" feature to see a visual ruler at the top showing all breakpoints
+   - **Viewport Info**: The control panel header shows current viewport size and active breakpoint
+   - **Breakpoint List**: View all breakpoints in the control panel with active/inactive status
+   - **Layout Inspector**: Toggle "Layout Inspector" to detect and highlight Grid/Flex containers
+6. **Deactivate**: Press `Ctrl+Shift+L` again or `Escape` to close
+
+## Breakpoint Features
+
+### Visual Breakpoint Ruler
+
+The Breakpoint Ruler displays at the top of the page when enabled, showing:
+- **Breakpoint Markers**: Vertical lines indicating each breakpoint's minimum width
+- **Viewport Indicator**: Red line showing the current viewport width
+- **Clickable Markers**: Click on any breakpoint marker for information
+- **Color-Coded**: Each breakpoint has a unique color for easy identification
+
+### Breakpoint List
+
+The control panel includes a breakpoint list showing:
+- **All Breakpoints**: Complete list of configured breakpoints (Small, Medium, Large, etc.)
+- **Active Status**: Visual indication of which breakpoints are currently active
+- **Breakpoint Ranges**: Shows the pixel range for each breakpoint (e.g., "≥ 640px")
+- **Real-time Updates**: Automatically updates as you resize the browser window
+
+### Viewport Tracking
+
+The control panel header displays:
+- **Current Viewport Size**: Shows width × height in pixels
+- **Active Breakpoint**: Displays the name of the currently active breakpoint (e.g., "Large")
+- **Real-time Updates**: Updates automatically when the viewport size changes
+
+### Layout Inspector
+
+The Layout Inspector helps you understand page structure:
+- **Grid Detection**: Automatically detects CSS Grid containers
+- **Flex Detection**: Automatically detects Flexbox containers
+- **Visual Overlays**: Highlights detected layout containers with colored borders
+- **Layout Properties**: Shows gap, direction, alignment, and justification properties
+- **Interactive Selection**: Click on layout items in the list to highlight them on the page
 
 ## Adding Components to the Loupe Tool
 

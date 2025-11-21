@@ -27,7 +27,7 @@
                     </h1>
                   </div>
                   <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Inspect design system components on any page. Press a keyboard shortcut to see every component and access its documentation, source code, and design files.
+                    Inspect design system components on any page. Press a keyboard shortcut to see every component and access its documentation, source code, and design files. Includes breakpoint tracking, layout inspection, and responsive design tools.
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
@@ -73,16 +73,21 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h2 class="text-2xl font-bold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                How to Use
-              </h2>
+              <div class="flex items-center gap-3 mb-4">
+                <div class="p-2 rounded-lg" :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'">
+                  <Keyboard :size="24" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
+                </div>
+                <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  How to Use
+                </h2>
+              </div>
               
               <div class="space-y-4">
                 <div class="flex items-start gap-4">
-                  <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold"
-                    :class="isDarkMode ? 'bg-indigo-900 text-indigo-300' : 'bg-indigo-100 text-indigo-600'"
+                  <div class="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+                    :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-600'"
                   >
-                    1
+                    <Keyboard :size="20" />
                   </div>
                   <div>
                     <h3 class="font-semibold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -95,10 +100,10 @@
                 </div>
 
                 <div class="flex items-start gap-4">
-                  <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold"
-                    :class="isDarkMode ? 'bg-indigo-900 text-indigo-300' : 'bg-indigo-100 text-indigo-600'"
+                  <div class="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+                    :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-600'"
                   >
-                    2
+                    <Eye :size="20" />
                   </div>
                   <div>
                     <h3 class="font-semibold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -111,10 +116,10 @@
                 </div>
 
                 <div class="flex items-start gap-4">
-                  <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold"
-                    :class="isDarkMode ? 'bg-indigo-900 text-indigo-300' : 'bg-indigo-100 text-indigo-600'"
+                  <div class="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+                    :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-600'"
                   >
-                    3
+                    <MousePointerClick :size="20" />
                   </div>
                   <div>
                     <h3 class="font-semibold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -127,10 +132,10 @@
                 </div>
 
                 <div class="flex items-start gap-4">
-                  <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold"
-                    :class="isDarkMode ? 'bg-indigo-900 text-indigo-300' : 'bg-indigo-100 text-indigo-600'"
+                  <div class="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+                    :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-600'"
                   >
-                    4
+                    <ExternalLink :size="20" />
                   </div>
                   <div>
                     <h3 class="font-semibold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -143,10 +148,26 @@
                 </div>
 
                 <div class="flex items-start gap-4">
-                  <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold"
-                    :class="isDarkMode ? 'bg-indigo-900 text-indigo-300' : 'bg-indigo-100 text-indigo-600'"
+                  <div class="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+                    :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-600'"
                   >
-                    5
+                    <Ruler :size="20" />
+                  </div>
+                  <div>
+                    <h3 class="font-semibold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      Use Breakpoint Features
+                    </h3>
+                    <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                      Toggle "Breakpoint Ruler" to see a visual ruler at the top showing all breakpoints. View current viewport size and active breakpoint in the control panel. Use "Layout Inspector" to detect Grid and Flex containers.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex items-start gap-4">
+                  <div class="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+                    :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-600'"
+                  >
+                    <X :size="20" />
                   </div>
                   <div>
                     <h3 class="font-semibold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -160,6 +181,167 @@
               </div>
             </div>
 
+            <!-- Breakpoint Features Section -->
+            <div 
+              class="rounded-lg shadow-sm border p-6 mb-6"
+              :class="isDarkMode 
+                ? 'bg-slate-900 border-gray-700' 
+                : 'bg-white border-gray-200'"
+            >
+              <div class="flex items-center gap-3 mb-4">
+                <div class="p-2 rounded-lg" :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'">
+                  <Ruler :size="24" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
+                </div>
+                <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  Breakpoint Features
+                </h2>
+              </div>
+              
+              <div class="space-y-6">
+                <!-- Breakpoint Ruler -->
+                <div class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                  <div class="flex items-center gap-3 mb-3">
+                    <div class="p-1.5 rounded" :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'">
+                      <Ruler :size="18" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
+                    </div>
+                    <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      Visual Breakpoint Ruler
+                    </h3>
+                  </div>
+                  <div class="mb-3 p-3 rounded bg-slate-900/50 border border-gray-700">
+                    <svg viewBox="0 0 400 40" class="w-full h-10">
+                      <!-- Ruler background -->
+                      <rect x="0" y="0" width="400" height="40" fill="rgb(15 23 42)" />
+                      <!-- Breakpoint markers -->
+                      <line x1="80" y1="0" x2="80" y2="40" stroke="#818cf8" stroke-width="2" />
+                      <text x="80" y="25" fill="#818cf8" font-size="10" text-anchor="middle">640</text>
+                      <line x1="160" y1="0" x2="160" y2="40" stroke="#a78bfa" stroke-width="2" />
+                      <text x="160" y="25" fill="#a78bfa" font-size="10" text-anchor="middle">768</text>
+                      <line x1="240" y1="0" x2="240" y2="40" stroke="#c084fc" stroke-width="2" />
+                      <text x="240" y="25" fill="#c084fc" font-size="10" text-anchor="middle">1024</text>
+                      <line x1="320" y1="0" x2="320" y2="40" stroke="#d946ef" stroke-width="2" />
+                      <text x="320" y="25" fill="#d946ef" font-size="10" text-anchor="middle">1280</text>
+                      <!-- Viewport indicator -->
+                      <line x1="280" y1="0" x2="280" y2="40" stroke="#ef4444" stroke-width="3" />
+                      <circle cx="280" cy="20" r="4" fill="#ef4444" />
+                    </svg>
+                  </div>
+                  <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    The Breakpoint Ruler displays at the top of the page when enabled, providing a visual representation of all breakpoints:
+                  </p>
+                  <ul class="list-disc list-inside space-y-1 text-sm ml-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    <li>Color-coded vertical markers for each breakpoint</li>
+                    <li>Red viewport indicator showing current window width</li>
+                    <li>Clickable markers with breakpoint information</li>
+                    <li>Real-time updates as you resize the browser</li>
+                  </ul>
+                </div>
+
+                <!-- Breakpoint List -->
+                <div class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                  <div class="flex items-center gap-3 mb-3">
+                    <div class="p-1.5 rounded" :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'">
+                      <List :size="18" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
+                    </div>
+                    <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      Breakpoint List
+                    </h3>
+                  </div>
+                  <div class="mb-3 p-3 rounded space-y-2" :class="isDarkMode ? 'bg-slate-900/50 border border-gray-700' : 'bg-white border border-gray-200'">
+                    <div class="flex items-center justify-between p-2 rounded border" :class="isDarkMode ? 'bg-indigo-900/20 border-indigo-700' : 'bg-indigo-50 border-indigo-200'">
+                      <span class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Large</span>
+                      <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700'">Active</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded border" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                      <span class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Medium</span>
+                      <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-500'">Inactive</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded border" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                      <span class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Small</span>
+                      <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-500'">Inactive</span>
+                    </div>
+                  </div>
+                  <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    The control panel includes a comprehensive breakpoint list:
+                  </p>
+                  <ul class="list-disc list-inside space-y-1 text-sm ml-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    <li>Shows all configured breakpoints (Small, Medium, Large, XL, 2XL)</li>
+                    <li>Visual indication of active/inactive status</li>
+                    <li>Displays pixel ranges for each breakpoint</li>
+                    <li>Updates automatically when viewport changes</li>
+                  </ul>
+                </div>
+
+                <!-- Viewport Tracking -->
+                <div class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                  <div class="flex items-center gap-3 mb-3">
+                    <div class="p-1.5 rounded" :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'">
+                      <Monitor :size="18" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
+                    </div>
+                    <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      Viewport Tracking
+                    </h3>
+                  </div>
+                  <div class="mb-3 p-3 rounded" :class="isDarkMode ? 'bg-slate-900/50 border border-gray-700' : 'bg-white border border-gray-200'">
+                    <div class="flex items-center gap-3">
+                      <div class="p-2 rounded" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-100'">
+                        <Monitor :size="20" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'" />
+                      </div>
+                      <div>
+                        <div class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">1920 × 1080px</div>
+                        <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Large</div>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    Real-time viewport information displayed in the control panel header:
+                  </p>
+                  <ul class="list-disc list-inside space-y-1 text-sm ml-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    <li>Current viewport dimensions (width × height)</li>
+                    <li>Active breakpoint name (e.g., "Large", "Medium")</li>
+                    <li>Automatic updates on window resize</li>
+                  </ul>
+                </div>
+
+                <!-- Layout Inspector -->
+                <div class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                  <div class="flex items-center gap-3 mb-3">
+                    <div class="p-1.5 rounded" :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'">
+                      <LayoutGrid :size="18" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
+                    </div>
+                    <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      Layout Inspector
+                    </h3>
+                  </div>
+                  <div class="mb-3 p-3 rounded" :class="isDarkMode ? 'bg-slate-900/50 border border-gray-700' : 'bg-white border border-gray-200'">
+                    <svg viewBox="0 0 200 120" class="w-full h-24">
+                      <!-- Grid container -->
+                      <rect x="10" y="10" width="180" height="100" fill="none" stroke="#818cf8" stroke-width="2" stroke-dasharray="4 4" rx="4" />
+                      <!-- Grid cells -->
+                      <rect x="15" y="15" width="55" height="40" fill="#818cf8" opacity="0.2" rx="2" />
+                      <rect x="75" y="15" width="55" height="40" fill="#818cf8" opacity="0.2" rx="2" />
+                      <rect x="135" y="15" width="50" height="40" fill="#818cf8" opacity="0.2" rx="2" />
+                      <rect x="15" y="60" width="55" height="40" fill="#818cf8" opacity="0.2" rx="2" />
+                      <rect x="75" y="60" width="55" height="40" fill="#818cf8" opacity="0.2" rx="2" />
+                      <rect x="135" y="60" width="50" height="40" fill="#818cf8" opacity="0.2" rx="2" />
+                      <!-- Label -->
+                      <text x="100" y="65" fill="#818cf8" font-size="12" text-anchor="middle" font-weight="bold">Grid</text>
+                    </svg>
+                  </div>
+                  <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    Detect and inspect CSS layout containers on the page:
+                  </p>
+                  <ul class="list-disc list-inside space-y-1 text-sm ml-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    <li>Automatically detects CSS Grid and Flexbox containers</li>
+                    <li>Visual overlays highlighting layout containers</li>
+                    <li>Shows layout properties (gap, direction, alignment, justification)</li>
+                    <li>Click items in the list to highlight them on the page</li>
+                    <li>Refresh button to re-scan after DOM changes</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
             <!-- Adding Components Section -->
             <div 
               class="rounded-lg shadow-sm border p-6 mb-6"
@@ -167,16 +349,26 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h2 class="text-2xl font-bold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Adding Components to the Loupe Tool
-              </h2>
+              <div class="flex items-center gap-3 mb-4">
+                <div class="p-2 rounded-lg" :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'">
+                  <Code :size="24" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
+                </div>
+                <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  Adding Components to the Loupe Tool
+                </h2>
+              </div>
               
               <p class="mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 To make a component detectable by the Loupe Tool, add data attributes to the component's root element:
               </p>
 
-              <div class="rounded-lg p-4 mb-4" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                <pre class="text-sm overflow-x-auto"><code :class="isDarkMode ? 'text-gray-300' : 'text-gray-800'">&lt;template&gt;
+              <div class="rounded-lg p-4 mb-4 relative overflow-hidden" :class="isDarkMode ? 'bg-slate-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'">
+                <div class="absolute top-2 right-2 flex gap-1">
+                  <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                  <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
+                  <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                </div>
+                <pre class="text-sm overflow-x-auto pt-4"><code :class="isDarkMode ? 'text-gray-300' : 'text-gray-800'">&lt;template&gt;
   &lt;div 
     data-ds-component="component-name"
     data-ds-path="@design-system/components/component-name"
@@ -205,17 +397,27 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h2 class="text-2xl font-bold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Try It Now
-              </h2>
+              <div class="flex items-center gap-3 mb-4">
+                <div class="p-2 rounded-lg" :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'">
+                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">play_circle</span>
+                </div>
+                <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                  Try It Now
+                </h2>
+              </div>
               
               <p class="mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Press <kbd class="px-2 py-1 rounded border" :class="isDarkMode ? 'border-gray-600 bg-slate-800 text-gray-300' : 'border-gray-300 bg-gray-100 text-gray-700'">Ctrl</kbd> + <kbd class="px-2 py-1 rounded border" :class="isDarkMode ? 'border-gray-600 bg-slate-800 text-gray-300' : 'border-gray-300 bg-gray-100 text-gray-700'">Shift</kbd> + <kbd class="px-2 py-1 rounded border" :class="isDarkMode ? 'border-gray-600 bg-slate-800 text-gray-300' : 'border-gray-300 bg-gray-100 text-gray-700'">L</kbd> to activate the Loupe Tool and see all design system components on this page highlighted.
               </p>
 
-              <div class="mt-6 p-4 rounded-lg" :class="isDarkMode ? 'bg-indigo-900/20 border border-indigo-700' : 'bg-indigo-50 border border-indigo-200'">
-                <div class="flex items-start gap-3">
-                  <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400">info</span>
+              <div class="mt-6 p-4 rounded-lg relative overflow-hidden" :class="isDarkMode ? 'bg-indigo-900/20 border border-indigo-700' : 'bg-indigo-50 border border-indigo-200'">
+                <div class="absolute top-0 right-0 w-32 h-32 opacity-10">
+                  <ScanEye :size="128" class="text-indigo-400" />
+                </div>
+                <div class="flex items-start gap-3 relative z-10">
+                  <div class="p-2 rounded-lg" :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'">
+                    <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400">info</span>
+                  </div>
                   <div>
                     <p class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-indigo-300' : 'text-indigo-900'">
                       Components on this page
@@ -238,7 +440,7 @@
 import { ref, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { ScanEye } from 'lucide-vue-next';
+import { ScanEye, Ruler, List, Monitor, LayoutGrid, Code, Keyboard, MousePointerClick, Eye, ExternalLink, X } from 'lucide-vue-next';
 
 const drawerOpen = ref(false);
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
