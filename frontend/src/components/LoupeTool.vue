@@ -1,7 +1,64 @@
 <template>
   <div v-if="isActive" class="loupe-tool">
-    <!-- Overlay for highlighting components -->
+    <!-- Visual Breakpoint Ruler -->
+    <div v-if="showRuler" class="breakpoint-ruler">
+      <div class="ruler-container">
+        <div class="ruler-scale">
+          <div
+            v-for="bp in sortedBreakpoints"
+            :key="`ruler-${bp.id}`"
+            class="ruler-marker"
+            :style="{
+              left: `${((bp.minWidth || 0) / maxBreakpoint) * 100}%`,
+              color: getBreakpointColor(bp.id)
+            }"
+            :title="`${bp.label || bp.id}: ${formatBreakpointRange(bp)} - Click to jump`"
+            @click.stop="jumpToBreakpoint(bp)"
+          >
+            <div class="marker-line-vertical"></div>
+            <div class="marker-label">{{ bp.minWidth || 0 }}px</div>
+          </div>
+          <div
+            v-for="bp in sortedBreakpoints.filter(b => b.maxWidth)"
+            :key="`ruler-max-${bp.id}`"
+            class="ruler-marker ruler-marker-max"
+            :style="{
+              left: `${(bp.maxWidth / maxBreakpoint) * 100}%`,
+              color: getBreakpointColor(bp.id)
+            }"
+            :title="`${bp.label || bp.id} max: ${bp.maxWidth}px`"
+          >
+            <div class="marker-line-vertical"></div>
+          </div>
+        </div>
+        <div class="ruler-viewport-indicator" :style="{ left: `${Math.min((viewportWidth / maxBreakpoint) * 100, 100)}%` }">
+          <div class="viewport-indicator-line"></div>
+          <div class="viewport-indicator-label">{{ viewportWidth }}px</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid/Layout Overlays -->
+    <div v-if="showLayoutInspector" class="layout-overlays">
+      <div
+        v-for="(layout, index) in detectedLayouts"
+        :key="getLayoutId(layout, index)"
+        class="layout-overlay"
+        :class="{ 'layout-highlighted': highlightedLayoutIndex === index }"
+        :style="getLayoutOverlayStyle(layout, index)"
+        @click.stop="selectLayoutItem(index)"
+        @mouseenter="highlightedLayoutIndex = index"
+        @mouseleave="highlightedLayoutIndex = null"
+      >
+        <div class="layout-label" v-if="highlightedLayoutIndex === index">
+          {{ layout.type === 'grid' ? 'Grid' : 'Flex' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay for highlighting components (toggleable) -->
     <div
+      v-if="showComponentHighlights"
       v-for="(component, index) in detectedComponents"
       :key="`component-${index}-${component.element.id || component.name}`"
       class="component-highlight"
@@ -38,7 +95,7 @@
         <button
           @click="closeLoupe"
           class="close-button"
-          aria-label="Close Loupe Tool"
+          aria-label="Close Loupe"
         >
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -85,14 +142,152 @@
       </div>
     </div>
 
-    <!-- Instructions overlay -->
+    <!-- Unified Control Panel -->
+    <div class="control-panel">
+      <div class="panel-header">
+        <div class="flex-1">
+          <h3 class="panel-title flex items-center gap-2">
+            <ScanEye :size="20" class="scan-eye-icon" />
+            Loupe
+          </h3>
+          <p class="panel-subtitle">Viewport: {{ viewportWidth }} × {{ viewportHeight }}px • {{ currentBreakpointLabel }}</p>
+        </div>
+        <button
+          @click="closeLoupe"
+          class="close-button"
+          aria-label="Close Loupe"
+        >
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- Feature Toggles -->
+      <div class="features-section">
+        <div class="section-label">Features</div>
+        <div class="feature-toggles">
+          <label class="feature-toggle">
+            <input type="checkbox" v-model="showComponentHighlights" />
+            <span>Component Highlights</span>
+          </label>
+          <label class="feature-toggle">
+            <input type="checkbox" v-model="showRuler" />
+            <span>Breakpoint Ruler</span>
+          </label>
+          <label class="feature-toggle">
+            <input type="checkbox" v-model="showLayoutInspector" @change="onLayoutInspectorToggle" />
+            <span>Layout Inspector</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Breakpoints Section -->
+      <div class="breakpoints-section">
+        <div class="section-label">Breakpoints</div>
+        <div class="breakpoints-list">
+          <div
+            v-for="bp in breakpointItems"
+            :key="`${bp.id}-${viewportWidth}`"
+            class="breakpoint-item"
+            :class="{ active: bp.isActive }"
+            :style="bp.isActive ? { borderColor: getBreakpointColor(bp.id) } : {}"
+          >
+            <div class="breakpoint-item-header">
+              <span class="breakpoint-name">{{ bp.label || bp.id }}</span>
+              <span class="breakpoint-status" :class="{ 'status-active': bp.isActive }">
+                {{ bp.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+            <div class="breakpoint-range">{{ formatBreakpointRange(bp) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Layout Inspector Section -->
+      <div v-if="showLayoutInspector" class="layout-inspector-section">
+        <div class="section-label">
+          Layout Containers
+          <div class="section-actions">
+            <button
+              v-if="isScanning"
+              @click="cancelScan"
+              class="cancel-scan-button"
+              title="Cancel scan"
+            >
+              Cancel
+            </button>
+            <button
+              v-else
+              @click="refreshLayouts"
+              class="refresh-button"
+              title="Refresh layouts"
+            >
+              ↻ Refresh
+            </button>
+          </div>
+        </div>
+        <div v-if="isScanning" class="scanning-indicator">
+          <div class="scanning-spinner"></div>
+          <span>Scanning for layouts...</span>
+        </div>
+        <div class="layout-list" ref="layoutListRef">
+          <div
+            v-for="(layout, index) in detectedLayouts"
+            :key="`layout-item-${index}`"
+            :ref="el => setLayoutItemRef(el, index)"
+            class="layout-item"
+            :class="{ active: highlightedLayoutIndex === index }"
+            @click="toggleLayoutHighlight(index)"
+            @mouseenter="highlightedLayoutIndex = index"
+            @mouseleave="highlightedLayoutIndex = null"
+          >
+            <div class="layout-item-header">
+              <span class="layout-type-badge" :class="`type-${layout.type}`">
+                {{ layout.type === 'grid' ? 'Grid' : 'Flex' }}
+              </span>
+              <span class="layout-selector">{{ layout.selector }}</span>
+            </div>
+            <div class="layout-properties">
+              <div v-if="layout.properties.direction" class="layout-prop">
+                <span class="prop-label">Direction:</span>
+                <span class="prop-value">{{ layout.properties.direction }}</span>
+              </div>
+              <div v-if="layout.properties.gap" class="layout-prop">
+                <span class="prop-label">Gap:</span>
+                <span class="prop-value">{{ layout.properties.gap }}</span>
+              </div>
+              <div v-if="layout.properties.alignItems" class="layout-prop">
+                <span class="prop-label">Align:</span>
+                <span class="prop-value">{{ layout.properties.alignItems }}</span>
+              </div>
+              <div v-if="layout.properties.justifyContent" class="layout-prop">
+                <span class="prop-label">Justify:</span>
+                <span class="prop-value">{{ layout.properties.justifyContent }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-if="detectedLayouts.length === 0 && !isScanning" class="no-layouts">
+            No grid or flex containers detected
+          </div>
+        </div>
+      </div>
+
+      <!-- Instructions -->
+      <div class="instructions-section">
+        <p class="instruction-text">
+          Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd> to toggle • <kbd>Esc</kbd> to close
+        </p>
+      </div>
+    </div>
+
+    <!-- Instructions overlay (simplified) -->
     <div class="instructions-overlay">
       <div class="instructions-content">
-        <h3 class="flex items-center gap-2">
+          <h3 class="flex items-center gap-2">
           <ScanEye :size="20" class="scan-eye-icon" />
-          Loupe Tool Active
+          Loupe Active
         </h3>
-        <p>Hover over highlighted components to see details</p>
+        <p v-if="showComponentHighlights">Hover over highlighted components to see details</p>
+        <p v-else>Toggle features in the control panel</p>
         <p class="shortcut-hint">Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd> to close</p>
       </div>
     </div>
@@ -100,7 +295,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import { ScanEye } from 'lucide-vue-next';
 import { componentMetadataService } from '../services/componentMetadataService';
 
@@ -108,6 +303,37 @@ const isActive = ref(false);
 const detectedComponents = ref([]);
 const activeComponent = ref(null);
 const infoPosition = ref(null);
+
+// Component viewing toggle
+const showComponentHighlights = ref(true);
+
+// Breakpoint configuration
+const breakpoints = ref([
+  { id: 'sm', label: 'Small', minWidth: 640 },
+  { id: 'md', label: 'Medium', minWidth: 768 },
+  { id: 'lg', label: 'Large', minWidth: 1024 },
+  { id: 'xl', label: 'Extra Large', minWidth: 1280 },
+  { id: '2xl', label: '2X Large', minWidth: 1536 },
+]);
+
+// Viewport tracking
+const viewportWidth = ref(window.innerWidth);
+const viewportHeight = ref(window.innerHeight);
+let resizeTimeout = null;
+
+// Feature toggles
+const showRuler = ref(true);
+const showLayoutInspector = ref(false);
+
+// Layout inspector state
+const detectedLayouts = ref([]);
+const highlightedLayoutIndex = ref(null);
+const layoutOverlayStyles = ref(new Map());
+const layoutListRef = ref(null);
+const layoutItemRefs = ref(new Map());
+const isScanning = ref(false);
+const scanCancelToken = ref(null);
+let styleUpdateTimeout = null;
 
 const scanForComponents = () => {
   detectedComponents.value = [];
@@ -225,11 +451,141 @@ const hideInfo = () => {
   }, 150);
 };
 
+// Breakpoint functions
+const currentBreakpointLabel = computed(() => {
+  // Access viewportWidth to ensure reactivity
+  const width = viewportWidth.value;
+  
+  if (activeBreakpoints.value.length > 0) {
+    // Get the largest active breakpoint (highest minWidth)
+    // This ensures we show the most specific breakpoint that matches
+    const largest = activeBreakpoints.value.reduce((prev, current) => {
+      const prevMin = prev.minWidth || 0;
+      const currentMin = current.minWidth || 0;
+      return currentMin > prevMin ? current : prev;
+    });
+    return largest.label || largest.id;
+  }
+  return 'Base';
+});
+
+// Make breakpoint active check reactive
+const isBreakpointActive = (breakpoint) => {
+  // Access viewportWidth.value to ensure Vue tracks the dependency
+  const width = viewportWidth.value;
+  if (breakpoint.minWidth !== undefined && breakpoint.maxWidth !== undefined) {
+    return width >= breakpoint.minWidth && width <= breakpoint.maxWidth;
+  } else if (breakpoint.minWidth !== undefined) {
+    return width >= breakpoint.minWidth;
+  } else if (breakpoint.maxWidth !== undefined) {
+    return width <= breakpoint.maxWidth;
+  }
+  return false;
+};
+
+// Computed property for breakpoint items with active state (for better reactivity)
+const breakpointItems = computed(() => {
+  return breakpoints.value.map(bp => ({
+    ...bp,
+    isActive: isBreakpointActive(bp)
+  }));
+});
+
+const activeBreakpoints = computed(() => {
+  // Explicitly access viewportWidth to ensure reactivity
+  const width = viewportWidth.value;
+  return breakpoints.value.filter(bp => {
+    if (bp.minWidth !== undefined && bp.maxWidth !== undefined) {
+      return width >= bp.minWidth && width <= bp.maxWidth;
+    } else if (bp.minWidth !== undefined) {
+      return width >= bp.minWidth;
+    } else if (bp.maxWidth !== undefined) {
+      return width <= bp.maxWidth;
+    }
+    return false;
+  });
+});
+
+const formatBreakpointRange = (breakpoint) => {
+  if (breakpoint.minWidth !== undefined && breakpoint.maxWidth !== undefined) {
+    return `${breakpoint.minWidth}px - ${breakpoint.maxWidth}px`;
+  } else if (breakpoint.minWidth !== undefined) {
+    return `≥ ${breakpoint.minWidth}px`;
+  } else if (breakpoint.maxWidth !== undefined) {
+    return `≤ ${breakpoint.maxWidth}px`;
+  }
+  return 'All sizes';
+};
+
+const getBreakpointColor = (id) => {
+  const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'];
+  const index = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return colors[index % colors.length];
+};
+
+const sortedBreakpoints = computed(() => {
+  return [...breakpoints.value].sort((a, b) => {
+    const aMin = a.minWidth || 0;
+    const bMin = b.minWidth || 0;
+    return aMin - bMin;
+  });
+});
+
+const maxBreakpoint = computed(() => {
+  const maxValues = breakpoints.value.map(bp => {
+    if (bp.maxWidth !== undefined) return bp.maxWidth;
+    if (bp.minWidth !== undefined) return bp.minWidth;
+    return 0;
+  });
+  return Math.max(...maxValues, viewportWidth.value, 1920);
+});
+
+const jumpToBreakpoint = (breakpoint) => {
+  if (breakpoint.minWidth !== undefined) {
+    alert(`To test at ${breakpoint.minWidth}px, resize your browser window or use dev tools.`);
+  }
+};
+
+const updateViewport = () => {
+  // Force reactivity by directly updating the refs
+  const newWidth = window.innerWidth;
+  const newHeight = window.innerHeight;
+  
+  // Only update if changed to trigger reactivity
+  if (viewportWidth.value !== newWidth) {
+    viewportWidth.value = newWidth;
+  }
+  if (viewportHeight.value !== newHeight) {
+    viewportHeight.value = newHeight;
+  }
+};
+
+const handleResize = () => {
+  if (resizeTimeout) {
+    clearTimeout(resizeTimeout);
+  }
+  resizeTimeout = setTimeout(() => {
+    // Force update viewport immediately for breakpoint detection
+    viewportWidth.value = window.innerWidth;
+    viewportHeight.value = window.innerHeight;
+    updateViewport(); // This also updates, but we do it above to ensure reactivity
+    if (showLayoutInspector.value && detectedLayouts.value.length > 0) {
+      updateLayoutOverlayStyles();
+    }
+  }, 50); // Reduced debounce for more responsive breakpoint updates
+};
+
 const activateLoupe = () => {
-  console.log('Activating Loupe Tool...');
+  console.log('Activating Developer Tools...');
   isActive.value = true;
   document.body.style.overflow = 'hidden';
+  updateViewport();
   scanForComponents();
+  
+  // Scan for layouts if inspector is enabled
+  if (showLayoutInspector.value && detectedLayouts.value.length === 0) {
+    scanForLayouts();
+  }
   
   console.log(`Found ${detectedComponents.value.length} components`);
   
@@ -249,6 +605,235 @@ const closeLoupe = () => {
   infoPosition.value = null;
   detectedComponents.value = [];
   document.body.style.overflow = '';
+  
+  // Cancel layout scanning
+  if (scanCancelToken.value) {
+    scanCancelToken.value.cancelled = true;
+  }
+  highlightedLayoutIndex.value = null;
+  if (styleUpdateTimeout) {
+    clearTimeout(styleUpdateTimeout);
+  }
+};
+
+// Layout Inspector functions
+const scanForLayouts = async () => {
+  if (scanCancelToken.value) {
+    scanCancelToken.value.cancelled = true;
+  }
+  
+  const cancelToken = { cancelled: false };
+  scanCancelToken.value = cancelToken;
+  
+  isScanning.value = true;
+  detectedLayouts.value = [];
+  
+  try {
+    const layouts = await scanForLayoutsAsync(cancelToken);
+    
+    if (!cancelToken.cancelled) {
+      const filteredLayouts = layouts.filter((layout, index) => {
+        return !layouts.some((other, otherIndex) => {
+          if (index >= otherIndex) return false;
+          return other.element.contains(layout.element);
+        });
+      });
+      
+      detectedLayouts.value = filteredLayouts;
+      layoutItemRefs.value.clear();
+      updateLayoutOverlayStyles();
+    }
+  } catch (error) {
+    console.error('Layout scan error:', error);
+  } finally {
+    if (!cancelToken.cancelled) {
+      isScanning.value = false;
+    }
+  }
+};
+
+const scanForLayoutsAsync = async (cancelToken) => {
+  const MAX_ELEMENTS = 2000;
+  const BATCH_SIZE = 50;
+  const MAX_TIME = 2000;
+  const startTime = Date.now();
+  
+  const layouts = [];
+  const allElements = Array.from(document.querySelectorAll('*'));
+  const elementsToScan = allElements.slice(0, MAX_ELEMENTS);
+  
+  for (let i = 0; i < elementsToScan.length; i += BATCH_SIZE) {
+    if (cancelToken.cancelled) break;
+    if (Date.now() - startTime > MAX_TIME) break;
+    
+    const batch = elementsToScan.slice(i, i + BATCH_SIZE);
+    
+    for (const element of batch) {
+      if (cancelToken.cancelled) break;
+      if (element.offsetParent === null && element !== document.body) continue;
+      
+      const tagName = element.tagName?.toLowerCase();
+      if (['script', 'style', 'meta', 'link', 'noscript', 'template'].includes(tagName)) continue;
+      
+      try {
+        const styles = window.getComputedStyle(element);
+        const display = styles.display;
+        
+        if (display === 'grid' || display === 'flex') {
+          const rect = element.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0 && rect.top < window.innerHeight + 1000) {
+            const properties = {
+              direction: display === 'flex' ? styles.flexDirection : 'grid',
+              gap: styles.gap || styles.gridGap || '0',
+              alignItems: styles.alignItems || 'stretch',
+              justifyContent: styles.justifyContent || 'normal',
+            };
+            
+            let selector = element.tagName.toLowerCase();
+            if (element.id) {
+              selector = `#${element.id}`;
+            } else if (element.className) {
+              const classes = Array.from(element.classList).slice(0, 2).join('.');
+              if (classes) selector += `.${classes}`;
+            }
+            
+            layouts.push({ element, type: display, selector, properties, rect });
+          }
+        }
+      } catch (error) {
+        continue;
+      }
+    }
+    
+    if (i + BATCH_SIZE < elementsToScan.length) {
+      await new Promise(resolve => {
+        if (window.requestIdleCallback) {
+          window.requestIdleCallback(resolve, { timeout: 100 });
+        } else {
+          setTimeout(resolve, 0);
+        }
+      });
+    }
+  }
+  
+  return layouts;
+};
+
+const onLayoutInspectorToggle = async () => {
+  if (showLayoutInspector.value) {
+    if (scanCancelToken.value) {
+      scanCancelToken.value.cancelled = true;
+    }
+    if (detectedLayouts.value.length === 0) {
+      await scanForLayouts();
+    }
+  } else {
+    if (scanCancelToken.value) {
+      scanCancelToken.value.cancelled = true;
+    }
+    highlightedLayoutIndex.value = null;
+    isScanning.value = false;
+  }
+};
+
+const refreshLayouts = async () => {
+  if (showLayoutInspector.value) {
+    await scanForLayouts();
+  }
+};
+
+const cancelScan = () => {
+  if (scanCancelToken.value) {
+    scanCancelToken.value.cancelled = true;
+  }
+  isScanning.value = false;
+};
+
+const setLayoutItemRef = (el, index) => {
+  if (el) {
+    layoutItemRefs.value.set(index, el);
+  } else {
+    layoutItemRefs.value.delete(index);
+  }
+};
+
+const selectLayoutItem = (index) => {
+  highlightedLayoutIndex.value = index;
+  scrollToLayoutItem(index);
+};
+
+const toggleLayoutHighlight = (index) => {
+  if (highlightedLayoutIndex.value === index) {
+    highlightedLayoutIndex.value = null;
+  } else {
+    highlightedLayoutIndex.value = index;
+    scrollToLayoutItem(index);
+  }
+};
+
+const scrollToLayoutItem = async (index) => {
+  await nextTick();
+  setTimeout(() => {
+    const itemRef = layoutItemRefs.value.get(index);
+    if (itemRef) {
+      itemRef.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest'
+      });
+    }
+  }, 10);
+};
+
+const getLayoutId = (layout, index) => {
+  return layout.element.id 
+    ? `layout-${layout.element.id}`
+    : layout.element.className 
+    ? `layout-${index}-${layout.element.className.split(' ')[0]}`
+    : `layout-${index}-${layout.element.tagName}`;
+};
+
+const updateLayoutOverlayStyles = () => {
+  if (!showLayoutInspector.value || !isActive.value) return;
+  
+  if (styleUpdateTimeout) {
+    clearTimeout(styleUpdateTimeout);
+  }
+  
+  styleUpdateTimeout = setTimeout(() => {
+    if (!showLayoutInspector.value || !isActive.value) return;
+    
+    const newStyles = new Map();
+    detectedLayouts.value.forEach((layout, index) => {
+      try {
+        const id = getLayoutId(layout, index);
+        const rect = layout.element.getBoundingClientRect();
+        newStyles.set(id, {
+          position: 'fixed',
+          left: `${rect.left + window.scrollX}px`,
+          top: `${rect.top + window.scrollY}px`,
+          width: `${rect.width}px`,
+          height: `${rect.height}px`,
+          zIndex: 9997,
+        });
+      } catch (error) {
+        console.warn('Layout element no longer available:', error);
+      }
+    });
+    layoutOverlayStyles.value = newStyles;
+  }, 100);
+};
+
+const getLayoutOverlayStyle = (layout, index) => {
+  const id = getLayoutId(layout, index);
+  return layoutOverlayStyles.value.get(id) || {
+    position: 'fixed',
+    left: `${layout.rect.left + window.scrollX}px`,
+    top: `${layout.rect.top + window.scrollY}px`,
+    width: `${layout.rect.width}px`,
+    height: `${layout.rect.height}px`,
+    zIndex: 9997,
+  };
 };
 
 const handleKeyDown = (event) => {
@@ -274,10 +859,11 @@ const handleKeyDown = (event) => {
 };
 
 onMounted(async () => {
-  // Use capture phase to ensure we catch the event before other handlers
+  updateViewport();
   window.addEventListener('keydown', handleKeyDown, true);
+  window.addEventListener('resize', handleResize);
   
-  console.log('Loupe Tool mounted and listening for keyboard shortcuts');
+  console.log('Developer Tools mounted and listening for keyboard shortcuts');
   
   // Load component metadata from API
   try {
@@ -290,6 +876,16 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeyDown, true);
+  window.removeEventListener('resize', handleResize);
+  if (resizeTimeout) {
+    clearTimeout(resizeTimeout);
+  }
+  if (scanCancelToken.value) {
+    scanCancelToken.value.cancelled = true;
+  }
+  if (styleUpdateTimeout) {
+    clearTimeout(styleUpdateTimeout);
+  }
   if (isActive.value) {
     closeLoupe();
   }
@@ -537,6 +1133,550 @@ kbd {
   background: #334155;
   border-color: #475569;
   color: #cbd5e1;
+}
+
+/* Unified Control Panel */
+.control-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 400px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 40px);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 10002;
+  pointer-events: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dark .control-panel {
+  background: #1e293b;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dark .panel-header {
+  border-bottom-color: #334155;
+}
+
+.panel-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-title .scan-eye-icon {
+  color: #6366f1;
+  flex-shrink: 0;
+}
+
+.dark .panel-title {
+  color: #f1f5f9;
+}
+
+.dark .panel-title .scan-eye-icon {
+  color: #818cf8;
+}
+
+.panel-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.dark .panel-subtitle {
+  color: #94a3b8;
+}
+
+/* Breakpoint Ruler */
+.breakpoint-ruler {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 2px solid #e5e7eb;
+  z-index: 9998;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dark .breakpoint-ruler {
+  background: rgba(30, 41, 59, 0.95);
+  border-bottom-color: #334155;
+}
+
+.ruler-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.ruler-scale {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.ruler-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ruler-marker:hover {
+  opacity: 0.8;
+}
+
+.marker-line-vertical {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.ruler-marker-max .marker-line-vertical {
+  opacity: 0.3;
+  width: 1px;
+}
+
+.marker-label {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  pointer-events: none;
+}
+
+.dark .marker-label {
+  background: rgba(30, 41, 59, 0.9);
+  color: #f1f5f9;
+}
+
+.ruler-viewport-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.viewport-indicator-line {
+  width: 2px;
+  height: 100%;
+  background: #ef4444;
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
+}
+
+.viewport-indicator-label {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ef4444;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+/* Layout Overlays */
+.layout-overlays {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9996;
+  pointer-events: none;
+}
+
+.layout-overlay {
+  border: 2px solid #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+  pointer-events: auto;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.layout-overlay:hover,
+.layout-overlay.layout-highlighted {
+  border-color: #818cf8;
+  background: rgba(129, 140, 248, 0.2);
+  box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.3);
+}
+
+.layout-label {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: #6366f1;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* Sections */
+.features-section,
+.breakpoints-section,
+.layout-inspector-section {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dark .features-section,
+.dark .breakpoints-section,
+.dark .layout-inspector-section {
+  border-bottom-color: #334155;
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dark .section-label {
+  color: #94a3b8;
+}
+
+.feature-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feature-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #111827;
+}
+
+.dark .feature-toggle {
+  color: #f1f5f9;
+}
+
+.feature-toggle input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.breakpoints-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.breakpoint-item {
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  transition: all 0.2s;
+}
+
+.dark .breakpoint-item {
+  border-color: #334155;
+  background: #0f172a;
+}
+
+.breakpoint-item.active {
+  border-width: 2px;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.breakpoint-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.breakpoint-name {
+  font-weight: 600;
+  color: #111827;
+  font-size: 14px;
+}
+
+.dark .breakpoint-name {
+  color: #f1f5f9;
+}
+
+.breakpoint-range {
+  font-size: 12px;
+  color: #6b7280;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.dark .breakpoint-range {
+  color: #94a3b8;
+}
+
+.breakpoint-status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #e5e7eb;
+  color: #6b7280;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.dark .breakpoint-status {
+  background: #334155;
+  color: #94a3b8;
+}
+
+.breakpoint-status.status-active {
+  background: #6366f1;
+  color: white;
+}
+
+/* Layout Inspector Styles */
+.section-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.cancel-scan-button,
+.refresh-button {
+  padding: 4px 8px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.cancel-scan-button {
+  background: #ef4444;
+}
+
+.cancel-scan-button:hover {
+  background: #dc2626;
+}
+
+.refresh-button:hover {
+  background: #818cf8;
+}
+
+.scanning-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.dark .scanning-indicator {
+  background: #0f172a;
+  color: #94a3b8;
+}
+
+.scanning-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.dark .scanning-spinner {
+  border-color: #334155;
+  border-top-color: #818cf8;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.layout-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.layout-item {
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dark .layout-item {
+  border-color: #334155;
+  background: #0f172a;
+}
+
+.layout-item:hover,
+.layout-item.active {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.layout-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.layout-type-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.layout-type-badge.type-grid {
+  background: #6366f1;
+  color: white;
+}
+
+.layout-type-badge.type-flex {
+  background: #10b981;
+  color: white;
+}
+
+.layout-selector {
+  font-size: 11px;
+  color: #6b7280;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dark .layout-selector {
+  color: #94a3b8;
+}
+
+.layout-properties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.layout-prop {
+  display: flex;
+  gap: 4px;
+}
+
+.prop-label {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.dark .prop-label {
+  color: #94a3b8;
+}
+
+.prop-value {
+  color: #111827;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.dark .prop-value {
+  color: #f1f5f9;
+}
+
+.no-layouts {
+  padding: 12px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.dark .no-layouts {
+  color: #64748b;
+}
+
+.instructions-section {
+  padding: 16px 20px;
+}
+
+.instruction-text {
+  font-size: 12px;
+  color: #6b7280;
+  text-align: center;
+  margin: 0;
+}
+
+.dark .instruction-text {
+  color: #94a3b8;
+}
+
+.flex-1 {
+  flex: 1;
 }
 
 </style>

@@ -20,7 +20,7 @@
       <FloatingActionButton v-if="aiAssistantEnabled" :isChatOpen="chatOpen" @toggle-chat="handleToggleChat" />
       <EeroChatbot v-if="aiAssistantEnabled" :isOpen="chatOpen" @close="handleCloseChat" />
       
-      <!-- Loupe Tool -->
+      <!-- Loupe Tool (now includes breakpoint overlay features) -->
       <LoupeTool v-if="loupeToolEnabled" />
       
       <!-- Toast Notifications -->
