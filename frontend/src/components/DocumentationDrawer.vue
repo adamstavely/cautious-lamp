@@ -796,8 +796,26 @@
           <div>
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Guidelines</h4>
             <div class="space-y-1">
+              <router-link
+                v-for="item in filteredGuidelines.filter(item => item.link !== '/colors' && item.link !== '/typography' && item.link !== '/spacing' && item.link !== '/shadows' && item.link !== '/accessibility' && item.link.startsWith('/guidelines/'))"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
               <a
-                v-for="item in filteredGuidelines.filter(item => item.link !== '/colors' && item.link !== '/typography' && item.link !== '/spacing' && item.link !== '/shadows' && item.link !== '/accessibility')"
+                v-for="item in filteredGuidelines.filter(item => item.link !== '/colors' && item.link !== '/typography' && item.link !== '/spacing' && item.link !== '/shadows' && item.link !== '/accessibility' && !item.link.startsWith('/guidelines/'))"
                 :key="item.link"
                 href="#"
                 @click.prevent="navigateToDoc(item.link)"
@@ -1061,6 +1079,7 @@ const guidelines = [
   { text: 'Spacing', link: '/spacing', icon: 'space_dashboard' },
   { text: 'Shadows', link: '/shadows', icon: 'layers' },
   { text: 'Accessibility', link: '/accessibility', icon: 'accessibility' },
+  { text: 'Voice and Tone', link: '/guidelines/voice-and-tone', icon: 'mic' },
   { text: 'Terminal UI (TUI) Guidance', link: '/tui-guidance', icon: 'terminal' }
 ];
 
@@ -1121,7 +1140,8 @@ const toolGroups = computed(() => ({
     { text: 'Gradient Generator', link: '/tools/gradient-generator', icon: 'gradient' },
     { text: 'Palette Builder', link: '/palette-builder', icon: 'swatch-book' },
     { text: 'Color Converter', link: '/tools/color-converter', icon: 'swap_horiz' },
-    { text: 'Color Contrast Checker', link: '/tools/color-contrast', icon: 'contrast' }
+    { text: 'Color Contrast Checker', link: '/tools/color-contrast', icon: 'contrast' },
+    { text: 'APCA Calculator', link: '/tools/apca-calculator', icon: 'calculate' }
   ],
   dataVisualization: [
     { text: 'Chart Builder', link: '/tools/chart-builder', icon: 'bar_chart' },
@@ -1255,7 +1275,8 @@ const tokenItems = [
   { text: 'Overview', link: '/tokens', icon: 'style' },
   { text: 'Token Studio', link: '/tokens/studio', icon: 'tune' },
   { text: 'Token Playground', link: '/tokens/playground', icon: 'palette' },
-  { text: 'Style Library', link: '/tokens/library', icon: 'library_books' }
+  { text: 'Style Library', link: '/tokens/library', icon: 'library_books' },
+  { text: 'Color Palettes', link: '/tokens/color-palettes', icon: 'palette' }
 ];
 
 const tokenUtilities = [

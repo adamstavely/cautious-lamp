@@ -363,6 +363,18 @@ const router = createRouter({
       component: () => import('./views/StyleLibrary.vue'),
     },
     {
+      path: '/tokens/color-palettes',
+      component: () => import('./views/ColorPalettes.vue'),
+    },
+    {
+      path: '/tokens/color-palettes/harmony',
+      component: () => import('./views/HarmonyPalette.vue'),
+    },
+    {
+      path: '/tokens/color-palettes/colored-text',
+      component: () => import('./views/ColoredTextPalette.vue'),
+    },
+    {
       path: '/tokens/playground',
       component: () => import('./views/TokenPlayground.vue'),
     },
@@ -393,6 +405,10 @@ const router = createRouter({
     {
       path: '/patterns/navigation',
       component: () => import('./views/PatternNavigation.vue'),
+    },
+    {
+      path: '/patterns/notifications',
+      component: () => import('./views/PatternNotifications.vue'),
     },
     {
       path: '/patterns/data-display',
@@ -461,6 +477,10 @@ const router = createRouter({
     {
       path: '/tools/color-contrast',
       component: () => import('./views/ColorContrastChecker.vue'),
+    },
+    {
+      path: '/tools/apca-calculator',
+      component: () => import('./views/APCACalculator.vue'),
     },
     {
       path: '/tools/nasa-tlx',
@@ -781,6 +801,10 @@ const router = createRouter({
     {
       path: '/guidelines',
       component: () => import('./views/Guidelines.vue'),
+    },
+    {
+      path: '/guidelines/voice-and-tone',
+      component: () => import('./views/VoiceAndTone.vue'),
     },
     {
       path: '/palette-builder',
