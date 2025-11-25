@@ -178,8 +178,33 @@
                 chevron_right
               </span>
             </a>
+
+            <!-- Token Card 6: AI Tokens -->
+            <router-link 
+              to="/tokens/ai-builder" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">smart_toy</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                AI Tokens
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Design tokens for AI agents and GenAI applications.
+              </p>
+            </router-link>
           </div>
         </div>
+
 
         <!-- Featured Tools Section -->
         <div class="max-w-7xl mx-auto">
@@ -214,6 +239,10 @@
               <router-link to="/tokens/extract" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
                 <h3 class="text-white font-semibold text-xl mb-2">Design Extractor</h3>
                 <p class="text-white/80 text-sm">Extract design tokens from any website URL and import them into your style library as DTCG-compliant tokens.</p>
+              </router-link>
+              <router-link to="/tokens/ai-builder" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">AI Token Builder</h3>
+                <p class="text-white/80 text-sm">Create and manage design tokens for AI agents and GenAI applications. Standardize agent identity, confidence, explainability, and more.</p>
               </router-link>
             </div>
           </div>

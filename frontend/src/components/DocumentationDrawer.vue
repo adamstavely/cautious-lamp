@@ -1277,6 +1277,7 @@ const uxResearchTools = [
 const tokenItems = [
   { text: 'Overview', link: '/tokens', icon: 'style' },
   { text: 'Token Studio', link: '/tokens/studio', icon: 'tune' },
+  { text: 'AI Token Studio', link: '/tokens/ai-builder', icon: 'smart_toy' },
   { text: 'Token Playground', link: '/tokens/playground', icon: 'palette' },
   { text: 'Style Library', link: '/tokens/library', icon: 'library_books' },
   { text: 'Color Palettes', link: '/tokens/color-palettes', icon: 'palette' }

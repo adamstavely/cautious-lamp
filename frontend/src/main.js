@@ -395,6 +395,10 @@ const router = createRouter({
       component: () => import('./views/DesignExtractor.vue'),
     },
     {
+      path: '/tokens/ai-builder',
+      component: () => import('./views/AITokenBuilder.vue'),
+    },
+    {
       path: '/design-sync',
       component: () => import('./views/DesignSync.vue'),
     },
