@@ -124,6 +124,7 @@ const crumbs = computed(() => {
     '/tokens': 'Tokens',
     '/patterns': 'Patterns',
     '/patterns/navigation': 'Navigation',
+    '/patterns/notifications': 'Notifications',
     '/patterns/data-display': 'Data Display',
     '/patterns/layout': 'Layout',
     '/patterns/forms': 'Forms',

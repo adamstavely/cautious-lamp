@@ -250,6 +250,30 @@
               </p>
             </router-link>
 
+            <!-- Tool Card 7.5: APCA Calculator -->
+            <router-link 
+              to="/tools/apca-calculator" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">calculate</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                APCA Calculator
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Compose colors with consistent APCA contrast ratios.
+              </p>
+            </router-link>
+
             <!-- Tool Card 8: Photosensitivity Analysis -->
             <router-link 
               to="/tools/photosensitivity" 
@@ -602,6 +626,10 @@
               <router-link to="/tools/color-contrast" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
                 <h3 class="text-white font-semibold text-xl mb-2">Color Contrast Checker</h3>
                 <p class="text-white/80 text-sm">Ensure your color combinations meet WCAG accessibility standards for text readability.</p>
+              </router-link>
+              <router-link to="/tools/apca-calculator" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
+                <h3 class="text-white font-semibold text-xl mb-2">APCA Calculator</h3>
+                <p class="text-white/80 text-sm">Compose colors with consistent APCA contrast ratios using the modern contrast standard.</p>
               </router-link>
               <router-link to="/tools/html-viewer" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
                 <h3 class="text-white font-semibold text-xl mb-2">HTML Viewer</h3>
