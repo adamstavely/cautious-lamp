@@ -286,9 +286,10 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import axios from 'axios';
 
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(false);
 let darkModeObserver = null;
 let darkModeInterval = null;
@@ -303,13 +304,9 @@ const applicationName = ref('');
 const enablePatternDetection = ref(true);
 const outputJson = ref(false);
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
+
+
 
 const triggerFileInput = () => {
   fileInput.value?.click();

@@ -299,9 +299,10 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const conversionMode = ref('escape');
 const inputText = ref('');
@@ -316,13 +317,9 @@ const outputText = computed(() => {
   }
 });
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
+
+
 
 const escapeHTML = (text) => {
   const map = {

@@ -227,17 +227,10 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { RouterLink } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
-
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
-
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 
 let darkModeObserver = null;
 let darkModeInterval = null;

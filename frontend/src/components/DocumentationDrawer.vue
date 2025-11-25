@@ -73,6 +73,7 @@
               v-for="item in filteredDesignPatterns.filter(item => item.link === '/patterns')"
               :key="item.link"
               :to="item.link"
+              @click.stop
               class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
               :class="[
                 isActive(item.link)
@@ -1040,6 +1041,8 @@ const navigateToDoc = (link) => {
   if (route.path !== '/guidelines') {
     router.push('/guidelines');
   }
+  // Don't close the drawer - keep it open
+  // The drawer state is managed by the parent component, so we don't emit 'close' here
 };
 
 const getDocUrl = (link) => {

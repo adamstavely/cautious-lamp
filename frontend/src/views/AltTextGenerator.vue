@@ -281,10 +281,11 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { Captions } from 'lucide-vue-next';
 
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const isDragging = ref(false);
 const isGenerating = ref(false);
@@ -293,13 +294,9 @@ const altText = ref('');
 const copied = ref(false);
 const fileInput = ref(null);
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
+
+
 
 const handleDragOver = () => {
   isDragging.value = true;

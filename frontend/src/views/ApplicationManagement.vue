@@ -598,18 +598,20 @@
       </div>
     </div>
   </div>
+  </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
 
 const router = useRouter();
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(false);
 const loading = ref(false);
 const isSaving = ref(false);
@@ -661,13 +663,9 @@ const filteredApplications = computed(() => {
   });
 });
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 const loadApplications = async () => {
   loading.value = true;

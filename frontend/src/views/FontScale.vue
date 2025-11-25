@@ -361,11 +361,12 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const fontSize = ref(16);
 const lineHeight = ref(1.4);
 const letterSpacing = ref(0);
@@ -487,13 +488,9 @@ watch(selectedRatio, (newValue) => {
   }
 });
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 let darkModeObserver = null;
 let darkModeInterval = null;

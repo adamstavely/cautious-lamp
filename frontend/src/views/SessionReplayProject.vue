@@ -427,12 +427,13 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import axios from 'axios';
 
 const route = useRoute();
 const router = useRouter();
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const project = ref(null);
 const loading = ref(false);
@@ -453,13 +454,9 @@ const projectForm = ref({
 
 const API_BASE_URL = 'http://localhost:3000/api/v1';
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 const loadProject = async () => {
   loading.value = true;

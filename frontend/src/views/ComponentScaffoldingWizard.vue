@@ -894,6 +894,7 @@ import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Dropdown from '../components/Dropdown.vue';
 
 const API_BASE_URL = 'http://localhost:3000/api/v1';
@@ -901,7 +902,7 @@ const API_KEY = 'test-api-key-123';
 
 const router = useRouter();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const currentStep = ref(0);
 const selectedTemplateId = ref(null);
 const templates = ref([]);
@@ -966,13 +967,9 @@ const templateOptions = computed(() => {
   ];
 });
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 const loadTemplates = async () => {
   try {

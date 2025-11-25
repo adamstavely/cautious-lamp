@@ -355,9 +355,10 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const isDragging = ref(false);
 const isConverting = ref(false);
@@ -372,13 +373,9 @@ const webpOutputFormat = ref('png');
 const icoSizes = [16, 32, 48, 64, 128, 256];
 const selectedSizes = ref([16, 32, 48]);
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
+
+
 
 const switchMode = (mode) => {
   if (conversionMode.value !== mode) {

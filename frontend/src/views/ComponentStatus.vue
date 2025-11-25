@@ -261,6 +261,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { Pipette } from 'lucide-vue-next';
 import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
@@ -269,7 +270,7 @@ const router = useRouter();
 const { components: sharedComponents } = useComponentPatternStatus();
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const selectedStatus = ref(null);
 
 // Use shared components from composable
@@ -335,13 +336,9 @@ const getStatusClass = (status) => {
   }
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 // Map component names to their routes
 const getComponentRoute = (componentName) => {

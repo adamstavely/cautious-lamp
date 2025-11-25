@@ -299,11 +299,12 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const variant = ref('classic');
 const type = ref('paragraphs');
 const count = ref(3);
@@ -465,13 +466,9 @@ const wrapInBlockElements = (content, paragraphs) => {
   return result.join('\n\n');
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 const generateParagraphs = (num) => {
   const currentVariant = getCurrentVariant();

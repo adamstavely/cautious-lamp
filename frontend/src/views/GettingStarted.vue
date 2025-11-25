@@ -381,17 +381,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(false);
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
+
+
 
 onMounted(() => {
   // Auto-open drawer if navigating from sidebar

@@ -246,9 +246,10 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(false);
 const personaGenerated = ref(false);
 
@@ -308,13 +309,9 @@ const generatedPersonaHTML = computed(() => {
   `;
 });
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 const resetForm = () => {
   Object.keys(form).forEach(key => {

@@ -267,10 +267,11 @@
 <script setup>
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import axios from 'axios';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const budgets = ref([]);
 const showCreateModal = ref(false);
 const editingBudget = ref(null);
@@ -286,13 +287,9 @@ const budgetForm = ref({
   alertThreshold: null
 });
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 const loadBudgets = async () => {
   try {

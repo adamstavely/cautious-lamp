@@ -907,13 +907,14 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
 import { componentMetadataService } from '../services/componentMetadataService.js';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const activeTab = ref('bundle');
 
 // Bundle Analysis
@@ -936,13 +937,9 @@ const budgetForm = ref({
   alertThreshold: null
 });
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 // Bundle Analysis Functions
 const formatSize = (bytes) => {

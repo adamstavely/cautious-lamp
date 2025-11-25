@@ -236,10 +236,11 @@ import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import MarkdownViewer from '../components/MarkdownViewer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 
 const route = useRoute();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const currentDocLink = ref(null);
 
 const handleBreadcrumbNavigate = (path) => {
@@ -263,13 +264,6 @@ const openDrawer = () => {
   drawerOpen.value = true;
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
-
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
 
 // Open drawer when navigating to /guidelines - removed auto-open
 // watch(() => route.path, (newPath) => {

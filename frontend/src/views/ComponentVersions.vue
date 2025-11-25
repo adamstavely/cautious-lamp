@@ -228,10 +228,11 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 
 const route = useRoute();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const selectedComponent = ref('');
 
 // Sample version data - in a real app, this would come from an API
@@ -398,13 +399,9 @@ const viewVersion = (version) => {
   alert(`Viewing version ${version}`);
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 // Watch for dark mode changes
 let darkModeObserver = null;

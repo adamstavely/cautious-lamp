@@ -445,12 +445,13 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
 
 const router = useRouter();
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(false);
 const isSubmitting = ref(false);
 
@@ -503,13 +504,9 @@ const form = ref({
 const API_BASE_URL = 'http://localhost:3000/api/v1';
 const API_KEY = 'test-api-key-123';
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 const registerApplication = async () => {
   isSubmitting.value = true;

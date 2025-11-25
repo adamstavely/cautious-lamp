@@ -254,11 +254,12 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
 
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const loading = ref(false);
 const users = ref([]);
@@ -274,13 +275,9 @@ const CURRENT_USER_ID = 'user-123'; // In production, get from auth context
 
 const availableWorkspaces = ref([]);
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 const loadUsers = async () => {
   try {

@@ -623,11 +623,12 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import axios from 'axios';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const showBannerModal = ref(false);
 const showBannerForm = ref(false);
 const banners = ref([]);
@@ -640,13 +641,9 @@ const bannerForm = ref({
   noExpiration: true
 });
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 const fetchBanners = async () => {
   try {

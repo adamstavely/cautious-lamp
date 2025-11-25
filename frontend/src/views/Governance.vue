@@ -761,12 +761,13 @@ return checks;"
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const selectedRule = ref(null);
 const complianceResults = ref(null);
 const complianceScope = ref('design-system'); // 'design-system' or 'applications'
@@ -3257,13 +3258,9 @@ const runComplianceCheckMock = () => {
   }
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 let darkModeObserver = null;
 let darkModeInterval = null;

@@ -682,6 +682,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
 import ColorPicker from '../components/ColorPicker.vue';
@@ -689,7 +690,7 @@ import ColorPicker from '../components/ColorPicker.vue';
 const route = useRoute();
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const selectedCategory = ref('color');
 const showAddTokenModal = ref(false);
 const showAddCategoryModal = ref(false);
@@ -1383,13 +1384,9 @@ const downloadFile = (content, filename, mimeType) => {
   URL.revokeObjectURL(url);
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 let darkModeObserver = null;
 let darkModeInterval = null;

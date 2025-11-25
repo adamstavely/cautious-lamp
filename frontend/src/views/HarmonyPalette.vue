@@ -404,10 +404,11 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { RouterLink } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import harmonyPalette from '@evilmartians/harmony/base';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const searchQuery = ref('');
 const copiedColor = ref(null);
 
@@ -458,13 +459,9 @@ const usageGuidelines = [
   { label: 'Any Text', contrast: 105, fontSize: '16px', lineHeight: '24px', icon: 'P10', color: 'oklch(0.05 0.04 0)' }
 ];
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 // Color family order matching the Harmony palette documentation
 const colorFamilyOrder = [

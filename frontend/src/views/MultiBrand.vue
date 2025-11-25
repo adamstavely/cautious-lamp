@@ -294,9 +294,10 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const selectedBrand = ref(null);
 const showAddBrand = ref(false);
 const newBrand = ref({ name: '', primaryColor: '#4f46e5', secondaryColor: '#6366f1' });
@@ -354,13 +355,9 @@ const saveBrand = () => {
   console.log('Saving brand:', selectedBrand.value);
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 let darkModeObserver = null;
 let darkModeInterval = null;

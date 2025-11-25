@@ -250,10 +250,11 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const alignment = ref('left');
 const radius = ref(8);
 const words = ref(8);
@@ -263,13 +264,9 @@ const spacing = ref(8);
 const color = ref('#9ca3af');
 const showColorPicker = ref(false);
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 // Generate random word widths (simulating text)
 const generateWordWidths = (numWords) => {

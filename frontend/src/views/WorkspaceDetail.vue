@@ -2577,6 +2577,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
@@ -2584,7 +2585,7 @@ import axios from 'axios';
 const router = useRouter();
 const route = useRoute();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const workspace = ref(null);
 const loading = ref(true);
 const activeTab = ref('overview');
@@ -2657,13 +2658,9 @@ const API_KEY = 'test-api-key-123';
 const CURRENT_USER_ID = 'user-123';
 const CURRENT_USER_EMAIL = 'user@example.com';
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 const loadWorkspace = async () => {
   const workspaceId = route.params.id;

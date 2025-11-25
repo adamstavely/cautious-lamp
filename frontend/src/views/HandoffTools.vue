@@ -598,11 +598,12 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import CodeFormatDropdown from '../components/CodeFormatDropdown.vue';
 import ColorPicker from '../components/ColorPicker.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const activeTab = ref('designer');
 const fileInput = ref(null);
 const uploadedFile = ref(null);
@@ -879,13 +880,9 @@ const copyToken = async (token) => {
   }
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 let darkModeObserver = null;
 let darkModeInterval = null;

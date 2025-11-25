@@ -202,13 +202,14 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 
 const router = useRouter();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 
-const closeDrawer = () => { drawerOpen.value = false; };
-const toggleDrawer = () => { drawerOpen.value = !drawerOpen.value; };
+
+
 
 const focusSearch = () => {
   // Dispatch a custom event to focus the search bar in TopNav

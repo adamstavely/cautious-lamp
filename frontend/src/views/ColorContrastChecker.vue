@@ -410,12 +410,13 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
 import chroma from 'chroma-js';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const foregroundColor = ref('#7AC600');
 const backgroundColor = ref('#0E55A8');
 const showColorPicker = ref(false);
@@ -424,13 +425,9 @@ const pickerPosition = ref({ left: 0, top: 0 });
 const currentPickerType = ref('foreground');
 const foregroundHue = ref(83);
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 // Calculate relative luminance
 const getLuminance = (rgb) => {

@@ -184,25 +184,22 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { lawsOfUXData } from '../data/lawsOfUX.js';
 
 const route = useRoute();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 
 const lawId = computed(() => route.params.id);
 const law = computed(() => {
   return lawsOfUXData[lawId.value] || null;
 });
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 // Helper to get icon SVG content for a law (scaled for hero section)
 const getLawIcon = (id) => {

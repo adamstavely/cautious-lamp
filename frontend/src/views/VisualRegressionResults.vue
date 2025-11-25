@@ -311,6 +311,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ImageComparisonSlider from '../components/ImageComparisonSlider.vue';
 import EnhancedDiffViewer from '../components/EnhancedDiffViewer.vue';
@@ -319,7 +320,7 @@ import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
 
 const route = useRoute();
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const testRun = ref(null);
 const results = ref([]);
@@ -350,13 +351,9 @@ const sortOptions = [
 
 const API_BASE_URL = 'http://localhost:3000/api/v1';
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 const loadResults = async () => {
   loading.value = true;

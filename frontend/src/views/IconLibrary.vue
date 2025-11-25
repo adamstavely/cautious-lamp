@@ -686,13 +686,14 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, h, createApp, watch } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
 import Dropdown from '../components/Dropdown.vue';
 import * as LucideIcons from 'lucide-vue-next';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const showUploadModal = ref(false);
 const searchQuery = ref('');
 const selectedSet = ref('');
@@ -1127,13 +1128,9 @@ const uploadIconSet = async () => {
   selectedFiles.value = [];
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 let darkModeObserver = null;
 let darkModeInterval = null;

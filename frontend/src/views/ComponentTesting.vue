@@ -769,13 +769,14 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:3000/api/v1';
 const API_KEY = 'test-api-key-123';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const selectedComponent = ref('');
 const componentData = ref(null);
 const loadingComponent = ref(false);
@@ -1747,13 +1748,9 @@ const downloadCicdConfig = (config) => {
   URL.revokeObjectURL(url);
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 let darkModeObserver = null;
 let darkModeInterval = null;

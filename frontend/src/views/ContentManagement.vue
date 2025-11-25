@@ -532,6 +532,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
 import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
@@ -539,7 +540,7 @@ import { useComponentPatternStatus } from '../composables/useComponentPatternSta
 const { components, patterns, updateComponentStatus, updatePatternStatus } = useComponentPatternStatus();
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const activeTab = ref('create');
 const showEditModal = ref(false);
 const editingItem = ref(null);
@@ -672,13 +673,9 @@ const saveStatusChange = () => {
   closeEditModal();
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 let darkModeObserver = null;
 let darkModeInterval = null;

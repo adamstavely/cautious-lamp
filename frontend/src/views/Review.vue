@@ -161,21 +161,18 @@
 import { ref, shallowRef, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { RouterLink } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import { FolderKanban } from 'lucide-vue-next';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const UploadPageComponent = shallowRef(null);
 const uploadPageRef = ref(null);
 const mounted = ref(false);
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 const openRequestReviewModal = async () => {
   if (!mounted.value || !UploadPageComponent.value) {

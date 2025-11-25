@@ -288,10 +288,11 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import axios from 'axios';
 
 const router = useRouter();
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const projects = ref([]);
 const loading = ref(false);
@@ -312,13 +313,9 @@ const newProject = ref({
 
 const API_BASE_URL = 'http://localhost:3000/api/v1';
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 const loadProjects = async () => {
   loading.value = true;

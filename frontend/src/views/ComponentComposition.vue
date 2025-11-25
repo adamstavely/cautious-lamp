@@ -473,6 +473,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, h } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Dropdown from '../components/Dropdown.vue';
 
 // Helper function to get preview component (defined first)
@@ -741,7 +742,7 @@ getPreviewComponent = (item) => {
 };
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const previewDarkMode = ref(false);
 const composition = ref([]);
 const draggedItem = ref(null);
@@ -966,13 +967,9 @@ const exportCode = () => {
   URL.revokeObjectURL(url);
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 let darkModeObserver = null;
 let darkModeInterval = null;

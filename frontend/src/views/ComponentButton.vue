@@ -1776,6 +1776,7 @@
 import { ref, computed, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ComponentPreview from '../components/ComponentPreview.vue';
 import ComponentDependencyGraphCard from '../components/ComponentDependencyGraphCard.vue';
@@ -1787,7 +1788,7 @@ import { useComponentPatternStatus } from '../composables/useComponentPatternSta
 const route = useRoute();
 const { getComponent } = useComponentPatternStatus();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const sharedPlaygroundUrl = ref('');
 const shareUrlCopied = ref(false);
 const previewDarkMode = ref(false);
@@ -2486,13 +2487,9 @@ const downloadComponentCodemod = () => {
   URL.revokeObjectURL(url);
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 // Variant Builder Methods
 const getVariantStyles = (properties) => {

@@ -1276,6 +1276,7 @@ const openColorPicker = (event) => {
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
 import Dropdown from '../components/Dropdown.vue';
@@ -1287,7 +1288,7 @@ import axios from 'axios';
 const route = useRoute();
 const { getComponent } = useComponentPatternStatus();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const previewDarkMode = ref(false);
 const codeFormat = ref('vue');
 const selectedColor = ref('#4f46e5');
@@ -1938,13 +1939,9 @@ const exportAsHTML = async () => {
   await navigator.clipboard.writeText(htmlCode);
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 let darkModeObserver = null;
 let darkModeInterval = null;

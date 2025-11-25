@@ -550,6 +550,7 @@ import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import axios from 'axios';
 import { mockAPI, isMockMode, mockReviews, getCurrentUser, getFilteredReviews } from '../mockData.js';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import PromptModal from '../components/review-ui/PromptModal.vue';
 import ConfirmModal from '../components/review-ui/ConfirmModal.vue';
@@ -559,19 +560,15 @@ import TeamEditModal from '../components/review-ui/TeamEditModal.vue';
 import TeamMembersModal from '../components/review-ui/TeamMembersModal.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const links = ref([]);
 const selectedIds = ref([]);
 const teams = ref([]);
 const activeTab = ref('links');
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 let darkModeObserver = null;
 let darkModeInterval = null;

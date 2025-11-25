@@ -1130,12 +1130,13 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
 import jsPDF from 'jspdf';
 
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(false);
 const activeTab = ref('dashboard');
 const complianceSummary = ref(null);
@@ -1176,13 +1177,9 @@ const applicationOptions = computed(() => {
   ];
 });
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
+
+
 
 const getScoreColor = (score) => {
   if (score >= 95) return 'text-green-500';

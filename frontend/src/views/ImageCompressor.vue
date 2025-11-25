@@ -333,9 +333,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const isDragging = ref(false);
 const isCompressing = ref(false);
@@ -358,13 +359,9 @@ const compressionPercentage = computed(() => {
   return Math.round(reduction);
 });
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
+
+
 
 const handleDrop = (e) => {
   isDragging.value = false;

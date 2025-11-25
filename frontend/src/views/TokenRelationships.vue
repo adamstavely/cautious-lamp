@@ -582,9 +582,10 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import axios from 'axios';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const graphContainer = ref(null);
 const graphSvg = ref(null);
 const graphWidth = ref(1200);
@@ -860,13 +861,9 @@ const resetView = () => {
   loadRelationships();
 };
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 // Watch for changes
 watch([filteredNodes, filteredEdges], () => {

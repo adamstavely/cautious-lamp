@@ -1192,11 +1192,12 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { useDrawer } from '../composables/useDrawer.js';
 import Dropdown from '../components/Dropdown.vue';
 import axios from 'axios';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const drawerOpen = ref(false);
+const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const activeTab = ref('whats-new');
 const feedbackTab = ref('requests');
 const statusFilter = ref('all');
@@ -1390,13 +1391,9 @@ const filteredRoadmapItems = computed(() => {
   return roadmapItems.value.filter(item => item.status === statusFilter.value);
 });
 
-const closeDrawer = () => {
-  drawerOpen.value = false;
-};
 
-const toggleDrawer = () => {
-  drawerOpen.value = !drawerOpen.value;
-};
+
+
 
 const formatDate = (dateString) => {
   if (!dateString) return '';
