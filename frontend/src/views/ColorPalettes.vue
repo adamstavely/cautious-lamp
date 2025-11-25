@@ -26,20 +26,28 @@
               </div>
               <div class="hidden md:block flex-shrink-0">
                 <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
                     <defs>
                       <linearGradient id="paletteGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
                         <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
                       </linearGradient>
                     </defs>
-                    <!-- Stylized palette icon -->
-                    <circle cx="50" cy="50" r="30" fill="url(#paletteGradient)" opacity="0.3"/>
-                    <circle cx="150" cy="50" r="30" fill="url(#paletteGradient)" opacity="0.5"/>
-                    <circle cx="50" cy="150" r="30" fill="url(#paletteGradient)" opacity="0.4"/>
-                    <circle cx="150" cy="150" r="30" fill="url(#paletteGradient)" opacity="0.6"/>
-                    <line x1="50" y1="50" x2="150" y2="50" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
-                    <line x1="50" y1="50" x2="50" y2="150" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+                    <!-- Color palette swatches -->
+                    <rect x="30" y="40" width="35" height="35" rx="3" fill="#4f46e5" opacity="0.8"/>
+                    <rect x="70" y="40" width="35" height="35" rx="3" fill="#6366f1" opacity="0.8"/>
+                    <rect x="110" y="40" width="35" height="35" rx="3" fill="#818cf8" opacity="0.8"/>
+                    <rect x="150" y="40" width="35" height="35" rx="3" fill="#a5b4fc" opacity="0.8"/>
+                    <rect x="30" y="80" width="35" height="35" rx="3" fill="#7c3aed" opacity="0.7"/>
+                    <rect x="70" y="80" width="35" height="35" rx="3" fill="#8b5cf6" opacity="0.7"/>
+                    <rect x="110" y="80" width="35" height="35" rx="3" fill="#a78bfa" opacity="0.7"/>
+                    <rect x="150" y="80" width="35" height="35" rx="3" fill="#c4b5fd" opacity="0.7"/>
+                    <rect x="30" y="120" width="35" height="35" rx="3" fill="#059669" opacity="0.7"/>
+                    <rect x="70" y="120" width="35" height="35" rx="3" fill="#10b981" opacity="0.7"/>
+                    <rect x="110" y="120" width="35" height="35" rx="3" fill="#34d399" opacity="0.7"/>
+                    <rect x="150" y="120" width="35" height="35" rx="3" fill="#6ee7b7" opacity="0.7"/>
+                    <!-- Palette frame/border -->
+                    <rect x="25" y="35" width="165" height="125" rx="4" fill="none" stroke="url(#paletteGradient)" stroke-width="2" opacity="0.4"/>
                   </svg>
                 </div>
               </div>
