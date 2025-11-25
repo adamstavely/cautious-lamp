@@ -23,6 +23,36 @@
                   Access design tokens and components programmatically via REST and GraphQL APIs.
                 </p>
               </div>
+              <div class="hidden md:block flex-shrink-0">
+                <div class="w-64 h-64 relative">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                      <linearGradient id="apiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <!-- API representation - connected nodes and data flow -->
+                    <rect x="30" y="30" width="50" height="50" rx="4" fill="url(#apiGradient)" opacity="0.4"/>
+                    <rect x="120" y="30" width="50" height="50" rx="4" fill="url(#apiGradient)" opacity="0.5"/>
+                    <rect x="30" y="120" width="50" height="50" rx="4" fill="url(#apiGradient)" opacity="0.6"/>
+                    <rect x="120" y="120" width="50" height="50" rx="4" fill="url(#apiGradient)" opacity="0.4"/>
+                    <!-- Central API hub -->
+                    <circle cx="100" cy="100" r="25" fill="url(#apiGradient)" opacity="0.7"/>
+                    <circle cx="100" cy="100" r="15" fill="url(#apiGradient)" opacity="0.9"/>
+                    <!-- Connection lines representing API calls -->
+                    <line x1="55" y1="55" x2="100" y2="100" stroke="url(#apiGradient)" stroke-width="2" opacity="0.4"/>
+                    <line x1="145" y1="55" x2="100" y2="100" stroke="url(#apiGradient)" stroke-width="2" opacity="0.4"/>
+                    <line x1="55" y1="145" x2="100" y2="100" stroke="url(#apiGradient)" stroke-width="2" opacity="0.4"/>
+                    <line x1="145" y1="145" x2="100" y2="100" stroke="url(#apiGradient)" stroke-width="2" opacity="0.4"/>
+                    <!-- Data flow indicators -->
+                    <circle cx="100" cy="70" r="3" fill="white" opacity="0.8"/>
+                    <circle cx="100" cy="130" r="3" fill="white" opacity="0.8"/>
+                    <circle cx="70" cy="100" r="3" fill="white" opacity="0.8"/>
+                    <circle cx="130" cy="100" r="3" fill="white" opacity="0.8"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>

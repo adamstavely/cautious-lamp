@@ -23,6 +23,33 @@
                   Auto-generate component documentation from code comments. Extract props, examples, and usage guidelines automatically.
                 </p>
               </div>
+              <div class="hidden md:block flex-shrink-0">
+                <div class="w-64 h-64 relative">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                      <linearGradient id="docGenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                      </linearGradient>
+                    </defs>
+                    <!-- Documentation representation - document with code -->
+                    <rect x="40" y="30" width="120" height="140" rx="4" fill="url(#docGenGradient)" opacity="0.3"/>
+                    <rect x="50" y="40" width="100" height="8" rx="2" fill="url(#docGenGradient)" opacity="0.6"/>
+                    <rect x="50" y="55" width="80" height="8" rx="2" fill="url(#docGenGradient)" opacity="0.5"/>
+                    <rect x="50" y="70" width="90" height="8" rx="2" fill="url(#docGenGradient)" opacity="0.5"/>
+                    <!-- Code block representation -->
+                    <rect x="50" y="90" width="100" height="60" rx="2" fill="url(#docGenGradient)" opacity="0.2"/>
+                    <rect x="60" y="100" width="60" height="4" rx="1" fill="url(#docGenGradient)" opacity="0.7"/>
+                    <rect x="60" y="110" width="50" height="4" rx="1" fill="url(#docGenGradient)" opacity="0.6"/>
+                    <rect x="60" y="120" width="70" height="4" rx="1" fill="url(#docGenGradient)" opacity="0.6"/>
+                    <rect x="60" y="130" width="45" height="4" rx="1" fill="url(#docGenGradient)" opacity="0.7"/>
+                    <!-- Arrow indicating generation -->
+                    <path d="M 160 100 L 180 100 L 175 95 M 180 100 L 175 105" stroke="url(#docGenGradient)" stroke-width="3" fill="none" opacity="0.6"/>
+                    <!-- Generated documentation -->
+                    <rect x="185" y="85" width="12" height="30" rx="1" fill="url(#docGenGradient)" opacity="0.5"/>
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>
