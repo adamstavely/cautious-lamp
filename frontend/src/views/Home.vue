@@ -23,8 +23,8 @@
                 </p>
               </div>
               <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+                <div class="w-64 h-64 relative overflow-visible">
+                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400 scale-125 origin-center" preserveAspectRatio="xMidYMid meet">
                     <defs>
                       <linearGradient id="homeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
