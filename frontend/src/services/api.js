@@ -25,6 +25,9 @@ apiClient.interceptors.request.use(
       config.headers['x-user-email'] = user.email;
       config.headers['x-user-id'] = user.id || user.email;
     }
+    // Add API key for endpoints that require it
+    const apiKey = localStorage.getItem('apiKey') || 'test-api-key-123';
+    config.headers['authorization'] = `Bearer ${apiKey}`;
     return config;
   },
   (error) => {
@@ -178,6 +181,20 @@ export const uploadAPI = {
       bypassClientReview,
       sharingMode,
       approvedEmails,
+    });
+    return response.data;
+  },
+};
+
+/**
+ * Design Extraction API methods
+ */
+export const designExtractionAPI = {
+  // Extract design tokens from URL
+  extract: async (url, options = {}) => {
+    const response = await apiClient.post('/api/v1/design-extraction/extract', {
+      url,
+      options,
     });
     return response.data;
   },

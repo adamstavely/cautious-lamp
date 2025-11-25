@@ -1282,7 +1282,8 @@ const tokenItems = [
 const tokenUtilities = [
   { text: 'Token Migration', link: '/tokens/migration', icon: 'swap_horiz' },
   { text: 'Token Sync', link: '/tokens/sync', icon: 'sync' },
-  { text: 'Token Relationships', link: '/tokens/relationships', icon: 'account_tree' }
+  { text: 'Token Relationships', link: '/tokens/relationships', icon: 'account_tree' },
+  { text: 'Design Extractor', link: '/tokens/extract', icon: 'download' }
 ];
 
 const showAdmin = computed(() => {

@@ -20,6 +20,7 @@ import { ContributionWorkflowModule } from './contribution-workflow/contribution
 import { ApiVersioningModule } from './api-versioning/api-versioning.module';
 import { SearchModule } from './search/search.module';
 import { SecurityModule } from './common/security/security.module';
+import { DesignExtractionModule } from './design-extraction/design-extraction.module';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { rateLimitConfig } from './common/rate-limiting/rate-limit.config';
@@ -61,6 +62,7 @@ import { CustomThrottlerGuard } from './common/rate-limiting/rate-limit.guard';
     ApiVersioningModule,
     SearchModule,
     SecurityModule,
+    DesignExtractionModule,
   ],
   providers: [
     {

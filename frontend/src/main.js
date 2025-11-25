@@ -391,6 +391,10 @@ const router = createRouter({
       component: () => import('./views/TokenSync.vue'),
     },
     {
+      path: '/tokens/extract',
+      component: () => import('./views/DesignExtractor.vue'),
+    },
+    {
       path: '/design-sync',
       component: () => import('./views/DesignSync.vue'),
     },
