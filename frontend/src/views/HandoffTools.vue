@@ -586,6 +586,7 @@
         </div>
       </div>
     </div>
+    </div>
     
     <!-- Color Picker -->
     <ColorPicker
