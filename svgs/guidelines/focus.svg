@@ -1,0 +1,22 @@
+<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="focusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Focus indicator - dashed outline around focused element -->
+  <rect x="60" y="60" width="80" height="80" rx="4" fill="none" stroke="url(#focusGradient)" stroke-width="3" opacity="0.6" stroke-dasharray="6,3"/>
+  <!-- Focused element -->
+  <rect x="70" y="70" width="60" height="60" rx="3" fill="url(#focusGradient)" opacity="0.3"/>
+  <!-- Focus ring layers -->
+  <rect x="55" y="55" width="90" height="90" rx="5" fill="none" stroke="url(#focusGradient)" stroke-width="2" opacity="0.3" stroke-dasharray="4,4"/>
+  <!-- Focus indicator arrow -->
+  <path d="M 100 50 L 95 60 L 100 55 L 105 60 Z" fill="url(#focusGradient)" opacity="0.7"/>
+  <!-- Focus state markers -->
+  <circle cx="65" cy="65" r="3" fill="url(#focusGradient)" opacity="0.6"/>
+  <circle cx="135" cy="65" r="3" fill="url(#focusGradient)" opacity="0.6"/>
+  <circle cx="65" cy="135" r="3" fill="url(#focusGradient)" opacity="0.6"/>
+  <circle cx="135" cy="135" r="3" fill="url(#focusGradient)" opacity="0.6"/>
+</svg>
+

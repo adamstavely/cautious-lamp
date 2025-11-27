@@ -1,0 +1,29 @@
+<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="feedbackGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Feedback loop representation -->
+  <circle cx="100" cy="100" r="40" fill="none" stroke="url(#feedbackGradient)" stroke-width="3" opacity="0.4" stroke-dasharray="8,4"/>
+  <!-- Central observation point -->
+  <circle cx="100" cy="100" r="15" fill="url(#feedbackGradient)" opacity="0.6"/>
+  <circle cx="100" cy="100" r="6" fill="white" opacity="0.8"/>
+  <!-- Feedback indicators radiating outward -->
+  <circle cx="100" cy="60" r="8" fill="url(#feedbackGradient)" opacity="0.5"/>
+  <circle cx="140" cy="100" r="8" fill="url(#feedbackGradient)" opacity="0.5"/>
+  <circle cx="100" cy="140" r="8" fill="url(#feedbackGradient)" opacity="0.5"/>
+  <circle cx="60" cy="100" r="8" fill="url(#feedbackGradient)" opacity="0.5"/>
+  <!-- Connection lines showing feedback flow -->
+  <line x1="100" y1="60" x2="100" y2="85" stroke="url(#feedbackGradient)" stroke-width="2" opacity="0.3"/>
+  <line x1="140" y1="100" x2="115" y2="100" stroke="url(#feedbackGradient)" stroke-width="2" opacity="0.3"/>
+  <line x1="100" y1="140" x2="100" y2="115" stroke="url(#feedbackGradient)" stroke-width="2" opacity="0.3"/>
+  <line x1="60" y1="100" x2="85" y2="100" stroke="url(#feedbackGradient)" stroke-width="2" opacity="0.3"/>
+  <!-- Observability metrics -->
+  <rect x="45" y="45" width="8" height="8" rx="1" fill="url(#feedbackGradient)" opacity="0.4"/>
+  <rect x="147" y="45" width="8" height="8" rx="1" fill="url(#feedbackGradient)" opacity="0.4"/>
+  <rect x="45" y="147" width="8" height="8" rx="1" fill="url(#feedbackGradient)" opacity="0.4"/>
+  <rect x="147" y="147" width="8" height="8" rx="1" fill="url(#feedbackGradient)" opacity="0.4"/>
+</svg>
+

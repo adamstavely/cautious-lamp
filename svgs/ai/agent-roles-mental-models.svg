@@ -1,0 +1,23 @@
+<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="rolesGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Role representation - distinct shapes for different roles -->
+  <!-- Role 1: Assistant -->
+  <circle cx="70" cy="70" r="20" fill="url(#rolesGradient)" opacity="0.6"/>
+  <circle cx="70" cy="70" r="8" fill="white" opacity="0.7"/>
+  <!-- Role 2: Coordinator -->
+  <rect x="130" y="50" width="30" height="30" rx="4" fill="url(#rolesGradient)" opacity="0.6"/>
+  <rect x="140" y="60" width="10" height="10" rx="2" fill="white" opacity="0.7"/>
+  <!-- Role 3: Specialist -->
+  <polygon points="100,130 80,160 120,160" fill="url(#rolesGradient)" opacity="0.6"/>
+  <circle cx="100" cy="145" r="5" fill="white" opacity="0.7"/>
+  <!-- Mental model connections -->
+  <line x1="70" y1="70" x2="100" y2="130" stroke="url(#rolesGradient)" stroke-width="2" opacity="0.3" stroke-dasharray="4,4"/>
+  <line x1="130" y1="65" x2="100" y2="130" stroke="url(#rolesGradient)" stroke-width="2" opacity="0.3" stroke-dasharray="4,4"/>
+  <line x1="70" y1="70" x2="130" y2="65" stroke="url(#rolesGradient)" stroke-width="2" opacity="0.3" stroke-dasharray="4,4"/>
+</svg>
+

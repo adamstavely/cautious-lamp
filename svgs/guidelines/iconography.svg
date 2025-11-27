@@ -1,0 +1,24 @@
+<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="iconographyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Icon grid representation -->
+  <!-- Icon 1: Circle -->
+  <circle cx="70" cy="70" r="15" fill="url(#iconographyGradient)" opacity="0.6"/>
+  <circle cx="70" cy="70" r="6" fill="white" opacity="0.7"/>
+  <!-- Icon 2: Square -->
+  <rect x="125" y="55" width="30" height="30" rx="3" fill="url(#iconographyGradient)" opacity="0.6"/>
+  <rect x="135" y="65" width="10" height="10" rx="2" fill="white" opacity="0.7"/>
+  <!-- Icon 3: Triangle -->
+  <polygon points="70,130 50,160 90,160" fill="url(#iconographyGradient)" opacity="0.6"/>
+  <circle cx="70" cy="145" r="5" fill="white" opacity="0.7"/>
+  <!-- Icon 4: Star -->
+  <path d="M 130 130 L 135 145 L 150 145 L 140 155 L 145 170 L 130 160 L 115 170 L 120 155 L 110 145 L 125 145 Z" fill="url(#iconographyGradient)" opacity="0.6"/>
+  <!-- Consistency grid lines -->
+  <line x1="50" y1="100" x2="150" y2="100" stroke="url(#iconographyGradient)" stroke-width="1" opacity="0.2" stroke-dasharray="2,2"/>
+  <line x1="100" y1="50" x2="100" y2="150" stroke="url(#iconographyGradient)" stroke-width="1" opacity="0.2" stroke-dasharray="2,2"/>
+</svg>
+

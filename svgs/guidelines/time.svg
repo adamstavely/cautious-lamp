@@ -1,0 +1,24 @@
+<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="timeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Clock representation -->
+  <circle cx="100" cy="100" r="45" fill="none" stroke="url(#timeGradient)" stroke-width="3" opacity="0.5"/>
+  <circle cx="100" cy="100" r="35" fill="url(#timeGradient)" opacity="0.2"/>
+  <!-- Clock hands -->
+  <line x1="100" y1="100" x2="100" y2="70" stroke="url(#timeGradient)" stroke-width="3" opacity="0.7" stroke-linecap="round"/>
+  <line x1="100" y1="100" x2="120" y2="100" stroke="url(#timeGradient)" stroke-width="2" opacity="0.6" stroke-linecap="round"/>
+  <!-- Time markers -->
+  <circle cx="100" cy="55" r="3" fill="url(#timeGradient)" opacity="0.6"/>
+  <circle cx="145" cy="100" r="3" fill="url(#timeGradient)" opacity="0.6"/>
+  <circle cx="100" cy="145" r="3" fill="url(#timeGradient)" opacity="0.6"/>
+  <circle cx="55" cy="100" r="3" fill="url(#timeGradient)" opacity="0.6"/>
+  <!-- Center point -->
+  <circle cx="100" cy="100" r="5" fill="url(#timeGradient)" opacity="0.8"/>
+  <!-- Time progression indicator -->
+  <path d="M 100 55 Q 145 100, 100 145" stroke="url(#timeGradient)" stroke-width="2" fill="none" opacity="0.3" stroke-dasharray="4,2"/>
+</svg>
+

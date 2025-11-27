@@ -1,0 +1,27 @@
+<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="thinkingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Thinking indicator - animated dots -->
+  <circle cx="80" cy="100" r="6" fill="url(#thinkingGradient)" opacity="0.7">
+    <animate attributeName="opacity" values="0.3;0.7;0.3" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="100" cy="100" r="6" fill="url(#thinkingGradient)" opacity="0.7">
+    <animate attributeName="opacity" values="0.3;0.7;0.3" dur="1.5s" begin="0.3s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="120" cy="100" r="6" fill="url(#thinkingGradient)" opacity="0.7">
+    <animate attributeName="opacity" values="0.3;0.7;0.3" dur="1.5s" begin="0.6s" repeatCount="indefinite"/>
+  </circle>
+  <!-- Thought bubble representation -->
+  <circle cx="100" cy="70" r="20" fill="url(#thinkingGradient)" opacity="0.2" stroke="url(#thinkingGradient)" stroke-width="2" stroke-opacity="0.4"/>
+  <circle cx="100" cy="70" r="8" fill="url(#thinkingGradient)" opacity="0.3"/>
+  <!-- Processing waves -->
+  <path d="M 50 130 Q 75 120, 100 130 T 150 130" stroke="url(#thinkingGradient)" stroke-width="2" fill="none" opacity="0.4"/>
+  <path d="M 50 150 Q 75 140, 100 150 T 150 150" stroke="url(#thinkingGradient)" stroke-width="2" fill="none" opacity="0.3"/>
+  <!-- Processing indicator -->
+  <circle cx="100" cy="100" r="25" fill="none" stroke="url(#thinkingGradient)" stroke-width="2" opacity="0.2" stroke-dasharray="8,4"/>
+</svg>
+

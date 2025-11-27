@@ -1,0 +1,31 @@
+<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="fallbackGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Primary path (broken/error state) -->
+  <line x1="40" y1="100" x2="80" y2="100" stroke="url(#fallbackGradient)" stroke-width="3" opacity="0.3" stroke-dasharray="4,4"/>
+  <!-- Error indicator -->
+  <circle cx="80" cy="100" r="10" fill="url(#fallbackGradient)" opacity="0.5"/>
+  <line x1="75" y1="95" x2="85" y2="105" stroke="white" stroke-width="2" opacity="0.8"/>
+  <line x1="85" y1="95" x2="75" y2="105" stroke="white" stroke-width="2" opacity="0.8"/>
+  <!-- Fallback path (alternative route) -->
+  <path d="M 80 100 Q 100 80, 120 100" stroke="url(#fallbackGradient)" stroke-width="3" fill="none" opacity="0.6"/>
+  <!-- Recovery path -->
+  <path d="M 120 100 Q 140 120, 160 100" stroke="url(#fallbackGradient)" stroke-width="3" fill="none" opacity="0.7"/>
+  <!-- Fallback nodes -->
+  <circle cx="100" cy="80" r="6" fill="url(#fallbackGradient)" opacity="0.6"/>
+  <circle cx="120" cy="100" r="6" fill="url(#fallbackGradient)" opacity="0.6"/>
+  <circle cx="160" cy="100" r="8" fill="url(#fallbackGradient)" opacity="0.7"/>
+  <!-- Success indicator at end -->
+  <circle cx="160" cy="100" r="4" fill="white" opacity="0.8"/>
+  <!-- Error state markers -->
+  <rect x="70" y="90" width="6" height="6" rx="1" fill="url(#fallbackGradient)" opacity="0.4"/>
+  <rect x="70" y="104" width="6" height="6" rx="1" fill="url(#fallbackGradient)" opacity="0.4"/>
+  <!-- Fallback safety indicators -->
+  <circle cx="100" cy="75" r="3" fill="url(#fallbackGradient)" opacity="0.5"/>
+  <circle cx="140" cy="110" r="3" fill="url(#fallbackGradient)" opacity="0.5"/>
+</svg>
+
