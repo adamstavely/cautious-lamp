@@ -5,10 +5,14 @@
     
     <!-- Main Content Area -->
     <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-y-auto"
+      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
       :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
     >
-      <div class="h-full p-8">
+      <!-- Breadcrumbs -->
+      <Breadcrumbs />
+      
+      <div class="h-full overflow-y-auto">
+        <div class="p-8">
         <!-- Back Button -->
         <div class="max-w-7xl mx-auto mb-8">
           <router-link
@@ -404,6 +408,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { RouterLink } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import harmonyPalette from '@evilmartians/harmony/base';
 

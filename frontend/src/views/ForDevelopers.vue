@@ -5,7 +5,11 @@
       class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
       :style="'margin-left: 48px;'"
     >
-      <div class="h-full p-8 overflow-hidden">
+      <!-- Breadcrumbs -->
+      <Breadcrumbs />
+      
+      <div class="h-full overflow-y-auto">
+        <div class="p-8">
         <!-- Hero Section -->
         <div class="max-w-7xl mx-auto mb-16">
           <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
@@ -576,6 +580,7 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
     </div>
   </div>
@@ -583,6 +588,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
+import Breadcrumbs from '../components/Breadcrumbs.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 

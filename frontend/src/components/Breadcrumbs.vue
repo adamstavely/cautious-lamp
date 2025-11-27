@@ -173,6 +173,20 @@ const crumbs = computed(() => {
     
     currentPath += '/' + part;
     
+    // Special handling for palette-builder
+    // Show it as Tools > Palette Builder
+    if (part === 'palette-builder') {
+      breadcrumbs.push({
+        label: 'Tools',
+        path: '/tools'
+      });
+      breadcrumbs.push({
+        label: 'Palette Builder',
+        path: null // Current page, not clickable
+      });
+      return; // Skip further processing
+    }
+    
     // Special handling for guidelines paths
     // When we have /guidelines/colors, we want Guidelines > Colors
     // So we need to map the doc path part separately
@@ -184,7 +198,12 @@ const crumbs = computed(() => {
       });
       // Handle the doc path separately
       const docPath = '/' + parts.slice(index + 1).join('/');
-      const docLabel = pathLabels[docPath] || parts[parts.length - 1].charAt(0).toUpperCase() + parts[parts.length - 1].slice(1).replace(/-/g, ' ');
+      let docLabel = pathLabels[docPath];
+      if (!docLabel) {
+        // Capitalize each word (split by hyphens, capitalize first letter of each)
+        const lastPart = parts[parts.length - 1];
+        docLabel = lastPart.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      }
       breadcrumbs.push({
         label: docLabel,
         path: null // Current page, not clickable
@@ -245,7 +264,12 @@ const crumbs = computed(() => {
       }
     }
     
-    const label = pathLabels[currentPath] || part.charAt(0).toUpperCase() + part.slice(1).replace(/-/g, ' ');
+    // Generate label - capitalize each word if not in pathLabels
+    let label = pathLabels[currentPath];
+    if (!label) {
+      // Capitalize each word (split by hyphens, capitalize first letter of each)
+      label = part.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    }
     
     breadcrumbs.push({
       label,

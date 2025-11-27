@@ -1,8 +1,14 @@
 <template>
-  <div class="p-6 min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-    <div class="flex gap-4" style="min-height: calc(100vh - 200px);">
-      <!-- Main Content Area -->
-      <div class="flex-1 overflow-y-auto space-y-4">
+  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
+    <div class="flex-1 h-full transition-all duration-300 relative overflow-hidden" style="margin-left: 48px;">
+      <!-- Breadcrumbs -->
+      <Breadcrumbs />
+      
+      <div class="h-full overflow-y-auto">
+        <div class="p-6 min-h-screen">
+          <div class="flex gap-4" style="min-height: calc(100vh - 200px);">
+            <!-- Main Content Area -->
+            <div class="flex-1 overflow-y-auto space-y-4">
       <!-- Completed Review Message -->
       <div v-if="reviewCompleted" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
         <div class="p-8 text-center">
@@ -393,13 +399,18 @@
       :message="alertMessage"
       :type="alertType"
     />
-  </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
 import { useRoute } from 'vue-router';
+import Breadcrumbs from '../components/Breadcrumbs.vue';
 import VersionSelector from '../components/review-ui/VersionSelector.vue';
 import PreviewFrame from '../components/review-ui/PreviewFrame.vue';
 import CommentsSidebar from '../components/review-ui/CommentsSidebar.vue';
