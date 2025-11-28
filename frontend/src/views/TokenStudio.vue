@@ -23,7 +23,7 @@
                 <div class="flex-1">
                   <div class="flex items-center gap-4 mb-4">
                     <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Token Studio
+                      Design Tokens
                     </h1>
                     <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
                       DTCG Compliant

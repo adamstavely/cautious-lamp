@@ -565,7 +565,7 @@
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
               ]"
             >
-              <span class="material-symbols-outlined text-lg">home</span>
+              <span class="material-symbols-outlined text-lg">bar_chart</span>
               <span class="font-medium">Overview</span>
             </router-link>
           </div>
@@ -712,7 +712,7 @@
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
               ]"
             >
-              <span class="material-symbols-outlined text-lg">home</span>
+              <span class="material-symbols-outlined text-lg">note_stack</span>
               <span class="font-medium">Overview</span>
             </router-link>
           </div>
@@ -823,7 +823,7 @@
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
               ]"
             >
-              <span class="material-symbols-outlined text-lg">home</span>
+              <span class="material-symbols-outlined text-lg">menu_book</span>
               <span class="font-medium">Overview</span>
             </router-link>
           </div>
@@ -855,47 +855,44 @@
           </div>
           
           <!-- Guidelines -->
-          <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Guidelines</h4>
-            <div class="space-y-1">
-              <router-link
-                v-for="item in filteredGuidelines.filter(item => item.link !== '/colors' && item.link !== '/typography' && item.link !== '/spacing' && item.link !== '/shadows' && item.link !== '/accessibility' && (item.link.startsWith('/guidelines/') || item.link === '/tui-guidance'))"
-                :key="item.link"
-                :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
-                    : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-                ]"
-              >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-                <span class="font-medium">{{ item.text }}</span>
-              </router-link>
-              <a
-                v-for="item in filteredGuidelines.filter(item => item.link !== '/colors' && item.link !== '/typography' && item.link !== '/spacing' && item.link !== '/shadows' && item.link !== '/accessibility' && !item.link.startsWith('/guidelines/') && item.link !== '/tui-guidance')"
-                :key="item.link"
-                href="#"
-                @click.prevent="navigateToDoc(item.link)"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
-                    : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-                ]"
-              >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-                <span class="font-medium">{{ item.text }}</span>
-              </a>
-            </div>
+          <div class="space-y-1">
+            <router-link
+              v-for="item in filteredGuidelines.filter(item => item.link !== '/colors' && item.link !== '/typography' && item.link !== '/spacing' && item.link !== '/shadows' && item.link !== '/accessibility' && (item.link.startsWith('/guidelines/') || item.link === '/tui-guidance'))"
+              :key="item.link"
+              :to="item.link"
+              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              :class="[
+                isActive(item.link)
+                  ? (isDarkMode 
+                    ? 'text-indigo-400 bg-indigo-900/20' 
+                    : 'text-indigo-600 bg-indigo-50')
+                  : (isDarkMode
+                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+              ]"
+            >
+              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+              <span class="font-medium">{{ item.text }}</span>
+            </router-link>
+            <a
+              v-for="item in filteredGuidelines.filter(item => item.link !== '/colors' && item.link !== '/typography' && item.link !== '/spacing' && item.link !== '/shadows' && item.link !== '/accessibility' && !item.link.startsWith('/guidelines/') && item.link !== '/tui-guidance')"
+              :key="item.link"
+              href="#"
+              @click.prevent="navigateToDoc(item.link)"
+              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              :class="[
+                isActive(item.link)
+                  ? (isDarkMode 
+                    ? 'text-indigo-400 bg-indigo-900/20' 
+                    : 'text-indigo-600 bg-indigo-50')
+                  : (isDarkMode
+                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+              ]"
+            >
+              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+              <span class="font-medium">{{ item.text }}</span>
+            </a>
           </div>
           
           <!-- Artificial Intelligence -->
@@ -938,25 +935,103 @@
             <span class="material-symbols-outlined">left_panel_close</span>
           </button>
         </div>
-        <nav class="space-y-1">
-          <router-link
-            v-for="item in filteredDesignAssets"
-            :key="item.link"
-            :to="item.link"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-            :class="[
-              isActive(item.link)
-                ? (isDarkMode 
-                  ? 'text-indigo-400 bg-indigo-900/20' 
-                  : 'text-indigo-600 bg-indigo-50')
-                : (isDarkMode
-                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-            ]"
-          >
-            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-            <span class="font-medium">{{ item.text }}</span>
-          </router-link>
+        <nav class="space-y-6">
+          <!-- Overview -->
+          <div class="space-y-1">
+            <router-link
+              v-for="item in filteredDesignAssets.filter(item => item.link === '/design-assets')"
+              :key="item.link"
+              :to="item.link"
+              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              :class="[
+                isActive(item.link)
+                  ? (isDarkMode 
+                    ? 'text-indigo-400 bg-indigo-900/20' 
+                    : 'text-indigo-600 bg-indigo-50')
+                  : (isDarkMode
+                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+              ]"
+            >
+              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+              <span class="font-medium">{{ item.text }}</span>
+            </router-link>
+          </div>
+          
+          <!-- Icons & Fonts -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Icons & Fonts</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in filteredDesignAssets.filter(item => item.link === '/design-assets/icons' || item.link === '/design-assets/font-library' || item.link === '/design-assets/country-flags')"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Seals & Logos -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Seals & Logos</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in filteredDesignAssets.filter(item => item.link === '/design-assets/company-logos' || item.link === '/design-assets/capability-logos' || item.link === '/design-assets/internal-seals' || item.link === '/design-assets/usg-seals')"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Visuals -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Visuals</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in filteredDesignAssets.filter(item => item.link === '/design-assets/illustrations' || item.link === '/design-assets/interactives' || item.link === '/design-assets/stock-photos')"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
         </nav>
       </div>
       
@@ -1008,33 +1083,11 @@
             <span class="material-symbols-outlined">left_panel_close</span>
           </button>
         </div>
-        <nav class="space-y-1">
-          <router-link
-            v-for="item in filteredTokenItems"
-            :key="item.link"
-            :to="item.link"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-            :class="[
-              isActive(item.link)
-                ? (isDarkMode 
-                  ? 'text-indigo-400 bg-indigo-900/20' 
-                  : 'text-indigo-600 bg-indigo-50')
-                : (isDarkMode
-                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-            ]"
-          >
-            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-            <span class="font-medium">{{ item.text }}</span>
-          </router-link>
-        </nav>
-
-        <!-- Utilities -->
-        <div class="mt-6">
-          <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Utilities</h4>
-          <nav class="space-y-1">
+        <nav class="space-y-6">
+          <!-- Overview -->
+          <div class="space-y-1">
             <router-link
-              v-for="item in filteredTokenUtilities"
+              v-for="item in filteredTokenItems.filter(item => item.link === '/tokens')"
               :key="item.link"
               :to="item.link"
               class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -1051,8 +1104,83 @@
               <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
               <span class="font-medium">{{ item.text }}</span>
             </router-link>
-          </nav>
-        </div>
+          </div>
+
+          <!-- Studio -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Studio</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in filteredTokenItems.filter(item => item.link === '/tokens/studio' || item.link === '/tokens/ai-builder' || item.link === '/tokens/playground')"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Library -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Library</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in filteredTokenItems.filter(item => item.link === '/tokens/library' || item.link === '/tokens/color-palettes')"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Utilities -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Utilities</h4>
+            <nav class="space-y-1">
+              <router-link
+                v-for="item in filteredTokenUtilities"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </nav>
+          </div>
+        </nav>
       </div>
     </div>
   </div>
@@ -1320,8 +1448,8 @@ const uxResearchTools = [
 
 const tokenItems = [
   { text: 'Overview', link: '/tokens', icon: 'style' },
-  { text: 'Token Studio', link: '/tokens/studio', icon: 'tune' },
-  { text: 'AI Token Studio', link: '/tokens/ai-builder', icon: 'smart_toy' },
+  { text: 'Design Tokens', link: '/tokens/studio', icon: 'tune' },
+  { text: 'AI Tokens', link: '/tokens/ai-builder', icon: 'smart_toy' },
   { text: 'Token Playground', link: '/tokens/playground', icon: 'palette' },
   { text: 'Style Library', link: '/tokens/library', icon: 'library_books' },
   { text: 'Color Palettes', link: '/tokens/color-palettes', icon: 'palette' }
