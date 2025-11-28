@@ -26,9 +26,9 @@
           <span class="material-symbols-outlined flex-shrink-0 mb-2" aria-hidden="true">{{ item.icon }}</span>
           <span class="font-medium text-sm text-center">{{ item.label }}</span>
         </router-link>
-        <!-- Divider after Getting Started, AI, and Design Assets -->
+        <!-- Divider after HCD and Design Assets -->
         <div 
-          v-if="item.path === '/getting-started' || item.path === '/ai' || item.path === '/design-assets'"
+          v-if="item.path === '/research' || item.path === '/design-assets'"
           class="h-px mx-4 mb-2"
           :class="isDarkMode ? 'bg-indigo-700' : 'bg-indigo-600'"
           aria-hidden="true"
@@ -147,12 +147,12 @@ const menuItems = [
   { path: '/getting-started', label: 'Getting Started', icon: 'rocket_launch' },
   { path: '/guidelines', label: 'Guidelines', icon: 'menu_book' },
   { path: '/research', label: 'HCD', icon: 'note_stack' },
-  { path: '/ai', label: 'AI', icon: 'psychology' },
   { path: '/components', label: 'Components', icon: 'widgets' },
   { path: '/tokens', label: 'Tokens', icon: 'style' },
   { path: '/patterns', label: 'Patterns', icon: 'pattern' },
   { path: '/design-assets', label: 'Design Assets', icon: 'collections' },
   { path: '/review', label: 'Review', icon: 'rate_review' },
+  { path: '/data-viz', label: 'Data Viz', icon: 'bar_chart' },
   { path: '/tools', label: 'Tools', icon: 'build' },
 ];
 
@@ -172,8 +172,8 @@ const isActive = (path) => {
   if (path === '/research') {
     return route.path === '/research' || route.path.startsWith('/research/') || route.path.startsWith('/hcd/');
   }
-  if (path === '/ai') {
-    return route.path === '/ai' || route.path.startsWith('/ai/');
+  if (path === '/data-viz') {
+    return route.path === '/data-viz' || route.path.startsWith('/data-viz/');
   }
   return route.path === path || route.path.startsWith(path + '/');
 };

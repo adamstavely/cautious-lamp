@@ -175,6 +175,14 @@ const router = createRouter({
       component: () => import('./views/FullScreenPreview.vue'),
     },
     {
+      path: '/data-viz',
+      component: () => import('./views/DataViz.vue'),
+    },
+    {
+      path: '/data-viz/:pathMatch(.*)*',
+      component: () => import('./views/DataViz.vue'),
+    },
+    {
       path: '/admin',
       component: () => import('./views/Admin.vue'),
     },
@@ -813,6 +821,10 @@ const router = createRouter({
     {
       path: '/guidelines/voice-and-tone',
       component: () => import('./views/VoiceAndTone.vue'),
+    },
+    {
+      path: '/guidelines/tui-guidance',
+      component: () => import('./views/Guidelines.vue'),
     },
     {
       path: '/palette-builder',

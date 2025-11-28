@@ -365,6 +365,7 @@ const getFilePath = (docPath) => {
     '/patterns/layout': '/docs/patterns/layout.md',
     '/patterns/forms': '/docs/patterns/forms.md',
     '/patterns/feedback': '/docs/patterns/feedback.md',
+    '/guidelines/tui-guidance': '/docs/guidelines/tui-guidance.md',
     '/tui-guidance': '/docs/guidelines/tui-guidance.md',
     '/': '/docs/index.md'
   };

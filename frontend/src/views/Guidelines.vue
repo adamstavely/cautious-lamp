@@ -283,6 +283,11 @@ onMounted(() => {
     sessionStorage.removeItem('openDrawerOnLoad');
   }
   
+  // Handle route on mount
+  if (route.path.startsWith('/guidelines/') && route.path !== '/guidelines') {
+    currentDocLink.value = route.path.replace('/guidelines', '');
+  }
+  
   darkModeObserver = new MutationObserver(() => {
     isDarkMode.value = document.documentElement.classList.contains('dark');
   });

@@ -483,31 +483,6 @@
             </div>
           </div>
 
-          <!-- Data Visualization -->
-          <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Data Visualization</h4>
-            <div class="space-y-1">
-              <router-link
-                v-for="item in filteredToolGroups.dataVisualization"
-                :key="item.link"
-                :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
-                    : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-                ]"
-              >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-                <span class="font-medium">{{ item.text }}</span>
-              </router-link>
-            </div>
-          </div>
-
           <!-- Development -->
           <div v-if="filteredToolGroups.development.length > 0">
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Development</h4>
@@ -554,6 +529,92 @@
               >
                 <Captions v-if="item.icon === 'captions'" :size="20" :stroke-width="2" />
                 <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+        </nav>
+      </div>
+      
+      <!-- Data Viz - only show when on data-viz route -->
+      <div v-if="showDataViz" class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Data Visualization</h3>
+          <button
+            @click="toggle"
+            class="p-2 rounded-lg transition-colors"
+            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            title="Close drawer"
+          >
+            <span class="material-symbols-outlined">left_panel_close</span>
+          </button>
+        </div>
+        <nav class="space-y-6">
+          <!-- Overview -->
+          <div class="space-y-1">
+            <router-link
+              to="/data-viz"
+              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              :class="[
+                isActive('/data-viz') && route.path === '/data-viz'
+                  ? (isDarkMode 
+                    ? 'text-indigo-400 bg-indigo-900/20' 
+                    : 'text-indigo-600 bg-indigo-50')
+                  : (isDarkMode
+                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+              ]"
+            >
+              <span class="material-symbols-outlined text-lg">home</span>
+              <span class="font-medium">Overview</span>
+            </router-link>
+          </div>
+          
+          <!-- Generators -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Generators</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in filteredDataVizGenerators"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Utilities -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Utilities</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in filteredDataVizUtilities"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -798,7 +859,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Guidelines</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in filteredGuidelines.filter(item => item.link !== '/colors' && item.link !== '/typography' && item.link !== '/spacing' && item.link !== '/shadows' && item.link !== '/accessibility' && item.link.startsWith('/guidelines/'))"
+                v-for="item in filteredGuidelines.filter(item => item.link !== '/colors' && item.link !== '/typography' && item.link !== '/spacing' && item.link !== '/shadows' && item.link !== '/accessibility' && (item.link.startsWith('/guidelines/') || item.link === '/tui-guidance'))"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -816,7 +877,7 @@
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
               <a
-                v-for="item in filteredGuidelines.filter(item => item.link !== '/colors' && item.link !== '/typography' && item.link !== '/spacing' && item.link !== '/shadows' && item.link !== '/accessibility' && !item.link.startsWith('/guidelines/'))"
+                v-for="item in filteredGuidelines.filter(item => item.link !== '/colors' && item.link !== '/typography' && item.link !== '/spacing' && item.link !== '/shadows' && item.link !== '/accessibility' && !item.link.startsWith('/guidelines/') && item.link !== '/tui-guidance')"
                 :key="item.link"
                 href="#"
                 @click.prevent="navigateToDoc(item.link)"
@@ -836,41 +897,31 @@
               </a>
             </div>
           </div>
-        </nav>
-      </div>
-      
-      <!-- AI - only show when on AI route -->
-      <div v-if="showAI" class="mb-8">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Artificial Intelligence</h3>
-          <button
-            @click="toggle"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
-            title="Close drawer"
-          >
-            <span class="material-symbols-outlined">left_panel_close</span>
-          </button>
-        </div>
-        <nav class="space-y-1">
-          <router-link
-            v-for="item in filteredArtificialIntelligence"
-            :key="item.link"
-            :to="item.link"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-            :class="[
-              isActive(item.link)
-                ? (isDarkMode 
-                  ? 'text-indigo-400 bg-indigo-900/20' 
-                  : 'text-indigo-600 bg-indigo-50')
-                : (isDarkMode
-                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-            ]"
-          >
-            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-            <span class="font-medium">{{ item.text }}</span>
-          </router-link>
+          
+          <!-- Artificial Intelligence -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Artificial Intelligence</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in filteredArtificialIntelligence"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
         </nav>
       </div>
       
@@ -1061,7 +1112,6 @@ const foundations = [
 ];
 
 const artificialIntelligence = [
-  { text: 'Overview', link: '/ai', icon: 'psychology' },
   { text: 'AI Patterns', link: '/ai/patterns', icon: 'auto_awesome' },
   { text: 'AI Components', link: '/ai/components', icon: 'smart_toy' }
 ];
@@ -1083,7 +1133,7 @@ const guidelines = [
   { text: 'Shadows', link: '/shadows', icon: 'layers' },
   { text: 'Accessibility', link: '/accessibility', icon: 'accessibility' },
   { text: 'Voice and Tone', link: '/guidelines/voice-and-tone', icon: 'mic' },
-  { text: 'Terminal UI (TUI) Guidance', link: '/tui-guidance', icon: 'terminal' }
+  { text: 'Terminal UI (TUI) Guidance', link: '/guidelines/tui-guidance', icon: 'terminal' }
 ];
 
 const designPatterns = [
@@ -1145,12 +1195,6 @@ const toolGroups = computed(() => ({
     { text: 'Color Converter', link: '/tools/color-converter', icon: 'swap_horiz' },
     { text: 'Color Contrast Checker', link: '/tools/color-contrast', icon: 'contrast' },
     { text: 'APCA Calculator', link: '/tools/apca-calculator', icon: 'calculate' }
-  ],
-  dataVisualization: [
-    { text: 'Chart Builder', link: '/tools/chart-builder', icon: 'bar_chart' },
-    { text: 'Timeline Generator', link: '/tools/timeline-generator', icon: 'timeline' },
-    { text: 'Table Generator', link: '/tools/table-generator', icon: 'table_chart' },
-    { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'format_color_fill' }
   ],
   text: [
     { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'text-initial' },
@@ -1290,6 +1334,16 @@ const tokenUtilities = [
   { text: 'Design Extractor', link: '/tokens/extract', icon: 'download' }
 ];
 
+const dataVizGenerators = [
+  { text: 'Chart Builder', link: '/tools/chart-builder', icon: 'bar_chart' },
+  { text: 'Timeline Generator', link: '/tools/timeline-generator', icon: 'timeline' },
+  { text: 'Table Generator', link: '/tools/table-generator', icon: 'table_chart' }
+];
+
+const dataVizUtilities = [
+  { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'format_color_fill' }
+];
+
 const showAdmin = computed(() => {
   return route.path === '/admin' || route.path.startsWith('/admin/');
 });
@@ -1310,12 +1364,13 @@ const showResearch = computed(() => {
 const showGuidelines = computed(() => {
   return route.path === '/guidelines' || 
          route.path.startsWith('/guidelines/') ||
-         route.path === '/tui-guidance' ||
          route.path === '/colors' ||
          route.path === '/typography' ||
          route.path === '/spacing' ||
          route.path === '/shadows' ||
-         route.path === '/accessibility';
+         route.path === '/accessibility' ||
+         route.path === '/ai' ||
+         route.path.startsWith('/ai/');
 });
 
 const showTokens = computed(() => {
@@ -1331,11 +1386,29 @@ const showPatterns = computed(() => {
 });
 
 
+const showDataViz = computed(() => {
+  const path = route.path;
+  // Show for data-viz routes and data visualization tool routes
+  if (path === '/data-viz' || path.startsWith('/data-viz/')) {
+    return true;
+  }
+  // Also show for data visualization tool routes
+  if (path === '/tools/chart-builder' || path === '/tools/timeline-generator' || 
+      path === '/tools/table-generator' || path === '/tools/color-scale') {
+    return true;
+  }
+  return false;
+});
+
 const showTools = computed(() => {
   const path = route.path;
   // Exclude UX Research tools (they're now in HCD)
   // Exclude Theme Builder and Visual Regression (they're now in Review Utilities)
-  if (path === '/tools/nasa-tlx' || path === '/tools/sus' || path === '/tools/heuristic-evaluation' || path === '/theme-builder' || path === '/tools/visual-regression') {
+  // Exclude data visualization tools (they're now in Data Viz)
+  if (path === '/tools/nasa-tlx' || path === '/tools/sus' || path === '/tools/heuristic-evaluation' || 
+      path === '/theme-builder' || path === '/tools/visual-regression' ||
+      path === '/tools/chart-builder' || path === '/tools/timeline-generator' || 
+      path === '/tools/table-generator' || path === '/tools/color-scale') {
     return false;
   }
   return path === '/tools' || path.startsWith('/tools/') || path === '/palette-builder';
@@ -1354,7 +1427,7 @@ const showAI = computed(() => {
 });
 
 const showMainSections = computed(() => {
-  return !showPatterns.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value && !showTokens.value && !showAdmin.value && !showGettingStarted.value && !showResearch.value && !showAI.value && !showGuidelines.value;
+  return !showPatterns.value && !showComponents.value && !showTools.value && !showDesignAssets.value && !showReview.value && !showTokens.value && !showAdmin.value && !showGettingStarted.value && !showResearch.value && !showAI.value && !showGuidelines.value && !showDataViz.value;
 });
 
 const isActive = (path) => {
@@ -1460,10 +1533,17 @@ const filteredToolGroups = computed(() => {
     overview: toolGroups.value.overview.filter(item => isRouteEnabled(item.link)),
     color: toolGroups.value.color.filter(item => isRouteEnabled(item.link)),
     text: toolGroups.value.text.filter(item => isRouteEnabled(item.link)),
-    dataVisualization: toolGroups.value.dataVisualization.filter(item => isRouteEnabled(item.link)),
     development: toolGroups.value.development.filter(item => isRouteEnabled(item.link)),
     image: toolGroups.value.image.filter(item => isRouteEnabled(item.link))
   };
+});
+
+const filteredDataVizGenerators = computed(() => {
+  return dataVizGenerators.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredDataVizUtilities = computed(() => {
+  return dataVizUtilities.filter(item => isRouteEnabled(item.link));
 });
 
 const filteredReviewItems = computed(() => {
@@ -1507,6 +1587,8 @@ const getAllDrawerFlagKeys = () => {
     ...toolGroups.value.text.map(t => t.link),
     ...toolGroups.value.development.map(t => t.link),
     ...toolGroups.value.image.map(t => t.link),
+    ...dataVizGenerators.map(d => d.link),
+    ...dataVizUtilities.map(d => d.link),
   ];
   
   // Get unique flag keys for all routes
