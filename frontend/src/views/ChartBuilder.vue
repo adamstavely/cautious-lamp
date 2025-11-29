@@ -75,12 +75,25 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <h2 class="text-lg font-semibold mb-6 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">show_chart</span>
-                Chart Type
+              <h2 
+                @click="chartTypeSectionExpanded = !chartTypeSectionExpanded"
+                class="text-lg font-semibold mb-6 flex items-center justify-between gap-2 cursor-pointer hover:opacity-80 transition-opacity" 
+                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+              >
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-indigo-600">show_chart</span>
+                  Chart Type
+                </div>
+                <span 
+                  class="material-symbols-outlined text-gray-500 transition-transform duration-200"
+                  :class="chartTypeSectionExpanded ? 'rotate-180' : ''"
+                >
+                  expand_more
+                </span>
               </h2>
               
-              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <transition name="slide-fade">
+                <div v-show="chartTypeSectionExpanded" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 <button
                   v-for="type in chartTypes"
                   :key="type.value"
@@ -101,6 +114,7 @@
                   <p class="text-xs opacity-80">{{ type.description }}</p>
                 </button>
               </div>
+              </transition>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1115,6 +1129,7 @@ const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 
 const selectedChartType = ref('line');
+const chartTypeSectionExpanded = ref(true);
 const chartKey = ref(0);
 const chartData = ref([
   { label: 'Jan', value: 65 },
@@ -2995,6 +3010,19 @@ const SankeySVG = {
 </script>
 
 <style scoped>
+.slide-fade-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+  transition: all 0.3s ease-in;
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
 .texture-pattern {
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
