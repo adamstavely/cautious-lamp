@@ -734,6 +734,208 @@
                     </div>
                   </div>
 
+                  <!-- Choropleth Map Input -->
+
+                  <!-- Bullet Graph Input -->
+                  <div v-else-if="selectedChartType === 'bulletGraph'" class="mb-4">
+                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Bullet Items
+                    </label>
+                    <div class="space-y-3">
+                      <div 
+                        v-for="(item, index) in bulletGraphData"
+                        :key="index"
+                        class="border rounded-lg p-3"
+                        :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'"
+                      >
+                        <div class="flex items-center justify-between mb-2">
+                          <input
+                            v-model="item.label"
+                            type="text"
+                            placeholder="Item label"
+                            class="flex-1 px-3 py-1.5 rounded-lg border text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                            :class="isDarkMode 
+                              ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
+                              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
+                          />
+                          <button
+                            @click="bulletGraphData.splice(index, 1)"
+                            class="ml-2 px-2 py-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            :disabled="bulletGraphData.length <= 1"
+                          >
+                            <span class="material-symbols-outlined text-lg">delete</span>
+                          </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                          <div>
+                            <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Value</label>
+                            <input
+                              v-model.number="item.value"
+                              type="number"
+                              class="w-full px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                              :class="isDarkMode 
+                                ? 'bg-slate-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'"
+                            />
+                          </div>
+                          <div>
+                            <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Target</label>
+                            <input
+                              v-model.number="item.target"
+                              type="number"
+                              class="w-full px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                              :class="isDarkMode 
+                                ? 'bg-slate-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'"
+                            />
+                          </div>
+                          <div>
+                            <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Max</label>
+                            <input
+                              v-model.number="item.max"
+                              type="number"
+                              class="w-full px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                              :class="isDarkMode 
+                                ? 'bg-slate-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'"
+                            />
+                          </div>
+                          <div>
+                            <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Good Range</label>
+                            <input
+                              v-model.number="item.ranges.good"
+                              type="number"
+                              class="w-full px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                              :class="isDarkMode 
+                                ? 'bg-slate-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        @click="bulletGraphData.push({ label: `Item ${bulletGraphData.length + 1}`, value: 50, target: 60, max: 100, ranges: { poor: 0, fair: 30, good: 60, excellent: 80 } })"
+                        class="w-full px-4 py-2 rounded-lg border border-dashed text-sm font-medium transition-colors"
+                        :class="isDarkMode 
+                          ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
+                          : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
+                      >
+                        <span class="material-symbols-outlined text-base align-middle mr-1">add</span>
+                        Add Bullet Item
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Chord Diagram Input -->
+                  <div v-else-if="selectedChartType === 'chordDiagram'" class="mb-4">
+                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Relationship Data
+                    </label>
+                    <div class="space-y-3">
+                      <div>
+                        <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Entities:</label>
+                        <div class="space-y-2">
+                          <div 
+                            v-for="(node, index) in chordDiagramData.nodes"
+                            :key="index"
+                            class="flex gap-2"
+                          >
+                            <input
+                              v-model="node.id"
+                              type="text"
+                              placeholder="ID"
+                              class="w-20 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                              :class="isDarkMode 
+                                ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
+                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
+                            />
+                            <input
+                              v-model="node.label"
+                              type="text"
+                              placeholder="Entity name"
+                              class="flex-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                              :class="isDarkMode 
+                                ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
+                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
+                            />
+                            <button
+                              @click="chordDiagramData.nodes.splice(index, 1)"
+                              class="px-2 py-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                              :disabled="chordDiagramData.nodes.length <= 2"
+                            >
+                              <span class="material-symbols-outlined text-sm">close</span>
+                            </button>
+                          </div>
+                          <button
+                            @click="chordDiagramData.nodes.push({ id: `Entity${chordDiagramData.nodes.length + 1}`, label: `Entity ${chordDiagramData.nodes.length + 1}` })"
+                            class="w-full px-3 py-1.5 rounded border border-dashed text-xs font-medium transition-colors"
+                            :class="isDarkMode 
+                              ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
+                              : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
+                          >
+                            <span class="material-symbols-outlined text-xs align-middle mr-1">add</span>
+                            Add Entity
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Relationships:</label>
+                        <div class="space-y-2">
+                          <div 
+                            v-for="(link, index) in chordDiagramData.links"
+                            :key="index"
+                            class="flex gap-2"
+                          >
+                            <select
+                              v-model="link.source"
+                              class="flex-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                              :class="isDarkMode 
+                                ? 'bg-slate-800 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'"
+                            >
+                              <option v-for="node in chordDiagramData.nodes" :key="node.id" :value="node.id">{{ node.label }}</option>
+                            </select>
+                            <span class="self-center text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">↔</span>
+                            <select
+                              v-model="link.target"
+                              class="flex-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                              :class="isDarkMode 
+                                ? 'bg-slate-800 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'"
+                            >
+                              <option v-for="node in chordDiagramData.nodes" :key="node.id" :value="node.id">{{ node.label }}</option>
+                            </select>
+                            <input
+                              v-model.number="link.value"
+                              type="number"
+                              placeholder="Value"
+                              class="w-20 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                              :class="isDarkMode 
+                                ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
+                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
+                            />
+                            <button
+                              @click="chordDiagramData.links.splice(index, 1)"
+                              class="px-2 py-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            >
+                              <span class="material-symbols-outlined text-sm">close</span>
+                            </button>
+                          </div>
+                          <button
+                            @click="chordDiagramData.links.push({ source: chordDiagramData.nodes[0]?.id || '', target: chordDiagramData.nodes[1]?.id || '', value: 10 })"
+                            class="w-full px-3 py-1.5 rounded border border-dashed text-xs font-medium transition-colors"
+                            :class="isDarkMode 
+                              ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
+                              : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
+                          >
+                            <span class="material-symbols-outlined text-xs align-middle mr-1">add</span>
+                            Add Relationship
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <!-- Single Dataset Input -->
                   <div v-else class="mb-4">
                     <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -1310,6 +1512,22 @@
                       >
                         <SankeySVG :data="sankeyData" :colors="colorSchemes[chartConfig.colorScheme] || colorSchemes.default" />
                       </div>
+                      <!-- Custom SVG Bullet Graph -->
+                      <div
+                        v-else-if="selectedChartType === 'bulletGraph'"
+                        :key="`chart-${selectedChartType}-${chartKey}`"
+                        class="w-full h-full"
+                      >
+                        <BulletGraphSVG :data="bulletGraphData" :colors="colorSchemes[chartConfig.colorScheme] || colorSchemes.default" />
+                      </div>
+                      <!-- Custom SVG Chord Diagram -->
+                      <div
+                        v-else-if="selectedChartType === 'chordDiagram'"
+                        :key="`chart-${selectedChartType}-${chartKey}`"
+                        class="w-full h-full"
+                      >
+                        <ChordDiagramSVG :data="chordDiagramData" :colors="colorSchemes[chartConfig.colorScheme] || colorSchemes.default" />
+                      </div>
                       </div>
                       <figcaption :id="`chart-summary-${chartKey}`" class="sr-only">
                         {{ chartConfig.summary || 'Chart visualization' }}
@@ -1403,7 +1621,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount, h } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, h } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
@@ -1427,6 +1645,9 @@ import {
 import { Line as LineChart, Bar as BarChart, Pie as PieChart, Doughnut as DoughnutChart, Scatter as ScatterChart, Radar as RadarChart, Bubble as BubbleChart, PolarArea as PolarAreaChart, Chart } from 'vue-chartjs';
 import { CandlestickController, CandlestickElement } from 'chartjs-chart-financial';
 import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
+// Map utilities removed - maps moved to MapMaker.vue
+// import { loadTopoJSON, getGeoJSONFeatures, mapDataToFeatures, getFeatureCentroid, getDefaultMapUrls } from '../utils/mapData.js';
+// import { createProjection, createPathGenerator, projectCoordinates } from '../utils/mapProjections.js';
 
 // Helper function to draw the color scale legend
 function drawLegend(ctx, x, y, width, height, options, chartArea) {
@@ -1653,6 +1874,30 @@ const sankeyData = ref({
   ]
 });
 
+
+// Bullet graph data
+const bulletGraphData = ref([
+  { label: 'Revenue', value: 75, target: 80, max: 100, ranges: { poor: 0, fair: 50, good: 75, excellent: 90 } },
+  { label: 'Profit', value: 60, target: 70, max: 100, ranges: { poor: 0, fair: 40, good: 60, excellent: 85 } },
+  { label: 'Growth', value: 85, target: 90, max: 100, ranges: { poor: 0, fair: 60, good: 80, excellent: 95 } }
+]);
+
+// Chord diagram data
+const chordDiagramData = ref({
+  nodes: [
+    { id: 'A', label: 'Category A' },
+    { id: 'B', label: 'Category B' },
+    { id: 'C', label: 'Category C' },
+    { id: 'D', label: 'Category D' }
+  ],
+  links: [
+    { source: 'A', target: 'B', value: 30 },
+    { source: 'A', target: 'C', value: 20 },
+    { source: 'B', target: 'D', value: 25 },
+    { source: 'C', target: 'D', value: 15 }
+  ]
+});
+
 const chartConfig = ref({
   title: 'My Chart',
   summary: '',
@@ -1739,6 +1984,24 @@ const generatedInsights = computed(() => {
   } else if (chartType === 'funnel') {
     values = funnelData.value.map(item => item.value);
     labels = funnelData.value.map(item => item.label);
+  } else if (chartType === 'choropleth') {
+    // Maps moved to MapMaker.vue
+    values = [];
+    labels = [];
+  } else if (chartType === 'flowMap') {
+    // Maps moved to MapMaker.vue
+    values = [];
+    labels = [];
+  } else if (chartType === 'bulletGraph') {
+    values = bulletGraphData.value.map(item => item.value);
+    labels = bulletGraphData.value.map(item => item.label);
+  } else if (chartType === 'chordDiagram') {
+    values = chordDiagramData.value.links.map(link => link.value);
+    labels = chordDiagramData.value.links.map(link => {
+      const sourceNode = chordDiagramData.value.nodes.find(n => n.id === link.source);
+      const targetNode = chordDiagramData.value.nodes.find(n => n.id === link.target);
+      return `${sourceNode?.label || link.source} ↔ ${targetNode?.label || link.target}`;
+    });
   } else if (chartData.value && chartData.value.length > 0) {
     values = chartData.value.map(item => item.value);
     labels = chartData.value.map(item => item.label);
@@ -2000,6 +2263,31 @@ const generateDataTable = () => {
     ];
   } else if (chartType === 'funnel') {
     tableData = funnelData.value.map(item => ({ label: item.label, value: item.value }));
+  } else if (chartType === 'choropleth') {
+    // Maps moved to MapMaker.vue
+    tableData = [];
+  } else if (chartType === 'flowMap') {
+    // Maps moved to MapMaker.vue
+    tableData = [];
+  } else if (chartType === 'bulletGraph') {
+    tableData = bulletGraphData.value.map(item => ({
+      label: item.label,
+      value: item.value,
+      target: item.target,
+      max: item.max,
+      'poor range': `0-${item.ranges.fair}`,
+      'fair range': `${item.ranges.fair}-${item.ranges.good}`,
+      'good range': `${item.ranges.good}-${item.ranges.excellent}`
+    }));
+  } else if (chartType === 'chordDiagram') {
+    tableData = chordDiagramData.value.links.map(link => {
+      const sourceNode = chordDiagramData.value.nodes.find(n => n.id === link.source);
+      const targetNode = chordDiagramData.value.nodes.find(n => n.id === link.target);
+      return {
+        label: `${sourceNode?.label || link.source} ↔ ${targetNode?.label || link.target}`,
+        value: link.value
+      };
+    });
   } else if (chartData.value && chartData.value.length > 0) {
     tableData = chartData.value.map(item => ({ label: item.label, value: item.value }));
   }
@@ -2056,6 +2344,15 @@ const dataTableHeaders = computed(() => {
       { key: 'min', label: `Min${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` },
       { key: 'max', label: `Max${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` },
       { key: 'target', label: `Target${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` }
+    );
+  } else if (chartType === 'bulletGraph') {
+    headers.push(
+      { key: 'value', label: `Value${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` },
+      { key: 'target', label: `Target${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` },
+      { key: 'max', label: `Max${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` },
+      { key: 'poor range', label: 'Poor Range' },
+      { key: 'fair range', label: 'Fair Range' },
+      { key: 'good range', label: 'Good Range' }
     );
   } else {
     headers.push({ 
@@ -2267,7 +2564,9 @@ const chartTypes = [
   { value: 'scatter', label: 'Scatter Plot', icon: 'scatter_plot', description: 'Correlation analysis' },
   { value: 'radar', label: 'Radar Chart', icon: 'insights', description: 'Multi-dimensional data' },
   { value: 'bubble', label: 'Bubble Chart', icon: 'bubble_chart', description: 'Three variables' },
-  { value: 'polar', label: 'Polar Area', icon: 'pie_chart', description: 'Circular segments' }
+  { value: 'polar', label: 'Polar Area', icon: 'pie_chart', description: 'Circular segments' },
+  { value: 'bulletGraph', label: 'Bullet Graph', icon: 'track_changes', description: 'Horizontal bars with targets and ranges' },
+  { value: 'chordDiagram', label: 'Chord Diagram', icon: 'hub', description: 'Circular diagram showing relationships' }
 ];
 
 const colorSchemes = {
@@ -2448,6 +2747,26 @@ const chartDataForDisplay = computed(() => {
   // Handle sankey (will use custom SVG rendering)
   if (chartType === 'sankey') {
     return { type: 'sankey', data: sankeyData.value };
+  }
+  
+  // Handle choropleth map - MOVED TO MapMaker.vue
+  if (chartType === 'choropleth') {
+    return { type: 'choropleth', data: [] };
+  }
+  
+  // Handle flow map - MOVED TO MapMaker.vue
+  if (chartType === 'flowMap') {
+    return { type: 'flowMap', data: { nodes: [], links: [] } };
+  }
+  
+  // Handle bullet graph (will use custom SVG rendering)
+  if (chartType === 'bulletGraph') {
+    return { type: 'bulletGraph', data: bulletGraphData.value };
+  }
+  
+  // Handle chord diagram (will use custom SVG rendering)
+  if (chartType === 'chordDiagram') {
+    return { type: 'chordDiagram', data: chordDiagramData.value };
   }
   
   // Handle multi-dataset charts (stacked, grouped, combo, multi-line)
@@ -3211,6 +3530,14 @@ const exportChart = async (format) => {
   } else if (format === 'html') {
     const colors = colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default;
     const chartType = selectedChartType.value;
+    
+    // SVG-based charts (choropleth, flowMap, bulletGraph, chordDiagram, treemap, sankey) 
+    // don't work with Chart.js HTML export - recommend PNG/PDF instead
+    if (chartType === 'choropleth' || chartType === 'flowMap' || chartType === 'bulletGraph' || 
+        chartType === 'chordDiagram' || chartType === 'treemap' || chartType === 'sankey') {
+      alert('HTML export is not available for SVG-based charts. Please use PNG or PDF export instead.');
+      return;
+    }
     
     // Prepare chart data based on chart type
     let chartDataConfig = '';
@@ -4339,6 +4666,745 @@ const SankeySVG = {
             fill: '#fff',
             'font-size': 12,
             'font-weight': 'bold'
+          }, node.label)
+        ])
+      )
+    ]);
+  }
+};
+
+// Choropleth Map SVG Component - MOVED TO MapMaker.vue
+/*
+const ChoroplethMapSVG = {
+  props: ['data', 'colors', 'mapType', 'showAllRegions'],
+  setup(props) {
+    const containerRef = ref(null);
+    const width = ref(800);
+    const height = ref(500);
+    const loading = ref(true);
+    const error = ref(null);
+    const topoJsonData = ref(null);
+    const features = ref([]);
+    const projection = ref(null);
+    const pathGenerator = ref(null);
+    
+    // Update dimensions on resize
+    const updateDimensions = () => {
+      if (containerRef.value) {
+        const rect = containerRef.value.getBoundingClientRect();
+        width.value = rect.width || 800;
+        height.value = rect.height || 500;
+        
+        // Recreate projection with new dimensions
+        if (props.mapType) {
+          const mapTypeValue = props.mapType || 'us';
+          const proj = createProjection(mapTypeValue, width.value, height.value);
+          projection.value = proj;
+          pathGenerator.value = createPathGenerator(proj);
+        }
+      }
+    };
+    
+    // Calculate color scale
+    const colorScale = computed(() => {
+      if (!props.data || props.data.length === 0) return () => props.colors[0] || '#ccc';
+      
+      const values = props.data.map(r => r.value);
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = max - min || 1;
+      
+      return (value) => {
+        const normalizedValue = (value - min) / range;
+        const colorIndex = Math.floor(normalizedValue * (props.colors.length - 1));
+        return props.colors[colorIndex] || props.colors[0] || '#ccc';
+      };
+    });
+    
+    // Map data regions to features
+    const dataFeatureMap = computed(() => {
+      if (!features.value.length || !props.data) return new Map();
+      return mapDataToFeatures(props.data, features.value);
+    });
+    
+    // Get default color for regions without data
+    const defaultColor = '#e5e7eb';
+    
+    // Load TopoJSON data
+    onMounted(async () => {
+      try {
+        loading.value = true;
+        error.value = null;
+        
+        const mapType = props.mapType || 'us';
+        const mapUrls = getDefaultMapUrls();
+        const url = mapType === 'us' ? mapUrls.us : mapUrls.world;
+        const objectName = mapType === 'us' ? 'states' : 'countries';
+        
+        // Load TopoJSON
+        const topoJson = await loadTopoJSON(url);
+        topoJsonData.value = topoJson;
+        
+        // Convert to GeoJSON features
+        const geoFeatures = getGeoJSONFeatures(topoJson, objectName);
+        features.value = geoFeatures;
+        
+        // Create projection
+        const mapTypeValue = props.mapType || 'us';
+        const proj = createProjection(mapTypeValue, width.value, height.value);
+        projection.value = proj;
+        
+        // Create path generator
+        pathGenerator.value = createPathGenerator(proj);
+        
+        // Set up resize observer after initial render
+        await nextTick();
+        if (containerRef.value) {
+          const resizeObserver = new ResizeObserver(() => {
+            updateDimensions();
+          });
+          resizeObserver.observe(containerRef.value);
+          
+          // Cleanup on unmount
+          onBeforeUnmount(() => {
+            resizeObserver.disconnect();
+          });
+        }
+        
+        loading.value = false;
+      } catch (err) {
+        console.error('Error loading map data:', err);
+        error.value = err.message || 'Failed to load map data';
+        loading.value = false;
+      }
+    });
+    
+    // Watch for mapType changes
+    watch(() => props.mapType, async (newMapType) => {
+      if (!newMapType) return;
+      
+      try {
+        loading.value = true;
+        error.value = null;
+        
+        const mapUrls = getDefaultMapUrls();
+        const url = newMapType === 'us' ? mapUrls.us : mapUrls.world;
+        const objectName = newMapType === 'us' ? 'states' : 'countries';
+        
+        const topoJson = await loadTopoJSON(url);
+        topoJsonData.value = topoJson;
+        
+        const geoFeatures = getGeoJSONFeatures(topoJson, objectName);
+        features.value = geoFeatures;
+        
+        const proj = createProjection(newMapType, width.value, height.value);
+        projection.value = proj;
+        pathGenerator.value = createPathGenerator(proj);
+        
+        loading.value = false;
+      } catch (err) {
+        console.error('Error loading map data:', err);
+        error.value = err.message || 'Failed to load map data';
+        loading.value = false;
+      }
+    });
+    
+    return () => {
+      if (loading.value) {
+        return h('div', {
+          class: 'flex items-center justify-center w-full h-full',
+          style: { minHeight: '300px' }
+        }, [
+          h('div', { class: 'text-gray-500' }, 'Loading map...')
+        ]);
+      }
+      
+      if (error.value) {
+        return h('div', {
+          class: 'flex items-center justify-center w-full h-full',
+          style: { minHeight: '300px' }
+        }, [
+          h('div', { class: 'text-red-500' }, `Error: ${error.value}`)
+        ]);
+      }
+      
+      if (!pathGenerator.value || !features.value.length) {
+        return h('div', {
+          class: 'flex items-center justify-center w-full h-full',
+          style: { minHeight: '300px' }
+        }, [
+          h('div', { class: 'text-gray-500' }, 'No map data available')
+        ]);
+      }
+      
+      // Determine which features to render
+      const featuresToRender = props.showAllRegions !== false 
+        ? features.value 
+        : features.value.filter(f => {
+            const featureName = f.properties?.name;
+            // Check if any data region matches this feature
+            return Array.from(dataFeatureMap.value.keys()).some(name => {
+              const mappedFeature = dataFeatureMap.value.get(name);
+              return mappedFeature && mappedFeature.properties?.name === featureName;
+            });
+          });
+      
+      return h('div', {
+        ref: containerRef,
+        class: 'w-full h-full'
+      }, [
+        h('svg', {
+          width: width.value,
+          height: height.value,
+          viewBox: `0 0 ${width.value} ${height.value}`,
+          class: 'w-full h-full',
+          role: 'img',
+          'aria-label': 'Choropleth map showing regional data values'
+        }, [
+        // Render all features
+        ...featuresToRender.map((feature, index) => {
+          const featureName = feature.properties?.name;
+          const hasData = dataFeatureMap.value.has(featureName);
+          const dataRegion = hasData ? props.data.find(r => r.name === featureName) : null;
+          
+          const color = dataRegion 
+            ? colorScale.value(dataRegion.value)
+            : defaultColor;
+          
+          const pathData = pathGenerator.value(feature);
+          if (!pathData) return null;
+          
+          // Calculate centroid for label
+          const centroid = getFeatureCentroid(feature);
+          const [centroidX, centroidY] = projection.value(centroid) || [0, 0];
+          
+          return h('g', { key: `region-${index}` }, [
+            h('path', {
+              d: pathData,
+              fill: color,
+              stroke: '#fff',
+              'stroke-width': 0.5,
+              'aria-label': dataRegion 
+                ? `${featureName}: ${dataRegion.value}` 
+                : featureName,
+              tabindex: 0,
+              role: 'button',
+              style: { cursor: 'pointer' }
+            }),
+            // Only show label if there's data for this region
+            dataRegion ? h('text', {
+              x: centroidX,
+              y: centroidY,
+              'text-anchor': 'middle',
+              'dominant-baseline': 'middle',
+              fill: '#000',
+              'font-size': 12,
+              'font-weight': 'bold',
+              style: { pointerEvents: 'none' }
+            }, featureName) : null
+          ]);
+        })
+      ])
+      ]);
+    };
+  }
+};
+*/
+
+// Flow Map SVG Component - MOVED TO MapMaker.vue
+/*
+const FlowMapSVG = {
+  props: ['data', 'colors', 'mapType'],
+  setup(props) {
+    const containerRef = ref(null);
+    const width = ref(800);
+    const height = ref(500);
+    const loading = ref(true);
+    const error = ref(null);
+    const topoJsonData = ref(null);
+    const features = ref([]);
+    const projection = ref(null);
+    const pathGenerator = ref(null);
+    
+    // Update dimensions on resize
+    const updateDimensions = () => {
+      if (containerRef.value) {
+        const rect = containerRef.value.getBoundingClientRect();
+        width.value = rect.width || 800;
+        height.value = rect.height || 500;
+        
+        // Recreate projection with new dimensions
+        if (props.mapType) {
+          const mapTypeValue = props.mapType || 'us';
+          const proj = createProjection(mapTypeValue, width.value, height.value);
+          projection.value = proj;
+          pathGenerator.value = createPathGenerator(proj);
+        }
+      }
+    };
+    
+    // Project nodes to screen coordinates
+    const nodes = computed(() => {
+      if (!projection.value || !props.data?.nodes) return [];
+      
+      return props.data.nodes.map((node, index) => {
+        let x, y;
+        
+        // Use lat/lng if available, otherwise fall back to x/y
+        if (node.lat !== undefined && node.lng !== undefined) {
+          const projected = projectCoordinates(projection.value, node.lng, node.lat);
+          if (projected) {
+            [x, y] = projected;
+          } else {
+            // Fallback to x/y if projection fails
+            x = node.x || 200;
+            y = node.y || 200;
+          }
+        } else if (node.x !== undefined && node.y !== undefined) {
+          x = node.x;
+          y = node.y;
+        } else {
+          // Default position
+          x = 200;
+          y = 200;
+        }
+        
+        return {
+          ...node,
+          x,
+          y,
+          color: props.colors[index % props.colors.length],
+          radius: 15
+        };
+      });
+    });
+    
+    const links = computed(() => {
+      if (!props.data?.links) return [];
+      
+      return props.data.links.map((link, index) => {
+        const sourceNode = nodes.value.find(n => n.id === link.source);
+        const targetNode = nodes.value.find(n => n.id === link.target);
+        if (!sourceNode || !targetNode) return null;
+        
+        const dx = targetNode.x - sourceNode.x;
+        const dy = targetNode.y - sourceNode.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx);
+        
+        // Use a consistent color based on link index instead of random
+        const colorIndex = index % props.colors.length;
+        const color = props.colors[colorIndex] || '#888';
+        
+        return {
+          ...link,
+          sourceX: sourceNode.x,
+          sourceY: sourceNode.y,
+          targetX: targetNode.x,
+          targetY: targetNode.y,
+          distance,
+          angle,
+          strokeWidth: Math.max(2, link.value / 10),
+          color: color + '80' // Add transparency
+        };
+      }).filter(Boolean);
+    });
+    
+    // Load TopoJSON data
+    onMounted(async () => {
+      try {
+        loading.value = true;
+        error.value = null;
+        
+        const mapType = props.mapType || 'us';
+        const mapUrls = getDefaultMapUrls();
+        const url = mapType === 'us' ? mapUrls.us : mapUrls.world;
+        const objectName = mapType === 'us' ? 'states' : 'countries';
+        
+        // Load TopoJSON
+        const topoJson = await loadTopoJSON(url);
+        topoJsonData.value = topoJson;
+        
+        // Convert to GeoJSON features
+        const geoFeatures = getGeoJSONFeatures(topoJson, objectName);
+        features.value = geoFeatures;
+        
+        // Create projection
+        const mapTypeValue = props.mapType || 'us';
+        const proj = createProjection(mapTypeValue, width.value, height.value);
+        projection.value = proj;
+        
+        // Create path generator
+        pathGenerator.value = createPathGenerator(proj);
+        
+        // Set up resize observer after initial render
+        await nextTick();
+        if (containerRef.value) {
+          const resizeObserver = new ResizeObserver(() => {
+            updateDimensions();
+          });
+          resizeObserver.observe(containerRef.value);
+          
+          // Cleanup on unmount
+          onBeforeUnmount(() => {
+            resizeObserver.disconnect();
+          });
+        }
+        
+        loading.value = false;
+      } catch (err) {
+        console.error('Error loading map data:', err);
+        error.value = err.message || 'Failed to load map data';
+        loading.value = false;
+      }
+    });
+    
+    // Watch for mapType changes
+    watch(() => props.mapType, async (newMapType) => {
+      if (!newMapType) return;
+      
+      try {
+        loading.value = true;
+        error.value = null;
+        
+        const mapUrls = getDefaultMapUrls();
+        const url = newMapType === 'us' ? mapUrls.us : mapUrls.world;
+        const objectName = newMapType === 'us' ? 'states' : 'countries';
+        
+        const topoJson = await loadTopoJSON(url);
+        topoJsonData.value = topoJson;
+        
+        const geoFeatures = getGeoJSONFeatures(topoJson, objectName);
+        features.value = geoFeatures;
+        
+        const proj = createProjection(newMapType, width.value, height.value);
+        projection.value = proj;
+        pathGenerator.value = createPathGenerator(proj);
+        
+        loading.value = false;
+      } catch (err) {
+        console.error('Error loading map data:', err);
+        error.value = err.message || 'Failed to load map data';
+        loading.value = false;
+      }
+    });
+    
+    return () => {
+      if (loading.value) {
+        return h('div', {
+          class: 'flex items-center justify-center w-full h-full',
+          style: { minHeight: '300px' }
+        }, [
+          h('div', { class: 'text-gray-500' }, 'Loading map...')
+        ]);
+      }
+      
+      if (error.value) {
+        return h('div', {
+          class: 'flex items-center justify-center w-full h-full',
+          style: { minHeight: '300px' }
+        }, [
+          h('div', { class: 'text-red-500' }, `Error: ${error.value}`)
+        ]);
+      }
+      
+      if (!pathGenerator.value || !features.value.length) {
+        return h('div', {
+          class: 'flex items-center justify-center w-full h-full',
+          style: { minHeight: '300px' }
+        }, [
+          h('div', { class: 'text-gray-500' }, 'No map data available')
+        ]);
+      }
+      
+      return h('div', {
+        ref: containerRef,
+        class: 'w-full h-full'
+      }, [
+        h('svg', {
+          width: width.value,
+          height: height.value,
+          viewBox: `0 0 ${width.value} ${height.value}`,
+          class: 'w-full h-full',
+          role: 'img',
+          'aria-label': 'Flow map showing movement between locations'
+        }, [
+        // Map background - render all features
+        ...features.value.map((feature, index) => {
+          const pathData = pathGenerator.value(feature);
+          if (!pathData) return null;
+          
+          return h('path', {
+            key: `map-feature-${index}`,
+            d: pathData,
+            fill: '#f0f0f0',
+            stroke: '#ccc',
+            'stroke-width': 0.5,
+            opacity: 0.3
+          });
+        }),
+        // Links (curved paths) - render behind nodes
+        ...links.value.map((link, index) => {
+          const midX = (link.sourceX + link.targetX) / 2;
+          const midY = (link.sourceY + link.targetY) / 2;
+          const controlOffset = link.distance * 0.3;
+          const controlX = midX - Math.sin(link.angle) * controlOffset;
+          const controlY = midY + Math.cos(link.angle) * controlOffset;
+          const path = `M ${link.sourceX} ${link.sourceY} Q ${controlX} ${controlY} ${link.targetX} ${link.targetY}`;
+          
+          return h('path', {
+            key: `link-${index}`,
+            d: path,
+            stroke: link.color,
+            'stroke-width': link.strokeWidth,
+            fill: 'none',
+            opacity: 0.6,
+            'aria-label': `Flow from ${props.data.nodes.find(n => n.id === link.source)?.label || link.source} to ${props.data.nodes.find(n => n.id === link.target)?.label || link.target}: ${link.value}`
+          });
+        }),
+        // Nodes
+        ...nodes.value.map((node, index) => 
+          h('g', { key: `node-${index}` }, [
+            h('circle', {
+              cx: node.x,
+              cy: node.y,
+              r: node.radius,
+              fill: node.color,
+              stroke: '#fff',
+              'stroke-width': 2,
+              'aria-label': `Location: ${node.label}`,
+              tabindex: 0,
+              role: 'button',
+              style: { cursor: 'pointer' }
+            }),
+            h('text', {
+              x: node.x,
+              y: node.y + node.radius + 15,
+              'text-anchor': 'middle',
+              'dominant-baseline': 'middle',
+              fill: '#000',
+              'font-size': 12,
+              'font-weight': 'bold',
+              style: { pointerEvents: 'none' }
+            }, node.label)
+          ])
+        )
+        ])
+      ]);
+    };
+  }
+};
+*/
+
+// Bullet Graph SVG Component
+const BulletGraphSVG = {
+  props: ['data', 'colors'],
+  setup(props) {
+    const width = 400;
+    const height = computed(() => props.data.length * 60 + 40);
+    
+    const items = computed(() => {
+      return props.data.map((item, index) => {
+        const y = index * 60 + 30;
+        const barWidth = width - 100;
+        const valueWidth = (item.value / item.max) * barWidth;
+        const targetX = (item.target / item.max) * barWidth;
+        const poorWidth = (item.ranges.fair / item.max) * barWidth;
+        const fairWidth = ((item.ranges.good - item.ranges.fair) / item.max) * barWidth;
+        const goodWidth = ((item.ranges.excellent - item.ranges.good) / item.max) * barWidth;
+        
+        return {
+          ...item,
+          y,
+          barWidth,
+          valueWidth,
+          targetX,
+          poorWidth,
+          fairWidth,
+          goodWidth,
+          color: props.colors[index % props.colors.length]
+        };
+      });
+    });
+    
+    return () => h('svg', {
+      width: width,
+      height: height.value,
+      viewBox: `0 0 ${width} ${height.value}`,
+      class: 'w-full h-full',
+      role: 'img',
+      'aria-label': 'Bullet graph showing values, targets, and ranges'
+    }, [
+      ...items.value.map((item, index) => 
+        h('g', { key: `bullet-${index}` }, [
+          // Range backgrounds
+          h('rect', {
+            x: 80,
+            y: item.y - 15,
+            width: item.poorWidth,
+            height: 30,
+            fill: '#d32f2f',
+            opacity: 0.3,
+            'aria-label': `Poor range: 0 to ${item.ranges.fair}`
+          }),
+          h('rect', {
+            x: 80 + item.poorWidth,
+            y: item.y - 15,
+            width: item.fairWidth,
+            height: 30,
+            fill: '#f57c00',
+            opacity: 0.3,
+            'aria-label': `Fair range: ${item.ranges.fair} to ${item.ranges.good}`
+          }),
+          h('rect', {
+            x: 80 + item.poorWidth + item.fairWidth,
+            y: item.y - 15,
+            width: item.goodWidth,
+            height: 30,
+            fill: '#388e3c',
+            opacity: 0.3,
+            'aria-label': `Good range: ${item.ranges.good} to ${item.ranges.excellent}`
+          }),
+          // Value bar
+          h('rect', {
+            x: 80,
+            y: item.y - 10,
+            width: item.valueWidth,
+            height: 20,
+            fill: item.color,
+            'aria-label': `Value: ${item.value}, Target: ${item.target}, Max: ${item.max}`
+          }),
+          // Target marker
+          h('line', {
+            x1: 80 + item.targetX,
+            y1: item.y - 20,
+            x2: 80 + item.targetX,
+            y2: item.y + 20,
+            stroke: '#000',
+            'stroke-width': 3,
+            'stroke-dasharray': '5,5',
+            'aria-label': `Target: ${item.target}`
+          }),
+          // Label
+          h('text', {
+            x: 5,
+            y: item.y + 5,
+            'text-anchor': 'start',
+            'dominant-baseline': 'middle',
+            fill: '#000',
+            'font-size': 12,
+            'font-weight': 'bold'
+          }, item.label),
+          // Value text
+          h('text', {
+            x: 85 + item.valueWidth,
+            y: item.y + 5,
+            'text-anchor': 'start',
+            'dominant-baseline': 'middle',
+            fill: '#000',
+            'font-size': 11
+          }, item.value)
+        ])
+      )
+    ]);
+  }
+};
+
+// Chord Diagram SVG Component
+const ChordDiagramSVG = {
+  props: ['data', 'colors'],
+  setup(props) {
+    const width = 400;
+    const height = 400;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(width, height) / 2 - 50;
+    
+    const nodes = computed(() => {
+      return props.data.nodes.map((node, index) => {
+        const angle = (index / props.data.nodes.length) * 2 * Math.PI - Math.PI / 2;
+        const x = centerX + radius * Math.cos(angle);
+        const y = centerY + radius * Math.sin(angle);
+        
+        return {
+          ...node,
+          x,
+          y,
+          angle,
+          color: props.colors[index % props.colors.length]
+        };
+      });
+    });
+    
+    const links = computed(() => {
+      return props.data.links.map(link => {
+        const sourceNode = nodes.value.find(n => n.id === link.source);
+        const targetNode = nodes.value.find(n => n.id === link.target);
+        if (!sourceNode || !targetNode) return null;
+        
+        // Create curved path for chord
+        const dx = targetNode.x - sourceNode.x;
+        const dy = targetNode.y - sourceNode.y;
+        const dr = Math.sqrt(dx * dx + dy * dy);
+        const sweep = link.value > 0 ? 1 : 0;
+        
+        return {
+          ...link,
+          sourceX: sourceNode.x,
+          sourceY: sourceNode.y,
+          targetX: targetNode.x,
+          targetY: targetNode.y,
+          path: `M ${sourceNode.x} ${sourceNode.y} A ${dr} ${dr} 0 0 ${sweep} ${targetNode.x} ${targetNode.y}`,
+          strokeWidth: Math.max(2, link.value / 5),
+          color: props.colors[Math.floor(Math.random() * props.colors.length)] + '80'
+        };
+      }).filter(Boolean);
+    });
+    
+    return () => h('svg', {
+      width: width,
+      height: height,
+      viewBox: `0 0 ${width} ${height}`,
+      class: 'w-full h-full',
+      role: 'img',
+      'aria-label': 'Chord diagram showing relationships between entities'
+    }, [
+      // Links (chords)
+      ...links.value.map((link, index) => 
+        h('path', {
+          key: `chord-${index}`,
+          d: link.path,
+          stroke: link.color,
+          'stroke-width': link.strokeWidth,
+          fill: 'none',
+          opacity: 0.6,
+          'aria-label': `Relationship between ${props.data.nodes.find(n => n.id === link.source)?.label || link.source} and ${props.data.nodes.find(n => n.id === link.target)?.label || link.target}: ${link.value}`
+        })
+      ),
+      // Nodes
+      ...nodes.value.map((node, index) => 
+        h('g', { key: `node-${index}` }, [
+          h('circle', {
+            cx: node.x,
+            cy: node.y,
+            r: 20,
+            fill: node.color,
+            stroke: '#fff',
+            'stroke-width': 2,
+            'aria-label': `Entity: ${node.label}`,
+            tabindex: 0,
+            role: 'button',
+            style: { cursor: 'pointer' }
+          }),
+          h('text', {
+            x: node.x + (node.x > centerX ? 30 : -30),
+            y: node.y,
+            'text-anchor': node.x > centerX ? 'start' : 'end',
+            'dominant-baseline': 'middle',
+            fill: '#000',
+            'font-size': 11,
+            'font-weight': 'bold',
+            style: { pointerEvents: 'none' }
           }, node.label)
         ])
       )

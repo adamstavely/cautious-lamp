@@ -1,17 +1,30 @@
 <template>
   <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
     <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
+    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" @navigate-doc="handleDocNavigation" />
     
     <!-- Main Content Area -->
     <div 
       class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
       :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
     >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
+      <!-- Markdown Content - shown when a doc link is clicked -->
+      <div v-if="currentDocLink" class="h-full w-full relative flex flex-col">
+        <!-- Breadcrumbs -->
+        <Breadcrumbs 
+          :custom-path="currentDocLink"
+          :on-navigate="handleBreadcrumbNavigate"
+        />
+        <div class="flex-1 overflow-hidden">
+          <MarkdownViewer :doc-path="currentDocLink" />
+        </div>
+      </div>
       
-      <div class="h-full overflow-y-auto">
+      <!-- Overview Content - shown by default -->
+      <div v-else class="h-full overflow-y-auto">
+        <!-- Breadcrumbs -->
+        <Breadcrumbs />
+        
         <div class="p-8">
         <!-- Hero Section -->
         <div class="max-w-7xl mx-auto mb-16">
@@ -87,7 +100,31 @@
                 Chart Builder
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Create interactive charts and graphs including line, bar, pie, doughnut, scatter plots, and more.
+                Create interactive charts and graphs including line, bar, pie, doughnut, scatter plots, treemaps, and more.
+              </p>
+            </router-link>
+
+            <!-- Map Maker Card -->
+            <router-link 
+              to="/tools/map-maker" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">map</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Map Maker
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Create interactive choropleth and flow maps with accurate geographic boundaries using TopoJSON data.
               </p>
             </router-link>
 
@@ -171,13 +208,45 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import MarkdownViewer from '../components/MarkdownViewer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 
+const route = useRoute();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const currentDocLink = ref(null);
+
+const handleBreadcrumbNavigate = (path) => {
+  // Handle navigation from breadcrumbs
+  if (path === '/data-viz' || path === '/') {
+    currentDocLink.value = null;
+  } else if (path.startsWith('/data-viz/')) {
+    // Keep the full path for MarkdownViewer
+    currentDocLink.value = path;
+  }
+};
+
+const handleDocNavigation = (link) => {
+  currentDocLink.value = link;
+  // Open drawer if closed
+  if (!drawerOpen.value) {
+    drawerOpen.value = true;
+  }
+};
+
+// Watch for route changes to update currentDocLink
+watch(() => route.path, (newPath) => {
+  if (newPath.startsWith('/data-viz/') && newPath !== '/data-viz') {
+    // Keep the full path for MarkdownViewer
+    currentDocLink.value = newPath;
+  } else if (newPath === '/data-viz') {
+    currentDocLink.value = null;
+  }
+}, { immediate: true });
 
 let darkModeObserver = null;
 let darkModeInterval = null;
@@ -187,6 +256,12 @@ onMounted(() => {
   if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
     drawerOpen.value = true;
     sessionStorage.removeItem('openDrawerOnLoad');
+  }
+  
+  // Handle route on mount
+  if (route.path.startsWith('/data-viz/') && route.path !== '/data-viz') {
+    // Keep the full path for MarkdownViewer
+    currentDocLink.value = route.path;
   }
   
   darkModeObserver = new MutationObserver(() => {

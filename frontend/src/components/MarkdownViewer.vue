@@ -286,6 +286,98 @@ const foundationHeroCards = {
       <rect x="100" y="150" width="20" height="12" rx="2" fill="url(#tuiGradient)" opacity="0.3"/>
       <rect x="125" y="150" width="20" height="12" rx="2" fill="url(#tuiGradient)" opacity="0.3"/>
     </svg>`
+  },
+  '/data-viz/types-of-dashboards': {
+    title: 'Types of Dashboards',
+    description: 'Learn about different dashboard types and their characteristics. Understand the distinction between curated dashboards and data collection dashboards, and discover when to use each type.',
+    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="dashboardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <!-- Dashboard frame -->
+      <rect x="20" y="30" width="160" height="140" rx="4" fill="url(#dashboardGradient)" opacity="0.1" stroke="url(#dashboardGradient)" stroke-width="2"/>
+      <!-- Dashboard header -->
+      <rect x="20" y="30" width="160" height="25" rx="4" fill="url(#dashboardGradient)" opacity="0.3"/>
+      <!-- Dashboard title bar dots -->
+      <circle cx="32" cy="42" r="3" fill="url(#dashboardGradient)" opacity="0.5"/>
+      <circle cx="42" cy="42" r="3" fill="url(#dashboardGradient)" opacity="0.5"/>
+      <circle cx="52" cy="42" r="3" fill="url(#dashboardGradient)" opacity="0.5"/>
+      <!-- Chart elements - Bar chart -->
+      <rect x="35" y="100" width="15" height="50" rx="2" fill="url(#dashboardGradient)" opacity="0.7"/>
+      <rect x="55" y="80" width="15" height="70" rx="2" fill="url(#dashboardGradient)" opacity="0.7"/>
+      <rect x="75" y="90" width="15" height="60" rx="2" fill="url(#dashboardGradient)" opacity="0.7"/>
+      <rect x="95" y="70" width="15" height="80" rx="2" fill="url(#dashboardGradient)" opacity="0.7"/>
+      <!-- Line chart -->
+      <path d="M 35 120 Q 55 100, 75 110 T 115 105" stroke="url(#dashboardGradient)" stroke-width="2.5" fill="none" opacity="0.6"/>
+      <circle cx="35" cy="120" r="3" fill="url(#dashboardGradient)" opacity="0.7"/>
+      <circle cx="75" cy="110" r="3" fill="url(#dashboardGradient)" opacity="0.7"/>
+      <circle cx="115" cy="105" r="3" fill="url(#dashboardGradient)" opacity="0.7"/>
+      <!-- Pie chart segment -->
+      <path d="M 140 100 L 140 100 A 20 20 0 0 1 155 110 Z" fill="url(#dashboardGradient)" opacity="0.5"/>
+      <path d="M 140 100 L 155 110 A 20 20 0 0 1 140 120 Z" fill="url(#dashboardGradient)" opacity="0.6"/>
+      <path d="M 140 100 L 140 120 A 20 20 0 0 1 125 110 Z" fill="url(#dashboardGradient)" opacity="0.4"/>
+      <!-- Grid lines -->
+      <line x1="30" y1="75" x2="120" y2="75" stroke="url(#dashboardGradient)" stroke-width="1" opacity="0.2" stroke-dasharray="2,2"/>
+      <line x1="30" y1="95" x2="120" y2="95" stroke="url(#dashboardGradient)" stroke-width="1" opacity="0.2" stroke-dasharray="2,2"/>
+      <line x1="30" y1="115" x2="120" y2="115" stroke="url(#dashboardGradient)" stroke-width="1" opacity="0.2" stroke-dasharray="2,2"/>
+      <!-- Dashboard widgets/sections -->
+      <rect x="130" y="70" width="40" height="25" rx="2" fill="url(#dashboardGradient)" opacity="0.2" stroke="url(#dashboardGradient)" stroke-width="1"/>
+      <rect x="130" y="100" width="40" height="25" rx="2" fill="url(#dashboardGradient)" opacity="0.2" stroke="url(#dashboardGradient)" stroke-width="1"/>
+      <rect x="130" y="130" width="40" height="25" rx="2" fill="url(#dashboardGradient)" opacity="0.2" stroke="url(#dashboardGradient)" stroke-width="1"/>
+    </svg>`
+  },
+  '/data-viz/dashboard-patterns': {
+    title: 'Dashboard Patterns',
+    description: 'Explore comprehensive design patterns for dashboards including data information, visual representations, layout strategies, interactions, and color schemes. Learn how to effectively organize and present data.',
+    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="patternsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <!-- Pattern grid background -->
+      <rect x="20" y="20" width="160" height="160" rx="4" fill="url(#patternsGradient)" opacity="0.05" stroke="url(#patternsGradient)" stroke-width="1"/>
+      <!-- Grid pattern -->
+      <line x1="40" y1="40" x2="40" y2="160" stroke="url(#patternsGradient)" stroke-width="1" opacity="0.2"/>
+      <line x1="80" y1="40" x2="80" y2="160" stroke="url(#patternsGradient)" stroke-width="1" opacity="0.2"/>
+      <line x1="120" y1="40" x2="120" y2="160" stroke="url(#patternsGradient)" stroke-width="1" opacity="0.2"/>
+      <line x1="160" y1="40" x2="160" y2="160" stroke="url(#patternsGradient)" stroke-width="1" opacity="0.2"/>
+      <line x1="20" y1="60" x2="180" y2="60" stroke="url(#patternsGradient)" stroke-width="1" opacity="0.2"/>
+      <line x1="20" y1="100" x2="180" y2="100" stroke="url(#patternsGradient)" stroke-width="1" opacity="0.2"/>
+      <line x1="20" y1="140" x2="180" y2="140" stroke="url(#patternsGradient)" stroke-width="1" opacity="0.2"/>
+      <!-- Pattern elements - various visualizations -->
+      <!-- Bar chart pattern -->
+      <rect x="30" y="110" width="12" height="30" rx="1" fill="url(#patternsGradient)" opacity="0.6"/>
+      <rect x="45" y="100" width="12" height="40" rx="1" fill="url(#patternsGradient)" opacity="0.6"/>
+      <rect x="60" y="115" width="12" height="25" rx="1" fill="url(#patternsGradient)" opacity="0.6"/>
+      <!-- Line chart pattern -->
+      <path d="M 90 120 Q 105 100, 120 110 T 150 105" stroke="url(#patternsGradient)" stroke-width="2" fill="none" opacity="0.6"/>
+      <circle cx="90" cy="120" r="2.5" fill="url(#patternsGradient)" opacity="0.7"/>
+      <circle cx="120" cy="110" r="2.5" fill="url(#patternsGradient)" opacity="0.7"/>
+      <circle cx="150" cy="105" r="2.5" fill="url(#patternsGradient)" opacity="0.7"/>
+      <!-- Pie chart pattern -->
+      <path d="M 100 50 L 100 50 A 18 18 0 0 1 112 58 Z" fill="url(#patternsGradient)" opacity="0.5"/>
+      <path d="M 100 50 L 112 58 A 18 18 0 0 1 100 68 Z" fill="url(#patternsGradient)" opacity="0.6"/>
+      <path d="M 100 50 L 100 68 A 18 18 0 0 1 88 58 Z" fill="url(#patternsGradient)" opacity="0.4"/>
+      <!-- Gauge pattern -->
+      <path d="M 50 70 A 15 15 0 0 1 65 70" stroke="url(#patternsGradient)" stroke-width="3" fill="none" opacity="0.6"/>
+      <line x1="50" y1="70" x2="57" y2="63" stroke="url(#patternsGradient)" stroke-width="2" opacity="0.6"/>
+      <!-- Table/grid pattern -->
+      <rect x="30" y="50" width="25" height="15" rx="1" fill="url(#patternsGradient)" opacity="0.2" stroke="url(#patternsGradient)" stroke-width="1"/>
+      <rect x="58" y="50" width="25" height="15" rx="1" fill="url(#patternsGradient)" opacity="0.2" stroke="url(#patternsGradient)" stroke-width="1"/>
+      <!-- Number/KPI pattern -->
+      <text x="90" y="75" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="url(#patternsGradient)" opacity="0.7">42</text>
+      <!-- Trend arrow pattern -->
+      <path d="M 140 70 L 140 60 L 145 65 L 140 60 L 135 65 Z" fill="url(#patternsGradient)" opacity="0.6"/>
+      <!-- Color swatches pattern -->
+      <rect x="160" y="50" width="12" height="12" rx="1" fill="#10b981" opacity="0.7"/>
+      <rect x="160" y="65" width="12" height="12" rx="1" fill="#f59e0b" opacity="0.7"/>
+      <rect x="160" y="80" width="12" height="12" rx="1" fill="#ef4444" opacity="0.7"/>
+    </svg>`
   }
 };
 
@@ -367,6 +459,8 @@ const getFilePath = (docPath) => {
     '/patterns/feedback': '/docs/patterns/feedback.md',
     '/guidelines/tui-guidance': '/docs/guidelines/tui-guidance.md',
     '/tui-guidance': '/docs/guidelines/tui-guidance.md',
+    '/data-viz/types-of-dashboards': '/docs/data-viz/types-of-dashboards.md',
+    '/data-viz/dashboard-patterns': '/docs/data-viz/dashboard-patterns.md',
     '/': '/docs/index.md'
   };
   
@@ -383,6 +477,11 @@ const getFilePath = (docPath) => {
   
   // Handle guidelines paths: /guidelines/xyz -> /docs/guidelines/xyz.md
   if (docPath.startsWith('/guidelines/')) {
+    return `/docs${docPath}.md`;
+  }
+  
+  // Handle data-viz paths: /data-viz/xyz -> /docs/data-viz/xyz.md
+  if (docPath.startsWith('/data-viz/')) {
     return `/docs${docPath}.md`;
   }
   

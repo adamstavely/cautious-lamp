@@ -570,6 +570,31 @@
             </router-link>
           </div>
           
+          <!-- Guidance -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Guidance</h4>
+            <div class="space-y-1">
+              <router-link
+                v-for="item in filteredDataVizGuidance"
+                :key="item.link"
+                :to="item.link"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </router-link>
+            </div>
+          </div>
+
           <!-- Generators -->
           <div>
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Generators</h4>
@@ -686,7 +711,7 @@
       <!-- HCD - only show when on research route -->
       <div v-if="showResearch" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">HCD</h3>
+          <h3 class="text-sm font-semibold tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Human-Centered Design</h3>
           <button
             @click="toggle"
             class="p-2 rounded-lg transition-colors"
@@ -1216,9 +1241,16 @@ const toggle = () => {
 
 const navigateToDoc = (link) => {
   emit('navigate-doc', link);
-  // Navigate to guidelines page if not already there
-  if (route.path !== '/guidelines') {
-    router.push('/guidelines');
+  // Navigate to appropriate page based on link
+  if (link.startsWith('/data-viz/')) {
+    if (route.path !== '/data-viz' && !route.path.startsWith('/data-viz/')) {
+      router.push('/data-viz');
+    }
+  } else if (link.startsWith('/guidelines/')) {
+    // Navigate to guidelines page if not already there
+    if (route.path !== '/guidelines') {
+      router.push('/guidelines');
+    }
   }
   // Don't close the drawer - keep it open
   // The drawer state is managed by the parent component, so we don't emit 'close' here
@@ -1464,12 +1496,18 @@ const tokenUtilities = [
 
 const dataVizGenerators = [
   { text: 'Chart Builder', link: '/tools/chart-builder', icon: 'bar_chart' },
+  { text: 'Map Maker', link: '/tools/map-maker', icon: 'map' },
   { text: 'Timeline Generator', link: '/tools/timeline-generator', icon: 'timeline' },
   { text: 'Table Generator', link: '/tools/table-generator', icon: 'table_chart' }
 ];
 
 const dataVizUtilities = [
   { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'format_color_fill' }
+];
+
+const dataVizGuidance = [
+  { text: 'Types of Dashboards', link: '/data-viz/types-of-dashboards', icon: 'dashboard' },
+  { text: 'Dashboard Patterns', link: '/data-viz/dashboard-patterns', icon: 'pattern' }
 ];
 
 const showAdmin = computed(() => {
@@ -1674,6 +1712,10 @@ const filteredDataVizUtilities = computed(() => {
   return dataVizUtilities.filter(item => isRouteEnabled(item.link));
 });
 
+const filteredDataVizGuidance = computed(() => {
+  return dataVizGuidance.filter(item => isRouteEnabled(item.link));
+});
+
 const filteredReviewItems = computed(() => {
   return reviewItems.filter(item => isRouteEnabled(item.link));
 });
@@ -1717,6 +1759,7 @@ const getAllDrawerFlagKeys = () => {
     ...toolGroups.value.image.map(t => t.link),
     ...dataVizGenerators.map(d => d.link),
     ...dataVizUtilities.map(d => d.link),
+    ...dataVizGuidance.map(d => d.link),
   ];
   
   // Get unique flag keys for all routes
