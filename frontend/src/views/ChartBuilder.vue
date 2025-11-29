@@ -981,6 +981,84 @@ import { Line as LineChart, Bar as BarChart, Pie as PieChart, Doughnut as Doughn
 import { CandlestickController, CandlestickElement } from 'chartjs-chart-financial';
 import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
 
+// Helper function to draw the color scale legend
+function drawLegend(ctx, x, y, width, height, options, chartArea) {
+  // Draw gradient background
+  const gradient = ctx.createLinearGradient(x, y, x + width, y);
+  if (options.colors && options.colors.length > 0) {
+    options.colors.forEach((color, index) => {
+      gradient.addColorStop(index / (options.colors.length - 1), color);
+    });
+  }
+  
+  // Draw gradient rectangle
+  ctx.fillStyle = gradient;
+  ctx.fillRect(x, y, width, height);
+  
+  // Draw border
+  ctx.strokeStyle = options.gridColor || '#e2e8f0';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, width, height);
+  
+  // Draw min/max labels
+  ctx.fillStyle = options.textColor || '#1e293b';
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(options.min.toFixed(1), x, y + height + 5);
+  ctx.textAlign = 'right';
+  ctx.fillText(options.max.toFixed(1), x + width, y + height + 5);
+}
+
+// Custom color scale legend plugin for heatmaps
+const colorScaleLegendPlugin = {
+  id: 'colorScaleLegend',
+  afterDraw: (chart) => {
+    try {
+      // Check chart type - try multiple ways to detect matrix chart
+      const chartType = chart.config?.type || chart.chart?.config?.type || chart.type;
+      if (chartType !== 'matrix') {
+        return;
+      }
+      
+      const ctx = chart.ctx;
+      if (!ctx) return;
+      
+      const chartArea = chart.chartArea;
+      if (!chartArea) return;
+      
+      const options = chart.options?.plugins?.colorScaleLegend;
+      if (!options || !options.show) return;
+      
+      // Get canvas dimensions to ensure we draw within bounds
+      const canvas = ctx.canvas;
+      const canvasHeight = canvas.height;
+      
+      const legendHeight = 30;
+      const legendWidth = 200;
+      const labelHeight = 15;
+      const totalHeight = legendHeight + labelHeight + 5;
+      
+      // Center horizontally, position below chart area
+      const legendX = (chartArea.left + chartArea.right - legendWidth) / 2;
+      const legendY = chartArea.bottom + 20;
+      
+      // Ensure legend is within canvas bounds
+      if (legendY + totalHeight > canvasHeight) {
+        // If not enough space below, position above chart
+        const newY = chartArea.top - totalHeight - 20;
+        if (newY >= 0) {
+          drawLegend(ctx, legendX, newY, legendWidth, legendHeight, options, chartArea);
+        }
+      } else {
+        drawLegend(ctx, legendX, legendY, legendWidth, legendHeight, options, chartArea);
+      }
+    } catch (error) {
+      console.error('Error drawing color scale legend:', error);
+    }
+  }
+};
+
 // Register Chart.js components
 ChartJS.register(
   CategoryScale,
@@ -997,7 +1075,8 @@ ChartJS.register(
   CandlestickController,
   CandlestickElement,
   MatrixController,
-  MatrixElement
+  MatrixElement,
+  colorScaleLegendPlugin
 );
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
@@ -1312,22 +1391,40 @@ const chartDataForDisplay = computed(() => {
           data.push({
             x: colIndex,
             y: rowIndex,
-            v: heatmapData.value.values[rowIndex][colIndex]
+            v: heatmapData.value.values[rowIndex][colIndex],
+            w: 1,
+            h: 1
           });
         }
       });
     });
     
+    const allValues = heatmapData.value.values.flat().filter(v => v !== undefined);
+    const max = allValues.length > 0 ? Math.max(...allValues) : 0;
+    const min = allValues.length > 0 ? Math.min(...allValues) : 0;
+    const numColumns = heatmapData.value.columns.length;
+    const numRows = heatmapData.value.rows.length;
+    
     return {
       datasets: [{
         label: chartConfig.value.title || 'Heatmap',
         data,
+        borderWidth: 0,
+        borderColor: 'transparent',
+        // Set width and height as dataset-level functions to fill cells
+        width: ({ chart }) => {
+          const chartArea = chart.chartArea || {};
+          const availableWidth = chartArea.right - chartArea.left;
+          return availableWidth / numColumns;
+        },
+        height: ({ chart }) => {
+          const chartArea = chart.chartArea || {};
+          const availableHeight = chartArea.bottom - chartArea.top;
+          return availableHeight / numRows;
+        },
         backgroundColor: (ctx) => {
           const value = ctx.raw.v;
-          const allValues = heatmapData.value.values.flat().filter(v => v !== undefined);
           if (allValues.length === 0) return colors[0];
-          const max = Math.max(...allValues);
-          const min = Math.min(...allValues);
           if (max === min) return colors[0];
           const ratio = (value - min) / (max - min);
           return colors[Math.floor(ratio * (colors.length - 1))];
@@ -1526,8 +1623,34 @@ const chartOptions = computed(() => {
   
   // Heatmap options
   if (chartType === 'heatmap') {
+    const allValues = heatmapData.value.values.flat().filter(v => v !== undefined);
+    const max = allValues.length > 0 ? Math.max(...allValues) : 0;
+    const min = allValues.length > 0 ? Math.min(...allValues) : 0;
+    const colors = chartConfig.value.colorScheme === 'custom' 
+      ? (customColors.value.length > 0 ? customColors.value : colorSchemes.default)
+      : (colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default);
+    
     return {
       ...baseOptions,
+      layout: {
+        padding: {
+          bottom: chartConfig.value.showLegend ? 60 : 0 // Reserve space for legend below chart
+        }
+      },
+      plugins: {
+        ...baseOptions.plugins,
+        legend: {
+          display: false // Disable default legend for matrix charts
+        },
+        colorScaleLegend: {
+          show: chartConfig.value.showLegend,
+          colors: colors,
+          min: min,
+          max: max,
+          textColor: textColor,
+          gridColor: gridColor
+        }
+      },
       scales: {
         x: {
           type: 'linear',
