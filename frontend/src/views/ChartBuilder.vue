@@ -791,6 +791,38 @@
                     </label>
                   </div>
 
+                  <!-- Axis Labels (only for charts with scales) -->
+                  <div v-if="selectedChartType !== 'pie' && selectedChartType !== 'doughnut' && selectedChartType !== 'polar' && selectedChartType !== 'gauge'" class="mb-4 space-y-3">
+                    <div>
+                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        X Axis Label
+                      </label>
+                      <input
+                        v-model="chartConfig.xAxisLabel"
+                        type="text"
+                        placeholder="Enter X axis label"
+                        class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                        :class="isDarkMode 
+                          ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                        Y Axis Label
+                      </label>
+                      <input
+                        v-model="chartConfig.yAxisLabel"
+                        type="text"
+                        placeholder="Enter Y axis label"
+                        class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                        :class="isDarkMode 
+                          ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
+                      />
+                    </div>
+                  </div>
+
                   <!-- Export Buttons -->
                   <div class="space-y-2 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
                     <button
@@ -1208,7 +1240,9 @@ const sankeyData = ref({
 const chartConfig = ref({
   title: 'My Chart',
   colorScheme: 'default',
-  showLegend: true
+  showLegend: true,
+  xAxisLabel: '',
+  yAxisLabel: ''
 });
 
 // Custom colors for individual data points
@@ -1610,12 +1644,24 @@ const chartOptions = computed(() => {
         x: {
           type: 'category',
           ticks: { color: textColor },
-          grid: { color: gridColor }
+          grid: { color: gridColor },
+          title: {
+            display: true,
+            text: chartConfig.value.xAxisLabel || 'Date',
+            color: textColor,
+            font: { size: 14, weight: 'bold' }
+          }
         },
         y: {
           type: 'linear',
           ticks: { color: textColor },
-          grid: { color: gridColor }
+          grid: { color: gridColor },
+          title: {
+            display: true,
+            text: chartConfig.value.yAxisLabel || 'Price',
+            color: textColor,
+            font: { size: 14, weight: 'bold' }
+          }
         }
       }
     };
@@ -1663,7 +1709,13 @@ const chartOptions = computed(() => {
             },
             color: textColor
           },
-          grid: { color: gridColor }
+          grid: { color: gridColor },
+          title: {
+            display: true,
+            text: chartConfig.value.xAxisLabel || 'Columns',
+            color: textColor,
+            font: { size: 14, weight: 'bold' }
+          }
         },
         y: {
           type: 'linear',
@@ -1677,7 +1729,13 @@ const chartOptions = computed(() => {
             },
             color: textColor
           },
-          grid: { color: gridColor }
+          grid: { color: gridColor },
+          title: {
+            display: true,
+            text: chartConfig.value.yAxisLabel || 'Rows',
+            color: textColor,
+            font: { size: 14, weight: 'bold' }
+          }
         }
       }
     };
@@ -1691,11 +1749,23 @@ const chartOptions = computed(() => {
       scales: {
         x: {
           ticks: { color: textColor },
-          grid: { color: gridColor }
+          grid: { color: gridColor },
+          title: {
+            display: true,
+            text: chartConfig.value.xAxisLabel || 'Value',
+            color: textColor,
+            font: { size: 14, weight: 'bold' }
+          }
         },
         y: {
           ticks: { color: textColor },
-          grid: { color: gridColor }
+          grid: { color: gridColor },
+          title: {
+            display: true,
+            text: chartConfig.value.yAxisLabel || 'Category',
+            color: textColor,
+            font: { size: 14, weight: 'bold' }
+          }
         }
       }
     };
@@ -1708,11 +1778,23 @@ const chartOptions = computed(() => {
       scales: {
         x: {
           ticks: { color: textColor },
-          grid: { color: gridColor }
+          grid: { color: gridColor },
+          title: {
+            display: true,
+            text: chartConfig.value.xAxisLabel || 'Category',
+            color: textColor,
+            font: { size: 14, weight: 'bold' }
+          }
         },
         y: {
           ticks: { color: textColor },
-          grid: { color: gridColor }
+          grid: { color: gridColor },
+          title: {
+            display: true,
+            text: chartConfig.value.yAxisLabel || 'Value',
+            color: textColor,
+            font: { size: 14, weight: 'bold' }
+          }
         }
       }
     };
@@ -1726,11 +1808,23 @@ const chartOptions = computed(() => {
       scales: {
         x: {
           ticks: { color: textColor },
-          grid: { color: gridColor }
+          grid: { color: gridColor },
+          title: {
+            display: true,
+            text: chartConfig.value.xAxisLabel || 'Value',
+            color: textColor,
+            font: { size: 14, weight: 'bold' }
+          }
         },
         y: {
           ticks: { color: textColor },
-          grid: { color: gridColor }
+          grid: { color: gridColor },
+          title: {
+            display: true,
+            text: chartConfig.value.yAxisLabel || 'Category',
+            color: textColor,
+            font: { size: 14, weight: 'bold' }
+          }
         }
       }
     };
@@ -1744,28 +1838,52 @@ const chartOptions = computed(() => {
         x: {
           stacked: true,
           ticks: { color: textColor },
-          grid: { color: gridColor }
+          grid: { color: gridColor },
+          title: {
+            display: true,
+            text: chartConfig.value.xAxisLabel || 'Category',
+            color: textColor,
+            font: { size: 14, weight: 'bold' }
+          }
         },
         y: {
           stacked: true,
           ticks: { color: textColor },
-          grid: { color: gridColor }
+          grid: { color: gridColor },
+          title: {
+            display: true,
+            text: chartConfig.value.yAxisLabel || 'Value',
+            color: textColor,
+            font: { size: 14, weight: 'bold' }
+          }
         }
       }
     };
   }
   
-  // Default scales for other charts
+  // Default scales for other charts (line, bar, scatter, bubble, area, groupedBar, combo, radar)
   return {
     ...baseOptions,
     scales: {
       x: {
         ticks: { color: textColor },
-        grid: { color: gridColor }
+        grid: { color: gridColor },
+        title: {
+          display: true,
+          text: chartConfig.value.xAxisLabel || (chartType === 'scatter' || chartType === 'bubble' ? 'X Value' : 'Category'),
+          color: textColor,
+          font: { size: 14, weight: 'bold' }
+        }
       },
       y: {
         ticks: { color: textColor },
-        grid: { color: gridColor }
+        grid: { color: gridColor },
+        title: {
+          display: true,
+          text: chartConfig.value.yAxisLabel || (chartType === 'scatter' || chartType === 'bubble' ? 'Y Value' : 'Value'),
+          color: textColor,
+          font: { size: 14, weight: 'bold' }
+        }
       }
     }
   };
