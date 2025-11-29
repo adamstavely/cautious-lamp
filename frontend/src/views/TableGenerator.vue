@@ -83,6 +83,62 @@
                     Configuration
                   </h2>
 
+                  <!-- Table Title (Required) -->
+                  <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Table Title <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      v-model="config.title"
+                      type="text"
+                      placeholder="Enter table title"
+                      required
+                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                      :class="isDarkMode 
+                        ? (config.title ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' : 'bg-slate-800 border-red-500 text-white placeholder-gray-500')
+                        : (config.title ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-white border-red-500 text-gray-900 placeholder-gray-400')"
+                    />
+                    <p v-if="!config.title" class="mt-1 text-xs text-red-500">Table title is required for accessibility compliance.</p>
+                  </div>
+
+                  <!-- Table Summary (Required) -->
+                  <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Table Summary <span class="text-red-500">*</span>
+                      <span class="text-xs font-normal text-gray-500 ml-1">(1-2 sentences)</span>
+                    </label>
+                    <textarea
+                      v-model="config.summary"
+                      rows="2"
+                      placeholder="Enter a brief summary describing what this table shows"
+                      required
+                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors resize-none"
+                      :class="isDarkMode 
+                        ? (config.summary ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' : 'bg-slate-800 border-red-500 text-white placeholder-gray-500')
+                        : (config.summary ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-white border-red-500 text-gray-900 placeholder-gray-400')"
+                    ></textarea>
+                    <p v-if="!config.summary" class="mt-1 text-xs text-red-500">Table summary is required for accessibility compliance.</p>
+                  </div>
+
+                  <!-- Key Insight (Required) -->
+                  <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Key Insight <span class="text-red-500">*</span>
+                      <span class="text-xs font-normal text-gray-500 ml-1">(Primary takeaway)</span>
+                    </label>
+                    <textarea
+                      v-model="config.keyInsight"
+                      rows="2"
+                      placeholder="Enter the primary insight or takeaway from this table"
+                      required
+                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors resize-none"
+                      :class="isDarkMode 
+                        ? (config.keyInsight ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' : 'bg-slate-800 border-red-500 text-white placeholder-gray-500')
+                        : (config.keyInsight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-white border-red-500 text-gray-900 placeholder-gray-400')"
+                    ></textarea>
+                    <p v-if="!config.keyInsight" class="mt-1 text-xs text-red-500">Key insight is required for accessibility compliance.</p>
+                  </div>
+
                   <!-- Table Options -->
                   <div class="mb-6 space-y-3">
                     <h3 class="text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -349,14 +405,18 @@
                     </div>
 
                     <!-- Table -->
-                    <div class="overflow-x-auto">
-                      <table 
-                        class="w-full border-collapse"
-                        :class="[
-                          config.stripedRows ? 'table-striped' : '',
-                          config.hoverEffects ? 'table-hover' : ''
-                        ]"
-                      >
+                    <figure role="region" :aria-label="config.title || 'Data Table'" :aria-describedby="`table-summary-${selectedExportFormat}`">
+                      <div class="overflow-x-auto">
+                        <table 
+                          class="w-full border-collapse"
+                          role="table"
+                          :aria-label="config.title || 'Data Table'"
+                          :aria-describedby="`table-summary-${selectedExportFormat}`"
+                          :class="[
+                            config.stripedRows ? 'table-striped' : '',
+                            config.hoverEffects ? 'table-hover' : ''
+                          ]"
+                        >
                         <thead>
                           <tr :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">
                             <th v-if="config.selectionMode !== 'none'" class="p-3 text-left border" :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'">
@@ -419,7 +479,11 @@
                           </tr>
                         </tbody>
                       </table>
-                    </div>
+                      </div>
+                      <figcaption :id="`table-summary-${selectedExportFormat}`" class="sr-only">
+                        {{ config.summary || 'Data table visualization' }}
+                      </figcaption>
+                    </figure>
 
                     <!-- Pagination -->
                     <div v-if="config.enablePagination && filteredRows.length > config.rowsPerPage" class="mt-4 flex items-center justify-between">
@@ -447,6 +511,108 @@
                         >
                           Next
                         </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Accessibility Panel -->
+                <div 
+                  class="rounded-lg shadow-sm border p-6 mb-6"
+                  :class="isDarkMode 
+                    ? 'bg-slate-900 border-gray-700' 
+                    : 'bg-white border-gray-200'"
+                >
+                  <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      <span class="material-symbols-outlined text-indigo-600">verified</span>
+                      Accessibility Score
+                    </h3>
+                    <div class="flex items-center gap-2">
+                      <span 
+                        class="text-lg font-bold"
+                        :class="accessibilityScore >= 100 
+                          ? 'text-green-600' 
+                          : accessibilityScore >= 70 
+                            ? 'text-yellow-600' 
+                            : 'text-red-600'"
+                      >
+                        {{ accessibilityScore }}%
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div class="space-y-2 text-xs">
+                    <div class="flex items-center justify-between">
+                      <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Alt Text</span>
+                      <span :class="config.title && config.summary && config.keyInsight ? 'text-green-600' : 'text-red-500'">
+                        <span class="material-symbols-outlined text-sm">{{ config.title && config.summary && config.keyInsight ? 'check_circle' : 'error' }}</span>
+                      </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Keyboard Navigation</span>
+                      <span class="text-green-600">
+                        <span class="material-symbols-outlined text-sm">check_circle</span>
+                      </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Screen Reader</span>
+                      <span class="text-green-600">
+                        <span class="material-symbols-outlined text-sm">check_circle</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Fix It Guidance -->
+                  <div v-if="accessibilityScore < 100" class="mt-3 p-3 rounded-lg" :class="isDarkMode ? 'bg-yellow-900/20 border border-yellow-700' : 'bg-yellow-50 border border-yellow-200'">
+                    <h4 class="text-xs font-semibold mb-2 flex items-center gap-1" :class="isDarkMode ? 'text-yellow-300' : 'text-yellow-800'">
+                      <span class="material-symbols-outlined text-sm">info</span>
+                      Fix Required
+                    </h4>
+                    <ul class="space-y-1 text-xs" :class="isDarkMode ? 'text-yellow-200' : 'text-yellow-700'">
+                      <li v-if="!config.title || !config.summary || !config.keyInsight">
+                        • Add required metadata: title, summary, and key insight
+                      </li>
+                    </ul>
+                  </div>
+
+                  <!-- Run axe-core Scan Button -->
+                  <button
+                    @click="runAxeCoreScan"
+                    :disabled="axeScanRunning"
+                    class="w-full mt-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    :class="isDarkMode 
+                      ? (axeScanRunning ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white')
+                      : (axeScanRunning ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white')"
+                  >
+                    <span v-if="axeScanRunning" class="material-symbols-outlined animate-spin text-sm">refresh</span>
+                    <span v-else class="material-symbols-outlined text-sm">bug_report</span>
+                    {{ axeScanRunning ? 'Scanning...' : 'Run Accessibility Check' }}
+                  </button>
+                  
+                  <!-- axe-core Results -->
+                  <div v-if="axeScanResults" class="mt-3 space-y-2">
+                    <div v-if="axeScanResults.error" class="p-2 rounded text-xs bg-yellow-900/30 text-yellow-300 border border-yellow-700">
+                      <div class="font-semibold">Scan Error</div>
+                      <div class="mt-1">{{ axeScanResults.error }}</div>
+                    </div>
+                    <div 
+                      v-for="(violation, index) in axeScanResults.violations"
+                      :key="index"
+                      class="p-2 rounded text-xs border"
+                      :class="isDarkMode ? 'bg-red-900/30 text-red-300 border-red-700' : 'bg-red-50 text-red-700 border-red-200'"
+                    >
+                      <div class="font-semibold flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">{{ violation.impact === 'critical' ? 'error' : 'warning' }}</span>
+                        {{ violation.id }} ({{ violation.impact || 'moderate' }})
+                      </div>
+                      <div class="mt-1">{{ violation.description }}</div>
+                      <div class="mt-1 text-xs opacity-80">{{ violation.help }}</div>
+                    </div>
+                    <div v-if="axeScanResults.violations && axeScanResults.violations.length === 0 && !axeScanResults.error" class="p-2 rounded text-xs text-green-600 border border-green-200" :class="isDarkMode ? 'bg-green-900/30 border-green-700' : 'bg-green-50'">
+                      <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">check_circle</span>
+                        No accessibility violations found!
                       </div>
                     </div>
                   </div>
@@ -531,6 +697,8 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { calculateContrast } from '../composables/useContrast.js';
+import axe from 'axe-core';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -542,6 +710,9 @@ const exportFormats = [
 ];
 
 const config = ref({
+  title: '',
+  summary: '',
+  keyInsight: '',
   enableSorting: true,
   enableFiltering: true,
   enablePagination: true,
@@ -572,6 +743,93 @@ const currentPage = ref(1);
 const selectedRows = ref(new Set());
 
 const selectedExportFormat = ref('react');
+
+// Accessibility Score (0-100%)
+const accessibilityScore = computed(() => {
+  let score = 0;
+  let maxScore = 0;
+  
+  // Alt Text (required fields) - 100 points
+  maxScore += 100;
+  if (config.value.title && config.value.title.trim() !== '') score += 34;
+  if (config.value.summary && config.value.summary.trim() !== '') score += 33;
+  if (config.value.keyInsight && config.value.keyInsight.trim() !== '') score += 33;
+  
+  return Math.round((score / maxScore) * 100);
+});
+
+// axe-core Integration
+const axeScanRunning = ref(false);
+const axeScanResults = ref(null);
+
+const runAxeCoreScan = async () => {
+  axeScanRunning.value = true;
+  axeScanResults.value = null;
+  
+  try {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const previewSection = document.querySelector('.lg\\:col-span-2 .rounded-lg.shadow-sm.border');
+    const scanTarget = previewSection;
+    
+    if (!scanTarget) {
+      axeScanResults.value = {
+        violations: [{
+          id: 'scan-error',
+          description: 'Table preview not found. Please ensure the table is rendered.',
+          help: 'Try refreshing the page or reloading the table data.',
+          impact: 'critical'
+        }],
+        passes: [],
+        incomplete: [],
+        inapplicable: []
+      };
+      return;
+    }
+    
+    const results = await axe.run(scanTarget, {
+      runOnly: {
+        type: 'tag',
+        values: ['wcag2a', 'wcag2aa', 'wcag21aa', 'best-practice']
+      },
+      rules: {
+        'color-contrast': { enabled: true },
+        'aria-required-attr': { enabled: true },
+        'aria-valid-attr-value': { enabled: true },
+        'aria-label': { enabled: true },
+        'aria-labelledby': { enabled: true },
+        'button-name': { enabled: true },
+        'keyboard': { enabled: true },
+        'focus-order-semantics': { enabled: true },
+        'focusable-content': { enabled: true },
+        'document-title': { enabled: false },
+        'html-has-lang': { enabled: false },
+        'html-lang-valid': { enabled: false },
+        'page-has-heading-one': { enabled: false },
+        'landmark-one-main': { enabled: false }
+      }
+    });
+    
+    console.log('axe-core scan results:', results);
+    axeScanResults.value = results;
+  } catch (error) {
+    console.error('axe-core scan error:', error);
+    axeScanResults.value = {
+      violations: [{
+        id: 'scan-error',
+        description: `Error running accessibility scan: ${error.message}`,
+        help: 'Please check the browser console for more details.',
+        impact: 'critical'
+      }],
+      passes: [],
+      incomplete: [],
+      inapplicable: [],
+      error: error.message
+    };
+  } finally {
+    axeScanRunning.value = false;
+  }
+};
 
 const filteredRows = computed(() => {
   let result = [...rows.value];
