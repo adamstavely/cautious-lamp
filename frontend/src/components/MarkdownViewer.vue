@@ -1,37 +1,67 @@
 <template>
   <div class="markdown-viewer-container h-full flex">
     <!-- Main Content Area -->
-    <div class="markdown-viewer flex-1 h-full overflow-y-auto p-8" :class="isDarkMode ? 'bg-slate-900 dark' : 'bg-white'">
-      <div v-if="loading" class="flex items-center justify-center h-full">
-        <div class="text-center">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p class="text-gray-500 dark:text-gray-400">Loading content...</p>
-        </div>
-      </div>
-      <div v-else-if="error" class="flex items-center justify-center h-full">
-        <div class="text-center">
-          <p class="text-red-600 dark:text-red-400 font-semibold mb-2">Error loading content</p>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">{{ error }}</p>
-        </div>
-      </div>
-      <div v-else>
-        <div v-html="renderedMarkdown" class="prose prose-slate dark:prose-invert max-w-none markdown-content"></div>
-        
-        <!-- Edit Page and Last Updated Footer -->
-        <div class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-sm">
-          <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-            <span class="material-symbols-outlined text-base">edit</span>
-            <a 
-              :href="editPageUrl" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-            >
-              Edit this page
-            </a>
+    <div class="markdown-viewer flex-1 h-full overflow-hidden" :class="isDarkMode ? 'bg-slate-900 dark' : 'bg-white'">
+      <!-- VitePress iframe for VitePress pages -->
+      <div v-if="isVitePressPage" class="h-full w-full relative">
+        <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-900 z-10">
+          <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <p class="text-gray-500 dark:text-gray-400">Loading VitePress page...</p>
+            <p class="text-xs text-gray-400 mt-2 font-mono">{{ vitePressUrl }}</p>
           </div>
-          <div v-if="lastUpdated" class="text-gray-500 dark:text-gray-400">
-            Last updated: {{ lastUpdated }}
+        </div>
+        <iframe
+          v-show="!loading && !error"
+          :src="vitePressUrl"
+          class="w-full h-full border-0"
+          frameborder="0"
+          @load="handleIframeLoad"
+          @error="handleIframeError"
+        ></iframe>
+        <div v-if="error" class="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-900 z-10">
+          <div class="text-center p-4">
+            <p class="text-red-600 dark:text-red-400 font-semibold mb-2">Error loading VitePress page</p>
+            <p class="text-gray-500 dark:text-gray-400 text-sm mb-2">{{ error }}</p>
+            <p class="text-xs text-gray-400 font-mono">{{ vitePressUrl }}</p>
+            <p class="text-xs text-gray-400 mt-4">Make sure the VitePress dev server is running: <code class="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">npm run docs:dev</code></p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Markdown content for regular markdown files -->
+      <div v-else class="h-full overflow-y-auto p-8">
+        <div v-if="loading" class="flex items-center justify-center h-full">
+          <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <p class="text-gray-500 dark:text-gray-400">Loading content...</p>
+          </div>
+        </div>
+        <div v-else-if="error" class="flex items-center justify-center h-full">
+          <div class="text-center">
+            <p class="text-red-600 dark:text-red-400 font-semibold mb-2">Error loading content</p>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">{{ error }}</p>
+          </div>
+        </div>
+        <div v-else>
+          <div ref="markdownContentRef" v-html="renderedMarkdown" class="prose prose-slate dark:prose-invert max-w-none markdown-content"></div>
+          
+          <!-- Edit Page and Last Updated Footer -->
+          <div class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-sm">
+            <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+              <span class="material-symbols-outlined text-base">edit</span>
+              <a 
+                :href="editPageUrl" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                Edit this page
+              </a>
+            </div>
+            <div v-if="lastUpdated" class="text-gray-500 dark:text-gray-400">
+              Last updated: {{ lastUpdated }}
+            </div>
           </div>
         </div>
       </div>
@@ -39,7 +69,7 @@
     
     <!-- Right Sidebar - Table of Contents -->
     <aside 
-      v-if="toc.length > 0 && !loading && !error"
+      v-if="!isVitePressPage && toc.length > 0 && !loading && !error"
       class="toc-sidebar w-64 flex-shrink-0 border-l border-gray-200 dark:border-gray-700 p-6 h-full overflow-y-auto"
       :class="isDarkMode ? 'bg-slate-900' : 'bg-white'"
     >
@@ -87,6 +117,7 @@ const props = defineProps({
 const loading = ref(true);
 const error = ref(null);
 const markdownContent = ref('');
+const markdownContentRef = ref(null);
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const toc = ref([]);
 const activeHeading = ref('');
@@ -137,7 +168,10 @@ marked.setOptions({
   gfm: true,
   headerIds: true,
   mangle: false,
-  renderer: renderer
+  renderer: renderer,
+  // Ensure HTML is not sanitized - marked preserves HTML by default but be explicit
+  sanitize: false,
+  silent: false
 });
 
 // Foundation page hero card data
@@ -419,10 +453,193 @@ const getHeroCardHTML = () => {
   `;
 };
 
+// Cache for loaded SVG content (synchronous cache for processed SVGs)
+// Use a ref with a counter to trigger reactivity when cache updates
+const svgContentCache = ref(new Map());
+const svgCacheVersion = ref(0);
+
+// Helper function to make all IDs unique (same logic as foundation pages, but more comprehensive)
+const makeSvgIdsUnique = (svgContent, uniqueId) => {
+  let processedSvg = svgContent;
+  
+  // Find all IDs in the SVG
+  const idMatches = [...svgContent.matchAll(/id="([^"]+)"/g)];
+  const idMap = new Map();
+  
+  for (const match of idMatches) {
+    const originalId = match[1];
+    // Only make IDs unique if they're not already unique
+    if (!originalId.includes(uniqueId)) {
+      const newId = `${originalId}-${uniqueId}`;
+      idMap.set(originalId, newId);
+    }
+  }
+  
+  // Replace all ID definitions
+  for (const [originalId, newId] of idMap) {
+    const escapedId = originalId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    processedSvg = processedSvg.replace(new RegExp(`id="${escapedId}"`, 'g'), `id="${newId}"`);
+  }
+  
+  // Replace all URL references to IDs (in stroke, fill, and other attributes)
+  for (const [originalId, newId] of idMap) {
+    const escapedId = originalId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const urlPattern = new RegExp(`url\\(#${escapedId}\\)`, 'g');
+    processedSvg = processedSvg.replace(urlPattern, `url(#${newId})`);
+  }
+  
+  return processedSvg;
+};
+
+// Process SVG img tags and embed SVG content inline during markdown rendering
+const processSvgImages = (htmlContent) => {
+  // Find all img tags with SVG sources
+  const imgTagRegex = /<img([^>]*)\s+src="(\/svgs\/[^"]+\.svg)"([^>]*)>/gi;
+  let processedContent = htmlContent;
+  
+  // Collect all matches first
+  const matches = [];
+  let match;
+  imgTagRegex.lastIndex = 0;
+  while ((match = imgTagRegex.exec(htmlContent)) !== null) {
+    matches.push({
+      fullMatch: match[0],
+      beforeAttrs: match[1] || '',
+      src: match[2],
+      afterAttrs: match[3] || ''
+    });
+  }
+  
+  // Process matches in reverse order to avoid index shifting issues
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const { fullMatch, beforeAttrs, src, afterAttrs } = matches[i];
+    
+    // Check cache first - if SVG is cached, embed it directly
+    if (svgContentCache.value.has(src)) {
+      const cachedSvg = svgContentCache.value.get(src);
+      
+      // Extract classes from img tag
+      const classMatch = (beforeAttrs + ' ' + afterAttrs).match(/class="([^"]+)"/);
+      const classes = classMatch ? classMatch[1] : 'w-full h-full';
+      
+      // Update SVG class if needed - preserve existing class or add new one
+      // Also ensure SVG has proper namespace and attributes for rendering
+      let svgWithClass = cachedSvg;
+      const svgClassMatch = cachedSvg.match(/<svg([^>]*)>/i);
+      if (svgClassMatch) {
+        let updatedAttrs = svgClassMatch[1].trim();
+        
+        // Ensure SVG has proper xmlns namespace (required for gradients to work)
+        // This is critical for gradient references to resolve correctly when embedded via v-html
+        const svgNs = 'http://www.w3.org/2000/svg';
+        if (!updatedAttrs.match(/xmlns\s*=/i)) {
+          // Add xmlns at the beginning if it doesn't exist
+          updatedAttrs = `xmlns="${svgNs}" ${updatedAttrs}`.trim();
+        } else if (!updatedAttrs.includes(`xmlns="${svgNs}"`)) {
+          // Replace existing xmlns with correct one (case-insensitive)
+          updatedAttrs = updatedAttrs.replace(/xmlns\s*=\s*"[^"]*"/i, `xmlns="${svgNs}"`);
+        }
+        
+        // Ensure viewBox is present (required for proper scaling)
+        if (!updatedAttrs.match(/viewBox\s*=/i)) {
+          // Extract viewBox from original if it exists
+          const viewBoxMatch = cachedSvg.match(/viewBox\s*=\s*"([^"]+)"/i);
+          if (viewBoxMatch) {
+            updatedAttrs += ` viewBox="${viewBoxMatch[1]}"`;
+          }
+        }
+        
+        // Update or add class
+        if (updatedAttrs.match(/class\s*=/i)) {
+          updatedAttrs = updatedAttrs.replace(/class\s*=\s*"[^"]*"/i, `class="${classes}"`);
+        } else {
+          updatedAttrs += ` class="${classes}"`;
+        }
+        
+        // Ensure there's a space before attributes
+        if (updatedAttrs && !updatedAttrs.startsWith(' ')) {
+          updatedAttrs = ' ' + updatedAttrs;
+        }
+        
+        svgWithClass = cachedSvg.replace(/<svg[^>]*>/i, `<svg${updatedAttrs}>`);
+      }
+      
+      // Replace this specific occurrence directly
+      processedContent = processedContent.replace(fullMatch, svgWithClass);
+    }
+    // If not cached, keep the img tag - it will be processed async and cached
+  }
+  
+  return processedContent;
+};
+
+// Load SVG files and cache them (runs async when markdown changes)
+const loadSvgFiles = async () => {
+  if (!markdownContent.value) return;
+  
+  // Find all SVG img tags in the markdown content (after it's parsed to HTML)
+  // We need to check the rendered markdown, not the raw markdown
+  const renderedHtml = marked.parse(markdownContent.value);
+  const imgTagRegex = /<img[^>]*\s+src="(\/svgs\/[^"]+\.svg)"[^>]*>/gi;
+  const matches = [...renderedHtml.matchAll(imgTagRegex)];
+  
+  // Extract unique SVG sources
+  const svgSources = [...new Set(matches.map(m => m[1]))];
+  
+  if (svgSources.length === 0) return;
+  
+  // Load each SVG that's not already cached
+  let hasNewCache = false;
+  for (const src of svgSources) {
+    if (svgContentCache.value.has(src)) {
+      continue; // Already cached
+    }
+    
+    try {
+      const response = await fetch(src);
+      if (!response.ok) {
+        console.warn(`Failed to load SVG: ${src}`, response.status);
+        continue;
+      }
+      
+      let svgContent = await response.text();
+      
+      // Make gradient IDs unique (same logic as foundation pages)
+      // Create unique ID from the path
+      const uniqueId = src.replace(/\//g, '-').replace(/\.svg$/, '').replace(/^-/, '');
+      svgContent = makeSvgIdsUnique(svgContent, uniqueId);
+      
+      // Cache the processed SVG
+      svgContentCache.value.set(src, svgContent);
+      hasNewCache = true;
+    } catch (error) {
+      console.error(`Error loading SVG ${src}:`, error);
+    }
+  }
+  
+  // If we cached new SVGs, trigger a re-render by incrementing version
+  // This will cause renderedMarkdown computed to re-run
+  if (hasNewCache) {
+    // Single increment after all SVGs are loaded to trigger reactivity
+    svgCacheVersion.value++;
+    // Wait for next tick to ensure reactivity is processed
+    await nextTick();
+  }
+};
+
 const renderedMarkdown = computed(() => {
   if (!markdownContent.value) return '';
   headings.length = 0; // Clear previous headings
-  const parsedMarkdown = marked.parse(markdownContent.value);
+  
+  // Access svgCacheVersion to make this computed reactive to cache changes
+  const _ = svgCacheVersion.value;
+  
+  // Parse markdown - marked should preserve HTML img tags
+  let parsedMarkdown = marked.parse(markdownContent.value);
+  
+  // Process SVG img tags - embed cached SVGs directly, keep img tags for uncached ones
+  parsedMarkdown = processSvgImages(parsedMarkdown);
+  
   // Prepend hero card for foundation pages
   if (isFoundationPage.value) {
     return getHeroCardHTML() + parsedMarkdown;
@@ -430,12 +647,103 @@ const renderedMarkdown = computed(() => {
   return parsedMarkdown;
 });
 
+// Watch for markdown content changes to load SVG files
+watch(markdownContent, async () => {
+  // Load SVG files asynchronously and cache them
+  await loadSvgFiles();
+  // Force re-computation of renderedMarkdown after caching
+  // The svgCacheVersion change should trigger reactivity, but ensure it does
+  await nextTick();
+}, { immediate: true });
+
+// Also watch svgCacheVersion to ensure reactivity
+watch(svgCacheVersion, () => {
+  // This ensures renderedMarkdown computed re-runs when cache updates
+  // The computed already accesses svgCacheVersion, but this ensures it's tracked
+}, { immediate: false });
+
 // Watch for rendered markdown to update TOC
 watch(renderedMarkdown, async () => {
   await nextTick();
   toc.value = [...headings];
   updateActiveHeading();
   setupScrollSpy();
+}, { immediate: false });
+
+// Check if a path is a VitePress page (new pages that should be loaded via VitePress)
+// Actually, let's just load them as markdown files directly instead of using iframe
+const isVitePressPagePath = (docPath) => {
+  // Disable iframe approach - load markdown directly instead
+  return false;
+  
+  /* Original VitePress iframe detection - disabled
+  // Direct markdown file mappings (not VitePress)
+  const directMarkdownPaths = [
+    '/colors', '/typography', '/spacing', '/shadows', '/accessibility',
+    '/ai', '/ai/patterns', '/ai/components',
+    '/hcd/principles', '/hcd/research', '/hcd/accessibility',
+    '/patterns', '/patterns/navigation', '/patterns/data-display', '/patterns/layout', '/patterns/forms', '/patterns/feedback',
+    '/guidelines/tui-guidance', '/tui-guidance',
+    '/data-viz/types-of-dashboards', '/data-viz/dashboard-patterns',
+    '/'
+  ];
+  
+  // If it's a direct markdown path, not VitePress
+  if (directMarkdownPaths.includes(docPath)) {
+    return false;
+  }
+  
+  // Check if it's a new VitePress page path (paths may include /guidelines/ prefix)
+  // New AI pages: /guidelines/ai/agent-roles-mental-models or /ai/agent-roles-mental-models
+  if ((docPath.startsWith('/guidelines/ai/') || docPath.startsWith('/ai/')) && 
+      docPath !== '/ai/patterns' && docPath !== '/ai/components' &&
+      docPath !== '/guidelines/ai/patterns' && docPath !== '/guidelines/ai/components') {
+    return true;
+  }
+  
+  // New pattern pages: /guidelines/patterns/agent-oriented-onboarding or /patterns/agent-oriented-onboarding
+  const existingPatternPaths = ['/patterns', '/patterns/navigation', '/patterns/data-display', '/patterns/layout', '/patterns/forms', '/patterns/feedback'];
+  const existingGuidelinesPatternPaths = ['/guidelines/patterns', '/guidelines/patterns/navigation', '/guidelines/patterns/data-display', '/guidelines/patterns/layout', '/guidelines/patterns/forms', '/guidelines/patterns/feedback'];
+  if ((docPath.startsWith('/guidelines/patterns/') || docPath.startsWith('/patterns/')) && 
+      !existingPatternPaths.includes(docPath) && !existingGuidelinesPatternPaths.includes(docPath)) {
+    return true;
+  }
+  
+  // New guideline pages: /guidelines/color-contrast, etc. (but not /guidelines/tui-guidance)
+  if (docPath.startsWith('/guidelines/') && docPath !== '/guidelines/tui-guidance' &&
+      !docPath.startsWith('/guidelines/ai/') && !docPath.startsWith('/guidelines/patterns/') &&
+      !docPath.startsWith('/guidelines/tools/')) {
+    return true;
+  }
+  
+  // New tools/references pages: /guidelines/tools/references/... or /tools/references/...
+  if (docPath.startsWith('/guidelines/tools/references/') || docPath.startsWith('/tools/references/')) {
+    return true;
+  }
+  
+  return false;
+  */
+};
+
+const isVitePressPage = computed(() => {
+  const result = isVitePressPagePath(props.docPath);
+  console.log('Checking if VitePress page:', props.docPath, '->', result);
+  return result;
+});
+
+const vitePressUrl = computed(() => {
+  if (!isVitePressPage.value) return '';
+  
+  // Normalize the path - remove /guidelines prefix if present since VitePress base is /guidelines/
+  let normalizedPath = props.docPath;
+  if (normalizedPath.startsWith('/guidelines/')) {
+    normalizedPath = normalizedPath.replace('/guidelines', '');
+  }
+  
+  if (import.meta.env.DEV) {
+    return `http://localhost:5175/guidelines${normalizedPath === '/' ? '' : normalizedPath}`;
+  }
+  return `/guidelines${normalizedPath === '/' ? '/index.html' : normalizedPath}.html`;
 });
 
 const getFilePath = (docPath) => {
@@ -469,6 +777,27 @@ const getFilePath = (docPath) => {
     return pathMap[docPath];
   }
   
+  // Handle new VitePress pages - they're in docs/ directory
+  // /guidelines/ai/xyz -> /docs/ai/xyz.md
+  if (docPath.startsWith('/guidelines/ai/')) {
+    return `/docs/ai${docPath.replace('/guidelines/ai', '')}.md`;
+  }
+  
+  // /guidelines/patterns/xyz -> /docs/patterns/xyz.md
+  if (docPath.startsWith('/guidelines/patterns/')) {
+    return `/docs/patterns${docPath.replace('/guidelines/patterns', '')}.md`;
+  }
+  
+  // /guidelines/guidelines/xyz -> /docs/guidelines/xyz.md
+  if (docPath.startsWith('/guidelines/guidelines/')) {
+    return `/docs/guidelines${docPath.replace('/guidelines/guidelines', '')}.md`;
+  }
+  
+  // /guidelines/tools/references/xyz -> /docs/tools/references/xyz.md
+  if (docPath.startsWith('/guidelines/tools/references/')) {
+    return `/docs/tools/references${docPath.replace('/guidelines/tools/references', '')}.md`;
+  }
+  
   // Otherwise, try to construct the path dynamically
   // Handle pattern paths: /patterns/xyz -> /docs/patterns/xyz.md
   if (docPath.startsWith('/patterns/')) {
@@ -477,7 +806,7 @@ const getFilePath = (docPath) => {
   
   // Handle guidelines paths: /guidelines/xyz -> /docs/guidelines/xyz.md
   if (docPath.startsWith('/guidelines/')) {
-    return `/docs${docPath}.md`;
+    return `/docs${docPath.replace('/guidelines', '/guidelines')}.md`;
   }
   
   // Handle data-viz paths: /data-viz/xyz -> /docs/data-viz/xyz.md
@@ -495,7 +824,26 @@ const getGitHubEditUrl = (docPath) => {
   return `https://github.com/adamstavely/cautious-lamp/edit/main/frontend/${filePath}`;
 };
 
+const handleIframeLoad = () => {
+  console.log('VitePress iframe loaded successfully');
+  loading.value = false;
+  error.value = null;
+};
+
+const handleIframeError = () => {
+  console.error('VitePress iframe failed to load');
+  loading.value = false;
+  error.value = 'Failed to load VitePress page. Make sure the VitePress dev server is running on port 5175.';
+};
+
 const loadMarkdown = async () => {
+  // Skip loading markdown if this is a VitePress page (will use iframe)
+  if (isVitePressPage.value) {
+    loading.value = true;
+    error.value = null;
+    return;
+  }
+  
   loading.value = true;
   error.value = null;
   toc.value = [];
@@ -628,7 +976,16 @@ onMounted(() => {
 });
 
 watch(() => props.docPath, () => {
-  loadMarkdown();
+  console.log('MarkdownViewer docPath changed:', props.docPath);
+  console.log('Is VitePress page:', isVitePressPage.value);
+  console.log('VitePress URL:', vitePressUrl.value);
+  
+  if (!isVitePressPage.value) {
+    loadMarkdown();
+  } else {
+    loading.value = true;
+    error.value = null;
+  }
 }, { immediate: false });
 
 // Cleanup
@@ -916,6 +1273,20 @@ onBeforeUnmount(() => {
   padding-left: 0.5714286em;
 }
 
+/* Ensure images in markdown are visible */
+.markdown-viewer :deep(.prose img),
+.markdown-content :deep(img) {
+  display: block !important;
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.markdown-viewer :deep(.prose img[src*="/svgs/"]) {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
 /* Hero card styles within markdown */
 .markdown-content :deep(.texture-pattern) {
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
@@ -925,6 +1296,48 @@ onBeforeUnmount(() => {
 .markdown-content :deep(.mb-12 h1) {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
+}
+
+/* Ensure SVG elements render correctly */
+.markdown-content :deep(svg) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  position: relative;
+}
+
+/* Ensure line elements are visible and render correctly */
+.markdown-content :deep(svg line) {
+  display: block !important;
+  visibility: visible !important;
+  opacity: inherit !important;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  /* Ensure stroke is applied */
+  stroke-width: inherit;
+  stroke: inherit;
+}
+
+/* Ensure defs and gradients are properly rendered */
+.markdown-content :deep(svg defs) {
+  display: block;
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.markdown-content :deep(svg defs linearGradient),
+.markdown-content :deep(svg defs radialGradient) {
+  display: block;
+}
+
+/* Ensure gradient references resolve correctly */
+.markdown-content :deep(svg [fill*="url(#"]),
+.markdown-content :deep(svg [stroke*="url(#"]) {
+  /* Don't override - let the gradient work */
 }
 </style>
 
