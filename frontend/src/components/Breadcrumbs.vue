@@ -129,6 +129,13 @@ const crumbs = computed(() => {
     '/patterns/layout': 'Layout',
     '/patterns/forms': 'Forms',
     '/patterns/feedback': 'Feedback',
+    '/guidelines/patterns/agent-oriented-onboarding': 'Agent-Oriented Onboarding',
+    '/guidelines/patterns/ai-disengagement-timeout-error': 'AI Disengagement Timeout Error',
+    '/guidelines/patterns/ai-thinking-states': 'AI Thinking States',
+    '/guidelines/patterns/empty-loading-states': 'Empty Loading States',
+    '/guidelines/patterns/error-handling': 'Error Handling',
+    '/guidelines/patterns/multi-agent-orchestration': 'Multi-Agent Orchestration',
+    '/guidelines/patterns/new-features-experiences': 'New Features Experiences',
     '/fonts': 'Fonts',
     '/design-assets/font-library': 'Font Library',
     '/tools/font-scale': 'Font Scale',
@@ -211,10 +218,53 @@ const crumbs = computed(() => {
       return;
     }
     
+    // Special handling for patterns paths
+    // When we have /patterns/layout or /guidelines/patterns/empty-loading-states
+    if (part === 'patterns' && index < parts.length - 1) {
+      breadcrumbs.push({
+        label: 'Patterns',
+        path: '/patterns'
+      });
+      // Handle the doc path separately
+      const docPath = '/' + parts.slice(index + 1).join('/');
+      let docLabel = pathLabels[docPath] || pathLabels[`/patterns${docPath}`];
+      if (!docLabel) {
+        // Capitalize each word (split by hyphens, capitalize first letter of each)
+        const lastPart = parts[parts.length - 1];
+        docLabel = lastPart.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      }
+      breadcrumbs.push({
+        label: docLabel,
+        path: null // Current page, not clickable
+      });
+      skipCount = parts.length - index - 1; // Skip all remaining parts
+      return;
+    }
+    
     // Special handling for guidelines paths
     // When we have /guidelines/colors, we want Guidelines > Colors
     // So we need to map the doc path part separately
     if (part === 'guidelines' && index < parts.length - 1) {
+      // Check if it's a patterns page under guidelines
+      if (index + 1 < parts.length && parts[index + 1] === 'patterns') {
+        breadcrumbs.push({
+          label: 'Patterns',
+          path: '/patterns'
+        });
+        // Handle the pattern doc path
+        const docPath = '/' + parts.slice(index + 2).join('/');
+        let docLabel = pathLabels[`/guidelines/patterns${docPath}`];
+        if (!docLabel) {
+          const lastPart = parts[parts.length - 1];
+          docLabel = lastPart.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        }
+        breadcrumbs.push({
+          label: docLabel,
+          path: null // Current page, not clickable
+        });
+        skipCount = parts.length - index - 1; // Skip all remaining parts
+        return;
+      }
       // Add Guidelines breadcrumb
       breadcrumbs.push({
         label: 'Guidelines',

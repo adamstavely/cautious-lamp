@@ -70,13 +70,10 @@
           <!-- Overview -->
           <div class="space-y-1">
             <router-link
-              v-for="item in filteredDesignPatterns.filter(item => item.link === '/patterns')"
-              :key="item.link"
-              :to="item.link"
-              @click.stop
+              to="/patterns"
               class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
               :class="[
-                isActive(item.link)
+                isActive('/patterns') && route.path === '/patterns'
                   ? (isDarkMode 
                     ? 'text-indigo-400 bg-indigo-900/20' 
                     : 'text-indigo-600 bg-indigo-50')
@@ -85,8 +82,28 @@
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
               ]"
             >
-              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-              <span class="font-medium">{{ item.text }}</span>
+              <span class="material-symbols-outlined text-lg">view_quilt</span>
+              <span class="font-medium">Overview</span>
+            </router-link>
+          </div>
+
+          <!-- Pattern Status -->
+          <div class="space-y-1">
+            <router-link
+              to="/patterns/status"
+              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              :class="[
+                isActive('/patterns/status')
+                  ? (isDarkMode 
+                    ? 'text-indigo-400 bg-indigo-900/20' 
+                    : 'text-indigo-600 bg-indigo-50')
+                  : (isDarkMode
+                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+              ]"
+            >
+              <span class="material-symbols-outlined text-lg">check_circle</span>
+              <span class="font-medium">Pattern Status</span>
             </router-link>
           </div>
 
@@ -95,7 +112,7 @@
             <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Design Patterns</h4>
             <div class="space-y-1">
               <router-link
-                v-for="item in filteredDesignPatterns.filter(item => item.link !== '/patterns')"
+                v-for="item in filteredDesignPatterns"
                 :key="item.link"
                 :to="item.link"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
@@ -112,6 +129,32 @@
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
+            </div>
+          </div>
+
+          <!-- Interaction Patterns -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Interaction Patterns</h4>
+            <div class="space-y-1">
+              <a
+                v-for="item in filteredInteractionPatterns"
+                :key="item.link"
+                href="#"
+                @click.prevent="navigateToDoc(item.link)"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </a>
             </div>
           </div>
 
@@ -1271,8 +1314,14 @@ const navigateToDoc = (link) => {
     // For reference pages, navigate directly to the specific page
     // This keeps the drawer in Tools mode (showTools will be true)
     router.push(link);
+  } else if (link.startsWith('/guidelines/patterns/')) {
+    // For pattern pages under /guidelines/patterns/, navigate directly to the specific path
+    router.push(link);
+  } else if (link.startsWith('/patterns/')) {
+    // For pattern pages, navigate directly to the specific path
+    router.push(link);
   } else if (link.startsWith('/guidelines/')) {
-    // For all guidelines docs, navigate directly to the specific path
+    // For all other guidelines docs, navigate directly to the specific path
     // This ensures the URL shows the full path and breadcrumbs work correctly
     router.push(link);
   } else if (['/colors', '/typography', '/spacing', '/shadows', '/accessibility'].includes(link)) {
@@ -1347,22 +1396,24 @@ const guidelines = [
   { text: 'Typography Guidelines', link: '/guidelines/typography', icon: 'text_fields' }
 ];
 
+// Design Patterns - core UI patterns
 const designPatterns = [
-  { text: 'Overview', link: '/patterns', icon: 'view_quilt' },
-  { text: 'Pattern Status', link: '/patterns/status', icon: 'check_circle' },
   { text: 'Layout Patterns', link: '/patterns/layout', icon: 'view_quilt' },
   { text: 'Navigation', link: '/patterns/navigation', icon: 'navigation' },
   { text: 'Data Display', link: '/patterns/data-display', icon: 'table_chart' },
   { text: 'Forms', link: '/patterns/forms', icon: 'description' },
   { text: 'Feedback', link: '/patterns/feedback', icon: 'feedback' },
+  { text: 'Empty Loading States', link: '/guidelines/patterns/empty-loading-states', icon: 'hourglass_empty' },
+  { text: 'Error Handling', link: '/guidelines/patterns/error-handling', icon: 'error' },
+  { text: 'New Features Experiences', link: '/guidelines/patterns/new-features-experiences', icon: 'new_releases' }
+];
+
+// Interaction Patterns - AI and interaction-focused patterns
+const interactionPatterns = [
   { text: 'Agent-Oriented Onboarding', link: '/guidelines/patterns/agent-oriented-onboarding', icon: 'rocket_launch' },
   { text: 'AI Disengagement Timeout Error', link: '/guidelines/patterns/ai-disengagement-timeout-error', icon: 'timer_off' },
   { text: 'AI Thinking States', link: '/guidelines/patterns/ai-thinking-states', icon: 'psychology' },
-  { text: 'Data Visualization', link: '/guidelines/patterns/data-visualization', icon: 'bar_chart' },
-  { text: 'Empty Loading States', link: '/guidelines/patterns/empty-loading-states', icon: 'hourglass_empty' },
-  { text: 'Error Handling', link: '/guidelines/patterns/error-handling', icon: 'error' },
-  { text: 'Multi-Agent Orchestration', link: '/guidelines/patterns/multi-agent-orchestration', icon: 'account_tree' },
-  { text: 'New Features Experiences', link: '/guidelines/patterns/new-features-experiences', icon: 'new_releases' }
+  { text: 'Multi-Agent Orchestration', link: '/guidelines/patterns/multi-agent-orchestration', icon: 'account_tree' }
 ];
 
 const codePatterns = [
@@ -1592,15 +1643,20 @@ const showResearch = computed(() => {
 });
 
 const showGuidelines = computed(() => {
-  return route.path === '/guidelines' || 
-         route.path.startsWith('/guidelines/') ||
-         route.path === '/colors' ||
-         route.path === '/typography' ||
-         route.path === '/spacing' ||
-         route.path === '/shadows' ||
-         route.path === '/accessibility' ||
-         route.path === '/ai' ||
-         route.path.startsWith('/ai/');
+  const path = route.path;
+  // Exclude pattern pages - they're handled by showPatterns
+  if (path.startsWith('/guidelines/patterns/')) {
+    return false;
+  }
+  return path === '/guidelines' || 
+         path.startsWith('/guidelines/') ||
+         path === '/colors' ||
+         path === '/typography' ||
+         path === '/spacing' ||
+         path === '/shadows' ||
+         path === '/accessibility' ||
+         path === '/ai' ||
+         path.startsWith('/ai/');
 });
 
 const showTokens = computed(() => {
@@ -1612,7 +1668,10 @@ const showReview = computed(() => {
 });
 
 const showPatterns = computed(() => {
-  return route.path === '/patterns' || route.path.startsWith('/patterns/');
+  const path = route.path;
+  return path === '/patterns' || 
+         path.startsWith('/patterns/') || 
+         path.startsWith('/guidelines/patterns/');
 });
 
 
@@ -1701,6 +1760,10 @@ const filteredGuidelines = computed(() => {
 
 const filteredDesignPatterns = computed(() => {
   return designPatterns.filter(item => isRouteEnabled(item.link));
+});
+
+const filteredInteractionPatterns = computed(() => {
+  return interactionPatterns.filter(item => isRouteEnabled(item.link));
 });
 
 const filteredCodePatterns = computed(() => {
@@ -1803,6 +1866,7 @@ const getAllDrawerFlagKeys = () => {
     ...humanCenteredDesign.map(h => h.link),
     ...guidelines.map(g => g.link),
     ...designPatterns.map(d => d.link),
+    ...interactionPatterns.map(i => i.link),
     ...codePatterns.map(c => c.link),
     ...componentUtilities.map(c => c.link),
     ...componentItems.map(c => c.link),

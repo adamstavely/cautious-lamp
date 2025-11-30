@@ -415,6 +415,10 @@ const router = createRouter({
       component: () => import('./views/Patterns.vue'),
     },
     {
+      path: '/patterns/:pathMatch(.*)*',
+      component: () => import('./views/Patterns.vue'),
+    },
+    {
       path: '/patterns/status',
       component: () => import('./views/PatternStatus.vue'),
     },
@@ -833,6 +837,10 @@ const router = createRouter({
     {
       path: '/guidelines/tui-guidance',
       component: () => import('./views/Guidelines.vue'),
+    },
+    {
+      path: '/guidelines/patterns/:pathMatch(.*)*', // Catch-all for pattern pages under guidelines
+      component: () => import('./views/Patterns.vue'),
     },
     {
       path: '/guidelines/:pathMatch(.*)*',

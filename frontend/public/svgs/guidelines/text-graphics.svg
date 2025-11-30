@@ -5,18 +5,37 @@
       <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
     </linearGradient>
   </defs>
-  <!-- Text lines -->
-  <line x1="50" y1="70" x2="150" y2="70" stroke="url(#textGraphicsGradient)" stroke-width="4" opacity="0.7"/>
-  <line x1="50" y1="95" x2="140" y2="95" stroke="url(#textGraphicsGradient)" stroke-width="3" opacity="0.6"/>
-  <line x1="50" y1="120" x2="145" y2="120" stroke="url(#textGraphicsGradient)" stroke-width="3" opacity="0.6"/>
-  <!-- Graphic elements -->
-  <circle cx="70" cy="150" r="15" fill="url(#textGraphicsGradient)" opacity="0.5"/>
-  <rect x="110" y="135" width="30" height="30" rx="3" fill="url(#textGraphicsGradient)" opacity="0.5"/>
-  <!-- Text and graphic integration -->
-  <line x1="50" y1="125" x2="70" y2="135" stroke="url(#textGraphicsGradient)" stroke-width="2" opacity="0.3"/>
-  <line x1="140" y1="125" x2="125" y2="135" stroke="url(#textGraphicsGradient)" stroke-width="2" opacity="0.3"/>
-  <!-- Text emphasis -->
-  <circle cx="55" cy="70" r="3" fill="url(#textGraphicsGradient)" opacity="0.6"/>
-  <circle cx="55" cy="120" r="3" fill="url(#textGraphicsGradient)" opacity="0.6"/>
+  <!-- Text block representation -->
+  <rect x="50" y="50" width="100" height="60" rx="4" fill="url(#textGraphicsGradient)" opacity="0.1"/>
+  <!-- Text lines with varying lengths -->
+  <line x1="60" y1="65" x2="140" y2="65" stroke="url(#textGraphicsGradient)" stroke-width="3" opacity="0.8"/>
+  <line x1="60" y1="80" x2="130" y2="80" stroke="url(#textGraphicsGradient)" stroke-width="2.5" opacity="0.7"/>
+  <line x1="60" y1="95" x2="120" y2="95" stroke="url(#textGraphicsGradient)" stroke-width="2" opacity="0.6"/>
+  
+  <!-- Graphic elements - shapes representing visual content -->
+  <!-- Circle graphic -->
+  <circle cx="70" cy="140" r="20" fill="url(#textGraphicsGradient)" opacity="0.6"/>
+  <circle cx="70" cy="140" r="10" fill="white" opacity="0.4"/>
+  
+  <!-- Square graphic -->
+  <rect x="110" y="125" width="25" height="25" rx="2" fill="url(#textGraphicsGradient)" opacity="0.6"/>
+  <rect x="117" y="132" width="11" height="11" rx="1" fill="white" opacity="0.4"/>
+  
+  <!-- Triangle graphic -->
+  <polygon points="150,140 140,160 160,160" fill="url(#textGraphicsGradient)" opacity="0.6"/>
+  <circle cx="150" cy="150" r="4" fill="white" opacity="0.4"/>
+  
+  <!-- Connection lines showing text-graphic relationship -->
+  <line x1="100" y1="110" x2="70" y2="120" stroke="url(#textGraphicsGradient)" stroke-width="1.5" opacity="0.3" stroke-dasharray="3,2"/>
+  <line x1="100" y1="110" x2="122" y2="125" stroke="url(#textGraphicsGradient)" stroke-width="1.5" opacity="0.3" stroke-dasharray="3,2"/>
+  <line x1="100" y1="110" x2="150" y2="140" stroke="url(#textGraphicsGradient)" stroke-width="1.5" opacity="0.3" stroke-dasharray="3,2"/>
+  
+  <!-- Text label indicators -->
+  <circle cx="60" cy="65" r="2" fill="url(#textGraphicsGradient)" opacity="0.8"/>
+  <circle cx="60" cy="80" r="2" fill="url(#textGraphicsGradient)" opacity="0.7"/>
+  <circle cx="60" cy="95" r="2" fill="url(#textGraphicsGradient)" opacity="0.6"/>
+  
+  <!-- Decorative elements showing harmony -->
+  <line x1="50" y1="50" x2="50" y2="110" stroke="url(#textGraphicsGradient)" stroke-width="1" opacity="0.2"/>
+  <line x1="150" y1="50" x2="150" y2="110" stroke="url(#textGraphicsGradient)" stroke-width="1" opacity="0.2"/>
 </svg>
-
