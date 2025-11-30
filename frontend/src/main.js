@@ -579,6 +579,10 @@ const router = createRouter({
       component: () => import('./views/Tools.vue'),
     },
     {
+      path: '/tools/references/:pathMatch(.*)*',
+      component: () => import('./views/Tools.vue'),
+    },
+    {
       path: '/tools/px-converter',
       component: () => import('./views/PxConverter.vue'),
     },
@@ -828,6 +832,10 @@ const router = createRouter({
     },
     {
       path: '/guidelines/tui-guidance',
+      component: () => import('./views/Guidelines.vue'),
+    },
+    {
+      path: '/guidelines/:pathMatch(.*)*',
       component: () => import('./views/Guidelines.vue'),
     },
     {

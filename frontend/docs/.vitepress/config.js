@@ -11,6 +11,20 @@ export default defineConfig({
     host: 'localhost'
   },
   
+  // Vite configuration
+  vite: {
+    publicDir: '../../public',
+    assetsInclude: ['**/*.svg'],
+    optimizeDeps: {
+      exclude: ['**/*.svg']
+    },
+    server: {
+      fs: {
+        allow: ['..']
+      }
+    }
+  },
+  
   themeConfig: {
     logo: '/logo.svg',
     // Disable VitePress default appearance toggle - we'll handle it ourselves
@@ -52,11 +66,66 @@ export default defineConfig({
         ]
       },
       {
+        text: 'Artificial Intelligence',
+        items: [
+          { text: 'Agent Roles Mental Models', link: '/ai/agent-roles-mental-models' },
+          { text: 'Content Microcopy', link: '/ai/content-microcopy' },
+          { text: 'Designing for Agentic Experiences', link: '/ai/designing-for-agentic-experiences' },
+          { text: 'Designing for Generative AI', link: '/ai/designing-for-generative-ai' },
+          { text: 'Designing for MCP UI', link: '/ai/designing-for-mcp-ui' },
+          { text: 'Fallback Error States', link: '/ai/fallback-error-states' },
+          { text: 'Feedback Observability', link: '/ai/feedback-observability' },
+          { text: 'Human Machine Teaming', link: '/ai/human-machine-teaming' },
+          { text: 'Identity Persona', link: '/ai/identity-persona' },
+          { text: 'Memory Personalization', link: '/ai/memory-personalization' },
+          { text: 'Safe Exploration', link: '/ai/safe-exploration' }
+        ]
+      },
+      {
         text: 'Patterns',
         items: [
           { text: 'Layout Patterns', link: '/patterns' },
           { text: 'Navigation', link: '/patterns/navigation' },
-          { text: 'Data Display', link: '/patterns/data-display' }
+          { text: 'Data Display', link: '/patterns/data-display' },
+          { text: 'Agent-Oriented Onboarding', link: '/patterns/agent-oriented-onboarding' },
+          { text: 'AI Disengagement Timeout Error', link: '/patterns/ai-disengagement-timeout-error' },
+          { text: 'AI Thinking States', link: '/patterns/ai-thinking-states' },
+          { text: 'Data Visualization', link: '/patterns/data-visualization' },
+          { text: 'Empty Loading States', link: '/patterns/empty-loading-states' },
+          { text: 'Error Handling', link: '/patterns/error-handling' },
+          { text: 'Multi-Agent Orchestration', link: '/patterns/multi-agent-orchestration' },
+          { text: 'New Features Experiences', link: '/patterns/new-features-experiences' }
+        ]
+      },
+      {
+        text: 'Guidelines',
+        items: [
+          { text: 'Color Contrast', link: '/guidelines/color-contrast' },
+          { text: 'Content Organization Navigation', link: '/guidelines/content-organization-navigation' },
+          { text: 'CSS Grid Layout', link: '/guidelines/css-grid-layout' },
+          { text: 'Flashing', link: '/guidelines/flashing' },
+          { text: 'Focus', link: '/guidelines/focus' },
+          { text: 'Iconography', link: '/guidelines/iconography' },
+          { text: 'Information Architecture', link: '/guidelines/information-architecture' },
+          { text: 'Keyboard Gestures', link: '/guidelines/keyboard-gestures' },
+          { text: 'Metadata SEO', link: '/guidelines/metadata-seo' },
+          { text: 'Multimedia Animation', link: '/guidelines/multimedia-animation' },
+          { text: 'Text Graphics', link: '/guidelines/text-graphics' },
+          { text: 'Time', link: '/guidelines/time' },
+          { text: 'Typography', link: '/guidelines/typography' }
+        ]
+      },
+      {
+        text: 'Tools',
+        items: [
+          {
+            text: 'References',
+            items: [
+              { text: 'JAWS Commands', link: '/tools/references/jaws-commands' },
+              { text: 'Penpot for Beginners', link: '/tools/references/penpot-for-beginners' },
+              { text: 'Units of Measure', link: '/tools/references/units-of-measure' }
+            ]
+          }
         ]
       }
     ],

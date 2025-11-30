@@ -533,6 +533,32 @@
               </router-link>
             </div>
           </div>
+
+          <!-- References -->
+          <div v-if="filteredToolGroups.references && filteredToolGroups.references.length > 0">
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">References</h4>
+            <div class="space-y-1">
+              <a
+                v-for="item in filteredToolGroups.references"
+                :key="item.link"
+                href="#"
+                @click.prevent="navigateToDoc(item.link)"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </a>
+            </div>
+          </div>
         </nav>
       </div>
       
@@ -822,7 +848,7 @@
       <!-- Guidelines - only show when on guidelines route -->
       <div v-if="showGuidelines" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Guidelines</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Foundations</h3>
           <button
             @click="toggle"
             class="p-2 rounded-lg transition-colors"
@@ -876,58 +902,20 @@
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </a>
-            </div>
-          </div>
-          
-          <!-- Guidelines -->
-          <div class="space-y-1">
-            <router-link
-              v-for="item in filteredGuidelines.filter(item => item.link !== '/colors' && item.link !== '/typography' && item.link !== '/spacing' && item.link !== '/shadows' && item.link !== '/accessibility' && (item.link.startsWith('/guidelines/') || item.link === '/tui-guidance'))"
-              :key="item.link"
-              :to="item.link"
-              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-              :class="[
-                isActive(item.link)
-                  ? (isDarkMode 
-                    ? 'text-indigo-400 bg-indigo-900/20' 
-                    : 'text-indigo-600 bg-indigo-50')
-                  : (isDarkMode
-                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-              ]"
-            >
-              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-              <span class="font-medium">{{ item.text }}</span>
-            </router-link>
-            <a
-              v-for="item in filteredGuidelines.filter(item => item.link !== '/colors' && item.link !== '/typography' && item.link !== '/spacing' && item.link !== '/shadows' && item.link !== '/accessibility' && !item.link.startsWith('/guidelines/') && item.link !== '/tui-guidance')"
-              :key="item.link"
-              href="#"
-              @click.prevent="navigateToDoc(item.link)"
-              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
-              :class="[
-                isActive(item.link)
-                  ? (isDarkMode 
-                    ? 'text-indigo-400 bg-indigo-900/20' 
-                    : 'text-indigo-600 bg-indigo-50')
-                  : (isDarkMode
-                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
-              ]"
-            >
-              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
-              <span class="font-medium">{{ item.text }}</span>
-            </a>
-          </div>
-          
-          <!-- Artificial Intelligence -->
-          <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Artificial Intelligence</h4>
-            <div class="space-y-1">
-              <router-link
-                v-for="item in filteredArtificialIntelligence"
+              <a
+                v-for="item in filteredGuidelines.filter(item => {
+                  const isFoundation = ['/colors', '/typography', '/spacing', '/shadows', '/accessibility'].includes(item.link);
+                  const isGuidelinePage = item.link.startsWith('/guidelines/') && 
+                    !item.link.startsWith('/guidelines/ai/') && 
+                    !item.link.startsWith('/guidelines/patterns/') && 
+                    !item.link.startsWith('/guidelines/tools/') &&
+                    item.link !== '/guidelines/voice-and-tone' &&
+                    item.link !== '/guidelines/tui-guidance';
+                  return !isFoundation && (isGuidelinePage || item.link === '/guidelines/voice-and-tone' || item.link === '/guidelines/tui-guidance');
+                })"
                 :key="item.link"
-                :to="item.link"
+                href="#"
+                @click.prevent="navigateToDoc(item.link)"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
@@ -941,7 +929,33 @@
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
-              </router-link>
+              </a>
+            </div>
+          </div>
+          
+          <!-- Artificial Intelligence -->
+          <div>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Artificial Intelligence</h4>
+            <div class="space-y-1">
+              <a
+                v-for="item in filteredArtificialIntelligence.filter(item => item.link.startsWith('/guidelines/ai/'))"
+                :key="item.link"
+                href="#"
+                @click.prevent="navigateToDoc(item.link)"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                :class="[
+                  isActive(item.link)
+                    ? (isDarkMode 
+                      ? 'text-indigo-400 bg-indigo-900/20' 
+                      : 'text-indigo-600 bg-indigo-50')
+                    : (isDarkMode
+                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                ]"
+              >
+                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="font-medium">{{ item.text }}</span>
+              </a>
             </div>
           </div>
         </nav>
@@ -1240,17 +1254,30 @@ const toggle = () => {
 };
 
 const navigateToDoc = (link) => {
+  // Handle standalone component routes that should navigate directly
+  const standaloneRoutes = ['/guidelines/voice-and-tone', '/guidelines/tui-guidance'];
+  if (standaloneRoutes.includes(link)) {
+    router.push(link);
+    return;
+  }
+  
   emit('navigate-doc', link);
   // Navigate to appropriate page based on link
   if (link.startsWith('/data-viz/')) {
     if (route.path !== '/data-viz' && !route.path.startsWith('/data-viz/')) {
       router.push('/data-viz');
     }
+  } else if (link.startsWith('/tools/references/')) {
+    // For reference pages, navigate directly to the specific page
+    // This keeps the drawer in Tools mode (showTools will be true)
+    router.push(link);
   } else if (link.startsWith('/guidelines/')) {
-    // Navigate to guidelines page if not already there
-    if (route.path !== '/guidelines') {
-      router.push('/guidelines');
-    }
+    // For all guidelines docs, navigate directly to the specific path
+    // This ensures the URL shows the full path and breadcrumbs work correctly
+    router.push(link);
+  } else if (['/colors', '/typography', '/spacing', '/shadows', '/accessibility'].includes(link)) {
+    // Foundation links without /guidelines/ prefix - convert to full path
+    router.push(`/guidelines${link}`);
   }
   // Don't close the drawer - keep it open
   // The drawer state is managed by the parent component, so we don't emit 'close' here
@@ -1273,7 +1300,18 @@ const foundations = [
 
 const artificialIntelligence = [
   { text: 'AI Patterns', link: '/ai/patterns', icon: 'auto_awesome' },
-  { text: 'AI Components', link: '/ai/components', icon: 'smart_toy' }
+  { text: 'AI Components', link: '/ai/components', icon: 'smart_toy' },
+  { text: 'Agent Roles Mental Models', link: '/guidelines/ai/agent-roles-mental-models', icon: 'psychology' },
+  { text: 'Content Microcopy', link: '/guidelines/ai/content-microcopy', icon: 'text_fields' },
+  { text: 'Designing for Agentic Experiences', link: '/guidelines/ai/designing-for-agentic-experiences', icon: 'auto_awesome' },
+  { text: 'Designing for Generative AI', link: '/guidelines/ai/designing-for-generative-ai', icon: 'smart_toy' },
+  { text: 'Designing for MCP UI', link: '/guidelines/ai/designing-for-mcp-ui', icon: 'settings' },
+  { text: 'Fallback Error States', link: '/guidelines/ai/fallback-error-states', icon: 'error' },
+  { text: 'Feedback Observability', link: '/guidelines/ai/feedback-observability', icon: 'visibility' },
+  { text: 'Human Machine Teaming', link: '/guidelines/ai/human-machine-teaming', icon: 'handshake' },
+  { text: 'Identity Persona', link: '/guidelines/ai/identity-persona', icon: 'person' },
+  { text: 'Memory Personalization', link: '/guidelines/ai/memory-personalization', icon: 'memory' },
+  { text: 'Safe Exploration', link: '/guidelines/ai/safe-exploration', icon: 'explore' }
 ];
 
 const humanCenteredDesign = [
@@ -1293,7 +1331,20 @@ const guidelines = [
   { text: 'Shadows', link: '/shadows', icon: 'layers' },
   { text: 'Accessibility', link: '/accessibility', icon: 'accessibility' },
   { text: 'Voice and Tone', link: '/guidelines/voice-and-tone', icon: 'mic' },
-  { text: 'Terminal UI (TUI) Guidance', link: '/guidelines/tui-guidance', icon: 'terminal' }
+  { text: 'Terminal UI (TUI) Guidance', link: '/guidelines/tui-guidance', icon: 'terminal' },
+  { text: 'Color Contrast', link: '/guidelines/color-contrast', icon: 'contrast' },
+  { text: 'Content Organization Navigation', link: '/guidelines/content-organization-navigation', icon: 'navigation' },
+  { text: 'CSS Grid Layout', link: '/guidelines/css-grid-layout', icon: 'grid_view' },
+  { text: 'Flashing', link: '/guidelines/flashing', icon: 'flash_on' },
+  { text: 'Focus', link: '/guidelines/focus', icon: 'center_focus_strong' },
+  { text: 'Iconography', link: '/guidelines/iconography', icon: 'image' },
+  { text: 'Information Architecture', link: '/guidelines/information-architecture', icon: 'account_tree' },
+  { text: 'Keyboard Gestures', link: '/guidelines/keyboard-gestures', icon: 'keyboard' },
+  { text: 'Metadata SEO', link: '/guidelines/metadata-seo', icon: 'search' },
+  { text: 'Multimedia Animation', link: '/guidelines/multimedia-animation', icon: 'animation' },
+  { text: 'Text Graphics', link: '/guidelines/text-graphics', icon: 'text_fields' },
+  { text: 'Time', link: '/guidelines/time', icon: 'schedule' },
+  { text: 'Typography Guidelines', link: '/guidelines/typography', icon: 'text_fields' }
 ];
 
 const designPatterns = [
@@ -1303,7 +1354,15 @@ const designPatterns = [
   { text: 'Navigation', link: '/patterns/navigation', icon: 'navigation' },
   { text: 'Data Display', link: '/patterns/data-display', icon: 'table_chart' },
   { text: 'Forms', link: '/patterns/forms', icon: 'description' },
-  { text: 'Feedback', link: '/patterns/feedback', icon: 'feedback' }
+  { text: 'Feedback', link: '/patterns/feedback', icon: 'feedback' },
+  { text: 'Agent-Oriented Onboarding', link: '/guidelines/patterns/agent-oriented-onboarding', icon: 'rocket_launch' },
+  { text: 'AI Disengagement Timeout Error', link: '/guidelines/patterns/ai-disengagement-timeout-error', icon: 'timer_off' },
+  { text: 'AI Thinking States', link: '/guidelines/patterns/ai-thinking-states', icon: 'psychology' },
+  { text: 'Data Visualization', link: '/guidelines/patterns/data-visualization', icon: 'bar_chart' },
+  { text: 'Empty Loading States', link: '/guidelines/patterns/empty-loading-states', icon: 'hourglass_empty' },
+  { text: 'Error Handling', link: '/guidelines/patterns/error-handling', icon: 'error' },
+  { text: 'Multi-Agent Orchestration', link: '/guidelines/patterns/multi-agent-orchestration', icon: 'account_tree' },
+  { text: 'New Features Experiences', link: '/guidelines/patterns/new-features-experiences', icon: 'new_releases' }
 ];
 
 const codePatterns = [
@@ -1377,6 +1436,11 @@ const toolGroups = computed(() => ({
     { text: 'Alt Text Generator', link: '/tools/alt-text-generator', icon: 'captions' },
     { text: 'Photosensitivity Analysis', link: '/tools/photosensitivity', icon: 'visibility' },
     { text: 'CSS Animation Generator', link: '/tools/css-animation', icon: 'animation' }
+  ],
+  references: [
+    { text: 'JAWS Commands', link: '/tools/references/jaws-commands', icon: 'keyboard' },
+    { text: 'Penpot for Beginners', link: '/tools/references/penpot-for-beginners', icon: 'brush' },
+    { text: 'Units of Measure', link: '/tools/references/units-of-measure', icon: 'straighten' }
   ]
 }));
 
@@ -1577,6 +1641,7 @@ const showTools = computed(() => {
       path === '/tools/table-generator' || path === '/tools/color-scale') {
     return false;
   }
+  // Include reference pages in Tools drawer
   return path === '/tools' || path.startsWith('/tools/') || path === '/palette-builder';
 });
 
@@ -1700,7 +1765,8 @@ const filteredToolGroups = computed(() => {
     color: toolGroups.value.color.filter(item => isRouteEnabled(item.link)),
     text: toolGroups.value.text.filter(item => isRouteEnabled(item.link)),
     development: toolGroups.value.development.filter(item => isRouteEnabled(item.link)),
-    image: toolGroups.value.image.filter(item => isRouteEnabled(item.link))
+    image: toolGroups.value.image.filter(item => isRouteEnabled(item.link)),
+    references: toolGroups.value.references.filter(item => isRouteEnabled(item.link))
   };
 });
 
@@ -1757,6 +1823,7 @@ const getAllDrawerFlagKeys = () => {
     ...toolGroups.value.text.map(t => t.link),
     ...toolGroups.value.development.map(t => t.link),
     ...toolGroups.value.image.map(t => t.link),
+    ...toolGroups.value.references.map(t => t.link),
     ...dataVizGenerators.map(d => d.link),
     ...dataVizUtilities.map(d => d.link),
     ...dataVizGuidance.map(d => d.link),

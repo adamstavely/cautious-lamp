@@ -798,6 +798,11 @@ const getFilePath = (docPath) => {
     return `/docs/tools/references${docPath.replace('/guidelines/tools/references', '')}.md`;
   }
   
+  // /tools/references/xyz -> /docs/tools/references/xyz.md
+  if (docPath.startsWith('/tools/references/')) {
+    return `/docs/tools/references${docPath.replace('/tools/references', '')}.md`;
+  }
+  
   // Otherwise, try to construct the path dynamically
   // Handle pattern paths: /patterns/xyz -> /docs/patterns/xyz.md
   if (docPath.startsWith('/patterns/')) {
@@ -812,6 +817,27 @@ const getFilePath = (docPath) => {
   // Handle data-viz paths: /data-viz/xyz -> /docs/data-viz/xyz.md
   if (docPath.startsWith('/data-viz/')) {
     return `/docs${docPath}.md`;
+  }
+  
+  // Handle guideline pages that don't have /guidelines/ prefix
+  // These are pages like /color-contrast, /iconography, etc. that should map to /docs/guidelines/
+  // Check if it's not a known foundation path, AI path, pattern path, etc.
+  if (!docPath.startsWith('/ai/') && 
+      !docPath.startsWith('/patterns/') && 
+      !docPath.startsWith('/tools/') && 
+      !docPath.startsWith('/data-viz/') && 
+      !docPath.startsWith('/hcd/') &&
+      !docPath.startsWith('/guidelines/') &&
+      docPath !== '/colors' &&
+      docPath !== '/typography' &&
+      docPath !== '/spacing' &&
+      docPath !== '/shadows' &&
+      docPath !== '/accessibility' &&
+      docPath !== '/ai' &&
+      docPath !== '/patterns' &&
+      docPath !== '/') {
+    // This is likely a guideline page, map to /docs/guidelines/
+    return `/docs/guidelines${docPath}.md`;
   }
   
   // Default fallback
@@ -858,10 +884,22 @@ const loadMarkdown = async () => {
     const response = await fetch(filePath);
     
     if (!response.ok) {
-      throw new Error(`Failed to load: ${response.statusText}`);
+      // Check if we got HTML instead of markdown (likely a 404 page)
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/html')) {
+        throw new Error(`Markdown file not found at ${filePath}. The file may need to be copied to the public directory.`);
+      }
+      throw new Error(`Failed to load: ${response.statusText} (${response.status})`);
     }
     
-    markdownContent.value = await response.text();
+    const content = await response.text();
+    
+    // Check if we got HTML instead of markdown (likely a 404 or error page)
+    if (content.trim().startsWith('<!DOCTYPE') || content.trim().startsWith('<html') || content.trim().startsWith('<meta')) {
+      throw new Error(`Markdown file not found at ${filePath}. Received HTML instead. The file may need to be copied to the public directory.`);
+    }
+    
+    markdownContent.value = content;
     
     // Try to get last modified date from response headers
     const lastModified = response.headers.get('last-modified');

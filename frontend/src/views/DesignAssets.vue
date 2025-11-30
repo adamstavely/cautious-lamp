@@ -87,7 +87,31 @@
               </p>
             </router-link>
 
-            <!-- Asset Card 2: Country Flags -->
+            <!-- Asset Card 2: Font Library -->
+            <router-link 
+              to="/design-assets/font-library" 
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl">library_books</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                Font Library
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                Browse and preview hundreds of Google Fonts.
+              </p>
+            </router-link>
+
+            <!-- Asset Card 3: Country Flags -->
             <router-link 
               to="/design-assets/country-flags" 
               class="group rounded-2xl p-6 border transition-all"
@@ -111,7 +135,7 @@
               </p>
             </router-link>
 
-            <!-- Asset Card 3: USG Seals -->
+            <!-- Asset Card 4: USG Seals -->
             <router-link 
               to="/design-assets/usg-seals" 
               class="group rounded-2xl p-6 border transition-all"
@@ -135,7 +159,7 @@
               </p>
             </router-link>
 
-            <!-- Asset Card 4: Internal Seals -->
+            <!-- Asset Card 5: Internal Seals -->
             <router-link 
               to="/design-assets/internal-seals" 
               class="group rounded-2xl p-6 border transition-all"
@@ -159,7 +183,7 @@
               </p>
             </router-link>
 
-            <!-- Asset Card 5: Interactives -->
+            <!-- Asset Card 6: Interactives -->
             <router-link 
               to="/design-assets/interactives" 
               class="group rounded-2xl p-6 border transition-all"
@@ -183,7 +207,7 @@
               </p>
             </router-link>
 
-            <!-- Asset Card 6: Stock Photos -->
+            <!-- Asset Card 7: Stock Photos -->
             <router-link 
               to="/design-assets/stock-photos" 
               class="group rounded-2xl p-6 border transition-all"
@@ -207,7 +231,7 @@
               </p>
             </router-link>
 
-            <!-- Asset Card 7: Illustrations -->
+            <!-- Asset Card 8: Illustrations -->
             <router-link 
               to="/design-assets/illustrations" 
               class="group rounded-2xl p-6 border transition-all"
@@ -231,7 +255,7 @@
               </p>
             </router-link>
 
-            <!-- Asset Card 8: Capability Logos -->
+            <!-- Asset Card 9: Capability Logos -->
             <router-link 
               to="/design-assets/capability-logos" 
               class="group rounded-2xl p-6 border transition-all"
@@ -255,7 +279,7 @@
               </p>
             </router-link>
 
-            <!-- Asset Card 9: Company Logos -->
+            <!-- Asset Card 10: Company Logos -->
             <router-link 
               to="/design-assets/company-logos" 
               class="group rounded-2xl p-6 border transition-all"

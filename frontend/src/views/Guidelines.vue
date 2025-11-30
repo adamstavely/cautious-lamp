@@ -231,14 +231,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import MarkdownViewer from '../components/MarkdownViewer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 
 const route = useRoute();
+const router = useRouter();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const currentDocLink = ref(null);
@@ -247,13 +248,27 @@ const handleBreadcrumbNavigate = (path) => {
   // Handle navigation from breadcrumbs
   if (path === '/guidelines' || path === '/') {
     currentDocLink.value = null;
+    router.push('/guidelines');
   } else if (path.startsWith('/guidelines/')) {
     currentDocLink.value = path.replace('/guidelines', '');
+    router.push(path);
   }
 };
 
 const handleDocNavigation = (link) => {
-  currentDocLink.value = link;
+  // Navigate to the full path to update the URL
+  if (link.startsWith('/guidelines/')) {
+    currentDocLink.value = link.replace('/guidelines', '');
+    router.push(link);
+  } else if (['/colors', '/typography', '/spacing', '/shadows', '/accessibility'].includes(link)) {
+    // Foundation links without /guidelines/ prefix - convert to full path
+    currentDocLink.value = link;
+    router.push(`/guidelines${link}`);
+  } else {
+    // For other links without /guidelines prefix, add it
+    currentDocLink.value = link;
+    router.push(`/guidelines${link}`);
+  }
   // Open drawer if closed
   if (!drawerOpen.value) {
     drawerOpen.value = true;
@@ -265,12 +280,15 @@ const openDrawer = () => {
 };
 
 
-// Open drawer when navigating to /guidelines - removed auto-open
-// watch(() => route.path, (newPath) => {
-//   if (newPath === '/guidelines') {
-//     drawerOpen.value = true;
-//   }
-// }, { immediate: true });
+// Watch for route changes to update currentDocLink
+watch(() => route.path, (newPath) => {
+  if (newPath.startsWith('/guidelines/') && newPath !== '/guidelines') {
+    // Update currentDocLink when route changes (e.g., from browser back/forward)
+    currentDocLink.value = newPath.replace('/guidelines', '');
+  } else if (newPath === '/guidelines') {
+    currentDocLink.value = null;
+  }
+}, { immediate: true });
 
 // Watch for dark mode changes
 let darkModeObserver = null;

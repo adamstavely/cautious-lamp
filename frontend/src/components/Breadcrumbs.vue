@@ -187,6 +187,30 @@ const crumbs = computed(() => {
       return; // Skip further processing
     }
     
+    // Special handling for tools/references paths
+    // Show it as Tools > References > Page Name
+    if (part === 'tools' && index + 1 < parts.length && parts[index + 1] === 'references') {
+      breadcrumbs.push({
+        label: 'Tools',
+        path: '/tools'
+      });
+      breadcrumbs.push({
+        label: 'References',
+        path: '/tools/references'
+      });
+      // Handle the reference page name
+      if (index + 2 < parts.length) {
+        const refPage = parts[index + 2];
+        const refLabel = refPage.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        breadcrumbs.push({
+          label: refLabel,
+          path: null // Current page, not clickable
+        });
+      }
+      skipCount = parts.length - index - 1; // Skip all remaining parts
+      return;
+    }
+    
     // Special handling for guidelines paths
     // When we have /guidelines/colors, we want Guidelines > Colors
     // So we need to map the doc path part separately

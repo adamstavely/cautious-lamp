@@ -1,17 +1,31 @@
 <template>
   <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
     <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
+    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" @navigate-doc="handleDocNavigation" />
     
     <!-- Main Content Area -->
     <div 
       class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
       :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
     >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
+      <!-- Reference Content - shown when a reference link is clicked -->
+      <div v-if="currentDocLink" class="h-full w-full relative flex flex-col">
+        <!-- Breadcrumbs -->
+        <Breadcrumbs 
+          :custom-path="currentDocLink"
+          :on-navigate="handleBreadcrumbNavigate"
+        />
+        <div class="flex-1 overflow-hidden">
+          <MarkdownViewer :doc-path="currentDocLink" />
+        </div>
+      </div>
       
-      <div class="h-full overflow-y-auto">
+      <!-- Overview Content - shown by default -->
+      <div v-else class="h-full overflow-y-auto">
+        <!-- Breadcrumbs -->
+        <Breadcrumbs />
+        
+        <div class="h-full overflow-y-auto">
         <div class="p-8">
         <!-- Hero Section -->
         <div class="max-w-7xl mx-auto mb-16">
@@ -643,6 +657,7 @@
           </div>
         </div>
         </div>
+        </div>
       </div>
     </div>
   </div>
@@ -650,13 +665,34 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import MarkdownViewer from '../components/MarkdownViewer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { MonitorCog, Tag, TextInitial, SwatchBook, Captions } from 'lucide-vue-next';
 import { useDrawer } from '../composables/useDrawer.js';
 
+const route = useRoute();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const currentDocLink = ref(null);
+
+const handleBreadcrumbNavigate = (path) => {
+  // Handle navigation from breadcrumbs
+  if (path === '/tools' || path === '/') {
+    currentDocLink.value = null;
+  } else if (path.startsWith('/tools/references/')) {
+    currentDocLink.value = path;
+  }
+};
+
+const handleDocNavigation = (link) => {
+  currentDocLink.value = link;
+  // Open drawer if closed
+  if (!drawerOpen.value) {
+    drawerOpen.value = true;
+  }
+};
 
 let darkModeObserver = null;
 let darkModeInterval = null;
@@ -666,6 +702,11 @@ onMounted(() => {
   if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
     drawerOpen.value = true;
     sessionStorage.removeItem('openDrawerOnLoad');
+  }
+  
+  // Handle route on mount - check if we're on a reference page
+  if (route.path.startsWith('/tools/references/')) {
+    currentDocLink.value = route.path;
   }
   
   darkModeObserver = new MutationObserver(() => {
