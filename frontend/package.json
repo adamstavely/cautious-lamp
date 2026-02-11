@@ -32,7 +32,7 @@
     "@vue-leaflet/vue-leaflet": "^0.10.1",
     "apcach": "^0.6.4",
     "axe-core": "^4.11.0",
-    "axios": "^1.6.0",
+    "axios": "^1.13.5",
     "chart.js": "^4.5.1",
     "chartjs-chart-financial": "^0.2.1",
     "chartjs-chart-matrix": "^3.0.0",
