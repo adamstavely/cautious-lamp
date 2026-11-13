@@ -56,14 +56,6 @@ export class GovernanceController {
     return this.rules.list({ category: valid }).then((rules) => ({ rules, total: rules.length }));
   }
 
-  /** The enabled rules an application can pick for its scans (ApplicationCapabilitiesForm) */
-  @Get('applications/governance-rules')
-  applicationRules() {
-    return this.rules
-      .list({ enabledOnly: true })
-      .then((rules) => rules.map((rule) => ({ id: rule.id, name: rule.name, category: rule.category })));
-  }
-
   @Get('governance/rules/export')
   exportRules() {
     return this.rules.export();

@@ -60,7 +60,7 @@ An application belongs to at most one workspace (`workspaceId`).
 
 ### Capabilities
 
-- **Governance:** `enabled`, `rules` (rule ids from `GET /applications/governance-rules`; empty means every enabled rule. An application scan without `ruleIds` runs these, skipping any deleted or disabled since) and `scanSchedule`.
+- **Governance:** `enabled`, `rules` (rule ids from `GET /governance/rules`; empty means every enabled rule. An application scan without `ruleIds` runs these, skipping any deleted or disabled since) and `scanSchedule`.
 - **Visual regression:** enabling it creates a visual-regression project (`argosProjectId` is required; `argosBaseUrl` must be on `ARGOS_ALLOWED_BASE_URLS`; `argosBranch` defaults to `ARGOS_DEFAULT_BRANCH` or `main`). `argosToken` is passed to the project, where it is encrypted, and never stored on or returned with the application.
 - **Session replay:** enabling it creates a session-replay project (`openreplayProjectKey` is required). `openreplayApiKey` is handled like `argosToken`. `openreplayBaseUrl` must be a public http(s) address or listed in `OPENREPLAY_ALLOWED_BASE_URLS` (see below).
 - If creating a project fails, the request fails with that error and nothing is saved; a project created earlier in the same request is deleted again. Changing an enabled capability's settings updates its project. Disabling a capability keeps the project; deleting the application deletes both projects.
@@ -151,7 +151,6 @@ For the user management page:
 | --- | --- | --- |
 | `GET /applications?teamId=&workspaceId=&capability=` | any | `{ applications, count }` |
 | `POST /applications/register` | `admin:governance`, or admin of `workspaceId` | `{ name, workspaceId?, description?, repository?, version?, designSystemVersion?, applicationUrl?, teamId?, metadata?, capabilities? }` |
-| `GET /applications/governance-rules` | any | `[{ id, name, category }]`, the enabled governance rules |
 | `GET /applications/version-tracking` | any | `{ currentVersion, currentVersionSource, applicationsByVersion, upgradeSummary, recommendedActions }` |
 | `GET /applications/needing-upgrade?currentVersion=` | any | `{ applications, currentVersion, upgradeRequired }` |
 | `GET /applications/affected-by-breaking-changes?version=` | any | `{ applications, affectedCount, breakingChanges, breakingChangesSource }`; `version` is required |

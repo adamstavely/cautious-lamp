@@ -153,7 +153,8 @@ const categoryLabel = (category) => ({ 'design-system': 'Design system', 'ux-hcd
 
 onMounted(async () => {
   try {
-    rules.value = (await apiClient.get('/api/v1/applications/governance-rules')).data ?? [];
+    const { data } = await apiClient.get('/api/v1/governance/rules');
+    rules.value = (data?.rules ?? []).filter((rule) => rule.enabled);
   } catch (error) {
     rulesError.value = apiErrorMessage(error, 'The rule list could not be loaded; every enabled rule will run.');
   }

@@ -26,7 +26,7 @@ class GovernanceCapabilityDto {
   @IsBoolean()
   enabled: boolean;
 
-  /** Rule ids from GET /applications/governance-rules; empty means every enabled rule */
+  /** Rule ids from GET /governance/rules; empty means every enabled rule */
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(100)

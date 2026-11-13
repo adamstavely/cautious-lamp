@@ -196,11 +196,7 @@ describe('Governance HTTP API', () => {
     expect(res.body.message).toMatch(/private or internal/);
   });
 
-  it('lists enabled rules for the application picker, and runs only the rules an application picked', async () => {
-    const picker = await call('GET', '/applications/governance-rules');
-    expect(picker.status).toBe(200);
-    expect(picker.body[0]).toEqual({ id: expect.any(String), name: expect.any(String), category: expect.any(String) });
-
+  it('runs only the rules an application picked, skipping ones deleted since', async () => {
     const res = await admin('POST', '/governance/scans', { scope: 'application', applicationId: 'app-3', codebase: { html: '<img src="a.png">' } });
     expect(res.status).toBe(201);
     expect(res.body.rules.map((r: { id: string }) => r.id)).toEqual(['a11y-image-alt']);
