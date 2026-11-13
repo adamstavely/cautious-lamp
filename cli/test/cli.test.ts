@@ -60,12 +60,23 @@ const BUTTON = {
 let server: http.Server;
 let baseURL: string;
 const requests: Recorded[] = [];
+let lastBody: any;
 
 beforeAll(async () => {
   if (!fs.existsSync(CLI)) throw new Error(`${CLI} not found: run npm run build first`);
 
   server = http.createServer((req, res) => {
     requests.push({ method: req.method ?? '', url: req.url ?? '', authorization: req.headers.authorization });
+    if (req.method === 'POST') {
+      let raw = '';
+      req.on('data', (chunk) => (raw += chunk));
+      req.on('end', () => {
+        lastBody = raw ? JSON.parse(raw) : undefined;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ applicationId: lastBody?.applicationId, scannedAt: 'now', checks: [] }));
+      });
+      return;
+    }
     const send = (status: number, body: unknown) => {
       res.writeHead(status, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(body));
@@ -229,6 +240,28 @@ describe('tokens (against a mock API)', () => {
     const { code, stdout } = await runCli(['health'], { env: { HOME: tmpDir('home'), DS_API_URL: baseURL } });
     expect(code).toBe(0);
     expect(stdout).toContain('API is healthy');
+  });
+});
+
+describe('scan (against a mock API)', () => {
+  it('refuses to scan with nothing to scan, without calling the API', async () => {
+    const { code, stderr } = await runCli(['scan', '-a', 'app-1'], {
+      env: { HOME: tmpDir('home'), DS_API_URL: baseURL, DS_API_KEY: API_KEY },
+    });
+    expect(code).not.toBe(0);
+    expect(stderr).toContain('Nothing to scan');
+    expect(requests).toHaveLength(0);
+  });
+
+  it('sends the files it was given', async () => {
+    const dir = tmpDir('scan');
+    fs.writeFileSync(path.join(dir, 'index.html'), '<img src="a.png">');
+    const { code } = await runCli(['scan', '-a', 'app-1', '--html', path.join(dir, 'index.html')], {
+      env: { HOME: tmpDir('home'), DS_API_URL: baseURL, DS_API_KEY: API_KEY },
+    });
+    expect(code).toBe(0);
+    expect(requests.at(-1)).toMatchObject({ method: 'POST', url: '/api/v1/compliance/scan-application' });
+    expect(lastBody).toMatchObject({ applicationId: 'app-1', codebase: { html: '<img src="a.png">' } });
   });
 });
 

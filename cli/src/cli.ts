@@ -245,13 +245,36 @@ export function createProgram(): Command {
     .command('scan')
     .description('Scan an application codebase for compliance (POST /compliance/scan-application)')
     .requiredOption('-a, --application <id>', 'Application ID to scan')
+    .option('-u, --url <url>', 'Public URL for the server to fetch and scan')
+    .option('--html <file>', 'HTML file to scan')
+    .option('--css <file>', 'CSS file to scan')
+    .option('--js <file>', 'JavaScript file to scan')
     .option('-c, --categories <categories>', 'Comma-separated list of rule categories (e.g., accessibility,design-system,ux-hcd)')
     .addOption(new Option('-f, --format <format>', 'Output format').choices(['table', 'json']).default('table'))
     .action(
-      run(async (options: { application: string; categories?: string; format: string }) => {
+      run(async (options: { application: string; url?: string; html?: string; css?: string; js?: string; categories?: string; format: string }) => {
+        const readSource = (file?: string) => {
+          if (!file) return undefined;
+          if (!fs.existsSync(file)) throw new CliError(`File not found: ${file}`);
+          return fs.readFileSync(file, 'utf-8');
+        };
+        const codebase = { html: readSource(options.html), css: readSource(options.css), javascript: readSource(options.js) };
+        const hasCode = Boolean(codebase.html || codebase.css || codebase.javascript);
+        if (!hasCode && !options.url) {
+          throw new CliError('Nothing to scan: pass --url, or one or more of --html, --css and --js.');
+        }
+        if (hasCode && options.url) {
+          throw new CliError('Pass either --url or files to scan, not both.');
+        }
+
         const api = getAPI();
         const categories = parseCategories(options.categories);
-        const result = await api.scanApplicationCodebase(options.application, undefined, categories);
+        const result = await api.scanApplicationCodebase(
+          options.application,
+          hasCode ? codebase : undefined,
+          categories,
+          options.url,
+        );
 
         if (options.format === 'json') {
           console.log(JSON.stringify(result, null, 2));
