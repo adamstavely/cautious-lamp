@@ -128,7 +128,8 @@ There is no hard delete: users are disabled. Disabling yourself, or disabling th
   | `/admin/feature-flags` | `admin:system_health` |
   | `/admin/applications`, `/admin/accessibility-reports` | `admin:governance` |
   | `/admin/dependencies` | `component:view` |
-  | anything else under `/admin` (including `/admin/workspaces`) | `admin:users` |
+  | `/admin/workspaces` | none beyond signing in (each workspace enforces its own roles on the server) |
+  | anything else under `/admin` | `admin:users` |
 
   If permissions can't be loaded, the guard denies.
 - `VITE_USE_MOCKS=true` signs in a local demo user, with no backend.

@@ -257,9 +257,25 @@
 
                 <!-- Save Button -->
                 <div class="mt-6 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                  <label for="extract-workspace" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    Workspace
+                  </label>
+                  <select
+                    id="extract-workspace"
+                    v-model="workspaceId"
+                    class="w-full mb-2 px-4 py-2 border border-solid rounded-lg"
+                    :class="isDarkMode ? 'bg-slate-800 border-gray-600 text-white' : 'bg-[#fff] border-gray-300 text-gray-900'"
+                    :disabled="!writableWorkspaces.length"
+                  >
+                    <option v-for="ws in writableWorkspaces" :key="ws.id" :value="ws.id">{{ ws.name }}</option>
+                  </select>
+                  <p v-if="!workspacesLoading && !writableWorkspaces.length" class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    You need editor access to a workspace to save a style dictionary.
+                    <router-link to="/admin/workspaces" class="underline">Open workspaces</router-link>
+                  </p>
                   <button
                     @click="saveToStyleLibrary"
-                    :disabled="!dictionaryName || saving"
+                    :disabled="!dictionaryName || !workspaceId || saving"
                     class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700"
                   >
                     Save to Style Library
@@ -335,6 +351,30 @@ import { useDrawer } from '../composables/useDrawer.js';
 
 const router = useRouter();
 const route = useRoute();
+
+// Workspaces the user can save into (editor or above)
+const workspaces = ref([]);
+const workspacesLoading = ref(true);
+const workspaceId = ref(route.params.workspaceId || route.query.workspace || '');
+const writableWorkspaces = computed(() =>
+  workspaces.value.filter((ws) => ['owner', 'admin', 'editor'].includes(ws.effectiveRole)),
+);
+
+const loadWorkspaces = async () => {
+  workspacesLoading.value = true;
+  try {
+    const response = await apiClient.get('/api/v1/workspaces', { params: { mine: 'true' } });
+    workspaces.value = response.data || [];
+    if (!writableWorkspaces.value.some((ws) => ws.id === workspaceId.value)) {
+      workspaceId.value = writableWorkspaces.value[0]?.id || '';
+    }
+  } catch (err) {
+    workspaces.value = [];
+    error.value = err.response?.data?.message || 'Could not load your workspaces.';
+  } finally {
+    workspacesLoading.value = false;
+  }
+};
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -532,13 +572,12 @@ const saveToStyleLibrary = async () => {
   error.value = null;
 
   try {
-    // Get workspace ID - use default or get from route/context
-    const workspaceId = route.params.workspaceId || 'default-workspace';
-    
-    // Flatten DTCG tokens for storage
-    const flattenedTokens = flattenDTCG(extractedData.value.dtcg);
+    if (!workspaceId.value) {
+      error.value = 'Choose a workspace to save to';
+      return;
+    }
 
-    const response = await apiClient.post(`/api/v1/workspaces/${workspaceId}/style-dictionaries`, {
+    const response = await apiClient.post(`/api/v1/workspaces/${encodeURIComponent(workspaceId.value)}/style-dictionaries`, {
       name: dictionaryName.value.trim(),
       description: `Extracted from ${extractedData.value.url} on ${new Date(extractedData.value.extractedAt).toLocaleDateString()}`,
       format: 'json',
@@ -586,6 +625,7 @@ let darkModeObserver = null;
 let darkModeInterval = null;
 
 onMounted(() => {
+  loadWorkspaces();
   darkModeObserver = new MutationObserver(() => {
     isDarkMode.value = document.documentElement.classList.contains('dark');
   });

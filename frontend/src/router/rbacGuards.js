@@ -20,6 +20,9 @@ const ADMIN_PREFIXES = [
   ['/admin/accessibility-reports', 'admin:governance'],
   // Linked from the Components area, so ordinary viewers need it
   ['/admin/dependencies', 'component:view'],
+  // Workspaces enforce per-workspace roles on the server; members of a
+  // workspace need these pages without any admin permission
+  ['/admin/workspaces', null],
 ];
 const ADMIN_DEFAULT_PERMISSION = 'admin:users';
 
@@ -29,6 +32,7 @@ const matchesPrefix = (path, prefix) => path === prefix || path.startsWith(`${pr
 export function requiredPermissionFor(path) {
   if (!matchesPrefix(path, '/admin')) return null;
   const match = ADMIN_PREFIXES.find(([prefix]) => matchesPrefix(path, prefix));
+  // A matched null permission means signing in is enough
   return match ? match[1] : ADMIN_DEFAULT_PERMISSION;
 }
 
