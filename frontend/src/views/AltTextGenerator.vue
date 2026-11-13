@@ -96,7 +96,7 @@
                   <input
                     ref="fileInput"
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/gif,image/webp"
                     @change="handleFileSelect"
                     class="hidden"
                   />
@@ -120,7 +120,7 @@
                       </button>
                     </div>
                     <p class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
-                      Supported formats: JPG, PNG, GIF, WebP (Max 10MB)
+                      Supported formats: JPG, PNG, GIF, WebP (Max 5MB)
                     </p>
                   </div>
                 </div>
@@ -162,7 +162,7 @@
                 <!-- Manual Alt Text Input -->
                 <div class="mb-4">
                   <div class="flex items-center justify-between mb-2">
-                    <label class="block text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    <label for="alt-text-output" class="block text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                       <Captions :size="18" :stroke-width="2" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                       Alt Text
                     </label>
@@ -179,6 +179,7 @@
                       </button>
                   </div>
                   <textarea
+                    id="alt-text-output"
                     v-model="altText"
                     rows="4"
                     class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
@@ -190,6 +191,24 @@
                   <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
                     {{ altText.length }} / 125 characters (recommended max)
                   </p>
+                </div>
+
+                <!-- Optional context for the generator -->
+                <div class="mb-4">
+                  <label for="alt-text-context" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                    Where the image appears (optional)
+                  </label>
+                  <input
+                    id="alt-text-context"
+                    v-model="context"
+                    type="text"
+                    maxlength="500"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    :class="isDarkMode
+                      ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-400'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
+                    placeholder="e.g. Hero image on the pricing page"
+                  />
                 </div>
 
                 <!-- Generate Button -->
@@ -214,6 +233,8 @@
                     Generate Alt Text
                   </span>
                 </button>
+
+                <InlineNotice :notice="notice" @dismiss="clearNotice" />
 
               </div>
 
@@ -281,22 +302,27 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
+import apiClient from '../services/api.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { Captions } from 'lucide-vue-next';
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 const isDragging = ref(false);
 const isGenerating = ref(false);
 const selectedFile = ref(null);
 const altText = ref('');
+const context = ref('');
 const copied = ref(false);
 const fileInput = ref(null);
-
-
-
-
 
 const handleDragOver = () => {
   isDragging.value = true;
@@ -308,38 +334,33 @@ const handleDragLeave = () => {
 
 const handleDrop = (e) => {
   isDragging.value = false;
-  const files = e.dataTransfer.files;
-  if (files.length > 0 && files[0].type.startsWith('image/')) {
-    processFile(files[0]);
-  } else {
-    alert('Please upload an image file.');
-  }
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
 };
 
 const handleFileSelect = (e) => {
   const file = e.target.files[0];
-  if (file && file.type.startsWith('image/')) {
-    processFile(file);
-  } else {
-    alert('Please select an image file.');
-  }
+  if (file) processFile(file);
 };
 
 const processFile = (file) => {
-  if (file.size > 10 * 1024 * 1024) {
-    alert('File size must be less than 10MB.');
+  if (!IMAGE_TYPES.includes(file.type)) {
+    showNotice('Please choose a PNG, JPEG, GIF or WebP image.', 'error');
     return;
   }
-  
+  if (file.size > MAX_FILE_SIZE) {
+    showNotice('Images must be 5MB or smaller.', 'error');
+    return;
+  }
+  clearNotice();
   selectedFile.value = file;
-  
-  // Clear previous alt text
   altText.value = '';
 };
 
 const clearFile = () => {
   selectedFile.value = null;
   altText.value = '';
+  clearNotice();
   if (fileInput.value) {
     fileInput.value.value = '';
   }
@@ -359,39 +380,29 @@ const generateAltText = async () => {
   }
 
   isGenerating.value = true;
-
+  clearNotice();
   try {
-    // In a real implementation, this would call an AI service or backend API
-    // For now, we'll simulate with a simple placeholder
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Mock AI-generated alt text based on file name
-    const fileName = selectedFile.value.name.toLowerCase();
-    let generated = '';
-    
-    if (fileName.includes('photo') || fileName.includes('image')) {
-      generated = 'A photograph showing various elements and details.';
-    } else if (fileName.includes('logo')) {
-      generated = 'Company or organization logo.';
-    } else if (fileName.includes('icon')) {
-      generated = 'An icon representing a concept or action.';
-    } else if (fileName.includes('chart') || fileName.includes('graph')) {
-      generated = 'A data visualization chart displaying information.';
+    const formData = new FormData();
+    formData.append('image', selectedFile.value);
+    if (context.value.trim()) formData.append('context', context.value.trim());
+
+    const { data } = await apiClient.post('/api/v1/alt-text', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    });
+
+    altText.value = data.altText;
+    if (data.altText) {
+      showNotice('Alt text generated. Check it reads well in context before using it.', 'success');
     } else {
-      generated = 'An image containing visual content and information.';
-    }
-    
-    altText.value = generated;
-    
-    // Show toast notification
-    if (window.showToast) {
-      window.showToast('Alt text generated successfully', 'success');
+      showNotice('This image looks decorative, so it should have empty alt text (alt="").', 'info');
     }
   } catch (error) {
-    console.error('Generation error:', error);
-    if (window.showToast) {
-      window.showToast('Failed to generate alt text. Please try again or enter manually.', 'error');
-    }
+    const message = error.response?.data?.message;
+    showNotice(
+      Array.isArray(message) ? message.join(' ') : message || 'Could not reach the alt text service. You can still write alt text by hand.',
+      'error',
+    );
   } finally {
     isGenerating.value = false;
   }
@@ -405,19 +416,11 @@ const copyAltText = async () => {
   try {
     await navigator.clipboard.writeText(altText.value);
     copied.value = true;
-    
-    if (window.showToast) {
-      window.showToast('Alt text copied to clipboard', 'success');
-    }
-    
     setTimeout(() => {
       copied.value = false;
     }, 2000);
-  } catch (error) {
-    console.error('Copy error:', error);
-    if (window.showToast) {
-      window.showToast('Failed to copy alt text', 'error');
-    }
+  } catch {
+    showNotice('Copy failed. Select the text and copy it manually.', 'error');
   }
 };
 
@@ -427,16 +430,6 @@ onMounted(() => {
     drawerOpen.value = true;
     sessionStorage.removeItem('openDrawerOnLoad');
   }
-  
-  // Watch for dark mode changes
-  const observer = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
 });
 </script>
 
