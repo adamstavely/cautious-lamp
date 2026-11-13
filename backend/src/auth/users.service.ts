@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
@@ -11,7 +12,7 @@ import * as bcrypt from 'bcryptjs';
 import { SecurityAuditService } from '../common/security/security-audit.service';
 import { Permission, RbacService, Role, RoleDefinition } from '../rbac/rbac.service';
 import { DocumentStore, DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
-import { AuthPrincipal } from './principal';
+import { AuthPrincipal, hasPermission } from './principal';
 import {
   MIN_PASSWORD_LENGTH,
   PublicUser,
@@ -214,6 +215,10 @@ export class UsersService implements OnModuleInit {
     assertPasswordPolicy(input.password);
     const email = normalizeEmail(input.email);
     const roleIds = [...new Set(input.roles ?? [])];
+    // Granting roles is role management: admin:users alone must not hand out admin roles
+    if (roleIds.length && !hasPermission(actor, Permission.ADMIN_RBAC)) {
+      throw new ForbiddenException(`Assigning roles requires ${Permission.ADMIN_RBAC}`);
+    }
     const known = new Set((await this.rbac.getRoles()).map((role) => role.id));
     const unknown = roleIds.filter((roleId) => !known.has(roleId));
     if (unknown.length) throw new BadRequestException(`Unknown roles: ${unknown.join(', ')}`);
@@ -270,6 +275,8 @@ export class UsersService implements OnModuleInit {
 
   async resetPassword(id: string, password: string, actor: AuthPrincipal): Promise<void> {
     assertPasswordPolicy(password);
+    if (!(await this.findById(id))) throw new NotFoundException('User not found');
+    await this.assertNotOutranked(id, actor);
     const passwordHash = await hashPassword(password);
     const user = await this.mutate(id, (doc) => {
       doc.passwordHash = passwordHash;
@@ -277,6 +284,19 @@ export class UsersService implements OnModuleInit {
       doc.tokenVersion += 1;
     });
     this.logAccount('password_changed', `Password reset for ${user.email}`, actor, { targetUserId: id, change: 'reset' });
+  }
+
+  /**
+   * 403 if the target user has an `admin:` permission the actor lacks. Setting
+   * someone's password lets you sign in as them, so admin:users alone must not
+   * be enough to take over an account with more admin access (e.g. admin:rbac).
+   */
+  private async assertNotOutranked(targetId: string, actor: AuthPrincipal): Promise<void> {
+    const { permissions } = await this.rbac.getAccess(targetId);
+    const missing = permissions.filter((permission) => permission.startsWith('admin:') && !hasPermission(actor, permission));
+    if (missing.length) {
+      throw new ForbiddenException(`This user has admin permissions you don't have (${missing.join(', ')})`);
+    }
   }
 
   /**

@@ -84,9 +84,9 @@ All need `admin:users`.
 | --- | --- | --- |
 | `GET /users` | `?q=&status=` | `{ users: User[], total }`, where `User` is the stored user without `passwordHash` and `tokenVersion`, plus `roles` (role ids). `q` matches email or name. |
 | `GET /users/:id` | | `User` |
-| `POST /users` | `{ email, name, password, roles? }` | `User`. `409` if the email is taken, `400` for an unknown role. The new user has `mustChangePassword: true`. |
+| `POST /users` | `{ email, name, password, roles? }` | `User`. `409` if the email is taken, `400` for an unknown role, `403` if `roles` is not empty and the caller lacks `admin:rbac`. The new user has `mustChangePassword: true`. |
 | `PATCH /users/:id` | `{ name?, status? }` | `User`. Disabling a user bumps `tokenVersion`. |
-| `POST /users/:id/reset-password` | `{ password }` | `204`. Sets `mustChangePassword` and bumps `tokenVersion`. |
+| `POST /users/:id/reset-password` | `{ password }` | `204`. Sets `mustChangePassword` and bumps `tokenVersion`. `403` if the user has an `admin:` permission the caller lacks (a password reset would let the caller sign in as them). |
 
 There is no hard delete: users are disabled. Disabling yourself, or disabling the last active user with `admin:rbac`, returns `409`.
 

@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Permission, Role } from '../rbac/rbac.service';
 import { ADMIN_EMAIL, ADMIN_KEY, AuthHarness, createAuthHarness } from './testing/harness';
 
@@ -78,6 +78,31 @@ describe('UsersService', () => {
       expect(await h.auth.resolve(accessToken)).toBeNull();
       expect((await h.users.get(user.id)).mustChangePassword).toBe(true);
       await expect(h.users.get('usr_missing')).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('admin:users without admin:rbac', () => {
+    beforeEach(async () => {
+      h = await createAuthHarness();
+    });
+
+    it("can't grant roles or take over an account with more access", async () => {
+      const { accessToken } = await h.createUser('owner@example.com', [Role.SYSTEM_OWNER]);
+      const owner = await h.principalFor(accessToken);
+      expect(owner.permissions.has(Permission.ADMIN_USERS)).toBe(true);
+      expect(owner.permissions.has(Permission.ADMIN_RBAC)).toBe(false);
+
+      await expect(
+        h.users.create({ email: 'eve@example.com', name: 'Eve', password: 'a long enough password', roles: [Role.DESIGN_SYSTEM_MANAGER] }, owner),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      const plain = await h.users.create({ email: 'fay@example.com', name: 'Fay', password: 'a long enough password' }, owner);
+      expect(plain.roles).toEqual([]);
+
+      const { user: designer } = await h.createUser('dan@example.com', [Role.DESIGNER]);
+      await h.users.resetPassword(designer.id, 'a reset password!!', owner);
+      const adminId = (await h.users.list({ q: ADMIN_EMAIL })).users[0].id;
+      await expect(h.users.resetPassword(adminId, 'a reset password!!', owner)).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(h.users.resetPassword('usr_missing', 'a reset password!!', owner)).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 

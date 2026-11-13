@@ -24,7 +24,7 @@
                   User Management
                 </h1>
                 <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Manage users and their workspace memberships. Assign users to teams and control access.
+                  Create and manage the people who can sign in: their accounts, passwords and roles.
                 </p>
               </div>
               <div class="hidden md:block flex-shrink-0">
@@ -54,352 +54,354 @@
           </div>
         </div>
 
-        <!-- Users Table -->
-        <div class="max-w-7xl mx-auto">
-          <div 
-            class="rounded-lg shadow-sm border overflow-hidden"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div v-if="loading" class="p-8 text-center" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-              Loading users...
-            </div>
-            
-            <div v-else-if="users.length === 0" class="p-8 text-center" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-              No users found.
-            </div>
 
-            <table v-else class="w-full">
-              <thead :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">User</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Workspaces</th>
-                  <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Actions</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y" :class="isDarkMode ? 'divide-gray-700' : 'divide-gray-200'">
-                <tr
-                  v-for="user in users"
-                  :key="user.userId"
-                  class="hover:bg-opacity-50 transition-colors"
-                  :class="isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50'"
-                >
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-full flex items-center justify-center" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-100'">
-                        <span class="material-symbols-outlined" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">person</span>
-                      </div>
-                      <div>
-                        <div class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ user.email }}</div>
-                        <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">ID: {{ user.userId }}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4">
-                    <div v-if="user.workspaces.length === 0" class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                      No workspaces
-                    </div>
-                    <div v-else class="flex flex-wrap gap-2">
-                      <span
-                        v-for="ws in user.workspaces"
-                        :key="ws.workspaceId"
-                        class="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
-                        :class="ws.role === 'owner'
-                          ? (isDarkMode ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-700')
-                          : ws.role === 'admin'
-                          ? (isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700')
-                          : ws.role === 'editor'
-                          ? (isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700')
-                          : (isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700')"
-                      >
-                        {{ ws.workspaceName }}
-                        <span class="ml-1 text-xs opacity-75">({{ ws.role }})</span>
-                      </span>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      @click="manageUserWorkspaces(user)"
-                      class="text-indigo-600 hover:text-indigo-700 transition-colors"
-                      :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : ''"
-                      title="Manage Workspaces"
-                    >
-                      <span class="material-symbols-outlined">edit</span>
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
+        <div class="max-w-7xl mx-auto space-y-4">
+          <InlineNotice :notice="notice" @dismiss="clearNotice" />
 
-    <!-- Manage User Workspaces Modal -->
-    <div
-      v-if="selectedUser"
-      class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
-      @click.self="selectedUser = null"
-    >
-      <div 
-        class="rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-        :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
-      >
-        <div class="flex items-center justify-between mb-6">
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-indigo-600 text-3xl">person</span>
+          <!-- Toolbar -->
+          <div class="flex flex-wrap items-end gap-3">
+            <div class="min-w-[16rem] flex-1">
+              <label for="user-search" class="mb-2 block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Search</label>
+              <input
+                id="user-search"
+                v-model="search"
+                type="search"
+                placeholder="Name or email"
+                autocomplete="off"
+                class="w-full rounded-lg border border-solid px-3 py-2 text-sm"
+                :class="isDarkMode ? 'border-gray-600 bg-slate-800 text-white' : 'border-gray-300 bg-[#fff] text-gray-900'"
+              />
+            </div>
             <div>
-              <h3 class="text-2xl font-semibold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                {{ selectedUser.email }}
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Manage workspace memberships
-              </p>
-            </div>
-          </div>
-          <button
-            @click="selectedUser = null"
-            class="text-gray-400 hover:text-gray-600"
-          >
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-
-        <!-- Current Workspaces -->
-        <div class="mb-6">
-          <h4 class="font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Current Workspaces</h4>
-          <div v-if="selectedUser.workspaces.length === 0" class="text-sm py-4 text-center rounded-lg border" :class="isDarkMode ? 'text-gray-500 border-gray-700' : 'text-gray-500 border-gray-200'">
-            User is not a member of any workspace
-          </div>
-          <div v-else class="space-y-2">
-            <div
-              v-for="ws in selectedUser.workspaces"
-              :key="ws.workspaceId"
-              class="flex items-center justify-between p-3 rounded-lg border"
-              :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center gap-3">
-                <span class="material-symbols-outlined text-indigo-600">folder</span>
-                <div>
-                  <div class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ ws.workspaceName }}</div>
-                  <div class="text-xs flex items-center gap-2 mt-1">
-                    <span 
-                      class="px-2 py-0.5 rounded capitalize"
-                      :class="ws.role === 'owner'
-                        ? (isDarkMode ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-700')
-                        : ws.role === 'admin'
-                        ? (isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700')
-                        : ws.role === 'editor'
-                        ? (isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700')
-                        : (isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700')"
-                    >
-                      {{ ws.role }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <button
-                v-if="ws.role !== 'owner'"
-                @click="removeUserFromWorkspace(ws.workspaceId)"
-                class="p-2 rounded-lg transition-colors text-red-600 hover:bg-red-50"
-                :class="isDarkMode ? 'hover:bg-red-900/30' : ''"
-                title="Remove from workspace"
+              <label for="user-status" class="mb-2 block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Status</label>
+              <select
+                id="user-status"
+                v-model="statusFilter"
+                class="rounded-lg border border-solid px-3 py-2 text-sm"
+                :class="isDarkMode ? 'border-gray-600 bg-slate-800 text-white' : 'border-gray-300 bg-[#fff] text-gray-900'"
               >
-                <span class="material-symbols-outlined text-base">delete</span>
-              </button>
+                <option value="">All</option>
+                <option value="active">Active</option>
+                <option value="disabled">Disabled</option>
+              </select>
             </div>
-          </div>
-        </div>
-
-        <!-- Add to Workspace -->
-        <div class="pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-          <h4 class="font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Add to Workspace</h4>
-          <div class="flex items-center gap-3">
-            <Dropdown
-              v-model="selectedWorkspaceForAdd"
-              :options="availableWorkspaces"
-              :is-dark-mode="isDarkMode"
-              placeholder="Select workspace"
-              class="flex-1"
-            />
-            <Dropdown
-              v-model="selectedRole"
-              :options="[
-                { value: 'viewer', label: 'Viewer' },
-                { value: 'editor', label: 'Editor' },
-                { value: 'admin', label: 'Admin' }
-              ]"
-              :is-dark-mode="isDarkMode"
-              placeholder="Role"
-            />
+            <div v-if="canReadRoles">
+              <label for="user-role" class="mb-2 block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Role</label>
+              <select
+                id="user-role"
+                v-model="roleFilter"
+                class="rounded-lg border border-solid px-3 py-2 text-sm"
+                :class="isDarkMode ? 'border-gray-600 bg-slate-800 text-white' : 'border-gray-300 bg-[#fff] text-gray-900'"
+              >
+                <option value="">Any role</option>
+                <option value="__none">No roles</option>
+                <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</option>
+              </select>
+            </div>
             <button
-              @click="addUserToWorkspace"
-              :disabled="!selectedWorkspaceForAdd || !selectedRole || adding"
-              class="px-4 py-2 rounded-lg font-medium transition-colors"
-              :class="selectedWorkspaceForAdd && selectedRole && !adding
-                ? (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')
-                : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
+              v-if="canManageUsers"
+              type="button"
+              class="inline-flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
+              :class="isDarkMode ? 'bg-indigo-500 hover:bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'"
+              @click="createOpen = true"
             >
-              {{ adding ? 'Adding...' : 'Add' }}
+              <span class="material-symbols-outlined text-base" aria-hidden="true">person_add</span>
+              Create user
             </button>
           </div>
-        </div>
+
+          <!-- Users Table -->
+          <div
+            class="rounded-lg shadow-sm border overflow-hidden"
+            :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-[#fff] border-gray-200'"
+          >
+            <div v-if="loadState === 'loading' && !users.length" class="p-8 text-center" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'" role="status">
+              Loading users…
+            </div>
+
+            <div v-else-if="loadState === 'error'" class="p-8 text-center" role="alert">
+              <p class="mb-4" :class="isDarkMode ? 'text-red-300' : 'text-red-700'">{{ loadError }}</p>
+              <button
+                type="button"
+                class="rounded-lg border border-solid px-4 py-2 text-sm font-medium transition-colors"
+                :class="isDarkMode ? 'border-gray-600 text-gray-200 hover:bg-slate-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'"
+                @click="loadUsers"
+              >
+                Try again
+              </button>
+            </div>
+
+            <div v-else-if="!filteredUsers.length" class="p-8 text-center" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+              {{ hasFilters ? 'No users match these filters.' : 'No users yet.' }}
+            </div>
+
+            <div v-else class="overflow-x-auto">
+              <table class="w-full">
+                <caption class="sr-only">Users, sorted by email</caption>
+                <thead :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">User</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Status</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Roles</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Last sign-in</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      <span class="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y" :class="isDarkMode ? 'divide-gray-700' : 'divide-gray-200'">
+                  <tr
+                    v-for="u in pagedUsers"
+                    :key="u.id"
+                    class="transition-colors"
+                    :class="isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50'"
+                  >
+                    <td class="px-6 py-4">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-sm font-semibold" :class="isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-600'" aria-hidden="true">
+                          {{ initialsFor(u) }}
+                        </div>
+                        <div class="min-w-0">
+                          <div class="flex items-center gap-2 text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                            <span class="truncate">{{ u.name }}</span>
+                            <span v-if="u.id === currentUserId" class="rounded px-1.5 py-0.5 text-xs" :class="isDarkMode ? 'bg-indigo-900/40 text-indigo-300' : 'bg-indigo-100 text-indigo-700'">You</span>
+                          </div>
+                          <div class="truncate text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ u.email }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex flex-col items-start gap-1">
+                        <StatusBadge :status="u.status" />
+                        <span v-if="u.mustChangePassword" class="text-xs" :class="isDarkMode ? 'text-amber-300' : 'text-amber-700'">Must change password</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <span v-if="!u.roles.length" class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">None</span>
+                      <ul v-else class="flex flex-wrap gap-1.5">
+                        <li
+                          v-for="roleId in u.roles"
+                          :key="roleId"
+                          class="rounded px-2 py-0.5 text-xs font-medium"
+                          :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-800'"
+                        >
+                          {{ roleName(roleId) }}
+                        </li>
+                      </ul>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      {{ formatDateTime(u.lastLoginAt) }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right">
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+                        :class="isDarkMode ? 'text-indigo-300 hover:bg-slate-800' : 'text-indigo-700 hover:bg-indigo-50'"
+                        :aria-label="`Manage ${u.name} (${u.email})`"
+                        @click="openUser(u)"
+                      >
+                        <span class="material-symbols-outlined text-base" aria-hidden="true">manage_accounts</span>
+                        Manage
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Paging -->
+            <nav
+              v-if="filteredUsers.length > PAGE_SIZE"
+              class="flex flex-wrap items-center justify-between gap-3 border-t border-solid px-6 py-3 text-sm"
+              :class="isDarkMode ? 'border-gray-700 text-gray-300' : 'border-gray-200 text-gray-700'"
+              aria-label="Users pages"
+            >
+              <span>Showing {{ pageStart + 1 }}–{{ pageEnd }} of {{ filteredUsers.length }}</span>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  class="rounded-lg border border-solid px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+                  :class="isDarkMode ? 'border-gray-600 hover:bg-slate-800' : 'border-gray-300 hover:bg-gray-100'"
+                  :disabled="page === 0"
+                  @click="page--"
+                >
+                  Previous
+                </button>
+                <span aria-live="polite">Page {{ page + 1 }} of {{ pageCount }}</span>
+                <button
+                  type="button"
+                  class="rounded-lg border border-solid px-3 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+                  :class="isDarkMode ? 'border-gray-600 hover:bg-slate-800' : 'border-gray-300 hover:bg-gray-100'"
+                  :disabled="page >= pageCount - 1"
+                  @click="page++"
+                >
+                  Next
+                </button>
+              </div>
+            </nav>
+          </div>
+          <p class="sr-only" role="status" aria-live="polite">{{ resultsAnnouncement }}</p>
         </div>
       </div>
     </div>
+    </div>
+
+    <CreateUserDialog
+      v-model="createOpen"
+      :roles="roles"
+      :can-assign-roles="canManageRoles && rolesLoaded"
+      @created="onCreated"
+    />
+
+    <UserDetailDialog
+      v-model="detailOpen"
+      :user="selectedUser"
+      :roles="roles"
+      :current-user-id="currentUserId"
+      :can-manage-users="canManageUsers"
+      :can-manage-roles="canManageRoles && rolesLoaded"
+      @updated="onUpdated"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
-import Dropdown from '../components/Dropdown.vue';
-import apiClient from '../services/api.js';
-import { useAuth } from '../composables/useAuth.js';
+import InlineNotice from '../components/InlineNotice.vue';
+import StatusBadge from '../components/admin/StatusBadge.vue';
+import CreateUserDialog from '../components/admin/CreateUserDialog.vue';
+import UserDetailDialog from '../components/admin/UserDetailDialog.vue';
+import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
+import { initialsFor, useAuth } from '../composables/useAuth.js';
+import { adminErrorMessage, formatDateTime, rbacApi, usersApi } from '../composables/useAccessAdmin.js';
+
+const PAGE_SIZE = 25;
 
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const loading = ref(false);
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
+const { user: authUser, hasPermission, refreshMe } = useAuth();
+
+const currentUserId = computed(() => authUser.value?.id ?? null);
+const canManageUsers = computed(() => hasPermission('admin:users'));
+// Role names and role changes need admin:rbac; without it roles show as ids
+const canReadRoles = computed(() => hasPermission('admin:rbac'));
+const canManageRoles = canReadRoles;
+
 const users = ref([]);
-const workspaces = ref([]);
+const loadState = ref('idle');
+const loadError = ref('');
+const roles = ref([]);
+const rolesLoaded = ref(false);
+const search = ref('');
+const statusFilter = ref('');
+const roleFilter = ref('');
+const page = ref(0);
+const createOpen = ref(false);
+const detailOpen = ref(false);
 const selectedUser = ref(null);
-const selectedWorkspaceForAdd = ref('');
-const selectedRole = ref('');
-const adding = ref(false);
 
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-// The signed-in user. The server takes identity from the token and ignores
-// ids sent in bodies or queries; these only fill in local placeholder data.
-const { user: authUser } = useAuth();
-const CURRENT_USER_ID = authUser.value?.id ?? null;
+const roleName = (id) => roles.value.find((role) => role.id === id)?.name ?? id;
 
-const availableWorkspaces = ref([]);
+const hasFilters = computed(() => !!(search.value.trim() || statusFilter.value || roleFilter.value));
+const filteredUsers = computed(() => {
+  if (!roleFilter.value) return users.value;
+  if (roleFilter.value === '__none') return users.value.filter((u) => !u.roles.length);
+  return users.value.filter((u) => u.roles.includes(roleFilter.value));
+});
+const pageCount = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / PAGE_SIZE)));
+const pageStart = computed(() => page.value * PAGE_SIZE);
+const pageEnd = computed(() => Math.min(filteredUsers.value.length, pageStart.value + PAGE_SIZE));
+const pagedUsers = computed(() => filteredUsers.value.slice(pageStart.value, pageEnd.value));
+const resultsAnnouncement = computed(() =>
+  loadState.value === 'ready' ? `${filteredUsers.value.length} user${filteredUsers.value.length === 1 ? '' : 's'}` : ''
+);
 
+watch(pageCount, (count) => {
+  if (page.value > count - 1) page.value = count - 1;
+});
+watch(roleFilter, () => {
+  page.value = 0;
+});
 
-
-
-
+let seq = 0;
 const loadUsers = async () => {
+  const mine = ++seq;
+  loadState.value = 'loading';
+  loadError.value = '';
   try {
-    loading.value = true;
-    const response = await apiClient.get(`${API_BASE_URL}/users`);
-    users.value = response.data || [];
+    const result = await usersApi.list({ q: search.value.trim() || undefined, status: statusFilter.value || undefined });
+    if (mine !== seq) return;
+    users.value = Array.isArray(result?.users) ? result.users : [];
+    loadState.value = 'ready';
   } catch (error) {
-    console.error('Failed to load users:', error);
+    if (mine !== seq) return;
     users.value = [];
-  } finally {
-    loading.value = false;
+    loadState.value = 'error';
+    loadError.value = adminErrorMessage(error, "Couldn't load users.");
   }
 };
 
-const loadWorkspaces = async () => {
+const loadRoles = async () => {
+  if (!canReadRoles.value) return;
   try {
-    const response = await apiClient.get(`${API_BASE_URL}/workspaces`);
-    workspaces.value = response.data || [];
-    updateAvailableWorkspaces();
+    roles.value = await rbacApi.roles();
+    rolesLoaded.value = true;
   } catch (error) {
-    console.error('Failed to load workspaces:', error);
-    workspaces.value = [];
+    rolesLoaded.value = false;
+    showNotice(`${adminErrorMessage(error, "Couldn't load roles.")} Roles are shown by id and can't be changed.`, 'warning');
   }
 };
 
-const updateAvailableWorkspaces = () => {
-  if (!selectedUser.value) {
-    availableWorkspaces.value = workspaces.value.map(ws => ({ value: ws.id, label: ws.name }));
-    return;
-  }
+let searchTimer = null;
+watch(search, () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    page.value = 0;
+    loadUsers();
+  }, 300);
+});
+watch(statusFilter, () => {
+  page.value = 0;
+  loadUsers();
+});
 
-  // Filter out workspaces the user is already a member of
-  const userWorkspaceIds = selectedUser.value.workspaces.map(ws => ws.workspaceId);
-  availableWorkspaces.value = workspaces.value
-    .filter(ws => !userWorkspaceIds.includes(ws.id))
-    .map(ws => ({ value: ws.id, label: ws.name }));
+const openUser = (u) => {
+  selectedUser.value = u;
+  detailOpen.value = true;
 };
 
-const manageUserWorkspaces = (user) => {
-  selectedUser.value = { ...user };
-  selectedWorkspaceForAdd.value = '';
-  selectedRole.value = '';
-  updateAvailableWorkspaces();
+const replaceUser = (updated) => {
+  const index = users.value.findIndex((u) => u.id === updated.id);
+  if (index >= 0) users.value.splice(index, 1, updated);
 };
 
-const addUserToWorkspace = async () => {
-  if (!selectedUser.value || !selectedWorkspaceForAdd.value || !selectedRole.value) return;
-
-  try {
-    adding.value = true;
-    await apiClient.post(`${API_BASE_URL}/users/${selectedUser.value.userId}/workspaces`, {
-      workspaceId: selectedWorkspaceForAdd.value,
-      email: selectedUser.value.email,
-      role: selectedRole.value,
-      addedBy: CURRENT_USER_ID,
-    });
-
-    // Reload users to get updated workspace list
-    await loadUsers();
-    
-    // Update selected user
-    const updatedUser = users.value.find(u => u.userId === selectedUser.value.userId);
-    if (updatedUser) {
-      selectedUser.value = updatedUser;
-      updateAvailableWorkspaces();
-    }
-
-    selectedWorkspaceForAdd.value = '';
-    selectedRole.value = '';
-  } catch (error) {
-    console.error('Failed to add user to workspace:', error);
-    alert('Failed to add user to workspace. Please try again.');
-  } finally {
-    adding.value = false;
-  }
+const onUpdated = (updated) => {
+  replaceUser(updated);
+  // My own roles may have changed: reload my permissions so the UI matches
+  if (updated.id === currentUserId.value) refreshMe();
 };
 
-const removeUserFromWorkspace = async (workspaceId) => {
-  if (!selectedUser.value || !confirm('Remove user from this workspace?')) return;
-
-  try {
-    await apiClient.delete(`${API_BASE_URL}/users/${selectedUser.value.userId}/workspaces/${workspaceId}`);
-
-    // Reload users to get updated workspace list
-    await loadUsers();
-    
-    // Update selected user
-    const updatedUser = users.value.find(u => u.userId === selectedUser.value.userId);
-    if (updatedUser) {
-      selectedUser.value = updatedUser;
-      updateAvailableWorkspaces();
-    }
-  } catch (error) {
-    console.error('Failed to remove user from workspace:', error);
-    alert('Failed to remove user from workspace. Please try again.');
-  }
+const onCreated = (created) => {
+  showNotice(`Created ${created.email}.`, 'success');
+  loadUsers();
 };
 
-let darkModeObserver = null;
+// When the detail dialog closes, re-sync with the server (filters may no longer match)
+watch(detailOpen, (open) => {
+  if (!open) loadUsers();
+});
 
 onMounted(() => {
   loadUsers();
-  loadWorkspaces();
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
+  loadRoles();
 });
 
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-});
+onBeforeUnmount(() => clearTimeout(searchTimer));
 </script>
 
 <style scoped>
