@@ -138,6 +138,82 @@ describe('ApiClient', () => {
     });
   });
 
+  describe('Retry policy', () => {
+    // Short delay so retried GETs don't slow the suite down
+    let fastClient: ApiClient;
+    let fastAdapter: MockAdapter;
+
+    beforeEach(() => {
+      fastClient = new ApiClient({ retryDelay: 1 });
+      fastAdapter = new MockAdapter((fastClient as any).client);
+    });
+
+    afterEach(() => {
+      fastAdapter.restore();
+    });
+
+    it('should retry GET on timeout', async () => {
+      fastAdapter.onGet('/test').timeoutOnce().onGet('/test').reply(200, { ok: true });
+
+      await expect(fastClient.get('/test')).resolves.toEqual({ ok: true });
+      expect(fastAdapter.history.get.length).toBe(2);
+    });
+
+    it('should retry GET on 5xx', async () => {
+      fastAdapter.onGet('/test').replyOnce(503).onGet('/test').reply(200, { ok: true });
+
+      await expect(fastClient.get('/test')).resolves.toEqual({ ok: true });
+      expect(fastAdapter.history.get.length).toBe(2);
+    });
+
+    it('should not retry POST on timeout', async () => {
+      fastAdapter.onPost('/reviews').timeout();
+
+      await expect(fastClient.post('/reviews', { title: 'x' })).rejects.toThrow();
+      expect(fastAdapter.history.post.length).toBe(1);
+    });
+
+    it('should not retry POST on 5xx', async () => {
+      fastAdapter.onPost('/reviews').reply(500, { error: 'boom' });
+
+      await expect(fastClient.post('/reviews', { title: 'x' })).rejects.toThrow('API Error 500');
+      expect(fastAdapter.history.post.length).toBe(1);
+    });
+
+    it('should not retry POST on network error', async () => {
+      fastAdapter.onPost('/reviews').networkError();
+
+      await expect(fastClient.post('/reviews', { title: 'x' })).rejects.toThrow();
+      expect(fastAdapter.history.post.length).toBe(1);
+    });
+
+    it('should not retry PUT on 5xx', async () => {
+      fastAdapter.onPut('/reviews/1').reply(502);
+
+      await expect(fastClient.put('/reviews/1', { title: 'x' })).rejects.toThrow();
+      expect(fastAdapter.history.put.length).toBe(1);
+    });
+
+    it('should not retry DELETE on timeout', async () => {
+      fastAdapter.onDelete('/reviews/1').timeout();
+
+      await expect(fastClient.delete('/reviews/1')).rejects.toThrow();
+      expect(fastAdapter.history.delete.length).toBe(1);
+    });
+  });
+
+  describe('Caching', () => {
+    it('should key cached GETs by path as well as params', async () => {
+      const { cache } = require('../../src/cache');
+      mockAdapter.onGet('/workspaces/ws1/icons').reply(200, []);
+
+      await apiClient.get('/workspaces/ws1/icons', { workspaceId: 'ws1' }, 'assets');
+
+      expect(cache.get).toHaveBeenCalledWith('assets', { workspaceId: 'ws1', __path: '/workspaces/ws1/icons' });
+      expect(cache.set).toHaveBeenCalledWith('assets', [], { workspaceId: 'ws1', __path: '/workspaces/ws1/icons' });
+    });
+  });
+
   describe('Authentication', () => {
     it('should include Authorization header', async () => {
       mockAdapter.onGet('/test').reply(200, {});

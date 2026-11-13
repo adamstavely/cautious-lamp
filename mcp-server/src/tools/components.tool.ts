@@ -1,5 +1,8 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
 import { apiClient } from '../api-client';
+
+const componentStatusSchema = z.enum(['production', 'in-progress', 'planned', 'deprecated']);
 
 export interface ComponentProp {
   name: string;
@@ -40,6 +43,10 @@ export interface ComponentsResponse {
   };
 }
 
+export const getComponentsSchema = z.object({
+  status: componentStatusSchema.optional(),
+});
+
 export const getComponentsTool: Tool = {
   name: 'get_components',
   description: 'Retrieve all components with optional status filter',
@@ -62,6 +69,10 @@ export async function getComponents(args: { status?: string }): Promise<Componen
   return await apiClient.get<ComponentsResponse>('/components', params, 'components');
 }
 
+export const getComponentSchema = z.object({
+  id: z.string().min(1),
+});
+
 export const getComponentTool: Tool = {
   name: 'get_component',
   description: 'Get a specific component by ID with full details',
@@ -80,6 +91,11 @@ export const getComponentTool: Tool = {
 export async function getComponent(args: { id: string }): Promise<Component> {
   return await apiClient.get<Component>(`/components/${encodeURIComponent(args.id)}`, { id: args.id }, 'components');
 }
+
+export const getComponentCodeSchema = z.object({
+  id: z.string().min(1),
+  format: z.enum(['vue', 'react', 'html']),
+});
 
 export const getComponentCodeTool: Tool = {
   name: 'get_component_code',
@@ -114,6 +130,11 @@ export async function getComponentCode(args: { id: string; format: 'vue' | 'reac
   
   throw new Error(`Unsupported format: ${args.format}`);
 }
+
+export const searchComponentsSchema = z.object({
+  query: z.string(),
+  status: componentStatusSchema.optional(),
+});
 
 export const searchComponentsTool: Tool = {
   name: 'search_components',

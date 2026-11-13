@@ -121,11 +121,13 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 
 ### Reviews
 
-- **`get_reviews`** - Retrieve all reviews for a workspace with optional status filter
-- **`get_review`** - Get a specific review by ID
-- **`create_review`** - Create a new design review
-- **`update_review`** - Update an existing review (status, description, tags, etc.)
-- **`search_reviews`** - Search reviews by title, description, or tags
+- **`get_reviews`** - List design reviews with an optional workflow state filter
+- **`get_review`** - Get a specific review by ID (with password if protected)
+- **`create_review`** - Create a new design review from a URL
+- **`update_review`** - Approve/reject a workflow stage, move to client or art director review, resubmit, complete, or update sharing (`action` selects which)
+- **`search_reviews`** - Search reviews by filename, title, description, or designer
+- **`get_review_comments`** - Get the comments on a review, optionally for one version
+- **`add_review_comment`** - Add a comment to a review
 
 ## Available Resources
 
@@ -196,15 +198,26 @@ The MCP server connects to the following backend API endpoints:
 - `POST /api/v1/compliance/scan` - Compliance scanning
 - `GET /api/v1/workspaces/:id/assets` - Asset retrieval
 - `GET /api/v1/workspaces/:id/icons` - Icon retrieval
-- `GET /api/v1/workspaces/:id/reviews` - Review retrieval
-- `POST /api/v1/workspaces/:id/reviews` - Create review
-- `PUT /api/v1/workspaces/:id/reviews/:reviewId` - Update review
+- `GET /admin/reviews` - Review list
+- `GET /review/:id` - Review retrieval
+- `POST /review/create-from-url` - Create review
+- `POST /review/:id/workflow/{approve,reject,move-to-client-review,move-to-art-director-review,resubmit}` - Workflow changes
+- `POST /review/:id/complete`, `POST /review/:id/sharing` - Complete review, update sharing
+- `GET /review/:id/comments`, `POST /review/:id/comments` - Review comments
+
+The patterns library and review routes are mounted at the server root, so the server derives
+their URL from `MCP_API_BASE_URL` by dropping the trailing `/api/vN`. The review routes are the
+same ones the frontend calls (`frontend/src/services/api.js`).
+
+Only `GET` requests are retried (on timeouts, network errors and 408/429/5xx). `POST`, `PUT` and
+`DELETE` are sent once, so a timed-out create is never duplicated.
 
 ## Error Handling
 
 The server includes comprehensive error handling:
 - API errors are caught and returned with descriptive messages
-- Invalid tool calls return error responses
+- Tool arguments are validated (zod); missing or invalid arguments return an `isError` result
+- Logs go to stderr only, since stdout carries the MCP JSON-RPC stream
 - Resource access errors are handled gracefully
 
 ## License

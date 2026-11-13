@@ -21,6 +21,12 @@ export interface TokensResponse {
   };
 }
 
+export const getTokensSchema = z.object({
+  category: z.string().optional(),
+  type: z.string().optional(),
+  tag: z.string().optional(),
+});
+
 export const getTokensTool: Tool = {
   name: 'get_tokens',
   description: 'Retrieve all design tokens with optional filters (category, type, tag)',
@@ -52,6 +58,10 @@ export async function getTokens(args: { category?: string; type?: string; tag?: 
   return await apiClient.get<TokensResponse>('/tokens', params, 'tokens');
 }
 
+export const getTokenSchema = z.object({
+  name: z.string().min(1),
+});
+
 export const getTokenTool: Tool = {
   name: 'get_token',
   description: 'Get a specific design token by name',
@@ -70,6 +80,11 @@ export const getTokenTool: Tool = {
 export async function getToken(args: { name: string }): Promise<Token> {
   return await apiClient.get<Token>(`/tokens/${encodeURIComponent(args.name)}`, { name: args.name }, 'tokens');
 }
+
+export const searchTokensSchema = z.object({
+  query: z.string(),
+  category: z.string().optional(),
+});
 
 export const searchTokensTool: Tool = {
   name: 'search_tokens',

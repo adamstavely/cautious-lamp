@@ -88,7 +88,11 @@ export async function readDocumentationResource(uri: string): Promise<string> {
   const resolvedPath = path.resolve(filePath);
   const resolvedBase = path.resolve(DOCS_BASE_PATH);
   
-  if (!resolvedPath.startsWith(resolvedBase)) {
+  // Compare against the base plus a separator so sibling directories that share
+  // the prefix (e.g. `docs-private` next to `docs`) are rejected too.
+  const isInsideBase = resolvedPath === resolvedBase || resolvedPath.startsWith(resolvedBase + path.sep);
+
+  if (!isInsideBase) {
     logger.error('Invalid documentation path (security check)', {
       uri,
       docPath,

@@ -27,6 +27,20 @@ describe('Compliance Tool', () => {
       expect(result.rules).toEqual(mockRules);
     });
 
+    it('should read rules from the object the backend returns', async () => {
+      const exported = {
+        rules: [{ name: 'Color Contrast WCAG AA', category: 'accessibility', enabled: true, description: 'Rule: Color Contrast WCAG AA (accessibility)' }],
+        version: '1.0.0',
+        exportedAt: '2024-01-01T00:00:00.000Z',
+      };
+      mockApiClient.get.mockResolvedValue(exported);
+
+      const result = await getComplianceRules();
+
+      expect(result.rules).toEqual(exported.rules);
+      expect(mockApiClient.get).toHaveBeenCalledWith('/rules/export', undefined, 'compliance');
+    });
+
     it('should handle non-JSON response', async () => {
       mockApiClient.get.mockResolvedValue('not json');
 
@@ -37,18 +51,28 @@ describe('Compliance Tool', () => {
   });
 
   describe('scanComponent', () => {
-    it('should scan a component for compliance', async () => {
-      const mockResult = {
-        checks: [{ id: 'check1', rule: 'rule1', status: 'pass' as const, message: 'OK' }],
-        summary: { total: 1, pass: 1, warning: 0, error: 0 },
-      };
-
-      mockApiClient.post.mockResolvedValue(mockResult);
+    it('should scan the design system and keep only checks for the component', async () => {
+      mockApiClient.get.mockResolvedValue({ id: 'button', name: 'Button' });
+      mockApiClient.post.mockResolvedValue({
+        scope: 'design-system',
+        passed: 1,
+        warnings: 1,
+        failed: 0,
+        checks: [
+          { id: 'check1', rule: 'rule1', status: 'pass', message: 'OK', component: 'Button' },
+          { id: 'check2', rule: 'rule1', status: 'warning', message: 'Hmm', component: 'Card' },
+        ],
+      });
 
       const result = await scanComponent({ componentId: 'button' });
 
-      expect(result).toEqual(mockResult);
-      expect(mockApiClient.post).toHaveBeenCalledWith('/compliance/scan', { componentId: 'button' }, 'compliance');
+      expect(result).toEqual({
+        checks: [{ id: 'check1', rule: 'rule1', status: 'pass', message: 'OK', component: 'Button' }],
+        summary: { total: 1, pass: 1, warning: 0, error: 0 },
+      });
+      expect(mockApiClient.get).toHaveBeenCalledWith('/components/button', { id: 'button' }, 'components');
+      // The backend requires a scope and has no per-component scan
+      expect(mockApiClient.post).toHaveBeenCalledWith('/compliance/scan', { scope: 'design-system' });
     });
   });
 
@@ -60,6 +84,17 @@ describe('Compliance Tool', () => {
       const result = await exportRules({});
 
       expect(result).toBe(mockRules);
+    });
+
+    it('should stringify the object the backend returns', async () => {
+      const exported = { rules: [{ name: 'rule-1', severity: 'warn' }], meta: {} };
+      mockApiClient.get.mockResolvedValue(exported);
+
+      const result = await exportRules({ format: 'eslint' });
+
+      expect(typeof result).toBe('string');
+      expect(JSON.parse(result)).toEqual(exported);
+      expect(mockApiClient.get).toHaveBeenCalledWith('/rules/export', { format: 'eslint' }, 'compliance');
     });
   });
 });
