@@ -26,7 +26,7 @@
             </router-link>
           </div>
         </div>
-        <div class="spot hidden md:block w-72 h-72 lg:w-80 lg:h-80" aria-hidden="true" v-html="spot('site/home')"></div>
+        <div class="spot hidden md:block w-72 h-72 lg:w-80 lg:h-80" aria-hidden="true" v-html="spot('site/compass-rose')"></div>
       </section>
 
       <!-- Foundations -->
