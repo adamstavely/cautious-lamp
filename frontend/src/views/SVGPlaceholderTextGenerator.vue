@@ -188,6 +188,7 @@
               <div class="lg:col-span-2">
                 <div class="preview-area panel">
                   <div class="relative border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 min-h-[500px] bg-slate-50 dark:bg-slate-900">
+                    <InlineNotice :notice="notice" class="mb-4 mr-14" @dismiss="clearNotice" />
                     <button
                       @click="copySVG"
                       class="seg absolute top-4 right-4"
@@ -206,8 +207,24 @@
                         alignItems: alignment === 'center' ? 'center' : alignment === 'right' ? 'flex-end' : 'flex-start',
                         gap: spacing + 'px'
                       }"
-                      v-html="svgContent"
-                    ></div>
+                    >
+                      <div
+                        v-for="(lineWords, lineIndex) in layout"
+                        :key="lineIndex"
+                        style="display: flex; gap: 8px; align-items: center;"
+                      >
+                        <div
+                          v-for="(width, wordIndex) in lineWords"
+                          :key="wordIndex"
+                          :style="{
+                            width: width + 'px',
+                            height: safeNumber(height, 8, 40, 16) + 'px',
+                            backgroundColor: safeColor,
+                            borderRadius: safeNumber(radius, 0, 20, 8) + 'px',
+                          }"
+                        ></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -220,14 +237,18 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { spot } from '../utils/spotIllustrations.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
 const alignment = ref('left');
 const radius = ref(8);
 const words = ref(8);
@@ -237,173 +258,114 @@ const spacing = ref(8);
 const color = ref('#9ca3af');
 const showColorPicker = ref(false);
 
+const MAX_LINE_WIDTH = 600; // Maximum width of a line, in px
+const WORD_SPACING = 8; // Space between words, in px
+const SVG_MARGIN = 20;
+const SVG_WIDTH = MAX_LINE_WIDTH + SVG_MARGIN * 2;
 
-
-
-
-// Generate random word widths (simulating text)
-const generateWordWidths = (numWords) => {
-  const widths = [];
-  for (let i = 0; i < numWords; i++) {
-    // Random width between 30 and 100 pixels to simulate word lengths
-    // Add some variation to make words more realistic
-    widths.push(Math.random() * 70 + 30);
-  }
-  return widths;
+// Clamp a slider value to its range (sliders can briefly hold '' or NaN).
+const safeNumber = (value, min, max, fallback) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
 };
 
-// Store word widths to maintain consistency
-const wordWidthsCache = ref([]);
+// Only a hex color may reach the SVG/HTML output.
+const safeColor = computed(() => (/^#[0-9a-f]{3,8}$/i.test(color.value) ? color.value : '#9ca3af'));
 
-// Generate SVG content
-const svgContent = computed(() => {
-  if (wordWidthsCache.value.length === 0) {
-    wordWidthsCache.value = generateWordWidths(words.value * lines.value);
-  }
-  
-  const svgLines = [];
-  const maxLineWidth = 600; // Maximum width for a line
-  const wordSpacing = 8; // Space between words
+// Random word widths between 30 and 100px, to simulate text
+const generateWordWidths = (numWords) =>
+  Array.from({ length: numWords }, () => Math.round(Math.random() * 70 + 30));
+
+// Lines of word widths. Generated once per refresh so the preview, the copied
+// SVG and the downloaded SVG are all the same layout.
+const layout = ref([]);
+
+const generateLayout = () => {
+  const lineCount = Math.round(safeNumber(lines.value, 1, 10, 3));
+  const wordCount = Math.round(safeNumber(words.value, 1, 20, 8));
+  const wordWidths = generateWordWidths(wordCount * lineCount);
+  const lineWidthVariation = [0.7, 0.5, 0.8, 0.6, 0.9, 0.65, 0.75, 0.55, 0.85, 0.6];
+  const result = [];
   let wordIndex = 0;
-  
-  for (let lineIndex = 0; lineIndex < lines.value; lineIndex++) {
+
+  for (let lineIndex = 0; lineIndex < lineCount; lineIndex++) {
     const lineWords = [];
     let currentLineWidth = 0;
-    
-    // Calculate target line width - vary it for each line to ensure different lengths
-    // First line: 70-90% of max, second: 50-70%, third: 80-100%, etc.
-    const lineWidthVariation = [0.7, 0.5, 0.8, 0.6, 0.9, 0.65, 0.75, 0.55, 0.85, 0.6];
-    const targetLineWidth = maxLineWidth * (lineWidthVariation[lineIndex % lineWidthVariation.length] + Math.random() * 0.2);
-    
-    // Add words until we approach the target width (with some randomness)
-    while (wordIndex < wordWidthsCache.value.length && currentLineWidth < targetLineWidth) {
-      const wordWidth = wordWidthsCache.value[wordIndex];
-      const wouldExceedMax = currentLineWidth + wordWidth + wordSpacing > maxLineWidth;
-      
-      // Stop if we'd exceed max width, or if we've reached a reasonable length
-      if (wouldExceedMax && lineWords.length > 0) {
-        break;
-      }
-      
-      // Sometimes stop early to create shorter lines (30% chance after minimum 2 words)
-      if (lineWords.length >= 2 && currentLineWidth >= targetLineWidth * 0.6 && Math.random() < 0.3) {
-        break;
-      }
-      
-      lineWords.push(wordWidth);
-      currentLineWidth += wordWidth + wordSpacing;
-      wordIndex++;
-    }
-    
-    // Ensure each line has at least one word
-    if (lineWords.length === 0 && wordIndex < wordWidthsCache.value.length) {
-      lineWords.push(wordWidthsCache.value[wordIndex]);
-      wordIndex++;
-    }
-    
-    // Create HTML for this line
-    let lineHTML = '<div style="display: flex; gap: 8px; align-items: center;">';
-    lineWords.forEach((width) => {
-      lineHTML += `<div style="width: ${width}px; height: ${height.value}px; background-color: ${color.value}; border-radius: ${radius.value}px;"></div>`;
-    });
-    lineHTML += '</div>';
-    
-    svgLines.push(lineHTML);
-  }
-  
-  return svgLines.join('');
-});
+    // Vary the target width per line so lines have different lengths
+    const targetLineWidth =
+      MAX_LINE_WIDTH * Math.min(1, lineWidthVariation[lineIndex % lineWidthVariation.length] + Math.random() * 0.2);
 
-// Generate SVG as downloadable string
-const generateSVGString = () => {
-  // Use cached word widths or generate new ones
-  const wordWidths = wordWidthsCache.value.length > 0 
-    ? wordWidthsCache.value 
-    : generateWordWidths(words.value * lines.value);
-  
-  const svgWidth = 800;
-  const svgHeight = lines.value * (height.value + spacing.value) + spacing.value;
-  
-  let svg = `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">`;
-  
-  let currentY = spacing.value;
-  const maxLineWidth = svgWidth - 40;
-  const wordSpacing = 8;
-  let wordIndex = 0;
-  
-  for (let lineIndex = 0; lineIndex < lines.value; lineIndex++) {
-    const lineWords = [];
-    let currentLineWidth = 0;
-    
-    // Calculate target line width - vary it for each line to ensure different lengths
-    const lineWidthVariation = [0.7, 0.5, 0.8, 0.6, 0.9, 0.65, 0.75, 0.55, 0.85, 0.6];
-    const targetLineWidth = maxLineWidth * (lineWidthVariation[lineIndex % lineWidthVariation.length] + Math.random() * 0.2);
-    
-    // Add words until we approach the target width (with some randomness)
     while (wordIndex < wordWidths.length && currentLineWidth < targetLineWidth) {
       const wordWidth = wordWidths[wordIndex];
-      const wouldExceedMax = currentLineWidth + wordWidth + wordSpacing > maxLineWidth;
-      
-      // Stop if we'd exceed max width, or if we've reached a reasonable length
-      if (wouldExceedMax && lineWords.length > 0) {
-        break;
-      }
-      
+      const extra = lineWords.length > 0 ? WORD_SPACING : 0;
+      if (currentLineWidth + extra + wordWidth > MAX_LINE_WIDTH && lineWords.length > 0) break;
       // Sometimes stop early to create shorter lines (30% chance after minimum 2 words)
-      if (lineWords.length >= 2 && currentLineWidth >= targetLineWidth * 0.6 && Math.random() < 0.3) {
-        break;
-      }
-      
+      if (lineWords.length >= 2 && currentLineWidth >= targetLineWidth * 0.6 && Math.random() < 0.3) break;
       lineWords.push(wordWidth);
-      currentLineWidth += wordWidth + wordSpacing;
+      currentLineWidth += extra + wordWidth;
       wordIndex++;
     }
-    
+
     // Ensure each line has at least one word
-    if (lineWords.length === 0 && wordIndex < wordWidths.length) {
-      lineWords.push(wordWidths[wordIndex]);
+    if (lineWords.length === 0) {
+      lineWords.push(wordWidths[wordIndex] ?? 60);
       wordIndex++;
     }
-    
-    const totalLineWidth = lineWords.reduce((sum, w) => sum + w, 0) + (lineWords.length - 1) * wordSpacing;
-    
-    let currentX = alignment.value === 'center' 
-      ? (svgWidth - totalLineWidth) / 2
-      : alignment.value === 'right'
-      ? svgWidth - totalLineWidth - 20
-      : 20;
-    
-    lineWords.forEach((width) => {
-      svg += `<rect x="${currentX}" y="${currentY}" width="${width}" height="${height.value}" fill="${color.value}" rx="${radius.value}" ry="${radius.value}"/>`;
-      currentX += width + wordSpacing;
-    });
-    
-    currentY += height.value + spacing.value;
+    result.push(lineWords);
   }
-  
+  layout.value = result;
+};
+
+// Build the SVG from the current layout. All values are numbers or a validated
+// hex color, so nothing user-typed is interpolated unescaped.
+const generateSVGString = () => {
+  const h = safeNumber(height.value, 8, 40, 16);
+  const gap = safeNumber(spacing.value, 4, 32, 8);
+  const r = safeNumber(radius.value, 0, 20, 8);
+  const fill = safeColor.value;
+  const lineRows = layout.value;
+  const svgHeight = lineRows.length * (h + gap) + gap;
+
+  let svg = `<svg width="${SVG_WIDTH}" height="${svgHeight}" viewBox="0 0 ${SVG_WIDTH} ${svgHeight}" xmlns="http://www.w3.org/2000/svg">`;
+  let currentY = gap;
+
+  lineRows.forEach((lineWords) => {
+    const totalLineWidth = lineWords.reduce((sum, w) => sum + w, 0) + (lineWords.length - 1) * WORD_SPACING;
+    let currentX =
+      alignment.value === 'center'
+        ? (SVG_WIDTH - totalLineWidth) / 2
+        : alignment.value === 'right'
+        ? SVG_WIDTH - totalLineWidth - SVG_MARGIN
+        : SVG_MARGIN;
+
+    lineWords.forEach((width) => {
+      svg += `<rect x="${currentX}" y="${currentY}" width="${width}" height="${h}" fill="${fill}" rx="${r}" ry="${r}"/>`;
+      currentX += width + WORD_SPACING;
+    });
+    currentY += h + gap;
+  });
+
   svg += '</svg>';
   return svg;
 };
 
 const refresh = () => {
-  // Generate new random word widths
-  wordWidthsCache.value = generateWordWidths(words.value * lines.value);
+  generateLayout();
 };
 
 const copySVG = async () => {
-  const svgString = generateSVGString();
   try {
-    await navigator.clipboard.writeText(svgString);
-    // Could add a toast notification here
-    alert('SVG copied to clipboard!');
+    await navigator.clipboard.writeText(generateSVGString());
+    showNotice('SVG copied to clipboard.', 'success');
   } catch (error) {
     console.error('Failed to copy:', error);
+    showNotice('Could not copy to the clipboard. Use Download instead.', 'error');
   }
 };
 
 const downloadSVG = () => {
-  const svgString = generateSVGString();
-  const blob = new Blob([svgString], { type: 'image/svg+xml' });
+  const blob = new Blob([generateSVGString()], { type: 'image/svg+xml' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -411,70 +373,13 @@ const downloadSVG = () => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
-let darkModeObserver = null;
-let darkModeInterval = null;
+// New word count or line count: lay out fresh lines
+watch([words, lines], generateLayout);
 
-// Watch for changes to words or lines value and regenerate
-watch([words, lines], () => {
-  wordWidthsCache.value = generateWordWidths(words.value * lines.value);
-});
-
-// Watch for dark mode changes and force update
-watch(isDarkMode, () => {
-  // Force a reactive update when dark mode changes
-  // This ensures all computed properties and styles update immediately
-  nextTick(() => {
-    // Trigger any necessary re-renders
-  });
-});
-
-onMounted(() => {
-  // Initialize word widths
-  wordWidthsCache.value = generateWordWidths(words.value * lines.value);
-  
-  // Improved dark mode detection with immediate callback
-  const updateDarkMode = () => {
-    const wasDark = isDarkMode.value;
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-    // Force update if state changed
-    if (wasDark !== isDarkMode.value) {
-      // Trigger reactivity
-      nextTick(() => {});
-    }
-  };
-  
-  darkModeObserver = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-        updateDarkMode();
-      }
-    });
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-    attributeOldValue: true
-  });
-  
-  // Initial check
-  updateDarkMode();
-  
-  // Fallback interval check (less frequent)
-  darkModeInterval = setInterval(updateDarkMode, 50);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
+onMounted(generateLayout);
 </script>
 
 <style scoped>

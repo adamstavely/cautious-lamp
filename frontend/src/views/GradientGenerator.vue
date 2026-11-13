@@ -214,12 +214,13 @@
               <div class="flex items-center gap-2">
                 <button
                   @click="fetchPalettes"
-                  class="px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                  :disabled="loadingPalettes"
+                  class="px-4 py-2 rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-wait"
                   :class="isDarkMode 
                     ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                 >
-                  Load from Palette Builder
+                  {{ loadingPalettes ? 'Loading…' : 'Load from Palette Builder' }}
                 </button>
                 <button
                   @click="addColorStop"
@@ -230,6 +231,8 @@
                 </button>
               </div>
             </div>
+
+            <InlineNotice :notice="paletteNotice" class="mb-4" @dismiss="clearPaletteNotice" />
 
             <!-- Palette Selector -->
             <div v-if="availablePalettes.length > 0" class="mb-4 space-y-2">
@@ -841,6 +844,8 @@
         </div>
         
         <div class="p-6 space-y-6">
+          <InlineNotice :notice="exportNotice" @dismiss="clearExportNotice" />
+
           <!-- Export Format Selector -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Code Format</label>
@@ -918,22 +923,20 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import ColorPicker from '../components/ColorPicker.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import { useDrawer } from '../composables/useDrawer.js';
-import axios from 'axios';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
+import apiClient from '../services/api.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-
-
-
-
-
-let darkModeObserver = null;
-let darkModeInterval = null;
+const { notice: paletteNotice, showNotice: showPaletteNotice, clearNotice: clearPaletteNotice } = useNotice();
+const { notice: exportNotice, showNotice: showExportNotice, clearNotice: clearExportNotice } = useNotice();
 
 const gradientType = ref('linear');
 const linearAngle = ref(90);
@@ -985,6 +988,7 @@ const showAccessibilityCheck = ref(false);
 const accessibilityTextColor = ref('#000000');
 const availablePalettes = ref([]);
 const selectedPaletteId = ref('');
+const loadingPalettes = ref(false);
 const showExportModal = ref(false);
 
 const gradientTypes = [
@@ -1054,9 +1058,10 @@ const updateCurrentLayer = () => {
 };
 
 // Watch for changes to sync layers
+// Deep, because the position inputs mutate radialPosition/conicPosition in place.
 watch([gradientType, linearAngle, radialPosition, radialShape, radialSize, conicPosition, conicAngle, blendMode], () => {
   updateCurrentLayer();
-});
+}, { deep: true });
 
 watch(colorStops, () => {
   updateCurrentLayer();
@@ -1200,13 +1205,6 @@ const animationStyle = computed(() => {
     }
   }
   
-  // Debug: log when animation is enabled
-  if (animationEnabled.value) {
-    console.log('Animation style:', style);
-    console.log('Animation type:', animationType.value);
-    console.log('Duration:', animationDuration.value);
-  }
-  
   return style;
 });
 
@@ -1236,7 +1234,10 @@ const addLayer = () => {
 const removeLayer = (index) => {
   if (layers.value.length > 1) {
     layers.value.splice(index, 1);
-    if (currentLayerIndex.value >= layers.value.length) {
+    // Keep pointing at the same layer when one before it is removed.
+    if (index < currentLayerIndex.value) {
+      currentLayerIndex.value -= 1;
+    } else if (currentLayerIndex.value >= layers.value.length) {
       currentLayerIndex.value = layers.value.length - 1;
     }
     syncCurrentLayer();
@@ -1249,11 +1250,14 @@ const moveLayer = (fromIndex, toIndex) => {
   const layer = layers.value.splice(fromIndex, 1)[0];
   layers.value.splice(toIndex, 0, layer);
   
-  // Update current layer index
-  if (currentLayerIndex.value === fromIndex) {
+  // Keep the selection on the same layer after the move.
+  const current = currentLayerIndex.value;
+  if (current === fromIndex) {
     currentLayerIndex.value = toIndex;
-  } else if (currentLayerIndex.value === toIndex) {
-    currentLayerIndex.value = fromIndex;
+  } else if (fromIndex < current && current <= toIndex) {
+    currentLayerIndex.value = current - 1;
+  } else if (toIndex <= current && current < fromIndex) {
+    currentLayerIndex.value = current + 1;
   }
 };
 
@@ -1322,16 +1326,17 @@ const removeColorStop = (index) => {
 const formattedExportCode = computed(() => {
   const gradient = cssGradientWithBlend.value;
   const blendModes = cssBlendModes.value;
+  const multiLayer = layers.value.filter((layer) => layer.enabled).length > 1;
   
   switch (exportFormat.value) {
     case 'css':
-      if (layers.value.length > 1) {
+      if (multiLayer) {
         return `background-image: ${gradient};\nbackground-blend-mode: ${blendModes};`;
       }
       return `background: ${gradient};\nbackground-image: ${gradient};`;
       
     case 'css-vars':
-      return `:root {\n  --gradient-primary: ${gradient};\n${layers.value.length > 1 ? `  --gradient-blend-mode: ${blendModes};\n` : ''}}\n\n.my-element {\n  background-image: var(--gradient-primary);${layers.value.length > 1 ? '\n  background-blend-mode: var(--gradient-blend-mode);' : ''}\n}`;
+      return `:root {\n  --gradient-primary: ${gradient};\n${multiLayer ? `  --gradient-blend-mode: ${blendModes};\n` : ''}}\n\n.my-element {\n  background-image: var(--gradient-primary);${multiLayer ? '\n  background-blend-mode: var(--gradient-blend-mode);' : ''}\n}`;
       
     case 'tailwind':
       return `// tailwind.config.js\nmodule.exports = {\n  theme: {\n    extend: {\n      backgroundImage: {\n        'gradient-primary': '${gradient}',\n      },\n    },\n  },\n}`;
@@ -1343,7 +1348,7 @@ const formattedExportCode = computed(() => {
       return JSON.stringify({
         layers: layers.value,
         css: gradient,
-        blendMode: layers.value.length > 1 ? blendModes : undefined,
+        blendMode: multiLayer ? blendModes : undefined,
         animation: animationEnabled.value ? {
           type: animationType.value,
           duration: animationDuration.value,
@@ -1353,11 +1358,11 @@ const formattedExportCode = computed(() => {
       }, null, 2);
       
     case 'react':
-      return `import styled from 'styled-components';\n\nconst GradientComponent = styled.div\`\n  background-image: ${gradient};\n${layers.value.length > 1 ? `  background-blend-mode: ${blendModes};\n` : ''}\`;`;
+      return `import styled from 'styled-components';\n\nconst GradientComponent = styled.div\`\n  background-image: ${gradient};\n${multiLayer ? `  background-blend-mode: ${blendModes};\n` : ''}\`;`;
       
     case 'vue':
       // Vue component code - using style binding
-      return `const gradient = '${gradient}';\n${layers.value.length > 1 ? `const blendMode = '${blendModes}';\n` : ''}\n// Use in template:\n// <div :style="{ backgroundImage: gradient${layers.value.length > 1 ? ', backgroundBlendMode: blendMode' : ''} }">Your content</div>`;
+      return `const gradient = '${gradient}';\n${multiLayer ? `const blendMode = '${blendModes}';\n` : ''}\n// Use in template:\n// <div :style="{ backgroundImage: gradient${multiLayer ? ', backgroundBlendMode: blendMode' : ''} }">Your content</div>`;
       
     default:
       return gradient;
@@ -1367,119 +1372,218 @@ const formattedExportCode = computed(() => {
 const copyFormattedCode = async () => {
   try {
     await navigator.clipboard.writeText(formattedExportCode.value);
-    alert(`${exportFormat.value.toUpperCase()} code copied to clipboard!`);
+    showExportNotice(`${exportFormat.value.toUpperCase()} code copied to clipboard.`, 'success');
   } catch (err) {
     console.error('Failed to copy:', err);
+    showExportNotice('Could not copy to the clipboard. Select the code and copy it manually.', 'error');
   }
 };
+
+// Trigger a download, revoking the object URL once the click has been handled.
+const downloadBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+};
+
+// Parse a CSS position component ("50%", "120px", "center", "left"...) into pixels.
+const parsePosition = (value, size, axis) => {
+  const v = String(value ?? '').trim().toLowerCase();
+  const keywords = axis === 'x'
+    ? { left: 0, center: 50, right: 100 }
+    : { top: 0, center: 50, bottom: 100 };
+  if (v in keywords) return (keywords[v] / 100) * size;
+  const num = parseFloat(v);
+  if (!Number.isFinite(num)) return size / 2;
+  return v.endsWith('px') ? num : (num / 100) * size;
+};
+
+// Start/end points of a CSS linear-gradient(<angle>deg) line inside a w x h box.
+// CSS angles: 0deg points up, 90deg right; the line is long enough that the
+// corners land exactly on 0% and 100%.
+const linearGradientLine = (angleDeg, w, h) => {
+  const rad = (angleDeg * Math.PI) / 180;
+  const dx = Math.sin(rad);
+  const dy = -Math.cos(rad);
+  const half = (Math.abs(w * dx) + Math.abs(h * dy)) / 2;
+  const cx = w / 2;
+  const cy = h / 2;
+  return { x1: cx - dx * half, y1: cy - dy * half, x2: cx + dx * half, y2: cy + dy * half };
+};
+
+// Radii of a CSS radial-gradient ending shape centred at (x, y) in a w x h box.
+const radialRadii = (shape, size, x, y, w, h) => {
+  const sideX = { closest: Math.min(x, w - x), farthest: Math.max(x, w - x) };
+  const sideY = { closest: Math.min(y, h - y), farthest: Math.max(y, h - y) };
+  const which = size.startsWith('closest') ? 'closest' : 'farthest';
+  if (shape === 'circle') {
+    if (size.endsWith('side')) {
+      const r = which === 'closest'
+        ? Math.min(sideX.closest, sideY.closest)
+        : Math.max(sideX.farthest, sideY.farthest);
+      return { rx: r, ry: r };
+    }
+    const r = Math.hypot(sideX[which], sideY[which]);
+    return { rx: r, ry: r };
+  }
+  // Ellipse: the "-side" ellipse touches the sides; the "-corner" one keeps that
+  // aspect ratio and passes through the corner (a factor of sqrt(2)).
+  const factor = size.endsWith('corner') ? Math.SQRT2 : 1;
+  return { rx: sideX[which] * factor, ry: sideY[which] * factor };
+};
+
+const stopColor = (stop) => hexToRgba(stop.color, stop.opacity ?? 100);
+const sortedStops = (layer) => [...layer.colorStops].sort((a, b) => a.position - b.position);
+const clampOffset = (position) => Math.min(1, Math.max(0, (Number(position) || 0) / 100));
+
+// Canvas composite operations share their names with CSS blend modes.
+const canvasBlendMode = (mode) => (!mode || mode === 'normal' ? 'source-over' : mode);
 
 const exportAsImage = () => {
   const canvas = document.createElement('canvas');
   canvas.width = 1920;
   canvas.height = 1080;
   const ctx = canvas.getContext('2d');
-  
-  if (!ctx) return;
-  
-  let gradient;
-  if (gradientType.value === 'linear') {
-    const radians = (linearAngle.value * Math.PI) / 180;
-    const x1 = canvas.width / 2 - (canvas.width / 2) * Math.cos(radians + Math.PI);
-    const y1 = canvas.height / 2 - (canvas.height / 2) * Math.sin(radians + Math.PI);
-    const x2 = canvas.width / 2 + (canvas.width / 2) * Math.cos(radians + Math.PI);
-    const y2 = canvas.height / 2 + (canvas.height / 2) * Math.sin(radians + Math.PI);
-    gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-  } else if (gradientType.value === 'radial') {
-    const x = parseFloat(radialPosition.value.x.replace('%', '')) * canvas.width / 100;
-    const y = parseFloat(radialPosition.value.y.replace('%', '')) * canvas.height / 100;
-    const radius = Math.max(canvas.width, canvas.height) / 2;
-    gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-  } else {
-    // Conic gradients are not directly supported in canvas, use linear as fallback
-    gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  if (!ctx) {
+    showExportNotice('Your browser could not create the image.', 'error');
+    return;
   }
-  
-  colorStops.value.forEach((stop) => {
-    const rgb = hexToRgb(stop.color);
-    gradient.addColorStop(stop.position / 100, `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`);
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // CSS paints the first background layer on top, so draw from the last one up.
+  const enabled = layers.value.filter((layer) => layer.enabled).reverse();
+  if (enabled.length === 0) {
+    showExportNotice('Enable at least one layer to export.', 'warning');
+    return;
+  }
+
+  enabled.forEach((layer, i) => {
+    // Canvas gradients are resolved in the coordinate space active at fill time.
+    ctx.save();
+    ctx.globalCompositeOperation = i === 0 ? 'source-over' : canvasBlendMode(layer.blendMode);
+    let gradient;
+    let fill = () => ctx.fillRect(0, 0, w, h);
+    if (layer.type === 'radial') {
+      const x = parsePosition(layer.radialPosition.x, w, 'x');
+      const y = parsePosition(layer.radialPosition.y, h, 'y');
+      const { rx, ry } = radialRadii(layer.radialShape, layer.radialSize, x, y, w, h);
+      const r = Math.max(rx, 1);
+      const sy = Math.max(ry, 1) / r;
+      // A circle gradient at the origin, squashed vertically into the ellipse.
+      ctx.translate(x, y);
+      ctx.scale(1, sy);
+      gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      fill = () => ctx.fillRect(-x, -y / sy, w, h / sy);
+    } else if (layer.type === 'conic' && typeof ctx.createConicGradient === 'function') {
+      const x = parsePosition(layer.conicPosition.x, w, 'x');
+      const y = parsePosition(layer.conicPosition.y, h, 'y');
+      // CSS conic 0deg is "up"; canvas 0 rad is "right".
+      gradient = ctx.createConicGradient(((layer.conicAngle - 90) * Math.PI) / 180, x, y);
+    } else {
+      const angle = layer.type === 'linear' ? layer.linearAngle : 90;
+      const { x1, y1, x2, y2 } = linearGradientLine(angle, w, h);
+      gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+    }
+
+    sortedStops(layer).forEach((stop) => {
+      gradient.addColorStop(clampOffset(stop.position), stopColor(stop));
+    });
+
+    ctx.fillStyle = gradient;
+    fill();
+    ctx.restore();
   });
-  
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
+
   canvas.toBlob((blob) => {
-    if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'gradient.png';
-    a.click();
-    URL.revokeObjectURL(url);
+    if (!blob) {
+      showExportNotice('Could not create the PNG.', 'error');
+      return;
+    }
+    downloadBlob(blob, 'gradient.png');
   }, 'image/png');
 };
 
 const exportAsSVG = () => {
-  // Build SVG using DOM methods to avoid Vue parser issues
+  // Build SVG using DOM methods so every attribute value is escaped.
   const svgNS = 'http://www.w3.org/2000/svg';
+  const w = 800;
+  const h = 600;
   const svg = document.createElementNS(svgNS, 'svg');
   svg.setAttribute('xmlns', svgNS);
-  svg.setAttribute('width', '800');
-  svg.setAttribute('height', '600');
-  
+  svg.setAttribute('width', String(w));
+  svg.setAttribute('height', String(h));
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+
   const defs = document.createElementNS(svgNS, 'defs');
-  
-  let gradient;
-  if (gradientType.value === 'linear') {
-    gradient = document.createElementNS(svgNS, 'linearGradient');
-    gradient.setAttribute('id', 'grad');
-    const radians = (linearAngle.value * Math.PI) / 180;
-    const x1 = 50 - 50 * Math.cos(radians + Math.PI);
-    const y1 = 50 - 50 * Math.sin(radians + Math.PI);
-    const x2 = 50 + 50 * Math.cos(radians + Math.PI);
-    const y2 = 50 + 50 * Math.sin(radians + Math.PI);
-    gradient.setAttribute('x1', x1 + '%');
-    gradient.setAttribute('y1', y1 + '%');
-    gradient.setAttribute('x2', x2 + '%');
-    gradient.setAttribute('y2', y2 + '%');
-  } else if (gradientType.value === 'radial') {
-    gradient = document.createElementNS(svgNS, 'radialGradient');
-    gradient.setAttribute('id', 'grad');
-    gradient.setAttribute('cx', radialPosition.value.x);
-    gradient.setAttribute('cy', radialPosition.value.y);
-  } else {
-    gradient = document.createElementNS(svgNS, 'linearGradient');
-    gradient.setAttribute('id', 'grad');
-  }
-  
-  colorStops.value.forEach((stop) => {
-    const stopEl = document.createElementNS(svgNS, 'stop');
-    stopEl.setAttribute('offset', stop.position + '%');
-    stopEl.setAttribute('stop-color', stop.color);
-    if (stop.opacity !== 100) {
-      stopEl.setAttribute('stop-opacity', (stop.opacity / 100).toString());
-    }
-    gradient.appendChild(stopEl);
-  });
-  
-  defs.appendChild(gradient);
   svg.appendChild(defs);
-  
-  const rect = document.createElementNS(svgNS, 'rect');
-  rect.setAttribute('width', '800');
-  rect.setAttribute('height', '600');
-  rect.setAttribute('fill', 'url(#grad)');
-  svg.appendChild(rect);
-  
-  const serializer = new XMLSerializer();
-  const svgString = serializer.serializeToString(svg);
-  
-  const blob = new Blob([svgString], { type: 'image/svg+xml' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'gradient.svg';
-  a.click();
-  URL.revokeObjectURL(url);
+
+  const enabled = layers.value.filter((layer) => layer.enabled).reverse();
+  if (enabled.length === 0) {
+    showExportNotice('Enable at least one layer to export.', 'warning');
+    return;
+  }
+  let approximated = false;
+
+  enabled.forEach((layer, i) => {
+    const id = `grad-${i}`;
+    let gradient;
+    if (layer.type === 'radial') {
+      const x = parsePosition(layer.radialPosition.x, w, 'x');
+      const y = parsePosition(layer.radialPosition.y, h, 'y');
+      const { rx, ry } = radialRadii(layer.radialShape, layer.radialSize, x, y, w, h);
+      const r = Math.max(rx, 1);
+      gradient = document.createElementNS(svgNS, 'radialGradient');
+      gradient.setAttribute('gradientUnits', 'userSpaceOnUse');
+      gradient.setAttribute('cx', '0');
+      gradient.setAttribute('cy', '0');
+      gradient.setAttribute('r', String(r));
+      gradient.setAttribute('gradientTransform', `translate(${x} ${y}) scale(1 ${Math.max(ry, 1) / r})`);
+    } else {
+      // SVG has no conic gradient; a conic layer is approximated as linear.
+      if (layer.type === 'conic') approximated = true;
+      const angle = layer.type === 'linear' ? layer.linearAngle : (layer.conicAngle ?? 0) + 90;
+      const { x1, y1, x2, y2 } = linearGradientLine(angle, w, h);
+      gradient = document.createElementNS(svgNS, 'linearGradient');
+      gradient.setAttribute('gradientUnits', 'userSpaceOnUse');
+      gradient.setAttribute('x1', String(x1));
+      gradient.setAttribute('y1', String(y1));
+      gradient.setAttribute('x2', String(x2));
+      gradient.setAttribute('y2', String(y2));
+    }
+    gradient.setAttribute('id', id);
+
+    sortedStops(layer).forEach((stop) => {
+      const stopEl = document.createElementNS(svgNS, 'stop');
+      stopEl.setAttribute('offset', String(clampOffset(stop.position)));
+      stopEl.setAttribute('stop-color', stop.color);
+      if (stop.opacity !== 100) {
+        stopEl.setAttribute('stop-opacity', String((stop.opacity ?? 100) / 100));
+      }
+      gradient.appendChild(stopEl);
+    });
+    defs.appendChild(gradient);
+
+    const rect = document.createElementNS(svgNS, 'rect');
+    rect.setAttribute('width', String(w));
+    rect.setAttribute('height', String(h));
+    rect.setAttribute('fill', `url(#${id})`);
+    if (i > 0 && layer.blendMode && layer.blendMode !== 'normal') {
+      rect.setAttribute('style', `mix-blend-mode: ${layer.blendMode}`);
+    }
+    svg.appendChild(rect);
+  });
+
+  const svgString = new XMLSerializer().serializeToString(svg);
+  downloadBlob(new Blob([svgString], { type: 'image/svg+xml' }), 'gradient.svg');
+  if (approximated) {
+    showExportNotice('SVG has no conic gradients, so conic layers were exported as linear.', 'warning');
+  }
 };
 
 // Color interpolation helper
@@ -1584,42 +1688,73 @@ const contrastRatio = computed(() => {
   return Math.min(...contrastRatios);
 });
 
-// Fetch palettes from backend
+// Turn an API error into a message for the palette panel.
+const paletteErrorMessage = (error, fallback) => {
+  const status = error?.response?.status;
+  if (status === 404) return 'That palette no longer exists.';
+  if (status === 503) return 'Palette storage is unavailable right now. Try again in a moment.';
+  if (status === 401 || status === 403) return 'You are not authorised to load palettes. Check your API key.';
+  if (!error?.response) return 'Could not reach the server. Check your connection and try again.';
+  return error.response.data?.message || fallback;
+};
+
+// Fetch palettes from backend (first page; the API caps pageSize at 200)
 const fetchPalettes = async () => {
+  loadingPalettes.value = true;
   try {
-    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes`);
-    availablePalettes.value = response.data || [];
+    const response = await apiClient.get('/api/palettes', { params: { page: 1, pageSize: 200 } });
+    const data = response.data;
+    availablePalettes.value = Array.isArray(data) ? data : (data?.items ?? []);
+    if (availablePalettes.value.length === 0) {
+      showPaletteNotice('No saved palettes yet. Save one in Palette Builder first.', 'info');
+    } else {
+      clearPaletteNotice();
+    }
   } catch (error) {
     console.error('Error fetching palettes:', error);
-    alert('Error loading palettes. Make sure you have saved palettes in Palette Builder.');
+    showPaletteNotice(paletteErrorMessage(error, 'Error loading palettes.'), 'error');
+  } finally {
+    loadingPalettes.value = false;
   }
 };
 
 // Import colors from selected palette
 const importPaletteColors = async () => {
   if (!selectedPaletteId.value) return;
-  
+
   try {
-    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/${selectedPaletteId.value}`);
-    const palette = response.data;
-    
-    if (palette.colors && palette.colors.length > 0) {
-      const colors = palette.colors.map((c) => c.hex || c);
-      const step = 100 / (colors.length - 1);
-      
-      colorStops.value = colors.map((color, index) => ({
-        id: Date.now() + index,
-        color: typeof color === 'string' ? color : color.hex,
-        position: index * step,
-        opacity: 100,
-      }));
-      
-      updateGradient();
-      alert(`Imported ${colors.length} colors from ${palette.name}`);
+    const response = await apiClient.get(`/api/palettes/${encodeURIComponent(selectedPaletteId.value)}`);
+    const palette = response.data || {};
+    const colors = (palette.colors || [])
+      .map((c) => (typeof c === 'string' ? c : c?.hex))
+      .filter((c) => typeof c === 'string' && /^#?[0-9a-f]{6}$/i.test(c))
+      .map((c) => (c.startsWith('#') ? c : `#${c}`));
+
+    if (colors.length === 0) {
+      showPaletteNotice('That palette has no colors to import.', 'warning');
+      return;
     }
+
+    // A single color still needs two stops to form a gradient.
+    const source = colors.length === 1 ? [colors[0], colors[0]] : colors;
+    const step = 100 / (source.length - 1);
+    const now = Date.now();
+    colorStops.value = source.map((color, index) => ({
+      id: now + index,
+      color,
+      position: Math.round(index * step * 100) / 100,
+      opacity: 100,
+    }));
+
+    updateGradient();
+    showPaletteNotice(`Imported ${colors.length} colors from ${palette.name || 'the palette'}.`, 'success');
   } catch (error) {
     console.error('Error importing palette:', error);
-    alert('Error importing palette colors');
+    showPaletteNotice(paletteErrorMessage(error, 'Error importing palette colors.'), 'error');
+    if (error?.response?.status === 404) {
+      availablePalettes.value = availablePalettes.value.filter((p) => p.id !== selectedPaletteId.value);
+      selectedPaletteId.value = '';
+    }
   }
 };
 
@@ -1642,13 +1777,7 @@ const exportToAdobe = () => {
   };
   
   const json = JSON.stringify(gradientData, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'gradient-adobe.json';
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadBlob(new Blob([json], { type: 'application/json' }), 'gradient-adobe.json');
 };
 
 // Export to Penpot (Penpot JSON format)
@@ -1681,20 +1810,14 @@ const exportToPenpot = () => {
   };
   
   const json = JSON.stringify(gradientData, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'gradient-penpot.json';
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadBlob(new Blob([json], { type: 'application/json' }), 'gradient-penpot.json');
 };
 
 const handleDragStart = (index, event) => {
   draggedIndex.value = index;
   isDragging.value = true;
   event.dataTransfer.effectAllowed = 'move';
-  event.dataTransfer.setData('text/html', event.target);
+  event.dataTransfer.setData('text/plain', String(index));
 };
 
 const handleDragOver = (index, event) => {
@@ -1822,31 +1945,6 @@ const openAccessibilityColorPicker = (event) => {
 onMounted(() => {
   syncCurrentLayer();
   updateGradient();
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
 });
 </script>
 

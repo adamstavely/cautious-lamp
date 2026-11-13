@@ -359,55 +359,73 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const fontSize = ref(16);
 const lineHeight = ref(1.4);
 const letterSpacing = ref(0);
-const selectedRatio = ref('major-third');
+const selectedRatio = ref('perfect-fourth');
 const customRatio = ref(1.333);
 
+// Musical-interval ratios as used by modular type scales.
+const ratios = {
+  'minor-third': 1.2,
+  'major-third': 1.25,
+  'perfect-fourth': 1.333,
+  'perfect-fifth': 1.5,
+  'golden-ratio': 1.618,
+};
+
 const ratioOptions = [
-  { value: 'major-third', label: 'Major Third (1.333)' },
-  { value: 'perfect-fourth', label: 'Perfect Fourth (1.5)' },
-  { value: 'golden-ratio', label: 'Golden Ratio (1.618)' },
   { value: 'minor-third', label: 'Minor Third (1.2)' },
+  { value: 'major-third', label: 'Major Third (1.25)' },
+  { value: 'perfect-fourth', label: 'Perfect Fourth (1.333)' },
+  { value: 'perfect-fifth', label: 'Perfect Fifth (1.5)' },
+  { value: 'golden-ratio', label: 'Golden Ratio (1.618)' },
   { value: 'custom', label: 'Custom' }
 ];
 
-const ratios = {
-  'major-third': 1.333,
-  'perfect-fourth': 1.5,
-  'golden-ratio': 1.618,
-  'minor-third': 1.2,
-  'custom': customRatio.value
-};
+// Inputs are clamped to their min/max so an empty or out-of-range value
+// can't produce NaN or a collapsing scale.
+const baseSize = computed(() => {
+  const n = Number(fontSize.value);
+  if (!Number.isFinite(n) || n <= 0) return 16;
+  return Math.min(72, Math.max(12, n));
+});
 
 const currentRatio = computed(() => {
   if (selectedRatio.value === 'custom') {
-    return customRatio.value;
+    const n = Number(customRatio.value);
+    if (!Number.isFinite(n) || n <= 1) return 1.1;
+    return Math.min(2, Math.max(1.1, n));
   }
-  return ratios[selectedRatio.value];
+  return ratios[selectedRatio.value] ?? ratios['perfect-fourth'];
 });
 
+const round2 = (n) => Math.round(n * 100) / 100;
+
+// Modular scale: each heading level is one step (× ratio) above the next,
+// with h6 and body text at the base size and small text one step below.
 const computedTypographyScale = computed(() => {
   const ratio = currentRatio.value;
-  const baseSize = fontSize.value;
+  const base = baseSize.value;
+  const step = (n) => round2(base * Math.pow(ratio, n));
   return {
-    h1: Math.round(baseSize * Math.pow(ratio, 3)),
-    h2: Math.round(baseSize * Math.pow(ratio, 2)),
-    h3: Math.round(baseSize * ratio),
-    h4: baseSize,
-    h5: Math.round(baseSize / ratio),
-    h6: Math.round(baseSize / Math.pow(ratio, 2)),
-    body: baseSize,
-    small: Math.round(baseSize * 0.875)
+    h1: step(5),
+    h2: step(4),
+    h3: step(3),
+    h4: step(2),
+    h5: step(1),
+    h6: step(0),
+    body: step(0),
+    small: step(-1)
   };
 });
 
@@ -425,6 +443,19 @@ const getSizeLabel = (name) => {
   return labels[name] || name;
 };
 
+const downloadText = (text, type, filename) => {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Revoke once the click has been handled, or the download can be cancelled.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+};
+
 const exportFormat = (format) => {
   const scale = computedTypographyScale.value;
   
@@ -433,94 +464,33 @@ const exportFormat = (format) => {
     Object.entries(scale).forEach(([name, value]) => {
       css += `  --font-size-${name}: ${value}px;\n`;
     });
+    css += `  --line-height: ${lineHeight.value};\n`;
     css += '}\n\n';
     css += '/* Usage example */\n';
     css += '.text-h1 { font-size: var(--font-size-h1); }\n';
     css += '.text-h2 { font-size: var(--font-size-h2); }\n';
     css += '.text-body { font-size: var(--font-size-body); }\n';
-    
-    const blob = new Blob([css], { type: 'text/css' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `font-scale-${Date.now()}.css`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadText(css, 'text/css', `font-scale-${Date.now()}.css`);
   } else if (format === 'tailwind') {
     let config = `// tailwind.config.js\nmodule.exports = {\n  theme: {\n    extend: {\n      fontSize: {\n`;
     Object.entries(scale).forEach(([name, value]) => {
       config += `        '${name}': '${value}px',\n`;
     });
     config += `      },\n    },\n  },\n};\n`;
-    
-    const blob = new Blob([config], { type: 'text/javascript' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `font-scale-tailwind-${Date.now()}.js`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadText(config, 'text/javascript', `font-scale-tailwind-${Date.now()}.js`);
   } else if (format === 'json') {
     const config = {
       type: 'font-scale',
-      base: fontSize.value,
+      base: baseSize.value,
       ratio: currentRatio.value,
       ratioName: selectedRatio.value,
       lineHeight: lineHeight.value,
       letterSpacing: letterSpacing.value,
       scale: scale
     };
-    
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `font-scale-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadText(JSON.stringify(config, null, 2), 'application/json', `font-scale-${Date.now()}.json`);
   }
 };
-
-// Watch for ratio changes
-watch(selectedRatio, (newValue) => {
-  if (newValue === 'custom' && customRatio.value === 1.333) {
-    // Custom ratio is already initialized, no action needed
-  }
-});
-
-
-
-
-
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>

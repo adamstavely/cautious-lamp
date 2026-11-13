@@ -264,6 +264,7 @@
         
         <!-- Step Content -->
         <div class="p-8">
+          <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
           <!-- Step 1: Build Palette -->
           <Step1Build
             v-if="currentStep === 0"
@@ -317,7 +318,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
+import { ref, computed } from 'vue';
 import Step1Build from '../components/Step1Build.vue';
 import Step2Harmony from '../components/Step2Harmony.vue';
 import Step3Contrast from '../components/Step3Contrast.vue';
@@ -325,8 +326,12 @@ import Step4Roles from '../components/Step4Roles.vue';
 import Step5Use from '../components/Step5Use.vue';
 import PaletteHealthScore from '../components/PaletteHealthScore.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 
 const currentStep = ref(0);
 const steps = [
@@ -386,64 +391,10 @@ const prevStep = () => {
   }
 };
 
-const exportPalette = async () => {
-  // Export logic will be implemented
-  console.log('Exporting palette:', palette.value);
-  alert('Palette exported successfully!');
+// Step 5 saves the palette, then emits `export` once it is stored.
+const exportPalette = () => {
+  showNotice('Palette saved successfully.', 'success');
 };
-
-// Watch for dark mode changes and force update
-watch(isDarkMode, () => {
-  // Force a reactive update when dark mode changes
-  nextTick(() => {
-    // Trigger any necessary re-renders
-  });
-});
-
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  // Improved dark mode detection with immediate callback
-  const updateDarkMode = () => {
-    const wasDark = isDarkMode.value;
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-    // Force update if state changed
-    if (wasDark !== isDarkMode.value) {
-      // Trigger reactivity
-      nextTick(() => {});
-    }
-  };
-  
-  darkModeObserver = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-        updateDarkMode();
-      }
-    });
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-    attributeOldValue: true
-  });
-  
-  // Initial check
-  updateDarkMode();
-  
-  // Fallback interval check
-  darkModeInterval = setInterval(updateDarkMode, 50);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>
