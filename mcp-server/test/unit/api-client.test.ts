@@ -223,6 +223,22 @@ describe('ApiClient', () => {
       const request = mockAdapter.history.get[0];
       expect(request.headers?.Authorization).toBe('Bearer test-api-key');
     });
+
+    it('should send per-request headers alongside the API key, without caching', async () => {
+      const { cache } = require('../../src/cache');
+      cache.get.mockClear();
+      cache.set.mockClear();
+      mockAdapter.onGet('/review/r1').reply(200, { id: 'r1' });
+
+      await apiClient.get('/review/r1', {}, 'reviews', { 'x-review-password': 'pw' });
+
+      const request = mockAdapter.history.get[0];
+      expect(request.headers?.['x-review-password']).toBe('pw');
+      expect(request.headers?.Authorization).toBe('Bearer test-api-key');
+      expect(request.params).toEqual({});
+      expect(cache.get).not.toHaveBeenCalled();
+      expect(cache.set).not.toHaveBeenCalled();
+    });
   });
 
   describe('Error handling', () => {

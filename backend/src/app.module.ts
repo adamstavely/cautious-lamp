@@ -26,6 +26,7 @@ import { rateLimitConfig } from './common/rate-limiting/rate-limit.config';
 import { APP_GUARD } from '@nestjs/core';
 import { CustomThrottlerGuard } from './common/rate-limiting/rate-limit.guard';
 import { AppElasticsearchModule } from './common/elasticsearch/elasticsearch.module';
+import { ReviewsModule } from './reviews/reviews.module';
 import { AltTextModule } from './alt-text/alt-text.module';
 
 @Module({
@@ -55,6 +56,7 @@ import { AltTextModule } from './alt-text/alt-text.module';
     SearchModule,
     SecurityModule,
     DesignExtractionModule,
+    ReviewsModule,
   ],
   providers: [
     {

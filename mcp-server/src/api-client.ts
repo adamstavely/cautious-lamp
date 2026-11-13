@@ -190,11 +190,24 @@ export class ApiClient {
     );
   }
 
-  async get<T>(path: string, params?: Record<string, any>, resourceType?: string): Promise<T> {
+  /**
+   * GET with retries. `headers` are sent on this request only (e.g. a review
+   * password, which must never go in the query string). Requests with extra
+   * headers are never cached, since the response can depend on them.
+   */
+  async get<T>(
+    path: string,
+    params?: Record<string, any>,
+    resourceType?: string,
+    headers?: Record<string, string>
+  ): Promise<T> {
     // Try to get from cache first
     // The path is part of the cache key so different endpoints with the same
     // params (e.g. workspace assets vs. icons) never share an entry.
     const cacheParams = { ...params, __path: path };
+    if (headers && Object.keys(headers).length > 0) {
+      resourceType = undefined;
+    }
     if (resourceType) {
       const cached = cache.get<T>(resourceType, cacheParams);
       if (cached !== undefined) {
@@ -207,7 +220,7 @@ export class ApiClient {
     const result = await retryRequest(
       async () => {
         try {
-          const response = await this.client.get<T>(path, { params });
+          const response = await this.client.get<T>(path, headers ? { params, headers } : { params });
           return response.data;
         } catch (error) {
           if (error instanceof Error) {

@@ -1,13 +1,11 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { apiClient } from '../api-client';
-import { rootPath } from '../api-root';
 
 /*
- * Design reviews use the same endpoints as the frontend client
- * (`frontend/src/services/api.js`: reviewAPI, workflowAPI, uploadAPI,
- * commentAPI, adminAPI). Those routes are mounted at the server root
- * (`/review/...`, `/admin/reviews`), not under the `/api/v1` prefix.
+ * Design reviews, per docs/REVIEW_API.md. The routes live under `/api/v1`
+ * (the API client's base URL): `/reviews`, `/review/...`. Review passwords go
+ * in the `x-review-password` header, never in the URL.
  */
 
 export const WORKFLOW_STATES = [
@@ -16,17 +14,16 @@ export const WORKFLOW_STATES = [
   'client_approved',
   'art_director_review',
   'art_director_approved',
-  'ad_changes_requested',
   'creative_director_review',
-  'cd_changes_requested',
   'approved',
-  'rejected',
 ] as const;
 
 export type WorkflowState = (typeof WORKFLOW_STATES)[number];
 
 const workflowStateSchema = z.enum(WORKFLOW_STATES);
-const sharingModeSchema = z.enum(['anyone', 'restricted']);
+const SHARING_MODES = ['anyone', 'approved_emails'] as const;
+const sharingModeSchema = z.enum(SHARING_MODES);
+type SharingMode = (typeof SHARING_MODES)[number];
 
 export interface ReviewVersion {
   id: string;
@@ -34,30 +31,59 @@ export interface ReviewVersion {
   url?: string;
   notes?: string;
   type?: string;
+  filename?: string;
+  contentType?: string | null;
+  size?: number | null;
+  uploadedAt?: string;
+  uploadedBy?: string;
+}
+
+/** `{ [emoji]: [email] }` */
+export type Reactions = Record<string, string[]>;
+
+export interface ReviewReply {
+  id: string;
+  text: string;
+  author?: string;
+  authorEmail?: string | null;
+  timestamp?: string;
+  reactions?: Reactions;
 }
 
 export interface ReviewComment {
   id: string;
   text: string;
-  version?: string;
+  author?: string;
+  authorEmail?: string | null;
+  version?: string | null;
   type?: string;
   resolved?: boolean;
+  annotationId?: string;
+  annotationData?: Record<string, unknown>;
   timestamp?: string;
-  replies?: any[];
-  reactions?: any[];
+  replies?: ReviewReply[];
+  reactions?: Reactions;
 }
 
 export interface Review {
   id: string;
   filename?: string;
-  title?: string;
-  description?: string;
+  sourceType?: 'upload' | 'url';
+  url?: string;
   designer?: string;
   designerEmail?: string;
   teamId?: string | null;
   workflowState?: WorkflowState;
-  workflowHistory?: Array<{ stage: string; action: string; user?: string; timestamp?: string; reason?: string }>;
-  sharingMode?: 'anyone' | 'restricted';
+  workflowHistory?: Array<{
+    stage: string;
+    action: string;
+    user?: string;
+    timestamp?: string;
+    reason?: string;
+    versionLabel?: string;
+  }>;
+  bypassClientReview?: boolean;
+  sharingMode?: SharingMode;
   approvedEmails?: string[];
   versions?: ReviewVersion[];
   comments?: ReviewComment[];
@@ -66,25 +92,26 @@ export interface Review {
   extended?: boolean;
   hasPassword?: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
-/**
- * `GET /admin/reviews` returns a list of review summaries. Accept either a bare
- * array or a `{ reviews: [...] }` envelope.
- */
-function toReviewList(data: Review[] | { reviews?: Review[] }): Review[] {
-  if (Array.isArray(data)) return data;
+/** `GET /reviews` returns `{ reviews, total }`, review summaries without comments or history */
+async function listReviews(filters: { workflowState?: WorkflowState; q?: string; showExpired?: boolean }): Promise<Review[]> {
+  const params: Record<string, string> = {};
+  if (filters.workflowState) params.workflowState = filters.workflowState;
+  if (filters.q) params.q = filters.q;
+  if (filters.showExpired) params.showExpired = 'true';
+  const data = await apiClient.get<{ reviews?: Review[] }>('/reviews', params, 'reviews');
   return Array.isArray(data?.reviews) ? data.reviews : [];
 }
 
-async function listReviews(showExpired?: boolean): Promise<Review[]> {
-  const params = showExpired ? { showExpired: 'true' } : {};
-  const data = await apiClient.get<Review[] | { reviews?: Review[] }>(rootPath('/admin/reviews'), params, 'reviews');
-  return toReviewList(data);
+function reviewPath(reviewId: string, suffix: string = ''): string {
+  return `/review/${encodeURIComponent(reviewId)}${suffix}`;
 }
 
-function reviewPath(reviewId: string, suffix: string = ''): string {
-  return rootPath(`/review/${encodeURIComponent(reviewId)}${suffix}`);
+/** The review password header, when there is one */
+function passwordHeaders(password?: string): Record<string, string> | undefined {
+  return password ? { 'x-review-password': encodeURIComponent(password) } : undefined;
 }
 
 export const getReviewsSchema = z.object({
@@ -113,9 +140,7 @@ export const getReviewsTool: Tool = {
 };
 
 export async function getReviews(args: { workflowState?: WorkflowState; showExpired?: boolean }): Promise<Review[]> {
-  const reviews = await listReviews(args.showExpired);
-  if (!args.workflowState) return reviews;
-  return reviews.filter((review) => (review.workflowState || 'draft') === args.workflowState);
+  return listReviews({ workflowState: args.workflowState, showExpired: args.showExpired });
 }
 
 export const getReviewSchema = z.object({
@@ -143,13 +168,15 @@ export const getReviewTool: Tool = {
 };
 
 export async function getReview(args: { reviewId: string; password?: string }): Promise<Review> {
-  const params = args.password ? { password: args.password } : {};
   // Not cached: the response depends on the password and changes as people comment
-  return await apiClient.get<Review>(reviewPath(args.reviewId), params);
+  return await apiClient.get<Review>(reviewPath(args.reviewId), {}, undefined, passwordHeaders(args.password));
 }
 
 export const createReviewSchema = z.object({
-  url: z.string().url(),
+  url: z
+    .string()
+    .url()
+    .refine((value) => /^https?:\/\//i.test(value), { message: 'url must be http(s)' }),
   password: z.string().optional(),
   bypassClientReview: z.boolean().optional(),
   sharingMode: sharingModeSchema.optional(),
@@ -177,14 +204,14 @@ export const createReviewTool: Tool = {
       },
       sharingMode: {
         type: 'string',
-        enum: ['anyone', 'restricted'],
+        enum: [...SHARING_MODES],
         description: 'Who can open the review link',
         default: 'anyone',
       },
       approvedEmails: {
         type: 'array',
         items: { type: 'string' },
-        description: 'Emails allowed to open the review when sharingMode is restricted',
+        description: 'Emails allowed to open the review when sharingMode is approved_emails',
       },
     },
     required: ['url'],
@@ -195,10 +222,10 @@ export async function createReview(args: {
   url: string;
   password?: string;
   bypassClientReview?: boolean;
-  sharingMode?: 'anyone' | 'restricted';
+  sharingMode?: SharingMode;
   approvedEmails?: string[];
-}): Promise<{ reviewId: string }> {
-  return await apiClient.post<{ reviewId: string }>(rootPath('/review/create-from-url'), {
+}): Promise<{ reviewId: string; review?: Review }> {
+  return await apiClient.post<{ reviewId: string; review?: Review }>('/review/create-from-url', {
     url: args.url,
     password: args.password,
     bypassClientReview: args.bypassClientReview ?? false,
@@ -273,13 +300,13 @@ export const updateReviewTool: Tool = {
       },
       sharingMode: {
         type: 'string',
-        enum: ['anyone', 'restricted'],
+        enum: [...SHARING_MODES],
         description: 'New sharing mode (required for update_sharing)',
       },
       approvedEmails: {
         type: 'array',
         items: { type: 'string' },
-        description: 'Emails allowed when sharingMode is restricted (update_sharing only)',
+        description: 'Emails allowed when sharingMode is approved_emails (update_sharing only)',
       },
     },
     required: ['reviewId', 'action'],
@@ -292,7 +319,7 @@ export async function updateReview(args: {
   stage?: WorkflowState;
   reason?: string;
   targetStage?: WorkflowState;
-  sharingMode?: 'anyone' | 'restricted';
+  sharingMode?: SharingMode;
   approvedEmails?: string[];
 }): Promise<Review> {
   switch (args.action) {
@@ -301,7 +328,7 @@ export async function updateReview(args: {
     case 'reject':
       return await apiClient.post<Review>(
         reviewPath(args.reviewId, '/workflow/reject'),
-        { stage: args.stage, reason: args.reason ?? null },
+        args.reason !== undefined ? { stage: args.stage, reason: args.reason } : { stage: args.stage },
         'reviews'
       );
     case 'move_to_client_review':
@@ -335,7 +362,7 @@ export const searchReviewsSchema = z.object({
 
 export const searchReviewsTool: Tool = {
   name: 'search_reviews',
-  description: 'Search design reviews by filename, title, description, or designer',
+  description: 'Search design reviews by filename, designer or designer email',
   inputSchema: {
     type: 'object',
     properties: {
@@ -363,21 +390,14 @@ export async function searchReviews(args: {
   workflowState?: WorkflowState;
   showExpired?: boolean;
 }): Promise<Review[]> {
-  const reviews = await getReviews({ workflowState: args.workflowState, showExpired: args.showExpired });
-
-  const queryLower = args.query.toLowerCase();
-  return reviews.filter(
-    (review) =>
-      review.filename?.toLowerCase().includes(queryLower) ||
-      review.title?.toLowerCase().includes(queryLower) ||
-      review.description?.toLowerCase().includes(queryLower) ||
-      review.designer?.toLowerCase().includes(queryLower)
-  );
+  // The server matches `q` against filename, designer and designer email
+  return listReviews({ q: args.query, workflowState: args.workflowState, showExpired: args.showExpired });
 }
 
 export const getReviewCommentsSchema = z.object({
   reviewId: z.string().min(1),
   versionId: z.string().optional(),
+  password: z.string().optional(),
 });
 
 export const getReviewCommentsTool: Tool = {
@@ -394,14 +414,27 @@ export const getReviewCommentsTool: Tool = {
         type: 'string',
         description: 'Only return comments on this version',
       },
+      password: {
+        type: 'string',
+        description: 'Password, if the review is password protected',
+      },
     },
     required: ['reviewId'],
   },
 };
 
-export async function getReviewComments(args: { reviewId: string; versionId?: string }): Promise<ReviewComment[]> {
+export async function getReviewComments(args: {
+  reviewId: string;
+  versionId?: string;
+  password?: string;
+}): Promise<ReviewComment[]> {
   const params = args.versionId ? { versionId: args.versionId } : {};
-  return await apiClient.get<ReviewComment[]>(reviewPath(args.reviewId, '/comments'), params);
+  return await apiClient.get<ReviewComment[]>(
+    reviewPath(args.reviewId, '/comments'),
+    params,
+    undefined,
+    passwordHeaders(args.password)
+  );
 }
 
 export const addReviewCommentSchema = z.object({
@@ -428,11 +461,11 @@ export const addReviewCommentTool: Tool = {
       },
       version: {
         type: 'string',
-        description: 'Version ID the comment applies to',
+        description: 'Version ID the comment applies to (defaults to the latest version)',
       },
       type: {
         type: 'string',
-        description: 'Comment type',
+        description: 'Comment type (defaults to general)',
       },
       resolved: {
         type: 'boolean',
@@ -451,10 +484,8 @@ export async function addReviewComment(args: {
   type?: string;
   resolved?: boolean;
 }): Promise<ReviewComment> {
-  return await apiClient.post<ReviewComment>(reviewPath(args.reviewId, '/comments'), {
-    text: args.text,
-    version: args.version,
-    type: args.type,
-    resolved: args.resolved ?? false,
-  });
+  const body: Record<string, unknown> = { text: args.text, resolved: args.resolved ?? false };
+  if (args.version !== undefined) body.version = args.version;
+  if (args.type !== undefined) body.type = args.type;
+  return await apiClient.post<ReviewComment>(reviewPath(args.reviewId, '/comments'), body);
 }
