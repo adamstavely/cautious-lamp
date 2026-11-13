@@ -111,32 +111,56 @@ const stateNameMap = {
   'D.C.': 'District of Columbia'
 };
 
+// TopoJSON files are bundled under public/maps (see public/maps/README.md) and
+// loaded from there first; the jsDelivr copies they were taken from are the fallback.
+const BASE = (import.meta.env && import.meta.env.BASE_URL) || '/';
+const US_STATES = {
+  local: `${BASE}maps/states-10m.json`,
+  cdn: 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json'
+};
+const WORLD_COUNTRIES = {
+  local: `${BASE}maps/countries-110m.json`,
+  cdn: 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
+};
+const CDN_FALLBACKS = {
+  [US_STATES.local]: US_STATES.cdn,
+  [WORLD_COUNTRIES.local]: WORLD_COUNTRIES.cdn
+};
+
+async function fetchJSON(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to load TopoJSON (${response.status} ${response.statusText})`);
+  }
+  return response.json();
+}
+
 /**
- * Load TopoJSON data from URL or local file
+ * Load TopoJSON data from URL or local file. A bundled /maps/ file falls back
+ * to its CDN copy if it cannot be loaded. Concurrent requests share one fetch.
  * @param {string} url - URL or path to TopoJSON file
  * @returns {Promise<Object>} Parsed TopoJSON object
  */
-export async function loadTopoJSON(url) {
-  // Check cache first
+export function loadTopoJSON(url) {
   if (topoJsonCache.has(url)) {
     return topoJsonCache.get(url);
   }
 
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to load TopoJSON: ${response.statusText}`);
+  const request = (async () => {
+    try {
+      return await fetchJSON(url);
+    } catch (error) {
+      const fallback = CDN_FALLBACKS[url];
+      if (!fallback) throw error;
+      console.warn(`Could not load ${url}, falling back to ${fallback}:`, error);
+      return fetchJSON(fallback);
     }
-    const topoJson = await response.json();
-    
-    // Cache the result
-    topoJsonCache.set(url, topoJson);
-    
-    return topoJson;
-  } catch (error) {
-    console.error('Error loading TopoJSON:', error);
-    throw error;
-  }
+  })();
+
+  topoJsonCache.set(url, request);
+  // Do not cache failures, so a later attempt can retry.
+  request.catch(() => topoJsonCache.delete(url));
+  return request;
 }
 
 /**
@@ -165,8 +189,9 @@ export function getGeoJSONFeatures(topoJson, objectName) {
  * @returns {string} Normalized state name
  */
 export function normalizeStateName(name) {
-  if (!name) return name;
-  return stateNameMap[name] || name;
+  if (typeof name !== 'string') return name;
+  const trimmed = name.trim();
+  return stateNameMap[trimmed] || stateNameMap[trimmed.toUpperCase()] || trimmed;
 }
 
 /**
@@ -177,6 +202,9 @@ export function normalizeStateName(name) {
  * @returns {Object|null} Matching feature or null
  */
 export function findFeatureByName(features, name, propertyName = 'name') {
+  if (name === null || name === undefined) return null;
+  name = String(name).trim();
+  if (!name) return null;
   const normalizedName = normalizeStateName(name);
   
   // Try exact match first
@@ -193,8 +221,8 @@ export function findFeatureByName(features, name, propertyName = 'name') {
     });
   }
   
-  // Try partial match
-  if (!feature) {
+  // Try partial match (only for names long enough to be meaningful)
+  if (!feature && normalizedName.length >= 3) {
     feature = features.find(f => {
       const propValue = f.properties?.[propertyName];
       return propValue && propValue.toLowerCase().includes(normalizedName.toLowerCase());
@@ -240,13 +268,33 @@ export function mapDataToFeatures(dataRegions, features, propertyName = 'name') 
 }
 
 /**
+ * Match data regions to features, keyed by the feature's own name, so lookups
+ * from the feature side work whatever spelling the user typed ("CA" and
+ * "California" both colour California). Later rows win over earlier ones.
+ * @param {Array} dataRegions - Array of data objects with name/value
+ * @param {Array} features - Array of GeoJSON features
+ * @param {string} propertyName - Feature property to match against (default: 'name')
+ * @returns {Map} Map of feature name to the data region for it
+ */
+export function mapDataByFeatureName(dataRegions, features, propertyName = 'name') {
+  const mapping = new Map();
+  (dataRegions || []).forEach(region => {
+    const feature = findFeatureByName(features, region?.name, propertyName);
+    if (feature) {
+      mapping.set(feature.properties?.[propertyName], region);
+    }
+  });
+  return mapping;
+}
+
+/**
  * Get default TopoJSON URLs
  * @returns {Object} Object with US and world map URLs
  */
 export function getDefaultMapUrls() {
   return {
-    us: 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json',
-    world: 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
+    us: US_STATES.local,
+    world: WORLD_COUNTRIES.local
   };
 }
 
@@ -258,10 +306,10 @@ export function getDefaultMapUrls() {
  */
 export function getCountryMapUrl(countryName) {
   const countryMap = {
-    'United States': 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json',
-    'United States of America': 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json',
-    'USA': 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json',
-    'US': 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json'
+    'United States': US_STATES.local,
+    'United States of America': US_STATES.local,
+    'USA': US_STATES.local,
+    'US': US_STATES.local
   };
   
   return countryMap[countryName] || null;

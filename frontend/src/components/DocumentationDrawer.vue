@@ -1622,7 +1622,8 @@ const dataVizUtilities = [
 
 const dataVizGuidance = [
   { text: 'Types of Dashboards', link: '/data-viz/types-of-dashboards', icon: 'dashboard' },
-  { text: 'Dashboard Patterns', link: '/data-viz/dashboard-patterns', icon: 'pattern' }
+  { text: 'Dashboard Patterns', link: '/data-viz/dashboard-patterns', icon: 'pattern' },
+  { text: 'Dashboard Design', link: '/data-viz/dashboard-design', icon: 'space_dashboard' }
 ];
 
 const showAdmin = computed(() => {
@@ -1683,7 +1684,8 @@ const showDataViz = computed(() => {
   }
   // Also show for data visualization tool routes
   if (path === '/tools/chart-builder' || path === '/tools/timeline-generator' || 
-      path === '/tools/table-generator' || path === '/tools/color-scale') {
+      path === '/tools/table-generator' || path === '/tools/color-scale' ||
+      path === '/tools/map-maker') {
     return true;
   }
   return false;
@@ -1697,7 +1699,8 @@ const showTools = computed(() => {
   if (path === '/tools/nasa-tlx' || path === '/tools/sus' || path === '/tools/heuristic-evaluation' || 
       path === '/theme-builder' || path === '/tools/visual-regression' ||
       path === '/tools/chart-builder' || path === '/tools/timeline-generator' || 
-      path === '/tools/table-generator' || path === '/tools/color-scale') {
+      path === '/tools/table-generator' || path === '/tools/color-scale' ||
+      path === '/tools/map-maker') {
     return false;
   }
   // Include reference pages in Tools drawer

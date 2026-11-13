@@ -1,18 +1,34 @@
 import { geoAlbersUsa, geoMercator, geoEqualEarth, geoPath } from 'd3-geo';
 
 /**
+ * Inner extent [[x0, y0], [x1, y1]] for fitting, keeping padding on each side
+ * but never collapsing below 1px.
+ */
+function fitExtent(width, height, padding = 0) {
+  const p = Math.max(0, Math.min(padding, width / 4, height / 4));
+  return [[p, p], [Math.max(p + 1, width - p), Math.max(p + 1, height - p)]];
+}
+
+/**
  * Create Albers USA projection for US states
- * This projection is optimized for the continental US, Alaska, and Hawaii
+ * This projection is optimized for the continental US, Alaska, and Hawaii.
+ * With `fitObject` (GeoJSON, e.g. the states) the projection is fitted to the
+ * container; otherwise it is scaled from d3's reference size (1070 at 960x600)
+ * so it still fits small containers.
  * @param {number} width - SVG width
  * @param {number} height - SVG height
+ * @param {Object|null} fitObject - GeoJSON object to fit (optional)
+ * @param {number} padding - Padding in pixels when fitting (default: 10)
  * @returns {Object} D3 projection function
  */
-export function createUSProjection(width, height) {
-  const projection = geoAlbersUsa()
-    .scale(1070)
+export function createUSProjection(width, height, fitObject = null, padding = 10) {
+  const projection = geoAlbersUsa();
+  if (fitObject) {
+    return projection.fitExtent(fitExtent(width, height, padding), fitObject);
+  }
+  return projection
+    .scale(1070 * Math.min(width / 960, height / 600))
     .translate([width / 2, height / 2]);
-  
-  return projection;
 }
 
 /**
@@ -31,8 +47,8 @@ export function createWorldMercatorProjection(width, height, center = [0, 0], sc
   if (scale !== null) {
     projection.scale(scale);
   } else {
-    // Auto-calculate scale based on width
-    projection.scale(width / (2 * Math.PI));
+    // Fit the full 360° of longitude (and roughly ±85° latitude) in the box
+    projection.scale(Math.min(width, height) / (2 * Math.PI));
   }
   
   return projection;
@@ -47,17 +63,14 @@ export function createWorldMercatorProjection(width, height, center = [0, 0], sc
  * @returns {Object} D3 projection function
  */
 export function createWorldEqualEarthProjection(width, height, center = [0, 0], scale = null) {
+  if (scale === null && center[0] === 0 && center[1] === 0) {
+    // Fit the whole globe to the box, whatever its aspect ratio
+    return geoEqualEarth().fitExtent(fitExtent(width, height, 10), { type: 'Sphere' });
+  }
   const projection = geoEqualEarth()
     .center(center)
     .translate([width / 2, height / 2]);
-  
-  if (scale !== null) {
-    projection.scale(scale);
-  } else {
-    // Auto-calculate scale based on width
-    projection.scale(width / 2.5);
-  }
-  
+  projection.scale(scale !== null ? scale : width / 5.5);
   return projection;
 }
 
@@ -100,19 +113,12 @@ export function getProjectionBounds(projection, features) {
  * @returns {Object} Updated projection
  */
 export function fitProjectionToFeatures(projection, features, width, height, padding = 20) {
-  const path = createPathGenerator(projection);
-  const bounds = path.bounds({ type: 'FeatureCollection', features });
-  
-  const dx = bounds[1][0] - bounds[0][0];
-  const dy = bounds[1][1] - bounds[0][1];
-  const x = (bounds[0][0] + bounds[1][0]) / 2;
-  const y = (bounds[0][1] + bounds[1][1]) / 2;
-  const scale = Math.min((width - padding * 2) / dx, (height - padding * 2) / dy);
-  const translate = [width / 2 - scale * x, height / 2 - scale * y];
-  
-  return projection
-    .scale(scale)
-    .translate(translate);
+  // d3's fitExtent resets scale/translate before measuring, so the result does
+  // not depend on the projection's previous state.
+  return projection.fitExtent(
+    fitExtent(width, height, padding),
+    { type: 'FeatureCollection', features }
+  );
 }
 
 /**
@@ -155,20 +161,16 @@ export function invertCoordinates(projection, x, y) {
  * @param {number} width - SVG width
  * @param {number} height - SVG height
  * @param {string} projectionType - 'mercator' or 'equalEarth' for world maps (default: 'equalEarth')
+ * @param {Object|null} fitObject - GeoJSON to fit the projection to (optional; used for US maps)
  * @returns {Object} D3 projection function
  */
-export function createProjection(mapType, width, height, projectionType = 'equalEarth') {
-  if (mapType === 'us') {
-    return createUSProjection(width, height);
-  } else if (mapType === 'world') {
+export function createProjection(mapType, width, height, projectionType = 'equalEarth', fitObject = null) {
+  if (mapType === 'world') {
     if (projectionType === 'mercator') {
       return createWorldMercatorProjection(width, height);
-    } else {
-      return createWorldEqualEarthProjection(width, height);
     }
-  } else {
-    // Default to US projection
-    return createUSProjection(width, height);
+    return createWorldEqualEarthProjection(width, height);
   }
+  // 'us' and anything else
+  return createUSProjection(width, height, fitObject);
 }
-
