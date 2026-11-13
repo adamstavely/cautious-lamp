@@ -78,8 +78,9 @@
                 <!-- File Upload -->
                 <div
                   @drop.prevent="handleDrop"
-                  @dragover.prevent
-                  @dragenter.prevent
+                  @dragover.prevent="isDragging = true"
+                  @dragenter.prevent="isDragging = true"
+                  @dragleave.prevent="isDragging = false"
                   class="border-2 border-dashed rounded-lg p-8 text-center transition-colors mb-4"
                   :class="isDragging
                     ? (isDarkMode 
@@ -92,7 +93,7 @@
                   <input
                     ref="fileInput"
                     type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/gif"
+                    accept="image/png,image/jpeg,image/gif"
                     @change="handleFileSelect"
                     class="hidden"
                   />
@@ -232,6 +233,8 @@
                   </label>
                 </div>
 
+                <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
+
                 <!-- Compress Button -->
                 <button
                   @click="compressImage"
@@ -290,8 +293,11 @@
                       </div>
                       <div class="flex items-center justify-between pt-2 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
                         <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Reduction:</span>
-                        <span class="text-sm font-semibold" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">
+                        <span v-if="compressionPercentage >= 0" class="text-sm font-semibold" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">
                           {{ compressionPercentage }}% ({{ formatFileSize((selectedFile?.size || 0) - compressedSize) }} saved)
+                        </span>
+                        <span v-else class="text-sm font-semibold" :class="isDarkMode ? 'text-amber-400' : 'text-amber-600'">
+                          {{ -compressionPercentage }}% larger ({{ formatFileSize(compressedSize - (selectedFile?.size || 0)) }} more)
                         </span>
                       </div>
                     </div>
@@ -331,13 +337,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
+
+const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/gif'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const EXTENSIONS = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
 
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 const isDragging = ref(false);
 const isCompressing = ref(false);
 const selectedFile = ref(null);
@@ -351,199 +365,216 @@ const maxHeight = ref(null);
 const maintainAspectRatio = ref(true);
 const compressedBlob = ref(null);
 const compressedSize = ref(0);
+// Bumped whenever the selected file changes, so late async results for an old
+// file (FileReader, image decode, toBlob) are ignored.
+let fileToken = 0;
 
 const compressionPercentage = computed(() => {
-  if (!selectedFile.value || compressedSize.value === 0) return 0;
+  if (!selectedFile.value || compressedSize.value === 0 || !selectedFile.value.size) return 0;
   const originalSize = selectedFile.value.size;
   const reduction = ((originalSize - compressedSize.value) / originalSize) * 100;
   return Math.round(reduction);
 });
 
-
-
-
+const isAcceptedImage = (file) => ACCEPTED_TYPES.includes(file.type);
 
 const handleDrop = (e) => {
   isDragging.value = false;
-  const files = e.dataTransfer.files;
-  if (files.length > 0) {
-    const file = files[0];
-    if (file.type.startsWith('image/') && ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'].includes(file.type)) {
-      processFile(file);
-    } else {
-      alert('Please upload a PNG, JPG, or GIF image file.');
-    }
+  const file = e.dataTransfer?.files?.[0];
+  if (!file) return;
+  if (isAcceptedImage(file)) {
+    processFile(file);
+  } else {
+    showNotice('Please upload a PNG, JPG, or GIF image file.', 'error');
   }
 };
 
 const handleFileSelect = (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    if (file.type.startsWith('image/') && ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'].includes(file.type)) {
-      processFile(file);
-    } else {
-      alert('Please select a PNG, JPG, or GIF image file.');
-    }
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (isAcceptedImage(file)) {
+    processFile(file);
+  } else {
+    showNotice('Please select a PNG, JPG, or GIF image file.', 'error');
+    e.target.value = '';
   }
 };
 
 const processFile = (file) => {
-  if (file.size > 10 * 1024 * 1024) {
-    alert('File size must be less than 10MB.');
+  if (file.size > MAX_FILE_SIZE) {
+    showNotice('File size must be less than 10MB.', 'error');
     return;
   }
-  
+
+  clearNotice();
+  const token = ++fileToken;
   selectedFile.value = file;
   compressedBlob.value = null;
   compressedSize.value = 0;
-  
+  imageWidth.value = 0;
+  imageHeight.value = 0;
+
   // Create preview
   const reader = new FileReader();
   reader.onload = (e) => {
+    if (token !== fileToken) return;
     previewUrl.value = e.target.result;
-    
-    // Get image dimensions
+
     const img = new Image();
     img.onload = () => {
-      imageWidth.value = img.width;
-      imageHeight.value = img.height;
+      if (token !== fileToken) return;
+      imageWidth.value = img.naturalWidth;
+      imageHeight.value = img.naturalHeight;
+    };
+    img.onerror = () => {
+      if (token !== fileToken) return;
+      showNotice('That file could not be read as an image.', 'error');
+      clearFile();
     };
     img.src = e.target.result;
+  };
+  reader.onerror = () => {
+    if (token !== fileToken) return;
+    showNotice('That file could not be read.', 'error');
   };
   reader.readAsDataURL(file);
 };
 
 const clearFile = () => {
+  fileToken++;
   selectedFile.value = null;
   previewUrl.value = null;
   imageWidth.value = 0;
   imageHeight.value = 0;
   compressedBlob.value = null;
   compressedSize.value = 0;
+  isCompressing.value = false;
   if (fileInput.value) {
     fileInput.value.value = '';
   }
 };
 
 const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 Bytes';
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 Bytes';
   const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 };
 
-const compressImage = async () => {
-  if (!selectedFile.value) {
-    return;
-  }
+/** A positive pixel limit from a number input, or null when empty/0/negative/invalid. */
+const positiveLimit = (value) => {
+  const n = Number(value);
+  return value !== '' && value !== null && Number.isFinite(n) && n > 0 ? n : null;
+};
 
+const targetDimensions = (width, height) => {
+  const limitW = positiveLimit(maxWidth.value);
+  const limitH = positiveLimit(maxHeight.value);
+
+  if (maintainAspectRatio.value) {
+    const scale = Math.min(1, limitW ? limitW / width : 1, limitH ? limitH / height : 1);
+    return {
+      width: Math.max(1, Math.round(width * scale)),
+      height: Math.max(1, Math.round(height * scale)),
+    };
+  }
+  return {
+    width: Math.max(1, Math.round(limitW ? Math.min(width, limitW) : width)),
+    height: Math.max(1, Math.round(limitH ? Math.min(height, limitH) : height)),
+  };
+};
+
+const loadImage = (src) =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Image failed to load'));
+    img.src = src;
+  });
+
+const canvasToBlob = (canvas, mimeType, quality) =>
+  new Promise((resolve) => canvas.toBlob(resolve, mimeType, quality));
+
+const readAsDataUrl = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+
+const compressImage = async () => {
+  if (!selectedFile.value || isCompressing.value) return;
+
+  const file = selectedFile.value;
+  const token = fileToken;
   isCompressing.value = true;
+  clearNotice();
+  const url = URL.createObjectURL(file);
 
   try {
-    // Read the image file
-    const arrayBuffer = await selectedFile.value.arrayBuffer();
-    const blob = new Blob([arrayBuffer], { type: selectedFile.value.type });
-    const url = URL.createObjectURL(blob);
-    
-    const img = new Image();
-    img.onload = () => {
-      // Calculate new dimensions
-      let newWidth = img.width;
-      let newHeight = img.height;
-      
-      if (maxWidth.value && img.width > maxWidth.value) {
-        newWidth = maxWidth.value;
-        if (maintainAspectRatio.value) {
-          newHeight = (img.height / img.width) * newWidth;
-        }
-      }
-      
-      if (maxHeight.value && newHeight > maxHeight.value) {
-        newHeight = maxHeight.value;
-        if (maintainAspectRatio.value && !maxWidth.value) {
-          newWidth = (img.width / img.height) * newHeight;
-        }
-      }
-      
-      // Create a canvas and draw the image
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(newWidth);
-      canvas.height = Math.round(newHeight);
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      
-      // Determine output format and quality
-      let mimeType = selectedFile.value.type;
-      let quality = compressionQuality.value / 100;
-      
-      // For PNG, we can't use quality parameter, so we'll convert to JPEG if quality is low
-      if (mimeType === 'image/png' && compressionQuality.value < 80) {
-        mimeType = 'image/jpeg';
-      }
-      
-      // Convert canvas to blob
-      canvas.toBlob((compressedBlobResult) => {
-        if (compressedBlobResult) {
-          compressedBlob.value = compressedBlobResult;
-          compressedSize.value = compressedBlobResult.size;
-          
-          // Update preview
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            previewUrl.value = e.target.result;
-            imageWidth.value = canvas.width;
-            imageHeight.value = canvas.height;
-          };
-          reader.readAsDataURL(compressedBlobResult);
-        }
-        URL.revokeObjectURL(url);
-        isCompressing.value = false;
-      }, mimeType, quality);
-    };
-    
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      alert('Failed to compress image. Please try again.');
-      isCompressing.value = false;
-    };
-    
-    img.src = url;
+    const img = await loadImage(url);
+    const { width, height } = targetDimensions(img.naturalWidth, img.naturalHeight);
+
+    // Canvas can't encode GIF, and PNG ignores the quality setting. JPEG is used
+    // for JPEG input, and for PNG/GIF input below 80% quality (lossy); otherwise
+    // PNG (lossless) is kept.
+    const mimeType = file.type === 'image/jpeg' || compressionQuality.value < 80 ? 'image/jpeg' : 'image/png';
+    const quality = Math.min(1, Math.max(0.1, compressionQuality.value / 100));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas 2D context unavailable');
+    if (mimeType === 'image/jpeg') {
+      // JPEG has no alpha: paint transparent areas white rather than black.
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+    }
+    ctx.drawImage(img, 0, 0, width, height);
+
+    const result = await canvasToBlob(canvas, mimeType, quality);
+    if (!result) throw new Error('Canvas produced no output');
+    const dataUrl = await readAsDataUrl(result);
+    if (token !== fileToken) return;
+
+    compressedBlob.value = result;
+    compressedSize.value = result.size;
+    previewUrl.value = dataUrl;
+    imageWidth.value = width;
+    imageHeight.value = height;
+
+    if (file.type !== result.type) {
+      showNotice(`Converted to ${EXTENSIONS[result.type]?.toUpperCase() || result.type} for compression.`, 'info');
+    } else if (result.size >= file.size) {
+      showNotice('The compressed image is not smaller than the original. Try a lower quality or smaller dimensions.', 'warning');
+    }
   } catch (error) {
     console.error('Compression error:', error);
-    alert('Failed to compress image. Please try again.');
-    isCompressing.value = false;
+    if (token === fileToken) showNotice('Failed to compress image. Please try again.', 'error');
+  } finally {
+    URL.revokeObjectURL(url);
+    if (token === fileToken) isCompressing.value = false;
   }
 };
 
 const downloadCompressed = () => {
-  if (!compressedBlob.value) return;
-  
+  if (!compressedBlob.value || !selectedFile.value) return;
+
   const url = URL.createObjectURL(compressedBlob.value);
   const a = document.createElement('a');
   a.href = url;
-  const originalName = selectedFile.value.name.replace(/\.[^/.]+$/, '');
-  const extension = compressedBlob.value.type === 'image/jpeg' ? 'jpg' : 
-                    compressedBlob.value.type === 'image/png' ? 'png' : 
-                    compressedBlob.value.type === 'image/gif' ? 'gif' : 'jpg';
+  const originalName = selectedFile.value.name.replace(/\.[^/.]+$/, '') || 'image';
+  const extension = EXTENSIONS[compressedBlob.value.type] || 'img';
   a.download = `${originalName}-compressed.${extension}`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Revoke after the click has been handled so the download isn't cancelled.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 };
-
-onMounted(() => {
-  // Watch for dark mode changes
-  const observer = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-});
 </script>
 
 <style scoped>

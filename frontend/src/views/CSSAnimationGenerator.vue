@@ -255,7 +255,7 @@
                 <div class="space-y-4">
                   <div 
                     v-for="(keyframe, index) in keyframes" 
-                    :key="index"
+                    :key="keyframe.id"
                     class="p-4 rounded-lg border"
                     :class="isDarkMode ? 'bg-slate-700 border-gray-600' : 'bg-gray-50 border-gray-200'"
                   >
@@ -264,7 +264,7 @@
                         class="font-medium text-sm"
                         :class="isDarkMode ? 'text-white' : 'text-gray-900'"
                       >
-                        Keyframe {{ index === 0 ? 'From (0%)' : index === keyframes.length - 1 ? 'To (100%)' : `${keyframe.offset * 100}%` }}
+                        Keyframe {{ index === 0 ? 'From (0%)' : index === keyframes.length - 1 ? 'To (100%)' : `${formatOffset(keyframe.offset)}%` }}
                       </h5>
                       <button
                         v-if="keyframes.length > 2"
@@ -302,12 +302,14 @@
                         class="flex items-center gap-2"
                       >
                         <input 
+                          :id="`kf-${keyframe.id}-${property.name}`"
                           type="checkbox"
                           :checked="keyframe.properties[property.name] !== undefined"
                           @change="toggleProperty(keyframe, property.name, $event.target.checked)"
                           class="rounded"
                         />
                         <label 
+                          :for="`kf-${keyframe.id}-${property.name}`"
                           class="text-xs flex-1 cursor-pointer"
                           :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
                         >
@@ -346,19 +348,33 @@
               class="rounded-lg border p-6 mb-6" 
               :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
             >
-              <h4 
-                class="font-semibold mb-4 flex items-center gap-2" 
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-              >
-                <span class="material-symbols-outlined text-indigo-600">preview</span>
-                Live Preview
-              </h4>
+              <div class="flex items-center justify-between mb-4">
+                <h4 
+                  class="font-semibold flex items-center gap-2" 
+                  :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+                >
+                  <span class="material-symbols-outlined text-indigo-600">preview</span>
+                  Live Preview
+                </h4>
+                <button
+                  type="button"
+                  @click="replayPreview"
+                  class="px-3 py-1.5 text-xs rounded-lg border font-medium transition-colors flex items-center gap-1"
+                  :class="isDarkMode
+                    ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
+                >
+                  <span class="material-symbols-outlined text-sm">replay</span>
+                  Replay
+                </button>
+              </div>
               <div 
                 class="w-full h-64 rounded-lg flex items-center justify-center"
                 :class="isDarkMode ? 'bg-slate-900' : 'bg-gray-100'"
               >
                 <div 
-                  class="w-24 h-24 rounded-lg flex items-center justify-center font-medium transition-all"
+                  :key="previewKey"
+                  class="w-24 h-24 rounded-lg flex items-center justify-center font-medium"
                   :style="computedAnimationStyle"
                   :class="isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white'"
                 >
@@ -420,12 +436,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watchEffect, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const animationName = ref('fadeIn');
 const duration = ref(300);
@@ -446,20 +463,26 @@ const animatableProperties = [
   { name: 'boxShadow', label: 'Box Shadow', type: 'text', placeholder: '0 4px 6px rgba(0,0,0,0.1)' }
 ];
 
+// Sensible starting values when a property is switched on (placeholders such
+// as "0-1" are hints, not valid CSS values).
+const propertyDefaults = {
+  opacity: 1,
+  transform: 'translateX(0)',
+  backgroundColor: '#6366f1',
+  color: '#ffffff',
+  width: '96px',
+  height: '96px',
+  borderRadius: '8px',
+  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+};
+
+let keyframeIdCounter = 0;
+const withId = (kf) => ({ id: keyframeIdCounter++, offset: kf.offset, properties: { ...kf.properties } });
+
 const keyframes = ref([
-  {
-    offset: 0,
-    properties: {
-      opacity: 0
-    }
-  },
-  {
-    offset: 1,
-    properties: {
-      opacity: 1
-    }
-  }
-]);
+  { offset: 0, properties: { opacity: 0 } },
+  { offset: 1, properties: { opacity: 1 } }
+].map(withId));
 
 const presets = [
   {
@@ -523,63 +546,118 @@ const presets = [
   }
 ];
 
-const computedAnimationStyle = computed(() => {
-  const keyframeString = keyframes.value.map(kf => {
-    const offset = Math.round(kf.offset * 100);
-    const props = Object.entries(kf.properties)
-      .map(([key, value]) => {
-        // Convert camelCase to kebab-case for CSS
-        const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-        return `      ${cssKey}: ${value};`;
-      })
-      .join('\n');
-    return `  ${offset}% {\n${props}\n  }`;
-  }).join('\n\n');
-  
-  const animationId = `animation-${animationName.value}`;
-  
-  // Inject style into document
-  let styleEl = document.getElementById(animationId);
-  if (!styleEl) {
-    styleEl = document.createElement('style');
-    styleEl.id = animationId;
-    document.head.appendChild(styleEl);
+const toKebab = (key) => key.replace(/([A-Z])/g, '-$1').toLowerCase();
+
+// The name is used as a CSS identifier: keep it to letters, digits, - and _,
+// never starting with a digit, so it can't break out of the generated CSS.
+const safeName = computed(() => {
+  const cleaned = String(animationName.value || '').trim().replace(/[^a-zA-Z0-9_-]/g, '').replace(/^-+/, '');
+  if (!cleaned) return 'animation';
+  // Identifiers can't start with a digit; CSS-wide keywords and "none" aren't valid names.
+  if (/^\d/.test(cleaned) || ['none', 'initial', 'inherit', 'unset', 'revert', 'default'].includes(cleaned.toLowerCase())) {
+    return `anim-${cleaned}`;
   }
-  
-  const css = `@keyframes ${animationName.value} {\n${keyframeString}\n}\n\n.${animationId}-preview {\n  animation: ${animationName.value} ${duration.value}ms ${timingFunction.value} ${delay.value}ms ${iterationCount.value} ${direction.value} ${fillMode.value};\n}`;
-  
-  styleEl.textContent = css;
-  
-  // Build inline styles from first keyframe
-  const firstKeyframe = keyframes.value[0];
+  return cleaned;
+});
+
+// Property values must not close the declaration/block they sit in.
+const safeValue = (value) => String(value ?? '').replace(/[{};<>]/g, '').trim();
+
+const clampOffset = (offset) => {
+  const n = Number(offset);
+  return offset === '' || !Number.isFinite(n) ? 0 : Math.min(1, Math.max(0, n));
+};
+
+const formatOffset = (offset) => Math.round(clampOffset(offset) * 10000) / 100;
+
+const msValue = (value, { allowNegative = false } = {}) => {
+  const n = Number(value);
+  if (value === '' || value === null || !Number.isFinite(n)) return 0;
+  return allowNegative ? n : Math.max(0, n);
+};
+
+// animation-iteration-count: "infinite" or a non-negative number.
+const safeIterationCount = computed(() => {
+  const raw = String(iterationCount.value ?? '').trim().toLowerCase();
+  if (raw === 'infinite') return 'infinite';
+  const n = Number(raw);
+  return raw !== '' && Number.isFinite(n) && n >= 0 ? String(n) : '1';
+});
+
+// Keyframes in offset order, with only properties that have a value.
+const orderedKeyframes = computed(() =>
+  [...keyframes.value]
+    .map((kf) => ({
+      offset: formatOffset(kf.offset),
+      properties: Object.entries(kf.properties)
+        .map(([key, value]) => [key, safeValue(value)])
+        .filter(([, value]) => value !== '')
+    }))
+    .sort((a, b) => a.offset - b.offset)
+);
+
+const animationShorthand = computed(() =>
+  `${safeName.value} ${msValue(duration.value)}ms ${timingFunction.value} ${msValue(delay.value, { allowNegative: true })}ms ${safeIterationCount.value} ${direction.value} ${fillMode.value}`
+);
+
+const keyframesCss = (indent) =>
+  orderedKeyframes.value.map((kf) => {
+    const props = kf.properties
+      .map(([key, value]) => `${indent}  ${toKebab(key)}: ${value};`)
+      .join('\n');
+    return `${indent}${kf.offset}% {\n${props}\n${indent}}`;
+  }).join('\n\n');
+
+// One <style> element for this page's preview, kept in sync and removed on unmount.
+const styleEl = document.createElement('style');
+styleEl.setAttribute('data-css-animation-generator', '');
+document.head.appendChild(styleEl);
+
+watchEffect(() => {
+  styleEl.textContent = `@keyframes ${safeName.value} {\n${keyframesCss('  ')}\n}`;
+});
+
+onBeforeUnmount(() => {
+  styleEl.remove();
+});
+
+const computedAnimationStyle = computed(() => {
+  // Before the animation starts (with a delay), show the first keyframe.
   const inlineStyles = {};
-  Object.entries(firstKeyframe.properties).forEach(([key, value]) => {
-    const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-    inlineStyles[cssKey] = value;
+  const first = orderedKeyframes.value[0];
+  first?.properties.forEach(([key, value]) => {
+    inlineStyles[toKebab(key)] = value;
   });
-  
+
   return {
     ...inlineStyles,
-    animation: `${animationName.value} ${duration.value}ms ${timingFunction.value} ${delay.value}ms ${iterationCount.value} ${direction.value} ${fillMode.value}`
+    animation: animationShorthand.value
   };
 });
+
+const previewKey = ref(0);
+const replayPreview = () => {
+  previewKey.value++;
+};
 
 const toggleProperty = (keyframe, propertyName, enabled) => {
   if (enabled) {
     const property = animatableProperties.find(p => p.name === propertyName);
-    keyframe.properties[propertyName] = property?.placeholder || '';
+    keyframe.properties[propertyName] = propertyDefaults[propertyName] ?? property?.placeholder ?? '';
   } else {
     delete keyframe.properties[propertyName];
   }
 };
 
 const addKeyframe = () => {
-  keyframes.value.splice(keyframes.value.length - 1, 0, {
-    offset: 0.5,
+  // Insert halfway between the last two keyframes (the end keyframe stays last).
+  const list = keyframes.value;
+  const before = clampOffset(list[list.length - 2]?.offset ?? 0);
+  const after = clampOffset(list[list.length - 1]?.offset ?? 1);
+  list.splice(list.length - 1, 0, withId({
+    offset: Math.round(((before + after) / 2) * 100) / 100,
     properties: {}
-  });
-  // Sort by offset
-  keyframes.value.sort((a, b) => a.offset - b.offset);
+  }));
 };
 
 const removeKeyframe = (index) => {
@@ -590,102 +668,64 @@ const removeKeyframe = (index) => {
 
 const loadPreset = (preset) => {
   animationName.value = preset.name.toLowerCase().replace(/\s+/g, '');
-  keyframes.value = JSON.parse(JSON.stringify(preset.keyframes));
+  keyframes.value = preset.keyframes.map(withId);
   duration.value = preset.duration || 300;
   timingFunction.value = preset.timingFunction || 'ease';
-  if (preset.iterationCount) {
-    iterationCount.value = preset.iterationCount;
-  }
+  // Reset, so e.g. Bounce (infinite) followed by Fade doesn't stay infinite.
+  iterationCount.value = preset.iterationCount || '1';
+  replayPreview();
+};
+
+const downloadFile = (content, type, filename) => {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
 const exportFormat = (format) => {
-  const keyframeString = keyframes.value.map(kf => {
-    const offset = Math.round(kf.offset * 100);
-    const props = Object.entries(kf.properties)
-      .map(([key, value]) => {
-        const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-        return `    ${cssKey}: ${value};`;
-      })
-      .join('\n');
-    return `  ${offset}% {\n${props}\n  }`;
-  }).join('\n\n');
-  
+  const name = safeName.value;
+
   if (format === 'css') {
-    const css = `@keyframes ${animationName.value} {\n${keyframeString}\n}\n\n.animated-element {\n  animation: ${animationName.value} ${duration.value}ms ${timingFunction.value} ${delay.value}ms ${iterationCount.value} ${direction.value} ${fillMode.value};\n}\n`;
-    const blob = new Blob([css], { type: 'text/css' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `animation-${animationName.value}-${Date.now()}.css`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const css = `@keyframes ${name} {\n${keyframesCss('  ')}\n}\n\n.animated-element {\n  animation: ${animationShorthand.value};\n}\n`;
+    downloadFile(css, 'text/css', `animation-${name}-${Date.now()}.css`);
   } else if (format === 'tailwind') {
-    const config = `// tailwind.config.js\nmodule.exports = {\n  theme: {\n    extend: {\n      keyframes: {\n        '${animationName.value}': {\n${keyframeString}\n        },\n      },\n      animation: {\n        '${animationName.value}': '${animationName.value} ${duration.value}ms ${timingFunction.value} ${delay.value}ms ${iterationCount.value} ${direction.value} ${fillMode.value}',\n      },\n    },\n  },\n};\n`;
-    const blob = new Blob([config], { type: 'text/javascript' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `animation-${animationName.value}-tailwind-${Date.now()}.js`;
-    a.click();
-    URL.revokeObjectURL(url);
+    // Tailwind expects keyframes as a JS object: { '0%': { opacity: '0' } }.
+    const keyframeObject = {};
+    orderedKeyframes.value.forEach((kf) => {
+      const props = {};
+      kf.properties.forEach(([key, value]) => {
+        props[key] = value;
+      });
+      keyframeObject[`${kf.offset}%`] = props;
+    });
+    const keyframesJs = JSON.stringify(keyframeObject, null, 2).replace(/\n/g, '\n        ');
+    const config = `// tailwind.config.js\nmodule.exports = {\n  theme: {\n    extend: {\n      keyframes: {\n        ${JSON.stringify(name)}: ${keyframesJs},\n      },\n      animation: {\n        ${JSON.stringify(name)}: ${JSON.stringify(animationShorthand.value)},\n      },\n    },\n  },\n};\n`;
+    downloadFile(config, 'text/javascript', `animation-${name}-tailwind-${Date.now()}.js`);
   } else if (format === 'json') {
     const config = {
       type: 'css-animation',
-      name: animationName.value,
-      duration: duration.value,
-      delay: delay.value,
+      name,
+      duration: msValue(duration.value),
+      delay: msValue(delay.value, { allowNegative: true }),
       timingFunction: timingFunction.value,
-      iterationCount: iterationCount.value,
+      iterationCount: safeIterationCount.value,
       direction: direction.value,
       fillMode: fillMode.value,
-      keyframes: keyframes.value.map(kf => ({
-        offset: kf.offset,
-        properties: kf.properties
+      keyframes: orderedKeyframes.value.map((kf) => ({
+        offset: kf.offset / 100,
+        properties: Object.fromEntries(kf.properties)
       }))
     };
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `animation-${animationName.value}-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(JSON.stringify(config, null, 2), 'application/json', `animation-${name}-${Date.now()}.json`);
   }
 };
 
-
-
-
-
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>

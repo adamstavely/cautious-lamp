@@ -402,12 +402,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const previewDarkMode = ref(false);
 let shadowIdCounter = 0;
@@ -425,22 +426,54 @@ const shadows = ref([
   }
 ]);
 
+// Number inputs bound with v-model.number yield '' when cleared; treat that
+// (and anything non-numeric) as 0 so the generated CSS stays valid.
+const toNumber = (value, fallback = 0) => {
+  const n = Number(value);
+  return value === '' || value === null || !Number.isFinite(n) ? fallback : n;
+};
+
+const px = (value) => {
+  const n = toNumber(value);
+  return n === 0 ? '0' : `${n}px`;
+};
+
+const hexToRgba = (hex, opacity) => {
+  let value = String(hex || '').trim().replace(/^#/, '');
+  if (/^[0-9a-fA-F]{3}$/.test(value)) {
+    value = value.split('').map((c) => c + c).join('');
+  }
+  if (!/^[0-9a-fA-F]{6}$/.test(value)) value = '000000';
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  const alpha = Math.min(1, Math.max(0, toNumber(opacity, 1)));
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 const computedBoxShadow = computed(() => {
   const shadowStrings = shadows.value.map(shadow => {
     const rgba = hexToRgba(shadow.color, shadow.opacity);
     const inset = shadow.inset ? 'inset ' : '';
-    return `${inset}${shadow.x}px ${shadow.y}px ${shadow.blur}px ${shadow.spread}px ${rgba}`;
+    // Blur radius can't be negative in CSS (the whole declaration would be dropped).
+    const blur = Math.max(0, toNumber(shadow.blur));
+    return `${inset}${px(shadow.x)} ${px(shadow.y)} ${px(blur)} ${px(shadow.spread)} ${rgba}`;
   });
   return {
     boxShadow: shadowStrings.join(', ')
   };
 });
 
-const hexToRgba = (hex, opacity) => {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+const downloadFile = (content, type, filename) => {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
 const addShadow = () => {
@@ -479,42 +512,25 @@ const loadPreset = (size) => {
 const exportFormat = (format) => {
   if (format === 'css') {
     const css = `.shadow-custom {\n  box-shadow: ${computedBoxShadow.value.boxShadow};\n}\n`;
-    const blob = new Blob([css], { type: 'text/css' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `box-shadow-${Date.now()}.css`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(css, 'text/css', `box-shadow-${Date.now()}.css`);
   } else if (format === 'tailwind') {
     const config = `// tailwind.config.js\nmodule.exports = {\n  theme: {\n    extend: {\n      boxShadow: {\n        'custom': '${computedBoxShadow.value.boxShadow}',\n      },\n    },\n  },\n};\n`;
-    const blob = new Blob([config], { type: 'text/javascript' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `box-shadow-tailwind-${Date.now()}.js`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(config, 'text/javascript', `box-shadow-tailwind-${Date.now()}.js`);
   } else if (format === 'json') {
     const config = {
       type: 'box-shadow',
       shadows: shadows.value.map(s => ({
-        x: s.x,
-        y: s.y,
-        blur: s.blur,
-        spread: s.spread,
+        x: toNumber(s.x),
+        y: toNumber(s.y),
+        blur: Math.max(0, toNumber(s.blur)),
+        spread: toNumber(s.spread),
         color: s.color,
-        opacity: s.opacity,
+        opacity: Math.min(1, Math.max(0, toNumber(s.opacity, 1))),
         inset: s.inset
-      }))
+      })),
+      css: computedBoxShadow.value.boxShadow
     };
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `box-shadow-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(JSON.stringify(config, null, 2), 'application/json', `box-shadow-${Date.now()}.json`);
   }
 };
 
@@ -522,35 +538,6 @@ const exportFormat = (format) => {
 
 
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>

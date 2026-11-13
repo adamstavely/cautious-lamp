@@ -161,8 +161,8 @@
                       :class="isDarkMode ? 'bg-slate-700 accent-indigo-500' : 'bg-gray-200 accent-indigo-600'"
                     />
                     <div class="flex justify-between text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                      <span>Slow</span>
                       <span>Fast</span>
+                      <span>Slow</span>
                     </div>
                   </div>
 
@@ -214,6 +214,8 @@
                   
                   <div class="flex items-center justify-center p-12 rounded-lg min-h-[300px]"
                     :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'"
+                    role="status"
+                    aria-label="Loading"
                   >
                     <!-- Spinner -->
                     <div v-if="config.style === 'spinner'" 
@@ -234,6 +236,7 @@
                     <!-- Bars -->
                     <div v-if="config.style === 'bars'" 
                       class="flex gap-1 items-end"
+                      :style="{ height: getSizeValue().spinner }"
                     >
                       <div 
                         v-for="i in 5"
@@ -247,12 +250,12 @@
                       class="w-full space-y-3"
                     >
                       <div 
-                        v-for="row in config.skeletonRows"
+                        v-for="row in skeletonRowCount"
                         :key="row"
                         class="flex gap-3"
                       >
                         <div 
-                          v-for="col in config.skeletonColumns"
+                          v-for="col in skeletonColumnCount"
                           :key="col"
                           :style="getSkeletonStyles()"
                         ></div>
@@ -320,6 +323,7 @@
                           Copy
                         </button>
                       </div>
+                      <InlineNotice :notice="notice" class="mb-2" @dismiss="clearNotice" />
                       <textarea
                         :value="generatedCode"
                         readonly
@@ -341,13 +345,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
 
 const spinnerStyles = [
   { label: 'Spinner', value: 'spinner', icon: 'refresh' },
@@ -374,26 +382,58 @@ const config = ref({
 
 const selectedExportFormat = ref('react');
 
-const getSizeValue = () => {
-  const sizeMap = {
-    sm: { spinner: '32px', dot: '8px', bar: '4px', pulse: '32px' },
-    md: { spinner: '48px', dot: '12px', bar: '6px', pulse: '48px' },
-    lg: { spinner: '64px', dot: '16px', bar: '8px', pulse: '64px' }
-  };
-  return sizeMap[config.value.size];
+const SIZE_MAP = {
+  sm: { spinner: '32px', dot: '8px', bar: '4px', pulse: '32px' },
+  md: { spinner: '48px', dot: '12px', bar: '6px', pulse: '48px' },
+  lg: { spinner: '64px', dot: '16px', bar: '8px', pulse: '64px' }
 };
+const BAR_HEIGHTS = ['20%', '40%', '60%', '40%', '20%'];
+
+const KEYFRAMES = {
+  spinner: '@keyframes spinner-rotate {\n  from { transform: rotate(0deg); }\n  to { transform: rotate(360deg); }\n}',
+  dots: '@keyframes spinner-dot-bounce {\n  0%, 80%, 100% { transform: translateY(0); opacity: 0.7; }\n  40% { transform: translateY(-10px); opacity: 1; }\n}',
+  bars: '@keyframes spinner-bar-bounce {\n  0%, 100% { transform: scaleY(0.4); }\n  50% { transform: scaleY(1); }\n}',
+  skeleton: '@keyframes skeleton-pulse {\n  0%, 100% { opacity: 0.1; }\n  50% { opacity: 0.2; }\n}',
+  pulse: '@keyframes spinner-pulse-scale {\n  0%, 100% { transform: scale(1); opacity: 1; }\n  50% { transform: scale(1.2); opacity: 0.7; }\n}'
+};
+
+const clampInt = (value, min, max, fallback) => {
+  const n = Math.round(Number(value));
+  return value === '' || !Number.isFinite(n) ? fallback : Math.min(max, Math.max(min, n));
+};
+
+// Number inputs can be cleared or typed out of range; v-for needs a sane integer.
+const skeletonRowCount = computed(() => clampInt(config.value.skeletonRows, 1, 10, 3));
+const skeletonColumnCount = computed(() => clampInt(config.value.skeletonColumns, 1, 5, 2));
+
+const speed = computed(() => {
+  const n = Number(config.value.speed);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+});
+
+// The text colour input accepts anything; "#rrggbb" + "20" is only valid for
+// 6-digit hex, so expand 3-digit hex and fall back to color-mix otherwise.
+const withAlpha = (color, alphaHex = '20') => {
+  const value = String(color || '').trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(value)) return `${value}${alphaHex}`;
+  if (/^#[0-9a-fA-F]{3}$/.test(value)) {
+    return `#${value.slice(1).split('').map((c) => c + c).join('')}${alphaHex}`;
+  }
+  const percent = Math.round((parseInt(alphaHex, 16) / 255) * 1000) / 10;
+  return `color-mix(in srgb, ${value || '#6366f1'} ${percent}%, transparent)`;
+};
+
+const getSizeValue = () => SIZE_MAP[config.value.size] || SIZE_MAP.md;
 
 const getSpinnerStyles = () => {
   const sizes = getSizeValue();
   return {
     width: sizes.spinner,
     height: sizes.spinner,
-    border: `4px solid ${config.value.color}20`,
+    border: `4px solid ${withAlpha(config.value.color)}`,
     borderTop: `4px solid ${config.value.color}`,
     borderRadius: '50%',
-    animation: `spinner-rotate ${config.value.speed}s linear infinite`,
-    '--spinner-color': config.value.color,
-    '--spinner-speed': `${config.value.speed}s`
+    animation: `spinner-rotate ${speed.value}s linear infinite`
   };
 };
 
@@ -404,25 +444,21 @@ const getDotStyles = (index) => {
     height: sizes.dot,
     backgroundColor: config.value.color,
     borderRadius: '50%',
-    animation: `spinner-dot-bounce ${config.value.speed}s ease-in-out infinite`,
-    animationDelay: `${(index - 1) * 0.15}s`,
-    '--spinner-color': config.value.color,
-    '--spinner-speed': `${config.value.speed}s`
+    animation: `spinner-dot-bounce ${speed.value}s ease-in-out infinite`,
+    animationDelay: `${(index - 1) * 0.15}s`
   };
 };
 
 const getBarStyles = (index) => {
   const sizes = getSizeValue();
-  const heights = ['20%', '40%', '60%', '40%', '20%'];
   return {
     width: sizes.bar,
-    height: heights[index - 1],
+    height: BAR_HEIGHTS[index - 1],
     backgroundColor: config.value.color,
     borderRadius: '2px',
-    animation: `spinner-bar-bounce ${config.value.speed}s ease-in-out infinite`,
-    animationDelay: `${(index - 1) * 0.1}s`,
-    '--spinner-color': config.value.color,
-    '--spinner-speed': `${config.value.speed}s`
+    transformOrigin: 'bottom',
+    animation: `spinner-bar-bounce ${speed.value}s ease-in-out infinite`,
+    animationDelay: `${(index - 1) * 0.1}s`
   };
 };
 
@@ -433,9 +469,7 @@ const getSkeletonStyles = () => {
     borderRadius: '4px',
     height: '60px',
     flex: 1,
-    animation: `skeleton-pulse ${config.value.speed}s ease-in-out infinite`,
-    '--spinner-color': config.value.color,
-    '--spinner-speed': `${config.value.speed}s`
+    animation: `skeleton-pulse ${speed.value}s ease-in-out infinite`
   };
 };
 
@@ -446,227 +480,283 @@ const getPulseStyles = () => {
     height: sizes.pulse,
     backgroundColor: config.value.color,
     borderRadius: '50%',
-    animation: `spinner-pulse-scale ${config.value.speed}s ease-in-out infinite`,
-    '--spinner-color': config.value.color,
-    '--spinner-speed': `${config.value.speed}s`
+    animation: `spinner-pulse-scale ${speed.value}s ease-in-out infinite`
   };
+};
+
+const COMPONENT_NAMES = {
+  spinner: 'Spinner',
+  dots: 'DotsSpinner',
+  bars: 'BarsSpinner',
+  skeleton: 'SkeletonLoader',
+  pulse: 'PulseLoader'
+};
+
+// JSX markup per style; `s` is the size entry for the chosen size.
+const reactMarkup = (style) => ({
+  spinner: `<div
+        style={{
+          width: sizes.spinner,
+          height: sizes.spinner,
+          border: \`4px solid \${trackColor}\`,
+          borderTopColor: color,
+          borderRadius: '50%',
+          animation: \`spinner-rotate \${speed}s linear infinite\`
+        }}
+      />`,
+  dots: `<div style={{ display: 'flex', gap: '0.5rem' }}>
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            style={{
+              width: sizes.dot,
+              height: sizes.dot,
+              borderRadius: '50%',
+              backgroundColor: color,
+              animation: \`spinner-dot-bounce \${speed}s ease-in-out infinite\`,
+              animationDelay: \`\${i * 0.15}s\`
+            }}
+          />
+        ))}
+      </div>`,
+  bars: `<div style={{ display: 'flex', gap: '0.25rem', alignItems: 'flex-end', height: sizes.spinner }}>
+        {BAR_HEIGHTS.map((height, i) => (
+          <div
+            key={i}
+            style={{
+              width: sizes.bar,
+              height,
+              borderRadius: '2px',
+              backgroundColor: color,
+              transformOrigin: 'bottom',
+              animation: \`spinner-bar-bounce \${speed}s ease-in-out infinite\`,
+              animationDelay: \`\${i * 0.1}s\`
+            }}
+          />
+        ))}
+      </div>`,
+  skeleton: `<div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {Array.from({ length: rows }).map((_, rowIndex) => (
+          <div key={rowIndex} style={{ display: 'flex', gap: '0.75rem' }}>
+            {Array.from({ length: columns }).map((_, colIndex) => (
+              <div
+                key={colIndex}
+                style={{
+                  flex: 1,
+                  height: '60px',
+                  borderRadius: '4px',
+                  backgroundColor: color,
+                  opacity: 0.1,
+                  animation: \`skeleton-pulse \${speed}s ease-in-out infinite\`
+                }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>`,
+  pulse: `<div
+        style={{
+          width: sizes.pulse,
+          height: sizes.pulse,
+          borderRadius: '50%',
+          backgroundColor: color,
+          animation: \`spinner-pulse-scale \${speed}s ease-in-out infinite\`
+        }}
+      />`
+}[style]);
+
+const vueMarkup = (style) => ({
+  spinner: `<div
+      :style="{
+        width: sizes.spinner,
+        height: sizes.spinner,
+        border: \`4px solid \${trackColor}\`,
+        borderTopColor: color,
+        borderRadius: '50%',
+        animation: \`spinner-rotate \${speed}s linear infinite\`
+      }"
+    ></div>`,
+  dots: `<div style="display: flex; gap: 0.5rem">
+      <div
+        v-for="i in 3"
+        :key="i"
+        :style="{
+          width: sizes.dot,
+          height: sizes.dot,
+          borderRadius: '50%',
+          backgroundColor: color,
+          animation: \`spinner-dot-bounce \${speed}s ease-in-out infinite\`,
+          animationDelay: \`\${(i - 1) * 0.15}s\`
+        }"
+      ></div>
+    </div>`,
+  bars: `<div :style="{ display: 'flex', gap: '0.25rem', alignItems: 'flex-end', height: sizes.spinner }">
+      <div
+        v-for="(height, i) in BAR_HEIGHTS"
+        :key="i"
+        :style="{
+          width: sizes.bar,
+          height,
+          borderRadius: '2px',
+          backgroundColor: color,
+          transformOrigin: 'bottom',
+          animation: \`spinner-bar-bounce \${speed}s ease-in-out infinite\`,
+          animationDelay: \`\${i * 0.1}s\`
+        }"
+      ></div>
+    </div>`,
+  skeleton: `<div style="width: 100%; display: flex; flex-direction: column; gap: 0.75rem">
+      <div v-for="row in rows" :key="row" style="display: flex; gap: 0.75rem">
+        <div
+          v-for="col in columns"
+          :key="col"
+          :style="{
+            flex: 1,
+            height: '60px',
+            borderRadius: '4px',
+            backgroundColor: color,
+            opacity: 0.1,
+            animation: \`skeleton-pulse \${speed}s ease-in-out infinite\`
+          }"
+        ></div>
+      </div>
+    </div>`,
+  pulse: `<div
+      :style="{
+        width: sizes.pulse,
+        height: sizes.pulse,
+        borderRadius: '50%',
+        backgroundColor: color,
+        animation: \`spinner-pulse-scale \${speed}s ease-in-out infinite\`
+      }"
+    ></div>`
+}[style]);
+
+const cssMarkup = (style) => {
+  const sizes = getSizeValue();
+  const color = config.value.color;
+  const s = speed.value;
+  switch (style) {
+    case 'dots':
+      return {
+        css: `.loader-dots {\n  display: flex;\n  gap: 0.5rem;\n}\n\n.loader-dots > span {\n  width: ${sizes.dot};\n  height: ${sizes.dot};\n  border-radius: 50%;\n  background-color: ${color};\n  animation: spinner-dot-bounce ${s}s ease-in-out infinite;\n}\n\n.loader-dots > span:nth-child(2) { animation-delay: 0.15s; }\n.loader-dots > span:nth-child(3) { animation-delay: 0.3s; }`,
+        html: '<div class="loader-dots" role="status" aria-label="Loading"><span></span><span></span><span></span></div>'
+      };
+    case 'bars':
+      return {
+        css: `.loader-bars {\n  display: flex;\n  gap: 0.25rem;\n  align-items: flex-end;\n  height: ${sizes.spinner};\n}\n\n.loader-bars > span {\n  width: ${sizes.bar};\n  border-radius: 2px;\n  background-color: ${color};\n  transform-origin: bottom;\n  animation: spinner-bar-bounce ${s}s ease-in-out infinite;\n}\n\n${BAR_HEIGHTS.map((h, i) => `.loader-bars > span:nth-child(${i + 1}) { height: ${h}; animation-delay: ${Math.round(i * 10) / 100}s; }`).join('\n')}`,
+        html: '<div class="loader-bars" role="status" aria-label="Loading"><span></span><span></span><span></span><span></span><span></span></div>'
+      };
+    case 'skeleton':
+      return {
+        css: `.skeleton {\n  display: flex;\n  flex-direction: column;\n  gap: 0.75rem;\n}\n\n.skeleton-row {\n  display: flex;\n  gap: 0.75rem;\n}\n\n.skeleton-cell {\n  flex: 1;\n  height: 60px;\n  border-radius: 4px;\n  background-color: ${color};\n  opacity: 0.1;\n  animation: skeleton-pulse ${s}s ease-in-out infinite;\n}`,
+        html: `<div class="skeleton" role="status" aria-label="Loading">\n${Array.from({ length: skeletonRowCount.value }, () => `  <div class="skeleton-row">${'<div class="skeleton-cell"></div>'.repeat(skeletonColumnCount.value)}</div>`).join('\n')}\n</div>`
+      };
+    case 'pulse':
+      return {
+        css: `.loader-pulse {\n  width: ${sizes.pulse};\n  height: ${sizes.pulse};\n  border-radius: 50%;\n  background-color: ${color};\n  animation: spinner-pulse-scale ${s}s ease-in-out infinite;\n}`,
+        html: '<div class="loader-pulse" role="status" aria-label="Loading"></div>'
+      };
+    default:
+      return {
+        css: `.spinner {\n  width: ${sizes.spinner};\n  height: ${sizes.spinner};\n  border: 4px solid ${withAlpha(color)};\n  border-top-color: ${color};\n  border-radius: 50%;\n  animation: spinner-rotate ${s}s linear infinite;\n}`,
+        html: '<div class="spinner" role="status" aria-label="Loading"></div>'
+      };
+  }
 };
 
 const generatedCode = computed(() => {
-  const sizes = getSizeValue();
-  
+  const style = config.value.style in KEYFRAMES ? config.value.style : 'spinner';
+  const name = COMPONENT_NAMES[style];
+  const q = (value) => JSON.stringify(String(value ?? ''));
+  const keyframes = KEYFRAMES[style];
+  const isSkeleton = style === 'skeleton';
+
   if (selectedExportFormat.value === 'react') {
-    if (config.value.style === 'spinner') {
-      return `import React from 'react';
+    return `import React from 'react';
 
-export interface SpinnerProps {
+const KEYFRAMES = ${JSON.stringify(keyframes)};
+
+const SIZE_MAP: Record<string, Record<string, string>> = ${JSON.stringify(SIZE_MAP, null, 2)};
+${style === 'bars' ? `\nconst BAR_HEIGHTS = ${JSON.stringify(BAR_HEIGHTS)};\n` : ''}
+export interface ${name}Props {
   size?: 'sm' | 'md' | 'lg';
   color?: string;
+  trackColor?: string;
   speed?: number;
+  label?: string;${isSkeleton ? '\n  rows?: number;\n  columns?: number;' : ''}
 }
 
-export const Spinner: React.FC<SpinnerProps> = ({
-  size = '${config.value.size}',
-  color = '${config.value.color}',
-  speed = ${config.value.speed}
+export const ${name}: React.FC<${name}Props> = ({
+  size = ${q(config.value.size)},
+  color = ${q(config.value.color)},
+  trackColor = ${q(withAlpha(config.value.color))},
+  speed = ${speed.value},
+  label = 'Loading'${isSkeleton ? `,\n  rows = ${skeletonRowCount.value},\n  columns = ${skeletonColumnCount.value}` : ''}
 }) => {
-  const sizeMap = {
-    sm: '32px',
-    md: '48px',
-    lg: '64px'
-  };
-  
+  const sizes = SIZE_MAP[size] || SIZE_MAP.md;
+
   return (
-    <div
-      className="inline-block rounded-full"
-      style={{
-        width: sizeMap[size],
-        height: sizeMap[size],
-        border: \`4px solid \${color}20\`,
-        borderTop: \`4px solid \${color}\`,
-        animation: \`spinner-rotate \${speed}s linear infinite\`
-      }}
-    />
-  );
-};
-
-<style jsx>{\`
-  @keyframes spinner-rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-\`}</style>`;
-    } else if (config.value.style === 'dots') {
-      return `import React from 'react';
-
-export interface DotsSpinnerProps {
-  size?: 'sm' | 'md' | 'lg';
-  color?: string;
-  speed?: number;
-}
-
-export const DotsSpinner: React.FC<DotsSpinnerProps> = ({
-  size = '${config.value.size}',
-  color = '${config.value.color}',
-  speed = ${config.value.speed}
-}) => {
-  const sizeMap = {
-    sm: '8px',
-    md: '12px',
-    lg: '16px'
-  };
-  
-  return (
-    <div className="flex gap-2">
-      {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="rounded-full"
-          style={{
-            width: sizeMap[size],
-            height: sizeMap[size],
-            backgroundColor: color,
-            animation: \`spinner-dot-bounce \${speed}s ease-in-out infinite\`,
-            animationDelay: \`\${(i - 1) * 0.15}s\`
-          }}
-        />
-      ))}
+    <div role="status" aria-label={label}${isSkeleton ? ' style={{ width: \'100%\' }}' : ''}>
+      <style>{KEYFRAMES}</style>
+      ${reactMarkup(style)}
     </div>
   );
-};
-
-<style jsx>{\`
-  @keyframes spinner-dot-bounce {
-    0%, 80%, 100% { transform: translateY(0); opacity: 0.7; }
-    40% { transform: translateY(-10px); opacity: 1; }
+};`;
   }
-\`}</style>`;
-    } else if (config.value.style === 'skeleton') {
-      return `import React from 'react';
 
-export interface SkeletonLoaderProps {
-  rows?: number;
-  columns?: number;
-  color?: string;
-  speed?: number;
-}
+  if (selectedExportFormat.value === 'vue') {
+    const templateOpen = String.fromCharCode(60) + 'template' + String.fromCharCode(62);
+    const templateClose = String.fromCharCode(60) + '/' + 'template' + String.fromCharCode(62);
+    const scriptSetupOpen = String.fromCharCode(60) + 'script setup' + String.fromCharCode(62);
+    const scriptClose = String.fromCharCode(60) + '/' + 'script' + String.fromCharCode(62);
+    return templateOpen + `
+  <div role="status" :aria-label="label"${isSkeleton ? ' style="width: 100%"' : ''}>
+    ${vueMarkup(style)}
+  </div>
+` + templateClose + `
 
-export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
-  rows = ${config.value.skeletonRows},
-  columns = ${config.value.skeletonColumns},
-  color = '${config.value.color}',
-  speed = ${config.value.speed}
-}) => {
-  return (
-    <div className="w-full space-y-3">
-      {Array.from({ length: rows }).map((_, rowIndex) => (
-        <div key={rowIndex} className="flex gap-3">
-          {Array.from({ length: columns }).map((_, colIndex) => (
-            <div
-              key={colIndex}
-              className="flex-1 rounded"
-              style={{
-                height: '60px',
-                backgroundColor: color,
-                opacity: 0.1,
-                animation: \`skeleton-pulse \${speed}s ease-in-out infinite\`
-              }}
-            />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-};
+` + scriptSetupOpen + `
+import { computed } from 'vue';
 
-<style jsx>{\`
-  @keyframes skeleton-pulse {
-    0%, 100% { opacity: 0.1; }
-    50% { opacity: 0.2; }
+const props = defineProps({
+  size: { type: String, default: ${q(config.value.size)} },
+  color: { type: String, default: ${q(config.value.color)} },
+  trackColor: { type: String, default: ${q(withAlpha(config.value.color))} },
+  speed: { type: Number, default: ${speed.value} },
+  label: { type: String, default: 'Loading' }${isSkeleton ? `,\n  rows: { type: Number, default: ${skeletonRowCount.value} },\n  columns: { type: Number, default: ${skeletonColumnCount.value} }` : ''}
+});
+
+const SIZE_MAP = ${JSON.stringify(SIZE_MAP, null, 2)};
+${style === 'bars' ? `const BAR_HEIGHTS = ${JSON.stringify(BAR_HEIGHTS)};\n` : ''}
+const sizes = computed(() => SIZE_MAP[props.size] || SIZE_MAP.md);
+` + scriptClose + `
+
+<style>
+${keyframes}
+</style>`;
   }
-\`}</style>`;
-    } else {
-      return `/* Similar structure for other spinner types */`;
-    }
-  } else if (selectedExportFormat.value === 'vue') {
-    return `<!-- Vue component code - similar structure -->`;
-  } else {
-    return `/* CSS Animations for Loading Spinner */
-@keyframes spinner-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
 
-@keyframes spinner-dot-bounce {
-  0%, 80%, 100% { transform: translateY(0); opacity: 0.7; }
-  40% { transform: translateY(-10px); opacity: 1; }
-}
+  const { css, html } = cssMarkup(style);
+  return `/* CSS for ${name} */
+${keyframes}
 
-@keyframes spinner-bar-bounce {
-  0%, 100% { transform: scaleY(0.4); }
-  50% { transform: scaleY(1); }
-}
+${css}
 
-@keyframes skeleton-pulse {
-  0%, 100% { opacity: 0.1; }
-  50% { opacity: 0.2; }
-}
-
-@keyframes spinner-pulse-scale {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.7; }
-}
-
-.spinner {
-  border: 4px solid ${config.value.color}20;
-  border-top: 4px solid ${config.value.color};
-  border-radius: 50%;
-  animation: spinner-rotate ${config.value.speed}s linear infinite;
-}`;
-  }
+/* Usage:
+${html}
+*/`;
 });
 
 const copyCode = async () => {
   try {
     await navigator.clipboard.writeText(generatedCode.value);
+    showNotice('Code copied to clipboard.', 'success');
   } catch (error) {
     console.error('Copy failed:', error);
+    showNotice('Could not copy to the clipboard. Select the code and copy it manually.', 'error');
   }
 };
-
-
-
-
-
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style>

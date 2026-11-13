@@ -246,10 +246,12 @@
                       </button>
                     </div>
 
+                    <InlineNotice :notice="columnNotice" class="mb-3" @dismiss="clearColumnNotice" />
+
                     <div class="space-y-3 max-h-64 overflow-y-auto">
                       <div
                         v-for="(column, index) in columns"
-                        :key="index"
+                        :key="column.id"
                         class="border rounded-lg p-3"
                         :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'"
                       >
@@ -268,7 +270,8 @@
 
                         <div class="space-y-2">
                           <input
-                            v-model="column.name"
+                            :value="column.name"
+                            @change="renameColumn(index, $event)"
                             type="text"
                             placeholder="Column name"
                             class="w-full px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
@@ -355,8 +358,8 @@
                         </div>
                         <div class="grid grid-cols-2 gap-1">
                           <input
-                            v-for="(column, colIndex) in columns"
-                            :key="colIndex"
+                            v-for="column in columns"
+                            :key="column.id"
                             v-model="row[column.name]"
                             type="text"
                             :placeholder="column.name"
@@ -376,6 +379,7 @@
               <div class="lg:col-span-2">
                 <!-- Preview Section -->
                 <div 
+                  ref="previewSection"
                   class="rounded-lg shadow-sm border p-6 mb-6"
                   :class="isDarkMode 
                     ? 'bg-slate-900 border-gray-700' 
@@ -405,13 +409,13 @@
                     </div>
 
                     <!-- Table -->
-                    <figure role="region" :aria-label="config.title || 'Data Table'" :aria-describedby="`table-summary-${selectedExportFormat}`">
+                    <figure role="region" :aria-label="config.title || 'Data Table'" aria-describedby="table-summary">
                       <div class="overflow-x-auto">
                         <table 
                           class="w-full border-collapse"
                           role="table"
                           :aria-label="config.title || 'Data Table'"
-                          :aria-describedby="`table-summary-${selectedExportFormat}`"
+                          aria-describedby="table-summary"
                           :class="[
                             config.stripedRows ? 'table-striped' : '',
                             config.hoverEffects ? 'table-hover' : ''
@@ -425,18 +429,20 @@
                                 type="checkbox"
                                 :checked="allSelected"
                                 @change="toggleSelectAll"
+                                aria-label="Select all rows on this page"
                                 class="w-4 h-4"
                                 :class="isDarkMode ? 'accent-indigo-500' : 'accent-indigo-600'"
                               />
                             </th>
                             <th
                               v-for="column in columns"
-                              :key="column.name"
+                              :key="column.id"
                               class="p-3 text-left border font-semibold text-sm"
                               :class="[
                                 isDarkMode ? 'border-gray-600 text-gray-200' : 'border-gray-300 text-gray-700',
                                 config.enableSorting && column.sortable ? 'cursor-pointer hover:bg-gray-200 dark:hover:bg-slate-600' : ''
                               ]"
+                              :aria-sort="config.enableSorting && column.sortable && sortColumn === column.name ? (sortDirection === 'asc' ? 'ascending' : 'descending') : undefined"
                               @click="config.enableSorting && column.sortable ? handleSort(column.name) : null"
                             >
                               <div class="flex items-center gap-2">
@@ -451,26 +457,27 @@
                         <tbody>
                           <tr
                             v-for="(row, rowIndex) in paginatedRows"
-                            :key="rowIndex"
+                            :key="rowKey(row)"
                             :class="[
                               isDarkMode ? 'border-gray-700' : 'border-gray-200',
                               config.stripedRows && rowIndex % 2 === 0 ? (isDarkMode ? 'bg-slate-800/50' : 'bg-gray-50') : '',
                               config.hoverEffects ? 'hover:bg-indigo-50 dark:hover:bg-indigo-900/20' : '',
-                              isRowSelected(rowIndex) ? 'bg-indigo-100 dark:bg-indigo-900/30' : ''
+                              isRowSelected(row) ? 'bg-indigo-100 dark:bg-indigo-900/30' : ''
                             ]"
                           >
                             <td v-if="config.selectionMode !== 'none'" class="p-3 border" :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'">
                               <input
                                 type="checkbox"
-                                :checked="isRowSelected(rowIndex)"
-                                @change="toggleRowSelection(rowIndex)"
+                                :checked="isRowSelected(row)"
+                                @change="toggleRowSelection(row)"
+                                :aria-label="`Select row ${rowIndex + 1}`"
                                 class="w-4 h-4"
                                 :class="isDarkMode ? 'accent-indigo-500' : 'accent-indigo-600'"
                               />
                             </td>
                             <td
                               v-for="column in columns"
-                              :key="column.name"
+                              :key="column.id"
                               class="p-3 border text-sm"
                               :class="isDarkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'"
                             >
@@ -480,7 +487,7 @@
                         </tbody>
                       </table>
                       </div>
-                      <figcaption :id="`table-summary-${selectedExportFormat}`" class="sr-only">
+                      <figcaption id="table-summary" class="sr-only">
                         {{ config.summary || 'Data table visualization' }}
                       </figcaption>
                     </figure>
@@ -672,6 +679,7 @@
                           Copy
                         </button>
                       </div>
+                      <InlineNotice :notice="notice" class="mb-2" @dismiss="clearNotice" />
                       <textarea
                         :value="generatedCode"
                         readonly
@@ -693,15 +701,24 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, toRaw } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { calculateContrast } from '../composables/useContrast.js';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 import axe from 'axe-core';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
+const {
+  notice: columnNotice,
+  showNotice: showColumnNotice,
+  clearNotice: clearColumnNotice
+} = useNotice();
+const previewSection = ref(null);
 
 const exportFormats = [
   { label: 'React', value: 'react' },
@@ -722,11 +739,12 @@ const config = ref({
   hoverEffects: true
 });
 
+let columnIdCounter = 0;
 const columns = ref([
   { name: 'Name', type: 'text', sortable: true, filterable: true },
   { name: 'Age', type: 'number', sortable: true, filterable: true },
   { name: 'Email', type: 'text', sortable: true, filterable: true }
-]);
+].map(c => ({ id: columnIdCounter++, ...c })));
 
 const rows = ref([
   { Name: 'John Doe', Age: '30', Email: 'john@example.com' },
@@ -740,7 +758,37 @@ const filters = ref({});
 const sortColumn = ref(null);
 const sortDirection = ref('asc'); // 'asc' or 'desc'
 const currentPage = ref(1);
+// Selected rows are tracked by row object (not by position), so the selection
+// follows the row through sorting, filtering and paging.
 const selectedRows = ref(new Set());
+
+// Stable keys for preview rows without adding fields to the exported row data.
+const rowKeys = new WeakMap();
+let rowKeyCounter = 0;
+const rowKey = (row) => {
+  const raw = toRaw(row);
+  if (!rowKeys.has(raw)) rowKeys.set(raw, rowKeyCounter++);
+  return rowKeys.get(raw);
+};
+
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+const toBool = (value) => value === true || /^(true|yes|y|1)$/i.test(String(value ?? '').trim());
+
+const compareValues = (a, b, type) => {
+  if (type === 'number') return (Number(a) || 0) - (Number(b) || 0);
+  if (type === 'date') return (new Date(a).getTime() || 0) - (new Date(b).getTime() || 0);
+  if (type === 'boolean') return Number(toBool(a)) - Number(toBool(b));
+  return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+};
+
+// The range input always gives 5-50, but guard against 0/'' anyway (division).
+const rowsPerPage = computed(() => Math.max(1, Number(config.value.rowsPerPage) || 10));
 
 const selectedExportFormat = ref('react');
 
@@ -767,10 +815,7 @@ const runAxeCoreScan = async () => {
   axeScanResults.value = null;
   
   try {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const previewSection = document.querySelector('.lg\\:col-span-2 .rounded-lg.shadow-sm.border');
-    const scanTarget = previewSection;
+    const scanTarget = previewSection.value;
     
     if (!scanTarget) {
       axeScanResults.value = {
@@ -810,7 +855,6 @@ const runAxeCoreScan = async () => {
       }
     });
     
-    console.log('axe-core scan results:', results);
     axeScanResults.value = results;
   } catch (error) {
     console.error('axe-core scan error:', error);
@@ -833,85 +877,81 @@ const runAxeCoreScan = async () => {
 
 const filteredRows = computed(() => {
   let result = [...rows.value];
-  
+
   // Apply filters
   if (config.value.enableFiltering) {
-    Object.keys(filters.value).forEach(columnName => {
-      const filterValue = filters.value[columnName]?.toLowerCase() || '';
+    Object.entries(filters.value).forEach(([columnName, value]) => {
+      const filterValue = String(value || '').toLowerCase();
       if (filterValue) {
-        result = result.filter(row => {
-          const cellValue = String(row[columnName] || '').toLowerCase();
-          return cellValue.includes(filterValue);
-        });
+        result = result.filter(row => String(row[columnName] ?? '').toLowerCase().includes(filterValue));
       }
     });
   }
-  
+
   // Apply sorting
   if (config.value.enableSorting && sortColumn.value) {
     const column = columns.value.find(c => c.name === sortColumn.value);
     if (column && column.sortable) {
-      result = [...result].sort((a, b) => {
-        const aVal = a[sortColumn.value] || '';
-        const bVal = b[sortColumn.value] || '';
-        
-        if (column.type === 'number') {
-          const aNum = Number(aVal) || 0;
-          const bNum = Number(bVal) || 0;
-          return sortDirection.value === 'asc' ? aNum - bNum : bNum - aNum;
-        } else if (column.type === 'date') {
-          const aDate = new Date(aVal).getTime() || 0;
-          const bDate = new Date(bVal).getTime() || 0;
-          return sortDirection.value === 'asc' ? aDate - bDate : bDate - aDate;
-        } else {
-          const aStr = String(aVal).toLowerCase();
-          const bStr = String(bVal).toLowerCase();
-          if (sortDirection.value === 'asc') {
-            return aStr.localeCompare(bStr);
-          } else {
-            return bStr.localeCompare(aStr);
-          }
-        }
-      });
+      const direction = sortDirection.value === 'asc' ? 1 : -1;
+      result.sort((a, b) => direction * compareValues(a[column.name], b[column.name], column.type));
     }
   }
-  
+
   return result;
 });
 
-const totalPages = computed(() => {
-  return Math.ceil(filteredRows.value.length / config.value.rowsPerPage);
-});
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredRows.value.length / rowsPerPage.value)));
 
 const paginatedRows = computed(() => {
   if (!config.value.enablePagination) {
     return filteredRows.value;
   }
-  
-  const start = (currentPage.value - 1) * config.value.rowsPerPage;
-  const end = start + config.value.rowsPerPage;
-  return filteredRows.value.slice(start, end);
+
+  const start = (currentPage.value - 1) * rowsPerPage.value;
+  return filteredRows.value.slice(start, start + rowsPerPage.value);
+});
+
+// New filters or a different page size: start from page 1; never sit past the last page.
+watch(filters, () => { currentPage.value = 1; }, { deep: true });
+watch(() => config.value.rowsPerPage, () => { currentPage.value = 1; });
+watch(totalPages, (pages) => {
+  if (currentPage.value > pages) currentPage.value = pages;
+});
+
+// Switching selection mode (e.g. multiple -> single) starts a fresh selection.
+watch(() => config.value.selectionMode, () => {
+  selectedRows.value.clear();
 });
 
 const allSelected = computed(() => {
   if (config.value.selectionMode !== 'multiple') return false;
-  return paginatedRows.value.length > 0 && paginatedRows.value.every((_, index) => {
-    const actualIndex = (currentPage.value - 1) * config.value.rowsPerPage + index;
-    return selectedRows.value.has(actualIndex);
-  });
+  return paginatedRows.value.length > 0 && paginatedRows.value.every(row => selectedRows.value.has(row));
 });
 
+const uniqueColumnName = (base) => {
+  const names = new Set(columns.value.map(c => c.name));
+  let n = columns.value.length + 1;
+  let name = `${base} ${n}`;
+  while (names.has(name)) {
+    n++;
+    name = `${base} ${n}`;
+  }
+  return name;
+};
+
 const addColumn = () => {
+  const name = uniqueColumnName('Column');
   columns.value.push({
-    name: `Column ${columns.value.length + 1}`,
+    id: columnIdCounter++,
+    name,
     type: 'text',
     sortable: true,
     filterable: true
   });
-  
+
   // Add empty values for existing rows
   rows.value.forEach(row => {
-    row[`Column ${columns.value.length}`] = '';
+    row[name] = '';
   });
 };
 
@@ -919,14 +959,54 @@ const removeColumn = (index) => {
   if (columns.value.length <= 1) return;
   const columnName = columns.value[index].name;
   columns.value.splice(index, 1);
-  
+
   // Remove column data from rows
   rows.value.forEach(row => {
     delete row[columnName];
   });
-  
-  // Remove filter
+
+  // Remove filter / sort on that column
   delete filters.value[columnName];
+  if (sortColumn.value === columnName) sortColumn.value = null;
+};
+
+// Rows are keyed by column name, so a rename has to move each row's value to
+// the new key (and any filter/sort on it), keeping key order for the export.
+const renameColumn = (index, event) => {
+  const column = columns.value[index];
+  const oldName = column.name;
+  const newName = event.target.value.trim();
+  if (newName === oldName) {
+    event.target.value = oldName;
+    return;
+  }
+  if (!newName) {
+    showColumnNotice('Column names can\'t be empty.', 'error');
+    event.target.value = oldName;
+    return;
+  }
+  if (columns.value.some((c, i) => i !== index && c.name === newName)) {
+    showColumnNotice(`A column named "${newName}" already exists.`, 'error');
+    event.target.value = oldName;
+    return;
+  }
+  clearColumnNotice();
+
+  rows.value.forEach(row => {
+    const entries = Object.entries(row);
+    Object.keys(row).forEach(key => { delete row[key]; });
+    entries.forEach(([key, value]) => {
+      row[key === oldName ? newName : key] = value;
+    });
+    if (!entries.some(([key]) => key === oldName)) row[newName] = '';
+  });
+  if (Object.prototype.hasOwnProperty.call(filters.value, oldName)) {
+    filters.value[newName] = filters.value[oldName];
+    delete filters.value[oldName];
+  }
+  if (sortColumn.value === oldName) sortColumn.value = newName;
+  column.name = newName;
+  event.target.value = newName;
 };
 
 const addRow = () => {
@@ -939,7 +1019,8 @@ const addRow = () => {
 
 const removeRow = (index) => {
   if (rows.value.length <= 1) return;
-  rows.value.splice(index, 1);
+  const [removed] = rows.value.splice(index, 1);
+  selectedRows.value.delete(removed);
 };
 
 const handleSort = (columnName) => {
@@ -959,46 +1040,39 @@ const getSortIcon = (columnName) => {
 
 const formatCellValue = (value, type) => {
   if (value === null || value === undefined || value === '') return '-';
-  
+
   if (type === 'boolean') {
-    return value ? 'Yes' : 'No';
+    // Cells are typed text, so "false"/"no"/"0" must read as No.
+    return toBool(value) ? 'Yes' : 'No';
   }
-  
+
   return value;
 };
 
-const toggleRowSelection = (rowIndex) => {
-  const actualIndex = (currentPage.value - 1) * config.value.rowsPerPage + rowIndex;
-  
+const toggleRowSelection = (row) => {
   if (config.value.selectionMode === 'single') {
+    const wasSelected = selectedRows.value.has(row);
     selectedRows.value.clear();
-    selectedRows.value.add(actualIndex);
+    if (!wasSelected) selectedRows.value.add(row);
   } else if (config.value.selectionMode === 'multiple') {
-    if (selectedRows.value.has(actualIndex)) {
-      selectedRows.value.delete(actualIndex);
+    if (selectedRows.value.has(row)) {
+      selectedRows.value.delete(row);
     } else {
-      selectedRows.value.add(actualIndex);
+      selectedRows.value.add(row);
     }
   }
 };
 
-const isRowSelected = (rowIndex) => {
-  const actualIndex = (currentPage.value - 1) * config.value.rowsPerPage + rowIndex;
-  return selectedRows.value.has(actualIndex);
-};
+const isRowSelected = (row) => selectedRows.value.has(row);
 
 const toggleSelectAll = (event) => {
-  if (event.target.checked) {
-    paginatedRows.value.forEach((_, index) => {
-      const actualIndex = (currentPage.value - 1) * config.value.rowsPerPage + index;
-      selectedRows.value.add(actualIndex);
-    });
-  } else {
-    paginatedRows.value.forEach((_, index) => {
-      const actualIndex = (currentPage.value - 1) * config.value.rowsPerPage + index;
-      selectedRows.value.delete(actualIndex);
-    });
-  }
+  paginatedRows.value.forEach(row => {
+    if (event.target.checked) {
+      selectedRows.value.add(row);
+    } else {
+      selectedRows.value.delete(row);
+    }
+  });
 };
 
 const generatedCode = computed(() => {
@@ -1046,7 +1120,7 @@ export const DataTable: React.FC<DataTableProps> = ({
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [selectedRows, setSelectedRows] = useState<Set<Record<string, any>>>(new Set());
 
   const filteredRows = useMemo(() => {
     let result = [...rows];
@@ -1146,26 +1220,17 @@ export const DataTable: React.FC<DataTableProps> = ({
                   {config.selectionMode === 'multiple' && (
                     <input
                       type="checkbox"
-                      checked={paginatedRows.every((_, i) => {
-                        const actualIndex = (currentPage - 1) * (config.rowsPerPage || 10) + i;
-                        return selectedRows.has(actualIndex);
-                      })}
+                      checked={paginatedRows.length > 0 && paginatedRows.every(row => selectedRows.has(row))}
                       onChange={(e) => {
-                        if (e.target.checked) {
-                          const newSelected = new Set(selectedRows);
-                          paginatedRows.forEach((_, i) => {
-                            const actualIndex = (currentPage - 1) * (config.rowsPerPage || 10) + i;
-                            newSelected.add(actualIndex);
-                          });
-                          setSelectedRows(newSelected);
-                        } else {
-                          const newSelected = new Set(selectedRows);
-                          paginatedRows.forEach((_, i) => {
-                            const actualIndex = (currentPage - 1) * (config.rowsPerPage || 10) + i;
-                            newSelected.delete(actualIndex);
-                          });
-                          setSelectedRows(newSelected);
-                        }
+                        const newSelected = new Set(selectedRows);
+                        paginatedRows.forEach(row => {
+                          if (e.target.checked) {
+                            newSelected.add(row);
+                          } else {
+                            newSelected.delete(row);
+                          }
+                        });
+                        setSelectedRows(newSelected);
                       }}
                     />
                   )}
@@ -1193,31 +1258,31 @@ export const DataTable: React.FC<DataTableProps> = ({
           </thead>
           <tbody>
             {paginatedRows.map((row, rowIndex) => {
-              const actualIndex = (currentPage - 1) * (config.rowsPerPage || 10) + rowIndex;
               return (
                 <tr
                   key={rowIndex}
                   className={\`
                     \${config.stripedRows && rowIndex % 2 === 0 ? 'bg-gray-50' : ''}
                     \${config.hoverEffects ? 'hover:bg-indigo-50' : ''}
-                    \${selectedRows.has(actualIndex) ? 'bg-indigo-100' : ''}
+                    \${selectedRows.has(row) ? 'bg-indigo-100' : ''}
                   \`}
                 >
                   {config.selectionMode !== 'none' && (
                     <td className="p-3 border">
                       <input
                         type="checkbox"
-                        checked={selectedRows.has(actualIndex)}
+                        checked={selectedRows.has(row)}
                         onChange={() => {
                           const newSelected = new Set(selectedRows);
                           if (config.selectionMode === 'single') {
+                            const wasSelected = newSelected.has(row);
                             newSelected.clear();
-                            newSelected.add(actualIndex);
+                            if (!wasSelected) newSelected.add(row);
                           } else {
-                            if (newSelected.has(actualIndex)) {
-                              newSelected.delete(actualIndex);
+                            if (newSelected.has(row)) {
+                              newSelected.delete(row);
                             } else {
-                              newSelected.add(actualIndex);
+                              newSelected.add(row);
                             }
                           }
                           setSelectedRows(newSelected);
@@ -1321,14 +1386,14 @@ export const DataTable: React.FC<DataTableProps> = ({
             :class="[
               config.stripedRows && rowIndex % 2 === 0 ? 'bg-gray-50' : '',
               config.hoverEffects ? 'hover:bg-indigo-50' : '',
-              isRowSelected(rowIndex) ? 'bg-indigo-100' : ''
+              isRowSelected(row) ? 'bg-indigo-100' : ''
             ]"
           >
             <td v-if="config.selectionMode !== 'none'" class="p-3 border">
               <input
                 type="checkbox"
-                :checked="isRowSelected(rowIndex)"
-                @change="toggleRowSelection(rowIndex)"
+                :checked="isRowSelected(row)"
+                @change="toggleRowSelection(row)"
               />
             </td>
             <td
@@ -1369,7 +1434,7 @@ export const DataTable: React.FC<DataTableProps> = ({
 ` + templateCloseTag + `
 
 ` + scriptSetupTag + `
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 const props = defineProps({
   columns: {
@@ -1392,21 +1457,113 @@ const sortDirection = ref('asc');
 const currentPage = ref(1);
 const selectedRows = ref(new Set());
 
-// Add computed properties and methods similar to the React version
+const rowsPerPage = computed(() => Math.max(1, Number(props.config.rowsPerPage) || 10));
+
+const toBool = (value) => value === true || /^(true|yes|y|1)$/i.test(String(value ?? '').trim());
+
+const compareValues = (a, b, type) => {
+  if (type === 'number') return (Number(a) || 0) - (Number(b) || 0);
+  if (type === 'date') return (new Date(a).getTime() || 0) - (new Date(b).getTime() || 0);
+  if (type === 'boolean') return Number(toBool(a)) - Number(toBool(b));
+  return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+};
+
+const filteredRows = computed(() => {
+  let result = [...props.rows];
+  if (props.config.enableFiltering) {
+    Object.entries(filters.value).forEach(([columnName, value]) => {
+      const filterValue = String(value || '').toLowerCase();
+      if (filterValue) {
+        result = result.filter(row => String(row[columnName] ?? '').toLowerCase().includes(filterValue));
+      }
+    });
+  }
+  if (props.config.enableSorting && sortColumn.value) {
+    const column = props.columns.find(c => c.name === sortColumn.value);
+    if (column && column.sortable) {
+      const direction = sortDirection.value === 'asc' ? 1 : -1;
+      result.sort((a, b) => direction * compareValues(a[column.name], b[column.name], column.type));
+    }
+  }
+  return result;
+});
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredRows.value.length / rowsPerPage.value)));
+
+const paginatedRows = computed(() => {
+  if (!props.config.enablePagination) return filteredRows.value;
+  const start = (currentPage.value - 1) * rowsPerPage.value;
+  return filteredRows.value.slice(start, start + rowsPerPage.value);
+});
+
+watch(filters, () => { currentPage.value = 1; }, { deep: true });
+watch(totalPages, (pages) => { if (currentPage.value > pages) currentPage.value = pages; });
+
+const allSelected = computed(() =>
+  paginatedRows.value.length > 0 && paginatedRows.value.every(row => selectedRows.value.has(row))
+);
+
+const handleSort = (columnName) => {
+  if (sortColumn.value === columnName) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = columnName;
+    sortDirection.value = 'asc';
+  }
+  currentPage.value = 1;
+};
+
+const getSortIcon = (columnName) => {
+  if (sortColumn.value !== columnName) return '↕';
+  return sortDirection.value === 'asc' ? '↑' : '↓';
+};
+
+const formatCellValue = (value, type) => {
+  if (value === null || value === undefined || value === '') return '-';
+  if (type === 'boolean') return toBool(value) ? 'Yes' : 'No';
+  return value;
+};
+
+const isRowSelected = (row) => selectedRows.value.has(row);
+
+const toggleRowSelection = (row) => {
+  if (props.config.selectionMode === 'single') {
+    const wasSelected = selectedRows.value.has(row);
+    selectedRows.value.clear();
+    if (!wasSelected) selectedRows.value.add(row);
+  } else if (props.config.selectionMode === 'multiple') {
+    if (selectedRows.value.has(row)) {
+      selectedRows.value.delete(row);
+    } else {
+      selectedRows.value.add(row);
+    }
+  }
+};
+
+const toggleSelectAll = (event) => {
+  paginatedRows.value.forEach(row => {
+    if (event.target.checked) {
+      selectedRows.value.add(row);
+    } else {
+      selectedRows.value.delete(row);
+    }
+  });
+};
 ` + scriptClose;
   } else {
     // HTML export
+    const caption = config.value.title ? `\n  <caption>${escapeHtml(config.value.title)}</caption>` : '';
     return `<!-- Static HTML Table -->
-<table class="w-full border-collapse">
+<table class="w-full border-collapse">${caption}
   <thead>
     <tr class="bg-gray-100">
-      ${columns.value.map(c => `<th class="p-3 text-left border font-semibold text-sm">${c.name}</th>`).join('\n      ')}
+      ${columns.value.map(c => `<th scope="col" class="p-3 text-left border font-semibold text-sm">${escapeHtml(c.name)}</th>`).join('\n      ')}
     </tr>
   </thead>
   <tbody>
     ${rows.value.map(row => `
     <tr>
-      ${columns.value.map(c => `<td class="p-3 border text-sm">${row[c.name] || ''}</td>`).join('\n      ')}
+      ${columns.value.map(c => `<td class="p-3 border text-sm">${escapeHtml(formatCellValue(row[c.name], c.type))}</td>`).join('\n      ')}
     </tr>`).join('\n    ')}
   </tbody>
 </table>`;
@@ -1416,8 +1573,10 @@ const selectedRows = ref(new Set());
 const copyCode = async () => {
   try {
     await navigator.clipboard.writeText(generatedCode.value);
+    showNotice('Code copied to clipboard.', 'success');
   } catch (error) {
     console.error('Copy failed:', error);
+    showNotice('Could not copy to the clipboard. Select the code and copy it manually.', 'error');
   }
 };
 
@@ -1425,35 +1584,6 @@ const copyCode = async () => {
 
 
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>

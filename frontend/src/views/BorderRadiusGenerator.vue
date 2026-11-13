@@ -393,12 +393,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const locked = ref(true);
 const unit = ref('px');
@@ -419,24 +420,26 @@ const presets = [
   { name: 'Full', value: 9999 }
 ];
 
+// Radii can't be negative, and a cleared number input gives ''; both become 0
+// so the CSS is always valid.
+const radius = (val) => {
+  const n = Number(val);
+  return val === '' || val === null || !Number.isFinite(n) ? 0 : Math.max(0, n);
+};
+
 const computedBorderRadius = computed(() => {
   const formatValue = (val) => {
-    if (unit.value === '%') {
-      return `${val}%`;
-    }
-    return `${val}${unit.value}`;
+    const n = radius(val);
+    return n === 0 ? '0' : `${n}${unit.value}`;
   };
-  
-  if (topLeft.value === topRight.value && 
-      topRight.value === bottomRight.value && 
-      bottomRight.value === bottomLeft.value) {
-    return {
-      borderRadius: formatValue(topLeft.value)
-    };
+  const [tl, tr, br, bl] = [topLeft, topRight, bottomRight, bottomLeft].map((r) => formatValue(r.value));
+
+  if (tl === tr && tr === br && br === bl) {
+    return { borderRadius: tl };
   }
-  
+
   return {
-    borderRadius: `${formatValue(topLeft.value)} ${formatValue(topRight.value)} ${formatValue(bottomRight.value)} ${formatValue(bottomLeft.value)}`
+    borderRadius: `${tl} ${tr} ${br} ${bl}`
   };
 });
 
@@ -447,6 +450,22 @@ const updateUnified = () => {
     bottomRight.value = unifiedValue.value;
     bottomLeft.value = unifiedValue.value;
   }
+};
+
+// Re-locking (or changing the unified value while locked) keeps all four
+// corners in step, so "Locked" never shows mismatched corners.
+watch([locked, unifiedValue], updateUnified);
+
+const downloadFile = (content, type, filename) => {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
 const updateFromIndividual = () => {
@@ -465,39 +484,21 @@ const exportFormat = (format) => {
   
   if (format === 'css') {
     const css = `.rounded-custom {\n  border-radius: ${borderRadius};\n}\n`;
-    const blob = new Blob([css], { type: 'text/css' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `border-radius-${Date.now()}.css`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(css, 'text/css', `border-radius-${Date.now()}.css`);
   } else if (format === 'tailwind') {
     const config = `// tailwind.config.js\nmodule.exports = {\n  theme: {\n    extend: {\n      borderRadius: {\n        'custom': '${borderRadius}',\n      },\n    },\n  },\n};\n`;
-    const blob = new Blob([config], { type: 'text/javascript' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `border-radius-tailwind-${Date.now()}.js`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(config, 'text/javascript', `border-radius-tailwind-${Date.now()}.js`);
   } else if (format === 'json') {
     const config = {
       type: 'border-radius',
       unit: unit.value,
-      topLeft: topLeft.value,
-      topRight: topRight.value,
-      bottomRight: bottomRight.value,
-      bottomLeft: bottomLeft.value,
+      topLeft: radius(topLeft.value),
+      topRight: radius(topRight.value),
+      bottomRight: radius(bottomRight.value),
+      bottomLeft: radius(bottomLeft.value),
       borderRadius: borderRadius
     };
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `border-radius-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(JSON.stringify(config, null, 2), 'application/json', `border-radius-${Date.now()}.json`);
   }
 };
 
@@ -505,35 +506,6 @@ const exportFormat = (format) => {
 
 
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>

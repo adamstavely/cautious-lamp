@@ -104,6 +104,8 @@
                 />
               </div>
 
+              <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
+
               <!-- Palette Grid Table -->
               <div class="overflow-x-auto mb-8 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-300 bg-white'">
                 <table class="w-full border-collapse">
@@ -146,7 +148,12 @@
                         class="p-3 border-r text-center relative group cursor-pointer min-h-[120px]"
                         :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
                         :style="{ backgroundColor: colors[shade] || (isDarkMode ? '#1e293b' : '#f9fafb') }"
+                        :role="colors[shade] ? 'button' : undefined"
+                        :tabindex="colors[shade] ? 0 : undefined"
+                        :aria-label="colors[shade] ? `Copy ${familyName} ${shade}: ${colors[shade]}` : undefined"
                         @click="copyToClipboard(colors[shade], `${familyName}-${shade}`)"
+                        @keydown.enter.prevent="copyToClipboard(colors[shade], `${familyName}-${shade}`)"
+                        @keydown.space.prevent="copyToClipboard(colors[shade], `${familyName}-${shade}`)"
                       >
                         <!-- Contrast Number (Large) -->
                         <div 
@@ -161,20 +168,20 @@
                           class="text-xs font-mono mb-1"
                           :style="{ ...getTextColorForCell(colors[shade], `${familyName}-${shade}`), opacity: 0.95 }"
                         >
-                          {{ hexCache[`${familyName}-${shade}`] || 'OKLCH' }}
+                          {{ colorInfo[`${familyName}-${shade}`]?.hex || 'OKLCH' }}
                         </div>
                         
                         <!-- Usage Guideline Icon -->
                         <div 
                           class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-sm"
-                          :style="getUsageIconStyle(colors[shade], shade)"
+                          :style="getUsageIconStyle(colors[shade], shade, familyName)"
                         >
                           {{ getUsageGuidelineIcon(shade) }}
                         </div>
                         
                         <!-- Copy Indicator on Hover -->
-                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-30 rounded">
-                          <span class="material-symbols-outlined text-white drop-shadow-lg text-2xl">content_copy</span>
+                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity bg-black bg-opacity-30 rounded">
+                          <span class="material-symbols-outlined text-white drop-shadow-lg text-2xl">{{ copiedColor === `${familyName}-${shade}` ? 'check' : 'content_copy' }}</span>
                         </div>
                       </td>
                     </tr>
@@ -196,7 +203,7 @@
                     <div 
                       class="w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold"
                       :style="{ backgroundColor: guideline.color }"
-                      :class="getTextColorForGuideline(guideline.color) === 'white' ? 'text-white' : 'text-black'"
+                      :class="guidelineTextColors[index] === 'white' ? 'text-white' : 'text-black'"
                     >
                       {{ guideline.icon }}
                     </div>
@@ -399,22 +406,28 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
     </div>
-  </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { RouterLink } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 import harmonyPalette from '@evilmartians/harmony/base';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+// Note: much of this page (OKLCH grid, usage guidelines) duplicates
+// ColoredTextPalette.vue; a shared palette-grid component would remove that.
+
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
 const searchQuery = ref('');
 const copiedColor = ref(null);
 
@@ -521,49 +534,80 @@ const filteredColors = computed(() => {
   return filtered;
 });
 
-// Store computed hex values
-const hexCache = ref({});
+// OKLCH -> sRGB, computed directly. (Reading back getComputedStyle() doesn't
+// work: current browsers report oklch colours as "oklch(...)", not rgb(), so
+// the old regex never matched and hex values never appeared. It also forced a
+// layout for every cell on every render.)
+const parseOklch = (value) => {
+  const match = /oklch\(\s*([\d.]+)(%?)\s+([\d.]+)(%?)\s+([\d.]+)(?:deg)?/i.exec(String(value || ''));
+  if (!match) return null;
+  const L = match[2] ? parseFloat(match[1]) / 100 : parseFloat(match[1]);
+  const C = match[4] ? (parseFloat(match[3]) / 100) * 0.4 : parseFloat(match[3]);
+  const H = parseFloat(match[5]);
+  return [L, C, H].every(Number.isFinite) ? { L, C, H } : null;
+};
 
-// Store computed text colors for each color/shade combination
-const textColorCache = ref({});
+const oklchToRgb = (value) => {
+  const parsed = parseOklch(value);
+  if (!parsed) return null;
+  const { L, C, H } = parsed;
+  const hRad = (H * Math.PI) / 180;
+  const a = C * Math.cos(hRad);
+  const b = C * Math.sin(hRad);
 
-// Convert OKLCH to hex for display (using computed style)
-const computeHexFromOklch = (oklchValue, cacheKey) => {
-  if (hexCache.value[cacheKey]) {
-    return;
-  }
-  
-  // Use requestAnimationFrame to ensure DOM is ready
-  requestAnimationFrame(() => {
-    try {
-      const tempEl = document.createElement('div');
-      tempEl.style.backgroundColor = oklchValue;
-      tempEl.style.position = 'absolute';
-      tempEl.style.visibility = 'hidden';
-      tempEl.style.width = '1px';
-      tempEl.style.height = '1px';
-      document.body.appendChild(tempEl);
-      
-      const computedColor = window.getComputedStyle(tempEl).backgroundColor;
-      document.body.removeChild(tempEl);
-      
-      // Extract RGB from computed color (format: rgb(r, g, b) or rgba(r, g, b, a))
-      const rgbMatch = computedColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-      if (rgbMatch) {
-        const r = parseInt(rgbMatch[1]);
-        const g = parseInt(rgbMatch[2]);
-        const b = parseInt(rgbMatch[3]);
-        const hex = '#' + [r, g, b].map(x => {
-          const hex = x.toString(16);
-          return hex.length === 1 ? '0' + hex : hex;
-        }).join('').toUpperCase();
-        hexCache.value[cacheKey] = hex;
-      }
-    } catch (error) {
-      console.error('Error converting OKLCH:', error);
-    }
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
+
+  const linear = [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s
+  ];
+
+  return linear.map((channel) => {
+    const c = Math.min(1, Math.max(0, channel));
+    const encoded = c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+    return Math.round(Math.min(1, Math.max(0, encoded)) * 255);
   });
 };
+
+const toHex = ([r, g, b]) => '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+
+// Calculate relative luminance (WCAG standard)
+const calculateLuminance = (r, g, b) => {
+  const [rNorm, gNorm, bNorm] = [r / 255, g / 255, b / 255].map(val => {
+    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rNorm + 0.7152 * gNorm + 0.0722 * bNorm;
+};
+
+const isDarkColor = (value) => {
+  const rgb = oklchToRgb(value);
+  if (!rgb) return false;
+  return calculateLuminance(...rgb) < 0.5;
+};
+
+// Hex value, text colour and badge style for every cell, computed once.
+const colorInfo = computed(() => {
+  const info = {};
+  Object.entries(harmonyColors.value).forEach(([familyName, shades]) => {
+    Object.entries(shades).forEach(([shade, oklchValue]) => {
+      const rgb = oklchToRgb(oklchValue);
+      const dark = rgb ? calculateLuminance(...rgb) < 0.5 : Number(shade) >= 600;
+      info[`${familyName}-${shade}`] = {
+        hex: rgb ? toHex(rgb) : null,
+        textStyle: { color: dark ? '#ffffff' : '#000000' },
+        iconStyle: dark
+          ? { backgroundColor: 'rgba(255, 255, 255, 0.25)', color: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.3)' }
+          : { backgroundColor: 'rgba(0, 0, 0, 0.25)', color: '#000000', border: '1px solid rgba(0, 0, 0, 0.3)' }
+      };
+    });
+  });
+  return info;
+});
+
+const guidelineTextColors = usageGuidelines.map((guideline) => (isDarkColor(guideline.color) ? 'white' : 'black'));
 
 // Get contrast value for shade
 const getContrastForShade = (shade) => {
@@ -593,233 +637,57 @@ const getUsageGuidelineIcon = (shade) => {
   return mapping[shade] || '';
 };
 
-// Calculate relative luminance (WCAG standard)
-const calculateLuminance = (r, g, b) => {
-  const [rNorm, gNorm, bNorm] = [r / 255, g / 255, b / 255].map(val => {
-    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * rNorm + 0.7152 * gNorm + 0.0722 * bNorm;
-};
-
-// Get text color for cell (white or black based on background with WCAG compliance)
+// Get text color for cell (white or black based on background luminance)
 const getTextColorForCell = (oklchValue, cacheKey) => {
   if (!oklchValue) return { color: 'transparent' };
-  
-  // Check cache first
-  if (cacheKey && textColorCache.value[cacheKey]) {
-    return textColorCache.value[cacheKey];
-  }
-  
-  // If not in cache yet, return a default and it will be computed
-  // For dark shades (600-950), default to white; for light shades (50-500), default to black
-  if (cacheKey) {
-    const shade = cacheKey.split('-').pop();
-    const shadeNum = parseInt(shade);
-    const defaultColor = shadeNum >= 600 ? { color: '#ffffff' } : { color: '#000000' };
-    textColorCache.value[cacheKey] = defaultColor;
-    return defaultColor;
-  }
-  
-  return { color: '#000000' };
+  return colorInfo.value[cacheKey]?.textStyle || { color: '#000000' };
 };
 
 // Get usage icon style
-const getUsageIconStyle = (oklchValue, shade) => {
+const getUsageIconStyle = (oklchValue, shade, familyName) => {
   if (!oklchValue) {
     return {
       backgroundColor: isDarkMode.value ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
       color: isDarkMode.value ? '#ffffff' : '#000000'
     };
   }
-  
-  try {
-    // Create temporary element to get computed RGB
-    const tempEl = document.createElement('div');
-    tempEl.style.backgroundColor = oklchValue;
-    tempEl.style.position = 'absolute';
-    tempEl.style.visibility = 'hidden';
-    tempEl.style.width = '1px';
-    tempEl.style.height = '1px';
-    document.body.appendChild(tempEl);
-    
-    const computedColor = window.getComputedStyle(tempEl).backgroundColor;
-    document.body.removeChild(tempEl);
-    
-    const rgbMatch = computedColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-    if (rgbMatch) {
-      const r = parseInt(rgbMatch[1]);
-      const g = parseInt(rgbMatch[2]);
-      const b = parseInt(rgbMatch[3]);
-      
-      const bgLuminance = calculateLuminance(r, g, b);
-      
-      // Use white text on dark backgrounds, black on light
-      if (bgLuminance < 0.5) {
-        return {
-          backgroundColor: 'rgba(255, 255, 255, 0.25)',
-          color: '#ffffff',
-          border: '1px solid rgba(255, 255, 255, 0.3)'
-        };
-      } else {
-        return {
-          backgroundColor: 'rgba(0, 0, 0, 0.25)',
-          color: '#000000',
-          border: '1px solid rgba(0, 0, 0, 0.3)'
-        };
-      }
-    }
-  } catch (error) {
-    console.error('Error calculating icon style:', error);
-  }
-  
-  return {
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
-    color: '#000000'
-  };
-};
-
-// Get text color for guideline
-const getTextColorForGuideline = (backgroundColor) => {
-  try {
-    const tempEl = document.createElement('div');
-    tempEl.style.backgroundColor = backgroundColor;
-    tempEl.style.position = 'absolute';
-    tempEl.style.visibility = 'hidden';
-    tempEl.style.width = '1px';
-    tempEl.style.height = '1px';
-    document.body.appendChild(tempEl);
-    
-    const computedColor = window.getComputedStyle(tempEl).backgroundColor;
-    document.body.removeChild(tempEl);
-    
-    const rgbMatch = computedColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-    if (rgbMatch) {
-      const r = parseInt(rgbMatch[1]);
-      const g = parseInt(rgbMatch[2]);
-      const b = parseInt(rgbMatch[3]);
-      
-      const luminance = calculateLuminance(r, g, b);
-      
-      // Use white text on dark backgrounds, black on light
-      return luminance < 0.5 ? 'white' : 'black';
-    }
-  } catch (error) {
-    console.error('Error calculating guideline text color:', error);
-  }
-  
-  return 'black';
+  return colorInfo.value[`${familyName}-${shade}`]?.iconStyle || { backgroundColor: 'rgba(0, 0, 0, 0.25)', color: '#000000' };
 };
 
 // Copy to clipboard
+let copiedTimer = null;
 const copyToClipboard = async (value, colorName) => {
   if (!value) return;
-  
+
   try {
     await navigator.clipboard.writeText(value);
     copiedColor.value = colorName;
-    
-    // Show feedback
-    setTimeout(() => {
+    showNotice(`Copied ${colorName.replace('-', ' ')}: ${value}`, 'success');
+
+    clearTimeout(copiedTimer);
+    copiedTimer = setTimeout(() => {
       copiedColor.value = null;
     }, 2000);
   } catch (error) {
     console.error('Failed to copy:', error);
+    showNotice('Could not copy to the clipboard.', 'error');
   }
 };
-
-// Compute text colors for all cells
-const computeAllTextColors = () => {
-  // Use nextTick to ensure DOM is ready
-  setTimeout(() => {
-    Object.keys(harmonyColors.value).forEach(familyName => {
-      shadeLevels.forEach(shade => {
-        const oklchValue = harmonyColors.value[familyName][shade];
-        if (!oklchValue) return;
-        
-        const cacheKey = `${familyName}-${shade}`;
-        
-        // Skip if already cached
-        if (textColorCache.value[cacheKey]) return;
-        
-        try {
-          // Create temporary element to get computed RGB
-          const tempEl = document.createElement('div');
-          tempEl.style.backgroundColor = oklchValue;
-          tempEl.style.position = 'absolute';
-          tempEl.style.visibility = 'hidden';
-          tempEl.style.width = '1px';
-          tempEl.style.height = '1px';
-          document.body.appendChild(tempEl);
-          
-          const computedColor = window.getComputedStyle(tempEl).backgroundColor;
-          document.body.removeChild(tempEl);
-          
-          const rgbMatch = computedColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-          if (rgbMatch) {
-            const r = parseInt(rgbMatch[1]);
-            const g = parseInt(rgbMatch[2]);
-            const b = parseInt(rgbMatch[3]);
-            
-            const bgLuminance = calculateLuminance(r, g, b);
-            const textColor = bgLuminance < 0.5 ? '#ffffff' : '#000000';
-            
-            textColorCache.value[cacheKey] = { color: textColor };
-          }
-        } catch (error) {
-          console.error(`Error computing text color for ${cacheKey}:`, error);
-          textColorCache.value[cacheKey] = { color: '#000000' };
-        }
-      });
-    });
-  }, 100);
-};
-
-let darkModeObserver = null;
-let darkModeInterval = null;
 
 onMounted(() => {
   // Auto-open drawer if navigating from sidebar
-  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-    drawerOpen.value = true;
-    sessionStorage.removeItem('openDrawerOnLoad');
+  try {
+    if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
+      drawerOpen.value = true;
+      sessionStorage.removeItem('openDrawerOnLoad');
+    }
+  } catch {
+    // Storage unavailable (private mode / blocked): just don't auto-open.
   }
-  
-  // Compute hex values for all colors
-  Object.keys(harmonyColors.value).forEach(familyName => {
-    Object.keys(harmonyColors.value[familyName]).forEach(shade => {
-      const oklchValue = harmonyColors.value[familyName][shade];
-      const cacheKey = `${familyName}-${shade}`;
-      computeHexFromOklch(oklchValue, cacheKey);
-    });
-  });
-  
-  // Compute text colors for all cells
-  computeAllTextColors();
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
 });
 
 onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
+  clearTimeout(copiedTimer);
 });
 </script>
 

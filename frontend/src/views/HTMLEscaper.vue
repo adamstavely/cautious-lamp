@@ -104,6 +104,8 @@
               </div>
             </div>
 
+            <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
+
             <div class="grid lg:grid-cols-2 gap-6">
               <!-- Left Column: Input -->
               <div 
@@ -143,7 +145,6 @@
                 <div class="p-4">
                   <textarea
                     v-model="inputText"
-                    @input="handleConversion"
                     :placeholder="conversionMode === 'escape' ? 'Enter HTML to escape...' : 'Enter escaped HTML to unescape...'"
                     class="w-full h-64 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-sm resize-none"
                     :class="isDarkMode 
@@ -297,113 +298,106 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 const conversionMode = ref('escape');
 const inputText = ref('');
 
+const ESCAPE_MAP = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+
+const escapeHTML = (text) => text.replace(/[&<>"']/g, (char) => ESCAPE_MAP[char]);
+
+// Named entities recognised when unescaping. Pure string mapping: the input is
+// never parsed as HTML, so nothing in it can execute or be injected.
+const NAMED_ENTITIES = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: '\u00A0',
+  copy: '\u00A9',
+  reg: '\u00AE',
+  trade: '\u2122',
+  hellip: '\u2026',
+  mdash: '\u2014',
+  ndash: '\u2013',
+  lsquo: '\u2018',
+  rsquo: '\u2019',
+  ldquo: '\u201C',
+  rdquo: '\u201D',
+  laquo: '\u00AB',
+  raquo: '\u00BB',
+  deg: '\u00B0',
+  euro: '\u20AC',
+  pound: '\u00A3',
+  yen: '\u00A5',
+  cent: '\u00A2',
+  sect: '\u00A7',
+  middot: '\u00B7',
+  bull: '\u2022',
+  times: '\u00D7',
+  divide: '\u00F7',
+};
+
+const toCodePoint = (match, code) => {
+  // Valid Unicode scalar values only (no NUL, no surrogates, nothing past U+10FFFF).
+  if (Number.isNaN(code) || code <= 0 || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)) {
+    return match;
+  }
+  return String.fromCodePoint(code);
+};
+
+// Single pass, so "&amp;lt;" becomes "&lt;" (not "<"): escape/unescape round-trip exactly.
+const unescapeHTML = (text) =>
+  text.replace(/&(?:#[xX]([0-9a-fA-F]+)|#(\d+)|([a-zA-Z][a-zA-Z0-9]*));/g, (match, hex, dec, name) => {
+    if (hex !== undefined) return toCodePoint(match, parseInt(hex, 16));
+    if (dec !== undefined) return toCodePoint(match, parseInt(dec, 10));
+    return Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, name) ? NAMED_ENTITIES[name] : match;
+  });
+
 const outputText = computed(() => {
   if (!inputText.value) return '';
-  
-  if (conversionMode.value === 'escape') {
-    return escapeHTML(inputText.value);
-  } else {
-    return unescapeHTML(inputText.value);
-  }
+  return conversionMode.value === 'escape' ? escapeHTML(inputText.value) : unescapeHTML(inputText.value);
 });
-
-
-
-
-
-const escapeHTML = (text) => {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  };
-  
-  return text.replace(/[&<>"']/g, (char) => map[char]);
-};
-
-const unescapeHTML = (text) => {
-  // Named entities - must be replaced first
-  const namedEntities = {
-    '&amp;': '&',
-    '&lt;': '<',
-    '&gt;': '>',
-    '&quot;': '"',
-    '&apos;': "'",
-  };
-  
-  // Replace named entities
-  let result = text;
-  for (const [entity, char] of Object.entries(namedEntities)) {
-    result = result.replace(new RegExp(entity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), char);
-  }
-  
-  // Then replace numeric entities (decimal) - must come after named entities
-  result = result.replace(/&#(\d+);/g, (match, dec) => {
-    const code = parseInt(dec, 10);
-    // Only replace valid character codes
-    if (code >= 0 && code <= 0x10FFFF) {
-      return String.fromCharCode(code);
-    }
-    return match;
-  });
-  
-  // Then replace numeric entities (hexadecimal)
-  result = result.replace(/&#x([0-9a-fA-F]+);/gi, (match, hex) => {
-    const code = parseInt(hex, 16);
-    // Only replace valid character codes
-    if (code >= 0 && code <= 0x10FFFF) {
-      return String.fromCharCode(code);
-    }
-    return match;
-  });
-  
-  return result;
-};
-
-const handleConversion = () => {
-  // Conversion happens automatically via computed property
-};
 
 const clearInput = () => {
   inputText.value = '';
 };
 
-const copyInput = async () => {
-  if (!inputText.value) return;
-  
+const copyText = async (text, label) => {
+  if (!text) return;
   try {
-    await navigator.clipboard.writeText(inputText.value);
+    await navigator.clipboard.writeText(text);
+    showNotice(`${label} copied to clipboard.`, 'success');
   } catch (error) {
     console.error('Copy failed:', error);
+    showNotice('Could not copy to the clipboard. Select the text and copy it manually.', 'error');
   }
 };
 
-const copyOutput = async () => {
-  if (!outputText.value) return;
-  
-  try {
-    await navigator.clipboard.writeText(outputText.value);
-  } catch (error) {
-    console.error('Copy failed:', error);
-  }
-};
+const copyInput = () => copyText(inputText.value, 'Input');
+const copyOutput = () => copyText(outputText.value, 'Output');
 
 const downloadOutput = () => {
   if (!outputText.value) return;
-  
-  const blob = new Blob([outputText.value], { type: 'text/plain' });
+
+  const blob = new Blob([outputText.value], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -413,23 +407,6 @@ const downloadOutput = () => {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
-
-// Watch for mode changes to update output
-watch(conversionMode, () => {
-  // Output updates automatically via computed property
-});
-
-onMounted(() => {
-  // Watch for dark mode changes
-  const observer = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-});
 </script>
 
 <style scoped>
