@@ -17,12 +17,12 @@ The ESLint plugin is now fully implemented with:
    - Fetches rules from Rules Engine API
    - Converts scanner code to ESLint rules
    - Caches rules for performance
-   - Auto-loads when `apiUrl` is configured
+   - Loaded by awaiting `loadRulesFromAPI(config)` before linting (see README)
 
 3. **Rule Conversion**:
    - Scanner code → ESLint AST visitors
    - Pattern matching for common violations
-   - Support for auto-fix
+   - No auto-fix (rules report only)
 
 ### Files Structure
 

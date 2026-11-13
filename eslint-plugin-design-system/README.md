@@ -1,6 +1,8 @@
 # eslint-plugin-design-system
 
-ESLint plugin that integrates with your Design System Rules Engine to provide real-time linting based on your compliance rules.
+ESLint plugin for Design System compliance: five built-in rules that work offline, plus optional extra rules loaded from the Design System Rules Engine API.
+
+Supports ESLint 8 (eslintrc and flat config) and ESLint 9 (flat config).
 
 ## Installation
 
@@ -10,96 +12,87 @@ npm install --save-dev eslint-plugin-design-system
 
 ## Configuration
 
-### Basic Setup
+The plugin ships two presets with the same rules:
 
-Add to your `.eslintrc.js`:
+| Config | Format | Use with |
+| --- | --- | --- |
+| `recommended` (alias `legacy-recommended`) | eslintrc | `.eslintrc.*`, ESLint 8 default mode |
+| `flat/recommended` | flat config | `eslint.config.js`, ESLint 9 or ESLint 8.57+ flat mode |
+
+### Flat config (`eslint.config.js`)
+
+```javascript
+const designSystem = require('eslint-plugin-design-system');
+
+module.exports = [
+  designSystem.configs['flat/recommended'],
+  {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
+    rules: {
+      'design-system/component-naming': 'error'
+    }
+  }
+];
+```
+
+### eslintrc (`.eslintrc.js`)
 
 ```javascript
 module.exports = {
-  plugins: ['design-system'],
   extends: ['plugin:design-system/recommended'],
-  settings: {
-    'design-system': {
-      apiUrl: 'http://localhost:3000/api/v1',
-      apiKey: process.env.DS_API_KEY || 'test-api-key-123',
-      cacheRules: true,
-      cacheTimeout: 300000 // 5 minutes
-    }
-  },
+  parserOptions: { ecmaVersion: 2022, sourceType: 'module', ecmaFeatures: { jsx: true } },
   rules: {
-    // Built-in rules work immediately
-    'design-system/hardcoded-design-tokens': 'error',
-    'design-system/component-naming': 'warn',
-    'design-system/accessibility-attributes': 'error',
-    'design-system/spacing-consistency': 'warn',
-    'design-system/typography-scale': 'warn'
-    
-    // Additional rules loaded from API will be available automatically
+    'design-system/component-naming': 'error'
   }
 };
 ```
 
+`recommended` sets `hardcoded-design-tokens` and `accessibility-attributes` to `error`, the other three to `warn`.
+
 ## Built-in Rules
 
-The plugin includes these rules that work without API connection:
+| Rule | Reports |
+| --- | --- |
+| `hardcoded-design-tokens` | Hardcoded colors in strings and template literals: `#rgb`, `#rrggbb`, `#rrggbbaa`, colors inside longer values (`'1px solid #fff'`), `rgb()/rgba()/hsl()/hsla()`. Object keys and import sources are ignored. |
+| `spacing-consistency` | px spacing values (`'16px'`, `'-4px'`, `'8px 16px'`). Zero values are allowed, and values for non-spacing properties (`width`, `height`, `border*`, `*radius`, `font*`, ...) are left alone. |
+| `typography-scale` | Hardcoded `px/rem/em/pt` values for `fontSize`, `lineHeight`, `letterSpacing`, `wordSpacing` (object properties, `style.x = ...`, JSX props, or variables named like them), and numeric `fontSize: 16`. |
+| `component-naming` | Component declarations (variables, functions, classes whose name starts with an uppercase letter) that aren't PascalCase, e.g. `My_Component`. `_private`, `$el`, `camelCase` and ALL_CAPS constants (`MAX_SIZE`) are not components. References and imports aren't checked; only declarations. |
+| `accessibility-attributes` | Native JSX `<button>`, `<input>`, `<select>`, `<textarea>` with no accessible name. Accepted: non-empty `aria-label`, `aria-labelledby` or `title`; button text or child content; an `id` (for `<label htmlFor>`); a wrapping `<label>`; `type="hidden"/"submit"/"reset"`. Components (`<Button>`), `<ui.button>` and elements with `{...spread}` props are skipped. `placeholder` is not a label. |
 
-1. **`hardcoded-design-tokens`** - Prevents hardcoded colors, spacing, typography
-2. **`component-naming`** - Enforces PascalCase component naming
-3. **`accessibility-attributes`** - Requires ARIA attributes on interactive elements
-4. **`spacing-consistency`** - Ensures consistent spacing usage
-5. **`typography-scale`** - Validates typography scale usage
+None of the rules are auto-fixable.
 
-## API Integration
+Vue: the rules check `<script>` code when using `vue-eslint-parser`; `accessibility-attributes` only understands JSX, not Vue `<template>` markup.
 
-When `apiUrl` is configured, the plugin automatically fetches additional rules from your Rules Engine:
+## API rules
 
-- Rules are cached for performance (default: 5 minutes)
-- Rules sync with your Governance UI
-- Same scanner logic used in compliance scanning
+ESLint rules run synchronously, so rules from the Rules Engine have to be loaded **before** linting. Nothing is fetched when the plugin is required, and ESLint `settings` are not read.
 
-## Usage
+```javascript
+// eslint.config.mjs
+import designSystem from 'eslint-plugin-design-system';
+
+const { loaded } = await designSystem.loadRulesFromAPI({
+  apiUrl: process.env.DS_API_URL,   // e.g. http://localhost:3000/api/v1
+  apiKey: process.env.DS_API_KEY,   // sent as "Authorization: Bearer <key>"
+  timeout: 5000,                    // ms, default 5000
+  cacheTimeout: 300000              // ms, default 5 minutes
+});
+
+export default [
+  designSystem.configs['flat/recommended'],
+  { rules: Object.fromEntries(loaded.map(id => [`design-system/${id}`, 'warn'])) }
+];
+```
+
+- Fetches `GET {apiUrl}/rules/export?format=eslint` and expects `{ rules: [...] }`.
+- Rule ids are the rule name lowercased and hyphenated (`"No Brand Colors"` becomes `design-system/no-brand-colors`). Disabled rules, rules whose name sanitizes to nothing, and rules that would replace a built-in rule are skipped and listed in `skipped`.
+- It never rejects: if the API is down, slow (times out) or returns bad data, it logs one warning and resolves with whatever loaded (cached rules for that URL, if any).
+- `config.rules` registers rule definitions directly without a request.
+
+## Development
 
 ```bash
-# Lint files
-npx eslint . --plugin design-system
-
-# Fix auto-fixable issues
-npx eslint . --plugin design-system --fix
-
-# Check specific rules
-npx eslint . --rule 'design-system/hardcoded-design-tokens: error'
+npm run build   # tsc -> lib/
+npm test        # builds, then runs jest (RuleTester suites, load test, ESLint integration)
 ```
-
-## VS Code Integration
-
-Install the ESLint extension for VS Code:
-
-1. Install `dbaeumer.vscode-eslint` extension
-2. Configure ESLint as shown above
-3. Rules will work automatically in VS Code
-
-## Example
-
-**Before (violation):**
-```javascript
-const color = '#3b82f6'; // ❌ Hardcoded color
-const spacing = '16px';  // ❌ Hardcoded spacing
-```
-
-**After (fixed):**
-```javascript
-const color = tokens.color.primary; // ✅ Design token
-const spacing = tokens.spacing.md;   // ✅ Design token
-```
-
-## How It Works
-
-1. **Built-in Rules**: Work immediately without API connection
-2. **API Rules**: Fetched from Rules Engine when `apiUrl` is configured
-3. **Rule Conversion**: Scanner code converted to ESLint AST visitors
-4. **Real-time Linting**: Works in IDE and CLI
-
-## See Also
-
-- [Linter Integration Guide](../docs/LINTER_INTEGRATION.md)
-- [Rules Engine Guide](../docs/RULES_ENGINE_GUIDE.md)

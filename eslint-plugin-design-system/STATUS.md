@@ -29,7 +29,7 @@ The ESLint plugin is now **fully implemented** and ready for use.
 - ✅ Fetches rules from `/api/v1/rules/export?format=eslint`
 - ✅ Converts scanner code to ESLint AST visitors
 - ✅ Caches rules for performance (5-minute default)
-- ✅ Auto-loads when `apiUrl` is configured
+- Loaded by awaiting `loadRulesFromAPI(config)` before linting (see README); `settings` are not read
 
 ### 4. Backend Integration
 
@@ -107,7 +107,7 @@ Developer sees real-time violations
 - ✅ **Synchronous Built-in Rules**: Work immediately without API
 - ✅ **Asynchronous API Rules**: Load additional rules from Rules Engine
 - ✅ **Rule Conversion**: Scanner code → ESLint AST visitors
-- ✅ **Auto-fix Support**: Can automatically fix some violations
+- **Auto-fix**: not supported; rules report only
 - ✅ **VS Code Integration**: Works via ESLint extension
 - ✅ **Caching**: Rules cached for performance
 
