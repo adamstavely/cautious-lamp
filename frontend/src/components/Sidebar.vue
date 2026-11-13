@@ -42,12 +42,12 @@
     <div class="px-2 pb-4">
       <button
         @click="toggleDarkMode"
-        class="side-item side-toggle w-full"
+        class="side-item w-full"
         :title="isDarkMode ? 'Light Mode' : 'Dark Mode'"
         :aria-label="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
         aria-pressed="false"
       >
-        <span class="material-symbols-outlined side-ic" aria-hidden="true">
+        <span class="material-symbols-outlined flex-shrink-0" aria-hidden="true">
           {{ isDarkMode ? 'light_mode' : 'dark_mode' }}
         </span>
       </button>
@@ -161,51 +161,28 @@ const isActive = (path) => {
 
 <style scoped>
 .side {
-  background: var(--ds-bg);
-  color: var(--ds-muted);
-  border-right: 1px solid var(--ds-line);
+  @apply bg-[#fff] border-r border-slate-200 text-slate-600 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-400;
 }
 .side-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 4px;
-  border-radius: 10px;
-  color: var(--ds-muted);
-  transition: .12s;
-}
-.side-item:hover {
-  background: var(--ds-bg-3);
-  color: var(--ds-ink);
+  @apply flex flex-col items-center gap-1.5 px-1 py-2.5 rounded-xl transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-900 dark:hover:text-white;
 }
 .side-item.on {
-  background: var(--ds-accent-wash);
-  color: var(--ds-accent-ink);
+  @apply bg-[#f2f6fd] text-[#2f5ea8] dark:bg-[#263a5c]/40 dark:text-[#9dbcf0];
 }
 .side-ic {
-  color: var(--ds-faint);
-  transition: color .12s;
+  @apply text-slate-400 transition-colors dark:text-slate-500;
 }
 .side-item:hover .side-ic,
 .side-item.on .side-ic {
-  color: var(--ds-accent);
+  @apply text-[#2f5ea8] dark:text-[#9dbcf0];
 }
 .side-label {
-  font-size: 12.5px;
-  font-weight: 500;
-  line-height: 1.25;
-  text-align: center;
+  @apply text-xs font-medium text-center leading-tight;
 }
 .side-item.on .side-label {
-  font-weight: 600;
-}
-.side-toggle {
-  padding: 8px;
+  @apply font-semibold;
 }
 .side-divider {
-  height: 1px;
-  margin: 6px 12px 8px;
-  background: var(--ds-line);
+  @apply h-px mx-3 my-2 bg-slate-200 dark:bg-slate-800;
 }
 </style>
