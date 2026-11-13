@@ -1,6 +1,7 @@
 import { Controller, Get, Query, Headers } from '@nestjs/common';
 import { SearchService, SearchFilters } from './search.service';
 import { KeyManagementService } from '../common/security/key-management.service';
+import { AuthPrincipal, Principal } from '../auth/principal';
 
 @Controller('api/v1/search')
 export class SearchController {
@@ -24,6 +25,7 @@ export class SearchController {
     @Query('useCase') useCase?: string,
     @Query('tags') tags?: string,
     @Headers('authorization') authHeader?: string,
+    @Principal() principal?: AuthPrincipal,
   ) {
     this.validateRequest(authHeader);
     
@@ -48,7 +50,7 @@ export class SearchController {
       filters.tags = tags.split(',');
     }
 
-    return this.searchService.search(query, filters);
+    return this.searchService.search(query, filters, principal);
   }
 
   @Get('suggestions')
@@ -67,9 +69,10 @@ export class SearchController {
   @Get('filters')
   getAvailableFilters(
     @Headers('authorization') authHeader?: string,
+    @Principal() principal?: AuthPrincipal,
   ) {
     this.validateRequest(authHeader);
-    return this.searchService.getAvailableFilters();
+    return this.searchService.getAvailableFilters(principal);
   }
 }
 

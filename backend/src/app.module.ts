@@ -8,6 +8,7 @@ import { VisualRegressionModule } from './visual-regression/visual-regression.mo
 import { SessionReplayModule } from './session-replay/session-replay.module';
 import { PhotosensitivityModule } from './photosensitivity/photosensitivity.module';
 import { AccessibilityReportsModule } from './accessibility-reports/accessibility-reports.module';
+import { GovernanceModule } from './governance/governance.module';
 import { SystemHealthModule } from './system-health/system-health.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { TokenSyncModule } from './token-sync/token-sync.module';
@@ -30,6 +31,8 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { AltTextModule } from './alt-text/alt-text.module';
 import { AuthModule } from './auth/auth.module';
 import { AuthGuard } from './auth/auth.guard';
+import { ApplicationsModule } from './applications/applications.module';
+import { WorkspacesModule } from './workspaces/workspaces.module';
 
 @Module({
   imports: [
@@ -46,6 +49,7 @@ import { AuthGuard } from './auth/auth.guard';
     SessionReplayModule,
     PhotosensitivityModule,
     AccessibilityReportsModule,
+    GovernanceModule,
     SystemHealthModule,
     AnalyticsModule,
     TokenSyncModule,
@@ -60,6 +64,8 @@ import { AuthGuard } from './auth/auth.guard';
     SecurityModule,
     DesignExtractionModule,
     ReviewsModule,
+    ApplicationsModule,
+    WorkspacesModule,
   ],
   // Global guards run in this order: rate limiting first, then authentication
   providers: [

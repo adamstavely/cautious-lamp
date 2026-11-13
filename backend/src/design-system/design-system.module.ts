@@ -3,22 +3,16 @@ import { DesignSystemController } from './design-system.controller';
 import { DesignSystemService } from './design-system.service';
 import { ComponentRequestService } from './component-request.service';
 import { NotificationService } from './notification.service';
-import { ComplianceScannerService } from './compliance-scanner.service';
-import { ApplicationScannerService } from './application-scanner.service';
-import { VisualRegressionModule } from '../visual-regression/visual-regression.module';
-import { SessionReplayModule } from '../session-replay/session-replay.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { SecurityModule } from '../common/security/security.module';
 
 @Module({
-  imports: [VisualRegressionModule, SessionReplayModule, forwardRef(() => AnalyticsModule), SecurityModule],
+  imports: [forwardRef(() => AnalyticsModule), SecurityModule],
   controllers: [DesignSystemController],
   providers: [
     DesignSystemService,
     ComponentRequestService,
     NotificationService,
-    ComplianceScannerService,
-    ApplicationScannerService
   ],
   exports: [DesignSystemService, ComponentRequestService, NotificationService],
 })

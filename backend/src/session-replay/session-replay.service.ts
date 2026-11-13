@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Optional, Inject } from '@nestjs/common';
 import { OpenReplayApiClient } from './openreplay-api.client';
 import { EncryptionService } from '../common/security/encryption.service';
+import { resolveOpenReplayBaseUrl } from './openreplay-url';
 
 export interface Project {
   id: string;
@@ -47,6 +48,16 @@ export interface Session {
   metadata?: Record<string, any>;
 }
 
+const UPDATABLE_PROJECT_FIELDS = [
+  'name',
+  'description',
+  'applicationUrl',
+  'openreplayProjectKey',
+  'openreplayBaseUrl',
+  'privacySettings',
+  'config',
+] as const;
+
 @Injectable()
 export class SessionReplayService {
   private projects: Map<string, Project> = new Map();
@@ -91,9 +102,10 @@ export class SessionReplayService {
 
   // Project Management
   async createProject(teamId: string, dto: any): Promise<Project> {
+    // SSRF guard: the base URL is fetched later, so it is checked before it is stored
+    const openreplayBaseUrl = await resolveOpenReplayBaseUrl(dto.openreplayBaseUrl);
     // Verify OpenReplay connection if API key provided
     if (dto.openreplayApiKey) {
-      const openreplayBaseUrl = dto.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com';
       const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, dto.openreplayApiKey);
       
       try {
@@ -119,7 +131,7 @@ export class SessionReplayService {
       description: dto.description,
       applicationUrl: dto.applicationUrl,
       openreplayProjectKey: dto.openreplayProjectKey,
-      openreplayBaseUrl: dto.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com',
+      openreplayBaseUrl,
       openreplayApiKey: encryptedApiKey, // Encrypted API key stored at rest
       privacySettings: dto.privacySettings || {},
       config: dto.config || {},
@@ -164,9 +176,14 @@ export class SessionReplayService {
       throw new NotFoundException(`Project with ID ${id} not found`);
     }
 
+    // SSRF guard: check a new base URL before it is stored
+    if (dto.openreplayBaseUrl !== undefined) {
+      dto = { ...dto, openreplayBaseUrl: await resolveOpenReplayBaseUrl(dto.openreplayBaseUrl) };
+    }
+
     // If updating OpenReplay connection details, verify them
     if (dto.openreplayProjectKey || dto.openreplayApiKey || dto.openreplayBaseUrl) {
-      const openreplayBaseUrl = dto.openreplayBaseUrl || project.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com';
+      const openreplayBaseUrl = await resolveOpenReplayBaseUrl(dto.openreplayBaseUrl || project.openreplayBaseUrl);
       // Decrypt stored API key if using existing, or use new API key from DTO
       const storedApiKey = project.openreplayApiKey;
       const decryptedApiKey = storedApiKey && this.encryptionService?.isEncrypted(storedApiKey)
@@ -189,9 +206,15 @@ export class SessionReplayService {
       ? this.encryptionService?.encrypt(dto.openreplayApiKey)
       : project.openreplayApiKey; // Keep existing encrypted API key
 
+    // Only fields a client may change; id, timestamps and the like can't be overwritten
+    const changes: Partial<Project> = {};
+    for (const key of UPDATABLE_PROJECT_FIELDS) {
+      if (dto[key] !== undefined) (changes as Record<string, unknown>)[key] = dto[key];
+    }
+
     const updated: Project = {
       ...project,
-      ...dto,
+      ...changes,
       openreplayApiKey: encryptedApiKey,
       updatedAt: new Date(),
     };
@@ -218,10 +241,9 @@ export class SessionReplayService {
     }
 
     const decryptedApiKey = this.decryptToken(project.openreplayApiKey) || '';
-    const openreplayClient = new OpenReplayApiClient(
-      project.openreplayBaseUrl || 'https://api.openreplay.com',
-      decryptedApiKey
-    );
+    // Only builds a snippet (no request); the base URL was checked when it was saved
+    const openreplayBaseUrl = project.openreplayBaseUrl || 'https://api.openreplay.com';
+    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, decryptedApiKey);
 
     return openreplayClient.getIntegrationCode(
       project.openreplayProjectKey,
@@ -343,7 +365,8 @@ export class SessionReplayService {
       };
     }
 
-    const openreplayBaseUrl = project.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com';
+    // SSRF guard: re-checked before every request, since DNS can change after the URL was saved
+    const openreplayBaseUrl = await resolveOpenReplayBaseUrl(project.openreplayBaseUrl);
     const apiKey = this.decryptToken(project.openreplayApiKey);
     if (!apiKey) {
       throw new BadRequestException('OpenReplay API key not configured or failed to decrypt');
@@ -464,7 +487,8 @@ export class SessionReplayService {
       return mockSession;
     }
 
-    const openreplayBaseUrl = project.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com';
+    // SSRF guard: re-checked before every request, since DNS can change after the URL was saved
+    const openreplayBaseUrl = await resolveOpenReplayBaseUrl(project.openreplayBaseUrl);
     const apiKey = this.decryptToken(project.openreplayApiKey);
     if (!apiKey) {
       throw new BadRequestException('OpenReplay API key not configured or failed to decrypt');
@@ -525,8 +549,9 @@ export class SessionReplayService {
       return mockUrl;
     }
 
+    // Only builds a URL for the browser (no request); the base URL was checked when it was saved
     const openreplayBaseUrl = project.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com';
-    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, project.openreplayApiKey || '');
+    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, '');
     
     const numericProjectId = parseInt(project.openreplayProjectKey) || 1;
     return openreplayClient.getHeatmapUrl(numericProjectId, heatmapId);
