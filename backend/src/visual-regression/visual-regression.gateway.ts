@@ -11,6 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { Injectable } from '@nestjs/common';
 import { VisualRegressionService } from './visual-regression.service';
 import { KeyManagementService } from '../common/security/key-management.service';
+import { AuthService } from '../auth/auth.service';
 
 @Injectable()
 @WebSocketGateway({
@@ -29,14 +30,18 @@ export class VisualRegressionGateway implements OnGatewayConnection, OnGatewayDi
 
   constructor(
     private readonly visualRegressionService: VisualRegressionService,
-    private readonly keyManagementService: KeyManagementService,
+    private readonly authService: AuthService,
   ) {}
 
-  /** Clients send their API key as auth.token or an Authorization header */
-  handleConnection(client: Socket) {
+  /**
+   * Clients send a user token or an API key as auth.token or an Authorization
+   * header. The global AuthGuard doesn't cover connections, so check here.
+   */
+  async handleConnection(client: Socket) {
     const token = client.handshake.auth?.token ?? client.handshake.headers?.authorization;
-    if (!this.keyManagementService.isValidApiKey(KeyManagementService.extractKey(token))) {
-      client.emit('error', { message: 'Invalid or missing API key' });
+    const principal = await this.authService.resolve(KeyManagementService.extractKey(token)).catch(() => null);
+    if (!principal) {
+      client.emit('error', { message: 'Sign in or send a valid API key' });
       client.disconnect(true);
       return;
     }

@@ -429,7 +429,7 @@ import { useRoute, useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -461,7 +461,7 @@ const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
 const loadProject = async () => {
   loading.value = true;
   try {
-    const response = await axios.get(`${API_BASE_URL}/session-replay/projects/${route.params.id}`);
+    const response = await apiClient.get(`${API_BASE_URL}/session-replay/projects/${route.params.id}`);
     project.value = response.data;
     projectForm.value = {
       name: project.value.name,
@@ -482,7 +482,7 @@ const loadProject = async () => {
 
 const loadIntegrationCode = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/session-replay/projects/${route.params.id}/integration-code`);
+    const response = await apiClient.get(`${API_BASE_URL}/session-replay/projects/${route.params.id}/integration-code`);
     integrationCode.value = response.data.code;
   } catch (error) {
     console.error('Failed to load integration code:', error);
@@ -503,7 +503,7 @@ const copyIntegrationCode = async () => {
 const loadSessions = async () => {
   sessionsLoading.value = true;
   try {
-    const response = await axios.get(`${API_BASE_URL}/session-replay/projects/${route.params.id}/sessions`);
+    const response = await apiClient.get(`${API_BASE_URL}/session-replay/projects/${route.params.id}/sessions`);
     sessions.value = response.data.sessions || [];
   } catch (error) {
     console.error('Failed to load sessions:', error);
@@ -517,7 +517,7 @@ const loadSessions = async () => {
 const updateProject = async () => {
   saving.value = true;
   try {
-    await axios.put(`${API_BASE_URL}/session-replay/projects/${route.params.id}`, projectForm.value);
+    await apiClient.put(`${API_BASE_URL}/session-replay/projects/${route.params.id}`, projectForm.value);
     window.showToast?.('Project updated successfully', 'success');
     await loadProject();
   } catch (error) {
@@ -583,7 +583,7 @@ const liveSessions = computed(() => {
 const loadHeatmapsUrl = async () => {
   heatmapsUrlLoading.value = true;
   try {
-    const response = await axios.get(`${API_BASE_URL}/session-replay/projects/${route.params.id}/heatmaps-url`);
+    const response = await apiClient.get(`${API_BASE_URL}/session-replay/projects/${route.params.id}/heatmaps-url`);
     heatmapsUrl.value = response.data.url;
   } catch (error) {
     console.error('Failed to load heatmaps URL:', error);

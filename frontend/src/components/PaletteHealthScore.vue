@@ -335,7 +335,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 
@@ -541,7 +541,7 @@ const fetchContrastResults = async () => {
   }
 
   try {
-    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/analyze`, {
+    const response = await apiClient.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/analyze`, {
       colors: props.palette.colors.map((c) => ({ hex: c?.hex || '' })).filter((c) => c.hex),
     });
     contrastResults.value = response.data.contrastResults || [];

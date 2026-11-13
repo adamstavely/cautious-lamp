@@ -504,7 +504,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 
 const props = defineProps({
   palette: {
@@ -616,7 +616,7 @@ const getContrastSuggestion = async (result) => {
   
   try {
     console.log('Requesting contrast fix for:', { color1: result.color1, color2: result.color2 });
-    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/contrast-fix`, {
+    const response = await apiClient.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/contrast-fix`, {
       color1: result.color1,
       color2: result.color2,
       targetRatio: 4.5,
@@ -730,7 +730,7 @@ const testContrast = async () => {
   loading.value = true;
   try {
     console.log('Testing contrast for palette:', props.palette.colors.map((c) => c.hex));
-    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/analyze`, {
+    const response = await apiClient.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/analyze`, {
       colors: props.palette.colors.map((c) => ({ hex: c.hex })),
     });
     
@@ -761,7 +761,7 @@ const loadStrategicSuggestions = async () => {
   
   loadingStrategic.value = true;
   try {
-    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/strategic-colors`, {
+    const response = await apiClient.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/strategic-colors`, {
       colors: props.palette.colors.map((c) => c.hex),
       contrastResults: contrastResults.value,
       maxSuggestions: 5,

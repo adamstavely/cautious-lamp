@@ -144,7 +144,7 @@
 
 <script setup>
 import { ref, watch, nextTick, onMounted, computed, onBeforeUnmount } from 'vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 
 const props = defineProps({
   isOpen: {
@@ -156,7 +156,6 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 
 const inputMessage = ref('');
 const messages = ref([
@@ -230,14 +229,11 @@ const sendMessage = async () => {
       .filter(m => m.role !== 'system')
       .map(m => ({ role: m.role, content: m.content }));
 
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/ai/chat`,
       {
         message: userMessage,
         conversationHistory: conversationHistory.slice(-10) // Last 10 messages for context
-      },
-      {
-        headers: { Authorization: `Bearer ${API_KEY}` }
       }
     );
 

@@ -13,8 +13,7 @@ export class SessionReplayController {
   }
 
   @Post('projects')
-  async createProject(@Body() dto: CreateProjectDto, @Request() req: any) {
-    const userId = req.user?.id || 'anonymous';
+  async createProject(@Body() dto: CreateProjectDto) {
     const teamId = dto.teamId || 'default-team';
     return this.sessionReplayService.createProject(teamId, dto);
   }

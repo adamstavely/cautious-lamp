@@ -2,7 +2,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AuditService, AuditAction } from '../../audit/audit.service';
 
 export interface SecurityEvent {
-  type: 'auth_failed' | 'auth_success' | 'token_rotation' | 'token_revocation' | 'encryption' | 'rate_limit' | 'suspicious_activity' | 'permission_denied';
+  type:
+    | 'auth_failed'
+    | 'auth_success'
+    | 'token_rotation'
+    | 'token_revocation'
+    | 'encryption'
+    | 'rate_limit'
+    | 'suspicious_activity'
+    | 'permission_denied'
+    | AccountEventType;
   severity: 'low' | 'medium' | 'high' | 'critical';
   description: string;
   userId?: string;
@@ -10,6 +19,11 @@ export interface SecurityEvent {
   userAgent?: string;
   metadata?: Record<string, unknown>;
 }
+
+const FAILURE_EVENTS = new Set<SecurityEvent['type']>(['auth_failed', 'permission_denied', 'account_locked']);
+
+/** Changes to people's accounts and access (docs/AUTH.md) */
+export type AccountEventType = 'account_locked' | 'password_changed' | 'user_changed' | 'role_changed' | 'logout';
 
 /**
  * Service for logging security-specific audit events
@@ -50,8 +64,8 @@ export class SecurityAuditService {
         severity: event.severity,
         description: event.description,
       },
-      success: event.type !== 'auth_failed' && event.type !== 'permission_denied',
-      errorMessage: event.type === 'auth_failed' || event.type === 'permission_denied' ? event.description : undefined,
+      success: !FAILURE_EVENTS.has(event.type),
+      errorMessage: FAILURE_EVENTS.has(event.type) ? event.description : undefined,
     });
 
     // Log to console for critical events
@@ -233,6 +247,30 @@ export class SecurityAuditService {
   }
 
   /**
+   * Log an account event: a lockout, password change, sign-out, or a change to
+   * a user or their roles. `actorId` is who did it; `metadata.targetUserId`
+   * says whose account it was.
+   */
+  async logAccountEvent(
+    type: AccountEventType,
+    description: string,
+    actorId: string | undefined,
+    metadata?: Record<string, unknown>,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<void> {
+    await this.logSecurityEvent({
+      type,
+      severity: type === 'account_locked' || type === 'role_changed' ? 'high' : 'medium',
+      description,
+      userId: actorId,
+      ipAddress,
+      userAgent,
+      metadata,
+    });
+  }
+
+  /**
    * Check for suspicious activity patterns
    */
   private async checkSuspiciousActivity(event: SecurityEvent): Promise<void> {
@@ -298,6 +336,11 @@ export class SecurityAuditService {
       'rate_limit': AuditAction.RATE_LIMIT_EXCEEDED,
       'suspicious_activity': AuditAction.SUSPICIOUS_ACTIVITY,
       'permission_denied': AuditAction.PERMISSION_DENIED,
+      'account_locked': AuditAction.AUTH_FAILED,
+      'password_changed': AuditAction.UPDATE,
+      'user_changed': AuditAction.UPDATE,
+      'role_changed': AuditAction.ASSIGN,
+      'logout': AuditAction.LOGOUT,
     };
     return mapping[eventType] || AuditAction.API_CALL;
   }

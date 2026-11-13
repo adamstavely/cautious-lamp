@@ -608,7 +608,7 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 
 const router = useRouter();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -651,7 +651,6 @@ const editForm = ref({
 });
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 
 const filteredApplications = computed(() => {
   if (!filterCapability.value) {
@@ -674,9 +673,7 @@ const loadApplications = async () => {
     if (filterCapability.value) {
       params.append('capability', filterCapability.value);
     }
-    const response = await axios.get(`${API_BASE_URL}/applications?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/applications?${params.toString()}`);
     applications.value = response.data.applications || [];
     // Also load migration data
     await loadMigrationData();
@@ -691,12 +688,8 @@ const loadApplications = async () => {
 const loadMigrationData = async () => {
   try {
     const [migrationResponse, versionResponse] = await Promise.all([
-      axios.get(`${API_BASE_URL}/applications/version-tracking`, {
-        headers: { Authorization: `Bearer ${API_KEY}` }
-      }),
-      axios.get(`${API_BASE_URL}/design-system/current-version`, {
-        headers: { Authorization: `Bearer ${API_KEY}` }
-      })
+      apiClient.get(`${API_BASE_URL}/applications/version-tracking`),
+      apiClient.get(`${API_BASE_URL}/design-system/current-version`)
     ]);
     migrationData.value = migrationResponse.data;
     currentDesignSystemVersion.value = versionResponse.data.version;
@@ -708,9 +701,8 @@ const loadMigrationData = async () => {
 const updateApplicationVersion = async (applicationId, version) => {
   updatingVersion.value = applicationId;
   try {
-    await axios.patch(`${API_BASE_URL}/applications/${applicationId}/design-system-version`, 
-      { version },
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
+    await apiClient.patch(`${API_BASE_URL}/applications/${applicationId}/design-system-version`, 
+      { version }
     );
     window.showToast?.('Application version updated successfully', 'success');
     await loadApplications();
@@ -749,9 +741,7 @@ const getWorkspaceName = (workspaceId) => {
 
 const loadWorkspaces = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces`);
     workspaces.value = response.data || [];
   } catch (error) {
     console.error('Failed to load workspaces:', error);
@@ -815,9 +805,7 @@ const saveCapabilities = async () => {
       } : { enabled: false }
     };
 
-    await axios.patch(`${API_BASE_URL}/applications/${editingApplication.value.id}/capabilities`, payload, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    await apiClient.patch(`${API_BASE_URL}/applications/${editingApplication.value.id}/capabilities`, payload);
 
     window.showToast?.('Capabilities updated successfully', 'success');
     closeEditModal();
@@ -837,9 +825,7 @@ const deleteApplication = async (app) => {
   }
 
   try {
-    await axios.delete(`${API_BASE_URL}/applications/${app.id}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    await apiClient.delete(`${API_BASE_URL}/applications/${app.id}`);
     window.showToast?.('Application deleted successfully', 'success');
     await loadApplications();
   } catch (error) {

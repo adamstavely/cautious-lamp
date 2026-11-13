@@ -224,7 +224,7 @@ import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { useDrawer } from '../composables/useDrawer.js';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -232,7 +232,6 @@ const analysis = ref(null);
 const loading = ref(false);
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 
 
 
@@ -254,9 +253,7 @@ const getStatusClass = (status) => {
 const loadAnalysis = async () => {
   loading.value = true;
   try {
-    const response = await axios.get(`${API_BASE_URL}/performance/bundle-analysis`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/performance/bundle-analysis`);
     analysis.value = response.data;
   } catch (error) {
     console.error('Error loading analysis:', error);
@@ -268,10 +265,9 @@ const loadAnalysis = async () => {
 
 const analyzeComponent = async (componentId) => {
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/performance/bundle-analysis/analyze`,
-      { componentId, includeDependencies: true },
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
+      { componentId, includeDependencies: true }
     );
     
     const details = response.data;

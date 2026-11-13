@@ -6,6 +6,8 @@
 // when mock mode is on. Errors are thrown in the same shape axios uses
 // (`error.response.status`, `error.response.data`), so the UI handles both alike.
 
+import { authState } from './services/auth.js';
+
 const STORAGE_KEY = 'mockReviews.v2';
 const DAY = 24 * 60 * 60 * 1000;
 const DEMO_PDF = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
@@ -19,13 +21,34 @@ export const isMockMode = () => import.meta.env.VITE_USE_MOCKS === 'true';
 /** Async wrapper kept for callers that expect a promise. */
 export const isMockModeAsync = async () => isMockMode();
 
-// Mock user context (until real accounts exist, the acting user is self-asserted)
-export const getCurrentUser = () => ({
-  name: localStorage.getItem('currentDesigner') || 'Sarah Johnson',
-  email: localStorage.getItem('currentUserEmail') || 'sarah@example.com',
-  role: localStorage.getItem('userRole') || 'designer', // 'designer', 'client', 'art_director', 'creative_director'
-  teamId: localStorage.getItem('currentUserTeamId') || 'team-1',
-});
+/**
+ * The review role the review UI uses, from the signed-in user's RBAC roles.
+ * design_system_manager, review_manager and system_owner act as 'admin' for
+ * reviews; otherwise the most senior of creative_director, art_director,
+ * designer wins. Anyone else is treated as a designer (the server still
+ * decides what they may do).
+ */
+export const reviewRoleFor = (roles = []) => {
+  if (roles.some((role) => ['design_system_manager', 'review_manager', 'system_owner'].includes(role))) return 'admin';
+  if (roles.includes('creative_director')) return 'creative_director';
+  if (roles.includes('art_director')) return 'art_director';
+  return 'designer';
+};
+
+/** The signed-in user for the review UI: { id, name, email, roles, role, teamId }. */
+export const getCurrentUser = () => {
+  const user = authState.user;
+  const roles = user?.roles ?? [];
+  return {
+    id: user?.id ?? null,
+    name: user?.name || user?.email || '',
+    email: user?.email || '',
+    roles,
+    role: reviewRoleFor(roles),
+    // Only the demo data scopes by team; real lists are scoped by the server
+    teamId: 'team-1',
+  };
+};
 
 const defaultMockReviews = [
   {

@@ -523,21 +523,65 @@
           </div>
         </div>
 
-        <!-- User Avatar -->
-        <button
-          class="flex items-center gap-2 p-1 rounded-full transition-colors"
-          :class="isDarkMode ? 'hover:bg-slate-900' : 'hover:bg-slate-100'"
-          title="User Menu"
-          aria-label="User menu"
-          aria-haspopup="true"
-        >
-          <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold"
-            :class="isDarkMode ? 'bg-[#263a5c] text-[#cfdffb]' : 'bg-[#dce8fb] text-[#2f5ea8]'"
-            aria-hidden="true"
+        <!-- Account menu (menu button pattern) -->
+        <div ref="userMenuContainer" class="relative" @keydown.esc.stop="closeUserMenu(true)">
+          <button
+            id="user-menu-button"
+            ref="userMenuButton"
+            type="button"
+            class="flex items-center gap-2 p-1 rounded-full transition-colors hover:bg-slate-100 dark:hover:bg-slate-900"
+            :title="user ? `${user.name || user.email} (${user.email})` : 'Account'"
+            :aria-label="user ? `Account menu for ${user.name || user.email}` : 'Account menu'"
+            aria-haspopup="menu"
+            :aria-expanded="userMenuOpen ? 'true' : 'false'"
+            :aria-controls="userMenuOpen ? 'user-menu' : undefined"
+            @click="toggleUserMenu"
+            @keydown.down.prevent="openUserMenu(0)"
+            @keydown.up.prevent="openUserMenu(-1)"
           >
-            A
+            <span
+              class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold bg-[#dce8fb] text-[#2f5ea8] dark:bg-[#263a5c] dark:text-[#cfdffb]"
+              aria-hidden="true"
+            >{{ initials }}</span>
+          </button>
+
+          <div
+            v-if="userMenuOpen"
+            class="absolute right-0 mt-2 w-72 rounded-2xl border border-solid border-slate-200 bg-[#fff] dark:border-slate-800 dark:bg-slate-950 z-50 overflow-hidden"
+          >
+            <div class="flex items-center gap-3 px-4 py-4 border-b border-solid border-slate-200 dark:border-slate-800">
+              <span
+                class="w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-sm font-semibold bg-[#dce8fb] text-[#2f5ea8] dark:bg-[#263a5c] dark:text-[#cfdffb]"
+                aria-hidden="true"
+              >{{ initials }}</span>
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{{ user?.name || user?.email }}</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400 truncate">{{ user?.email }}</p>
+              </div>
+            </div>
+            <ul
+              id="user-menu"
+              ref="userMenuList"
+              role="menu"
+              aria-labelledby="user-menu-button"
+              class="py-1.5"
+              @keydown="handleUserMenuKeydown"
+            >
+              <li role="none">
+                <button type="button" role="menuitem" tabindex="-1" class="user-menu-item" @click="goToChangePassword">
+                  <span class="material-symbols-outlined text-lg" aria-hidden="true">key</span>
+                  Change password
+                </button>
+              </li>
+              <li role="none">
+                <button type="button" role="menuitem" tabindex="-1" class="user-menu-item" @click="signOut">
+                  <span class="material-symbols-outlined text-lg" aria-hidden="true">logout</span>
+                  Sign out
+                </button>
+              </li>
+            </ul>
           </div>
-        </button>
+        </div>
 
         <!-- App Picker -->
         <button
@@ -556,11 +600,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
-import { mockAPI, isMockMode, mockReviews } from '../mockData.js';
+import { mockAPI, isMockMode, mockReviews, getCurrentUser } from '../mockData.js';
+import { useAuth } from '../composables/useAuth.js';
+import { authHeaders } from '../services/api.js';
+import { canAccessPath } from '../router/rbacGuards.js';
 
 const router = useRouter();
+const { user, initials, logout } = useAuth();
 const notificationsContainer = ref(null);
 const searchContainer = ref(null);
 const searchQuery = ref('');
@@ -800,7 +848,7 @@ const filteredSearchResults = computed(() => {
   
   // Fallback to local search
   const query = searchQuery.value.toLowerCase();
-  return searchIndex.filter(item => {
+  return searchIndex.filter(item => canAccessPath(item.path)).filter(item => {
     return item.title.toLowerCase().includes(query) ||
            item.description.toLowerCase().includes(query) ||
            item.tags.some(tag => tag.toLowerCase().includes(query)) ||
@@ -808,12 +856,11 @@ const filteredSearchResults = computed(() => {
   }).slice(0, 8); // Limit to 8 results
 });
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 
 const loadAvailableFilters = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/search/filters`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
+      headers: authHeaders()
     });
     if (response.ok) {
       availableFilters.value = await response.json();
@@ -887,7 +934,7 @@ const performSearch = async () => {
       }
 
       const response = await fetch(`${API_BASE_URL}/api/v1/search?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${API_KEY}` }
+        headers: authHeaders()
       });
       
       if (response.ok) {
@@ -976,14 +1023,88 @@ const totalNotificationCount = computed(() => {
   return breakingChangeNotifications.value.length + recentActivity.value.length;
 });
 
-// Get current user (in real app, this would come from auth)
-const currentUser = ref(localStorage.getItem('currentDesigner') || 'Sarah Johnson');
-const currentUserEmail = ref(localStorage.getItem('currentUserEmail') || 'sarah@example.com');
-const currentUserRole = ref(localStorage.getItem('userRole') || 'designer');
+// The signed-in user, as the review UI sees them
+const reviewUser = computed(() => getCurrentUser());
+const currentUser = computed(() => reviewUser.value.name);
+const currentUserEmail = computed(() => reviewUser.value.email);
+const currentUserRole = computed(() => reviewUser.value.role);
+
+// Account menu
+const userMenuOpen = ref(false);
+const userMenuContainer = ref(null);
+const userMenuButton = ref(null);
+const userMenuList = ref(null);
+
+const userMenuItems = () => Array.from(userMenuList.value?.querySelectorAll('[role="menuitem"]') ?? []);
+
+const focusUserMenuItem = (index) => {
+  const items = userMenuItems();
+  if (!items.length) return;
+  items[(index + items.length) % items.length].focus();
+};
+
+/** Open the menu and focus an item (0 = first, -1 = last). */
+const openUserMenu = async (focusIndex = 0) => {
+  userMenuOpen.value = true;
+  showNotifications.value = false;
+  await nextTick();
+  focusUserMenuItem(focusIndex);
+};
+
+const closeUserMenu = (returnFocus = false) => {
+  if (!userMenuOpen.value) return;
+  userMenuOpen.value = false;
+  if (returnFocus) userMenuButton.value?.focus();
+};
+
+const toggleUserMenu = () => {
+  if (userMenuOpen.value) closeUserMenu(true);
+  else openUserMenu(0);
+};
+
+const handleUserMenuKeydown = (event) => {
+  const items = userMenuItems();
+  const current = items.indexOf(document.activeElement);
+  switch (event.key) {
+    case 'ArrowDown':
+      event.preventDefault();
+      focusUserMenuItem(current + 1);
+      break;
+    case 'ArrowUp':
+      event.preventDefault();
+      focusUserMenuItem(current - 1);
+      break;
+    case 'Home':
+      event.preventDefault();
+      focusUserMenuItem(0);
+      break;
+    case 'End':
+      event.preventDefault();
+      focusUserMenuItem(-1);
+      break;
+    case 'Tab':
+      closeUserMenu(false);
+      break;
+    default:
+      break;
+  }
+};
+
+const goToChangePassword = () => {
+  closeUserMenu(false);
+  router.push('/change-password');
+};
+
+const signOut = async () => {
+  closeUserMenu(false);
+  await logout();
+  router.replace({ path: '/login', query: { signedOut: '1' } });
+};
 
 // Toggle notifications dropdown
 const toggleNotifications = () => {
   showNotifications.value = !showNotifications.value;
+  if (showNotifications.value) closeUserMenu(false);
 };
 
 // Close notifications dropdown
@@ -993,6 +1114,9 @@ const closeNotifications = () => {
 
 // Click outside handler
 const handleClickOutside = (event) => {
+  if (userMenuOpen.value && userMenuContainer.value && !userMenuContainer.value.contains(event.target)) {
+    closeUserMenu(false);
+  }
   if (showNotifications.value && notificationsContainer.value && !notificationsContainer.value.contains(event.target)) {
     closeNotifications();
   }
@@ -1248,6 +1372,13 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside);
 });
 </script>
+
+<style scoped>
+.user-menu-item {
+  @apply w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-slate-700 hover:bg-slate-50 focus:bg-slate-100 focus:outline-none
+    dark:text-slate-200 dark:hover:bg-slate-900 dark:focus:bg-slate-900;
+}
+</style>
 
 <style>
 /* Ensure dark mode styles apply to TopNav */

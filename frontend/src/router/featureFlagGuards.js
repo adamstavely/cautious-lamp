@@ -1,4 +1,5 @@
 import OpenFeature from '../services/featureFlagsService';
+import { getUserContext } from '../composables/useFeatureFlags';
 
 // Map routes to feature flag keys
 const routeToFlagMap = {
@@ -83,15 +84,10 @@ export async function checkFeatureFlagGuard(to) {
   }
   
   try {
-    const userId = localStorage.getItem('userId') || undefined;
-    const userGroups = localStorage.getItem('userGroups') 
-      ? JSON.parse(localStorage.getItem('userGroups'))
-      : undefined;
-    
     // Default to enabled: the flag service returns the default when it can't
     // reach the backend, and a slow or rate-limited request shouldn't hide pages.
     // Only a flag that is explicitly off redirects.
-    const enabled = await OpenFeature.getBooleanValue(flagKey, true, { userId, userGroups });
+    const enabled = await OpenFeature.getBooleanValue(flagKey, true, getUserContext());
     
     if (!enabled) {
       // Feature is disabled, redirect to home

@@ -257,7 +257,8 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
+import { useAuth } from '../composables/useAuth.js';
 
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
@@ -270,8 +271,10 @@ const selectedRole = ref('');
 const adding = ref(false);
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
-const CURRENT_USER_ID = 'user-123'; // In production, get from auth context
+// The signed-in user. The server takes identity from the token and ignores
+// ids sent in bodies or queries; these only fill in local placeholder data.
+const { user: authUser } = useAuth();
+const CURRENT_USER_ID = authUser.value?.id ?? null;
 
 const availableWorkspaces = ref([]);
 
@@ -282,9 +285,7 @@ const availableWorkspaces = ref([]);
 const loadUsers = async () => {
   try {
     loading.value = true;
-    const response = await axios.get(`${API_BASE_URL}/users`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/users`);
     users.value = response.data || [];
   } catch (error) {
     console.error('Failed to load users:', error);
@@ -296,9 +297,7 @@ const loadUsers = async () => {
 
 const loadWorkspaces = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces`);
     workspaces.value = response.data || [];
     updateAvailableWorkspaces();
   } catch (error) {
@@ -332,13 +331,11 @@ const addUserToWorkspace = async () => {
 
   try {
     adding.value = true;
-    await axios.post(`${API_BASE_URL}/users/${selectedUser.value.userId}/workspaces`, {
+    await apiClient.post(`${API_BASE_URL}/users/${selectedUser.value.userId}/workspaces`, {
       workspaceId: selectedWorkspaceForAdd.value,
       email: selectedUser.value.email,
       role: selectedRole.value,
       addedBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
 
     // Reload users to get updated workspace list
@@ -365,9 +362,7 @@ const removeUserFromWorkspace = async (workspaceId) => {
   if (!selectedUser.value || !confirm('Remove user from this workspace?')) return;
 
   try {
-    await axios.delete(`${API_BASE_URL}/users/${selectedUser.value.userId}/workspaces/${workspaceId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    await apiClient.delete(`${API_BASE_URL}/users/${selectedUser.value.userId}/workspaces/${workspaceId}`);
 
     // Reload users to get updated workspace list
     await loadUsers();

@@ -448,7 +448,7 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 
 const router = useRouter();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -502,7 +502,6 @@ const form = ref({
 });
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 
 
 
@@ -547,9 +546,7 @@ const registerApplication = async () => {
       }
     };
 
-    const response = await axios.post(`${API_BASE_URL}/applications/register`, payload, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.post(`${API_BASE_URL}/applications/register`, payload);
 
     window.showToast?.('Application registered successfully', 'success');
     router.push('/admin/applications');

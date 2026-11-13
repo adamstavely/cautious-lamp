@@ -1397,7 +1397,8 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
+import { useAuth } from '../composables/useAuth.js';
 
 const router = useRouter();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
@@ -1429,9 +1430,11 @@ const newToken = ref({ name: '', value: '', type: 'color', category: 'colors', d
 const sharing = ref(false);
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
-const CURRENT_USER_ID = 'user-123'; // In production, get from auth context
-const CURRENT_USER_EMAIL = 'user@example.com'; // In production, get from auth context
+// The signed-in user. The server takes identity from the token and ignores
+// ids sent in bodies or queries; these only fill in local placeholder data.
+const { user: authUser } = useAuth();
+const CURRENT_USER_ID = authUser.value?.id ?? null;
+const CURRENT_USER_EMAIL = authUser.value?.email ?? '';
 
 
 
@@ -1440,9 +1443,7 @@ const CURRENT_USER_EMAIL = 'user@example.com'; // In production, get from auth c
 const loadWorkspaces = async () => {
   try {
     loading.value = true;
-    const response = await axios.get(`${API_BASE_URL}/workspaces?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces`);
     workspaces.value = response.data || [];
     
     // Load analytics for each workspace
@@ -1495,9 +1496,7 @@ const loadWorkspaces = async () => {
 
 const loadWorkspaceAnalytics = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/analytics`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/analytics`);
     workspaceAnalytics.value[workspaceId] = response.data;
   } catch (error) {
     console.error(`Failed to load analytics for workspace ${workspaceId}:`, error);
@@ -1521,9 +1520,7 @@ const loadWorkspaceAnalytics = async (workspaceId) => {
 
 const loadWorkspaceComponents = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/components?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/components`);
     workspaceComponents.value = response.data.components || [];
   } catch (error) {
     console.error(`Failed to load components for workspace ${workspaceId}:`, error);
@@ -1533,9 +1530,7 @@ const loadWorkspaceComponents = async (workspaceId) => {
 
 const loadWorkspaceFonts = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/fonts?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/fonts`);
     workspaceFonts.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load fonts for workspace ${workspaceId}:`, error);
@@ -1545,9 +1540,7 @@ const loadWorkspaceFonts = async (workspaceId) => {
 
 const loadWorkspaceAssets = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/assets?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/assets`);
     workspaceAssets.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load assets for workspace ${workspaceId}:`, error);
@@ -1557,9 +1550,7 @@ const loadWorkspaceAssets = async (workspaceId) => {
 
 const loadWorkspaceTokens = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/tokens?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/tokens`);
     workspaceTokens.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load tokens for workspace ${workspaceId}:`, error);
@@ -1572,13 +1563,11 @@ const createWorkspace = async () => {
 
   try {
     creating.value = true;
-    const response = await axios.post(`${API_BASE_URL}/workspaces`, {
+    const response = await apiClient.post(`${API_BASE_URL}/workspaces`, {
       name: newWorkspace.value.name,
       description: newWorkspace.value.description,
       ownerId: CURRENT_USER_ID,
       ownerEmail: CURRENT_USER_EMAIL,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     workspaces.value.push(response.data);
@@ -1616,13 +1605,11 @@ const addMember = async () => {
 
   try {
     addingMember.value = true;
-    const response = await axios.post(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/members`, {
+    const response = await apiClient.post(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/members`, {
       userId: `user-${Date.now()}`, // In production, lookup by email
       email: newMember.value.email,
       role: newMember.value.role,
       addedBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     selectedWorkspace.value = response.data;
@@ -1645,9 +1632,7 @@ const removeMember = async (userId) => {
   if (!confirm('Are you sure you want to remove this member?')) return;
 
   try {
-    const response = await axios.delete(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/members/${userId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.delete(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/members/${userId}`);
     
     selectedWorkspace.value = response.data;
   } catch (error) {
@@ -1660,10 +1645,8 @@ const updateMemberRole = async (userId, role) => {
   if (!selectedWorkspace.value) return;
 
   try {
-    const response = await axios.patch(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/members/${userId}/role`, {
+    const response = await apiClient.patch(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/members/${userId}/role`, {
       role,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     selectedWorkspace.value = response.data;
@@ -1677,13 +1660,11 @@ const updateWorkspaceSetting = async (setting, value) => {
   if (!selectedWorkspace.value) return;
 
   try {
-    const response = await axios.put(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}`, {
+    const response = await apiClient.put(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}`, {
       settings: {
         ...selectedWorkspace.value.settings,
         [setting]: value,
       },
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     selectedWorkspace.value = response.data;
@@ -1705,11 +1686,9 @@ const shareComponentWithWorkspaces = async () => {
 
   try {
     sharing.value = true;
-  const response = await axios.post(`${API_BASE_URL}/components/${sharingComponent.value}/share`, {
+  const response = await apiClient.post(`${API_BASE_URL}/components/${sharingComponent.value}/share`, {
       workspaceIds: selectedWorkspacesForSharing.value,
       requestingWorkspaceId: selectedWorkspace.value.id,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceComponents(selectedWorkspace.value.id);
@@ -1729,10 +1708,8 @@ const makeGlobal = async (component) => {
   if (!confirm('Make this component available to all workspaces? This action cannot be undone.')) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/components/${component.id}/make-global`, {
+    await apiClient.post(`${API_BASE_URL}/components/${component.id}/make-global`, {
       requestingWorkspaceId: selectedWorkspace.value.id,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceComponents(selectedWorkspace.value.id);
@@ -1747,11 +1724,9 @@ const addFont = async () => {
   if (!newFont.value.name || !newFont.value.family || !selectedWorkspace.value) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/fonts`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/fonts`, {
       ...newFont.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceFonts(selectedWorkspace.value.id);
@@ -1767,9 +1742,7 @@ const deleteFont = async (fontId) => {
   if (!selectedWorkspace.value || !confirm('Delete this font?')) return;
 
   try {
-    await axios.delete(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/fonts/${fontId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    await apiClient.delete(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/fonts/${fontId}`);
     
     await loadWorkspaceFonts(selectedWorkspace.value.id);
   } catch (error) {
@@ -1788,10 +1761,8 @@ const makeFontGlobal = async (font) => {
   if (!selectedWorkspace.value || !confirm('Make this font available to all workspaces?')) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/fonts/${font.id}/make-global`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/fonts/${font.id}/make-global`, {
       requestingWorkspaceId: selectedWorkspace.value.id,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceFonts(selectedWorkspace.value.id);
@@ -1806,11 +1777,9 @@ const addAsset = async () => {
   if (!newAsset.value.name || !newAsset.value.url || !selectedWorkspace.value) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/assets`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/assets`, {
       ...newAsset.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceAssets(selectedWorkspace.value.id);
@@ -1826,9 +1795,7 @@ const deleteAsset = async (assetId) => {
   if (!selectedWorkspace.value || !confirm('Delete this asset?')) return;
 
   try {
-    await axios.delete(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/assets/${assetId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    await apiClient.delete(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/assets/${assetId}`);
     
     await loadWorkspaceAssets(selectedWorkspace.value.id);
   } catch (error) {
@@ -1847,10 +1814,8 @@ const makeAssetGlobal = async (asset) => {
   if (!selectedWorkspace.value || !confirm('Make this asset available to all workspaces?')) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/assets/${asset.id}/make-global`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/assets/${asset.id}/make-global`, {
       requestingWorkspaceId: selectedWorkspace.value.id,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceAssets(selectedWorkspace.value.id);
@@ -1865,11 +1830,9 @@ const addToken = async () => {
   if (!newToken.value.name || !newToken.value.value || !selectedWorkspace.value) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/tokens`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/tokens`, {
       ...newToken.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceTokens(selectedWorkspace.value.id);
@@ -1885,9 +1848,7 @@ const deleteToken = async (tokenId) => {
   if (!selectedWorkspace.value || !confirm('Delete this token?')) return;
 
   try {
-    await axios.delete(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/tokens/${tokenId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    await apiClient.delete(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/tokens/${tokenId}`);
     
     await loadWorkspaceTokens(selectedWorkspace.value.id);
   } catch (error) {
@@ -1906,10 +1867,8 @@ const makeTokenGlobal = async (token) => {
   if (!selectedWorkspace.value || !confirm('Make this token available to all workspaces?')) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/tokens/${token.id}/make-global`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${selectedWorkspace.value.id}/tokens/${token.id}/make-global`, {
       requestingWorkspaceId: selectedWorkspace.value.id,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceTokens(selectedWorkspace.value.id);

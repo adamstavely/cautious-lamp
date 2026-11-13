@@ -1133,7 +1133,7 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 import jsPDF from 'jspdf';
 
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -1282,7 +1282,7 @@ const getApplicationName = (applicationId) => {
 
 const loadApplications = async () => {
   try {
-    const response = await axios.get('/api/v1/design-system/applications');
+    const response = await apiClient.get('/api/v1/design-system/applications');
     applications.value = response.data.applications || [];
   } catch (error) {
     console.error('Error loading applications:', error);
@@ -1297,7 +1297,7 @@ const generateReport = async () => {
 
   loading.value = true;
   try {
-    const response = await axios.post(`/api/v1/accessibility-reports/generate/${selectedApplicationId.value}`);
+    const response = await apiClient.post(`/api/v1/accessibility-reports/generate/${selectedApplicationId.value}`);
     const report = response.data;
     // Debug: Log the generated report structure
     console.log('Generated report:', report);
@@ -1325,7 +1325,7 @@ const loadReport = async () => {
 
   loading.value = true;
   try {
-    const response = await axios.get(`/api/v1/accessibility-reports/reports?applicationId=${selectedApplicationId.value}`);
+    const response = await apiClient.get(`/api/v1/accessibility-reports/reports?applicationId=${selectedApplicationId.value}`);
     reports.value = response.data || [];
     if (reports.value.length > 0) {
       const report = reports.value[0];
@@ -1347,7 +1347,7 @@ const loadReport = async () => {
 
 const loadReportById = async (reportId) => {
   try {
-    const response = await axios.get(`/api/v1/accessibility-reports/reports/${reportId}`);
+    const response = await apiClient.get(`/api/v1/accessibility-reports/reports/${reportId}`);
     // Convert date string to Date object if needed
     const report = response.data;
     if (report.generatedAt && typeof report.generatedAt === 'string') {
@@ -1376,7 +1376,7 @@ const loadReportById = async (reportId) => {
 
 const loadReports = async () => {
   try {
-    const response = await axios.get('/api/v1/accessibility-reports/reports');
+    const response = await apiClient.get('/api/v1/accessibility-reports/reports');
     console.log('Reports API response:', response.data);
     reports.value = Array.isArray(response.data) ? response.data : [];
     console.log('Reports loaded:', reports.value.length, reports.value);
@@ -1388,7 +1388,7 @@ const loadReports = async () => {
 
 const loadSchedules = async () => {
   try {
-    const response = await axios.get('/api/v1/accessibility-reports/schedules');
+    const response = await apiClient.get('/api/v1/accessibility-reports/schedules');
     console.log('Schedules API response:', response.data);
     schedules.value = Array.isArray(response.data) ? response.data : [];
     console.log('Schedules loaded:', schedules.value.length, schedules.value);
@@ -1405,7 +1405,7 @@ const toggleSchedule = async (scheduleId) => {
     }
     const schedule = schedules.value.find(s => s.id === scheduleId);
     if (schedule) {
-      await axios.put(`/api/v1/accessibility-reports/schedules/${scheduleId}`, {
+      await apiClient.put(`/api/v1/accessibility-reports/schedules/${scheduleId}`, {
         enabled: !schedule.enabled
       });
       await loadSchedules();
@@ -1421,7 +1421,7 @@ const deleteSchedule = async (scheduleId) => {
   }
 
   try {
-    await axios.delete(`/api/v1/accessibility-reports/schedules/${scheduleId}`);
+    await apiClient.delete(`/api/v1/accessibility-reports/schedules/${scheduleId}`);
     await loadSchedules();
   } catch (error) {
     console.error('Error deleting schedule:', error);
@@ -1464,7 +1464,7 @@ const saveSchedule = async () => {
       scheduleData.dayOfMonth = scheduleForm.value.dayOfMonth;
     }
 
-    await axios.post('/api/v1/accessibility-reports/schedules', scheduleData);
+    await apiClient.post('/api/v1/accessibility-reports/schedules', scheduleData);
     await loadSchedules();
     closeScheduleModal();
   } catch (error) {
@@ -1979,7 +1979,7 @@ onMounted(async () => {
 
 const loadComplianceSummary = async () => {
   try {
-    const response = await axios.get('/api/v1/accessibility-reports/summary');
+    const response = await apiClient.get('/api/v1/accessibility-reports/summary');
     complianceSummary.value = response.data;
   } catch (error) {
     console.error('Error loading compliance summary:', error);
@@ -1989,7 +1989,7 @@ const loadComplianceSummary = async () => {
 
 const loadSLAs = async () => {
   try {
-    const response = await axios.get('/api/v1/accessibility-reports/slas');
+    const response = await apiClient.get('/api/v1/accessibility-reports/slas');
     slas.value = Array.isArray(response.data) ? response.data : [];
   } catch (error) {
     console.error('Error loading SLAs:', error);
@@ -2004,7 +2004,7 @@ const createSLA = async () => {
   }
 
   try {
-    await axios.post('/api/v1/accessibility-reports/slas', slaForm.value);
+    await apiClient.post('/api/v1/accessibility-reports/slas', slaForm.value);
     await loadSLAs();
     await loadComplianceSummary(); // Refresh compliance summary to update SLA status
     closeSLAModal();
@@ -2030,7 +2030,7 @@ const updateSLA = async () => {
   if (!editingSLA.value) return;
 
   try {
-    await axios.put(`/api/v1/accessibility-reports/slas/${editingSLA.value.id}`, slaForm.value);
+    await apiClient.put(`/api/v1/accessibility-reports/slas/${editingSLA.value.id}`, slaForm.value);
     await loadSLAs();
     await loadComplianceSummary(); // Refresh compliance summary to update SLA status
     closeSLAModal();
@@ -2046,7 +2046,7 @@ const deleteSLA = async (slaId) => {
   }
 
   try {
-    await axios.delete(`/api/v1/accessibility-reports/slas/${slaId}`);
+    await apiClient.delete(`/api/v1/accessibility-reports/slas/${slaId}`);
     await loadSLAs();
     if (activeTab.value === 'multi-app') {
       await loadComplianceSummary();

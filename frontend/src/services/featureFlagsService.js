@@ -1,6 +1,10 @@
-import axios from 'axios';
+import apiClient from './api.js';
+import { getToken, isMockAuth } from './auth.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+
+// Flags are read with the signed-in user's token; signed out, there is nothing to read.
+const signedOutError = () => Object.assign(new Error('Not signed in'), { code: 'SIGNED_OUT' });
 
 // Simple OpenFeature-compatible provider
 class DesignSystemFeatureFlagProvider {
@@ -44,9 +48,11 @@ class DesignSystemFeatureFlagProvider {
       return cached.flag;
     }
 
+    if (!isMockAuth() && !getToken()) throw signedOutError();
+
     // Fetch from API
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/v1/feature-flags/key/${flagKey}`);
+      const response = await apiClient.get(`${API_BASE_URL}/api/v1/feature-flags/key/${flagKey}`);
       const flag = response.data;
       
       // Cache the flag
@@ -80,8 +86,9 @@ class DesignSystemFeatureFlagProvider {
   }
 
   async refreshCache() {
+    if (!isMockAuth() && !getToken()) return;
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/v1/feature-flags`);
+      const response = await apiClient.get(`${API_BASE_URL}/api/v1/feature-flags`);
       const flags = response.data;
       
       // Update cache

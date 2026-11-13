@@ -8,7 +8,10 @@
  */
 
 import axios from 'axios';
-import { getCurrentUser, isMockMode, mockAPI } from '../mockData.js';
+import { isMockMode, mockAPI } from '../mockData.js';
+import { authHeaders, handleUnauthorized } from './auth.js';
+
+export { authHeaders };
 
 // Backend origin. Empty means same origin; the Vite dev server proxies /api.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
@@ -28,41 +31,33 @@ export const resolveBackendUrl = (pathOrUrl) => {
 };
 
 
-/** The admin key for /admin routes, entered by the admin and kept in this browser. */
-export const getAdminApiKey = () => localStorage.getItem('adminApiKey') || '';
-export const setAdminApiKey = (key) => {
-  if (key) localStorage.setItem('adminApiKey', key);
-  else localStorage.removeItem('adminApiKey');
-};
-
-// Request interceptor to add authentication headers
+/**
+ * Every request carries the signed-in user's token (docs/AUTH.md). Identity
+ * comes from the token, so no x-user-* headers are sent. The browser never
+ * holds an API key.
+ */
 apiClient.interceptors.request.use(
   (config) => {
-    const user = getCurrentUser();
-    if (user) {
-      // Self-asserted acting user (display information, not authorization).
-      // Free text is URL-encoded (headers are ASCII-only); the server decodes it.
-      if (user.email) config.headers['x-user-email'] = user.email;
-      if (user.name) config.headers['x-user-name'] = encodeURIComponent(user.name);
-    }
-    // Admin routes use the admin key; everything else uses the API key
-    const key = config.useAdminKey
-      ? getAdminApiKey()
-      : localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
-    if (key) {
-      config.headers['authorization'] = `Bearer ${key}`;
-    }
+    Object.entries(authHeaders()).forEach(([name, value]) => {
+      config.headers[name] = value;
+    });
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor for error handling
+/**
+ * A 401 means the token is missing, expired or revoked: sign out and go to
+ * /login. Exceptions: a review that needs its password (401 passwordRequired),
+ * and calls that opt out with `config.skipAuthRedirect`.
+ * A 403 is left to the caller; apiErrorMessage() turns it into "You don't have access to this".
+ */
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (errorStatus(error) === 401 && !isPasswordRequired(error) && !error?.config?.skipAuthRedirect) {
+      handleUnauthorized();
+    }
     console.error('API Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }
@@ -96,22 +91,25 @@ export const errorStatus = (error) => error?.response?.status;
 export const isPasswordRequired = (error) =>
   errorStatus(error) === 401 && !!error?.response?.data?.passwordRequired;
 
-/** True when an admin call failed because the admin key is missing or was rejected. */
-export const isAdminKeyError = (error) => error?.code === 'ADMIN_KEY_MISSING' || errorStatus(error) === 401;
+/** True when the server refused the call because the user lacks a permission. */
+export const isForbidden = (error) => errorStatus(error) === 403;
+
+/** The message for a 403 (docs/AUTH.md). */
+export const FORBIDDEN_MESSAGE = "You don't have access to this.";
 
 /** A message for the user from a failed API call. */
 export const apiErrorMessage = (error, fallback = 'Something went wrong. Please try again.') => {
   const status = errorStatus(error);
   const serverMessage = error?.response?.data?.message;
   const detail = Array.isArray(serverMessage) ? serverMessage.join(', ') : serverMessage;
-  if (error?.code === 'ADMIN_KEY_MISSING') return 'Enter the admin API key to manage reviews.';
   if (!error?.response) return `${fallback} The review service could not be reached.`;
   switch (status) {
     case 401:
       if (error.response.data?.passwordRequired) return 'This review is password protected.';
-      return 'The API key was rejected. Check the key configured for this app.';
+      return 'Your session has ended. Sign in again.';
     case 403:
-      return detail || 'This review has not been shared with you.';
+      // Nest's generic 403 text means a missing permission; anything else is specific
+      return detail && !/^forbidden( resource)?$/i.test(detail) ? detail : FORBIDDEN_MESSAGE;
     case 404:
       return detail || 'Not found. It may have been deleted.';
     case 409:
@@ -431,17 +429,9 @@ export const passwordAPI = {
 };
 
 /**
- * Admin API methods. These use the admin key (localStorage.adminApiKey), not the API key.
+ * Admin API methods. These use the signed-in user's token; the server
+ * requires the admin:users permission (403 otherwise).
  */
-const adminConfig = (config = {}) => {
-  if (!getAdminApiKey()) {
-    const error = new Error('Admin API key is not set');
-    error.code = 'ADMIN_KEY_MISSING';
-    throw error;
-  }
-  return { ...config, useAdminKey: true };
-};
-
 const adminPath = (reviewId) => `/api/v1/admin/reviews/${encodeURIComponent(reviewId)}`;
 
 export const adminAPI = {
@@ -449,28 +439,28 @@ export const adminAPI = {
   getReviews: async (showExpired = false) => {
     if (isMockMode()) return mockAPI.adminListReviews(showExpired);
     const params = showExpired ? { showExpired: 'true' } : {};
-    const response = await apiClient.get('/api/v1/admin/reviews', adminConfig({ params }));
+    const response = await apiClient.get('/api/v1/admin/reviews', { params });
     return response.data;
   },
 
   // Extend review expiration by `days` (1-365)
   extendReview: async (reviewId, days = 7) => {
     if (isMockMode()) return mockAPI.adminExtend(reviewId, days);
-    const response = await apiClient.post(`${adminPath(reviewId)}/extend`, null, adminConfig({ params: { days } }));
+    const response = await apiClient.post(`${adminPath(reviewId)}/extend`, null, { params: { days } });
     return response.data;
   },
 
   // Reactivate expired review
   reactivateReview: async (reviewId) => {
     if (isMockMode()) return mockAPI.adminReactivate(reviewId);
-    const response = await apiClient.post(`${adminPath(reviewId)}/reactivate`, null, adminConfig());
+    const response = await apiClient.post(`${adminPath(reviewId)}/reactivate`, null);
     return response.data;
   },
 
   // Set or clear (empty) a review's password. Returns { hasPassword }.
   resetPassword: async (reviewId, password) => {
     if (isMockMode()) return mockAPI.adminResetPassword(reviewId, password || '');
-    const response = await apiClient.post(`${adminPath(reviewId)}/reset-password`, { password: password || '' }, adminConfig());
+    const response = await apiClient.post(`${adminPath(reviewId)}/reset-password`, { password: password || '' });
     return response.data;
   },
 
@@ -480,14 +470,14 @@ export const adminAPI = {
       await mockAPI.adminDelete(reviewId);
       return true;
     }
-    const response = await apiClient.delete(adminPath(reviewId), adminConfig());
+    const response = await apiClient.delete(adminPath(reviewId));
     return response.status === 204 || response.status === 200;
   },
 
   // Delete several reviews. Returns { deleted }.
   batchDelete: async (ids) => {
     if (isMockMode()) return mockAPI.adminBatchDelete(ids);
-    const response = await apiClient.post('/api/v1/admin/reviews/batch-delete', { ids }, adminConfig());
+    const response = await apiClient.post('/api/v1/admin/reviews/batch-delete', { ids });
     return response.data;
   },
 };

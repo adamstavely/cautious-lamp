@@ -25,9 +25,11 @@ export class DesignExtractionController {
     private readonly keyManagementService: KeyManagementService,
   ) {}
 
-  private validateRequest(authHeader?: string): void {
-    this.keyManagementService.assertValidApiKey(authHeader);
-  }
+  /**
+   * No-op: the global AuthGuard has already authenticated the caller (a user
+   * token or an API key, docs/AUTH.md). Kept so the call sites stay as they were.
+   */
+  private validateRequest(_authHeader?: string): void {}
 
   @Post('extract')
   async extract(

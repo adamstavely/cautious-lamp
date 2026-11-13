@@ -418,7 +418,7 @@
 
 <script setup>
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
@@ -465,7 +465,7 @@ const permissionCategories = computed(() => {
 const loadRoles = async () => {
   loading.value = true;
   try {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/rbac/roles`);
+    const response = await apiClient.get(`${API_BASE_URL}/api/v1/rbac/roles`);
     roles.value = response.data;
   } catch (error) {
     console.error('Failed to load roles:', error);
@@ -477,7 +477,7 @@ const loadRoles = async () => {
 
 const loadPermissions = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/rbac/permissions`);
+    const response = await apiClient.get(`${API_BASE_URL}/api/v1/rbac/permissions`);
     allPermissions.value = response.data;
   } catch (error) {
     console.error('Failed to load permissions:', error);
@@ -529,7 +529,7 @@ const saveRolePermissions = async () => {
   if (!editingRole.value) return;
 
   try {
-    await axios.put(
+    await apiClient.put(
       `${API_BASE_URL}/api/v1/rbac/roles/${editingRole.value.id}`,
       { permissions: selectedPermissions.value }
     );
@@ -545,7 +545,7 @@ const saveRolePermissions = async () => {
 
 const loadUsersForRole = async (roleId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/rbac/roles/${roleId}/users`);
+    const response = await apiClient.get(`${API_BASE_URL}/api/v1/rbac/roles/${roleId}/users`);
     roleUsers.value[roleId] = response.data;
   } catch (error) {
     console.error('Failed to load users for role:', error);
@@ -555,7 +555,7 @@ const loadUsersForRole = async (roleId) => {
 
 const assignRole = async () => {
   try {
-    await axios.post(
+    await apiClient.post(
       `${API_BASE_URL}/api/v1/rbac/users/${assignForm.value.userId}/roles`,
       { roleId: assignForm.value.roleId }
     );
@@ -574,7 +574,7 @@ const removeRoleFromUser = async (userId, roleId) => {
   if (!confirm(`Remove ${roleId} role from ${userId}?`)) return;
 
   try {
-    await axios.delete(`${API_BASE_URL}/api/v1/rbac/users/${userId}/roles/${roleId}`);
+    await apiClient.delete(`${API_BASE_URL}/api/v1/rbac/users/${userId}/roles/${roleId}`);
     await loadUsersForRole(roleId);
     alert('Role removed successfully!');
   } catch (error) {

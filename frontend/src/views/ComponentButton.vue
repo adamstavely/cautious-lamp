@@ -1782,7 +1782,7 @@ import ComponentPreview from '../components/ComponentPreview.vue';
 import ComponentDependencyGraphCard from '../components/ComponentDependencyGraphCard.vue';
 import BreakingChangeAlert from '../components/BreakingChangeAlert.vue';
 import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
 
 const route = useRoute();
@@ -1838,7 +1838,6 @@ const performanceData = ref(null);
 const performanceLoading = ref(false);
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 
 // Map route paths to component IDs
 const getComponentId = () => {
@@ -1895,10 +1894,9 @@ const loadPerformanceData = async () => {
 
   performanceLoading.value = true;
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/performance/bundle-analysis/analyze`,
-      { componentId, includeDependencies: true },
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
+      { componentId, includeDependencies: true }
     );
     performanceData.value = response.data;
   } catch (error) {
@@ -2590,10 +2588,9 @@ const saveVariant = async () => {
   
   savingVariant.value = true;
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/components/button/variants`,
-      newVariant,
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
+      newVariant
     );
     
     window.showToast?.('Variant saved successfully', 'success');
@@ -2635,9 +2632,8 @@ const resetVariantBuilder = () => {
 
 const loadVariants = async () => {
   try {
-    const response = await axios.get(
-      `${API_BASE_URL}/components/button/variants`,
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
+    const response = await apiClient.get(
+      `${API_BASE_URL}/components/button/variants`
     );
     customVariants.value = response.data.variants.filter(v => 
       !['primary', 'secondary', 'tertiary'].includes(v.name)
@@ -2653,9 +2649,8 @@ const deleteVariant = async (variantName) => {
   }
   
   try {
-    await axios.delete(
-      `${API_BASE_URL}/components/button/variants/${variantName}`,
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
+    await apiClient.delete(
+      `${API_BASE_URL}/components/button/variants/${variantName}`
     );
     
     window.showToast?.('Variant deleted successfully', 'success');

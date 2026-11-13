@@ -1273,7 +1273,7 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import { Pipette, ScanEye, Captions, Tag, TextInitial, SwatchBook, FolderKanban } from 'lucide-vue-next';
 import { getFeatureFlagForRoute } from '../router/featureFlagGuards';
-import { flagCache } from '../composables/useFeatureFlags';
+import { flagCache, getUserContext } from '../composables/useFeatureFlags';
 
 const props = defineProps({
   isOpen: {
@@ -1913,12 +1913,7 @@ const loadDrawerFlags = async () => {
   const flagKeys = getAllDrawerFlagKeys();
   if (flagKeys.size > 0) {
     try {
-      const context = {
-        userId: localStorage.getItem('userId') || undefined,
-        userGroups: localStorage.getItem('userGroups') 
-          ? JSON.parse(localStorage.getItem('userGroups'))
-          : undefined,
-      };
+      const context = getUserContext();
       
       // Load all flags in parallel
       await Promise.all(

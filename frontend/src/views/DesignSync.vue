@@ -663,14 +663,13 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, reactive } from 'vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Dropdown from '../components/Dropdown.vue';
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -730,9 +729,7 @@ const formatDate = (dateString) => {
 
 const loadConnections = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/design-sync/connections`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/design-sync/connections`);
     connections.value = response.data || [];
   } catch (error) {
     console.error('Error loading connections:', error);
@@ -768,10 +765,9 @@ const syncConnection = async (connectionId) => {
   syncingConnections.value.add(connectionId);
   try {
     const connection = connections.value.find(c => c.id === connectionId);
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/design-sync/connections/${connectionId}/sync`,
-      { direction: connection?.syncDirection || 'bidirectional' },
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
+      { direction: connection?.syncDirection || 'bidirectional' }
     );
     lastSyncResult.value = response.data;
     await loadConnections();
@@ -785,9 +781,7 @@ const syncConnection = async (connectionId) => {
 
 const viewDesignFile = async (connectionId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/design-sync/connections/${connectionId}/file`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/design-sync/connections/${connectionId}/file`);
     selectedDesignFile.value = response.data;
     currentConnectionId.value = connectionId;
     showDesignFileModal.value = true;
@@ -799,10 +793,9 @@ const viewDesignFile = async (connectionId) => {
 
 const generateComponentCode = async (component) => {
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/design-sync/components/${component.id}/generate`,
-      { framework: selectedFramework.value, connectionId: currentConnectionId.value },
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
+      { framework: selectedFramework.value, connectionId: currentConnectionId.value }
     );
     generatedCode.value = response.data.code;
     selectedComponent.value = component;
@@ -855,9 +848,7 @@ const deleteConnection = async (connectionId) => {
   if (!confirm('Are you sure you want to delete this connection?')) return;
   
   try {
-    await axios.delete(`${API_BASE_URL}/design-sync/connections/${connectionId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    await apiClient.delete(`${API_BASE_URL}/design-sync/connections/${connectionId}`);
     await loadConnections();
   } catch (error) {
     console.error('Error deleting connection:', error);
@@ -880,16 +871,14 @@ const saveConnection = async () => {
     };
 
     if (editingConnection.value) {
-      await axios.put(
+      await apiClient.put(
         `${API_BASE_URL}/design-sync/connections/${editingConnection.value.id}`,
-        connectionData,
-        { headers: { Authorization: `Bearer ${API_KEY}` } }
+        connectionData
       );
     } else {
-      await axios.post(
+      await apiClient.post(
         `${API_BASE_URL}/design-sync/connections`,
-        connectionData,
-        { headers: { Authorization: `Bearer ${API_KEY}` } }
+        connectionData
       );
     }
 

@@ -585,7 +585,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { useDrawer } from '../composables/useDrawer.js';
@@ -605,7 +605,6 @@ const viewMode = ref('tree'); // 'tree', 'table', or 'graph'
 const expandedChains = ref(new Set());
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 
 // Computed properties
 const filteredNodes = computed(() => {
@@ -757,9 +756,7 @@ const loadRelationships = async (tokenName = null) => {
     const url = tokenName 
       ? `${API_BASE_URL}/tokens/relationships?token=${encodeURIComponent(tokenName)}`
       : `${API_BASE_URL}/tokens/relationships`;
-    const response = await axios.get(url, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(url);
     relationshipsData.value = response.data;
     calculateLayout();
   } catch (error) {
@@ -837,9 +834,7 @@ const selectToken = async (tokenId) => {
   
   // Load impact analysis
   try {
-    const response = await axios.get(`${API_BASE_URL}/tokens/${encodeURIComponent(tokenId)}/impact`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/tokens/${encodeURIComponent(tokenId)}/impact`);
     impactAnalysis.value = response.data;
   } catch (error) {
     console.error('Error loading impact analysis:', error);

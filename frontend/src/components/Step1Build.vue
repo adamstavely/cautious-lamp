@@ -549,7 +549,7 @@
 
 <script setup>
 import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 import AdvancedPaletteTools from './AdvancedPaletteTools.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
@@ -746,7 +746,7 @@ const fetchSuggestions = async (regenerateType = null) => {
 
   try {
     const colors = props.palette.colors.map((c) => c.hex);
-    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/suggestions`, {
+    const response = await apiClient.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/suggestions`, {
       colors,
       regenerateType: regenerateType || undefined,
     });

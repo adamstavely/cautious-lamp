@@ -529,7 +529,7 @@
 
 <script setup>
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
@@ -729,7 +729,7 @@ const flagForm = ref({
 const loadFlags = async () => {
   loading.value = true;
   try {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/feature-flags`);
+    const response = await apiClient.get(`${API_BASE_URL}/api/v1/feature-flags`);
     flags.value = response.data;
   } catch (error) {
     console.error('Failed to load feature flags:', error);
@@ -741,7 +741,7 @@ const loadFlags = async () => {
 
 const toggleFlag = async (id) => {
   try {
-    await axios.put(`${API_BASE_URL}/api/v1/feature-flags/${id}/toggle`);
+    await apiClient.put(`${API_BASE_URL}/api/v1/feature-flags/${id}/toggle`);
     await loadFlags();
     // Refresh feature flag cache and notify all components
     if (window.OpenFeature) {
@@ -780,7 +780,7 @@ const deleteFlag = async (id) => {
   if (!confirm('Are you sure you want to delete this feature flag?')) return;
 
   try {
-    await axios.delete(`${API_BASE_URL}/api/v1/feature-flags/${id}`);
+    await apiClient.delete(`${API_BASE_URL}/api/v1/feature-flags/${id}`);
     await loadFlags();
   } catch (error) {
     console.error('Failed to delete feature flag:', error);
@@ -818,9 +818,9 @@ const saveFlag = async () => {
     if (Object.keys(payload.metadata).length === 0) delete payload.metadata;
 
     if (showEditModal.value && editingFlag.value) {
-      await axios.put(`${API_BASE_URL}/api/v1/feature-flags/${editingFlag.value.id}`, payload);
+      await apiClient.put(`${API_BASE_URL}/api/v1/feature-flags/${editingFlag.value.id}`, payload);
     } else {
-      await axios.post(`${API_BASE_URL}/api/v1/feature-flags`, payload);
+      await apiClient.post(`${API_BASE_URL}/api/v1/feature-flags`, payload);
     }
 
     await loadFlags();

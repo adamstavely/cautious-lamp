@@ -467,7 +467,7 @@ const submitComment = () => {
   if (!text || props.readOnly) return;
 
   submitting.value = true;
-  // The server records the author from the acting user headers.
+  // The server records the author from the signed-in user's token.
   emit('comment-added', {
     text,
     version: props.versionId || null,

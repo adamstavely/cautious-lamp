@@ -1,3 +1,4 @@
+import { authHeaders } from './auth.js';
 // Component Metadata Service
 // Stores metadata for design system components including links to docs, GitHub, and Figma
 
@@ -168,9 +169,7 @@ export const componentMetadataService = {
   async loadFromAPI() {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/component-metadata`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || ''}`,
-        },
+        headers: authHeaders(),
       });
       
       if (response.ok) {

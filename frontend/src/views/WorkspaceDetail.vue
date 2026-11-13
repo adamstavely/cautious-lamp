@@ -2580,7 +2580,8 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
+import { useAuth } from '../composables/useAuth.js';
 
 const router = useRouter();
 const route = useRoute();
@@ -2654,9 +2655,11 @@ const newGuideline = ref({ title: '', description: '', category: '', tags: [] })
 const sharing = ref(false);
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
-const CURRENT_USER_ID = 'user-123';
-const CURRENT_USER_EMAIL = 'user@example.com';
+// The signed-in user. The server takes identity from the token and ignores
+// ids sent in bodies or queries; these only fill in local placeholder data.
+const { user: authUser } = useAuth();
+const CURRENT_USER_ID = authUser.value?.id ?? null;
+const CURRENT_USER_EMAIL = authUser.value?.email ?? '';
 
 
 
@@ -2671,9 +2674,7 @@ const loadWorkspace = async () => {
 
   try {
     loading.value = true;
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}`);
     workspace.value = response.data;
     
     await Promise.all([
@@ -2723,9 +2724,7 @@ const loadWorkspace = async () => {
 
 const loadWorkspaceAnalytics = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/analytics`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/analytics`);
     workspaceAnalytics.value = response.data;
   } catch (error) {
     console.error(`Failed to load analytics for workspace ${workspaceId}:`, error);
@@ -2748,9 +2747,7 @@ const loadWorkspaceAnalytics = async (workspaceId) => {
 
 const loadWorkspaceComponents = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/components?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/components`);
     workspaceComponents.value = response.data.components || [];
   } catch (error) {
     console.error(`Failed to load components for workspace ${workspaceId}:`, error);
@@ -2760,9 +2757,7 @@ const loadWorkspaceComponents = async (workspaceId) => {
 
 const loadWorkspaceFonts = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/fonts?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/fonts`);
     workspaceFonts.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load fonts for workspace ${workspaceId}:`, error);
@@ -2772,9 +2767,7 @@ const loadWorkspaceFonts = async (workspaceId) => {
 
 const loadWorkspaceAssets = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/assets?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/assets`);
     workspaceAssets.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load assets for workspace ${workspaceId}:`, error);
@@ -2784,9 +2777,7 @@ const loadWorkspaceAssets = async (workspaceId) => {
 
 const loadWorkspaceTokens = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/tokens?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/tokens`);
     workspaceTokens.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load tokens for workspace ${workspaceId}:`, error);
@@ -2796,9 +2787,7 @@ const loadWorkspaceTokens = async (workspaceId) => {
 
 const loadWorkspaceReviews = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/reviews?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/reviews`);
     workspaceReviews.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load reviews for workspace ${workspaceId}:`, error);
@@ -2808,9 +2797,7 @@ const loadWorkspaceReviews = async (workspaceId) => {
 
 const loadWorkspaceSessionReplays = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/session-replays?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/session-replays`);
     workspaceSessionReplays.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load session replays for workspace ${workspaceId}:`, error);
@@ -2820,9 +2807,7 @@ const loadWorkspaceSessionReplays = async (workspaceId) => {
 
 const loadWorkspaceJourneyMaps = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/journey-maps?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/journey-maps`);
     workspaceJourneyMaps.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load journey maps for workspace ${workspaceId}:`, error);
@@ -2832,9 +2817,7 @@ const loadWorkspaceJourneyMaps = async (workspaceId) => {
 
 const loadWorkspaceHcdReports = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/hcd-reports?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/hcd-reports`);
     workspaceHcdReports.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load HCD reports for workspace ${workspaceId}:`, error);
@@ -2844,9 +2827,7 @@ const loadWorkspaceHcdReports = async (workspaceId) => {
 
 const loadWorkspaceUserPersonas = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/user-personas?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/user-personas`);
     workspaceUserPersonas.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load user personas for workspace ${workspaceId}:`, error);
@@ -2856,9 +2837,7 @@ const loadWorkspaceUserPersonas = async (workspaceId) => {
 
 const loadWorkspaceResearchArtifacts = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/research-artifacts?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/research-artifacts`);
     workspaceResearchArtifacts.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load research artifacts for workspace ${workspaceId}:`, error);
@@ -2868,9 +2847,7 @@ const loadWorkspaceResearchArtifacts = async (workspaceId) => {
 
 const loadWorkspaceInsights = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/insights?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/insights`);
     workspaceInsights.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load insights for workspace ${workspaceId}:`, error);
@@ -2880,9 +2857,7 @@ const loadWorkspaceInsights = async (workspaceId) => {
 
 const loadWorkspacePatterns = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/patterns?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/patterns`);
     workspacePatterns.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load patterns for workspace ${workspaceId}:`, error);
@@ -2892,9 +2867,7 @@ const loadWorkspacePatterns = async (workspaceId) => {
 
 const loadWorkspaceIcons = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/icons?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/icons`);
     workspaceIcons.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load icons for workspace ${workspaceId}:`, error);
@@ -2904,9 +2877,7 @@ const loadWorkspaceIcons = async (workspaceId) => {
 
 const loadWorkspaceInteractives = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/interactives?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/interactives`);
     workspaceInteractives.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load interactives for workspace ${workspaceId}:`, error);
@@ -2916,9 +2887,7 @@ const loadWorkspaceInteractives = async (workspaceId) => {
 
 const loadWorkspaceStockPhotos = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/stock-photos?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/stock-photos`);
     workspaceStockPhotos.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load stock photos for workspace ${workspaceId}:`, error);
@@ -2928,9 +2897,7 @@ const loadWorkspaceStockPhotos = async (workspaceId) => {
 
 const loadWorkspaceIllustrations = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/illustrations?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/illustrations`);
     workspaceIllustrations.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load illustrations for workspace ${workspaceId}:`, error);
@@ -2940,9 +2907,7 @@ const loadWorkspaceIllustrations = async (workspaceId) => {
 
 const loadWorkspaceCapabilityLogos = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/capability-logos?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/capability-logos`);
     workspaceCapabilityLogos.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load capability logos for workspace ${workspaceId}:`, error);
@@ -2952,9 +2917,7 @@ const loadWorkspaceCapabilityLogos = async (workspaceId) => {
 
 const loadWorkspaceStyleDictionaries = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/style-dictionaries?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/style-dictionaries`);
     workspaceStyleDictionaries.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load style dictionaries for workspace ${workspaceId}:`, error);
@@ -2964,9 +2927,7 @@ const loadWorkspaceStyleDictionaries = async (workspaceId) => {
 
 const loadWorkspaceGuidelines = async (workspaceId) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/workspaces/${workspaceId}/guidelines?userId=${CURRENT_USER_ID}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/workspaces/${workspaceId}/guidelines`);
     workspaceGuidelines.value = response.data || [];
   } catch (error) {
     console.error(`Failed to load guidelines for workspace ${workspaceId}:`, error);
@@ -2979,13 +2940,11 @@ const addMember = async () => {
 
   try {
     addingMember.value = true;
-    const response = await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/members`, {
+    const response = await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/members`, {
       userId: `user-${Date.now()}`,
       email: newMember.value.email,
       role: newMember.value.role,
       addedBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     workspace.value = response.data;
@@ -3008,9 +2967,7 @@ const removeMember = async (userId) => {
   if (!confirm('Are you sure you want to remove this member?')) return;
 
   try {
-    const response = await axios.delete(`${API_BASE_URL}/workspaces/${workspace.value.id}/members/${userId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.delete(`${API_BASE_URL}/workspaces/${workspace.value.id}/members/${userId}`);
     
     workspace.value = response.data;
   } catch (error) {
@@ -3023,10 +2980,8 @@ const updateMemberRole = async (userId, role) => {
   if (!workspace.value) return;
 
   try {
-    const response = await axios.patch(`${API_BASE_URL}/workspaces/${workspace.value.id}/members/${userId}/role`, {
+    const response = await apiClient.patch(`${API_BASE_URL}/workspaces/${workspace.value.id}/members/${userId}/role`, {
       role,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     workspace.value = response.data;
@@ -3040,13 +2995,11 @@ const updateWorkspaceSetting = async (setting, value) => {
   if (!workspace.value) return;
 
   try {
-    const response = await axios.put(`${API_BASE_URL}/workspaces/${workspace.value.id}`, {
+    const response = await apiClient.put(`${API_BASE_URL}/workspaces/${workspace.value.id}`, {
       settings: {
         ...workspace.value.settings,
         [setting]: value,
       },
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     workspace.value = response.data;
@@ -3067,11 +3020,9 @@ const shareComponentWithWorkspaces = async () => {
 
   try {
     sharing.value = true;
-    await axios.post(`${API_BASE_URL}/components/${sharingComponent.value}/share`, {
+    await apiClient.post(`${API_BASE_URL}/components/${sharingComponent.value}/share`, {
       workspaceIds: selectedWorkspacesForSharing.value,
       requestingWorkspaceId: workspace.value.id,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceComponents(workspace.value.id);
@@ -3091,10 +3042,8 @@ const makeGlobal = async (component) => {
   if (!confirm('Make this component available to all workspaces? This action cannot be undone.')) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/components/${component.id}/make-global`, {
+    await apiClient.post(`${API_BASE_URL}/components/${component.id}/make-global`, {
       requestingWorkspaceId: workspace.value.id,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceComponents(workspace.value.id);
@@ -3108,11 +3057,9 @@ const addFont = async () => {
   if (!newFont.value.name || !newFont.value.family || !workspace.value) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/fonts`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/fonts`, {
       ...newFont.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceFonts(workspace.value.id);
@@ -3128,9 +3075,7 @@ const deleteFont = async (fontId) => {
   if (!workspace.value || !confirm('Delete this font?')) return;
 
   try {
-    await axios.delete(`${API_BASE_URL}/workspaces/${workspace.value.id}/fonts/${fontId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    await apiClient.delete(`${API_BASE_URL}/workspaces/${workspace.value.id}/fonts/${fontId}`);
     
     await loadWorkspaceFonts(workspace.value.id);
   } catch (error) {
@@ -3149,10 +3094,8 @@ const makeFontGlobal = async (font) => {
   if (!workspace.value || !confirm('Make this font available to all workspaces?')) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/fonts/${font.id}/make-global`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/fonts/${font.id}/make-global`, {
       requestingWorkspaceId: workspace.value.id,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceFonts(workspace.value.id);
@@ -3166,11 +3109,9 @@ const addAsset = async () => {
   if (!newAsset.value.name || !newAsset.value.url || !workspace.value) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/assets`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/assets`, {
       ...newAsset.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceAssets(workspace.value.id);
@@ -3186,9 +3127,7 @@ const deleteAsset = async (assetId) => {
   if (!workspace.value || !confirm('Delete this asset?')) return;
 
   try {
-    await axios.delete(`${API_BASE_URL}/workspaces/${workspace.value.id}/assets/${assetId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    await apiClient.delete(`${API_BASE_URL}/workspaces/${workspace.value.id}/assets/${assetId}`);
     
     await loadWorkspaceAssets(workspace.value.id);
   } catch (error) {
@@ -3207,10 +3146,8 @@ const makeAssetGlobal = async (asset) => {
   if (!workspace.value || !confirm('Make this asset available to all workspaces?')) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/assets/${asset.id}/make-global`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/assets/${asset.id}/make-global`, {
       requestingWorkspaceId: workspace.value.id,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceAssets(workspace.value.id);
@@ -3224,11 +3161,9 @@ const addToken = async () => {
   if (!newToken.value.name || !newToken.value.value || !workspace.value) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/tokens`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/tokens`, {
       ...newToken.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceTokens(workspace.value.id);
@@ -3244,9 +3179,7 @@ const deleteToken = async (tokenId) => {
   if (!workspace.value || !confirm('Delete this token?')) return;
 
   try {
-    await axios.delete(`${API_BASE_URL}/workspaces/${workspace.value.id}/tokens/${tokenId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    await apiClient.delete(`${API_BASE_URL}/workspaces/${workspace.value.id}/tokens/${tokenId}`);
     
     await loadWorkspaceTokens(workspace.value.id);
   } catch (error) {
@@ -3265,10 +3198,8 @@ const makeTokenGlobal = async (token) => {
   if (!workspace.value || !confirm('Make this token available to all workspaces?')) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/tokens/${token.id}/make-global`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/tokens/${token.id}/make-global`, {
       requestingWorkspaceId: workspace.value.id,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     await loadWorkspaceTokens(workspace.value.id);
@@ -3289,10 +3220,8 @@ const makeResourceGlobal = async (resourceType, resource) => {
   if (!workspace.value || !confirm(`Make this ${resourceType.replace('-', ' ')} available to all workspaces?`)) return;
 
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/${resourceType}/${resource.id}/make-global`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/${resourceType}/${resource.id}/make-global`, {
       requestingWorkspaceId: workspace.value.id,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     // Reload the appropriate resource list
@@ -3327,9 +3256,7 @@ const deleteResource = async (resourceType, resourceId) => {
   if (!workspace.value || !confirm(`Delete this ${resourceType.replace('-', ' ')}?`)) return;
 
   try {
-    await axios.delete(`${API_BASE_URL}/workspaces/${workspace.value.id}/${resourceType}/${resourceId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    await apiClient.delete(`${API_BASE_URL}/workspaces/${workspace.value.id}/${resourceType}/${resourceId}`);
     
     // Reload the appropriate resource list
     const loadFunctions = {
@@ -3363,11 +3290,9 @@ const deleteResource = async (resourceType, resourceId) => {
 const addReview = async () => {
   if (!newReview.value.title || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/reviews`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/reviews`, {
       ...newReview.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspaceReviews(workspace.value.id);
     showAddReviewModal.value = false;
@@ -3381,11 +3306,9 @@ const addReview = async () => {
 const addSessionReplay = async () => {
   if (!newSessionReplay.value.name || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/session-replays`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/session-replays`, {
       ...newSessionReplay.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspaceSessionReplays(workspace.value.id);
     showAddSessionReplayModal.value = false;
@@ -3399,11 +3322,9 @@ const addSessionReplay = async () => {
 const addJourneyMap = async () => {
   if (!newJourneyMap.value.title || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/journey-maps`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/journey-maps`, {
       ...newJourneyMap.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspaceJourneyMaps(workspace.value.id);
     showAddJourneyMapModal.value = false;
@@ -3417,11 +3338,9 @@ const addJourneyMap = async () => {
 const addHcdReport = async () => {
   if (!newHcdReport.value.title || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/hcd-reports`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/hcd-reports`, {
       ...newHcdReport.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspaceHcdReports(workspace.value.id);
     showAddHcdReportModal.value = false;
@@ -3435,11 +3354,9 @@ const addHcdReport = async () => {
 const addUserPersona = async () => {
   if (!newUserPersona.value.name || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/user-personas`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/user-personas`, {
       ...newUserPersona.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspaceUserPersonas(workspace.value.id);
     showAddUserPersonaModal.value = false;
@@ -3453,11 +3370,9 @@ const addUserPersona = async () => {
 const addResearchArtifact = async () => {
   if (!newResearchArtifact.value.title || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/research-artifacts`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/research-artifacts`, {
       ...newResearchArtifact.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspaceResearchArtifacts(workspace.value.id);
     showAddResearchArtifactModal.value = false;
@@ -3471,11 +3386,9 @@ const addResearchArtifact = async () => {
 const addInsight = async () => {
   if (!newInsight.value.title || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/insights`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/insights`, {
       ...newInsight.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspaceInsights(workspace.value.id);
     showAddInsightModal.value = false;
@@ -3489,11 +3402,9 @@ const addInsight = async () => {
 const addPattern = async () => {
   if (!newPattern.value.name || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/patterns`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/patterns`, {
       ...newPattern.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspacePatterns(workspace.value.id);
     showAddPatternModal.value = false;
@@ -3507,11 +3418,9 @@ const addPattern = async () => {
 const addIcon = async () => {
   if (!newIcon.value.name || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/icons`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/icons`, {
       ...newIcon.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspaceIcons(workspace.value.id);
     showAddIconModal.value = false;
@@ -3525,11 +3434,9 @@ const addIcon = async () => {
 const addInteractive = async () => {
   if (!newInteractive.value.name || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/interactives`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/interactives`, {
       ...newInteractive.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspaceInteractives(workspace.value.id);
     showAddInteractiveModal.value = false;
@@ -3543,11 +3450,9 @@ const addInteractive = async () => {
 const addStockPhoto = async () => {
   if (!newStockPhoto.value.name || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/stock-photos`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/stock-photos`, {
       ...newStockPhoto.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspaceStockPhotos(workspace.value.id);
     showAddStockPhotoModal.value = false;
@@ -3561,11 +3466,9 @@ const addStockPhoto = async () => {
 const addIllustration = async () => {
   if (!newIllustration.value.name || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/illustrations`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/illustrations`, {
       ...newIllustration.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspaceIllustrations(workspace.value.id);
     showAddIllustrationModal.value = false;
@@ -3579,11 +3482,9 @@ const addIllustration = async () => {
 const addCapabilityLogo = async () => {
   if (!newCapabilityLogo.value.name || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/capability-logos`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/capability-logos`, {
       ...newCapabilityLogo.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspaceCapabilityLogos(workspace.value.id);
     showAddCapabilityLogoModal.value = false;
@@ -3597,11 +3498,9 @@ const addCapabilityLogo = async () => {
 const addStyleDictionary = async () => {
   if (!newStyleDictionary.value.name || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/style-dictionaries`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/style-dictionaries`, {
       ...newStyleDictionary.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspaceStyleDictionaries(workspace.value.id);
     showAddStyleDictionaryModal.value = false;
@@ -3615,11 +3514,9 @@ const addStyleDictionary = async () => {
 const addGuideline = async () => {
   if (!newGuideline.value.title || !workspace.value) return;
   try {
-    await axios.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/guidelines`, {
+    await apiClient.post(`${API_BASE_URL}/workspaces/${workspace.value.id}/guidelines`, {
       ...newGuideline.value,
       createdBy: CURRENT_USER_ID,
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     await loadWorkspaceGuidelines(workspace.value.id);
     showAddGuidelineModal.value = false;

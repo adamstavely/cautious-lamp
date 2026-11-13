@@ -764,7 +764,7 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -791,14 +791,11 @@ const filteredRules = computed(() => {
 });
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || ''; // In production, this would come from user settings
 
 const loadApplications = async () => {
   try {
     isLoading.value = true;
-    const response = await axios.get(`${API_BASE_URL}/applications`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/applications`);
     applications.value = response.data.applications || [];
   } catch (error) {
     console.error('Failed to load applications:', error);
@@ -818,12 +815,10 @@ const registerApplication = async () => {
   
   try {
     isLoading.value = true;
-    const response = await axios.post(`${API_BASE_URL}/applications/register`, {
+    const response = await apiClient.post(`${API_BASE_URL}/applications/register`, {
       name: newApplication.value.name,
       repository: newApplication.value.repository || undefined,
       version: newApplication.value.version || undefined
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     applications.value.push(response.data);
@@ -3014,15 +3009,13 @@ const applyCustomizedTemplate = () => {
 const runComplianceCheck = async () => {
   try {
     isLoading.value = true;
-    const response = await axios.post(`${API_BASE_URL}/compliance/scan`, {
+    const response = await apiClient.post(`${API_BASE_URL}/compliance/scan`, {
       scope: complianceScope.value,
       applicationId: selectedApplicationId.value || undefined,
       rules: rules.value.filter(r => r.enabled).map(r => ({
         name: r.name,
         scannerCode: r.scannerCode
       }))
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     complianceResults.value = response.data;
@@ -3040,10 +3033,8 @@ const scanApplicationCodebase = async () => {
   
   try {
     isLoading.value = true;
-    const response = await axios.post(`${API_BASE_URL}/compliance/scan-application`, {
+    const response = await apiClient.post(`${API_BASE_URL}/compliance/scan-application`, {
       applicationId: selectedApplicationId.value
-    }, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
     });
     
     complianceResults.value = {

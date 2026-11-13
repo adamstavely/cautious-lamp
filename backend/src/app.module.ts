@@ -28,6 +28,8 @@ import { CustomThrottlerGuard } from './common/rate-limiting/rate-limit.guard';
 import { AppElasticsearchModule } from './common/elasticsearch/elasticsearch.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { AltTextModule } from './alt-text/alt-text.module';
+import { AuthModule } from './auth/auth.module';
+import { AuthGuard } from './auth/auth.guard';
 
 @Module({
   imports: [
@@ -38,6 +40,7 @@ import { AltTextModule } from './alt-text/alt-text.module';
     DesignSystemModule,
     AuditModule,
     RbacModule,
+    AuthModule,
     FeatureFlagsModule,
     VisualRegressionModule,
     SessionReplayModule,
@@ -58,10 +61,15 @@ import { AltTextModule } from './alt-text/alt-text.module';
     DesignExtractionModule,
     ReviewsModule,
   ],
+  // Global guards run in this order: rate limiting first, then authentication
   providers: [
     {
       provide: APP_GUARD,
       useClass: CustomThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useExisting: AuthGuard,
     },
   ],
 })

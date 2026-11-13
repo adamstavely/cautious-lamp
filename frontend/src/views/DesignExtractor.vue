@@ -538,14 +538,13 @@ const saveToStyleLibrary = async () => {
     // Flatten DTCG tokens for storage
     const flattenedTokens = flattenDTCG(extractedData.value.dtcg);
 
-    const response = await apiClient.post(`/workspaces/${workspaceId}/style-dictionaries`, {
+    const response = await apiClient.post(`/api/v1/workspaces/${workspaceId}/style-dictionaries`, {
       name: dictionaryName.value.trim(),
       description: `Extracted from ${extractedData.value.url} on ${new Date(extractedData.value.extractedAt).toLocaleDateString()}`,
       format: 'json',
       tokens: extractedData.value.dtcg,
       url: extractedData.value.url,
       tags: ['extracted', 'dembrandt'],
-      createdBy: 'current-user', // TODO: Get from user context
     });
 
     savedDictionary.value = response.data;

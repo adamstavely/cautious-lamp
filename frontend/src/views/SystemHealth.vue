@@ -1074,7 +1074,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
@@ -1170,7 +1170,7 @@ const showDetailedReport = ref(false);
 const loadHealthScore = async () => {
   loadingHealthScore.value = true;
   try {
-    const response = await axios.get('/api/v1/system-health/score');
+    const response = await apiClient.get('/api/v1/system-health/score');
     healthScore.value = response.data;
     healthScoreAlerts.value = response.data.alerts || [];
     healthScoreRecommendations.value = response.data.recommendations || [];
@@ -1185,7 +1185,7 @@ const loadHealthScore = async () => {
 // Load health score trends
 const loadHealthScoreTrends = async (days = 30) => {
   try {
-    const response = await axios.get(`/api/v1/system-health/trends?days=${days}`);
+    const response = await apiClient.get(`/api/v1/system-health/trends?days=${days}`);
     healthScoreTrends.value = response.data;
   } catch (error) {
     console.error('Error loading health score trends:', error);
@@ -1258,7 +1258,7 @@ const loadAnalytics = async () => {
   loadingAnalytics.value = true;
   try {
     // Load component popularity
-    const popularityResponse = await axios.get(`/api/v1/analytics/component-popularity?timeframe=${adoptionTimeframe.value}`);
+    const popularityResponse = await apiClient.get(`/api/v1/analytics/component-popularity?timeframe=${adoptionTimeframe.value}`);
     const popularity = popularityResponse.data || [];
     
     // Update top components with real data
@@ -1276,11 +1276,11 @@ const loadAnalytics = async () => {
     }));
 
     // Load application adoption
-    const adoptionResponse = await axios.get('/api/v1/analytics/application-adoption');
+    const adoptionResponse = await apiClient.get('/api/v1/analytics/application-adoption');
     applicationAdoption.value = adoptionResponse.data || [];
 
     // Load usage trends
-    const trendsResponse = await axios.get('/api/v1/analytics/usage-trends?days=30');
+    const trendsResponse = await apiClient.get('/api/v1/analytics/usage-trends?days=30');
     const trends = trendsResponse.data || [];
     const maxUsage = Math.max(...trends.map(t => t.totalUsage), 1);
     usageTrends.value = trends.map(trend => {
@@ -1294,11 +1294,11 @@ const loadAnalytics = async () => {
     });
 
     // Load design debt metrics
-    const debtResponse = await axios.get('/api/v1/analytics/design-debt');
+    const debtResponse = await apiClient.get('/api/v1/analytics/design-debt');
     designDebtMetrics.value = debtResponse.data;
 
     // Load cross-application comparison
-    const comparisonResponse = await axios.get('/api/v1/analytics/cross-application-comparison');
+    const comparisonResponse = await apiClient.get('/api/v1/analytics/cross-application-comparison');
     crossApplicationComparison.value = comparisonResponse.data || [];
   } catch (error) {
     console.error('Error loading analytics:', error);
@@ -1378,7 +1378,7 @@ onBeforeUnmount(() => {
 const generateAuditReport = async () => {
   generatingReport.value = true;
   try {
-    const response = await axios.get('/api/v1/system-health/audit-report');
+    const response = await apiClient.get('/api/v1/system-health/audit-report');
     auditReport.value = response.data;
     showDetailedReport.value = false; // Start with summary view
   } catch (error) {

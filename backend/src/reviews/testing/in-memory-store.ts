@@ -1,4 +1,4 @@
-import { DocVersion, DocumentStore, StoredDoc, VersionConflictError } from '../document-store';
+import { DocVersion, DocumentStore, DuplicateDocumentError, StoredDoc, VersionConflictError } from '../document-store';
 
 /** In-memory DocumentStore with the same compare-and-swap semantics as Elasticsearch, for tests */
 export class InMemoryStore<T extends { id: string }> implements DocumentStore<T> {
@@ -14,7 +14,7 @@ export class InMemoryStore<T extends { id: string }> implements DocumentStore<T>
   }
 
   async create(doc: T): Promise<void> {
-    if (this.docs.has(doc.id)) throw new Error(`Duplicate id ${doc.id}`);
+    if (this.docs.has(doc.id)) throw new DuplicateDocumentError(doc.id);
     this.docs.set(doc.id, { doc: structuredClone(doc), seqNo: ++this.seq });
   }
 

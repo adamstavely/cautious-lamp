@@ -7,9 +7,12 @@ import { UpdateApplicationDto } from './dto/update-application.dto';
 import { UpdateCapabilitiesDto } from './dto/update-capabilities.dto';
 import { TokenRotationService } from '../common/security/token-rotation.service';
 import { KeyManagementService } from '../common/security/key-management.service';
+import { AuthPrincipal, Principal, Public, RequirePermission } from '../auth/principal';
+import { Permission } from '../rbac/rbac.service';
 
 @Controller('api/v1')
 export class DesignSystemController {
+  @Public()
   @Get('health')
   health() {
     return {
@@ -26,18 +29,20 @@ export class DesignSystemController {
     private readonly keyManagementService: KeyManagementService,
   ) {}
 
-  private validateRequest(authHeader?: string): void {
-    this.keyManagementService.assertValidApiKey(authHeader);
-  }
+  /**
+   * No-op: the global AuthGuard has already authenticated the caller (a user
+   * token or an API key, docs/AUTH.md). Kept so the call sites stay as they were.
+   */
+  private validateRequest(_authHeader?: string): void {}
 
-  // API key management needs the admin key (ADMIN_API_KEY)
+  // API key management needs admin:users (the admin key has it)
 
+  @RequirePermission(Permission.ADMIN_USERS)
   @Post('auth/api-keys')
   createApiKey(
     @Body() body: { name: string; expiresInDays?: number; scopes?: string[] },
     @Headers('authorization') authHeader?: string,
   ) {
-    this.keyManagementService.assertAdminKey(authHeader);
     if (!body.name) {
       throw new BadRequestException('API key name is required');
     }
@@ -48,22 +53,22 @@ export class DesignSystemController {
     return { apiKey: key, metadata: this.withoutSecrets(metadata) };
   }
 
+  @RequirePermission(Permission.ADMIN_USERS)
   @Get('auth/api-keys')
   getApiKeys(@Headers('authorization') authHeader?: string) {
-    this.keyManagementService.assertAdminKey(authHeader);
     return this.keyManagementService.getAllKeys().map((metadata) => this.withoutSecrets(metadata));
   }
 
   // Declared before 'auth/api-keys/:id' so ':id' doesn't capture it
+  @RequirePermission(Permission.ADMIN_USERS)
   @Get('auth/api-keys/needing-rotation')
   getTokensNeedingRotation(@Headers('authorization') authHeader?: string) {
-    this.keyManagementService.assertAdminKey(authHeader);
     return this.tokenRotationService.getTokensNeedingRotation();
   }
 
+  @RequirePermission(Permission.ADMIN_USERS)
   @Get('auth/api-keys/:id')
   getApiKey(@Param('id') id: string, @Headers('authorization') authHeader?: string) {
-    this.keyManagementService.assertAdminKey(authHeader);
     const metadata = this.keyManagementService.getKeyMetadata(id);
     if (!metadata) {
       throw new NotFoundException(`API key with ID ${id} not found`);
@@ -71,15 +76,15 @@ export class DesignSystemController {
     return this.withoutSecrets(metadata);
   }
 
+  @RequirePermission(Permission.ADMIN_USERS)
   @Post('auth/api-keys/:id/rotate')
   async rotateApiKey(
     @Param('id') id: string,
     @Body() body: { revokeOld?: boolean; reason?: 'manual' | 'automatic' | 'expired' | 'compromised' },
     @Request() req: any,
-    @Headers('authorization') authHeader?: string,
+    @Principal() principal: AuthPrincipal,
   ) {
-    this.keyManagementService.assertAdminKey(authHeader);
-    const userId = req.user?.id || 'admin';
+    const userId = principal.id;
     const ipAddress = req.ip;
     const userAgent = req.headers['user-agent'];
 
@@ -99,9 +104,9 @@ export class DesignSystemController {
     };
   }
 
+  @RequirePermission(Permission.ADMIN_USERS)
   @Post('auth/api-keys/:id/revoke')
   revokeApiKey(@Param('id') id: string, @Headers('authorization') authHeader?: string) {
-    this.keyManagementService.assertAdminKey(authHeader);
     const success = this.keyManagementService.revokeKey(id);
     if (!success) {
       throw new NotFoundException(`API key with ID ${id} not found`);
@@ -109,9 +114,9 @@ export class DesignSystemController {
     return { message: 'API key revoked successfully' };
   }
 
+  @RequirePermission(Permission.ADMIN_USERS)
   @Get('auth/api-keys/:id/rotation-history')
   getRotationHistory(@Param('id') id: string, @Headers('authorization') authHeader?: string) {
-    this.keyManagementService.assertAdminKey(authHeader);
     return this.tokenRotationService.getRotationHistory(id);
   }
 
@@ -228,6 +233,7 @@ export class DesignSystemController {
     };
   }
 
+  @Public()
   @Get('health')
   healthCheck() {
     return { 
@@ -563,11 +569,11 @@ export class DesignSystemController {
   @Post('requests/:id/vote')
   voteRequest(
     @Param('id') id: string,
-    @Body() body: { userId: string },
+    @Principal() principal: AuthPrincipal,
     @Headers('authorization') authHeader?: string,
   ) {
     this.validateRequest(authHeader);
-    const request = this.componentRequestService.voteRequest(id, body.userId);
+    const request = this.componentRequestService.voteRequest(id, principal.id);
     if (!request) {
       throw new BadRequestException(`Request ${id} not found`);
     }
@@ -577,12 +583,13 @@ export class DesignSystemController {
   @Put('requests/:id/status')
   updateRequestStatus(
     @Param('id') id: string,
-    @Body() body: { status: string; userId: string },
+    @Body() body: { status: string },
+    @Principal() principal: AuthPrincipal,
     @Headers('authorization') authHeader?: string,
   ) {
     this.validateRequest(authHeader);
     try {
-      const request = this.componentRequestService.transitionStatus(id, body.status as any, body.userId);
+      const request = this.componentRequestService.transitionStatus(id, body.status as any, principal.id);
       if (!request) {
         throw new BadRequestException(`Request ${id} not found`);
       }
@@ -775,12 +782,12 @@ export class DesignSystemController {
   // Notification endpoints
   @Get('notifications')
   getNotifications(
-    @Query('userId') userId: string,
+    @Principal() principal: AuthPrincipal,
     @Query('unreadOnly') unreadOnly?: string,
     @Headers('authorization') authHeader?: string,
   ) {
     this.validateRequest(authHeader);
-    return this.notificationService.getNotifications(userId, unreadOnly === 'true');
+    return this.notificationService.getNotifications(principal.id, unreadOnly === 'true');
   }
 
   @Put('notifications/:id/read')
@@ -798,21 +805,21 @@ export class DesignSystemController {
 
   @Put('notifications/read-all')
   markAllNotificationsAsRead(
-    @Body() body: { userId: string },
+    @Principal() principal: AuthPrincipal,
     @Headers('authorization') authHeader?: string,
   ) {
     this.validateRequest(authHeader);
-    const count = this.notificationService.markAllAsRead(body.userId);
+    const count = this.notificationService.markAllAsRead(principal.id);
     return { success: true, count };
   }
 
   @Get('notifications/unread-count')
   getUnreadCount(
-    @Query('userId') userId: string,
+    @Principal() principal: AuthPrincipal,
     @Headers('authorization') authHeader?: string,
   ) {
     this.validateRequest(authHeader);
-    return { count: this.notificationService.getUnreadCount(userId) };
+    return { count: this.notificationService.getUnreadCount(principal.id) };
   }
 
   // NASA-TLX endpoint
@@ -3056,14 +3063,8 @@ export class DesignSystemController {
 
   // ==================== User Management ====================
 
-  @Get('users')
-  getAllUsers(
-    @Headers('authorization') authHeader?: string,
-  ) {
-    this.validateRequest(authHeader);
-    return this.designSystemService.getAllUsersWithWorkspaces();
-  }
-
+  // GET /users belongs to UsersController (docs/AUTH.md). These per-user
+  // workspace routes have two or more segments, so they don't clash with it.
   @Get('users/:userId/workspaces')
   getUserWorkspaces(
     @Param('userId') userId: string,
@@ -3080,8 +3081,8 @@ export class DesignSystemController {
       workspaceId: string;
       email: string;
       role: 'admin' | 'editor' | 'viewer';
-      addedBy: string;
     },
+    @Principal() principal: AuthPrincipal,
     @Headers('authorization') authHeader?: string,
   ) {
     this.validateRequest(authHeader);
@@ -3090,7 +3091,7 @@ export class DesignSystemController {
       userId,
       body.email,
       body.role,
-      body.addedBy
+      principal.id
     );
     if (!workspace) {
       throw new BadRequestException(`Failed to add user to workspace`);

@@ -299,7 +299,7 @@
 
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 
 const props = defineProps({
   palette: {
@@ -462,7 +462,7 @@ const analyzePalette = async () => {
   console.log('Running harmony check for palette:', props.palette.colors.map((c) => c.hex));
   loading.value = true;
   try {
-    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/analyze`, {
+    const response = await apiClient.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/analyze`, {
       colors: props.palette.colors.map((c) => ({ hex: c.hex })),
     });
     

@@ -2,9 +2,14 @@
   <v-app>
     <!-- Skip Links for Keyboard Navigation - WCAG 2.1 AA -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
-    <a href="#navigation" class="skip-link">Skip to navigation</a>
-    
-    <div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col">
+    <a v-if="!bare" href="#navigation" class="skip-link">Skip to navigation</a>
+
+    <!-- Sign-in screens: no app chrome, and nothing that calls the API -->
+    <main v-if="bare" id="main-content" class="min-h-screen bg-[#fff] dark:bg-slate-950" role="main">
+      <router-view :key="$route.path" />
+    </main>
+
+    <div v-else class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col">
       <div class="flex flex-1 min-h-0">
         <Sidebar />
         <div class="flex-1 min-w-0 flex flex-col">
@@ -30,7 +35,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Sidebar from './components/Sidebar.vue';
 import TopNav from './components/TopNav.vue';
@@ -40,10 +45,24 @@ import EeroChatbot from './components/EeroChatbot.vue';
 import LoupeTool from './components/LoupeTool.vue';
 import Toast from './components/Toast.vue';
 import { useFeatureFlag } from './composables/useFeatureFlags';
+import { useAuth } from './composables/useAuth.js';
 
 const route = useRoute();
 const router = useRouter();
 const chatOpen = ref(false);
+const { isSignedIn } = useAuth();
+
+// Sign-in screens (and any moment without a signed-in user) render without the chrome
+const bare = computed(() => !!route.meta.bare || !isSignedIn.value);
+
+// The RBAC guard sends people without a permission home with ?unauthorized=<permission>
+watch(() => route.query.unauthorized, (permission) => {
+  if (!permission) return;
+  // nextTick: on first load the Toast component mounts after this runs
+  nextTick(() => window.showToast?.("You don't have access to this.", 'warning', 5000));
+  const { unauthorized, ...rest } = route.query;
+  router.replace({ query: rest });
+}, { immediate: true });
 const { isEnabled: aiAssistantEnabled } = useFeatureFlag('ai-assistant', false);
 const { isEnabled: loupeToolEnabled } = useFeatureFlag('component-loupe', false);
 

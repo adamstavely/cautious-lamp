@@ -56,6 +56,7 @@
           <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- System Health Card -->
             <router-link 
+              v-if="canAccessPath('/admin/health')"
               to="/admin/health"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
@@ -80,6 +81,7 @@
 
             <!-- Governance Card -->
             <router-link 
+              v-if="canAccessPath('/admin/governance')"
               to="/admin/governance"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
@@ -104,6 +106,7 @@
 
             <!-- Audit Logs Card -->
             <router-link 
+              v-if="canAccessPath('/admin/audit')"
               to="/admin/audit"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
@@ -128,6 +131,7 @@
 
             <!-- Site Banners Card -->
             <div
+              v-if="hasPermission('admin:banners')"
               @click="showBannerModal = true"
               class="group rounded-2xl p-6 border transition-all cursor-pointer"
               :class="isDarkMode 
@@ -152,6 +156,7 @@
 
             <!-- Workspace Management Card -->
             <router-link 
+              v-if="canAccessPath('/admin/workspaces')"
               to="/admin/workspaces"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
@@ -176,6 +181,7 @@
 
             <!-- User Management Card -->
             <router-link 
+              v-if="canAccessPath('/admin/users')"
               to="/admin/users"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
@@ -200,6 +206,7 @@
 
             <!-- Role Management Card -->
             <router-link 
+              v-if="canAccessPath('/admin/roles')"
               to="/admin/roles"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
@@ -224,6 +231,7 @@
 
             <!-- Feature Flags Card -->
             <router-link 
+              v-if="canAccessPath('/admin/feature-flags')"
               to="/admin/feature-flags"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
@@ -248,6 +256,7 @@
 
             <!-- Content Management Card -->
             <router-link 
+              v-if="canAccessPath('/admin/content')"
               to="/admin/content"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
@@ -273,6 +282,7 @@
 
             <!-- Performance Analysis Card -->
             <router-link 
+              v-if="canAccessPath('/admin/performance')"
               to="/admin/performance"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
@@ -297,6 +307,7 @@
 
             <!-- Accessibility Reports Card -->
             <router-link 
+              v-if="canAccessPath('/admin/accessibility-reports')"
               to="/admin/accessibility-reports"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
@@ -321,6 +332,7 @@
 
             <!-- Component Dependency Graph Card -->
             <router-link 
+              v-if="canAccessPath('/admin/dependencies')"
               to="/admin/dependencies"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
@@ -345,6 +357,7 @@
 
             <!-- Application Management Card -->
             <router-link 
+              v-if="canAccessPath('/admin/applications')"
               to="/admin/applications"
               class="group rounded-2xl p-6 border transition-all"
               :class="isDarkMode 
@@ -625,7 +638,9 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
+import { canAccessPath } from '../router/rbacGuards.js';
+import { hasPermission } from '../services/auth.js';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -647,7 +662,7 @@ const bannerForm = ref({
 
 const fetchBanners = async () => {
   try {
-    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners`);
+    const response = await apiClient.get(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners`);
     banners.value = response.data;
   } catch (error) {
     console.error('Failed to fetch banners:', error);
@@ -686,9 +701,6 @@ const editBanner = (banner) => {
 
 const saveBanner = async () => {
   try {
-    const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
-    const headers = { Authorization: `Bearer ${apiKey}` };
-    
     const payload = {
       title: bannerForm.value.title,
       message: bannerForm.value.message,
@@ -697,9 +709,9 @@ const saveBanner = async () => {
     };
 
     if (editingBanner.value) {
-      await axios.put(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners/${editingBanner.value.id}`, payload, { headers });
+      await apiClient.put(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners/${editingBanner.value.id}`, payload);
     } else {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners`, payload, { headers });
+      await apiClient.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners`, payload);
     }
 
     showBannerForm.value = false;
@@ -713,12 +725,9 @@ const saveBanner = async () => {
 
 const toggleBannerStatus = async (banner) => {
   try {
-    const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
-    const headers = { Authorization: `Bearer ${apiKey}` };
-    
-    await axios.put(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners/${banner.id}`, {
+    await apiClient.put(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners/${banner.id}`, {
       isActive: !banner.isActive
-    }, { headers });
+    });
 
     await fetchBanners();
   } catch (error) {
@@ -731,10 +740,7 @@ const deleteBanner = async (id) => {
   if (!confirm('Are you sure you want to delete this banner?')) return;
   
   try {
-    const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
-    const headers = { Authorization: `Bearer ${apiKey}` };
-    
-    await axios.delete(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners/${id}`, { headers });
+    await apiClient.delete(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners/${id}`);
     await fetchBanners();
   } catch (error) {
     console.error('Failed to delete banner:', error);
