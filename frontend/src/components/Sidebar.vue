@@ -3,71 +3,51 @@
     id="navigation" 
     data-ds-component="sidebar"
     data-ds-path="@design-system/components/sidebar"
-    class="sticky top-0 h-screen text-white flex flex-col flex-shrink-0 w-24 transition-colors z-50 bg-indigo-800 dark:bg-indigo-900" 
+    class="side sticky top-0 h-screen flex flex-col flex-shrink-0 w-24 transition-colors z-50" 
     aria-label="Main navigation"
   >
     <!-- Navigation Items -->
-    <nav class="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-4" role="navigation" aria-label="Main navigation">
+    <nav class="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-4 px-2" role="navigation" aria-label="Main navigation">
       <template v-for="(item, index) in menuItems" :key="item.path">
         <router-link
           :to="item.path"
           @click="handleSidebarClick"
-          :class="[
-            'flex flex-col items-center px-3 py-3 relative group mb-2',
-            isActive(item.path)
-              ? (isDarkMode 
-                ? 'border border-indigo-300 rounded-lg bg-indigo-400/30' 
-                : 'border border-indigo-400 rounded-lg bg-indigo-500/30')
-              : (isDarkMode
-                ? 'hover:bg-indigo-400/30 rounded-lg'
-                : 'hover:bg-indigo-700/50 rounded-lg')
-          ]"
+          :class="['side-item mb-1', { on: isActive(item.path) }]"
         >
-          <span class="material-symbols-outlined flex-shrink-0 mb-2" aria-hidden="true">{{ item.icon }}</span>
-          <span class="font-medium text-sm text-center">{{ item.label }}</span>
+          <span class="material-symbols-outlined side-ic" aria-hidden="true">{{ item.icon }}</span>
+          <span class="side-label">{{ item.label }}</span>
         </router-link>
         <!-- Divider after HCD and Design Assets -->
         <div 
           v-if="item.path === '/research' || item.path === '/design-assets'"
-          class="h-px mx-4 mb-2"
-          :class="isDarkMode ? 'bg-indigo-700' : 'bg-indigo-600'"
+          class="side-divider"
           aria-hidden="true"
         ></div>
       </template>
     </nav>
 
     <!-- Admin Section -->
-    <div class="px-3 pb-2">
+    <div class="px-2 pb-2">
       <router-link
         to="/admin"
         @click="handleSidebarClick"
-        :class="[
-          'flex flex-col items-center px-3 py-3 relative group',
-          isActive('/admin')
-            ? (isDarkMode 
-              ? 'border border-indigo-300 rounded-lg bg-indigo-400/30' 
-              : 'border border-indigo-400 rounded-lg bg-indigo-500/30')
-            : (isDarkMode
-              ? 'hover:bg-indigo-400/30 rounded-lg'
-              : 'hover:bg-indigo-700/50 rounded-lg')
-        ]"
+        :class="['side-item', { on: isActive('/admin') }]"
       >
-        <span class="material-symbols-outlined flex-shrink-0 mb-2" aria-hidden="true">admin_panel_settings</span>
-        <span class="font-medium text-sm text-center">Admin</span>
+        <span class="material-symbols-outlined side-ic" aria-hidden="true">admin_panel_settings</span>
+        <span class="side-label">Admin</span>
       </router-link>
     </div>
 
     <!-- Dark Mode Toggle -->
-    <div class="p-4">
+    <div class="px-2 pb-4">
       <button
         @click="toggleDarkMode"
-        class="flex items-center justify-center p-2 rounded-lg transition-colors relative group w-full"
-        :class="isDarkMode ? 'hover:bg-indigo-400/30' : 'hover:bg-indigo-700/50'"
+        class="side-item side-toggle w-full"
         :title="isDarkMode ? 'Light Mode' : 'Dark Mode'"
         :aria-label="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
         aria-pressed="false"
       >
-        <span class="material-symbols-outlined flex-shrink-0" aria-hidden="true">
+        <span class="material-symbols-outlined side-ic" aria-hidden="true">
           {{ isDarkMode ? 'light_mode' : 'dark_mode' }}
         </span>
       </button>
@@ -179,3 +159,53 @@ const isActive = (path) => {
 };
 </script>
 
+<style scoped>
+.side {
+  background: var(--ds-bg);
+  color: var(--ds-muted);
+  border-right: 1px solid var(--ds-line);
+}
+.side-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 4px;
+  border-radius: 10px;
+  color: var(--ds-muted);
+  transition: .12s;
+}
+.side-item:hover {
+  background: var(--ds-bg-3);
+  color: var(--ds-ink);
+}
+.side-item.on {
+  background: var(--ds-accent-wash);
+  color: var(--ds-accent-ink);
+}
+.side-ic {
+  color: var(--ds-faint);
+  transition: color .12s;
+}
+.side-item:hover .side-ic,
+.side-item.on .side-ic {
+  color: var(--ds-accent);
+}
+.side-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+}
+.side-item.on .side-label {
+  font-weight: 600;
+}
+.side-toggle {
+  padding: 8px;
+}
+.side-divider {
+  height: 1px;
+  margin: 6px 12px 8px;
+  background: var(--ds-line);
+}
+</style>
