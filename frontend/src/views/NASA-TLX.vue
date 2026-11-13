@@ -357,7 +357,7 @@ const submitForm = async () => {
   showSuccess.value = false;
 
   try {
-    const apiKey = localStorage.getItem('apiKey') || 'dev-key';
+    const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
     const user = localStorage.getItem('currentDesigner') || 'Anonymous User';
     
     const payload = {
@@ -365,7 +365,7 @@ const submitForm = async () => {
       user,
     };
 
-    await axios.post('http://localhost:3000/api/v1/nasa-tlx', payload, {
+    await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/nasa-tlx`, payload, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',

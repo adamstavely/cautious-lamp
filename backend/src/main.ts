@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 // Initialize OpenTelemetry BEFORE importing NestJS
 // This ensures all modules are instrumented
 import { initializeOpenTelemetry } from './observability/opentelemetry';
@@ -20,13 +22,19 @@ async function bootstrap() {
   
   app.useGlobalPipes(new ValidationPipe());
   
-  app.enableCors({
-    origin: ['http://localhost:5174', 'http://localhost:5175'], // Main app on 5174, VitePress on 5175
-    credentials: true,
-  });
+  // Main app on 5174, VitePress on 5175 by default
+  const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:5174,http://localhost:5175')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  app.enableCors({ origin: corsOrigins, credentials: true });
 
-  await app.listen(3000);
-  console.log('Backend server running on http://localhost:3000');
+  const port = Number(process.env.PORT) || 3000;
+  await app.listen(port);
+  console.log(`Backend server running on http://localhost:${port}`);
 }
-bootstrap();
+bootstrap().catch((error) => {
+  console.error('Backend failed to start:', error);
+  process.exit(1);
+});
 

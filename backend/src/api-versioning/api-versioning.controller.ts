@@ -1,14 +1,16 @@
 import { Controller, Get, Param, Headers, BadRequestException } from '@nestjs/common';
 import { ApiVersioningService } from './api-versioning.service';
+import { KeyManagementService } from '../common/security/key-management.service';
 
 @Controller('api')
 export class ApiVersioningController {
-  constructor(private readonly versioningService: ApiVersioningService) {}
+  constructor(
+    private readonly versioningService: ApiVersioningService,
+    private readonly keyManagementService: KeyManagementService,
+  ) {}
 
   private validateRequest(authHeader?: string): void {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new BadRequestException('Authorization header required');
-    }
+    this.keyManagementService.assertValidApiKey(authHeader);
   }
 
   @Get('versions')

@@ -746,7 +746,7 @@ const fetchSuggestions = async (regenerateType = null) => {
 
   try {
     const colors = props.palette.colors.map((c) => c.hex);
-    const response = await axios.post('http://localhost:3000/api/palettes/suggestions', {
+    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/suggestions`, {
       colors,
       regenerateType: regenerateType || undefined,
     });

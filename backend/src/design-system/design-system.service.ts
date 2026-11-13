@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, Optional, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException, ServiceUnavailableException, Optional, Inject, forwardRef } from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
 import { ComplianceScannerService, ScannerContext } from './compliance-scanner.service';
 import { ApplicationScannerService, ApplicationScanContext } from './application-scanner.service';
@@ -451,7 +451,7 @@ export interface ComplianceCheck {
 
 @Injectable()
 export class DesignSystemService {
-  private apiKeys = new Map<string, { name: string; createdAt: Date; encryptedKey?: string }>();
+  private readonly logger = new Logger(DesignSystemService.name);
   private applications = new Map<string, Application>();
   private workspaces = new Map<string, Workspace>();
   private workspaceFonts = new Map<string, WorkspaceFont>();
@@ -486,19 +486,6 @@ export class DesignSystemService {
   ) {
     this.scannerService = new ComplianceScannerService();
     this.applicationScanner = new ApplicationScannerService();
-    // Store encrypted keys for test keys
-    const testKey = 'test-api-key-123';
-    const devKey = 'dev-key';
-    this.apiKeys.set(testKey, { 
-      name: 'Default Test Key', 
-      createdAt: new Date(),
-      encryptedKey: this.encryptionService?.encrypt(testKey) || undefined,
-    });
-    this.apiKeys.set(devKey, { 
-      name: 'Development Key', 
-      createdAt: new Date(),
-      encryptedKey: this.encryptionService?.encrypt(devKey) || undefined,
-    });
   }
 
   // Set analytics service (called by module to avoid circular dependency)
@@ -562,22 +549,6 @@ export class DesignSystemService {
         tags: ['mobile', 'ios', 'android']
       }
     });
-  }
-
-  validateApiKey(apiKey: string): boolean {
-    return this.apiKeys.has(apiKey);
-  }
-
-  createApiKey(name: string): string {
-    const apiKey = `ds_${this.generateRandomString(32)}`;
-    // Encrypt the key before storing
-    const encryptedKey = this.encryptionService?.encrypt(apiKey);
-    this.apiKeys.set(apiKey, { 
-      name, 
-      createdAt: new Date(),
-      encryptedKey,
-    });
-    return apiKey;
   }
 
   private generateRandomString(length: number): string {
@@ -3921,30 +3892,22 @@ export const Table = ({
       createdAt: new Date().toISOString(),
     };
 
+    return this.storeSurveyResponse('nasa-tlx', document);
+  }
+
+  /**
+   * Stores a survey response. Fails with 503 rather than reporting a save that didn't happen.
+   */
+  private async storeSurveyResponse<T extends object>(index: string, document: T): Promise<T & { id: string }> {
     if (!this.elasticsearchService) {
-      // Return mock response if Elasticsearch is not available
-      return {
-        id: `mock-${Date.now()}`,
-        ...document,
-      };
+      throw new ServiceUnavailableException('Survey storage is not configured');
     }
-
     try {
-      const result = await this.elasticsearchService.index({
-        index: 'nasa-tlx',
-        document,
-      });
-
-      return {
-        id: result._id,
-        ...document,
-      };
+      const result = await this.elasticsearchService.index({ index, document, refresh: 'wait_for' });
+      return { id: result._id, ...document };
     } catch (error) {
-      // Return mock response if Elasticsearch fails
-      return {
-        id: `mock-${Date.now()}`,
-        ...document,
-      };
+      this.logger.error(`Failed to store ${index} response: ${(error as Error).message}`);
+      throw new ServiceUnavailableException('Survey storage is unavailable, please try again later');
     }
   }
 
@@ -3989,31 +3952,7 @@ export const Table = ({
       createdAt: new Date().toISOString(),
     };
 
-    if (!this.elasticsearchService) {
-      // Return mock response if Elasticsearch is not available
-      return {
-        id: `mock-${Date.now()}`,
-        ...document,
-      };
-    }
-
-    try {
-      const result = await this.elasticsearchService.index({
-        index: 'sus-scores',
-        document,
-      });
-
-      return {
-        id: result._id,
-        ...document,
-      };
-    } catch (error) {
-      // Return mock response if Elasticsearch fails
-      return {
-        id: `mock-${Date.now()}`,
-        ...document,
-      };
-    }
+    return this.storeSurveyResponse('sus-scores', document);
   }
 
   // Heuristic Evaluation
@@ -4043,29 +3982,7 @@ export const Table = ({
       createdAt: new Date().toISOString(),
     };
 
-    if (!this.elasticsearchService) {
-      return {
-        id: `mock-${Date.now()}`,
-        ...document,
-      };
-    }
-
-    try {
-      const result = await this.elasticsearchService.index({
-        index: 'heuristic-evaluations',
-        document,
-      });
-
-      return {
-        id: result._id,
-        ...document,
-      };
-    } catch (error) {
-      return {
-        id: `mock-${Date.now()}`,
-        ...document,
-      };
-    }
+    return this.storeSurveyResponse('heuristic-evaluations', document);
   }
 
   // Component metadata for Loupe Tool

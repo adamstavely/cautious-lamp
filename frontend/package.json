@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "docs:dev": "vitepress dev docs --port 5175",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "check:sfc": "node scripts/check-sfc.mjs"
   },
   "dependencies": {
     "@adobe/leonardo-contrast-colors": "^1.0.0",

@@ -647,7 +647,7 @@ const bannerForm = ref({
 
 const fetchBanners = async () => {
   try {
-    const response = await axios.get('http://localhost:3000/api/v1/banners');
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners`);
     banners.value = response.data;
   } catch (error) {
     console.error('Failed to fetch banners:', error);
@@ -686,7 +686,7 @@ const editBanner = (banner) => {
 
 const saveBanner = async () => {
   try {
-    const apiKey = localStorage.getItem('apiKey') || 'dev-key';
+    const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
     const headers = { Authorization: `Bearer ${apiKey}` };
     
     const payload = {
@@ -697,9 +697,9 @@ const saveBanner = async () => {
     };
 
     if (editingBanner.value) {
-      await axios.put(`http://localhost:3000/api/v1/banners/${editingBanner.value.id}`, payload, { headers });
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners/${editingBanner.value.id}`, payload, { headers });
     } else {
-      await axios.post('http://localhost:3000/api/v1/banners', payload, { headers });
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners`, payload, { headers });
     }
 
     showBannerForm.value = false;
@@ -713,10 +713,10 @@ const saveBanner = async () => {
 
 const toggleBannerStatus = async (banner) => {
   try {
-    const apiKey = localStorage.getItem('apiKey') || 'dev-key';
+    const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
     const headers = { Authorization: `Bearer ${apiKey}` };
     
-    await axios.put(`http://localhost:3000/api/v1/banners/${banner.id}`, {
+    await axios.put(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners/${banner.id}`, {
       isActive: !banner.isActive
     }, { headers });
 
@@ -731,10 +731,10 @@ const deleteBanner = async (id) => {
   if (!confirm('Are you sure you want to delete this banner?')) return;
   
   try {
-    const apiKey = localStorage.getItem('apiKey') || 'dev-key';
+    const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
     const headers = { Authorization: `Bearer ${apiKey}` };
     
-    await axios.delete(`http://localhost:3000/api/v1/banners/${id}`, { headers });
+    await axios.delete(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners/${id}`, { headers });
     await fetchBanners();
   } catch (error) {
     console.error('Failed to delete banner:', error);

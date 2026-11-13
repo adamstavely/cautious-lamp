@@ -94,7 +94,7 @@ const checkDrawerState = () => {
 
 const fetchBanners = async () => {
   try {
-    const response = await axios.get('http://localhost:3000/api/v1/banners?active=true');
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners?active=true`);
     banners.value = response.data.filter(banner => !dismissedBanners.value.has(banner.id));
   } catch (error) {
     console.error('Failed to fetch banners:', error);

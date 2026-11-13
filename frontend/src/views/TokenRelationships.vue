@@ -604,8 +604,8 @@ const searchQuery = ref('');
 const viewMode = ref('tree'); // 'tree', 'table', or 'graph'
 const expandedChains = ref(new Set());
 
-const API_BASE_URL = 'http://localhost:3000/api/v1';
-const API_KEY = 'test-api-key-123';
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
+const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 
 // Computed properties
 const filteredNodes = computed(() => {

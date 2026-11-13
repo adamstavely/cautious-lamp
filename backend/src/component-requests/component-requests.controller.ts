@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Put, Patch, Delete, Query, Param, Body, Headers, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { ComponentRequestsService } from './component-requests.service';
+import { KeyManagementService } from '../common/security/key-management.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestDto } from './dto/update-request.dto';
 import { TransitionStatusDto } from './dto/transition-status.dto';
@@ -8,21 +9,13 @@ import { VoteRequestDto } from './dto/vote-request.dto';
 
 @Controller('api/v1/component-requests')
 export class ComponentRequestsController {
-  constructor(private readonly requestsService: ComponentRequestsService) {}
+  constructor(
+    private readonly requestsService: ComponentRequestsService,
+    private readonly keyManagementService: KeyManagementService,
+  ) {}
 
-  private extractApiKey(authHeader: string | undefined): string | null {
-    if (!authHeader) return null;
-    if (authHeader.startsWith('Bearer ')) {
-      return authHeader.substring(7);
-    }
-    return authHeader;
-  }
-
-  private validateRequest(authHeader: string | undefined): void {
-    const apiKey = this.extractApiKey(authHeader);
-    if (!apiKey || apiKey !== 'test-api-key-123') {
-      throw new UnauthorizedException('Invalid or missing API key');
-    }
+  private validateRequest(authHeader?: string): void {
+    this.keyManagementService.assertValidApiKey(authHeader);
   }
 
   @Get('test')

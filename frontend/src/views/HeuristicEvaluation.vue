@@ -383,11 +383,11 @@ const submitEvaluation = async () => {
     
     // Submit to backend (similar to NASA-TLX)
     const response = await axios.post(
-      'http://localhost:3000/api/v1/heuristic-evaluation',
+      `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/heuristic-evaluation`,
       evaluationData,
       {
         headers: {
-          'Authorization': 'Bearer dev-key',
+          'Authorization': `Bearer ${localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || ''}`,
           'Content-Type': 'application/json'
         }
       }

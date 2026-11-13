@@ -1587,7 +1587,7 @@ const contrastRatio = computed(() => {
 // Fetch palettes from backend
 const fetchPalettes = async () => {
   try {
-    const response = await axios.get('http://localhost:3000/api/palettes');
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes`);
     availablePalettes.value = response.data || [];
   } catch (error) {
     console.error('Error fetching palettes:', error);
@@ -1600,7 +1600,7 @@ const importPaletteColors = async () => {
   if (!selectedPaletteId.value) return;
   
   try {
-    const response = await axios.get(`http://localhost:3000/api/palettes/${selectedPaletteId.value}`);
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/${selectedPaletteId.value}`);
     const palette = response.data;
     
     if (palette.colors && palette.colors.length > 0) {

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query } from '@nestjs/common';
 import { ColorPaletteService } from './color-palette.service';
 import { CreatePaletteDto } from './dto/create-palette.dto';
 import { AnalyzePaletteDto } from './dto/analyze-palette.dto';
@@ -18,8 +18,8 @@ export class ColorPaletteController {
   }
 
   @Get()
-  async findAll() {
-    return this.colorPaletteService.getAllPalettes();
+  async findAll(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    return this.colorPaletteService.getAllPalettes(Number(page) || 1, Number(pageSize) || 50);
   }
 
   @Get(':id')

@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
 import { ColorTheoryService } from './color-theory.service';
+import { EsIndexService, esStatusCode, isEsNotFound } from '../common/elasticsearch/es-index.service';
 import { CreatePaletteDto } from './dto/create-palette.dto';
 import { AnalyzePaletteDto } from './dto/analyze-palette.dto';
 
@@ -9,7 +10,20 @@ export class ColorPaletteService {
   constructor(
     private readonly elasticsearchService: ElasticsearchService,
     private readonly colorTheoryService: ColorTheoryService,
+    private readonly esIndexService: EsIndexService,
   ) {}
+
+  /** Maps Elasticsearch failures to 404 or 503 instead of a bare 500 */
+  private storageError(error: unknown, id?: string): never {
+    if (id && isEsNotFound(error)) {
+      throw new NotFoundException(`Palette ${id} not found`);
+    }
+    const status = esStatusCode(error);
+    if (status === undefined || status >= 500) {
+      throw new ServiceUnavailableException('Palette storage is unavailable, please try again later');
+    }
+    throw error;
+  }
 
   async createPalette(dto: CreatePaletteDto) {
     const palette = {
@@ -19,10 +33,10 @@ export class ColorPaletteService {
       updatedAt: new Date().toISOString(),
     };
 
-    const result = await this.elasticsearchService.index({
-      index: 'color-palettes',
-      document: palette,
-    });
+    await this.esIndexService.assertAvailable();
+    const result = await this.elasticsearchService
+      .index({ index: 'color-palettes', document: palette, refresh: 'wait_for' })
+      .catch((error) => this.storageError(error));
 
     return {
       id: result._id,
@@ -32,10 +46,9 @@ export class ColorPaletteService {
 
   async updatePalette(id: string, dto: CreatePaletteDto) {
     // Get existing palette to preserve createdAt
-    const existing = await this.elasticsearchService.get({
-      index: 'color-palettes',
-      id,
-    });
+    const existing = await this.elasticsearchService
+      .get({ index: 'color-palettes', id })
+      .catch((error) => this.storageError(error, id));
 
     const palette = {
       name: dto.name,
@@ -44,28 +57,17 @@ export class ColorPaletteService {
       updatedAt: new Date().toISOString(),
     };
 
-    await this.elasticsearchService.update({
-      index: 'color-palettes',
-      id,
-      doc: palette,
-    });
+    await this.elasticsearchService
+      .update({ index: 'color-palettes', id, doc: palette, refresh: 'wait_for' })
+      .catch((error) => this.storageError(error, id));
 
-    const result = await this.elasticsearchService.get({
-      index: 'color-palettes',
-      id,
-    });
-
-    return {
-      id: result._id,
-      ...(result._source as any),
-    };
+    return { id, ...palette };
   }
 
   async getPalette(id: string) {
-    const result = await this.elasticsearchService.get({
-      index: 'color-palettes',
-      id,
-    });
+    const result = await this.elasticsearchService
+      .get({ index: 'color-palettes', id })
+      .catch((error) => this.storageError(error, id));
 
     return {
       id: result._id,
@@ -73,21 +75,26 @@ export class ColorPaletteService {
     };
   }
 
-  async getAllPalettes() {
-    const result = await this.elasticsearchService.search({
-      index: 'color-palettes',
-      body: {
-        query: {
-          match_all: {},
-        },
-        sort: [{ createdAt: { order: 'desc' } }],
-      },
-    });
-
-    return result.hits.hits.map((hit: any) => ({
-      id: hit._id,
-      ...hit._source,
-    }));
+  async getAllPalettes(page = 1, pageSize = 50) {
+    const size = Math.min(Math.max(pageSize, 1), 200);
+    const from = (Math.max(page, 1) - 1) * size;
+    try {
+      const result = await this.elasticsearchService.search({
+        index: 'color-palettes',
+        from,
+        size,
+        query: { match_all: {} },
+        sort: [{ createdAt: { order: 'desc', unmapped_type: 'date' } }],
+      });
+      return result.hits.hits.map((hit: any) => ({
+        id: hit._id,
+        ...hit._source,
+      }));
+    } catch (error) {
+      // No palettes have been saved yet, so the index doesn't exist
+      if (isEsNotFound(error)) return [];
+      this.storageError(error);
+    }
   }
 
   async analyzePalette(dto: AnalyzePaletteDto) {

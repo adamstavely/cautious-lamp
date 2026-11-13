@@ -77,7 +77,7 @@ const checking = ref(false);
 const mockMode = ref(true);
 const forceMockMode = ref(false);
 
-const apiUrl = computed(() => import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000');
+const apiUrl = computed(() => import.meta.env.VITE_API_BASE_URL ?? '');
 
 const statusColor = computed(() => {
   if (checking.value) return 'orange';

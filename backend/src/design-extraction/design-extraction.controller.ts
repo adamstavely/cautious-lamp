@@ -7,7 +7,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { DesignExtractionService } from './design-extraction.service';
-import { DesignSystemService } from '../design-system/design-system.service';
+import { KeyManagementService } from '../common/security/key-management.service';
 
 export interface ExtractRequestDto {
   url: string;
@@ -22,22 +22,11 @@ export interface ExtractRequestDto {
 export class DesignExtractionController {
   constructor(
     private readonly extractionService: DesignExtractionService,
-    private readonly designSystemService: DesignSystemService,
+    private readonly keyManagementService: KeyManagementService,
   ) {}
 
-  private extractApiKey(authHeader: string | undefined): string | null {
-    if (!authHeader) return null;
-    if (authHeader.startsWith('Bearer ')) {
-      return authHeader.substring(7);
-    }
-    return authHeader;
-  }
-
-  private validateRequest(authHeader: string | undefined): void {
-    const apiKey = this.extractApiKey(authHeader);
-    if (!apiKey || !this.designSystemService.validateApiKey(apiKey)) {
-      throw new UnauthorizedException('Invalid or missing API key');
-    }
+  private validateRequest(authHeader?: string): void {
+    this.keyManagementService.assertValidApiKey(authHeader);
   }
 
   @Post('extract')

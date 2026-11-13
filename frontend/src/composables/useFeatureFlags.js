@@ -36,7 +36,7 @@ const preloadAllFlags = async () => {
   try {
     const context = getUserContext();
     // Get all flags from the service
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/v1/feature-flags`);
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/feature-flags`);
     if (response.ok) {
       const flags = await response.json();
       // Populate flagCache with all flags

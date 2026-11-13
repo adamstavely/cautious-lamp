@@ -807,8 +807,8 @@ const filteredSearchResults = computed(() => {
            item.category.toLowerCase().includes(query);
   }).slice(0, 8); // Limit to 8 results
 });
-const API_BASE_URL = 'http://localhost:3000';
-const API_KEY = 'test-api-key-123';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 
 const loadAvailableFilters = async () => {
   try {

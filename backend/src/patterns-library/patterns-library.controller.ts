@@ -1,14 +1,16 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, Headers, BadRequestException } from '@nestjs/common';
 import { PatternsLibraryService, ComponentPattern } from './patterns-library.service';
+import { KeyManagementService } from '../common/security/key-management.service';
 
 @Controller('patterns-library')
 export class PatternsLibraryController {
-  constructor(private readonly patternsService: PatternsLibraryService) {}
+  constructor(
+    private readonly patternsService: PatternsLibraryService,
+    private readonly keyManagementService: KeyManagementService,
+  ) {}
 
   private validateRequest(authHeader?: string): void {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new BadRequestException('Authorization header required');
-    }
+    this.keyManagementService.assertValidApiKey(authHeader);
   }
 
   @Get('patterns')

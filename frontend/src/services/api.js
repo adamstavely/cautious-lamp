@@ -5,8 +5,8 @@
 import axios from 'axios';
 import { getCurrentUser } from '../mockData.js';
 
-// Get API base URL from environment or default to localhost:3000
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+// Backend origin. Empty means same origin; the Vite dev server proxies /api.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -26,8 +26,10 @@ apiClient.interceptors.request.use(
       config.headers['x-user-id'] = user.id || user.email;
     }
     // Add API key for endpoints that require it
-    const apiKey = localStorage.getItem('apiKey') || 'test-api-key-123';
-    config.headers['authorization'] = `Bearer ${apiKey}`;
+    const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
+    if (apiKey) {
+      config.headers['authorization'] = `Bearer ${apiKey}`;
+    }
     return config;
   },
   (error) => {
@@ -68,25 +70,25 @@ export const reviewAPI = {
   // Get review by ID
   getReview: async (reviewId, password = null) => {
     const params = password ? { password } : {};
-    const response = await apiClient.get(`/review/${reviewId}`, { params });
+    const response = await apiClient.get(`/api/v1/review/${reviewId}`, { params });
     return response.data;
   },
 
   // Get version URL
   getVersion: async (reviewId, versionId) => {
-    const response = await apiClient.get(`/review/${reviewId}/version/${versionId}`);
+    const response = await apiClient.get(`/api/v1/review/${reviewId}/version/${versionId}`);
     return response.data.url;
   },
 
   // Mark review as complete
   completeReview: async (reviewId) => {
-    const response = await apiClient.post(`/review/${reviewId}/complete`);
+    const response = await apiClient.post(`/api/v1/review/${reviewId}/complete`);
     return response.data;
   },
 
   // Update sharing settings
   updateSharing: async (reviewId, sharingMode, approvedEmails) => {
-    const response = await apiClient.post(`/review/${reviewId}/sharing`, {
+    const response = await apiClient.post(`/api/v1/review/${reviewId}/sharing`, {
       sharingMode,
       approvedEmails,
     });
@@ -100,13 +102,13 @@ export const reviewAPI = {
 export const workflowAPI = {
   // Approve workflow stage
   approve: async (reviewId, stage) => {
-    const response = await apiClient.post(`/review/${reviewId}/workflow/approve`, { stage });
+    const response = await apiClient.post(`/api/v1/review/${reviewId}/workflow/approve`, { stage });
     return response.data;
   },
 
   // Reject workflow stage
   reject: async (reviewId, stage, reason = null) => {
-    const response = await apiClient.post(`/review/${reviewId}/workflow/reject`, {
+    const response = await apiClient.post(`/api/v1/review/${reviewId}/workflow/reject`, {
       stage,
       reason,
     });
@@ -115,19 +117,19 @@ export const workflowAPI = {
 
   // Move to client review
   moveToClientReview: async (reviewId) => {
-    const response = await apiClient.post(`/review/${reviewId}/workflow/move-to-client-review`);
+    const response = await apiClient.post(`/api/v1/review/${reviewId}/workflow/move-to-client-review`);
     return response.data;
   },
 
   // Move to art director review
   moveToArtDirectorReview: async (reviewId) => {
-    const response = await apiClient.post(`/review/${reviewId}/workflow/move-to-art-director-review`);
+    const response = await apiClient.post(`/api/v1/review/${reviewId}/workflow/move-to-art-director-review`);
     return response.data;
   },
 
   // Resubmit for review
   resubmit: async (reviewId, targetStage) => {
-    const response = await apiClient.post(`/review/${reviewId}/workflow/resubmit`, {
+    const response = await apiClient.post(`/api/v1/review/${reviewId}/workflow/resubmit`, {
       targetStage,
     });
     return response.data;
@@ -140,7 +142,7 @@ export const workflowAPI = {
 export const uploadAPI = {
   // Create review from file upload
   createFromUpload: async (filename, password, bypassClientReview, sharingMode, approvedEmails) => {
-    const response = await apiClient.post('/upload', {
+    const response = await apiClient.post('/api/v1/upload', {
       filename,
       password,
       bypassClientReview,
@@ -175,7 +177,7 @@ export const uploadAPI = {
 
   // Create review from URL
   createFromUrl: async (url, password, bypassClientReview, sharingMode, approvedEmails) => {
-    const response = await apiClient.post('/review/create-from-url', {
+    const response = await apiClient.post('/api/v1/review/create-from-url', {
       url,
       password,
       bypassClientReview,
@@ -212,7 +214,7 @@ export const versionAPI = {
     if (notes) formData.append('notes', notes);
     if (type) formData.append('type', type);
 
-    const response = await apiClient.post(`/review/${reviewId}/versions`, formData, {
+    const response = await apiClient.post(`/api/v1/review/${reviewId}/versions`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -228,14 +230,14 @@ export const commentAPI = {
   // Get comments
   getComments: async (reviewId, versionId = null) => {
     const params = versionId ? { versionId } : {};
-    const response = await apiClient.get(`/review/${reviewId}/comments`, { params });
+    const response = await apiClient.get(`/api/v1/review/${reviewId}/comments`, { params });
     return response.data;
   },
 
   // Add comment
   addComment: async (reviewId, text, version, type, resolved = false) => {
     const user = getCurrentUser();
-    const response = await apiClient.post(`/review/${reviewId}/comments`, {
+    const response = await apiClient.post(`/api/v1/review/${reviewId}/comments`, {
       text,
       version,
       type,
@@ -246,13 +248,13 @@ export const commentAPI = {
 
   // Update comment
   updateComment: async (reviewId, commentId, updates) => {
-    const response = await apiClient.patch(`/review/${reviewId}/comments/${commentId}`, updates);
+    const response = await apiClient.patch(`/api/v1/review/${reviewId}/comments/${commentId}`, updates);
     return response.data;
   },
 
   // Add reply
   addReply: async (reviewId, commentId, text) => {
-    const response = await apiClient.post(`/review/${reviewId}/comments/${commentId}/replies`, {
+    const response = await apiClient.post(`/api/v1/review/${reviewId}/comments/${commentId}/replies`, {
       text,
     });
     return response.data;
@@ -260,7 +262,7 @@ export const commentAPI = {
 
   // Toggle reaction on comment
   toggleReaction: async (reviewId, commentId, emoji) => {
-    const response = await apiClient.post(`/review/${reviewId}/comments/${commentId}/reactions`, {
+    const response = await apiClient.post(`/api/v1/review/${reviewId}/comments/${commentId}/reactions`, {
       emoji,
     });
     return response.data;
@@ -269,7 +271,7 @@ export const commentAPI = {
   // Toggle reaction on reply
   toggleReplyReaction: async (reviewId, commentId, replyId, emoji) => {
     const response = await apiClient.post(
-      `/review/${reviewId}/comments/${commentId}/replies/${replyId}/reactions`,
+      `/api/v1/review/${reviewId}/comments/${commentId}/replies/${replyId}/reactions`,
       { emoji }
     );
     return response.data;
@@ -282,13 +284,13 @@ export const commentAPI = {
 export const passwordAPI = {
   // Update password
   updatePassword: async (reviewId, password) => {
-    const response = await apiClient.post(`/review/${reviewId}/password`, { password });
+    const response = await apiClient.post(`/api/v1/review/${reviewId}/password`, { password });
     return response.data;
   },
 
   // Extend expiration
   extendExpiration: async (reviewId, days = 30) => {
-    const response = await apiClient.post(`/review/${reviewId}/extend`, { days });
+    const response = await apiClient.post(`/api/v1/review/${reviewId}/extend`, { days });
     return response.data;
   },
 };
@@ -300,13 +302,13 @@ export const adminAPI = {
   // Get all reviews
   getReviews: async (showExpired = false) => {
     const params = showExpired ? { showExpired: 'true' } : {};
-    const response = await apiClient.get('/admin/reviews', { params });
+    const response = await apiClient.get('/api/v1/admin/reviews', { params });
     return response.data;
   },
 
   // Extend review expiration
   extendReview: async (reviewId, days = 7) => {
-    const response = await apiClient.post(`/admin/reviews/${reviewId}/extend`, null, {
+    const response = await apiClient.post(`/api/v1/admin/reviews/${reviewId}/extend`, null, {
       params: { days },
     });
     return response.data;
@@ -314,13 +316,13 @@ export const adminAPI = {
 
   // Reactivate expired review
   reactivateReview: async (reviewId) => {
-    const response = await apiClient.post(`/admin/reviews/${reviewId}/reactivate`);
+    const response = await apiClient.post(`/api/v1/admin/reviews/${reviewId}/reactivate`);
     return response.data;
   },
 
   // Delete review
   deleteReview: async (reviewId) => {
-    const response = await apiClient.delete(`/admin/reviews/${reviewId}`);
+    const response = await apiClient.delete(`/api/v1/admin/reviews/${reviewId}`);
     return response.status === 204;
   },
 };
@@ -331,37 +333,37 @@ export const adminAPI = {
 export const teamsAPI = {
   // Get all teams
   getTeams: async () => {
-    const response = await apiClient.get('/teams');
+    const response = await apiClient.get('/api/v1/teams');
     return response.data;
   },
 
   // Get team by ID
   getTeam: async (teamId) => {
-    const response = await apiClient.get(`/teams/${teamId}`);
+    const response = await apiClient.get(`/api/v1/teams/${teamId}`);
     return response.data;
   },
 
   // Create team
   createTeam: async (name, description = null) => {
-    const response = await apiClient.post('/teams', { name, description });
+    const response = await apiClient.post('/api/v1/teams', { name, description });
     return response.data;
   },
 
   // Update team
   updateTeam: async (teamId, updates) => {
-    const response = await apiClient.patch(`/teams/${teamId}`, updates);
+    const response = await apiClient.patch(`/api/v1/teams/${teamId}`, updates);
     return response.data;
   },
 
   // Delete team
   deleteTeam: async (teamId) => {
-    const response = await apiClient.delete(`/teams/${teamId}`);
+    const response = await apiClient.delete(`/api/v1/teams/${teamId}`);
     return response.status === 204;
   },
 
   // Add team member
   addMember: async (teamId, email, name, role) => {
-    const response = await apiClient.post(`/teams/${teamId}/members`, {
+    const response = await apiClient.post(`/api/v1/teams/${teamId}/members`, {
       email,
       name,
       role,
@@ -371,13 +373,13 @@ export const teamsAPI = {
 
   // Update member role
   updateMemberRole: async (teamId, email, role) => {
-    const response = await apiClient.patch(`/teams/${teamId}/members/${email}`, { role });
+    const response = await apiClient.patch(`/api/v1/teams/${teamId}/members/${email}`, { role });
     return response.data;
   },
 
   // Remove team member
   removeMember: async (teamId, email) => {
-    const response = await apiClient.delete(`/teams/${teamId}/members/${email}`);
+    const response = await apiClient.delete(`/api/v1/teams/${teamId}/members/${email}`);
     return response.data;
   },
 };

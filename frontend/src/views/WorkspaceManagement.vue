@@ -1428,8 +1428,8 @@ const newAsset = ref({ name: '', type: 'image', url: '', description: '', tags: 
 const newToken = ref({ name: '', value: '', type: 'color', category: 'colors', description: '', tags: [] });
 const sharing = ref(false);
 
-const API_BASE_URL = 'http://localhost:3000/api/v1';
-const API_KEY = 'test-api-key-123';
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
+const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 const CURRENT_USER_ID = 'user-123'; // In production, get from auth context
 const CURRENT_USER_EMAIL = 'user@example.com'; // In production, get from auth context
 

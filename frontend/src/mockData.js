@@ -1100,7 +1100,7 @@ export const isMockMode = async () => {
   if (useRealAPI) {
     // Try to ping API health endpoint
     try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      const apiUrl = import.meta.env.VITE_API_BASE_URL ?? '';
       const response = await fetch(`${apiUrl}/api/v1/health`, {
         method: 'GET',
         mode: 'cors',

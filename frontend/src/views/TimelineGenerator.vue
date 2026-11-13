@@ -368,7 +368,7 @@
                       class="timeline-container"
                       role="img"
                       :aria-label="config.title || 'Timeline'"
-                      :aria-describedby="`timeline-summary-${timelinePreview}`"
+                      aria-describedby="timeline-summary"
                       tabindex="0"
                       :style="{
                         '--spacing': `${config.spacing}px`,
@@ -458,8 +458,7 @@
                           </div>
                         </div>
                       </div>
-                    </div>
-                    <figcaption :id="`timeline-summary-${timelinePreview}`" class="sr-only">
+                    <figcaption id="timeline-summary" class="sr-only">
                       {{ config.summary || 'Timeline visualization' }}
                     </figcaption>
                   </figure>
@@ -638,6 +637,7 @@
         </div>
       </div>
     </div>
+  </div>
   </div>
 </template>
 
