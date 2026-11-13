@@ -1,1884 +1,449 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
-import { ComplianceCheck } from '../design-system/design-system.service';
-import { DesignSystemService } from '../design-system/design-system.service';
+import {
+  BadRequestException,
+  ConflictException,
+  HttpException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+  UnprocessableEntityException,
+} from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { AuthPrincipal } from '../auth/principal';
+import { assertPublicHttpUrl } from '../common/security/url-safety';
+import { APPLICATION_DIRECTORY, ApplicationDirectory, GovernanceApplication } from '../governance/sources';
+import { DocumentStore, DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
+import {
+  AccessibilityReport,
+  ApplicationComplianceSummary,
+  ComplianceSLA,
+  MultiApplicationComplianceSummary,
+  ReportSchedule,
+} from './accessibility-reports.types';
+import { AxeOutcome, runAxeOnHtml, runAxeOnUrl } from './axe-engine';
+import { buildReport } from './report-builder';
+import { ScheduleTiming, assertValidTiming, calculateNextRun } from './schedule';
+import { evaluateSla } from './sla';
 
-export interface AccessibilityReport {
-  id: string;
-  applicationId: string;
-  applicationName: string;
-  generatedAt: Date;
-  scheduled: boolean;
-  scheduleId?: string;
-  
-  // WCAG Compliance Metrics
-  wcagLevel: 'A' | 'AA' | 'AAA' | 'Non-Compliant';
-  complianceScore: number; // 0-100
-  totalIssues: number;
-  criticalIssues: number;
-  highIssues: number;
-  moderateIssues: number;
-  lowIssues: number;
-  infoIssues: number;
-  
-  // Breakdown by WCAG Criteria
-  wcagCriteria: {
-    [key: string]: {
-      criterion: string;
-      level: 'A' | 'AA' | 'AAA';
-      status: 'pass' | 'fail' | 'warning';
-      issues: number;
-      description: string;
-      failingElements: Array<{
-        id: string;
-        message: string;
-        file?: string;
-        line?: number;
-        element?: string;
-        impact?: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW' | 'INFO';
-      }>;
-    };
-  };
-  
-  // Issues by Category
-  issuesByCategory: {
-    colorContrast: number;
-    keyboardNavigation: number;
-    ariaAttributes: number;
-    focusManagement: number;
-    altText: number;
-    headingHierarchy: number;
-    formLabels: number;
-    photosensitivity: number;
-    other: number;
-  };
-  
-  // Prioritized Fixes
-  prioritizedFixes: PrioritizedFix[];
-  
-  // Raw checks
-  checks: ComplianceCheck[];
-  
-  // Trend data
-  previousReportId?: string;
-  trend: {
-    scoreChange: number;
-    issuesChange: number;
-    newIssues: number;
-    fixedIssues: number;
-  };
+export const REPORT_STORE = Symbol('A11Y_REPORT_STORE');
+export const SCHEDULE_STORE = Symbol('A11Y_SCHEDULE_STORE');
+export const SLA_STORE = Symbol('A11Y_SLA_STORE');
+export const A11Y_SCANNER = Symbol('A11Y_SCANNER');
+
+export const REPORTS_INDEX = 'design-system-a11y-reports';
+export const SCHEDULES_INDEX = 'design-system-a11y-schedules';
+export const SLAS_INDEX = 'design-system-a11y-slas';
+
+const keyword = { type: 'keyword' };
+const date = { type: 'date' };
+export const REPORT_PROPERTIES = { id: keyword, applicationId: keyword, scheduleId: keyword, generatedAt: date, createdAt: date, complianceScore: { type: 'float' } };
+export const SCHEDULE_PROPERTIES = { id: keyword, applicationId: keyword, enabled: { type: 'boolean' }, nextRun: date, createdAt: date };
+export const SLA_PROPERTIES = { id: keyword, applicationId: keyword, createdAt: date };
+
+/** How reports scan; swapped in tests */
+export interface A11yScanner {
+  scanHtml(html: string): Promise<AxeOutcome>;
+  scanUrl(url: string): Promise<AxeOutcome>;
 }
 
-export interface PrioritizedFix {
-  id: string;
-  rule: string;
-  severity: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW' | 'INFO';
-  impact: string;
-  effort: 'low' | 'medium' | 'high';
-  priority: number; // Calculated priority score
-  affectedElements: number;
-  description: string;
-  recommendation: string;
-  wcagCriterion: string;
-  checks: ComplianceCheck[];
-  codeExamples?: {
-    before: string;
-    after: string;
-    language: 'html' | 'vue' | 'react' | 'css';
-    explanation: string;
-  }[];
-}
+export const axeScanner: A11yScanner = { scanHtml: runAxeOnHtml, scanUrl: (url) => runAxeOnUrl(url) };
 
-export interface ReportSchedule {
-  id: string;
-  applicationId: string;
-  frequency: 'daily' | 'weekly' | 'monthly';
-  dayOfWeek?: number; // 0-6 for weekly
-  dayOfMonth?: number; // 1-31 for monthly
-  time: string; // HH:mm format
-  enabled: boolean;
-  lastRun?: Date;
-  nextRun: Date;
-  recipients: string[]; // Email addresses
-}
+/** Report fields that list views don't need */
+const HEAVY_FIELDS = ['checks', 'prioritizedFixes', 'wcagCriteria'];
 
-export interface ComplianceSLA {
-  id: string;
-  applicationId: string;
-  targetScore: number; // 0-100
-  targetLevel: 'A' | 'AA' | 'AAA';
-  criticalIssuesThreshold: number; // Max allowed critical issues
-  highIssuesThreshold: number; // Max allowed high issues
-  createdAt: Date;
-  updatedAt: Date;
-}
+export type ReportSummary = Omit<AccessibilityReport, 'checks' | 'prioritizedFixes' | 'wcagCriteria'>;
 
-export interface MultiApplicationComplianceSummary {
-  totalApplications: number;
-  compliantApplications: number;
-  nonCompliantApplications: number;
-  averageScore: number;
-  applications: Array<{
-    applicationId: string;
-    applicationName: string;
-    latestReportId?: string;
-    complianceScore: number;
-    wcagLevel: 'A' | 'AA' | 'AAA' | 'Non-Compliant';
-    totalIssues: number;
-    criticalIssues: number;
-    highIssues: number;
-    slaStatus?: 'compliant' | 'at-risk' | 'non-compliant';
-    lastReportDate?: Date;
-    trend?: {
-      scoreChange: number;
-      issuesChange: number;
-    };
-  }>;
-}
+type Actor = AuthPrincipal | 'scheduler';
+const actorName = (actor: Actor) => (actor === 'scheduler' ? 'scheduler' : actor.type === 'user' ? actor.email : `service:${actor.id}`);
 
+const slaId = (applicationId: string) => `sla-${encodeURIComponent(applicationId)}`;
+
+/**
+ * Accessibility reports (axe-core over a URL or supplied HTML), report
+ * schedules and compliance SLAs, stored in Elasticsearch. See docs/GOVERNANCE.md.
+ */
 @Injectable()
-export class AccessibilityReportsService {
+export class AccessibilityReportsService implements OnModuleInit {
   private readonly logger = new Logger(AccessibilityReportsService.name);
-  private reports: Map<string, AccessibilityReport> = new Map();
-  private schedules: Map<string, ReportSchedule> = new Map();
-  private slas: Map<string, ComplianceSLA> = new Map();
 
-  private mockDataInitialized = false;
+  /** For the synchronous summary system-health reads; refreshed on every write and summary request */
+  private cache: { applications: GovernanceApplication[]; latest: Map<string, ReportSummary>; slas: ComplianceSLA[] } = {
+    applications: [],
+    latest: new Map(),
+    slas: [],
+  };
 
   constructor(
-    @Inject(forwardRef(() => DesignSystemService))
-    private readonly designSystemService: DesignSystemService,
-  ) {
-    // Mock data will be initialized lazily on first access
+    @Inject(REPORT_STORE) private readonly reports: DocumentStore<AccessibilityReport>,
+    @Inject(SCHEDULE_STORE) private readonly schedules: DocumentStore<ReportSchedule>,
+    @Inject(SLA_STORE) private readonly slas: DocumentStore<ComplianceSLA>,
+    @Inject(APPLICATION_DIRECTORY) private readonly applications: ApplicationDirectory,
+    @Inject(A11Y_SCANNER) private readonly scanner: A11yScanner,
+  ) {}
+
+  onModuleInit(): void {
+    this.refreshCache().catch((error) => this.logger.warn(`Accessibility summary cache not loaded: ${error.message}`));
   }
 
-  /**
-   * Generate an accessibility report for an application
-   */
+  // -------------------------------------------------------------- reports
+
   async generateReport(
     applicationId: string,
-    options?: { scheduled?: boolean; scheduleId?: string }
+    request: { url?: string; html?: string },
+    actor: Actor,
+    options: { scheduled?: boolean; scheduleId?: string } = {},
   ): Promise<AccessibilityReport> {
-    this.logger.log(`Generating accessibility report for application ${applicationId}`);
-
-    // Get application
-    const application = this.designSystemService.getApplication(applicationId);
-    if (!application) {
-      throw new Error(`Application ${applicationId} not found`);
+    const application = await this.requireApplication(applicationId);
+    const html = request.html?.trim() ? request.html : undefined;
+    if (html && request.url) throw new BadRequestException('Send either url or html, not both');
+    const url = html ? undefined : request.url || application.applicationUrl;
+    if (!html && !url) {
+      throw new BadRequestException('Nothing to scan: send a url or html, or set the application URL');
     }
 
-    // Run accessibility scan
-    const scanResult = await this.designSystemService.scanApplicationCodebase(
-      applicationId,
-      undefined,
-      ['accessibility']
-    );
-
-    // Process checks and generate report
-    const report = this.processScanResults(
-      applicationId,
-      application.name,
-      scanResult.checks,
-      options
-    );
-
-    // Calculate trends if previous report exists
-    const previousReport = this.getLatestReport(applicationId, report.id);
-    if (previousReport) {
-      report.previousReportId = previousReport.id;
-      report.trend = this.calculateTrend(report, previousReport);
+    let outcome: AxeOutcome;
+    try {
+      outcome = html ? await this.scanner.scanHtml(html) : await this.scanner.scanUrl(url!);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new UnprocessableEntityException(`Could not scan the page: ${(error as Error).message.split('\n')[0]}`);
     }
 
-    // Store report
-    this.reports.set(report.id, report);
-
-    return report;
-  }
-
-  /**
-   * Process scan results into structured report
-   */
-  private processScanResults(
-    applicationId: string,
-    applicationName: string,
-    checks: ComplianceCheck[],
-    options?: { scheduled?: boolean; scheduleId?: string }
-  ): AccessibilityReport {
-    // Filter accessibility-related checks
-    const accessibilityChecks = checks.filter(
-      check => 
-        check.rule.includes('Accessibility') ||
-        check.rule.includes('Alt Text') ||
-        check.rule.includes('Heading Hierarchy') ||
-        check.rule.includes('Color Contrast') ||
-        check.rule.includes('Keyboard') ||
-        check.rule.includes('ARIA') ||
-        check.rule.includes('Focus') ||
-        check.rule.includes('Photosensitivity')
-    );
-
-    // Categorize issues
-    const issuesByCategory = {
-      colorContrast: 0,
-      keyboardNavigation: 0,
-      ariaAttributes: 0,
-      focusManagement: 0,
-      altText: 0,
-      headingHierarchy: 0,
-      formLabels: 0,
-      photosensitivity: 0,
-      other: 0,
-    };
-
-    // Count by severity
-    let criticalIssues = 0;
-    let highIssues = 0;
-    let moderateIssues = 0;
-    let lowIssues = 0;
-    let infoIssues = 0;
-
-    accessibilityChecks.forEach(check => {
-      // Categorize
-      if (check.rule.includes('Color Contrast')) {
-        issuesByCategory.colorContrast++;
-      } else if (check.rule.includes('Keyboard')) {
-        issuesByCategory.keyboardNavigation++;
-      } else if (check.rule.includes('ARIA') || check.rule.includes('Accessibility Attributes')) {
-        issuesByCategory.ariaAttributes++;
-      } else if (check.rule.includes('Focus')) {
-        issuesByCategory.focusManagement++;
-      } else if (check.rule.includes('Alt Text') || check.rule.includes('Image')) {
-        issuesByCategory.altText++;
-      } else if (check.rule.includes('Heading')) {
-        issuesByCategory.headingHierarchy++;
-      } else if (check.rule.includes('Label') || check.rule.includes('Form')) {
-        issuesByCategory.formLabels++;
-      } else if (check.rule.includes('Photosensitivity')) {
-        issuesByCategory.photosensitivity++;
-      } else {
-        issuesByCategory.other++;
-      }
-
-      // Count by severity
-      if (check.impact === 'CRITICAL') {
-        criticalIssues++;
-      } else if (check.impact === 'HIGH') {
-        highIssues++;
-      } else if (check.impact === 'MODERATE') {
-        moderateIssues++;
-      } else if (check.impact === 'LOW') {
-        lowIssues++;
-      } else if (check.impact === 'INFO') {
-        infoIssues++;
-      }
-    });
-
-    const totalIssues = accessibilityChecks.length;
-
-    // Map to WCAG criteria first (needed for scoring)
-    const wcagCriteria = this.mapToWCAGCriteria(accessibilityChecks);
-
-    // Calculate compliance score based on WCAG 2.1 AA standards
-    // WCAG 2.1 AA requires: All Level A criteria pass AND all Level AA criteria pass
-    const levelACriteria = Object.values(wcagCriteria).filter(c => c.level === 'A');
-    const levelAACriteria = Object.values(wcagCriteria).filter(c => c.level === 'AA');
-    const levelAAACriteria = Object.values(wcagCriteria).filter(c => c.level === 'AAA');
-
-    // Count failures by level
-    const levelAFailures = levelACriteria.filter(c => c.status === 'fail').length;
-    const levelAAFailures = levelAACriteria.filter(c => c.status === 'fail').length;
-    const levelAWarnings = levelACriteria.filter(c => c.status === 'warning').length;
-    const levelAAWarnings = levelAACriteria.filter(c => c.status === 'warning').length;
-
-    // Calculate score: Start at 100, deduct for failures and warnings
-    // Level A failures are more critical than Level AA failures
-    let score = 100;
-    score -= levelAFailures * 15; // Heavy penalty for Level A failures
-    score -= levelAAFailures * 10; // Penalty for Level AA failures
-    score -= levelAWarnings * 5; // Moderate penalty for Level A warnings
-    score -= levelAAWarnings * 3; // Light penalty for Level AA warnings
-    score = Math.max(0, Math.min(100, score));
-
-    // Determine WCAG level based on WCAG 2.1 AA compliance
-    // AA compliant: All Level A and Level AA criteria must pass (no failures)
-    // AAA compliant: All Level A, AA, and AAA criteria must pass
-    let wcagLevel: 'A' | 'AA' | 'AAA' | 'Non-Compliant' = 'Non-Compliant';
-    
-    if (levelAFailures === 0 && levelAAFailures === 0) {
-      // Check AAA criteria if they exist
-      const levelAAAFailures = levelAAACriteria.filter(c => c.status === 'fail').length;
-      if (levelAAAFailures === 0 && levelAAACriteria.length > 0) {
-        wcagLevel = 'AAA';
-      } else {
-        wcagLevel = 'AA'; // WCAG 2.1 AA compliant
-      }
-    } else if (levelAFailures === 0) {
-      wcagLevel = 'A'; // Only Level A compliant
-    }
-
-    // Generate prioritized fixes
-    const prioritizedFixes = this.prioritizeFixes(accessibilityChecks);
-
-    const report: AccessibilityReport = {
-      id: `report-${applicationId}-${Date.now()}`,
-      applicationId,
-      applicationName,
-      generatedAt: new Date(),
-      scheduled: options?.scheduled || false,
-      scheduleId: options?.scheduleId,
-      wcagLevel,
-      complianceScore: score,
-      totalIssues,
-      criticalIssues,
-      highIssues,
-      moderateIssues,
-      lowIssues,
-      infoIssues,
-      wcagCriteria,
-      issuesByCategory,
-      prioritizedFixes,
-      checks: accessibilityChecks,
-      trend: {
-        scoreChange: 0,
-        issuesChange: 0,
-        newIssues: 0,
-        fixedIssues: 0,
+    const previousSummary = (await this.getReports(applicationId))[0];
+    const previous = previousSummary ? (await this.reports.get(previousSummary.id))?.doc ?? null : null;
+    const report = buildReport(
+      outcome,
+      {
+        id: `report-${randomUUID()}`,
+        applicationId,
+        applicationName: application.name,
+        generatedAt: new Date(),
+        source: html ? 'html' : 'url',
+        scheduled: options.scheduled,
+        scheduleId: options.scheduleId,
+        createdBy: actorName(actor),
       },
-    };
-
+      previous,
+    );
+    report.createdAt = report.generatedAt;
+    await this.reports.create(report);
+    await this.applications.recordScan(applicationId, new Date(report.generatedAt));
+    await this.refreshCache().catch(() => undefined);
     return report;
   }
 
+  async getReports(applicationId?: string): Promise<ReportSummary[]> {
+    const all = (await this.reports.list({ excludes: HEAVY_FIELDS })) as ReportSummary[];
+    return all
+      .filter((report) => !applicationId || report.applicationId === applicationId)
+      .map((report) => this.stripHeavy(report))
+      .sort((a, b) => b.generatedAt.localeCompare(a.generatedAt));
+  }
+
+  async getReport(id: string): Promise<AccessibilityReport> {
+    const found = await this.reports.get(id);
+    if (!found) throw new NotFoundException(`Report ${id} not found`);
+    return found.doc;
+  }
+
+  async deleteReport(id: string): Promise<void> {
+    if (!(await this.reports.delete(id))) throw new NotFoundException(`Report ${id} not found`);
+    await this.refreshCache().catch(() => undefined);
+  }
+
+  // ------------------------------------------------------------ summaries
+
+  /** Fresh multi-application summary (reloads applications, latest reports and SLAs) */
+  async getComplianceSummary(): Promise<MultiApplicationComplianceSummary> {
+    await this.refreshCache();
+    return this.getMultiApplicationComplianceSummary();
+  }
+
   /**
-   * Map checks to WCAG criteria
+   * Summary from the in-memory cache, for callers that can't await
+   * (SystemHealthService). The cache is refreshed on start, after every
+   * report/SLA change and on every GET /summary.
    */
-  private mapToWCAGCriteria(checks: ComplianceCheck[]): {
-    [key: string]: {
-      criterion: string;
-      level: 'A' | 'AA' | 'AAA';
-      status: 'pass' | 'fail' | 'warning';
-      issues: number;
-      description: string;
-      failingElements: Array<{
-        id: string;
-        message: string;
-        file?: string;
-        line?: number;
-        element?: string;
-        impact?: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW' | 'INFO';
-      }>;
-    };
-  } {
-    const criteria: {
-      [key: string]: {
-        criterion: string;
-        level: 'A' | 'AA' | 'AAA';
-        status: 'pass' | 'fail' | 'warning';
-        issues: number;
-        description: string;
-        failingElements: Array<{
-          id: string;
-          message: string;
-          file?: string;
-          line?: number;
-          element?: string;
-          impact?: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW' | 'INFO';
-        }>;
+  getMultiApplicationComplianceSummary(): MultiApplicationComplianceSummary {
+    const slaByApp = new Map(this.cache.slas.map((sla) => [sla.applicationId, sla]));
+    const applications: ApplicationComplianceSummary[] = this.cache.applications.map((app) => {
+      const latest = this.cache.latest.get(app.id);
+      return {
+        applicationId: app.id,
+        applicationName: app.name,
+        latestReportId: latest?.id,
+        complianceScore: latest ? latest.complianceScore : null,
+        wcagLevel: latest ? latest.wcagLevel : null,
+        totalIssues: latest?.totalIssues ?? 0,
+        criticalIssues: latest?.criticalIssues ?? 0,
+        highIssues: latest?.highIssues ?? 0,
+        slaStatus: evaluateSla(slaByApp.get(app.id), latest),
+        lastReportDate: latest?.generatedAt,
+        trend: latest?.previousReportId ? { scoreChange: latest.trend.scoreChange, issuesChange: latest.trend.issuesChange } : undefined,
       };
-    } = {};
-
-    // WCAG 2.1 Level A criteria
-    const levelACriteria = {
-      '1.1.1': { criterion: '1.1.1 Non-text Content', level: 'A' as const, description: 'All non-text content has text alternatives' },
-      '1.3.1': { criterion: '1.3.1 Info and Relationships', level: 'A' as const, description: 'Information, structure, and relationships are programmatically determinable' },
-      '2.1.1': { criterion: '2.1.1 Keyboard', level: 'A' as const, description: 'All functionality is operable through a keyboard' },
-      '2.4.2': { criterion: '2.4.2 Page Titled', level: 'A' as const, description: 'Web pages have titles that describe topic or purpose' },
-      '2.4.4': { criterion: '2.4.4 Link Purpose', level: 'A' as const, description: 'The purpose of each link can be determined from the link text alone' },
-      '3.3.2': { criterion: '3.3.2 Labels or Instructions', level: 'A' as const, description: 'Labels or instructions are provided when content requires user input' },
-      '4.1.2': { criterion: '4.1.2 Name, Role, Value', level: 'A' as const, description: 'For all user interface components, the name and role can be programmatically determined' },
-    };
-
-    // WCAG 2.1 Level AA criteria
-    const levelAACriteria = {
-      '1.4.3': { criterion: '1.4.3 Contrast (Minimum)', level: 'AA' as const, description: 'Text has a contrast ratio of at least 4.5:1' },
-      '1.4.5': { criterion: '1.4.5 Images of Text', level: 'AA' as const, description: 'Images of text are not used' },
-      '2.4.6': { criterion: '2.4.6 Headings and Labels', level: 'AA' as const, description: 'Headings and labels describe topic or purpose' },
-      '2.4.7': { criterion: '2.4.7 Focus Visible', level: 'AA' as const, description: 'Keyboard focus indicator is visible' },
-    };
-
-    // Map checks to criteria
-    checks.forEach(check => {
-      let criterionKey = '';
-      let criterionInfo: any = null;
-
-      if (check.rule.includes('Alt Text') || check.rule.includes('Image')) {
-        criterionKey = '1.1.1';
-        criterionInfo = levelACriteria['1.1.1'];
-      } else if (check.rule.includes('Heading')) {
-        criterionKey = '1.3.1';
-        criterionInfo = levelACriteria['1.3.1'];
-      } else if (check.rule.includes('Keyboard')) {
-        criterionKey = '2.1.1';
-        criterionInfo = levelACriteria['2.1.1'];
-      } else if (check.rule.includes('Color Contrast')) {
-        criterionKey = '1.4.3';
-        criterionInfo = levelAACriteria['1.4.3'];
-      } else if (check.rule.includes('Focus')) {
-        criterionKey = '2.4.7';
-        criterionInfo = levelAACriteria['2.4.7'];
-      } else if (check.rule.includes('Label') || check.rule.includes('Form')) {
-        criterionKey = '3.3.2';
-        criterionInfo = levelACriteria['3.3.2'];
-      } else if (check.rule.includes('ARIA') || check.rule.includes('Accessibility Attributes')) {
-        criterionKey = '4.1.2';
-        criterionInfo = levelACriteria['4.1.2'];
-      }
-
-      if (criterionKey && criterionInfo) {
-        if (!criteria[criterionKey]) {
-          criteria[criterionKey] = {
-            ...criterionInfo,
-            status: 'pass' as const,
-            issues: 0,
-            failingElements: [],
-          };
-        }
-        
-        // Only add failing checks to the list
-        if (check.status === 'error' || check.status === 'warning') {
-          criteria[criterionKey].issues++;
-          criteria[criterionKey].status = (check.impact === 'CRITICAL' || check.impact === 'HIGH') ? 'fail' : 'warning';
-          criteria[criterionKey].failingElements.push({
-            id: check.id,
-            message: check.message,
-            file: check.file,
-            line: check.line,
-            element: check.element,
-            impact: check.impact,
-          });
-        }
-      }
     });
-
-    return criteria;
-  }
-
-  /**
-   * Prioritize fixes based on severity, impact, and effort
-   */
-  private prioritizeFixes(checks: ComplianceCheck[]): PrioritizedFix[] {
-    // Group checks by rule
-    const checksByRule = new Map<string, ComplianceCheck[]>();
-    checks.forEach(check => {
-      if (!checksByRule.has(check.rule)) {
-        checksByRule.set(check.rule, []);
-      }
-      checksByRule.get(check.rule)!.push(check);
-    });
-
-    const fixes: PrioritizedFix[] = [];
-
-    checksByRule.forEach((ruleChecks, rule) => {
-      // Determine severity from checks using new scale
-      const hasCritical = ruleChecks.some(c => c.impact === 'CRITICAL');
-      const hasHigh = ruleChecks.some(c => c.impact === 'HIGH');
-      const hasModerate = ruleChecks.some(c => c.impact === 'MODERATE');
-      const hasLow = ruleChecks.some(c => c.impact === 'LOW');
-      
-      const severity: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW' | 'INFO' = 
-        hasCritical ? 'CRITICAL' :
-        hasHigh ? 'HIGH' :
-        hasModerate ? 'MODERATE' :
-        hasLow ? 'LOW' : 'INFO';
-
-      // Estimate effort based on rule type
-      let effort: 'low' | 'medium' | 'high' = 'medium';
-      if (rule.includes('Alt Text')) {
-        effort = 'low';
-      } else if (rule.includes('Color Contrast')) {
-        effort = 'medium';
-      } else if (rule.includes('Keyboard') || rule.includes('ARIA')) {
-        effort = 'high';
-      }
-
-      // Calculate priority score (higher = more important)
-      // Formula: (severity_weight * impact_weight) / effort_weight
-      const severityWeight = {
-        CRITICAL: 10,
-        HIGH: 7,
-        MODERATE: 4,
-        LOW: 1,
-        INFO: 0.5,
-      };
-      const effortWeight = {
-        low: 1,
-        medium: 2,
-        high: 3,
-      };
-      
-      const priority = (severityWeight[severity] * ruleChecks.length) / effortWeight[effort];
-
-      // Get WCAG criterion
-      let wcagCriterion = '';
-      if (rule.includes('Alt Text')) wcagCriterion = '1.1.1';
-      else if (rule.includes('Color Contrast')) wcagCriterion = '1.4.3';
-      else if (rule.includes('Keyboard')) wcagCriterion = '2.1.1';
-      else if (rule.includes('Focus')) wcagCriterion = '2.4.7';
-      else if (rule.includes('Label')) wcagCriterion = '3.3.2';
-      else if (rule.includes('ARIA')) wcagCriterion = '4.1.2';
-
-      fixes.push({
-        id: `fix-${rule.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}`,
-        rule,
-        severity,
-        impact: this.getImpactDescription(rule, severity),
-        effort,
-        priority,
-        affectedElements: ruleChecks.length,
-        description: ruleChecks[0]?.message || 'Accessibility issue detected',
-        recommendation: this.getRecommendation(rule),
-        wcagCriterion,
-        checks: ruleChecks,
-        codeExamples: this.generateCodeExamples(rule, ruleChecks),
-      });
-    });
-
-    // Sort by priority (highest first)
-    return fixes.sort((a, b) => b.priority - a.priority);
-  }
-
-  private getImpactDescription(rule: string, severity: string): string {
-    if (severity === 'CRITICAL') {
-      return 'Blocks users with disabilities from accessing content';
-    } else if (severity === 'HIGH') {
-      return 'Significantly impacts user experience for users with disabilities';
-    } else if (severity === 'MODERATE') {
-      return 'Moderately impacts accessibility and user experience';
-    } else if (severity === 'LOW') {
-      return 'Minor accessibility concern';
-    }
-    return 'Informational accessibility note';
-  }
-
-  private getRecommendation(rule: string): string {
-    if (rule.includes('Alt Text')) {
-      return 'Add descriptive alt text to all images. Use empty alt="" for decorative images.';
-    } else if (rule.includes('Color Contrast')) {
-      return 'Ensure text has a contrast ratio of at least 4.5:1 for normal text and 3:1 for large text.';
-    } else if (rule.includes('Keyboard')) {
-      return 'Ensure all interactive elements are keyboard accessible. Remove tabindex="-1" from interactive elements or provide alternative keyboard access.';
-    } else if (rule.includes('Focus')) {
-      return 'Ensure keyboard focus indicators are visible. Add focus styles to all interactive elements.';
-    } else if (rule.includes('ARIA')) {
-      return 'Add appropriate ARIA attributes to improve screen reader support. Ensure roles, labels, and states are properly defined.';
-    } else if (rule.includes('Heading')) {
-      return 'Use proper heading hierarchy (h1, h2, h3, etc.) without skipping levels.';
-    } else if (rule.includes('Label')) {
-      return 'Associate all form inputs with labels using the "for" attribute or aria-label.';
-    }
-    return 'Review and fix accessibility issues according to WCAG 2.1 guidelines.';
-  }
-
-  /**
-   * Generate code examples for a fix
-   */
-  private generateCodeExamples(rule: string, checks: ComplianceCheck[]): PrioritizedFix['codeExamples'] {
-    const examples: PrioritizedFix['codeExamples'] = [];
-
-    if (rule.includes('Alt Text')) {
-      examples.push({
-        before: `<img src="hero.jpg" />`,
-        after: `<img src="hero.jpg" alt="Aerial view of downtown cityscape at sunset" />`,
-        language: 'html',
-        explanation: 'Add descriptive alt text that conveys the same information as the image would to a sighted user.',
-      });
-      examples.push({
-        before: `<img src="decorative-line.png" alt="Decorative line" />`,
-        after: `<img src="decorative-line.png" alt="" />`,
-        language: 'html',
-        explanation: 'Use empty alt text for purely decorative images that don\'t convey meaningful information.',
-      });
-    } else if (rule.includes('Color Contrast')) {
-      examples.push({
-        before: `<p style="color: #999999;">Low contrast text</p>`,
-        after: `<p style="color: #333333;">High contrast text</p>`,
-        language: 'html',
-        explanation: 'Ensure text color meets WCAG AA contrast ratio of 4.5:1 for normal text (3:1 for large text).',
-      });
-      examples.push({
-        before: `.text { color: #999; }`,
-        after: `.text { color: #333; }`,
-        language: 'css',
-        explanation: 'Update CSS color values to meet contrast requirements. Use tools to verify contrast ratios.',
-      });
-    } else if (rule.includes('Keyboard')) {
-      examples.push({
-        before: `<div onclick="handleClick()">Click me</div>`,
-        after: `<button onclick="handleClick()">Click me</button>`,
-        language: 'html',
-        explanation: 'Use semantic HTML elements (button, a, input) instead of divs for interactive elements to ensure keyboard accessibility.',
-      });
-      examples.push({
-        before: `<div class="button" tabindex="0" @click="handleClick">Click</div>`,
-        after: `<button @click="handleClick">Click</button>`,
-        language: 'vue',
-        explanation: 'Use native button elements which are keyboard accessible by default. Avoid adding tabindex to non-semantic elements.',
-      });
-    } else if (rule.includes('Focus')) {
-      examples.push({
-        before: `.button { outline: none; }`,
-        after: `.button:focus { outline: 2px solid #0066cc; outline-offset: 2px; }`,
-        language: 'css',
-        explanation: 'Add visible focus indicators so keyboard users can see which element has focus.',
-      });
-    } else if (rule.includes('ARIA')) {
-      examples.push({
-        before: `<div class="menu">...</div>`,
-        after: `<div class="menu" role="menu" aria-label="Main navigation">...</div>`,
-        language: 'html',
-        explanation: 'Add appropriate ARIA roles and labels to provide context for screen reader users.',
-      });
-      examples.push({
-        before: `<button>Toggle</button>`,
-        after: `<button aria-expanded="false" aria-controls="menu">Toggle</button>`,
-        language: 'html',
-        explanation: 'Use aria-expanded and aria-controls to indicate the state and relationship of interactive elements.',
-      });
-    } else if (rule.includes('Label')) {
-      examples.push({
-        before: `<input type="text" name="email" />`,
-        after: `<label for="email">Email Address</label>\n<input type="text" id="email" name="email" />`,
-        language: 'html',
-        explanation: 'Associate labels with form inputs using the for attribute and matching id.',
-      });
-      examples.push({
-        before: `<input type="checkbox" />`,
-        after: `<label>\n  <input type="checkbox" />\n  I agree to the terms\n</label>`,
-        language: 'html',
-        explanation: 'Wrap inputs with labels or use aria-label for inputs that cannot have visible labels.',
-      });
-    } else if (rule.includes('Heading')) {
-      examples.push({
-        before: `<h1>Title</h1>\n<h3>Subtitle</h3>`,
-        after: `<h1>Title</h1>\n<h2>Subtitle</h2>`,
-        language: 'html',
-        explanation: 'Maintain proper heading hierarchy without skipping levels (h1 → h2 → h3).',
-      });
-    }
-
-    return examples.length > 0 ? examples : undefined;
-  }
-
-  /**
-   * Calculate trend between two reports
-   */
-  private calculateTrend(
-    current: AccessibilityReport,
-    previous: AccessibilityReport
-  ): AccessibilityReport['trend'] {
-    const scoreChange = current.complianceScore - previous.complianceScore;
-    const issuesChange = current.totalIssues - previous.totalIssues;
-
-    // Find new and fixed issues by comparing check IDs
-    const previousCheckIds = new Set(previous.checks.map(c => c.id));
-    const currentCheckIds = new Set(current.checks.map(c => c.id));
-
-    const newIssues = current.checks.filter(c => !previousCheckIds.has(c.id)).length;
-    const fixedIssues = previous.checks.filter(c => !currentCheckIds.has(c.id)).length;
-
+    const reported = applications.filter((a) => a.complianceScore !== null);
+    const count = (status: string) => applications.filter((a) => a.slaStatus === status).length;
+    const order: Record<string, number> = { 'non-compliant': 0, 'at-risk': 1, 'no-report': 2, 'no-sla': 3, compliant: 4 };
     return {
-      scoreChange,
-      issuesChange,
-      newIssues,
-      fixedIssues,
+      totalApplications: applications.length,
+      reportedApplications: reported.length,
+      compliantApplications: count('compliant'),
+      atRiskApplications: count('at-risk'),
+      nonCompliantApplications: count('non-compliant'),
+      unassessedApplications: count('no-sla') + count('no-report'),
+      averageScore: reported.length ? Math.round((reported.reduce((sum, a) => sum + a.complianceScore!, 0) / reported.length) * 100) / 100 : 0,
+      applications: applications.sort(
+        (a, b) =>
+          order[a.slaStatus] - order[b.slaStatus] ||
+          (a.complianceScore ?? 101) - (b.complianceScore ?? 101) ||
+          a.applicationName.localeCompare(b.applicationName),
+      ),
     };
   }
 
-  /**
-   * Get latest report for an application
-   */
-  getLatestReport(applicationId: string, excludeId?: string): AccessibilityReport | null {
-    const reports = Array.from(this.reports.values())
-      .filter(r => r.applicationId === applicationId && r.id !== excludeId)
-      .sort((a, b) => b.generatedAt.getTime() - a.generatedAt.getTime());
-    
-    return reports.length > 0 ? reports[0] : null;
+  // ------------------------------------------------------------ schedules
+
+  async getSchedules(applicationId?: string): Promise<ReportSchedule[]> {
+    const all = await this.schedules.list();
+    return all.filter((s) => !applicationId || s.applicationId === applicationId).sort((a, b) => a.nextRun.localeCompare(b.nextRun));
   }
 
-  /**
-   * Get all reports for an application
-   */
-  getReports(applicationId?: string): AccessibilityReport[] {
-    // Initialize mock data on first access if not already done
-    if (!this.mockDataInitialized && this.reports.size === 0) {
-      this.logger.log('Initializing mock data on first getReports() call');
-      this.initializeMockData();
-      this.mockDataInitialized = true;
-      this.logger.log(`Mock data initialized: ${this.reports.size} reports, ${this.schedules.size} schedules`);
-    }
-
-    const allReports = Array.from(this.reports.values());
-    if (applicationId) {
-      const filtered = allReports
-        .filter(r => r.applicationId === applicationId)
-        .sort((a, b) => b.generatedAt.getTime() - a.generatedAt.getTime());
-      this.logger.log(`Returning ${filtered.length} reports for application ${applicationId}`);
-      return filtered;
-    }
-    const sorted = allReports.sort((a, b) => b.generatedAt.getTime() - a.generatedAt.getTime());
-    this.logger.log(`Returning ${sorted.length} total reports`);
-    return sorted;
+  async getSchedule(id: string): Promise<ReportSchedule> {
+    const found = await this.schedules.get(id);
+    if (!found) throw new NotFoundException(`Schedule ${id} not found`);
+    return found.doc;
   }
 
-  /**
-   * Get a specific report
-   */
-  getReport(reportId: string): AccessibilityReport | null {
-    return this.reports.get(reportId) || null;
-  }
-
-  /**
-   * Create a report schedule
-   */
-  createSchedule(schedule: Omit<ReportSchedule, 'id' | 'nextRun'>): ReportSchedule {
-    const id = `schedule-${Date.now()}`;
-    const nextRun = this.calculateNextRun(schedule);
-    
-    const newSchedule: ReportSchedule = {
-      id,
-      ...schedule,
-      nextRun,
+  async createSchedule(
+    input: ScheduleTiming & { applicationId: string; url?: string; enabled?: boolean },
+    principal: AuthPrincipal,
+    now = new Date(),
+  ): Promise<ReportSchedule> {
+    const application = await this.requireApplication(input.applicationId);
+    const timing = this.timing(input);
+    const url = await this.scheduleUrl(input.url, application);
+    const at = now.toISOString();
+    const schedule: ReportSchedule = {
+      id: `schedule-${randomUUID()}`,
+      applicationId: application.id,
+      ...(input.url ? { url } : {}),
+      ...timing,
+      enabled: input.enabled !== false,
+      nextRun: calculateNextRun(timing, now).toISOString(),
+      createdAt: at,
+      updatedAt: at,
+      createdBy: actorName(principal),
     };
-
-    this.schedules.set(id, newSchedule);
-    return newSchedule;
+    await this.schedules.create(schedule);
+    return schedule;
   }
 
-  /**
-   * Calculate next run time for a schedule
-   */
-  private calculateNextRun(schedule: Omit<ReportSchedule, 'id' | 'nextRun'>): Date {
-    const now = new Date();
-    const [hours, minutes] = schedule.time.split(':').map(Number);
-    const nextRun = new Date();
-    nextRun.setHours(hours, minutes, 0, 0);
-
-    if (schedule.frequency === 'daily') {
-      if (nextRun <= now) {
-        nextRun.setDate(nextRun.getDate() + 1);
+  async updateSchedule(id: string, changes: Partial<ScheduleTiming> & { url?: string; enabled?: boolean }, now = new Date()): Promise<ReportSchedule> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const found = await this.schedules.get(id);
+      if (!found) throw new NotFoundException(`Schedule ${id} not found`);
+      const current = found.doc;
+      const timing = this.timing({
+        frequency: changes.frequency ?? current.frequency,
+        time: changes.time ?? current.time,
+        dayOfWeek: changes.dayOfWeek ?? current.dayOfWeek,
+        dayOfMonth: changes.dayOfMonth ?? current.dayOfMonth,
+      });
+      let url = current.url;
+      if (changes.url !== undefined) {
+        const application = await this.requireApplication(current.applicationId);
+        url = changes.url ? await this.scheduleUrl(changes.url, application) : undefined;
+        if (!url && !application.applicationUrl) throw new BadRequestException('The schedule needs a URL: the application has none');
       }
-    } else if (schedule.frequency === 'weekly') {
-      const dayDiff = (schedule.dayOfWeek! - nextRun.getDay() + 7) % 7;
-      nextRun.setDate(nextRun.getDate() + (dayDiff === 0 && nextRun > now ? 0 : dayDiff));
-    } else if (schedule.frequency === 'monthly') {
-      nextRun.setDate(schedule.dayOfMonth!);
-      if (nextRun <= now) {
-        nextRun.setMonth(nextRun.getMonth() + 1);
+      const enabled = changes.enabled ?? current.enabled;
+      const timingChanged =
+        timing.frequency !== current.frequency ||
+        timing.time !== current.time ||
+        timing.dayOfWeek !== current.dayOfWeek ||
+        timing.dayOfMonth !== current.dayOfMonth;
+      const reenabled = enabled && !current.enabled;
+      const next: ReportSchedule = {
+        id: current.id,
+        applicationId: current.applicationId,
+        ...(url ? { url } : {}),
+        ...timing,
+        enabled,
+        nextRun: timingChanged || reenabled ? calculateNextRun(timing, now).toISOString() : current.nextRun,
+        ...(current.lastRun ? { lastRun: current.lastRun } : {}),
+        ...(current.lastStatus ? { lastStatus: current.lastStatus } : {}),
+        ...(current.lastError ? { lastError: current.lastError } : {}),
+        ...(current.lastReportId ? { lastReportId: current.lastReportId } : {}),
+        createdAt: current.createdAt,
+        updatedAt: now.toISOString(),
+        createdBy: current.createdBy,
+      };
+      try {
+        await this.schedules.replace(next, found.version);
+        return next;
+      } catch (error) {
+        if (!(error instanceof VersionConflictError)) throw error;
       }
     }
+    throw new ConflictException(`Schedule ${id} is being changed concurrently; try again`);
+  }
 
-    return nextRun;
+  async deleteSchedule(id: string): Promise<void> {
+    if (!(await this.schedules.delete(id))) throw new NotFoundException(`Schedule ${id} not found`);
   }
 
   /**
-   * Get all schedules
+   * Runs every enabled schedule whose nextRun has passed. Each one is claimed
+   * first by moving nextRun forward with a compare-and-swap write, so two
+   * backend instances never run the same occurrence.
    */
-  getSchedules(applicationId?: string): ReportSchedule[] {
-    // Initialize mock data on first access if not already done
-    if (!this.mockDataInitialized && this.schedules.size === 0) {
-      this.initializeMockData();
-      this.mockDataInitialized = true;
+  async runDueSchedules(now = new Date()): Promise<number> {
+    let ran = 0;
+    for (const schedule of await this.schedules.list()) {
+      if (!schedule.enabled || new Date(schedule.nextRun) > now) continue;
+      const found = await this.schedules.get(schedule.id);
+      if (!found || !found.doc.enabled || new Date(found.doc.nextRun) > now) continue;
+      const claimed: ReportSchedule = { ...found.doc, nextRun: calculateNextRun(found.doc, now).toISOString(), lastRun: now.toISOString() };
+      try {
+        await this.schedules.replace(claimed, found.version);
+      } catch (error) {
+        if (error instanceof VersionConflictError) continue;
+        throw error;
+      }
+      ran++;
+      let result: Pick<ReportSchedule, 'lastStatus' | 'lastError' | 'lastReportId'>;
+      try {
+        const report = await this.generateReport(claimed.applicationId, { url: claimed.url }, 'scheduler', { scheduled: true, scheduleId: claimed.id });
+        result = { lastStatus: 'success', lastReportId: report.id };
+      } catch (error) {
+        this.logger.warn(`Scheduled report ${claimed.id} failed: ${(error as Error).message}`);
+        result = { lastStatus: 'failed', lastError: (error as Error).message.slice(0, 500) };
+      }
+      await this.recordRun(claimed.id, result);
     }
-
-    if (applicationId) {
-      return Array.from(this.schedules.values())
-        .filter(s => s.applicationId === applicationId);
-    }
-    return Array.from(this.schedules.values());
+    return ran;
   }
 
-  /**
-   * Update a schedule
-   */
-  updateSchedule(scheduleId: string, updates: Partial<ReportSchedule>): ReportSchedule | null {
-    const schedule = this.schedules.get(scheduleId);
-    if (!schedule) return null;
+  // ------------------------------------------------------------------ SLAs
 
-    const updated = { ...schedule, ...updates };
-    if (updates.frequency || updates.time || updates.dayOfWeek || updates.dayOfMonth) {
-      updated.nextRun = this.calculateNextRun(updated);
-    }
-    
-    this.schedules.set(scheduleId, updated);
-    return updated;
+  async getSLAs(applicationId?: string): Promise<ComplianceSLA[]> {
+    const all = await this.slas.list();
+    return all.filter((sla) => !applicationId || sla.applicationId === applicationId);
   }
 
-  /**
-   * Delete a schedule
-   */
-  deleteSchedule(scheduleId: string): boolean {
-    return this.schedules.delete(scheduleId);
+  async getSLA(id: string): Promise<ComplianceSLA> {
+    const found = await this.slas.get(id);
+    if (!found) throw new NotFoundException(`SLA ${id} not found`);
+    return found.doc;
   }
 
-  /**
-   * SLA Management
-   */
-  createSLA(sla: Omit<ComplianceSLA, 'id' | 'createdAt' | 'updatedAt'>): ComplianceSLA {
-    const id = `sla-${Date.now()}`;
-    const now = new Date();
-    const newSLA: ComplianceSLA = {
-      id,
-      ...sla,
+  /** One SLA per application: the id is derived from the application, so a second create is a 409 */
+  async createSLA(input: Omit<ComplianceSLA, 'id' | 'createdAt' | 'updatedAt'>): Promise<ComplianceSLA> {
+    await this.requireApplication(input.applicationId);
+    const now = new Date().toISOString();
+    const sla: ComplianceSLA = {
+      id: slaId(input.applicationId),
+      applicationId: input.applicationId,
+      targetScore: input.targetScore,
+      targetLevel: input.targetLevel,
+      criticalIssuesThreshold: input.criticalIssuesThreshold,
+      highIssuesThreshold: input.highIssuesThreshold,
       createdAt: now,
       updatedAt: now,
     };
-    this.slas.set(id, newSLA);
-    return newSLA;
+    try {
+      await this.slas.create(sla);
+    } catch (error) {
+      if (error instanceof DuplicateDocumentError) throw new ConflictException('This application already has an SLA; edit it instead');
+      throw error;
+    }
+    await this.refreshCache().catch(() => undefined);
+    return sla;
   }
 
-  getSLA(slaId: string): ComplianceSLA | null {
-    return this.slas.get(slaId) || null;
-  }
-
-  getSLAByApplication(applicationId: string): ComplianceSLA | null {
-    const slas = Array.from(this.slas.values()).filter(sla => sla.applicationId === applicationId);
-    return slas.length > 0 ? slas[0] : null;
-  }
-
-  getAllSLAs(): ComplianceSLA[] {
-    return Array.from(this.slas.values());
-  }
-
-  updateSLA(slaId: string, updates: Partial<Omit<ComplianceSLA, 'id' | 'createdAt'>>): ComplianceSLA | null {
-    const sla = this.slas.get(slaId);
-    if (!sla) {
-      return null;
-    }
-    const updated: ComplianceSLA = {
-      ...sla,
-      ...updates,
-      updatedAt: new Date(),
-    };
-    this.slas.set(slaId, updated);
-    return updated;
-  }
-
-  deleteSLA(slaId: string): boolean {
-    return this.slas.delete(slaId);
-  }
-
-  /**
-   * Check SLA compliance status
-   */
-  checkSLACompliance(applicationId: string, report: AccessibilityReport): 'compliant' | 'at-risk' | 'non-compliant' {
-    const sla = this.getSLAByApplication(applicationId);
-    if (!sla) {
-      return 'non-compliant'; // No SLA defined means non-compliant
-    }
-
-    // Check score
-    if (report.complianceScore < sla.targetScore) {
-      return 'non-compliant';
-    }
-
-    // Check WCAG level
-    const levelOrder = { 'A': 1, 'AA': 2, 'AAA': 3, 'Non-Compliant': 0 };
-    if (levelOrder[report.wcagLevel] < levelOrder[sla.targetLevel]) {
-      return 'non-compliant';
-    }
-
-    // Check critical issues threshold
-    if (report.criticalIssues > sla.criticalIssuesThreshold) {
-      return 'non-compliant';
-    }
-
-    // Check high issues threshold
-    if (report.highIssues > sla.highIssuesThreshold) {
-      return 'at-risk';
-    }
-
-    // Check if close to thresholds (within 10% of threshold)
-    const criticalThreshold = sla.criticalIssuesThreshold * 0.9;
-    const highThreshold = sla.highIssuesThreshold * 0.9;
-    if (report.criticalIssues >= criticalThreshold || report.highIssues >= highThreshold) {
-      return 'at-risk';
-    }
-
-    return 'compliant';
-  }
-
-  /**
-   * Get multi-application compliance summary
-   */
-  getMultiApplicationComplianceSummary(): MultiApplicationComplianceSummary {
-    // Get all applications
-    const applications = this.designSystemService.getAllApplications({}).applications;
-    
-    const applicationSummaries: MultiApplicationComplianceSummary['applications'] = [];
-    let totalScore = 0;
-    let compliantCount = 0;
-    let nonCompliantCount = 0;
-
-    applications.forEach(app => {
-      const latestReport = this.getLatestReport(app.id);
-      if (!latestReport) {
-        // Application has no reports yet
-        applicationSummaries.push({
-          applicationId: app.id,
-          applicationName: app.name,
-          complianceScore: 0,
-          wcagLevel: 'Non-Compliant',
-          totalIssues: 0,
-          criticalIssues: 0,
-          highIssues: 0,
-          slaStatus: 'non-compliant',
-        });
-        nonCompliantCount++;
-        return;
+  async updateSLA(
+    id: string,
+    changes: Partial<Pick<ComplianceSLA, 'targetScore' | 'targetLevel' | 'criticalIssuesThreshold' | 'highIssuesThreshold'>>,
+  ): Promise<ComplianceSLA> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const found = await this.slas.get(id);
+      if (!found) throw new NotFoundException(`SLA ${id} not found`);
+      const current = found.doc;
+      const next: ComplianceSLA = {
+        ...current,
+        targetScore: changes.targetScore ?? current.targetScore,
+        targetLevel: changes.targetLevel ?? current.targetLevel,
+        criticalIssuesThreshold: changes.criticalIssuesThreshold ?? current.criticalIssuesThreshold,
+        highIssuesThreshold: changes.highIssuesThreshold ?? current.highIssuesThreshold,
+        updatedAt: new Date().toISOString(),
+      };
+      try {
+        await this.slas.replace(next, found.version);
+        await this.refreshCache().catch(() => undefined);
+        return next;
+      } catch (error) {
+        if (!(error instanceof VersionConflictError)) throw error;
       }
+    }
+    throw new ConflictException(`SLA ${id} is being changed concurrently; try again`);
+  }
 
-      // Get previous report for trend
-      const previousReport = this.getLatestReport(app.id, latestReport.id);
-      const trend = previousReport ? this.calculateTrend(latestReport, previousReport) : undefined;
+  async deleteSLA(id: string): Promise<void> {
+    if (!(await this.slas.delete(id))) throw new NotFoundException(`SLA ${id} not found`);
+    await this.refreshCache().catch(() => undefined);
+  }
 
-      // Check SLA compliance
-      const slaStatus = this.checkSLACompliance(app.id, latestReport);
+  // --------------------------------------------------------------- helpers
 
-      if (slaStatus === 'compliant') {
-        compliantCount++;
-      } else {
-        nonCompliantCount++;
-      }
+  private async requireApplication(id: string): Promise<GovernanceApplication> {
+    const application = await this.applications.get(id);
+    if (!application) throw new NotFoundException(`Application ${id} not found`);
+    return application;
+  }
 
-      totalScore += latestReport.complianceScore;
-
-      applicationSummaries.push({
-        applicationId: app.id,
-        applicationName: app.name,
-        latestReportId: latestReport.id,
-        complianceScore: latestReport.complianceScore,
-        wcagLevel: latestReport.wcagLevel,
-        totalIssues: latestReport.totalIssues,
-        criticalIssues: latestReport.criticalIssues,
-        highIssues: latestReport.highIssues,
-        slaStatus,
-        lastReportDate: latestReport.generatedAt,
-        trend: trend ? {
-          scoreChange: trend.scoreChange,
-          issuesChange: trend.issuesChange,
-        } : undefined,
-      });
-    });
-
-    const averageScore = applications.length > 0 ? totalScore / applications.length : 0;
-
+  private timing(input: ScheduleTiming): ScheduleTiming {
+    assertValidTiming(input);
     return {
-      totalApplications: applications.length,
-      compliantApplications: compliantCount,
-      nonCompliantApplications: nonCompliantCount,
-      averageScore: Math.round(averageScore * 100) / 100,
-      applications: applicationSummaries.sort((a, b) => {
-        // Sort by SLA status (compliant first), then by score
-        const statusOrder = { 'compliant': 0, 'at-risk': 1, 'non-compliant': 2 };
-        const statusDiff = (statusOrder[a.slaStatus || 'non-compliant'] || 2) - (statusOrder[b.slaStatus || 'non-compliant'] || 2);
-        if (statusDiff !== 0) return statusDiff;
-        return b.complianceScore - a.complianceScore;
-      }),
+      frequency: input.frequency,
+      time: input.time,
+      ...(input.frequency === 'weekly' ? { dayOfWeek: input.dayOfWeek } : {}),
+      ...(input.frequency === 'monthly' ? { dayOfMonth: input.dayOfMonth } : {}),
     };
   }
 
-  /**
-   * Initialize mock data for demonstration
-   */
-  private initializeMockData(): void {
-    // This would be replaced with actual database queries in production
-    this.logger.log('Initializing mock accessibility report data');
+  /** The URL a schedule scans: its own, else the application's; checked to be public */
+  private async scheduleUrl(url: string | undefined, application: GovernanceApplication): Promise<string> {
+    const resolved = url || application.applicationUrl;
+    if (!resolved) throw new BadRequestException('The schedule needs a URL to scan: the application has none');
+    return (await assertPublicHttpUrl(resolved)).toString();
+  }
 
-    // Get available applications
-    const allApps = this.designSystemService.getAllApplications();
-    
-    // Use existing applications or create placeholder IDs
-    let app1, app2, app3;
-    if (allApps.applications.length > 0) {
-      app1 = allApps.applications[0];
-      app2 = allApps.applications[1] || allApps.applications[0];
-      app3 = allApps.applications[2] || allApps.applications[0];
-    } else {
-      // Create placeholder applications for mock data
-      app1 = { id: 'mock-app-001', name: 'Sample Application 1' };
-      app2 = { id: 'mock-app-002', name: 'Sample Application 2' };
-      app3 = { id: 'mock-app-003', name: 'Sample Application 3' };
-      this.logger.warn('No applications found, using placeholder IDs for mock data');
+  private async recordRun(id: string, result: Pick<ReportSchedule, 'lastStatus' | 'lastError' | 'lastReportId'>): Promise<void> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const found = await this.schedules.get(id);
+      if (!found) return;
+      const next: ReportSchedule = { ...found.doc, ...result };
+      if (!result.lastError) delete next.lastError;
+      try {
+        await this.schedules.replace(next, found.version);
+        return;
+      } catch (error) {
+        if (!(error instanceof VersionConflictError)) throw error;
+      }
     }
+  }
 
-    const now = new Date();
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  private stripHeavy(report: ReportSummary): ReportSummary {
+    const copy = { ...report } as Record<string, unknown>;
+    for (const field of HEAVY_FIELDS) delete copy[field];
+    return copy as ReportSummary;
+  }
 
-    // Create mock reports for app1 (good compliance)
-    const report1: AccessibilityReport = {
-      id: 'report-mock-001',
-      applicationId: app1.id,
-      applicationName: app1.name,
-      generatedAt: oneDayAgo,
-      scheduled: false,
-      wcagLevel: 'AA',
-      complianceScore: 87,
-      totalIssues: 12,
-      criticalIssues: 0,
-      highIssues: 3,
-      moderateIssues: 6,
-      lowIssues: 3,
-      infoIssues: 0,
-      wcagCriteria: {
-        '1.1.1': {
-          criterion: '1.1.1 Non-text Content',
-          level: 'A',
-          status: 'pass',
-          issues: 0,
-          description: 'All non-text content has text alternatives',
-          failingElements: [],
-        },
-        '1.3.1': {
-          criterion: '1.3.1 Info and Relationships',
-          level: 'A',
-          status: 'warning',
-          issues: 2,
-          description: 'Information, structure, and relationships are programmatically determinable',
-          failingElements: [
-            {
-              id: 'check-1.3.1-001',
-              message: 'Heading hierarchy skipped from h2 to h4 in components/Header.vue',
-              file: 'components/Header.vue',
-              line: 45,
-              element: '<h4>Section Title</h4>',
-              impact: 'MODERATE',
-            },
-            {
-              id: 'check-1.3.1-002',
-              message: 'List structure missing proper semantic markup in pages/Home.vue',
-              file: 'pages/Home.vue',
-              line: 120,
-              element: '<div class="list-item">',
-              impact: 'MODERATE',
-            },
-          ],
-        },
-        '1.4.3': {
-          criterion: '1.4.3 Contrast (Minimum)',
-          level: 'AA',
-          status: 'warning',
-          issues: 4,
-          description: 'Text has a contrast ratio of at least 4.5:1',
-          failingElements: [
-            {
-              id: 'check-1.4.3-001',
-              message: 'Text color #999999 on white background has contrast ratio 2.8:1 in components/Button.vue',
-              file: 'components/Button.vue',
-              line: 23,
-              element: '<button class="secondary">Click me</button>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-1.4.3-002',
-              message: 'Text color #cccccc on white background has contrast ratio 1.8:1 in components/Card.vue',
-              file: 'components/Card.vue',
-              line: 56,
-              element: '<p class="subtitle">Card subtitle</p>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-1.4.3-003',
-              message: 'Text color #aaaaaa on white background has contrast ratio 2.1:1 in pages/About.vue',
-              file: 'pages/About.vue',
-              line: 78,
-              element: '<span class="meta-text">Last updated</span>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-1.4.3-004',
-              message: 'Text color #bbbbbb on white background has contrast ratio 2.5:1 in components/Footer.vue',
-              file: 'components/Footer.vue',
-              line: 12,
-              element: '<a href="/privacy">Privacy Policy</a>',
-              impact: 'HIGH',
-            },
-          ],
-        },
-        '2.1.1': {
-          criterion: '2.1.1 Keyboard',
-          level: 'A',
-          status: 'pass',
-          issues: 0,
-          description: 'All functionality is operable through a keyboard',
-          failingElements: [],
-        },
-        '2.4.7': {
-          criterion: '2.4.7 Focus Visible',
-          level: 'AA',
-          status: 'warning',
-          issues: 3,
-          description: 'Keyboard focus indicator is visible',
-          failingElements: [
-            {
-              id: 'check-2.4.7-001',
-              message: 'Button element missing visible focus indicator in components/Button.vue',
-              file: 'components/Button.vue',
-              line: 15,
-              element: '<button class="primary">Submit</button>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-2.4.7-002',
-              message: 'Link element missing visible focus indicator in components/Nav.vue',
-              file: 'components/Nav.vue',
-              line: 32,
-              element: '<a href="/about">About</a>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-2.4.7-003',
-              message: 'Input element missing visible focus indicator in components/Form.vue',
-              file: 'components/Form.vue',
-              line: 67,
-              element: '<input type="text" name="email">',
-              impact: 'HIGH',
-            },
-          ],
-        },
-        '3.3.2': {
-          criterion: '3.3.2 Labels or Instructions',
-          level: 'A',
-          status: 'warning',
-          issues: 2,
-          description: 'Labels or instructions are provided when content requires user input',
-          failingElements: [
-            {
-              id: 'check-3.3.2-001',
-              message: 'Input field missing associated label in components/Form.vue',
-              file: 'components/Form.vue',
-              line: 45,
-              element: '<input type="email" name="email">',
-              impact: 'MODERATE',
-            },
-            {
-              id: 'check-3.3.2-002',
-              message: 'Textarea field missing associated label in components/ContactForm.vue',
-              file: 'components/ContactForm.vue',
-              line: 23,
-              element: '<textarea name="message"></textarea>',
-              impact: 'MODERATE',
-            },
-          ],
-        },
-        '4.1.2': {
-          criterion: '4.1.2 Name, Role, Value',
-          level: 'A',
-          status: 'warning',
-          issues: 1,
-          description: 'For all user interface components, the name and role can be programmatically determined',
-          failingElements: [
-            {
-              id: 'check-4.1.2-001',
-              message: 'Custom button missing ARIA role and accessible name in components/CustomButton.vue',
-              file: 'components/CustomButton.vue',
-              line: 8,
-              element: '<div class="button" @click="handleClick">Click</div>',
-              impact: 'MODERATE',
-            },
-          ],
-        },
-      },
-      issuesByCategory: {
-        colorContrast: 4,
-        keyboardNavigation: 0,
-        ariaAttributes: 1,
-        focusManagement: 3,
-        altText: 0,
-        headingHierarchy: 2,
-        formLabels: 2,
-        photosensitivity: 0,
-        other: 0,
-      },
-      prioritizedFixes: [
-        {
-          id: 'fix-001',
-          rule: 'Color Contrast (Minimum)',
-          severity: 'HIGH',
-          impact: 'Significantly impacts user experience for users with disabilities',
-          effort: 'medium',
-          priority: 14.0,
-          affectedElements: 4,
-          description: 'Text elements have insufficient color contrast ratios below WCAG 2.1 AA standards (4.5:1 for normal text)',
-          recommendation: 'Ensure text has a contrast ratio of at least 4.5:1 for normal text and 3:1 for large text.',
-          wcagCriterion: '1.4.3',
-          checks: [],
-        },
-        {
-          id: 'fix-002',
-          rule: 'Focus Visible',
-          severity: 'HIGH',
-          impact: 'Significantly impacts user experience for users with disabilities',
-          effort: 'low',
-          priority: 10.5,
-          affectedElements: 3,
-          description: 'Keyboard focus indicators are not visible on interactive elements',
-          recommendation: 'Ensure keyboard focus indicators are visible. Add focus styles to all interactive elements.',
-          wcagCriterion: '2.4.7',
-          checks: [],
-        },
-        {
-          id: 'fix-003',
-          rule: 'Heading Hierarchy',
-          severity: 'MODERATE',
-          impact: 'Moderately impacts accessibility and user experience',
-          effort: 'low',
-          priority: 4.0,
-          affectedElements: 2,
-          description: 'Heading hierarchy is not properly structured (skipped levels or incorrect nesting)',
-          recommendation: 'Use proper heading hierarchy (h1, h2, h3, etc.) without skipping levels.',
-          wcagCriterion: '1.3.1',
-          checks: [],
-        },
-        {
-          id: 'fix-004',
-          rule: 'Form Labels',
-          severity: 'MODERATE',
-          impact: 'Moderately impacts accessibility and user experience',
-          effort: 'low',
-          priority: 4.0,
-          affectedElements: 2,
-          description: 'Form inputs are missing associated labels',
-          recommendation: 'Associate all form inputs with labels using the "for" attribute or aria-label.',
-          wcagCriterion: '3.3.2',
-          checks: [],
-        },
-        {
-          id: 'fix-005',
-          rule: 'ARIA Attributes',
-          severity: 'MODERATE',
-          impact: 'Moderately impacts accessibility and user experience',
-          effort: 'high',
-          priority: 1.3,
-          affectedElements: 1,
-          description: 'Missing or incorrect ARIA attributes on interactive elements',
-          recommendation: 'Add appropriate ARIA attributes to improve screen reader support. Ensure roles, labels, and states are properly defined.',
-          wcagCriterion: '4.1.2',
-          checks: [],
-        },
-      ],
-      checks: [],
-      trend: {
-        scoreChange: 2.5,
-        issuesChange: -3,
-        newIssues: 1,
-        fixedIssues: 4,
-      },
-    };
-
-    // Create previous report for trend comparison
-    const report1Previous: AccessibilityReport = {
-      ...report1,
-      id: 'report-mock-001-previous',
-      generatedAt: threeDaysAgo,
-      complianceScore: 84.5,
-      totalIssues: 15,
-      criticalIssues: 0,
-      highIssues: 4,
-      moderateIssues: 8,
-      lowIssues: 3,
-      infoIssues: 0,
-      trend: {
-        scoreChange: 0,
-        issuesChange: 0,
-        newIssues: 0,
-        fixedIssues: 0,
-      },
-    };
-
-    // Create mock report for app2 (needs improvement)
-    const report2: AccessibilityReport = {
-      id: 'report-mock-002',
-      applicationId: app2.id,
-      applicationName: app2.name,
-      generatedAt: now,
-      scheduled: true,
-      scheduleId: 'schedule-mock-001',
-      wcagLevel: 'A',
-      complianceScore: 72,
-      totalIssues: 28,
-      criticalIssues: 2,
-      highIssues: 8,
-      moderateIssues: 12,
-      lowIssues: 6,
-      infoIssues: 0,
-      wcagCriteria: {
-        '1.1.1': {
-          criterion: '1.1.1 Non-text Content',
-          level: 'A',
-          status: 'fail',
-          issues: 5,
-          description: 'All non-text content has text alternatives',
-          failingElements: [
-            {
-              id: 'check-1.1.1-001',
-              message: 'Image missing alt text in components/Hero.vue',
-              file: 'components/Hero.vue',
-              line: 12,
-              element: '<img src="/hero.jpg">',
-              impact: 'CRITICAL',
-            },
-            {
-              id: 'check-1.1.1-002',
-              message: 'Image missing alt text in components/Gallery.vue',
-              file: 'components/Gallery.vue',
-              line: 45,
-              element: '<img src="/gallery-1.jpg">',
-              impact: 'CRITICAL',
-            },
-            {
-              id: 'check-1.1.1-003',
-              message: 'Image missing alt text in pages/About.vue',
-              file: 'pages/About.vue',
-              line: 23,
-              element: '<img src="/team.jpg">',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-1.1.1-004',
-              message: 'Image missing alt text in components/ProductCard.vue',
-              file: 'components/ProductCard.vue',
-              line: 18,
-              element: '<img src="/product.jpg">',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-1.1.1-005',
-              message: 'Image missing alt text in components/Footer.vue',
-              file: 'components/Footer.vue',
-              line: 8,
-              element: '<img src="/logo.png">',
-              impact: 'HIGH',
-            },
-          ],
-        },
-        '1.4.3': {
-          criterion: '1.4.3 Contrast (Minimum)',
-          level: 'AA',
-          status: 'fail',
-          issues: 8,
-          description: 'Text has a contrast ratio of at least 4.5:1',
-          failingElements: [
-            {
-              id: 'check-1.4.3-001',
-              message: 'Text color #888888 on white background has contrast ratio 3.2:1 in components/Button.vue',
-              file: 'components/Button.vue',
-              line: 15,
-              element: '<button class="secondary">Learn More</button>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-1.4.3-002',
-              message: 'Text color #999999 on white background has contrast ratio 2.8:1 in components/Card.vue',
-              file: 'components/Card.vue',
-              line: 32,
-              element: '<p class="subtitle">Card description</p>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-1.4.3-003',
-              message: 'Text color #aaaaaa on white background has contrast ratio 2.1:1 in pages/Home.vue',
-              file: 'pages/Home.vue',
-              line: 67,
-              element: '<span class="meta">Published date</span>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-1.4.3-004',
-              message: 'Text color #bbbbbb on white background has contrast ratio 2.5:1 in components/Nav.vue',
-              file: 'components/Nav.vue',
-              line: 28,
-              element: '<a href="/about">About Us</a>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-1.4.3-005',
-              message: 'Text color #777777 on white background has contrast ratio 3.8:1 in components/Footer.vue',
-              file: 'components/Footer.vue',
-              line: 15,
-              element: '<p class="copyright">Copyright text</p>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-1.4.3-006',
-              message: 'Text color #cccccc on white background has contrast ratio 1.8:1 in components/Modal.vue',
-              file: 'components/Modal.vue',
-              line: 42,
-              element: '<p class="help-text">Help information</p>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-1.4.3-007',
-              message: 'Text color #dddddd on white background has contrast ratio 1.4:1 in components/Tooltip.vue',
-              file: 'components/Tooltip.vue',
-              line: 19,
-              element: '<span class="tooltip-text">Tooltip content</span>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-1.4.3-008',
-              message: 'Text color #666666 on white background has contrast ratio 4.1:1 in components/Form.vue',
-              file: 'components/Form.vue',
-              line: 56,
-              element: '<label class="optional">Optional field</label>',
-              impact: 'MODERATE',
-            },
-          ],
-        },
-        '2.1.1': {
-          criterion: '2.1.1 Keyboard',
-          level: 'A',
-          status: 'fail',
-          issues: 3,
-          description: 'All functionality is operable through a keyboard',
-          failingElements: [
-            {
-              id: 'check-2.1.1-001',
-              message: 'Custom button element not keyboard accessible in components/CustomButton.vue',
-              file: 'components/CustomButton.vue',
-              line: 12,
-              element: '<div class="button" @click="handleClick">Click me</div>',
-              impact: 'CRITICAL',
-            },
-            {
-              id: 'check-2.1.1-002',
-              message: 'Interactive element has tabindex="-1" preventing keyboard access in components/Dropdown.vue',
-              file: 'components/Dropdown.vue',
-              line: 34,
-              element: '<div class="dropdown-trigger" tabindex="-1">Menu</div>',
-              impact: 'CRITICAL',
-            },
-            {
-              id: 'check-2.1.1-003',
-              message: 'Modal close button not keyboard accessible in components/Modal.vue',
-              file: 'components/Modal.vue',
-              line: 8,
-              element: '<span class="close" @click="close">×</span>',
-              impact: 'HIGH',
-            },
-          ],
-        },
-        '2.4.7': {
-          criterion: '2.4.7 Focus Visible',
-          level: 'AA',
-          status: 'fail',
-          issues: 6,
-          description: 'Keyboard focus indicator is visible',
-          failingElements: [
-            {
-              id: 'check-2.4.7-001',
-              message: 'Button element missing visible focus indicator in components/Button.vue',
-              file: 'components/Button.vue',
-              line: 10,
-              element: '<button class="primary">Submit</button>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-2.4.7-002',
-              message: 'Link element missing visible focus indicator in components/Nav.vue',
-              file: 'components/Nav.vue',
-              line: 25,
-              element: '<a href="/products">Products</a>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-2.4.7-003',
-              message: 'Input element missing visible focus indicator in components/Form.vue',
-              file: 'components/Form.vue',
-              line: 45,
-              element: '<input type="text" name="name">',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-2.4.7-004',
-              message: 'Select element missing visible focus indicator in components/Form.vue',
-              file: 'components/Form.vue',
-              line: 52,
-              element: '<select name="country">',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-2.4.7-005',
-              message: 'Checkbox element missing visible focus indicator in components/Form.vue',
-              file: 'components/Form.vue',
-              line: 68,
-              element: '<input type="checkbox" name="agree">',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-2.4.7-006',
-              message: 'Radio button element missing visible focus indicator in components/Form.vue',
-              file: 'components/Form.vue',
-              line: 75,
-              element: '<input type="radio" name="option">',
-              impact: 'HIGH',
-            },
-          ],
-        },
-        '3.3.2': {
-          criterion: '3.3.2 Labels or Instructions',
-          level: 'A',
-          status: 'warning',
-          issues: 4,
-          description: 'Labels or instructions are provided when content requires user input',
-          failingElements: [
-            {
-              id: 'check-3.3.2-001',
-              message: 'Input field missing associated label in components/Form.vue',
-              file: 'components/Form.vue',
-              line: 38,
-              element: '<input type="email" name="email">',
-              impact: 'MODERATE',
-            },
-            {
-              id: 'check-3.3.2-002',
-              message: 'Textarea field missing associated label in components/ContactForm.vue',
-              file: 'components/ContactForm.vue',
-              line: 20,
-              element: '<textarea name="message"></textarea>',
-              impact: 'MODERATE',
-            },
-            {
-              id: 'check-3.3.2-003',
-              message: 'Select field missing associated label in components/Form.vue',
-              file: 'components/Form.vue',
-              line: 52,
-              element: '<select name="country">',
-              impact: 'MODERATE',
-            },
-            {
-              id: 'check-3.3.2-004',
-              message: 'Checkbox missing associated label in components/Form.vue',
-              file: 'components/Form.vue',
-              line: 68,
-              element: '<input type="checkbox" name="terms">',
-              impact: 'MODERATE',
-            },
-          ],
-        },
-        '4.1.2': {
-          criterion: '4.1.2 Name, Role, Value',
-          level: 'A',
-          status: 'fail',
-          issues: 2,
-          description: 'For all user interface components, the name and role can be programmatically determined',
-          failingElements: [
-            {
-              id: 'check-4.1.2-001',
-              message: 'Custom button missing ARIA role and accessible name in components/CustomButton.vue',
-              file: 'components/CustomButton.vue',
-              line: 12,
-              element: '<div class="button" @click="handleClick">Click</div>',
-              impact: 'HIGH',
-            },
-            {
-              id: 'check-4.1.2-002',
-              message: 'Icon button missing accessible name in components/IconButton.vue',
-              file: 'components/IconButton.vue',
-              line: 5,
-              element: '<button><span class="icon">×</span></button>',
-              impact: 'HIGH',
-            },
-          ],
-        },
-      },
-      issuesByCategory: {
-        colorContrast: 8,
-        keyboardNavigation: 3,
-        ariaAttributes: 2,
-        focusManagement: 6,
-        altText: 5,
-        headingHierarchy: 2,
-        formLabels: 4,
-        photosensitivity: 0,
-        other: 0,
-      },
-      prioritizedFixes: [
-        {
-          id: 'fix-006',
-          rule: 'Alt Text Missing',
-          severity: 'CRITICAL',
-          impact: 'Blocks users with disabilities from accessing content',
-          effort: 'low',
-          priority: 50.0,
-          affectedElements: 5,
-          description: 'Images are missing alt text attributes, preventing screen reader users from understanding image content',
-          recommendation: 'Add descriptive alt text to all images. Use empty alt="" for decorative images.',
-          wcagCriterion: '1.1.1',
-          checks: [],
-        },
-        {
-          id: 'fix-007',
-          rule: 'Color Contrast (Minimum)',
-          severity: 'HIGH',
-          impact: 'Significantly impacts user experience for users with disabilities',
-          effort: 'medium',
-          priority: 40.0,
-          affectedElements: 8,
-          description: 'Text elements have insufficient color contrast ratios below WCAG 2.1 AA standards',
-          recommendation: 'Ensure text has a contrast ratio of at least 4.5:1 for normal text and 3:1 for large text.',
-          wcagCriterion: '1.4.3',
-          checks: [],
-        },
-        {
-          id: 'fix-008',
-          rule: 'Keyboard Navigation',
-          severity: 'CRITICAL',
-          impact: 'Blocks users with disabilities from accessing content',
-          effort: 'high',
-          priority: 7.0,
-          affectedElements: 3,
-          description: 'Interactive elements are not keyboard accessible',
-          recommendation: 'Ensure all interactive elements are keyboard accessible. Remove tabindex="-1" from interactive elements or provide alternative keyboard access.',
-          wcagCriterion: '2.1.1',
-          checks: [],
-        },
-        {
-          id: 'fix-009',
-          rule: 'Focus Visible',
-          severity: 'HIGH',
-          impact: 'Significantly impacts user experience for users with disabilities',
-          effort: 'low',
-          priority: 21.0,
-          affectedElements: 6,
-          description: 'Keyboard focus indicators are not visible on interactive elements',
-          recommendation: 'Ensure keyboard focus indicators are visible. Add focus styles to all interactive elements.',
-          wcagCriterion: '2.4.7',
-          checks: [],
-        },
-        {
-          id: 'fix-010',
-          rule: 'Form Labels',
-          severity: 'MODERATE',
-          impact: 'Moderately impacts accessibility and user experience',
-          effort: 'low',
-          priority: 8.0,
-          affectedElements: 4,
-          description: 'Form inputs are missing associated labels',
-          recommendation: 'Associate all form inputs with labels using the "for" attribute or aria-label.',
-          wcagCriterion: '3.3.2',
-          checks: [],
-        },
-        {
-          id: 'fix-011',
-          rule: 'ARIA Attributes',
-          severity: 'HIGH',
-          impact: 'Significantly impacts user experience for users with disabilities',
-          effort: 'high',
-          priority: 2.7,
-          affectedElements: 2,
-          description: 'Missing or incorrect ARIA attributes on interactive elements',
-          recommendation: 'Add appropriate ARIA attributes to improve screen reader support. Ensure roles, labels, and states are properly defined.',
-          wcagCriterion: '4.1.2',
-          checks: [],
-        },
-      ],
-      checks: [],
-      trend: {
-        scoreChange: -1.2,
-        issuesChange: 2,
-        newIssues: 5,
-        fixedIssues: 3,
-      },
-    };
-
-    // Create mock report for app3 (excellent compliance)
-    const report3: AccessibilityReport = {
-      id: 'report-mock-003',
-      applicationId: app3.id,
-      applicationName: app3.name,
-      generatedAt: oneWeekAgo,
-      scheduled: false,
-      wcagLevel: 'AAA',
-      complianceScore: 98,
-      totalIssues: 1,
-      criticalIssues: 0,
-      highIssues: 0,
-      moderateIssues: 0,
-      lowIssues: 1,
-      infoIssues: 0,
-      wcagCriteria: {
-        '1.1.1': {
-          criterion: '1.1.1 Non-text Content',
-          level: 'A',
-          status: 'pass',
-          issues: 0,
-          description: 'All non-text content has text alternatives',
-          failingElements: [],
-        },
-        '1.3.1': {
-          criterion: '1.3.1 Info and Relationships',
-          level: 'A',
-          status: 'pass',
-          issues: 0,
-          description: 'Information, structure, and relationships are programmatically determinable',
-          failingElements: [],
-        },
-        '1.4.3': {
-          criterion: '1.4.3 Contrast (Minimum)',
-          level: 'AA',
-          status: 'pass',
-          issues: 0,
-          description: 'Text has a contrast ratio of at least 4.5:1',
-          failingElements: [],
-        },
-        '2.1.1': {
-          criterion: '2.1.1 Keyboard',
-          level: 'A',
-          status: 'pass',
-          issues: 0,
-          description: 'All functionality is operable through a keyboard',
-          failingElements: [],
-        },
-        '2.4.7': {
-          criterion: '2.4.7 Focus Visible',
-          level: 'AA',
-          status: 'pass',
-          issues: 0,
-          description: 'Keyboard focus indicator is visible',
-          failingElements: [],
-        },
-        '3.3.2': {
-          criterion: '3.3.2 Labels or Instructions',
-          level: 'A',
-          status: 'pass',
-          issues: 0,
-          description: 'Labels or instructions are provided when content requires user input',
-          failingElements: [],
-        },
-        '4.1.2': {
-          criterion: '4.1.2 Name, Role, Value',
-          level: 'A',
-          status: 'warning',
-          issues: 1,
-          description: 'For all user interface components, the name and role can be programmatically determined',
-          failingElements: [
-            {
-              id: 'check-4.1.2-001',
-              message: 'One interactive element could benefit from additional ARIA attributes for better screen reader support in components/IconButton.vue',
-              file: 'components/IconButton.vue',
-              line: 12,
-              element: '<button aria-label="Close"><span class="icon">×</span></button>',
-              impact: 'LOW',
-            },
-          ],
-        },
-      },
-      issuesByCategory: {
-        colorContrast: 0,
-        keyboardNavigation: 0,
-        ariaAttributes: 1,
-        focusManagement: 0,
-        altText: 0,
-        headingHierarchy: 0,
-        formLabels: 0,
-        photosensitivity: 0,
-        other: 0,
-      },
-      prioritizedFixes: [
-        {
-          id: 'fix-012',
-          rule: 'ARIA Attributes',
-          severity: 'LOW',
-          impact: 'Minor accessibility concern',
-          effort: 'low',
-          priority: 0.3,
-          affectedElements: 1,
-          description: 'One interactive element could benefit from additional ARIA attributes for better screen reader support',
-          recommendation: 'Add appropriate ARIA attributes to improve screen reader support. Ensure roles, labels, and states are properly defined.',
-          wcagCriterion: '4.1.2',
-          checks: [],
-        },
-      ],
-      checks: [],
-      trend: {
-        scoreChange: 0.5,
-        issuesChange: -1,
-        newIssues: 0,
-        fixedIssues: 1,
-      },
-    };
-
-    // Store reports
-    this.reports.set(report1.id, report1);
-    this.reports.set(report1Previous.id, report1Previous);
-    this.reports.set(report2.id, report2);
-    this.reports.set(report3.id, report3);
-
-    // Create mock schedules
-    const schedule1: ReportSchedule = {
-      id: 'schedule-mock-001',
-      applicationId: app2.id,
-      frequency: 'weekly',
-      dayOfWeek: 1, // Monday
-      time: '09:00',
-      enabled: true,
-      lastRun: oneDayAgo,
-      nextRun: this.calculateNextRun({
-        applicationId: app2.id,
-        frequency: 'weekly',
-        dayOfWeek: 1,
-        time: '09:00',
-        enabled: true,
-        recipients: ['dev-team@example.com', 'accessibility@example.com'],
-      }),
-      recipients: ['dev-team@example.com', 'accessibility@example.com'],
-    };
-
-    const schedule2: ReportSchedule = {
-      id: 'schedule-mock-002',
-      applicationId: app1.id,
-      frequency: 'daily',
-      time: '08:00',
-      enabled: true,
-      lastRun: oneDayAgo,
-      nextRun: this.calculateNextRun({
-        applicationId: app1.id,
-        frequency: 'daily',
-        time: '08:00',
-        enabled: true,
-        recipients: ['product-manager@example.com'],
-      }),
-      recipients: ['product-manager@example.com'],
-    };
-
-    const schedule3: ReportSchedule = {
-      id: 'schedule-mock-003',
-      applicationId: app3.id,
-      frequency: 'monthly',
-      dayOfMonth: 1,
-      time: '10:00',
-      enabled: false,
-      lastRun: oneWeekAgo,
-      nextRun: this.calculateNextRun({
-        applicationId: app3.id,
-        frequency: 'monthly',
-        dayOfMonth: 1,
-        time: '10:00',
-        enabled: false,
-        recipients: ['qa-team@example.com'],
-      }),
-      recipients: ['qa-team@example.com'],
-    };
-
-    // Store schedules
-    this.schedules.set(schedule1.id, schedule1);
-    this.schedules.set(schedule2.id, schedule2);
-    this.schedules.set(schedule3.id, schedule3);
-
-    this.logger.log(`Initialized ${this.reports.size} mock reports and ${this.schedules.size} mock schedules`);
-    this.logger.log(`Report IDs: ${Array.from(this.reports.keys()).join(', ')}`);
-    this.logger.log(`Schedule IDs: ${Array.from(this.schedules.keys()).join(', ')}`);
+  private async refreshCache(): Promise<void> {
+    const [applications, reports, slas] = await Promise.all([this.applications.list(), this.getReports(), this.slas.list()]);
+    const latest = new Map<string, ReportSummary>();
+    for (const report of reports) if (!latest.has(report.applicationId)) latest.set(report.applicationId, report);
+    this.cache = { applications, latest, slas };
   }
 }
-
