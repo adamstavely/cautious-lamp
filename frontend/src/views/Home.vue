@@ -179,14 +179,7 @@
 </template>
 
 <script setup>
-// Trench Coat spot illustrations, inlined so they follow the app's .dark class.
-const spots = import.meta.glob('../assets/illustrations/spot/**/*.svg', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-});
-
-const spot = (name) => spots[`../assets/illustrations/spot/${name}.svg`] ?? '';
+import { spot } from '../utils/spotIllustrations.js';
 
 const foundations = [
   { title: 'Guidelines', to: '/guidelines', art: 'site/guidelines', body: 'Principles and best practices for consistent, accessible interfaces.' },
