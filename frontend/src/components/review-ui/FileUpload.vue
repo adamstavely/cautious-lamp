@@ -70,7 +70,7 @@
           </p>
           
           <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            PDF, AI, Sketch, Figma, or other design files
+            PDF, PNG, JPEG, GIF, WebP or SVG, up to 50MB
           </p>
           
           <!-- Selected File Preview -->

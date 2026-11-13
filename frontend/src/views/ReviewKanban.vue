@@ -423,6 +423,7 @@ const loadReviews = async () => {
       reviewId: review.id,
       filename: review.filename || `Review ${review.id}`,
       workflowState: review.workflowState || 'draft',
+      changesRequested: !!review.changesRequested,
       createdAt: review.createdAt,
       completed: !!review.completed
     }));
