@@ -230,7 +230,7 @@
                       <!-- Reply emoji reactions -->
                       <div class="mt-2 d-flex align-center flex-wrap ga-2">
                         <!-- Display existing reactions -->
-                        <template v-if="reply.reactions && reply.reactions.length > 0" v-for="(reactionGroup, emoji) in getReactionGroups(reply)" :key="emoji">
+                        <template v-for="(reactionGroup, emoji) in getReactionGroups(reply)" :key="emoji">
                           <v-chip
                             :color="hasUserReacted(reply, emoji) ? 'primary' : 'default'"
                             size="small"
@@ -243,7 +243,7 @@
                             <span class="font-weight-medium">{{ reactionGroup.length }}</span>
                           </v-chip>
                         </template>
-                        
+
                         <!-- Emoji picker button for reply -->
                         <v-menu v-if="!readOnly" v-model="emojiMenus[`reply-${reply.id}`]" location="top">
                           <template #activator="{ props: menuProps }">
@@ -328,46 +328,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed } from 'vue';
+import { useDarkMode } from '../../composables/useDarkMode.js';
+import { getCurrentUser } from '../../mockData.js';
 
-// Check if dark mode is active - make it reactive
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-
-// Watch for dark class changes on html element using MutationObserver
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  // Set up dark mode observer
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  // Also check periodically as a fallback
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  // Check immediately
-  checkDarkMode();
-  
-  // Check every 100ms as fallback
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
+const isDarkMode = useDarkMode();
 
 const props = defineProps({
   comments: {
@@ -385,6 +350,7 @@ const props = defineProps({
   }
 });
 
+// comment-added: ({ text, version, type, resolved }); reply-added: (commentId, text)
 const emit = defineEmits(['comment-added', 'comment-updated', 'reply-added', 'emoji-reaction-toggled', 'emoji-reaction-toggled-reply']);
 
 // Filter comments by version and remove null/undefined comments
@@ -396,7 +362,6 @@ const validComments = computed(() => {
     return allComments.filter(comment => comment.version === props.versionId);
   }
   
-  // If no versionId, return all comments (for backwards compatibility)
   return allComments;
 });
 
@@ -404,7 +369,8 @@ const newComment = ref('');
 const submitting = ref(false);
 const replyingTo = ref(null);
 const replyText = ref('');
-const currentUser = ref('Current User'); // In real app, this would come from auth
+// The acting user, read once: it only changes when the user switches identity elsewhere and reloads
+const currentUser = getCurrentUser();
 const emojiMenus = ref({}); // Track open emoji menus per comment
 
 // Available emoji reactions
@@ -412,23 +378,20 @@ const availableEmojis = ['👍', '❤️', '😂', '😮', '😢', '✅', '🎉'
 
 const formatTimestamp = (timestamp) => {
   if (!timestamp) return 'Unknown date';
-  try {
-    return new Date(timestamp).toLocaleString();
-  } catch (error) {
-    return 'Invalid date';
-  }
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? 'Invalid date' : date.toLocaleString();
 };
 
 // Get user initials from name
 const getInitials = (name) => {
-  if (!name) return '?';
-  const parts = name.trim().split(' ');
+  if (!name || !name.trim()) return '?';
+  const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) {
     // First letter of first name + first letter of last name
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
   // Single name - use first two letters if available
-  return name.length >= 2 ? name.substring(0, 2).toUpperCase() : name[0].toUpperCase();
+  return parts[0].substring(0, 2).toUpperCase();
 };
 
 // Get role label from role string
@@ -443,48 +406,34 @@ const getRoleLabel = (role) => {
   return roleMap[role] || role;
 };
 
-// Get role from author name (for legacy comments without role)
+// Role for display. The API doesn't record roles, so this is a best guess from the comment.
 const getAuthorRole = (author, comment) => {
   if (comment?.authorRole) {
     return comment.authorRole;
   }
-  // Fallback logic for legacy comments
-  if (author === 'Client' || author?.toLowerCase().includes('client')) {
-    return 'client';
+  if ((comment?.authorEmail && comment.authorEmail === currentUser.email) || author === currentUser.name) {
+    return props.currentUserRole;
   }
-  if (author === 'Art Director' || author?.toLowerCase().includes('art director')) {
-    return 'art_director';
-  }
-  if (author === 'Creative Director' || author?.toLowerCase().includes('creative director')) {
-    return 'creative_director';
-  }
-  return 'designer'; // Default to designer
+  const name = (author || '').toLowerCase();
+  if (name.includes('client')) return 'client';
+  if (name.includes('art director')) return 'art_director';
+  if (name.includes('creative director')) return 'creative_director';
+  return '';
 };
 
-// Group reactions by emoji
-const getReactionGroups = (comment) => {
-  if (!comment.reactions || !comment.reactions.length) return {};
-  
+// Reactions are { [emoji]: [email] } (contract shape)
+const getReactionGroups = (target) => {
+  const reactions = target?.reactions;
+  if (!reactions || typeof reactions !== 'object' || Array.isArray(reactions)) return {};
   const groups = {};
-  comment.reactions.forEach(reaction => {
-    const emoji = reaction.emoji || '👍'; // Default to thumbs up for old reactions
-    if (!groups[emoji]) {
-      groups[emoji] = [];
-    }
-    groups[emoji].push(reaction);
+  Object.entries(reactions).forEach(([emoji, emails]) => {
+    if (Array.isArray(emails) && emails.length) groups[emoji] = emails;
   });
-  
   return groups;
 };
 
 // Check if current user has reacted with specific emoji
-const hasUserReacted = (comment, emoji) => {
-  if (!comment.reactions || !comment.reactions.length) return false;
-  return comment.reactions.some(r => 
-    (r.user === currentUser.value || r.userEmail === currentUser.value) && 
-    (r.emoji || '👍') === emoji
-  );
-};
+const hasUserReacted = (target, emoji) => getReactionGroups(target)[emoji]?.includes(currentUser.email) || false;
 
 // Add emoji reaction
 const addEmojiReaction = (commentId, emoji) => {
@@ -513,33 +462,20 @@ const toggleEmojiReactionOnReply = (commentId, replyId, emoji) => {
   emit('emoji-reaction-toggled-reply', commentId, replyId, emoji);
 };
 
-const submitComment = async () => {
-  if (!newComment.value.trim()) return;
-  
+const submitComment = () => {
+  const text = newComment.value.trim();
+  if (!text || props.readOnly) return;
+
   submitting.value = true;
-  
-  try {
-    const comment = {
-      id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      text: newComment.value.trim(),
-      author: 'Current User', // In real app, this would come from auth
-      authorRole: props.currentUserRole || 'designer',
-      timestamp: new Date().toISOString(),
-      version: props.versionId || null,
-      resolved: false,
-      replies: [],
-      reactions: []
-    };
-    
-    emit('comment-added', comment);
-    
-    // Reset form
-    newComment.value = '';
-  } catch (error) {
-    console.error('Failed to add comment:', error);
-  } finally {
-    submitting.value = false;
-  }
+  // The server records the author from the acting user headers.
+  emit('comment-added', {
+    text,
+    version: props.versionId || null,
+    type: 'comment',
+    resolved: false
+  });
+  newComment.value = '';
+  submitting.value = false;
 };
 
 const toggleReply = (commentId) => {
@@ -560,17 +496,10 @@ const cancelReply = () => {
 
 const submitReply = (commentId) => {
   if (props.readOnly) return;
-  if (!replyText.value.trim()) return;
-  
-  const reply = {
-    id: `reply-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    text: replyText.value.trim(),
-    author: 'Current User',
-    authorRole: props.currentUserRole || 'designer',
-    timestamp: new Date().toISOString()
-  };
-  
-  emit('reply-added', commentId, reply);
+  const text = replyText.value.trim();
+  if (!text) return;
+
+  emit('reply-added', commentId, text);
   replyText.value = '';
   replyingTo.value = null;
 };
@@ -578,16 +507,10 @@ const submitReply = (commentId) => {
 const toggleResolved = (commentId) => {
   if (props.readOnly) return;
   
-  // Find the comment
   const comment = props.comments.find(c => c.id === commentId);
   if (!comment) return;
   
-  // Toggle resolved status and emit update
-  const updates = {
-    resolved: !comment.resolved
-  };
-  
-  emit('comment-updated', commentId, updates);
+  emit('comment-updated', commentId, { resolved: !comment.resolved });
 };
 </script>
 

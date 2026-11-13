@@ -13,6 +13,7 @@
       <v-divider />
       
       <v-card-text class="pt-6">
+        <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
         <!-- Add Member Form -->
         <div class="mb-6">
           <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Add Member</h3>
@@ -45,7 +46,7 @@
                   required
                   class="flex-1"
                 />
-                <v-btn color="primary" type="submit" :disabled="!newMemberEmail.trim()" class="align-self-end">
+                <v-btn color="primary" type="submit" :disabled="!newMemberEmail.trim() || busy" :loading="busy" class="align-self-end">
                   Add
                 </v-btn>
               </div>
@@ -56,11 +57,11 @@
         <!-- Members List -->
         <div>
           <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            Members ({{ team?.members?.length || 0 }})
+            Members ({{ members.length }})
           </h3>
-          <v-list v-if="team?.members?.length > 0">
+          <v-list v-if="members.length > 0">
             <v-list-item
-              v-for="member in team.members"
+              v-for="member in members"
               :key="member.email"
               class="px-0"
             >
@@ -89,18 +90,21 @@
               <template #append>
                 <div class="d-flex align-center ga-2">
                   <v-select
-                    v-model="member.role"
+                    :model-value="member.role"
                     :items="roleOptions"
                     variant="outlined"
                     density="compact"
                     hide-details
+                    :disabled="busy"
                     style="min-width: 140px;"
-                    @update:model-value="updateMemberRole(member.email, member.role)"
+                    @update:model-value="updateMemberRole(member.email, $event)"
                   />
                   <v-btn
                     icon="mdi-delete"
                     variant="text"
                     size="small"
+                    :disabled="busy"
+                    :aria-label="`Remove ${member.name || member.email}`"
                     @click="removeMember(member.email)"
                     color="error"
                   />
@@ -118,15 +122,17 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
-import axios from 'axios';
-import { mockAPI, isMockMode } from '../../mockData.js';
+import { ref, computed, watch } from 'vue';
+import { teamsAPI, apiErrorMessage } from '../../services/api.js';
+import { useNotice } from '../../composables/useNotice.js';
+import InlineNotice from '../InlineNotice.vue';
 
 const props = defineProps({
   modelValue: Boolean,
   team: Object
 });
 
+// members-updated: (team) after each change; the dialog stays open
 const emit = defineEmits(['update:modelValue', 'members-updated']);
 
 const dialog = ref(false);
@@ -134,13 +140,20 @@ const newMemberEmail = ref('');
 const newMemberName = ref('');
 const newMemberRole = ref('Designer');
 const roleOptions = ['Designer', 'Art Director'];
+const busy = ref(false);
+// Local copy of the team, replaced by each API response (never mutate the prop)
+const currentTeam = ref(null);
+const members = computed(() => currentTeam.value?.members || []);
+const { notice, showNotice, clearNotice } = useNotice();
 
 watch(() => props.modelValue, (val) => {
   dialog.value = val;
   if (val) {
+    currentTeam.value = props.team ? JSON.parse(JSON.stringify(props.team)) : null;
     newMemberEmail.value = '';
     newMemberName.value = '';
     newMemberRole.value = 'Designer';
+    clearNotice();
   }
 });
 
@@ -153,12 +166,12 @@ const close = () => {
 };
 
 const getInitials = (name) => {
-  if (!name) return '?';
-  const parts = name.split(' ');
+  if (!name || !name.trim()) return '?';
+  const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
-  return name[0].toUpperCase();
+  return parts[0][0].toUpperCase();
 };
 
 const getRoleColor = (role) => {
@@ -168,75 +181,45 @@ const getRoleColor = (role) => {
   return 'indigo';
 };
 
-const updateMemberRole = async (email, newRole) => {
-  if (!props.team) return;
-  
+/** Run a team change, keep the returned team, and report failures inline. */
+const change = async (action, failure, success) => {
+  if (!currentTeam.value || busy.value) return false;
+  busy.value = true;
+  clearNotice();
   try {
-    const useMockMode = await isMockMode();
-    const team = useMockMode 
-      ? (await mockAPI.getTeams()).find(t => t.id === props.team.id)
-      : (await axios.get(`/teams/${props.team.id}`)).data;
-    
-    const member = team.members.find(m => m.email === email);
-    if (member) {
-      member.role = newRole;
-      
-      if (useMockMode) {
-        await mockAPI.updateTeam(props.team.id, { members: team.members });
-      } else {
-        await axios.patch(`/teams/${props.team.id}/members/${encodeURIComponent(email)}`, {
-          role: newRole
-        });
-      }
-      
-      emit('members-updated');
-    }
+    const team = await action(currentTeam.value.id);
+    if (team && team.members) currentTeam.value = team;
+    emit('members-updated', currentTeam.value);
+    if (success) showNotice(success, 'success');
+    return true;
   } catch (error) {
-    console.error('Failed to update member role:', error);
+    console.error(failure, error);
+    showNotice(apiErrorMessage(error, failure), 'error');
+    return false;
+  } finally {
+    busy.value = false;
   }
 };
 
+const updateMemberRole = (email, newRole) =>
+  change((teamId) => teamsAPI.updateMemberRole(teamId, email, newRole), 'Failed to change the role.', 'Role updated.');
+
 const addMember = async () => {
-  if (!newMemberEmail.value.trim() || !props.team) return;
-  
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      await mockAPI.addTeamMember(props.team.id, {
-        email: newMemberEmail.value.trim(),
-        name: newMemberName.value.trim() || null,
-        role: newMemberRole.value || 'Designer'
-      });
-    } else {
-      await axios.post(`/teams/${props.team.id}/members`, {
-        email: newMemberEmail.value.trim(),
-        name: newMemberName.value.trim() || null,
-        role: newMemberRole.value || 'Designer'
-      });
-    }
+  const email = newMemberEmail.value.trim();
+  if (!email) return;
+  const added = await change(
+    (teamId) => teamsAPI.addMember(teamId, email, newMemberName.value.trim() || email, newMemberRole.value || 'Designer'),
+    'Failed to add the member.',
+    'Member added.'
+  );
+  if (added) {
     newMemberEmail.value = '';
     newMemberName.value = '';
     newMemberRole.value = 'Designer';
-    emit('members-updated');
-  } catch (error) {
-    console.error('Failed to add member:', error);
   }
 };
 
-const removeMember = async (email) => {
-  if (!props.team) return;
-  
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      await mockAPI.removeTeamMember(props.team.id, email);
-    } else {
-      await axios.delete(`/teams/${props.team.id}/members/${encodeURIComponent(email)}`);
-    }
-    emit('members-updated');
-  } catch (error) {
-    console.error('Failed to remove member:', error);
-  }
-};
+const removeMember = (email) =>
+  change((teamId) => teamsAPI.removeMember(teamId, email), 'Failed to remove the member.', 'Member removed.');
 </script>
 

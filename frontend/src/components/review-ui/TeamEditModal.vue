@@ -30,9 +30,10 @@
             class="mb-4"
           />
           
+          <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
           <div class="d-flex justify-end ga-2">
             <v-btn variant="text" @click="close">Cancel</v-btn>
-            <v-btn color="primary" type="submit" :disabled="!teamName.trim()">
+            <v-btn color="primary" type="submit" :disabled="!teamName.trim()" :loading="saving">
               Save Changes
             </v-btn>
           </div>
@@ -44,8 +45,9 @@
 
 <script setup>
 import { ref, watch } from 'vue';
-import axios from 'axios';
-import { mockAPI, isMockMode } from '../../mockData.js';
+import { teamsAPI, apiErrorMessage } from '../../services/api.js';
+import { useNotice } from '../../composables/useNotice.js';
+import InlineNotice from '../InlineNotice.vue';
 
 const props = defineProps({
   modelValue: Boolean,
@@ -57,12 +59,15 @@ const emit = defineEmits(['update:modelValue', 'team-updated']);
 const dialog = ref(false);
 const teamName = ref('');
 const teamDescription = ref('');
+const saving = ref(false);
+const { notice, showNotice, clearNotice } = useNotice();
 
 watch(() => props.modelValue, (val) => {
   dialog.value = val;
   if (val && props.team) {
     teamName.value = props.team.name || '';
     teamDescription.value = props.team.description || '';
+    clearNotice();
   }
 });
 
@@ -77,25 +82,21 @@ const close = () => {
 };
 
 const submit = async () => {
-  if (!teamName.value.trim() || !props.team) return;
-  
+  if (!teamName.value.trim() || !props.team || saving.value) return;
+
+  saving.value = true;
   try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      await mockAPI.updateTeam(props.team.id, {
-        name: teamName.value.trim(),
-        description: teamDescription.value.trim()
-      });
-    } else {
-      await axios.patch(`/teams/${props.team.id}`, {
-        name: teamName.value.trim(),
-        description: teamDescription.value.trim()
-      });
-    }
+    await teamsAPI.updateTeam(props.team.id, {
+      name: teamName.value.trim(),
+      description: teamDescription.value.trim()
+    });
     close();
     emit('team-updated');
   } catch (error) {
     console.error('Failed to update team:', error);
+    showNotice(apiErrorMessage(error, 'Failed to update the team.'), 'error');
+  } finally {
+    saving.value = false;
   }
 };
 </script>

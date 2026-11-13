@@ -155,91 +155,34 @@
       </div>
     </div>
     
-    <!-- Hidden UploadPage component for modal access -->
-    <div v-if="mounted && UploadPageComponent" style="display: none;">
-      <component :is="UploadPageComponent" ref="uploadPageRef" />
-    </div>
+    <!-- Request a review -->
+    <RequestReviewDialog v-model="showRequestReview" />
   </div>
 </template>
 
 <script setup>
-import { ref, shallowRef, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import RequestReviewDialog from '../components/review-ui/RequestReviewDialog.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
 import { FolderKanban } from 'lucide-vue-next';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const UploadPageComponent = shallowRef(null);
-const uploadPageRef = ref(null);
-const mounted = ref(false);
+const showRequestReview = ref(false);
 
-
-
-
-
-const openRequestReviewModal = async () => {
-  if (!mounted.value || !UploadPageComponent.value) {
-    console.warn('UploadPage component not loaded yet');
-    return;
-  }
-  
-  // Wait for next tick to ensure component is fully rendered
-  await nextTick();
-  
-  if (uploadPageRef.value && uploadPageRef.value.showUploadDesignModal !== undefined) {
-    uploadPageRef.value.showUploadDesignModal = true;
-  } else {
-    console.warn('UploadPage ref not available or showUploadDesignModal not exposed', {
-      hasRef: !!uploadPageRef.value,
-      refValue: uploadPageRef.value
-    });
-  }
+const openRequestReviewModal = () => {
+  showRequestReview.value = true;
 };
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(async () => {
+onMounted(() => {
   // Auto-open drawer if navigating from sidebar
   if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
     drawerOpen.value = true;
     sessionStorage.removeItem('openDrawerOnLoad');
-  }
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-  
-  try {
-    const module = await import('../components/review-ui/UploadPage.vue');
-    UploadPageComponent.value = module.default;
-    mounted.value = true;
-  } catch (err) {
-    console.error('Error loading UploadPage component:', err);
-  }
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
   }
 });
 </script>

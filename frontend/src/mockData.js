@@ -1,54 +1,31 @@
-// Mock data and API simulation for testing without backend
+// Browser-only demo backend for the review section.
+//
+// Used only when VITE_USE_MOCKS=true. It implements the same operations and
+// response shapes as the real API (docs/REVIEW_API.md), so the review UI has a
+// single code path: services/api.js calls `mockAPI` instead of the network
+// when mock mode is on. Errors are thrown in the same shape axios uses
+// (`error.response.status`, `error.response.data`), so the UI handles both alike.
 
-// Save reviews to localStorage
-const saveReviewsToStorage = (reviews) => {
-  try {
-    localStorage.setItem('mockReviews', JSON.stringify(reviews));
-  } catch (error) {
-    console.error('Failed to save reviews to storage:', error);
-  }
-};
+const STORAGE_KEY = 'mockReviews.v2';
+const DAY = 24 * 60 * 60 * 1000;
+const DEMO_PDF = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
 
-// Load persisted reviews from localStorage and merge with defaults
-const initializeMockReviews = (defaultReviews) => {
-  try {
-    const persisted = localStorage.getItem('mockReviews');
-    if (persisted) {
-      const parsed = JSON.parse(persisted);
-      // Merge persisted data with defaults, keeping defaults for new reviews
-      const merged = defaultReviews.map(defaultReview => {
-        const persistedReview = parsed.find(r => r.id === defaultReview.id);
-        if (persistedReview) {
-          // Merge: keep defaults but override with persisted workflow state and history
-          return {
-            ...defaultReview,
-            workflowState: persistedReview.workflowState,
-            workflowHistory: persistedReview.workflowHistory || defaultReview.workflowHistory,
-            completed: persistedReview.completed !== undefined ? persistedReview.completed : defaultReview.completed,
-            password: persistedReview.password !== undefined ? persistedReview.password : defaultReview.password,
-            expiresAt: persistedReview.expiresAt || defaultReview.expiresAt,
-            extended: persistedReview.extended !== undefined ? persistedReview.extended : defaultReview.extended,
-            sharingMode: persistedReview.sharingMode || defaultReview.sharingMode,
-            approvedEmails: persistedReview.approvedEmails || defaultReview.approvedEmails || [],
-            versions: persistedReview.versions || defaultReview.versions,
-            comments: persistedReview.comments || defaultReview.comments
-          };
-        }
-        return defaultReview;
-      });
-      // Add any persisted reviews that don't exist in defaults (newly created reviews)
-      parsed.forEach(persistedReview => {
-        if (!merged.find(r => r.id === persistedReview.id)) {
-          merged.push(persistedReview);
-        }
-      });
-      return merged;
-    }
-  } catch (error) {
-    console.error('Failed to load persisted reviews:', error);
-  }
-  return defaultReviews;
-};
+/**
+ * Mock mode is on only when the build says so. Synchronous; `await isMockMode()`
+ * still works for callers that treat it as async.
+ */
+export const isMockMode = () => import.meta.env.VITE_USE_MOCKS === 'true';
+
+/** Async wrapper kept for callers that expect a promise. */
+export const isMockModeAsync = async () => isMockMode();
+
+// Mock user context (until real accounts exist, the acting user is self-asserted)
+export const getCurrentUser = () => ({
+  name: localStorage.getItem('currentDesigner') || 'Sarah Johnson',
+  email: localStorage.getItem('currentUserEmail') || 'sarah@example.com',
+  role: localStorage.getItem('userRole') || 'designer', // 'designer', 'client', 'art_director', 'creative_director'
+  teamId: localStorage.getItem('currentUserTeamId') || 'team-1',
+});
 
 const defaultMockReviews = [
   {
@@ -235,887 +212,631 @@ const defaultMockReviews = [
   }
 ];
 
-// Initialize mockReviews with persisted data if available
-let mockReviews = initializeMockReviews(defaultMockReviews);
 
-let mockAdminLinks = [
-  {
-    id: 'admin-1',
-    filename: 'Website Design v2.pdf',
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    extended: false,
-    hasPassword: false,
-    designer: 'Sarah Johnson'
-  },
-  {
-    id: 'admin-2', 
-    filename: 'Mobile App Wireframes.sketch',
-    expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-    extended: false,
-    hasPassword: true,
-    designer: 'Mike Chen'
-  },
-  {
-    id: 'admin-3',
-    filename: 'Brand Guidelines.ai', 
-    expiresAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // Expired
-    extended: true,
-    hasPassword: true,
-    designer: 'Alex Rodriguez'
-  }
-];
+// ---------------------------------------------------------------------------
+// Normalising the seed data to the contract shapes
+// ---------------------------------------------------------------------------
 
-export { mockReviews };
-
-// Mock API functions
-export const mockAPI = {
-  // Upload simulation
-  upload: async (filename, password, bypassClientReview = false, sharingMode = 'anyone', approvedEmails = []) => {
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate upload delay
-    
-    // Determine initial workflow state
-    let initialWorkflowState = 'draft';
-    let workflowHistory = [
-      { stage: 'draft', action: 'uploaded', user: 'Designer', timestamp: new Date().toISOString() }
-    ];
-    
-    if (bypassClientReview) {
-      // Skip client review, go directly to art director review
-      initialWorkflowState = 'art_director_review';
-      workflowHistory = [
-        { stage: 'draft', action: 'uploaded', user: 'Designer', timestamp: new Date().toISOString() },
-        { stage: 'art_director_review', action: 'bypassed_client_review', user: 'Designer', timestamp: new Date().toISOString() }
-      ];
-    }
-    
-    const newReview = {
-      id: `review-${Date.now()}`,
-      filename: filename,
-      password: password || null,
-      designer: 'Designer', // In real app, this would come from auth
-      designerEmail: 'designer@example.com', // In real app, this would come from auth
-      teamId: null, // Will be set when associated with a team
-      workflowState: initialWorkflowState,
-      workflowHistory: workflowHistory,
-      sharingMode: sharingMode, // 'anyone' or 'restricted'
-      approvedEmails: approvedEmails, // Array of email addresses
-      versions: [
-        { 
-          id: 'v1', 
-          label: 'Version 1', 
-          url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' 
-        }
-      ],
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      extended: false,
-      comments: []
-    };
-    
-    mockReviews.push(newReview);
-    mockAdminLinks.push({
-      id: `admin-${newReview.id}`,
-      filename: newReview.filename,
-      expiresAt: newReview.expiresAt,
-      extended: newReview.extended,
-      hasPassword: !!newReview.password,
-      designer: newReview.designer,
-      workflowState: newReview.workflowState
-    });
-    
-    // Save to localStorage
-    saveReviewsToStorage(mockReviews);
-    
-    return { uploadUrl: 'mock://upload', reviewId: newReview.id };
-  },
-
-  // Create review from external URL
-  createReviewFromUrl: async (url, password, bypassClientReview = false, sharingMode = 'anyone', approvedEmails = []) => {
-    await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API delay
-    
-    // Extract filename from URL or use a default
-    const urlParts = url.split('/');
-    const filename = urlParts[urlParts.length - 1] || 'External Design Link';
-    
-    // Determine initial workflow state
-    let initialWorkflowState = 'draft';
-    let workflowHistory = [
-      { stage: 'draft', action: 'created_from_url', user: 'Designer', timestamp: new Date().toISOString() }
-    ];
-    
-    if (bypassClientReview) {
-      // Skip client review, go directly to art director review
-      initialWorkflowState = 'art_director_review';
-      workflowHistory = [
-        { stage: 'draft', action: 'created_from_url', user: 'Designer', timestamp: new Date().toISOString() },
-        { stage: 'art_director_review', action: 'bypassed_client_review', user: 'Designer', timestamp: new Date().toISOString() }
-      ];
-    }
-    
-    const newReview = {
-      id: `review-${Date.now()}`,
-      filename: filename,
-      password: password || null,
-      designer: 'Designer', // In real app, this would come from auth
-      designerEmail: 'designer@example.com', // In real app, this would come from auth
-      teamId: null, // Will be set when associated with a team
-      workflowState: initialWorkflowState,
-      workflowHistory: workflowHistory,
-      sharingMode: sharingMode, // 'anyone' or 'restricted'
-      approvedEmails: approvedEmails, // Array of email addresses
-      versions: [
-        { 
-          id: 'v1', 
-          label: 'External Link', 
-          url: url // Use the provided URL directly
-        }
-      ],
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      extended: false,
-      comments: []
-    };
-    
-    mockReviews.push(newReview);
-    mockAdminLinks.push({
-      id: `admin-${newReview.id}`,
-      filename: newReview.filename,
-      expiresAt: newReview.expiresAt,
-      extended: newReview.extended,
-      hasPassword: !!newReview.password,
-      designer: newReview.designer,
-      workflowState: newReview.workflowState
-    });
-    
-    // Save to localStorage
-    saveReviewsToStorage(mockReviews);
-    
-    return { reviewId: newReview.id };
-  },
-
-  // Get review data
-  getReview: async (reviewId, password = null) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (!review) {
-      throw new Error('Review not found');
-    }
-    
-    if (review.password && review.password !== password) {
-      const error = new Error('Unauthorized');
-      error.response = { status: 401 };
-      throw error;
-    }
-    
-    // Return a deep copy to ensure reactivity works properly
-    return JSON.parse(JSON.stringify(review));
-  },
-
-  // Get version URL
-  getVersion: async (reviewId, versionId) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (!review) {
-      throw new Error('Review not found');
-    }
-    
-    const version = review.versions.find(v => v.id === versionId);
-    if (!version) {
-      throw new Error('Version not found');
-    }
-    
-    return { url: version.url };
-  },
-
-  // Admin functions
-  getAdminLinks: async (showExpired = false) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    let links = showExpired ? mockAdminLinks : mockAdminLinks.filter(link => {
-      const now = new Date();
-      return new Date(link.expiresAt) > now;
-    });
-    
-    // Ensure password info and designer info are synced from reviews
-    return links.map(link => {
-      const review = mockReviews.find(r => r.filename === link.filename);
-      return {
-        ...link,
-        hasPassword: review ? !!review.password : link.hasPassword || false,
-        designer: review ? review.designer : link.designer || 'Unknown'
-      };
-    });
-  },
-
-  extendLink: async (id) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const link = mockAdminLinks.find(l => l.id === id);
-    if (link) {
-      link.extended = true;
-      link.expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      
-      // Find corresponding review and add history entry
-      const review = mockReviews.find(r => r.filename === link.filename);
-      if (review) {
-        if (!review.workflowHistory) {
-          review.workflowHistory = [];
-        }
-        review.workflowHistory.push({
-          stage: review.workflowState || 'draft',
-          action: 'extended',
-          user: 'Admin', // In real app, this would come from auth
-          timestamp: new Date().toISOString(),
-          days: 7
-        });
-      }
-    }
-  },
-
-  overrideLink: async (id, days) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const link = mockAdminLinks.find(l => l.id === id);
-    if (link) {
-      link.expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-      
-      // Find corresponding review and add history entry
-      const review = mockReviews.find(r => r.filename === link.filename);
-      if (review) {
-        if (!review.workflowHistory) {
-          review.workflowHistory = [];
-        }
-        review.workflowHistory.push({
-          stage: review.workflowState || 'draft',
-          action: 'extended',
-          user: 'Admin', // In real app, this would come from auth
-          timestamp: new Date().toISOString(),
-          days: 7
-        });
-      }
-    }
-  },
-
-  deleteLink: async (id) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const linkIndex = mockAdminLinks.findIndex(l => l.id === id);
-    if (linkIndex !== -1) {
-      mockAdminLinks.splice(linkIndex, 1);
-    }
-  },
-
-  batchDelete: async (ids) => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    mockAdminLinks = mockAdminLinks.filter(link => !ids.includes(link.id));
-  },
-
-  resetPassword: async (id, newPassword) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Find the corresponding review by admin link ID
-    const adminLink = mockAdminLinks.find(l => l.id === id);
-    if (adminLink) {
-      const review = mockReviews.find(r => r.filename === adminLink.filename);
-      if (review) {
-        const hadPassword = !!review.password;
-        const hasPassword = !!newPassword;
-        
-        // Add history entry before changing password (to track the change)
-        if (review.password !== newPassword) {
-          if (!review.workflowHistory) {
-            review.workflowHistory = [];
-          }
-          review.workflowHistory.push({
-            stage: review.workflowState || 'draft',
-            action: hasPassword ? 'password_set' : 'password_removed',
-            user: 'Admin', // In real app, this would come from auth
-            timestamp: new Date().toISOString()
-          });
-        }
-        
-        review.password = newPassword || null;
-        adminLink.hasPassword = !!newPassword;
-      }
-    }
-  },
-
-  // Comment functions
-  getComments: async (reviewId, versionId = null) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (!review || !review.comments) {
-      return [];
-    }
-    
-    // Return all comments for the review
-    // Comments are tagged with version but shown for all versions
-    return review.comments || [];
-  },
-
-  addComment: async (reviewId, comment) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (review) {
-      if (!review.comments) {
-        review.comments = [];
-      }
-      // Ensure comment has all required fields
-      const newComment = {
-        ...comment,
-        id: comment.id || `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        timestamp: comment.timestamp || new Date().toISOString(),
-        resolved: comment.resolved !== undefined ? comment.resolved : false,
-        replies: comment.replies || [],
-        reactions: comment.reactions || []
-      };
-      review.comments.push(newComment);
-      return newComment;
-    }
-    
-    return comment;
-  },
-
-  addReply: async (reviewId, commentId, reply) => {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (review && review.comments) {
-      const comment = review.comments.find(c => c.id === commentId);
-      if (comment) {
-        if (!comment.replies) {
-          comment.replies = [];
-        }
-        comment.replies.push(reply);
-      }
-    }
-    
-    return reply;
-  },
-
-  updateComment: async (reviewId, commentId, updates) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (review && review.comments) {
-      const comment = review.comments.find(c => c.id === commentId);
-      if (comment) {
-        Object.assign(comment, updates);
-      }
-    }
-  },
-
-  toggleEmojiReaction: async (reviewId, commentId, emoji) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (review && review.comments) {
-      const comment = review.comments.find(c => c.id === commentId);
-      if (comment) {
-        if (!comment.reactions) {
-          comment.reactions = [];
-        }
-        
-        const currentUser = 'Current User'; // In real app, this would come from auth
-        // Find existing reaction by this user with this emoji
-        const existingIndex = comment.reactions.findIndex(r => 
-          (r.user === currentUser || r.userEmail === currentUser) && 
-          (r.emoji || '👍') === emoji
-        );
-        
-        if (existingIndex >= 0) {
-          // Remove reaction (unreact) - toggle off this specific emoji
-          comment.reactions.splice(existingIndex, 1);
-        } else {
-          // Add new emoji reaction (users can have multiple emoji reactions)
-          comment.reactions.push({
-            user: currentUser,
-            emoji: emoji,
-            timestamp: new Date().toISOString()
-          });
-        }
-      }
-    }
-  },
-
-  toggleEmojiReactionOnReply: async (reviewId, commentId, replyId, emoji) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (review && review.comments) {
-      const comment = review.comments.find(c => c.id === commentId);
-      if (comment && comment.replies) {
-        const reply = comment.replies.find(r => r.id === replyId);
-        if (reply) {
-          if (!reply.reactions) {
-            reply.reactions = [];
-          }
-          
-          const currentUser = 'Current User'; // In real app, this would come from auth
-          // Find existing reaction by this user with this emoji
-          const existingIndex = reply.reactions.findIndex(r => 
-            (r.user === currentUser || r.userEmail === currentUser) && 
-            (r.emoji || '👍') === emoji
-          );
-          
-          if (existingIndex >= 0) {
-            // Remove reaction (unreact) - toggle off this specific emoji
-            reply.reactions.splice(existingIndex, 1);
-          } else {
-            // Add new emoji reaction (users can have multiple emoji reactions)
-            reply.reactions.push({
-              user: currentUser,
-              emoji: emoji,
-              timestamp: new Date().toISOString()
-            });
-          }
-        }
-      }
-    }
-  },
-
-  // Workflow approval methods
-  moveToClientReview: async (reviewId) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (review) {
-      review.workflowState = 'client_review';
-      review.workflowHistory.push({
-        stage: 'client_review',
-        action: 'moved_to_review',
-        user: review.designer || 'Designer',
-        timestamp: new Date().toISOString()
-      });
-      
-      // Update admin link
-      const adminLink = mockAdminLinks.find(l => l.id === `admin-${reviewId}`);
-      if (adminLink) {
-        adminLink.workflowState = 'client_review';
-      }
-      
-      // Save to localStorage
-      saveReviewsToStorage(mockReviews);
-    }
-  },
-
-  approveWorkflowStage: async (reviewId, stage, user) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (!review) {
-      throw new Error('Review not found');
-    }
-    
-    // Define the workflow progression
-    const workflowFlow = {
-      'client_review': 'client_approved', // Client approves -> moves to client_approved only
-      'art_director_review': 'art_director_approved', // Art director approves -> moves to art_director_approved, then auto to creative_director_review
-      'creative_director_review': 'approved' // Creative director approves -> final approval
-    };
-    
-    // Check if current state matches the stage being approved
-    if (review.workflowState === stage) {
-      const nextStage = workflowFlow[stage];
-      if (nextStage) {
-        // Add approval history entry first
-        if (!review.workflowHistory) {
-          review.workflowHistory = [];
-        }
-        review.workflowHistory.push({
-          stage: nextStage,
-          action: 'approved',
-          user: user?.name || user || 'Current User',
-          timestamp: new Date().toISOString()
-        });
-        
-        // Update workflow state
-        review.workflowState = nextStage;
-        
-        // Auto-advance only for art_director_approved -> creative_director_review
-        if (nextStage === 'art_director_approved') {
-          // Add a small delay to ensure state is updated
-          await new Promise(resolve => setTimeout(resolve, 50));
-          review.workflowState = 'creative_director_review';
-          review.workflowHistory.push({
-            stage: 'creative_director_review',
-            action: 'moved_to_review',
-            user: 'System',
-            timestamp: new Date().toISOString()
-          });
-        }
-        
-        // Update admin link if it exists
-        const adminLink = mockAdminLinks.find(l => l.id === `admin-${reviewId}`);
-        if (adminLink) {
-          adminLink.workflowState = review.workflowState;
-        }
-        
-        // Save to localStorage
-        saveReviewsToStorage(mockReviews);
-        
-        return JSON.parse(JSON.stringify(review)); // Return updated review
-      }
-    }
-    
-    throw new Error('Invalid workflow stage for approval');
-  },
-
-  rejectWorkflowStage: async (reviewId, stage, user, reason) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (!review) return;
-    
-    // Handle rejection based on stage
-    if (stage === 'art_director_review') {
-      // Art Director rejection -> AD Changes Requested
-      review.workflowState = 'ad_changes_requested';
-      review.workflowHistory.push({
-        stage: 'ad_changes_requested',
-        action: 'rejected',
-        user: user || 'Art Director',
-        reason: reason || '',
-        timestamp: new Date().toISOString()
-      });
-    } else if (stage === 'creative_director_review') {
-      // Creative Director rejection -> CD Changes Requested
-      review.workflowState = 'cd_changes_requested';
-      review.workflowHistory.push({
-        stage: 'cd_changes_requested',
-        action: 'rejected',
-        user: user || 'Creative Director',
-        reason: reason || '',
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      // Client rejection -> back to client review
-      review.workflowState = 'client_review';
-      review.workflowHistory.push({
-        stage: 'client_review',
-        action: 'rejected',
-        user: user || 'Current User',
-        reason: reason || '',
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    // Update admin link
-    const adminLink = mockAdminLinks.find(l => l.id === `admin-${reviewId}`);
-    if (adminLink) {
-      adminLink.workflowState = review.workflowState;
-    }
-    
-    // Save to localStorage
-    saveReviewsToStorage(mockReviews);
-    
-    return JSON.parse(JSON.stringify(review));
-  },
-  
-  // Move from changes requested back to review
-  // Move from client approved to art director review (designer requests)
-  moveToArtDirectorReview: async (reviewId) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (review && review.workflowState === 'client_approved') {
-      review.workflowState = 'art_director_review';
-      review.workflowHistory.push({
-        stage: 'art_director_review',
-        action: 'moved_to_review',
-        user: review.designer || 'Designer',
-        timestamp: new Date().toISOString()
-      });
-      
-      // Update admin link
-      const adminLink = mockAdminLinks.find(l => l.id === `admin-${reviewId}`);
-      if (adminLink) {
-        adminLink.workflowState = 'art_director_review';
-      }
-      
-      // Save to localStorage
-      saveReviewsToStorage(mockReviews);
-    }
-  },
-
-  resubmitForReview: async (reviewId, targetStage) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (!review) return;
-    
-    if (review.workflowState === 'ad_changes_requested') {
-      review.workflowState = 'art_director_review';
-      review.workflowHistory.push({
-        stage: 'art_director_review',
-        action: 'resubmitted',
-        user: review.designer || 'Designer',
-        timestamp: new Date().toISOString()
-      });
-    } else if (review.workflowState === 'cd_changes_requested') {
-      review.workflowState = 'creative_director_review';
-      review.workflowHistory.push({
-        stage: 'creative_director_review',
-        action: 'resubmitted',
-        user: review.designer || 'Designer',
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    // Update admin link
-    const adminLink = mockAdminLinks.find(l => l.id === `admin-${reviewId}`);
-    if (adminLink) {
-      adminLink.workflowState = review.workflowState;
-    }
-    
-    // Save to localStorage
-    saveReviewsToStorage(mockReviews);
-    
-    return JSON.parse(JSON.stringify(review));
-  },
-
-  // Version upload functions
-  uploadVersion: async (reviewId, filename, label, notes, type) => {
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate upload time
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (!review) {
-      throw new Error('Review not found');
-    }
-    
-    // Generate new version ID
-    const versionNumber = review.versions.length + 1;
-    const newVersion = {
-      id: `v${versionNumber}`,
-      label: label,
-      url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', // Mock URL
-      filename: filename,
-      notes: notes,
-      type: type,
-      uploadedAt: new Date().toISOString(),
-      uploadedBy: 'Designer' // In real app, this would come from auth
-    };
-    
-    review.versions.push(newVersion);
-    
-    // Add history entry for version upload
-    if (!review.workflowHistory) {
-      review.workflowHistory = [];
-    }
-    review.workflowHistory.push({
-      stage: review.workflowState || 'draft',
-      action: 'version_uploaded',
-      user: review.designer || 'Designer',
-      versionLabel: label,
-      timestamp: new Date().toISOString()
-    });
-    
-    // Save to localStorage
-    saveReviewsToStorage(mockReviews);
-    
-    return newVersion;
-  },
-
-  // Mark review as completed and deactivate the link
-  markReviewCompleted: async (reviewId, user) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const review = mockReviews.find(r => r.id === reviewId);
-    if (!review) {
-      throw new Error('Review not found');
-    }
-    
-    // Mark as completed
-    review.completed = true;
-    
-    // Deactivate the review link by setting expiresAt to current time (making it expired)
-    review.expiresAt = new Date().toISOString();
-    
-    // Add history entry
-    if (!review.workflowHistory) {
-      review.workflowHistory = [];
-    }
-    review.workflowHistory.push({
-      stage: review.workflowState || 'approved',
-      action: 'completed',
-      user: user?.name || user || 'Designer',
-      timestamp: new Date().toISOString()
-    });
-    
-    // Update corresponding admin link to expire it
-    const adminLink = mockAdminLinks.find(l => l.id === `admin-${reviewId}`);
-    if (adminLink) {
-      adminLink.expiresAt = new Date().toISOString(); // Set to current time to expire it
-    }
-    
-    // Save to localStorage
-    saveReviewsToStorage(mockReviews);
-    
-    return JSON.parse(JSON.stringify(review));
-  }
+const nameToEmail = (name) => {
+  const known = {
+    'Sarah Johnson': 'sarah@example.com',
+    'Mike Chen': 'mike@example.com',
+    'Alex Rodriguez': 'alex@example.com',
+    'Jennifer Walsh': 'jennifer@example.com',
+  };
+  return known[name] || `${String(name || 'user').toLowerCase().replace(/[^a-z0-9]+/g, '.')}@example.com`;
 };
 
-// Mock user context (in real app, this would come from auth)
-export const getCurrentUser = () => {
+/** Legacy `[{ user, emoji }]` reactions to the contract's `{ [emoji]: [email] }`. */
+const normalizeReactions = (reactions) => {
+  if (!reactions) return {};
+  if (!Array.isArray(reactions)) return { ...reactions };
+  const map = {};
+  reactions.forEach((r) => {
+    const emoji = r.emoji || '👍';
+    const email = r.userEmail || nameToEmail(r.user);
+    map[emoji] = map[emoji] || [];
+    if (!map[emoji].includes(email)) map[emoji].push(email);
+  });
+  return map;
+};
+
+const LEGACY_STATES = { ad_changes_requested: 'draft', cd_changes_requested: 'draft', art_director_approved: 'creative_director_review' };
+
+const normalizeReview = (review) => {
+  const createdAt = review.createdAt || review.workflowHistory?.[0]?.timestamp || new Date().toISOString();
   return {
-    name: localStorage.getItem('currentDesigner') || 'Sarah Johnson',
-    email: localStorage.getItem('currentUserEmail') || 'sarah@example.com',
-    role: localStorage.getItem('userRole') || 'designer', // 'designer', 'art_director', 'creative_director'
-    teamId: localStorage.getItem('currentUserTeamId') || 'team-1' // For art directors
+    sourceType: 'upload',
+    teamId: null,
+    completed: false,
+    bypassClientReview: false,
+    sharingMode: 'anyone',
+    approvedEmails: [],
+    extended: false,
+    ...review,
+    // Only the private `password` field is kept in the mock store; responses get `hasPassword`.
+    password: review.password || null,
+    workflowState: LEGACY_STATES[review.workflowState] || review.workflowState || 'draft',
+    sharingMode: review.sharingMode === 'restricted' ? 'approved_emails' : (review.sharingMode || 'anyone'),
+    designerEmail: review.designerEmail || nameToEmail(review.designer),
+    workflowHistory: review.workflowHistory || [],
+    versions: (review.versions || []).map((v) => ({
+      type: 'file',
+      notes: '',
+      filename: review.filename,
+      contentType: 'application/pdf',
+      size: null,
+      uploadedAt: createdAt,
+      uploadedBy: review.designer || 'Designer',
+      ...v,
+    })),
+    comments: (review.comments || []).map((c) => ({
+      authorEmail: c.authorEmail || nameToEmail(c.author),
+      ...c,
+      reactions: normalizeReactions(c.reactions),
+      replies: (c.replies || []).map((r) => ({
+        authorEmail: r.authorEmail || nameToEmail(r.author),
+        ...r,
+        reactions: normalizeReactions(r.reactions),
+      })),
+    })),
+    createdAt,
+    updatedAt: review.updatedAt || createdAt,
   };
 };
 
-// Get filtered reviews based on user role
-export const getFilteredReviews = (userRole, userEmail, userTeamId) => {
-  if (userRole === 'creative_director') {
-    // Creative Director sees all reviews across all teams
-    return mockReviews;
-  } else if (userRole === 'art_director') {
-    // Art Director sees all reviews in their team
-    return mockReviews.filter(review => review.teamId === userTeamId);
-  } else if (userRole === 'designer') {
-    // Designer sees only their own reviews
-    return mockReviews.filter(review => review.designerEmail === userEmail || review.designer === localStorage.getItem('currentDesigner'));
+const loadReviews = () => {
+  try {
+    const persisted = localStorage.getItem(STORAGE_KEY);
+    if (persisted) return JSON.parse(persisted).map(normalizeReview);
+  } catch (error) {
+    console.error('Failed to load demo reviews:', error);
   }
-  // Default: return all (for clients/admins)
+  return defaultMockReviews.map(normalizeReview);
+};
+
+const mockReviews = loadReviews();
+
+const save = () => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(mockReviews));
+  } catch (error) {
+    console.error('Failed to save demo reviews:', error);
+  }
+};
+
+export { mockReviews };
+
+// Get filtered reviews based on user role (demo-mode scoping; the server scopes real lists)
+export const getFilteredReviews = (userRole, userEmail, userTeamId) => {
+  if (userRole === 'creative_director') return mockReviews;
+  if (userRole === 'art_director') return mockReviews.filter((r) => r.teamId === userTeamId);
+  if (userRole === 'designer') return mockReviews.filter((r) => r.designerEmail === userEmail);
   return mockReviews;
 };
 
-// Mock teams data
-let mockTeams = [
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const delay = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms));
+const clone = (value) => JSON.parse(JSON.stringify(value));
+const newId = (prefix) => `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+const now = () => new Date().toISOString();
+
+const httpError = (status, message, extra = {}) => {
+  const error = new Error(message);
+  error.response = { status, data: { statusCode: status, message, ...extra } };
+  return error;
+};
+
+const isExpired = (review) => review.expiresAt && new Date(review.expiresAt) < new Date();
+
+const toReview = (review) => {
+  const { password, ...rest } = clone(review);
+  return { ...rest, hasPassword: !!password };
+};
+
+const toSummary = (review) => {
+  const { comments, workflowHistory, ...rest } = toReview(review);
+  // Same rule as the API: the last workflow action (ignoring uploads and extensions) was a rejection
+  const last = [...(workflowHistory || [])]
+    .reverse()
+    .find((entry) => !['version_uploaded', 'extended', 'reactivated'].includes(entry.action));
+  return { ...rest, changesRequested: last?.action === 'rejected' };
+};
+
+const actingUser = () => getCurrentUser();
+
+const history = (review, action, extra = {}) => {
+  review.workflowHistory.push({
+    stage: review.workflowState,
+    action,
+    user: actingUser().name,
+    timestamp: now(),
+    ...extra,
+  });
+  review.updatedAt = now();
+};
+
+const findReview = (id, { allowExpired = false, password, checkPassword = false } = {}) => {
+  const review = mockReviews.find((r) => r.id === id);
+  if (!review) throw httpError(404, 'Review not found');
+  if (!allowExpired && isExpired(review)) {
+    throw review.completed
+      ? httpError(410, 'This review has been completed', { reason: 'completed' })
+      : httpError(410, 'This review link has expired', { reason: 'expired' });
+  }
+  if (checkPassword && review.password && review.password !== password) {
+    throw httpError(401, 'Password required', { passwordRequired: true });
+  }
+  return review;
+};
+
+const findComment = (review, commentId) => {
+  const comment = review.comments.find((c) => c.id === commentId);
+  if (!comment) throw httpError(404, 'Comment not found');
+  return comment;
+};
+
+const toggleReaction = (target, emoji) => {
+  const email = actingUser().email;
+  target.reactions = normalizeReactions(target.reactions);
+  const list = target.reactions[emoji] || [];
+  if (list.includes(email)) {
+    target.reactions[emoji] = list.filter((e) => e !== email);
+    if (!target.reactions[emoji].length) delete target.reactions[emoji];
+  } else {
+    target.reactions[emoji] = [...list, email];
+  }
+};
+
+const transition = (review, from, to, action, extra) => {
+  const allowed = Array.isArray(from) ? from : [from];
+  if (!allowed.includes(review.workflowState)) {
+    throw httpError(409, `Cannot ${action.replace(/_/g, ' ')} from ${review.workflowState}`);
+  }
+  review.workflowState = to;
+  history(review, action, extra);
+};
+
+const createReview = ({ filename, password, bypassClientReview = false, sharingMode = 'anyone', approvedEmails = [], teamId = null, sourceType, url }) => {
+  const user = actingUser();
+  const review = normalizeReview({
+    id: newId('rev'),
+    filename,
+    sourceType,
+    url: sourceType === 'url' ? url : undefined,
+    password: password || null,
+    designer: user.name,
+    designerEmail: user.email,
+    teamId,
+    bypassClientReview,
+    sharingMode,
+    approvedEmails,
+    versions: [],
+    comments: [],
+    workflowState: 'draft',
+    workflowHistory: [{ stage: 'draft', action: sourceType === 'url' ? 'created_from_url' : 'uploaded', user: user.name, timestamp: now() }],
+    expiresAt: new Date(Date.now() + 30 * DAY).toISOString(),
+    createdAt: now(),
+  });
+  mockReviews.push(review);
+  return review;
+};
+
+const addVersion = (review, { filename, label, notes = '', type = 'file', contentType = 'application/pdf', size = null }) => {
+  const version = {
+    id: `v${review.versions.length + 1}`,
+    label: label || `Version ${review.versions.length + 1}`,
+    notes,
+    type,
+    filename,
+    contentType,
+    size,
+    uploadedAt: now(),
+    uploadedBy: actingUser().name,
+    url: DEMO_PDF, // demo only: every uploaded file previews as the same sample PDF
+  };
+  review.versions.push(version);
+  return version;
+};
+
+const pendingUploads = new Map();
+
+// ---------------------------------------------------------------------------
+// Mock teams
+// ---------------------------------------------------------------------------
+
+const mockTeams = [
   {
     id: 'team-1',
     name: 'Design Team Alpha',
     description: 'Main design team for client projects',
     members: [
       { email: 'sarah@example.com', name: 'Sarah Johnson', role: 'Designer' },
-      { email: 'mike@example.com', name: 'Mike Chen', role: 'Designer' }
+      { email: 'mike@example.com', name: 'Mike Chen', role: 'Designer' },
     ],
-    reviews: []
+    createdAt: new Date(Date.now() - 60 * DAY).toISOString(),
+    updatedAt: new Date(Date.now() - 60 * DAY).toISOString(),
   },
   {
     id: 'team-2',
     name: 'Brand Guidelines Team',
     description: 'Team responsible for brand consistency',
-    members: [
-      { email: 'alex@example.com', name: 'Alex Rodriguez', role: 'Designer' }
-    ],
-    reviews: []
-  }
+    members: [{ email: 'alex@example.com', name: 'Alex Rodriguez', role: 'Designer' }],
+    createdAt: new Date(Date.now() - 45 * DAY).toISOString(),
+    updatedAt: new Date(Date.now() - 45 * DAY).toISOString(),
+  },
 ];
 
-// Teams API methods
-export const teamsAPI = {
-  getTeams: async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockTeams;
+const findTeam = (teamId) => {
+  const team = mockTeams.find((t) => t.id === teamId);
+  if (!team) throw httpError(404, 'Team not found');
+  return team;
+};
+
+// ---------------------------------------------------------------------------
+// Mock API: one method per contract route (see docs/REVIEW_API.md)
+// ---------------------------------------------------------------------------
+
+export const mockAPI = {
+  // Reviews
+  async listReviews({ workflowState, q, showExpired = false } = {}) {
+    await delay();
+    const query = (q || '').trim().toLowerCase();
+    const reviews = mockReviews
+      .filter((r) => showExpired || !isExpired(r))
+      .filter((r) => !workflowState || r.workflowState === workflowState)
+      .filter((r) => !query || r.filename.toLowerCase().includes(query) || (r.designer || '').toLowerCase().includes(query))
+      .map(toSummary);
+    return { reviews, total: reviews.length };
   },
 
-  createTeam: async (name, description = '') => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    const newTeam = {
-      id: `team-${Date.now()}`,
-      name: name,
-      description: description,
-      members: [],
-      reviews: []
+  async getReview(reviewId, password = null) {
+    await delay();
+    return toReview(findReview(reviewId, { password, checkPassword: true }));
+  },
+
+  async getVersionUrl(reviewId, versionId, password = null) {
+    await delay(150);
+    const review = findReview(reviewId, { password, checkPassword: true });
+    const version = review.versions.find((v) => v.id === versionId);
+    if (!version) throw httpError(404, 'Version not found');
+    return version.url || DEMO_PDF;
+  },
+
+  async completeReview(reviewId) {
+    await delay();
+    const review = findReview(reviewId);
+    review.completed = true;
+    // Completing expires the link immediately, as on the server
+    review.expiresAt = now();
+    history(review, 'completed');
+    save();
+    return toReview(review);
+  },
+
+  async updateSharing(reviewId, sharingMode, approvedEmails = []) {
+    await delay();
+    const review = findReview(reviewId);
+    review.sharingMode = sharingMode;
+    review.approvedEmails = sharingMode === 'approved_emails' ? approvedEmails : [];
+    history(review, 'sharing_changed');
+    save();
+    return toReview(review);
+  },
+
+  async updatePassword(reviewId, password) {
+    await delay();
+    const review = findReview(reviewId);
+    review.password = password || null;
+    history(review, password ? 'password_set' : 'password_removed');
+    save();
+    return { hasPassword: !!review.password };
+  },
+
+  async extendExpiration(reviewId, days = 30) {
+    await delay();
+    if (!(days >= 1 && days <= 90)) throw httpError(400, 'days must be between 1 and 90');
+    const review = findReview(reviewId);
+    const base = Math.max(Date.now(), new Date(review.expiresAt).getTime());
+    review.expiresAt = new Date(base + days * DAY).toISOString();
+    review.extended = true;
+    history(review, 'extended', { days });
+    save();
+    return toReview(review);
+  },
+
+  // Creating reviews
+  async createUpload({ filename, password, bypassClientReview, sharingMode, approvedEmails, teamId } = {}) {
+    await delay();
+    if (!filename) throw httpError(400, 'filename is required');
+    const review = createReview({ filename, password, bypassClientReview, sharingMode, approvedEmails, teamId, sourceType: 'upload' });
+    const token = newId('tok');
+    pendingUploads.set(token, review.id);
+    save();
+    return { reviewId: review.id, uploadUrl: `mock://upload/${review.id}/${token}` };
+  },
+
+  async putUpload(uploadUrl, file) {
+    await delay(600);
+    const token = uploadUrl.split('/').pop();
+    const reviewId = pendingUploads.get(token);
+    if (!reviewId) throw httpError(403, 'Upload link is invalid or already used');
+    pendingUploads.delete(token);
+    const review = findReview(reviewId);
+    const version = addVersion(review, { filename: file?.name || review.filename, label: 'Version 1', contentType: file?.type, size: file?.size });
+    save();
+    return { success: true, versionId: version.id };
+  },
+
+  async createFromUrl({ url, filename, password, bypassClientReview, sharingMode, approvedEmails, teamId } = {}) {
+    await delay();
+    if (!/^https?:\/\//i.test(url || '')) throw httpError(400, 'url must be an http(s) URL');
+    const name = filename || url.split('/').filter(Boolean).pop() || 'External Design Link';
+    const review = createReview({ filename: name, password, bypassClientReview, sharingMode, approvedEmails, teamId, sourceType: 'url', url });
+    save();
+    return { reviewId: review.id, review: toReview(review) };
+  },
+
+  // Versions
+  async uploadVersion(reviewId, file, label, notes, type) {
+    await delay(800);
+    const review = findReview(reviewId);
+    const version = addVersion(review, { filename: file?.name, label, notes, type, contentType: file?.type, size: file?.size });
+    history(review, 'version_uploaded', { versionLabel: version.label });
+    save();
+    return clone(version);
+  },
+
+  // Workflow
+  async moveToClientReview(reviewId) {
+    await delay();
+    const review = findReview(reviewId);
+    if (review.bypassClientReview) throw httpError(409, 'This review bypasses client review');
+    transition(review, 'draft', 'client_review', 'moved_to_review');
+    save();
+    return toReview(review);
+  },
+
+  async moveToArtDirectorReview(reviewId) {
+    await delay();
+    const review = findReview(reviewId);
+    const from = review.bypassClientReview ? ['client_approved', 'draft'] : 'client_approved';
+    transition(review, from, 'art_director_review', 'moved_to_review');
+    save();
+    return toReview(review);
+  },
+
+  async approve(reviewId, stage) {
+    await delay();
+    const review = findReview(reviewId);
+    const next = { client_review: 'client_approved', art_director_review: 'creative_director_review', creative_director_review: 'approved' };
+    if (stage !== review.workflowState || !next[stage]) throw httpError(409, `Cannot approve from ${review.workflowState}`);
+    transition(review, stage, next[stage], 'approved');
+    save();
+    return toReview(review);
+  },
+
+  async reject(reviewId, stage, reason = null) {
+    await delay();
+    const review = findReview(reviewId);
+    const reviewStages = ['client_review', 'art_director_review', 'creative_director_review'];
+    if (stage !== review.workflowState || !reviewStages.includes(stage)) throw httpError(409, `Cannot reject from ${review.workflowState}`);
+    // Back to draft, recorded as the server does
+    transition(review, stage, 'draft', 'rejected', { reason: reason || '' });
+    save();
+    return toReview(review);
+  },
+
+  async resubmit(reviewId, targetStage) {
+    await delay();
+    const review = findReview(reviewId);
+    const targets = ['client_review', 'art_director_review', 'creative_director_review'];
+    if (!targets.includes(targetStage)) throw httpError(400, 'Invalid targetStage');
+    transition(review, 'draft', targetStage, 'resubmitted');
+    save();
+    return toReview(review);
+  },
+
+  // Comments
+  async getComments(reviewId, versionId = null) {
+    await delay(150);
+    const review = findReview(reviewId);
+    return clone(review.comments.filter((c) => !versionId || c.version === versionId));
+  },
+
+  async addComment(reviewId, { text, version, type, resolved = false, annotationId, annotationData } = {}) {
+    await delay(200);
+    const review = findReview(reviewId);
+    const user = actingUser();
+    const comment = {
+      id: newId('cmt'),
+      text,
+      author: user.name,
+      authorEmail: user.email,
+      version,
+      type,
+      resolved,
+      ...(annotationId ? { annotationId } : {}),
+      ...(annotationData ? { annotationData } : {}),
+      replies: [],
+      reactions: {},
+      timestamp: now(),
     };
-    mockTeams.push(newTeam);
-    return newTeam;
+    review.comments.push(comment);
+    save();
+    return clone(comment);
   },
 
-  updateTeam: async (teamId, updates) => {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    const team = mockTeams.find(t => t.id === teamId);
-    if (!team) {
-      throw new Error('Team not found');
-    }
-    Object.assign(team, updates);
-    return team;
+  async updateComment(reviewId, commentId, updates = {}) {
+    await delay(150);
+    const comment = findComment(findReview(reviewId), commentId);
+    ['text', 'resolved', 'annotationData'].forEach((key) => {
+      if (updates[key] !== undefined) comment[key] = updates[key];
+    });
+    save();
+    return clone(comment);
   },
 
-  deleteTeam: async (teamId) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const index = mockTeams.findIndex(t => t.id === teamId);
-    if (index === -1) {
-      throw new Error('Team not found');
-    }
+  async deleteComment(reviewId, commentId) {
+    await delay(150);
+    const review = findReview(reviewId);
+    findComment(review, commentId);
+    review.comments = review.comments.filter((c) => c.id !== commentId);
+    save();
+  },
+
+  async addReply(reviewId, commentId, text) {
+    await delay(200);
+    const comment = findComment(findReview(reviewId), commentId);
+    const user = actingUser();
+    const reply = { id: newId('rpl'), text, author: user.name, authorEmail: user.email, timestamp: now(), reactions: {} };
+    comment.replies.push(reply);
+    save();
+    return clone(reply);
+  },
+
+  async toggleReaction(reviewId, commentId, emoji) {
+    await delay(100);
+    const comment = findComment(findReview(reviewId), commentId);
+    toggleReaction(comment, emoji);
+    save();
+    return clone(comment);
+  },
+
+  async toggleReplyReaction(reviewId, commentId, replyId, emoji) {
+    await delay(100);
+    const comment = findComment(findReview(reviewId), commentId);
+    const reply = comment.replies.find((r) => r.id === replyId);
+    if (!reply) throw httpError(404, 'Reply not found');
+    toggleReaction(reply, emoji);
+    save();
+    return clone(comment);
+  },
+
+  // Admin (no admin key needed in demo mode)
+  async adminListReviews(showExpired = false) {
+    await delay();
+    return mockReviews.filter((r) => showExpired || !isExpired(r)).map(toSummary);
+  },
+
+  async adminExtend(reviewId, days = 7) {
+    await delay();
+    if (!(days >= 1 && days <= 365)) throw httpError(400, 'days must be between 1 and 365');
+    const review = findReview(reviewId, { allowExpired: true });
+    const base = Math.max(Date.now(), new Date(review.expiresAt).getTime());
+    review.expiresAt = new Date(base + days * DAY).toISOString();
+    review.extended = true;
+    history(review, 'extended', { days });
+    save();
+    return toReview(review);
+  },
+
+  async adminReactivate(reviewId) {
+    await delay();
+    const review = findReview(reviewId, { allowExpired: true });
+    review.expiresAt = new Date(Date.now() + 30 * DAY).toISOString();
+    review.completed = false;
+    history(review, 'reactivated');
+    save();
+    return toReview(review);
+  },
+
+  async adminResetPassword(reviewId, password) {
+    await delay();
+    const review = findReview(reviewId, { allowExpired: true });
+    review.password = password || null;
+    history(review, password ? 'password_set' : 'password_removed');
+    save();
+    return { hasPassword: !!review.password };
+  },
+
+  async adminDelete(reviewId) {
+    await delay();
+    const index = mockReviews.findIndex((r) => r.id === reviewId);
+    if (index === -1) throw httpError(404, 'Review not found');
+    mockReviews.splice(index, 1);
+    save();
+  },
+
+  async adminBatchDelete(ids = []) {
+    await delay();
+    let deleted = 0;
+    ids.forEach((id) => {
+      const index = mockReviews.findIndex((r) => r.id === id);
+      if (index !== -1) {
+        mockReviews.splice(index, 1);
+        deleted += 1;
+      }
+    });
+    save();
+    return { deleted };
+  },
+
+  // Teams
+  async getTeams() {
+    await delay();
+    return clone(mockTeams);
+  },
+
+  async getTeam(teamId) {
+    await delay();
+    return clone(findTeam(teamId));
+  },
+
+  async createTeam(name, description = '') {
+    await delay();
+    const team = { id: newId('team'), name, description: description || '', members: [], createdAt: now(), updatedAt: now() };
+    mockTeams.push(team);
+    return clone(team);
+  },
+
+  async updateTeam(teamId, updates = {}) {
+    await delay();
+    const team = findTeam(teamId);
+    if (updates.name !== undefined) team.name = updates.name;
+    if (updates.description !== undefined) team.description = updates.description;
+    team.updatedAt = now();
+    return clone(team);
+  },
+
+  async deleteTeam(teamId) {
+    await delay();
+    const index = mockTeams.findIndex((t) => t.id === teamId);
+    if (index === -1) throw httpError(404, 'Team not found');
     mockTeams.splice(index, 1);
   },
 
-  addTeamMember: async (teamId, member) => {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    const team = mockTeams.find(t => t.id === teamId);
-    if (!team) {
-      throw new Error('Team not found');
+  async addMember(teamId, email, name, role) {
+    await delay();
+    const team = findTeam(teamId);
+    if (team.members.some((m) => m.email.toLowerCase() === email.toLowerCase())) {
+      throw httpError(409, 'That person is already a member of this team');
     }
-    if (team.members.find(m => m.email === member.email)) {
-      throw new Error('Member already exists');
-    }
-    // Ensure role is set, default to 'Designer' if not provided
-    const memberWithRole = {
-      ...member,
-      role: member.role || 'Designer'
-    };
-    team.members.push(memberWithRole);
-    return team;
+    team.members.push({ email, name, role: role || 'Designer' });
+    team.updatedAt = now();
+    return clone(team);
   },
 
-  removeTeamMember: async (teamId, email) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const team = mockTeams.find(t => t.id === teamId);
-    if (!team) {
-      throw new Error('Team not found');
-    }
-    const index = team.members.findIndex(m => m.email === email);
-    if (index === -1) {
-      throw new Error('Member not found');
-    }
+  async updateMemberRole(teamId, email, role) {
+    await delay();
+    const team = findTeam(teamId);
+    const member = team.members.find((m) => m.email === email);
+    if (!member) throw httpError(404, 'Member not found');
+    member.role = role;
+    team.updatedAt = now();
+    return clone(team);
+  },
+
+  async removeMember(teamId, email) {
+    await delay();
+    const team = findTeam(teamId);
+    const index = team.members.findIndex((m) => m.email === email);
+    if (index === -1) throw httpError(404, 'Member not found');
     team.members.splice(index, 1);
-    return team;
-  }
-};
-
-// Add teams methods to mockAPI
-mockAPI.getTeams = teamsAPI.getTeams;
-mockAPI.createTeam = teamsAPI.createTeam;
-mockAPI.updateTeam = teamsAPI.updateTeam;
-mockAPI.deleteTeam = teamsAPI.deleteTeam;
-mockAPI.addTeamMember = teamsAPI.addTeamMember;
-mockAPI.removeTeamMember = teamsAPI.removeTeamMember;
-
-// Check if we're in mock mode (when API is not available)
-export const isMockMode = async () => {
-  // Force mock mode if explicitly set
-  if (localStorage.getItem('forceMockMode') === 'true') {
-    return true;
-  }
-  
-  // Check if user wants to use real API or if not set, auto-detect
-  const useRealAPI = localStorage.getItem('useRealAPI') === 'true' || localStorage.getItem('useRealAPI') === null;
-  
-  if (useRealAPI) {
-    // Try to ping API health endpoint
-    try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL ?? '';
-      const response = await fetch(`${apiUrl}/api/v1/health`, {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'omit',
-      });
-      if (response.ok) {
-        return false; // API is available
-      }
-    } catch (error) {
-      // CORS error or network error - use mock mode
-      console.log('API not available or CORS error, using mock mode');
-      return true;
-    }
-  }
-  
-  // Default to mock mode if explicitly disabled
-  return true;
+    team.updatedAt = now();
+    return clone(team);
+  },
 };

@@ -83,6 +83,22 @@
           </button>
         </div>
         
+        <!-- Draft after a rejection: resubmit to the stage that asked for changes -->
+        <div v-else-if="workflowState === 'draft' && resubmitTarget">
+          <button
+            @click="handleResubmitForReview"
+            class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-2"
+            :class="isDarkMode
+              ? 'bg-indigo-500 hover:bg-indigo-400'
+              : 'bg-indigo-600 hover:bg-indigo-700'"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Resubmit for {{ getWorkflowLabel(resubmitTarget) }}
+          </button>
+        </div>
+
         <!-- Move to Client Review -->
         <div v-else-if="workflowState === 'draft'">
           <button
@@ -95,7 +111,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Send to Client Review
+            {{ bypassClientReview ? 'Send to Art Director Review' : 'Send to Client Review' }}
           </button>
         </div>
         
@@ -253,46 +269,10 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref } from 'vue';
+import { useDarkMode } from '../../composables/useDarkMode.js';
 
-// Check if dark mode is active - make it reactive
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-
-// Watch for dark class changes on html element using MutationObserver
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  // Set up dark mode observer
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  // Also check periodically as a fallback
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  // Check immediately
-  checkDarkMode();
-  
-  // Check every 100ms as fallback
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
+const isDarkMode = useDarkMode();
 
 const props = defineProps({
   workflowState: {
@@ -314,6 +294,16 @@ const props = defineProps({
   workflowHistory: {
     type: Array,
     default: () => []
+  },
+  // Review stage to resubmit to after a rejection sent the review back to draft
+  resubmitTarget: {
+    type: String,
+    default: null
+  },
+  // Drafts go straight to Art Director review
+  bypassClientReview: {
+    type: Boolean,
+    default: false
   }
 });
 

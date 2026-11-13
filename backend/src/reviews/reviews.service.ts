@@ -81,8 +81,12 @@ export function toReview(doc: ReviewDoc): Review {
 }
 
 export function toSummary(doc: ReviewDoc): ReviewSummary {
-  const { comments: _c, workflowHistory: _h, ...summary } = toReview(doc);
-  return summary;
+  const { comments: _c, workflowHistory: history, ...summary } = toReview(doc);
+  // Uploads and extensions don't change the workflow, so look past them
+  const last = [...(history ?? [])]
+    .reverse()
+    .find((entry) => !['version_uploaded', 'extended', 'reactivated'].includes(entry.action));
+  return { ...summary, changesRequested: last?.action === 'rejected' };
 }
 
 @Injectable()
@@ -96,7 +100,7 @@ export class ReviewsService {
   // ---------------------------------------------------------------- reading
 
   async list(query: { workflowState?: WorkflowState; q?: string; showExpired?: boolean }) {
-    let docs = await this.store.list({ excludes: ['comments', 'workflowHistory'] });
+    let docs = await this.store.list({ excludes: ['comments'] });
     if (!query.showExpired) docs = docs.filter((doc) => !isExpired(doc));
     if (query.workflowState) docs = docs.filter((doc) => doc.workflowState === query.workflowState);
     const q = query.q?.trim().toLowerCase();
@@ -110,7 +114,7 @@ export class ReviewsService {
   }
 
   async adminList(showExpired: boolean): Promise<ReviewSummary[]> {
-    const docs = await this.store.list({ excludes: ['comments', 'workflowHistory'] });
+    const docs = await this.store.list({ excludes: ['comments'] });
     return docs.filter((doc) => showExpired || !isExpired(doc)).map(toSummary);
   }
 
@@ -491,9 +495,14 @@ export class ReviewsService {
     return normalize(stored.doc);
   }
 
-  /** 410 once a review has expired or been completed */
+  /** 410 once a review has expired or been completed; `reason` tells the two apart */
   private assertActive(doc: ReviewDoc): void {
-    if (isExpired(doc)) throw new GoneException('This review link has expired');
+    if (!isExpired(doc)) return;
+    throw new GoneException(
+      doc.completed
+        ? { statusCode: 410, message: 'This review has been completed', reason: 'completed' }
+        : { statusCode: 410, message: 'This review link has expired', reason: 'expired' },
+    );
   }
 
   /** Expiry, then sharing, then password (so a restricted review can't be used to test passwords) */

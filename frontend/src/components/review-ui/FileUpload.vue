@@ -47,6 +47,7 @@
         <input
           ref="fileInput"
           type="file"
+          :accept="ACCEPTED_TYPES.join(',')"
           @change="handleFileChange"
           class="hidden"
           required
@@ -266,32 +267,33 @@
       </div>
     </div>
     
+    <InlineNotice :notice="notice" @dismiss="clearNotice" />
+
     <!-- Upload Button -->
     <button
       type="submit"
-      :disabled="uploadType === 'file' ? !file : !externalUrl"
+      :disabled="submitting || (uploadType === 'file' ? !file : !externalUrl)"
       class="w-full px-4 py-3 bg-indigo-600 dark:bg-indigo-500 text-white font-medium rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:ring-offset-2 dark:focus:ring-offset-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
     >
-      Create Review Request
+      {{ submitting ? 'Creating review…' : 'Create Review Request' }}
     </button>
   </form>
-
-  <!-- Alert Modal -->
-  <AlertModal
-    v-model="showAlert"
-    title="Upload Error"
-    :message="alertMessage"
-    type="error"
-  />
 </template>
 
 <script setup>
 import { ref, watch } from 'vue';
-import { mockAPI, isMockMode } from '../../mockData.js';
-import { uploadAPI } from '../../services/api.js';
-import AlertModal from './AlertModal.vue';
+import { uploadAPI, reviewPasswords, apiErrorMessage } from '../../services/api.js';
+import { useNotice } from '../../composables/useNotice.js';
+import InlineNotice from '../InlineNotice.vue';
 
+// uploaded: ({ reviewId, url }) once the review exists (and its file is stored)
 const emit = defineEmits(['uploaded']);
+
+// What the review service accepts for uploads (docs/REVIEW_API.md)
+const ACCEPTED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'];
+const MAX_SIZE = 50 * 1024 * 1024;
+const submitting = ref(false);
+const { notice, showNotice, clearNotice } = useNotice();
 
 const uploadType = ref('file');
 const file = ref(null);
@@ -303,8 +305,6 @@ const sharingType = ref('anyone'); // 'anyone' or 'restricted'
 const approvedPeople = ref(['']);
 const showPassword = ref(false);
 const passwordCopied = ref(false);
-const showAlert = ref(false);
-const alertMessage = ref('');
 const isDragging = ref(false);
 const fileInput = ref(null);
 
@@ -437,17 +437,28 @@ const clearInputs = () => {
   }
 };
 
+const selectFile = (selected) => {
+  if (!selected) return;
+  if (!ACCEPTED_TYPES.includes(selected.type)) {
+    showNotice('Choose a PDF, PNG, JPEG, GIF, WebP or SVG file.', 'error');
+    return;
+  }
+  if (selected.size > MAX_SIZE) {
+    showNotice('That file is larger than 50MB.', 'error');
+    return;
+  }
+  clearNotice();
+  file.value = selected;
+};
+
 const handleFileChange = (event) => {
-  file.value = event.target.files[0];
+  selectFile(event.target.files[0]);
   isDragging.value = false;
 };
 
 const handleDrop = (event) => {
   isDragging.value = false;
-  const droppedFiles = event.dataTransfer.files;
-  if (droppedFiles.length > 0) {
-    file.value = droppedFiles[0];
-  }
+  selectFile(event.dataTransfer.files[0]);
 };
 
 const removeFile = () => {
@@ -471,65 +482,62 @@ const formatFileSize = (bytes) => {
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 };
 
-const submit = async () => {
-  if (uploadType.value === 'file' && !file.value) return;
-  if (uploadType.value === 'url' && !externalUrl.value) return;
-
+const isHttpUrl = (value) => {
   try {
-    const useMockMode = await isMockMode();
-    const bypassClientReview = reviewPath.value === 'bypass';
-    const finalPassword = passwordProtected.value ? password.value : null;
-    const sharingMode = sharingType.value === 'restricted' ? 'restricted' : 'anyone';
-    const approvedEmails = sharingType.value === 'restricted' 
-      ? approvedPeople.value.filter(email => email.trim() !== '')
-      : [];
-    
-    if (useMockMode) {
-      // Use mock API
-      if (uploadType.value === 'file') {
-        const { uploadUrl, reviewId } = await mockAPI.upload(file.value.name, finalPassword, bypassClientReview, sharingMode, approvedEmails);
-        const fullUrl = `${window.location.origin}/review/${reviewId}`;
-        emit('uploaded', fullUrl);
-      } else {
-        // Create review with external URL
-        const { reviewId } = await mockAPI.createReviewFromUrl(externalUrl.value, finalPassword, bypassClientReview, sharingMode, approvedEmails);
-        const fullUrl = `${window.location.origin}/review/${reviewId}`;
-        emit('uploaded', fullUrl);
-      }
-    } else {
-      // Use real API
-      if (uploadType.value === 'file') {
-        const { uploadUrl, reviewId } = await uploadAPI.createFromUpload(
-          file.value.name,
-          finalPassword,
-          bypassClientReview,
-          sharingMode,
-          approvedEmails
-        );
+    const { protocol } = new URL(value);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
 
-        await uploadAPI.uploadFile(uploadUrl, file.value);
-
-        const fullUrl = `${window.location.origin}/review/${reviewId}`;
-        emit('uploaded', fullUrl);
-      } else {
-        // Create review with external URL
-        const { reviewId } = await uploadAPI.createFromUrl(
-          externalUrl.value,
-          finalPassword,
-          bypassClientReview,
-          sharingMode,
-          approvedEmails
-        );
-        const fullUrl = `${window.location.origin}/review/${reviewId}`;
-        emit('uploaded', fullUrl);
-      }
+const submit = async () => {
+  if (submitting.value) return;
+  if (uploadType.value === 'file' && !file.value) return;
+  if (uploadType.value === 'url') {
+    if (!externalUrl.value) return;
+    if (!isHttpUrl(externalUrl.value.trim())) {
+      showNotice('Enter a full http:// or https:// address.', 'error');
+      return;
     }
+  }
+  if (passwordProtected.value && !password.value) {
+    showNotice('Enter a password, or turn off password protection.', 'error');
+    return;
+  }
+
+  const restricted = sharingType.value === 'restricted';
+  const options = {
+    password: passwordProtected.value ? password.value : undefined,
+    bypassClientReview: reviewPath.value === 'bypass',
+    sharingMode: restricted ? 'approved_emails' : 'anyone',
+    approvedEmails: restricted ? approvedPeople.value.map((email) => email.trim()).filter(Boolean) : [],
+  };
+  if (restricted && options.approvedEmails.length === 0) {
+    showNotice('Add at least one email address, or share with anyone who has the link.', 'error');
+    return;
+  }
+
+  submitting.value = true;
+  clearNotice();
+  try {
+    const { reviewId } = uploadType.value === 'file'
+      ? await uploadAPI.uploadReview(file.value, options)
+      : await uploadAPI.createFromUrl({ ...options, url: externalUrl.value.trim() });
+
+    // The designer set this password, so they can open the review this session without retyping it.
+    if (options.password) reviewPasswords.set(reviewId, options.password);
+
+    emit('uploaded', { reviewId, url: `${window.location.origin}/review/${encodeURIComponent(reviewId)}` });
+    clearInputs();
   } catch (error) {
     console.error('Upload failed:', error);
-    alertMessage.value = uploadType.value === 'file' 
-      ? 'Upload failed. Please try again.' 
-      : 'Failed to create review link. Please check the URL and try again.';
-    showAlert.value = true;
+    const fallback = uploadType.value === 'file'
+      ? 'Upload failed.'
+      : 'Failed to create the review link.';
+    showNotice(apiErrorMessage(error, fallback), 'error');
+  } finally {
+    submitting.value = false;
   }
 };
 </script>

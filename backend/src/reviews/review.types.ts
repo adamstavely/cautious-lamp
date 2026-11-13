@@ -109,7 +109,10 @@ export interface Review {
   extended: boolean;
 }
 
-export type ReviewSummary = Omit<Review, 'comments' | 'workflowHistory'>;
+export type ReviewSummary = Omit<Review, 'comments' | 'workflowHistory'> & {
+  /** The last workflow action was a rejection, so the designer has changes to make */
+  changesRequested: boolean;
+};
 
 /** Review as stored in Elasticsearch. Internal fields never leave the service. */
 export interface ReviewDoc extends Omit<Review, 'hasPassword' | 'versions'> {
