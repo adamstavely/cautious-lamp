@@ -209,7 +209,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { computed } from 'vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
 
 const props = defineProps({
   component: {
@@ -226,39 +227,11 @@ const props = defineProps({
   }
 });
 
-const isDarkMode = computed(() => props.isDarkMode || document.documentElement.classList.contains('dark'));
+// The page theme, unless the parent forces dark mode
+const pageIsDark = useDarkMode();
+const isDarkMode = computed(() => props.isDarkMode || pageIsDark.value);
 
 // Create a computed property to ensure reactivity
 const componentProps = computed(() => props.props);
-
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
