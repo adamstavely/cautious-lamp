@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex transition-colors duration-300">
+  <div class="w-full h-full bg-[#fff] dark:bg-slate-950 text-slate-900 dark:text-slate-100 relative flex">
     <!-- Drawer -->
     <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
     
@@ -12,79 +12,58 @@
       <Breadcrumbs />
       
       <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="hero-section rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden transition-all duration-300">
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      SVG Placeholder Text Generator
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Generate placeholder SVG text for your designs. Create customizable text placeholders with alignment, spacing, and styling options.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">image</span>
-                      SVG Generator
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-              </div>
+        <div class="max-w-6xl mx-auto px-6 md:px-10 py-12 md:py-16">
+          <!-- Hero -->
+          <section class="grid md:grid-cols-[1fr_auto] items-center gap-10 pb-12 mb-12 border-b border-slate-200 dark:border-slate-800">
+            <div>
+              <router-link to="/tools" class="inline-flex items-center gap-1 text-sm font-medium tracking-wide text-[#2f5ea8] dark:text-[#9dbcf0] mb-4 hover:underline underline-offset-4">
+                <span class="material-symbols-outlined text-base" aria-hidden="true">arrow_back</span>
+                Tools
+              </router-link>
+              <h1 class="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05] mb-5">SVG placeholder text</h1>
+              <p class="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
+                Generate placeholder SVG text for your designs, with control over alignment, spacing,
+                size and color.
+              </p>
             </div>
-          </div>
+            <div class="spot hidden md:block w-48 h-48 lg:w-56 lg:h-56" aria-hidden="true" v-html="spot('guidelines/text-graphics')"></div>
+          </section>
 
           <!-- Main Tool Section -->
-          <div class="max-w-7xl mx-auto">
+          <div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <!-- Control Panel -->
               <div class="lg:col-span-1">
-                <div 
-                  class="control-panel rounded-2xl shadow-lg p-6 transition-colors duration-300"
-                  :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
-                >
-                  <h2 
-                    class="text-xl font-bold mb-6 transition-colors duration-300"
-                    :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                  >
+                <div class="control-panel panel">
+                  <h2 class="text-lg font-semibold tracking-tight mb-6">
                     Take more control...
                   </h2>
 
                   <!-- Alignment -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-3 text-gray-700 dark:text-gray-300 transition-colors duration-300">Align</label>
+                    <label class="block text-sm font-medium mb-3 text-slate-600 dark:text-slate-400">Align</label>
                     <div class="flex gap-2">
                       <button
                         @click="alignment = 'left'"
-                        class="w-10 h-10 rounded-full border-2 transition-all duration-300 flex items-center justify-center"
-                        :class="alignment === 'left' 
-                          ? 'border-indigo-600 bg-indigo-600 text-white' 
-                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400'"
+                        class="seg"
+                        :class="{ on: alignment === 'left' }"
+                        aria-label="Align left"
                       >
                         <span class="material-symbols-outlined text-lg">format_align_left</span>
                       </button>
                       <button
                         @click="alignment = 'center'"
-                        class="w-10 h-10 rounded-full border-2 transition-all duration-300 flex items-center justify-center"
-                        :class="alignment === 'center' 
-                          ? 'border-indigo-600 bg-indigo-600 text-white' 
-                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400'"
+                        class="seg"
+                        :class="{ on: alignment === 'center' }"
+                        aria-label="Align center"
                       >
                         <span class="material-symbols-outlined text-lg">format_align_center</span>
                       </button>
                       <button
                         @click="alignment = 'right'"
-                        class="w-10 h-10 rounded-full border-2 transition-all duration-300 flex items-center justify-center"
-                        :class="alignment === 'right' 
-                          ? 'border-indigo-600 bg-indigo-600 text-white' 
-                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400'"
+                        class="seg"
+                        :class="{ on: alignment === 'right' }"
+                        aria-label="Align right"
                       >
                         <span class="material-symbols-outlined text-lg">format_align_right</span>
                       </button>
@@ -93,7 +72,7 @@
 
                   <!-- Radius Slider -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">
+                    <label class="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">
                       Radius: {{ radius }}px
                     </label>
                     <input
@@ -101,13 +80,13 @@
                       v-model.number="radius"
                       min="0"
                       max="20"
-                      class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 transition-colors duration-300"
+                      class="range"
                     />
                   </div>
 
                   <!-- Words Slider -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">
+                    <label class="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">
                       Words: {{ words }}
                     </label>
                     <input
@@ -115,13 +94,13 @@
                       v-model.number="words"
                       min="1"
                       max="20"
-                      class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 transition-colors duration-300"
+                      class="range"
                     />
                   </div>
 
                   <!-- Lines Slider -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">
+                    <label class="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">
                       Lines: {{ lines }}
                     </label>
                     <input
@@ -129,13 +108,13 @@
                       v-model.number="lines"
                       min="1"
                       max="10"
-                      class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 transition-colors duration-300"
+                      class="range"
                     />
                   </div>
 
                   <!-- Height Slider -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">
+                    <label class="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">
                       Height: {{ height }}px
                     </label>
                     <input
@@ -143,13 +122,13 @@
                       v-model.number="height"
                       min="8"
                       max="40"
-                      class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 transition-colors duration-300"
+                      class="range"
                     />
                   </div>
 
                   <!-- Spacing Slider -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">
+                    <label class="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">
                       Spacing: {{ spacing }}px
                     </label>
                     <input
@@ -157,16 +136,16 @@
                       v-model.number="spacing"
                       min="4"
                       max="32"
-                      class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 transition-colors duration-300"
+                      class="range"
                     />
                   </div>
 
                   <!-- Colors -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">Colors</label>
+                    <label class="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">Colors</label>
                     <div class="flex items-center gap-3">
                       <div
-                        class="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-600 cursor-pointer transition-colors duration-300"
+                        class="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700 cursor-pointer"
                         :style="{ backgroundColor: color }"
                         @click="showColorPicker = !showColorPicker"
                       ></div>
@@ -174,11 +153,11 @@
                         v-if="showColorPicker"
                         type="color"
                         v-model="color"
-                        class="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-600 cursor-pointer transition-colors duration-300"
+                        class="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700 cursor-pointer"
                       />
                       <button
                         @click="showColorPicker = !showColorPicker"
-                        class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 transition-colors"
+                        class="seg" aria-label="Pick a color"
                       >
                         <span class="material-symbols-outlined text-lg">add</span>
                       </button>
@@ -189,14 +168,14 @@
                   <div class="flex gap-3">
                     <button
                       @click="refresh"
-                      class="flex-1 px-4 py-2 rounded-full border-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2"
+                      class="btn btn-secondary flex-1"
                     >
                       <span class="material-symbols-outlined text-lg">refresh</span>
                       Refresh
                     </button>
                     <button
                       @click="downloadSVG"
-                      class="flex-1 px-4 py-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                      class="btn btn-primary flex-1"
                     >
                       <span class="material-symbols-outlined text-lg">download</span>
                       Download
@@ -207,20 +186,13 @@
 
               <!-- Preview Area -->
               <div class="lg:col-span-2">
-                <div 
-                  class="preview-area rounded-2xl shadow-lg p-6 transition-colors duration-300"
-                  :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
-                >
-                  <div 
-                    class="relative border-2 border-dashed rounded-xl p-8 min-h-[500px] transition-colors duration-300"
-                    :class="isDarkMode 
-                      ? 'border-indigo-600 bg-slate-900' 
-                      : 'border-indigo-300 bg-gray-50'"
-                  >
+                <div class="preview-area panel">
+                  <div class="relative border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 min-h-[500px] bg-slate-50 dark:bg-slate-900">
                     <button
                       @click="copySVG"
-                      class="absolute top-4 right-4 w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-colors duration-300 flex items-center justify-center"
+                      class="seg absolute top-4 right-4"
                       title="Copy SVG"
+                      aria-label="Copy SVG"
                     >
                       <span class="material-symbols-outlined text-lg">content_copy</span>
                     </button>
@@ -252,6 +224,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { spot } from '../utils/spotIllustrations.js';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -504,64 +477,60 @@ onBeforeUnmount(() => {
 });
 </script>
 
-<style>
-/* Force transitions on all background color changes - use attribute selectors to catch both light and dark classes */
-[class*="bg-white"][class*="dark:bg-slate-800"],
-[class*="bg-gray-50"][class*="dark:bg-slate-900"] {
-  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-/* More specific targeting for the card elements */
-.control-panel,
-.preview-area {
-  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-/* Target nested divs with background colors */
-.control-panel > div[class*="bg-"],
-.preview-area > div[class*="bg-"] {
-  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-/* Universal rule for all elements in these containers */
-.control-panel *,
-.preview-area * {
-  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-</style>
-
 <style scoped>
-/* Ensure smooth transitions for key elements */
-.control-panel,
-.preview-area,
-.hero-section {
-  transition-property: background-color, border-color, color !important;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
-  transition-duration: 300ms !important;
+.spot :deep(svg) {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
-input[type="range"] {
+.panel {
+  @apply rounded-2xl border border-slate-200 bg-[#fff] p-6 dark:border-slate-800 dark:bg-slate-900/40;
+}
+
+.seg {
+  @apply w-10 h-10 rounded-full border border-solid border-slate-200 bg-[#fff] text-slate-600 flex items-center justify-center transition-colors hover:border-[#8fb0e8] hover:text-[#2f5ea8] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-[#6f93d1] dark:hover:text-[#9dbcf0];
+}
+.seg.on {
+  @apply border-[#2f5ea8] bg-[#2f5ea8] text-white dark:border-[#9dbcf0] dark:bg-[#9dbcf0] dark:text-slate-950;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full text-sm font-medium transition-colors;
+}
+.btn-primary {
+  @apply bg-[#2f5ea8] text-white hover:bg-[#264d8b] dark:bg-[#9dbcf0] dark:text-slate-950 dark:hover:bg-[#b8cff5];
+}
+.btn-secondary {
+  @apply border border-solid border-slate-300 text-slate-800 hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900;
+}
+
+.range {
+  @apply w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 cursor-pointer;
   -webkit-appearance: none;
   appearance: none;
 }
-
-input[type="range"]::-webkit-slider-thumb {
+.range::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #4f46e5;
+  background: #2f5ea8;
   cursor: pointer;
 }
-
-input[type="range"]::-moz-range-thumb {
+.range::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #4f46e5;
+  background: #2f5ea8;
   cursor: pointer;
   border: none;
 }
+.range:is(.dark *)::-webkit-slider-thumb {
+  background: #9dbcf0;
+}
+.range:is(.dark *)::-moz-range-thumb {
+  background: #9dbcf0;
+}
 </style>
-
