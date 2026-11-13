@@ -10,8 +10,12 @@ import {
 } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { AuditService, AuditAction } from './audit.service';
+import { RequirePermission } from '../auth/principal';
+import { Permission } from '../rbac/rbac.service';
 
+/** Audit logs hold emails, IPs and request details, so every route needs admin:audit */
 @Controller('api/v1/audit')
+@RequirePermission(Permission.ADMIN_AUDIT)
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 

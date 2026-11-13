@@ -1200,7 +1200,8 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
+import { useAuth } from '../composables/useAuth.js';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -1228,39 +1229,21 @@ const requestAnalytics = ref(null);
 const loadingAnalytics = ref(false);
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 
-// Check RBAC permissions
+// What the signed-in user may do here comes from their RBAC permissions
+// (docs/AUTH.md). The server enforces the same permissions.
+const { user: authUser, hasPermission } = useAuth();
+// Sent where the API still expects an id; the server takes identity from the token
+const currentUserId = computed(() => authUser.value?.id ?? '');
+const currentUserName = computed(() => authUser.value?.name || authUser.value?.email || '');
+
 const checkPermissions = async () => {
-  try {
-    const userId = localStorage.getItem('userId');
-    const userRole = localStorage.getItem('userRole');
-    if (!userId) {
-      canEditRoadmap.value = false;
-      canEditReleaseNotes.value = false;
-      canApprove.value = false;
-      return;
-    }
-    
-    // Check if user has approval permissions (design_system_manager, review_manager, etc.)
-    canApprove.value = ['design_system_manager', 'review_manager', 'system_owner'].includes(userRole);
-    
-    const roadmapEditResponse = await axios.get(
-      `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/rbac/users/${userId}/permissions/roadmap:edit`
-    );
-    
-    canEditRoadmap.value = roadmapEditResponse.data.hasPermission;
-    canEditReleaseNotes.value = roadmapEditResponse.data.hasPermission; // Same permission for release notes
-  } catch (error) {
-    console.error('Error checking permissions:', error);
-    // Fail open - allow viewing but not editing
-    canEditRoadmap.value = false;
-    canEditReleaseNotes.value = false;
-    canApprove.value = false;
-  }
+  const canEdit = hasPermission('roadmap:edit');
+  canEditRoadmap.value = canEdit;
+  canEditReleaseNotes.value = canEdit; // Same permission for release notes
+  canApprove.value = canEdit;
 };
 
-// Release Notes Data
 const releaseNotes = ref([
   {
     version: '2.1.0',
@@ -1410,9 +1393,7 @@ const formatDate = (dateString) => {
 // Roadmap Functions
 const loadRoadmap = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/roadmap`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/roadmap`);
     roadmapItems.value = response.data;
   } catch (error) {
     console.error('Error loading roadmap:', error);
@@ -1422,16 +1403,14 @@ const loadRoadmap = async () => {
 const saveRoadmapItem = async () => {
   try {
     if (editingRoadmapItem.value) {
-      await axios.put(
+      await apiClient.put(
         `${API_BASE_URL}/roadmap/items/${editingRoadmapItem.value.id}`,
-        roadmapForm.value,
-        { headers: { Authorization: `Bearer ${API_KEY}` } }
+        roadmapForm.value
       );
     } else {
-      await axios.post(
+      await apiClient.post(
         `${API_BASE_URL}/roadmap/items`,
-        roadmapForm.value,
-        { headers: { Authorization: `Bearer ${API_KEY}` } }
+        roadmapForm.value
       );
     }
     closeRoadmapModal();
@@ -1459,9 +1438,7 @@ const deleteRoadmapItem = async (id) => {
   if (!confirm('Are you sure you want to delete this roadmap item?')) return;
   
   try {
-    await axios.delete(`${API_BASE_URL}/roadmap/items/${id}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    await apiClient.delete(`${API_BASE_URL}/roadmap/items/${id}`);
     loadRoadmap();
   } catch (error) {
     console.error('Error deleting item:', error);
@@ -1486,12 +1463,10 @@ const closeRoadmapModal = () => {
 const loadRequests = async () => {
   loadingRequests.value = true;
   try {
-    const response = await axios.get(`${API_BASE_URL}/component-requests`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/component-requests`);
     requests.value = response.data || [];
     requests.value.forEach(req => {
-      if (req.voters && req.voters.includes('current-user')) {
+      if (req.voters && req.voters.includes(currentUserId.value)) {
         userVotes.value.add(req.id);
       }
     });
@@ -1507,9 +1482,7 @@ const loadRequests = async () => {
 const loadIssues = async () => {
   loadingIssues.value = true;
   try {
-    const response = await axios.get(`${API_BASE_URL}/issues`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/issues`);
     issues.value = response.data || [];
   } catch (error) {
     console.error('Error loading issues:', error);
@@ -1528,14 +1501,13 @@ const submitRequest = async () => {
   try {
     // Check for duplicates first (optional - don't fail if endpoint isn't available)
     try {
-      const duplicateCheck = await axios.get(
+      const duplicateCheck = await apiClient.get(
         `${API_BASE_URL}/component-requests/duplicates`,
         {
           params: {
             title: requestForm.value.title,
             description: requestForm.value.description,
-          },
-          headers: { Authorization: `Bearer ${API_KEY}` }
+          }
         }
       );
 
@@ -1555,18 +1527,15 @@ const submitRequest = async () => {
       console.warn('Duplicate check failed, continuing with submission:', duplicateError);
     }
 
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/component-requests`,
       {
         title: requestForm.value.title,
         description: requestForm.value.description,
         useCase: requestForm.value.useCase || undefined,
-        requestedBy: 'current-user',
+        requestedBy: currentUserId.value,
         category: requestForm.value.category,
         priority: requestForm.value.priority || 'medium',
-      },
-      {
-        headers: { Authorization: `Bearer ${API_KEY}` }
       }
     );
 
@@ -1597,17 +1566,14 @@ const submitIssue = async () => {
 
   submittingIssue.value = true;
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/issues`,
       {
         title: issueForm.value.title,
         description: issueForm.value.description,
         category: issueForm.value.category,
         severity: issueForm.value.severity,
-        reportedBy: 'current-user'
-      },
-      {
-        headers: { Authorization: `Bearer ${API_KEY}` }
+        reportedBy: currentUserId.value
       }
     );
 
@@ -1624,12 +1590,9 @@ const submitIssue = async () => {
 
 const voteRequest = async (requestId) => {
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/component-requests/${requestId}/vote`,
-      { userId: 'current-user' },
-      {
-        headers: { Authorization: `Bearer ${API_KEY}` }
-      }
+      { userId: currentUserId.value }
     );
 
     const request = requests.value.find(r => r.id === requestId);
@@ -1654,9 +1617,7 @@ const isUserVoted = (requestId) => {
 
 const openRequestDetails = async (request) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/component-requests/${request.id}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/component-requests/${request.id}`);
     selectedRequest.value = response.data;
   } catch (error) {
     console.error('Error loading request details:', error);
@@ -1668,14 +1629,11 @@ const addComment = async (requestId) => {
   if (!newComment.value.trim()) return;
 
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/component-requests/${requestId}/comments`,
       {
-        author: 'current-user',
+        author: currentUserName.value,
         content: newComment.value
-      },
-      {
-        headers: { Authorization: `Bearer ${API_KEY}` }
       }
     );
 
@@ -1703,15 +1661,12 @@ const addComment = async (requestId) => {
 // Status transition
 const transitionStatus = async (requestId, newStatus) => {
   try {
-    const response = await axios.patch(
+    const response = await apiClient.patch(
       `${API_BASE_URL}/component-requests/${requestId}/status`,
       {
         status: newStatus,
-        userId: 'current-user',
+        userId: currentUserId.value,
         comment: `Status changed to ${newStatus}`
-      },
-      {
-        headers: { Authorization: `Bearer ${API_KEY}` }
       }
     );
 
@@ -1735,14 +1690,11 @@ const transitionStatus = async (requestId, newStatus) => {
 // Approve request
 const approveRequest = async (requestId, stage) => {
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/component-requests/${requestId}/approve`,
       {
-        userId: 'current-user',
+        userId: currentUserId.value,
         stage: stage
-      },
-      {
-        headers: { Authorization: `Bearer ${API_KEY}` }
       }
     );
 
@@ -1767,14 +1719,11 @@ const approveRequest = async (requestId, stage) => {
 // Reject request
 const rejectRequest = async (requestId, reason) => {
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/component-requests/${requestId}/reject`,
       {
-        userId: 'current-user',
+        userId: currentUserId.value,
         reason: reason
-      },
-      {
-        headers: { Authorization: `Bearer ${API_KEY}` }
       }
     );
 
@@ -1802,11 +1751,8 @@ const rejectRequest = async (requestId, reason) => {
 const loadAnalytics = async () => {
   loadingAnalytics.value = true;
   try {
-    const response = await axios.get(
-      `${API_BASE_URL}/component-requests/analytics`,
-      {
-        headers: { Authorization: `Bearer ${API_KEY}` }
-      }
+    const response = await apiClient.get(
+      `${API_BASE_URL}/component-requests/analytics`
     );
     requestAnalytics.value = response.data;
   } catch (error) {

@@ -5,6 +5,7 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { TriggerTestDto } from './dto/trigger-test.dto';
 import { parsePaginationParams } from '../common/pagination/pagination.types';
 import { ApiKeyGuard } from '../common/security/api-key.guard';
+import { AuthPrincipal, Principal, Public } from '../auth/principal';
 
 @Controller('api/v1/visual-regression')
 @UseGuards(ApiKeyGuard)
@@ -17,8 +18,7 @@ export class VisualRegressionController {
   }
 
   @Post('projects')
-  async createProject(@Body() dto: CreateProjectDto, @Request() req: any) {
-    const userId = req.user?.id || 'anonymous';
+  async createProject(@Body() dto: CreateProjectDto) {
     const teamId = dto.teamId || 'default-team';
     return this.visualRegressionService.createProject(teamId, dto);
   }
@@ -43,10 +43,9 @@ export class VisualRegressionController {
   async triggerTest(
     @Param('id') projectId: string,
     @Body() dto: TriggerTestDto,
-    @Request() req: any
+    @Principal() principal: AuthPrincipal,
   ) {
-    const userId = req.user?.id || 'anonymous';
-    return this.visualRegressionService.triggerTest(projectId, userId, dto);
+    return this.visualRegressionService.triggerTest(projectId, principal.id, dto);
   }
 
   @Get('projects/:id/runs')
@@ -74,17 +73,15 @@ export class VisualRegressionController {
 
   @Post('results/:id/approve')
   @HttpCode(200)
-  async approveDiff(@Param('id') resultId: string, @Request() req: any) {
-    const userId = req.user?.id || 'anonymous';
-    await this.visualRegressionService.approveDiff(resultId, userId);
+  async approveDiff(@Param('id') resultId: string, @Principal() principal: AuthPrincipal) {
+    await this.visualRegressionService.approveDiff(resultId, principal.id);
     return { message: 'Diff approved successfully' };
   }
 
   @Post('results/:id/reject')
   @HttpCode(200)
-  async rejectDiff(@Param('id') resultId: string, @Request() req: any) {
-    const userId = req.user?.id || 'anonymous';
-    await this.visualRegressionService.rejectDiff(resultId, userId);
+  async rejectDiff(@Param('id') resultId: string, @Principal() principal: AuthPrincipal) {
+    await this.visualRegressionService.rejectDiff(resultId, principal.id);
     return { message: 'Diff rejected successfully' };
   }
 
@@ -155,13 +152,14 @@ export class VisualRegressionController {
 }
 
 /**
- * Argos calls this without an API key, so it lives outside the guarded
- * controller. Each request must carry a valid signature instead.
+ * Argos calls this without an API key, so it is public and lives outside the
+ * guarded controller. Each request must carry a valid signature instead.
  */
 @Controller('api/v1/visual-regression')
 export class ArgosWebhookController {
   constructor(private readonly visualRegressionService: VisualRegressionService) {}
 
+  @Public()
   @Post('webhooks/argos')
   @HttpCode(200)
   async handleArgosWebhook(

@@ -20,6 +20,7 @@ import * as directives from 'vuetify/directives';
 import '@mdi/font/css/materialdesignicons.css';
 import { checkFeatureFlagGuard } from './router/featureFlagGuards';
 import { checkRbacGuard } from './router/rbacGuards';
+import { ensureSession, safeRedirect, setAuthRouter } from './services/auth.js';
 
 // Initialize dark mode before creating Vuetify
 const initDarkMode = () => {
@@ -42,27 +43,17 @@ const initDarkMode = () => {
   return isDark ? 'dark' : 'light';
 };
 
-// Initialize user role to design_system_manager for full access
-const initUserRole = () => {
-  // Allow override via query param, otherwise set to design_system_manager
-  const urlParams = new URLSearchParams(window.location.search);
-  const overrideRole = urlParams.get('role');
-  
-  if (overrideRole) {
-    localStorage.setItem('userRole', overrideRole);
-  } else {
-    // Always set to design_system_manager for full access to all pages
-    localStorage.setItem('userRole', 'design_system_manager');
-  }
-  
-  // Set userId if not already set (required for RBAC guards)
-  if (!localStorage.getItem('userId')) {
-    localStorage.setItem('userId', 'admin-user');
-  }
-};
-
 const initialTheme = initDarkMode();
-initUserRole();
+
+// Credentials and self-asserted identity from before sign-in existed. The admin
+// key in particular should not linger in the browser.
+['apiKey', 'adminApiKey', 'userRole', 'userId', 'userGroups', 'currentDesigner', 'currentUserEmail'].forEach((key) => {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // storage unavailable
+  }
+});
 
 const vuetify = createVuetify({
   components,
@@ -110,6 +101,17 @@ const vuetify = createVuetify({
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    // Sign-in screens: shown without the app chrome. /login is the only public route.
+    {
+      path: '/login',
+      component: () => import('./views/Login.vue'),
+      meta: { public: true, bare: true, title: 'Sign in' },
+    },
+    {
+      path: '/change-password',
+      component: () => import('./views/ChangePassword.vue'),
+      meta: { bare: true, title: 'Change password' },
+    },
     {
       path: '/',
       component: () => import('./views/Home.vue'),
@@ -181,10 +183,6 @@ const router = createRouter({
     {
       path: '/data-viz/:pathMatch(.*)*',
       component: () => import('./views/DataViz.vue'),
-    },
-    {
-      path: '/admin',
-      component: () => import('./views/Admin.vue'),
     },
     {
       path: '/ai',
@@ -866,25 +864,47 @@ const router = createRouter({
   ],
 });
 
-// Add feature flag and RBAC guards to router
-router.beforeEach(async (to, from, next) => {
-  // First check feature flags
+// Every route except /login needs a signed-in user (docs/AUTH.md). Someone
+// who must change their password sees only /change-password until they do.
+router.beforeEach(async (to) => {
+  let user = null;
+  let unreachable = false;
+  try {
+    user = await ensureSession();
+  } catch (error) {
+    // Fail closed: without /auth/me we can't tell who this is
+    console.error('Could not load the signed-in user:', error);
+    unreachable = true;
+  }
+
+  if (to.meta.public) {
+    // Already signed in: skip the sign-in page
+    if (user && !user.mustChangePassword) return safeRedirect(to.query.redirect);
+    if (user?.mustChangePassword) return { path: '/change-password' };
+    return true;
+  }
+
+  if (!user) {
+    const query = { redirect: safeRedirect(to.fullPath) };
+    if (unreachable) query.unreachable = '1';
+    return { path: '/login', query };
+  }
+
+  if (user.mustChangePassword) {
+    return to.path === '/change-password' ? true : { path: '/change-password' };
+  }
+
+  // Feature flags, then RBAC permissions
   const featureFlagResult = await checkFeatureFlagGuard(to);
-  if (featureFlagResult !== true) {
-    next(featureFlagResult);
-    return;
-  }
-  
-  // Then check RBAC permissions
-  const rbacResult = await checkRbacGuard(to);
-  if (rbacResult === true) {
-    next();
-  } else {
-    next(rbacResult);
-  }
+  if (featureFlagResult !== true) return featureFlagResult;
+  return checkRbacGuard(to);
 });
+
+setAuthRouter(router);
 
 const app = createApp(App);
 app.use(router);
 app.use(vuetify);
-app.mount('#app');
+// Mount once the first navigation (and its sign-in check) has settled, so the
+// app chrome never renders, or calls the API, for a signed-out visitor.
+router.isReady().finally(() => app.mount('#app'));

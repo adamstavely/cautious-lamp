@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SearchService } from './search.service';
 import { DesignSystemService } from '../design-system/design-system.service';
+import { WorkspacesService } from '../workspaces/workspaces.service';
+import { AuthPrincipal } from '../auth/principal';
 
 describe('SearchService', () => {
   let service: SearchService;
@@ -9,8 +11,9 @@ describe('SearchService', () => {
   const mockDesignSystemService = {
     getAllComponents: jest.fn(),
     getAllTokens: jest.fn(),
-    getAllWorkspaces: jest.fn(),
   };
+  const mockWorkspacesService = { list: jest.fn() };
+  const principal = { type: 'user', id: 'u1' } as unknown as AuthPrincipal;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -20,6 +23,7 @@ describe('SearchService', () => {
           provide: DesignSystemService,
           useValue: mockDesignSystemService,
         },
+        { provide: WorkspacesService, useValue: mockWorkspacesService },
       ],
     }).compile();
 
@@ -32,17 +36,17 @@ describe('SearchService', () => {
   });
 
   describe('search', () => {
-    it('should return empty array when no results found', () => {
+    it('should return empty array when no results found', async () => {
       mockDesignSystemService.getAllComponents.mockReturnValue([]);
       mockDesignSystemService.getAllTokens.mockReturnValue([]);
-      mockDesignSystemService.getAllWorkspaces.mockReturnValue([]);
+      mockWorkspacesService.list.mockResolvedValue([]);
 
-      const results = service.search('nonexistent');
+      const results = await service.search('nonexistent');
 
       expect(results).toEqual([]);
     });
 
-    it('should find components by name', () => {
+    it('should find components by name', async () => {
       mockDesignSystemService.getAllComponents.mockReturnValue([
         {
           id: '1',
@@ -58,16 +62,16 @@ describe('SearchService', () => {
         },
       ]);
       mockDesignSystemService.getAllTokens.mockReturnValue([]);
-      mockDesignSystemService.getAllWorkspaces.mockReturnValue([]);
+      mockWorkspacesService.list.mockResolvedValue([]);
 
-      const results = service.search('Button');
+      const results = await service.search('Button');
 
       expect(results).toHaveLength(1);
       expect(results[0].type).toBe('component');
       expect(results[0].title).toBe('Button');
     });
 
-    it('should filter by type', () => {
+    it('should filter by type', async () => {
       mockDesignSystemService.getAllComponents.mockReturnValue([
         {
           id: '1',
@@ -84,14 +88,14 @@ describe('SearchService', () => {
           category: 'colors',
         },
       ]);
-      mockDesignSystemService.getAllWorkspaces.mockReturnValue([]);
+      mockWorkspacesService.list.mockResolvedValue([]);
 
-      const results = service.search('Button', { type: ['token'] });
+      const results = await service.search('Button', { type: ['token'] });
 
       expect(results).toHaveLength(0);
     });
 
-    it('should calculate relevance scores correctly', () => {
+    it('should calculate relevance scores correctly', async () => {
       mockDesignSystemService.getAllComponents.mockReturnValue([
         {
           id: '1',
@@ -107,9 +111,9 @@ describe('SearchService', () => {
         },
       ]);
       mockDesignSystemService.getAllTokens.mockReturnValue([]);
-      mockDesignSystemService.getAllWorkspaces.mockReturnValue([]);
+      mockWorkspacesService.list.mockResolvedValue([]);
 
-      const results = service.search('Button');
+      const results = await service.search('Button');
 
       expect(results.length).toBeGreaterThan(0);
       // Exact match should have higher score
@@ -161,7 +165,7 @@ describe('SearchService', () => {
   });
 
   describe('getAvailableFilters', () => {
-    it('should return filter counts', () => {
+    it('should return filter counts', async () => {
       mockDesignSystemService.getAllComponents.mockReturnValue([
         {
           id: '1',
@@ -179,11 +183,11 @@ describe('SearchService', () => {
           category: 'colors',
         },
       ]);
-      mockDesignSystemService.getAllWorkspaces.mockReturnValue([
+      mockWorkspacesService.list.mockResolvedValue([
         { id: '1', name: 'Workspace 1' },
       ]);
 
-      const filters = service.getAvailableFilters();
+      const filters = await service.getAvailableFilters(principal);
 
       expect(filters.types).toBeDefined();
       expect(filters.categories).toBeDefined();

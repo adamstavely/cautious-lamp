@@ -24,18 +24,19 @@ export class KeyManagementService {
   private readonly logger = new Logger(KeyManagementService.name);
   private readonly keys = new Map<string, ApiKeyMetadata>();
 
-  /** Hashes of the keys configured through API_KEYS (comma-separated). */
-  private readonly configuredKeyHashes: Set<string>;
+  /** Keys configured through API_KEYS (comma-separated), by hash */
+  private readonly configuredKeys = new Map<string, { id: string; name: string }>();
 
   constructor(private readonly encryptionService: EncryptionService) {
-    this.configuredKeyHashes = new Set(
-      (process.env.API_KEYS ?? '')
-        .split(',')
-        .map((key) => key.trim())
-        .filter(Boolean)
-        .map((key) => this.hashKey(key)),
-    );
-    if (this.configuredKeyHashes.size === 0) {
+    (process.env.API_KEYS ?? '')
+      .split(',')
+      .map((key) => key.trim())
+      .filter(Boolean)
+      .forEach((key, index) => {
+        const hash = this.hashKey(key);
+        this.configuredKeys.set(hash, { id: `api-keys-${hash.slice(0, 12)}`, name: `API_KEYS key ${index + 1}` });
+      });
+    if (this.configuredKeys.size === 0) {
       this.logger.warn('API_KEYS is not set: only keys created through the API will be accepted');
     }
   }
@@ -45,7 +46,19 @@ export class KeyManagementService {
    */
   isValidApiKey(apiKey: string | undefined): boolean {
     if (!apiKey) return false;
-    return this.configuredKeyHashes.has(this.hashKey(apiKey)) || this.validateKey(apiKey) !== null;
+    return this.resolveApiKey(apiKey) !== null;
+  }
+
+  /**
+   * Who a key belongs to: a configured key (no scopes) or a live managed key
+   * with its scopes. Null for anything else, including the admin key.
+   */
+  resolveApiKey(apiKey: string | undefined): { id: string; name: string; scopes?: string[] } | null {
+    if (!apiKey) return null;
+    const configured = this.configuredKeys.get(this.hashKey(apiKey));
+    if (configured) return { ...configured };
+    const managed = this.validateKey(apiKey);
+    return managed ? { id: managed.id, name: managed.name, scopes: managed.scopes } : null;
   }
 
   /**
@@ -60,7 +73,9 @@ export class KeyManagementService {
   }
 
   /**
-   * Throws unless the Authorization header carries a valid API key
+   * Throws unless the Authorization header carries a valid API key.
+   * @deprecated Routes are authenticated by the global AuthGuard, which also
+   * accepts user tokens (docs/AUTH.md); use `@RequirePermission` instead.
    */
   assertValidApiKey(authHeader: string | undefined): void {
     if (!this.isValidApiKey(KeyManagementService.extractKey(authHeader))) {
@@ -69,7 +84,8 @@ export class KeyManagementService {
   }
 
   /**
-   * Throws unless the Authorization header carries the admin key
+   * Throws unless the Authorization header carries the admin key.
+   * @deprecated Use `@RequirePermission(Permission.ADMIN_USERS)`, which the admin key and admins pass.
    */
   assertAdminKey(authHeader: string | undefined): void {
     if (!this.isAdminKey(KeyManagementService.extractKey(authHeader))) {

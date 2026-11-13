@@ -1,5 +1,6 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import type { Request } from 'express';
+import type { AuthedRequest } from '../auth/principal';
 import { ActingUser } from './review.types';
 
 /**
@@ -23,8 +24,14 @@ function header(req: Request, name: string, max: number): string | null {
   return trimmed || null;
 }
 
-/** The self-asserted acting user from `x-user-email` / `x-user-name` (display only until Phase 2) */
+/**
+ * Who is acting: the signed-in user, or for a service principal (an API key)
+ * the person it says it acts for in `x-user-email` / `x-user-name`, which is
+ * recorded for display only (docs/AUTH.md).
+ */
 export function actingUserFrom(req: Request): ActingUser {
+  const principal = (req as AuthedRequest).principal;
+  if (principal?.type === 'user') return { email: principal.email, name: principal.name };
   return {
     email: header(req, 'x-user-email', 254)?.toLowerCase() ?? null,
     name: header(req, 'x-user-name', 200),

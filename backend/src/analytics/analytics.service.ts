@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DesignSystemService, Component } from '../design-system/design-system.service';
+import { ApplicationsService } from '../applications/applications.service';
 
 export interface ComponentUsage {
   componentId: string;
@@ -75,10 +76,8 @@ export class AnalyticsService {
 
   constructor(
     private readonly designSystemService: DesignSystemService,
-  ) {
-    // Initialize with some mock historical data for demonstration
-    this.initializeMockHistory();
-  }
+    private readonly applications: ApplicationsService,
+  ) {}
 
   /**
    * Track component usage from a scan
@@ -132,10 +131,10 @@ export class AnalyticsService {
   /**
    * Get component popularity rankings
    */
-  getComponentPopularity(timeframe: '7d' | '30d' | '90d' | 'all' = 'all'): ComponentPopularity[] {
+  async getComponentPopularity(timeframe: '7d' | '30d' | '90d' | 'all' = 'all'): Promise<ComponentPopularity[]> {
     const cutoffDate = this.getCutoffDate(timeframe);
     const allComponents = this.designSystemService.getAllComponents();
-    const allApplications = Array.from(this.designSystemService.getAllApplications({}).applications);
+    const allApplications = await this.applications.list();
     const totalApplications = allApplications.length;
 
     const popularity: ComponentPopularity[] = [];
@@ -198,8 +197,8 @@ export class AnalyticsService {
   /**
    * Get application adoption metrics
    */
-  getApplicationAdoption(): ApplicationAdoption[] {
-    const allApplications = Array.from(this.designSystemService.getAllApplications({}).applications);
+  async getApplicationAdoption(): Promise<ApplicationAdoption[]> {
+    const allApplications = await this.applications.list();
     const allComponents = this.designSystemService.getAllComponents();
     const productionComponents = allComponents.filter(c => c.status === 'production');
 
@@ -228,7 +227,7 @@ export class AnalyticsService {
         totalComponents: componentsUsed.size,
         designSystemComponents,
         adoptionRate: parseFloat(adoptionRate.toFixed(1)),
-        lastScanned: app.lastScanned,
+        lastScanned: app.lastScanned ? new Date(app.lastScanned) : undefined,
       };
     });
   }
@@ -291,8 +290,8 @@ export class AnalyticsService {
   /**
    * Get cross-application comparison
    */
-  getCrossApplicationComparison(applicationIds?: string[]): CrossApplicationComparison[] {
-    const allApplications = Array.from(this.designSystemService.getAllApplications({}).applications);
+  async getCrossApplicationComparison(applicationIds?: string[]): Promise<CrossApplicationComparison[]> {
+    const allApplications = await this.applications.list();
     const applicationsToCompare = applicationIds
       ? allApplications.filter(app => applicationIds.includes(app.id))
       : allApplications;
@@ -490,69 +489,4 @@ export class AnalyticsService {
     if (change < -5) return { direction: 'down', change: parseFloat(change.toFixed(1)) };
     return { direction: 'stable', change: parseFloat(change.toFixed(1)) };
   }
-
-  private initializeMockHistory(): void {
-    if (this.usageHistory.length > 0) return;
-
-    try {
-      const allComponents = this.designSystemService.getAllComponents();
-      const appsResult = this.designSystemService.getAllApplications({});
-      const applications = appsResult && appsResult.applications ? Array.from(appsResult.applications) : [];
-
-      // Generate mock history for last 90 days
-      const today = new Date();
-      for (let i = 90; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(today.getDate() - i);
-        const dateStr = date.toISOString();
-
-        // Randomly assign component usage
-        allComponents.forEach(component => {
-          if (Math.random() > 0.3) { // 70% chance component is used
-            const appCount = Math.floor(Math.random() * applications.length) + 1;
-            const selectedApps = applications.slice(0, appCount);
-            const totalUsage = Math.floor(Math.random() * 100) + 10;
-
-            this.usageHistory.push({
-              date: dateStr,
-              componentId: component.id,
-              componentName: component.name,
-              totalUsage,
-              applicationCount: appCount,
-              applications: selectedApps.map(app => ({
-                applicationId: app.id,
-                applicationName: app.name,
-                usageCount: Math.floor(totalUsage / appCount),
-              })),
-            });
-
-            // Also update current usage
-            selectedApps.forEach(app => {
-              if (!this.componentUsage.has(component.id)) {
-                this.componentUsage.set(component.id, []);
-              }
-              const usageRecords = this.componentUsage.get(component.id)!;
-              const existing = usageRecords.find(r => r.applicationId === app.id);
-              if (!existing) {
-                usageRecords.push({
-                  componentId: component.id,
-                  componentName: component.name,
-                  applicationId: app.id,
-                  applicationName: app.name,
-                  usageCount: Math.floor(totalUsage / appCount),
-                  files: [`src/components/${component.name}.vue`],
-                  firstSeen: date,
-                  lastSeen: date,
-                });
-              }
-            });
-          }
-        });
-      }
-    } catch (error) {
-      // Silently fail if initialization fails - will retry later if needed
-      console.warn('Failed to initialize mock history:', error);
-    }
-  }
 }
-

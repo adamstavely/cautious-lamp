@@ -3,9 +3,10 @@ import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
 import { DesignSystemModule } from '../design-system/design-system.module';
 import { DesignSystemService } from '../design-system/design-system.service';
+import { ApplicationsModule } from '../applications/applications.module';
 
 @Module({
-  imports: [forwardRef(() => DesignSystemModule)],
+  imports: [forwardRef(() => DesignSystemModule), ApplicationsModule],
   controllers: [AnalyticsController],
   providers: [AnalyticsService],
   exports: [AnalyticsService],

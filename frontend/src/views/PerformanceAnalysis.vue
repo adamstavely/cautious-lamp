@@ -910,7 +910,7 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 import { componentMetadataService } from '../services/componentMetadataService.js';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
@@ -927,7 +927,6 @@ const showCreateModal = ref(false);
 const editingBudget = ref(null);
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 
 const budgetForm = ref({
   name: '',
@@ -1007,9 +1006,7 @@ const getComponentRoute = (componentId, componentName) => {
 const loadAnalysis = async () => {
   loading.value = true;
   try {
-    const response = await axios.get(`${API_BASE_URL}/performance/bundle-analysis`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/performance/bundle-analysis`);
     // Ensure response data has the expected structure
     if (response.data && response.data.components && Array.isArray(response.data.components)) {
       analysis.value = response.data;
@@ -1033,10 +1030,9 @@ const showAnalysisModal = ref(false);
 
 const analyzeComponent = async (componentId) => {
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/performance/bundle-analysis/analyze`,
-      { componentId, includeDependencies: true },
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
+      { componentId, includeDependencies: true }
     );
     
     selectedComponent.value = response.data;
@@ -1126,9 +1122,7 @@ const getOptimizationSuggestions = (component) => {
 // Performance Budgets Functions
 const loadBudgets = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/performance/budgets`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    const response = await apiClient.get(`${API_BASE_URL}/performance/budgets`);
     budgets.value = response.data;
   } catch (error) {
     console.error('Error loading budgets:', error);
@@ -1232,16 +1226,14 @@ const getSuggestedUnit = (metric) => {
 const saveBudget = async () => {
   try {
     if (editingBudget.value) {
-      await axios.put(
+      await apiClient.put(
         `${API_BASE_URL}/performance/budgets/${editingBudget.value.id}`,
-        budgetForm.value,
-        { headers: { Authorization: `Bearer ${API_KEY}` } }
+        budgetForm.value
       );
     } else {
-      await axios.post(
+      await apiClient.post(
         `${API_BASE_URL}/performance/budgets`,
-        budgetForm.value,
-        { headers: { Authorization: `Bearer ${API_KEY}` } }
+        budgetForm.value
       );
     }
     closeModal();
@@ -1268,9 +1260,7 @@ const deleteBudget = async (id) => {
   if (!confirm('Are you sure you want to delete this budget?')) return;
   
   try {
-    await axios.delete(`${API_BASE_URL}/performance/budgets/${id}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
+    await apiClient.delete(`${API_BASE_URL}/performance/budgets/${id}`);
     loadBudgets();
   } catch (error) {
     console.error('Error deleting budget:', error);

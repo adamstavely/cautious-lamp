@@ -1,8 +1,12 @@
-import { INestApplication, UnauthorizedException, ValidationPipe } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { existsSync, readdirSync } from 'fs';
 import * as path from 'path';
-import { KeyManagementService } from '../common/security/key-management.service';
+import { AuthGuard } from '../auth/auth.guard';
+import { AuthService, DEFAULT_SERVICE_PERMISSIONS } from '../auth/auth.service';
+import { SecurityAuditService } from '../common/security/security-audit.service';
+import { ALL_PERMISSIONS } from '../rbac/rbac.service';
 import { AdminReviewsController } from './admin-reviews.controller';
 import { REVIEW_STORE, TEAM_STORE } from './document-store';
 import { ReviewFilesController } from './review-files.controller';
@@ -16,14 +20,24 @@ import { SAMPLE_FILES, createHarness } from './testing/harness';
 const API_KEY = 'test-key';
 const ADMIN_KEY = 'admin-key';
 
-const keys = {
-  assertValidApiKey(header?: string) {
-    if (header !== `Bearer ${API_KEY}`) throw new UnauthorizedException('Invalid or missing API key');
-  },
-  assertAdminKey(header?: string) {
-    if (header !== `Bearer ${ADMIN_KEY}`) throw new UnauthorizedException('Admin API key required');
+/** Stands in for AuthService: the two keys resolve like API_KEYS and ADMIN_API_KEY do */
+const auth = {
+  async resolve(credential?: string) {
+    const service = (id: string, permissions: readonly string[]) => ({
+      type: 'service' as const,
+      id,
+      name: id,
+      email: null,
+      roles: [],
+      permissions: new Set(permissions),
+      mustChangePassword: false as const,
+    });
+    if (credential === API_KEY) return service('test-key', DEFAULT_SERVICE_PERMISSIONS);
+    if (credential === ADMIN_KEY) return service('admin-key', ALL_PERMISSIONS);
+    return null;
   },
 };
+const audit = { logPermissionDenied: async () => undefined };
 
 /** End-to-end over HTTP, with in-memory storage in place of Elasticsearch */
 describe('Reviews HTTP API', () => {
@@ -55,7 +69,9 @@ describe('Reviews HTTP API', () => {
         { provide: ReviewFilesService, useValue: h.files },
         { provide: REVIEW_STORE, useValue: h.store },
         { provide: TEAM_STORE, useValue: h.teamStore },
-        { provide: KeyManagementService, useValue: keys },
+        { provide: AuthService, useValue: auth },
+        { provide: SecurityAuditService, useValue: audit },
+        { provide: APP_GUARD, useClass: AuthGuard },
       ],
     }).compile();
     app = moduleRef.createNestApplication({ rawBody: true, logger: false });
@@ -78,10 +94,10 @@ describe('Reviews HTTP API', () => {
     return { reviewId, uploadUrl, put: await put.json() };
   }
 
-  it('requires an API key, and the admin key for admin routes', async () => {
+  it('requires an API key, and admin:users (the admin key) for admin routes', async () => {
     expect((await fetch(`${base}/api/v1/reviews`)).status).toBe(401);
     expect((await call('GET', '/reviews')).status).toBe(200);
-    expect((await call('GET', '/admin/reviews')).status).toBe(401);
+    expect((await call('GET', '/admin/reviews')).status).toBe(403);
     expect((await call('GET', '/admin/reviews', undefined, { Authorization: `Bearer ${ADMIN_KEY}` })).status).toBe(200);
   });
 

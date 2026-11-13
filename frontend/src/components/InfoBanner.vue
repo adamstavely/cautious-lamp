@@ -45,7 +45,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 
 const banners = ref([]);
 const dismissedBanners = ref(new Set());
@@ -94,7 +94,7 @@ const checkDrawerState = () => {
 
 const fetchBanners = async () => {
   try {
-    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners?active=true`);
+    const response = await apiClient.get(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners?active=true`);
     banners.value = response.data.filter(banner => !dismissedBanners.value.has(banner.id));
   } catch (error) {
     console.error('Failed to fetch banners:', error);

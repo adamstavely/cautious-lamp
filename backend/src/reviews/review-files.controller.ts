@@ -1,13 +1,14 @@
 import { Controller, Get, Headers, Param, Put, Query, Req, Res, StreamableFile } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { createReadStream } from 'fs';
+import { Public } from '../auth/principal';
 import { ReviewsService } from './reviews.service';
 import { SIGNED_URL_TTL_SECONDS, contentDisposition } from './review-files.service';
 
 /**
- * Routes authorized by something other than an API key: the one-time upload
- * token, and HMAC-signed file URLs (so `<iframe>` and the PDF viewer can load
- * files without sending headers).
+ * Public routes, authorized by something other than a user token or API key:
+ * the one-time upload token, and HMAC-signed file URLs (so `<iframe>` and the
+ * PDF viewer can load files without sending headers).
  */
 @Controller('api/v1')
 export class ReviewFilesController {
@@ -18,6 +19,7 @@ export class ReviewFilesController {
    * form bodies, capped at 100kb); the service streams it to disk with its own
    * 50MB cap, so no global limit is raised.
    */
+  @Public()
   @Put('upload/:reviewId/:token')
   upload(
     @Param('reviewId') reviewId: string,
@@ -29,6 +31,7 @@ export class ReviewFilesController {
     return this.reviews.receiveUpload(reviewId, token, contentType, contentLength, req);
   }
 
+  @Public()
   @Get('review-files/:fileId')
   async file(
     @Param('fileId') fileId: string,

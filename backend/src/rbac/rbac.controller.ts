@@ -1,81 +1,90 @@
-import {
-  Controller,
-  Get,
-  Put,
-  Post,
-  Delete,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import { RbacService, Permission, RoleDefinition } from './rbac.service';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put } from '@nestjs/common';
+import { strictBody } from '../auth/auth.dto';
+import { AuthPrincipal, Principal, RequirePermission, assertSelfOr } from '../auth/principal';
+import { UsersService } from '../auth/users.service';
+import { Permission, RbacService } from './rbac.service';
+import { AssignRoleDto, UpdateRoleDto } from './rbac.dto';
 
+/**
+ * Roles and assignments (docs/AUTH.md). Everything needs admin:rbac, except
+ * that people may read their own roles and permissions. Role changes go
+ * through UsersService, which knows who is active (the last-admin rule).
+ * Clients put user ids in paths with encodeURIComponent; Express decodes them.
+ */
 @Controller('api/v1/rbac')
 export class RbacController {
-  constructor(private readonly rbacService: RbacService) {}
+  constructor(
+    private readonly rbacService: RbacService,
+    private readonly users: UsersService,
+  ) {}
 
   @Get('roles')
-  async getRoles() {
+  @RequirePermission(Permission.ADMIN_RBAC)
+  getRoles() {
     return this.rbacService.getRoles();
   }
 
   @Get('roles/:id')
-  async getRole(@Param('id') id: string) {
-    const role = await this.rbacService.getRole(id);
-    if (!role) {
-      return { error: 'Role not found' };
-    }
-    return role;
+  @RequirePermission(Permission.ADMIN_RBAC)
+  getRole(@Param('id') id: string) {
+    return this.rbacService.requireRole(id);
   }
 
   @Put('roles/:id')
-  async updateRole(
-    @Param('id') id: string,
-    @Body() body: { permissions: Permission[] },
-  ) {
-    return this.rbacService.updateRole(id, body.permissions);
+  @RequirePermission(Permission.ADMIN_RBAC)
+  updateRole(@Param('id') id: string, @Body(strictBody()) body: UpdateRoleDto, @Principal() principal: AuthPrincipal) {
+    return this.users.updateRolePermissions(id, body.permissions, principal);
   }
 
   @Get('permissions')
+  @RequirePermission(Permission.ADMIN_RBAC)
   getAllPermissions() {
     return this.rbacService.getAllPermissions();
   }
 
   @Get('users/:userId/roles')
-  async getUserRoles(@Param('userId') userId: string) {
+  getUserRoles(@Param('userId') userId: string, @Principal() principal: AuthPrincipal) {
+    assertSelfOr(principal, userId, Permission.ADMIN_RBAC);
     return this.rbacService.getUserRoles(userId);
   }
 
   @Post('users/:userId/roles')
-  async assignRoleToUser(
+  @RequirePermission(Permission.ADMIN_RBAC)
+  assignRoleToUser(
     @Param('userId') userId: string,
-    @Body() body: { roleId: string; assignedBy?: string },
+    @Body(strictBody()) body: AssignRoleDto,
+    @Principal() principal: AuthPrincipal,
   ) {
-    return this.rbacService.assignRoleToUser(userId, body.roleId, body.assignedBy);
+    return this.users.assignRole(userId, body.roleId, principal);
   }
 
   @Delete('users/:userId/roles/:roleId')
+  @RequirePermission(Permission.ADMIN_RBAC)
+  @HttpCode(200)
   async removeRoleFromUser(
     @Param('userId') userId: string,
     @Param('roleId') roleId: string,
+    @Principal() principal: AuthPrincipal,
   ) {
-    await this.rbacService.removeRoleFromUser(userId, roleId);
+    await this.users.removeRole(userId, roleId, principal);
     return { success: true };
   }
 
+  /** Summaries (id, email, name) of the users with the role */
   @Get('roles/:roleId/users')
+  @RequirePermission(Permission.ADMIN_RBAC)
   async getUsersWithRole(@Param('roleId') roleId: string) {
-    return this.rbacService.getUsersWithRole(roleId);
+    return this.users.summaries(await this.rbacService.getUsersWithRole(roleId));
   }
 
   @Get('users/:userId/permissions/:permission')
   async checkPermission(
     @Param('userId') userId: string,
-    @Param('permission') permission: Permission,
+    @Param('permission') permission: string,
+    @Principal() principal: AuthPrincipal,
   ) {
-    const hasPermission = await this.rbacService.hasPermission(userId, permission);
+    assertSelfOr(principal, userId, Permission.ADMIN_RBAC);
+    const hasPermission = await this.rbacService.hasPermission(userId, permission as Permission);
     return { hasPermission };
   }
 }
-

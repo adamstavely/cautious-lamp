@@ -1,5 +1,6 @@
 import { ref, computed, watch, reactive } from 'vue';
 import OpenFeature from '../services/featureFlagsService';
+import { authState, authHeaders, getToken, isMockAuth } from '../services/auth.js';
 
 // Cache for feature flag states - load from localStorage on initialization
 const loadFlagCache = () => {
@@ -19,24 +20,24 @@ const flagCache = reactive(loadFlagCache());
 const loadingFlags = ref(new Set());
 const activeFlagRefreshers = new Map(); // Track active flag refreshers
 
-// Get current user context (can be enhanced with actual user data)
-// Defined early to avoid hoisting issues
-const getUserContext = () => {
-  // In a real app, this would get from auth service
-  const userId = localStorage.getItem('userId') || undefined;
-  const userGroups = localStorage.getItem('userGroups') 
-    ? JSON.parse(localStorage.getItem('userGroups'))
-    : undefined;
-  
-  return { userId, userGroups };
-};
+/**
+ * Targeting context for flags: the signed-in user's id, with their RBAC roles
+ * as groups. Comes from the session, not from anything stored in the browser.
+ */
+export const getUserContext = () => ({
+  userId: authState.user?.id || undefined,
+  userGroups: authState.user?.roles?.length ? [...authState.user.roles] : undefined,
+});
 
 // Preload all flags from API on initialization
 const preloadAllFlags = async () => {
   try {
     const context = getUserContext();
     // Get all flags from the service
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/feature-flags`);
+    if (!isMockAuth() && !getToken()) return;
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/feature-flags`, {
+      headers: authHeaders(),
+    });
     if (response.ok) {
       const flags = await response.json();
       // Populate flagCache with all flags
@@ -102,9 +103,11 @@ const hashString = (str) => {
   return Math.abs(hash);
 };
 
-// Preload flags on initialization
+// Preload flags once someone is signed in (and again for each new sign-in)
 if (typeof window !== 'undefined') {
-  preloadAllFlags();
+  watch(() => authState.user?.id, (id) => {
+    if (id) preloadAllFlags();
+  }, { immediate: true });
 }
 
 // Export flagCache so components can access it reactively

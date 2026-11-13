@@ -1,5 +1,14 @@
-import { Injectable, Optional, Inject } from '@nestjs/common';
-import { ElasticsearchService } from '@nestjs/elasticsearch';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
+import { VersionConflictError } from '../reviews/document-store';
+import { RBAC_STORE, RbacStore, RoleDoc } from './rbac.store';
 
 export enum Permission {
   // Component permissions
@@ -35,6 +44,7 @@ export enum Permission {
   ADMIN_BANNERS = 'admin:banners',
   ADMIN_RBAC = 'admin:rbac',
   ADMIN_PERFORMANCE_ANALYSIS = 'admin:performance_analysis',
+  ADMIN_USERS = 'admin:users',
   
   // Roadmap & Feedback permissions
   ROADMAP_VIEW = 'roadmap:view',
@@ -69,23 +79,89 @@ export interface RoleDefinition {
   name: string;
   description: string;
   permissions: Permission[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface UserRole {
   userId: string;
   roleId: string;
-  assignedAt: Date;
+  assignedAt: string;
   assignedBy?: string;
 }
 
+export const ALL_PERMISSIONS: readonly Permission[] = Object.values(Permission);
+
+const PERMISSION_SET = new Set<string>(ALL_PERMISSIONS);
+
+export function isPermission(value: unknown): value is Permission {
+  return typeof value === 'string' && PERMISSION_SET.has(value);
+}
+
+/**
+ * Permissions added to the default roles after roles were first stored. A role
+ * stored before `defaultsApplied` was tracked is assumed to have had every other
+ * default applied already, so only these are added to it.
+ */
+const PERMISSIONS_ADDED_LATER: readonly Permission[] = [Permission.ADMIN_USERS];
+
+/** Labels for the permission picker. A Record, so a new permission without a label fails to compile. */
+const PERMISSION_LABELS: Record<Permission, string> = {
+  [Permission.COMPONENT_VIEW]: 'View Components',
+  [Permission.COMPONENT_CREATE]: 'Create Components',
+  [Permission.COMPONENT_EDIT]: 'Edit Components',
+  [Permission.COMPONENT_DELETE]: 'Delete Components',
+  [Permission.COMPONENT_APPROVE]: 'Approve Components',
+  [Permission.TOKEN_VIEW]: 'View Tokens',
+  [Permission.TOKEN_CREATE]: 'Create Tokens',
+  [Permission.TOKEN_EDIT]: 'Edit Tokens',
+  [Permission.TOKEN_DELETE]: 'Delete Tokens',
+  [Permission.PATTERN_VIEW]: 'View Patterns',
+  [Permission.PATTERN_CREATE]: 'Create Patterns',
+  [Permission.PATTERN_EDIT]: 'Edit Patterns',
+  [Permission.PATTERN_DELETE]: 'Delete Patterns',
+  [Permission.REVIEW_VIEW]: 'View Reviews',
+  [Permission.REVIEW_CREATE]: 'Create Reviews',
+  [Permission.REVIEW_APPROVE]: 'Approve Reviews',
+  [Permission.REVIEW_REJECT]: 'Reject Reviews',
+  [Permission.REVIEW_ADMIN]: 'Review Administration',
+  [Permission.ADMIN_SYSTEM_HEALTH]: 'System Health',
+  [Permission.ADMIN_GOVERNANCE]: 'Governance',
+  [Permission.ADMIN_AUDIT]: 'Audit Logs',
+  [Permission.ADMIN_BANNERS]: 'Site Banners',
+  [Permission.ADMIN_RBAC]: 'Role Management',
+  [Permission.ADMIN_PERFORMANCE_ANALYSIS]: 'Performance Analysis',
+  [Permission.ADMIN_USERS]: 'User Management',
+  [Permission.ROADMAP_VIEW]: 'View Roadmap',
+  [Permission.ROADMAP_EDIT]: 'Edit Roadmap',
+  [Permission.FEEDBACK_CREATE]: 'Create Feedback',
+  [Permission.FEEDBACK_VOTE]: 'Vote on Feedback',
+  [Permission.STYLE_MANAGE]: 'Manage Styles',
+  [Permission.STYLE_APPROVE]: 'Approve Styles',
+  [Permission.DESIGN_CREATE]: 'Create Designs',
+  [Permission.DESIGN_EDIT]: 'Edit Designs',
+  [Permission.DESIGN_APPROVE]: 'Approve Designs',
+};
+
+const PERMISSION_CATEGORIES: Record<string, string> = {
+  component: 'Components',
+  token: 'Design Tokens',
+  pattern: 'Patterns',
+  review: 'Reviews',
+  admin: 'Administration',
+  roadmap: 'Roadmap & Feedback',
+  feedback: 'Roadmap & Feedback',
+  style: 'Style',
+  design: 'Design',
+};
+
 @Injectable()
-export class RbacService {
-  private readonly indexPrefix = 'design-system-rbac';
-  
+export class RbacService implements OnModuleInit {
+  private readonly logger = new Logger(RbacService.name);
+  private initialized: Promise<void> | null = null;
+
   // Default role definitions with permissions
-  private readonly defaultRoles: Record<Role, Permission[]> = {
+  readonly defaultRoles: Record<Role, Permission[]> = {
     [Role.DESIGNER]: [
       Permission.COMPONENT_VIEW,
       Permission.COMPONENT_CREATE,
@@ -216,6 +292,7 @@ export class RbacService {
       Permission.ADMIN_GOVERNANCE,
       Permission.ADMIN_AUDIT,
       Permission.ADMIN_PERFORMANCE_ANALYSIS,
+      Permission.ADMIN_USERS,
       Permission.ROADMAP_VIEW,
       Permission.ROADMAP_EDIT,
       Permission.FEEDBACK_CREATE,
@@ -236,84 +313,81 @@ export class RbacService {
     ],
   };
 
-  constructor(
-    @Optional() @Inject(ElasticsearchService) private readonly elasticsearchService?: ElasticsearchService,
-  ) {
-    // Initialize default roles on service creation (async, don't await)
-    this.initializeDefaultRoles().catch(err => {
-      console.error('Failed to initialize default roles:', err);
-    });
-    
-    // Ensure default user has design system manager role
-    this.ensureDefaultUserRole().catch(err => {
-      console.error('Failed to ensure default user role:', err);
-    });
-  }
-
-  private async initializeDefaultRoles() {
-    if (!this.elasticsearchService) {
-      console.warn('ElasticsearchService not available, using in-memory RBAC');
-      return;
-    }
-
-    try {
-      for (const [roleId, permissions] of Object.entries(this.defaultRoles)) {
-        const role: RoleDefinition = {
-          id: roleId,
-          name: this.formatRoleName(roleId),
-          description: this.getRoleDescription(roleId as Role),
-          permissions,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        
-        await this.elasticsearchService.index({
-          index: `${this.indexPrefix}-roles`,
-          id: roleId,
-          document: role,
-          op_type: 'create', // Only create if doesn't exist
-        }).catch(() => {
-          // Role already exists, ignore
-        });
-      }
-    } catch (error) {
-      console.error('Failed to initialize default roles:', error);
-    }
-  }
+  constructor(@Inject(RBAC_STORE) private readonly store: RbacStore) {}
 
   /**
-   * Ensure the default/current user has the design system manager role
+   * Creates the indices and default roles before the app serves requests. If
+   * Elasticsearch is down the app still starts: RBAC calls return 503 and
+   * init is retried on the next call.
    */
-  private async ensureDefaultUserRole() {
-    const defaultUserId = process.env.DEFAULT_USER_ID || 'current-user';
-    const roleId = Role.DESIGN_SYSTEM_MANAGER;
-
+  async onModuleInit(): Promise<void> {
     try {
-      // Check if user already has this role
-      const existingRoles = await this.getUserRoles(defaultUserId);
-      const hasRole = existingRoles.some(role => role.id === roleId);
-
-      if (!hasRole) {
-        // Assign the role
-        await this.assignRoleToUser(defaultUserId, roleId, 'system');
-        console.log(`Assigned ${roleId} role to default user: ${defaultUserId}`);
-      }
+      await this.ensureInitialized();
     } catch (error) {
-      // If Elasticsearch is not available, we'll use in-memory storage
-      // For in-memory, we'll track it locally
-      if (!this.elasticsearchService) {
-        // Store in memory for this session
-        if (!(this as any).inMemoryUserRoles) {
-          (this as any).inMemoryUserRoles = new Map<string, Set<string>>();
-        }
-        const userRoles = (this as any).inMemoryUserRoles.get(defaultUserId) || new Set<string>();
-        userRoles.add(roleId);
-        (this as any).inMemoryUserRoles.set(defaultUserId, userRoles);
-        console.log(`Assigned ${roleId} role to default user (in-memory): ${defaultUserId}`);
-      } else {
-        console.error('Failed to ensure default user role:', error);
+      this.logger.warn(`RBAC not initialized yet, will retry on first use: ${(error as Error)?.message}`);
+    }
+  }
+
+  /** Idempotent: safe to call from every instance on every start */
+  ensureInitialized(): Promise<void> {
+    if (!this.initialized) {
+      this.initialized = this.initialize().catch((error) => {
+        this.initialized = null;
+        throw error;
+      });
+    }
+    return this.initialized;
+  }
+
+  private async initialize(): Promise<void> {
+    await this.store.init();
+    for (const [roleId, defaults] of Object.entries(this.defaultRoles) as [Role, Permission[]][]) {
+      await this.applyDefaults(roleId, defaults);
+    }
+  }
+
+  /** Creates a default role, or adds defaults it hasn't had yet without touching the rest */
+  private async applyDefaults(roleId: Role, defaults: Permission[]): Promise<void> {
+    const now = new Date().toISOString();
+    const created = await this.store.createRole({
+      id: roleId,
+      name: this.formatRoleName(roleId),
+      description: this.getRoleDescription(roleId),
+      permissions: [...defaults],
+      defaultsApplied: [...defaults],
+      createdAt: now,
+      updatedAt: now,
+    });
+    if (created) return;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const stored = await this.store.getRole(roleId);
+      if (!stored) return;
+      const role = stored.doc;
+      const applied = new Set(
+        role.defaultsApplied ?? defaults.filter((permission) => !PERMISSIONS_ADDED_LATER.includes(permission)),
+      );
+      const missing = defaults.filter((permission) => !applied.has(permission));
+      if (missing.length === 0 && role.defaultsApplied) return;
+      const permissions = new Set(role.permissions);
+      missing.forEach((permission) => permissions.add(permission));
+      try {
+        await this.store.replaceRole(
+          {
+            ...role,
+            permissions: [...permissions],
+            defaultsApplied: [...new Set([...applied, ...defaults])],
+            updatedAt: missing.length ? now : role.updatedAt,
+          },
+          stored.version,
+        );
+        if (missing.length) this.logger.log(`Added ${missing.join(', ')} to role ${roleId}`);
+        return;
+      } catch (error) {
+        if (!(error instanceof VersionConflictError)) throw error;
       }
     }
+    this.logger.warn(`Role ${roleId} kept changing during init; its new default permissions were not added`);
   }
 
   private formatRoleName(roleId: string): string {
@@ -338,309 +412,130 @@ export class RbacService {
     return descriptions[role] || '';
   }
 
-  /**
-   * Get all roles
-   */
+  /** The API shape: stored roles without bookkeeping, and only known permissions */
+  private toDefinition(role: RoleDoc): RoleDefinition {
+    const { defaultsApplied, ...rest } = role;
+    return { ...rest, permissions: role.permissions.filter(isPermission) };
+  }
+
   async getRoles(): Promise<RoleDefinition[]> {
-    if (!this.elasticsearchService) {
-      // Return default roles from memory
-      return Object.entries(this.defaultRoles).map(([roleId, permissions]) => ({
-        id: roleId,
-        name: this.formatRoleName(roleId),
-        description: this.getRoleDescription(roleId as Role),
-        permissions,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }));
-    }
-
-    try {
-      const result = await this.elasticsearchService.search<RoleDefinition>({
-        index: `${this.indexPrefix}-roles`,
-        query: { match_all: {} },
-        size: 100,
-      });
-
-      return result.hits.hits.map(hit => hit._source);
-    } catch (error) {
-      console.error('Failed to get roles:', error);
-      return [];
-    }
+    await this.ensureInitialized();
+    const roles = await this.store.listRoles();
+    return roles.map((role) => this.toDefinition(role)).sort((a, b) => a.id.localeCompare(b.id));
   }
 
-  /**
-   * Get a specific role by ID
-   */
+  /** The role, or null when there is no such role */
   async getRole(roleId: string): Promise<RoleDefinition | null> {
-    if (!this.elasticsearchService) {
-      if (this.defaultRoles[roleId as Role]) {
-        return {
-          id: roleId,
-          name: this.formatRoleName(roleId),
-          description: this.getRoleDescription(roleId as Role),
-          permissions: this.defaultRoles[roleId as Role],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-      }
-      return null;
-    }
-
-    try {
-      const result = await this.elasticsearchService.get<RoleDefinition>({
-        index: `${this.indexPrefix}-roles`,
-        id: roleId,
-      });
-
-      return result._source;
-    } catch (error) {
-      console.error(`Failed to get role ${roleId}:`, error);
-      return null;
-    }
+    await this.ensureInitialized();
+    const stored = await this.store.getRole(roleId);
+    return stored ? this.toDefinition(stored.doc) : null;
   }
 
-  /**
-   * Update role permissions
-   */
-  async updateRole(roleId: string, permissions: Permission[]): Promise<RoleDefinition> {
+  /** The role, or a 404 */
+  async requireRole(roleId: string): Promise<RoleDefinition> {
     const role = await this.getRole(roleId);
-    if (!role) {
-      throw new Error(`Role ${roleId} not found`);
-    }
-
-    const updatedRole: RoleDefinition = {
-      ...role,
-      permissions,
-      updatedAt: new Date(),
-    };
-
-    if (!this.elasticsearchService) {
-      console.warn('ElasticsearchService not available, role update not persisted');
-      return updatedRole;
-    }
-
-    try {
-      await this.elasticsearchService.index({
-        index: `${this.indexPrefix}-roles`,
-        id: roleId,
-        document: updatedRole,
-      });
-
-      return updatedRole;
-    } catch (error) {
-      console.error(`Failed to update role ${roleId}:`, error);
-      throw error;
-    }
+    if (!role) throw new NotFoundException(`Role ${roleId} not found`);
+    return role;
   }
 
   /**
-   * Assign role to user
+   * Replaces a role's permissions. `check` runs against the role as read, and
+   * can veto the change (the last-admin rule) before anything is written.
    */
+  async updateRole(
+    roleId: string,
+    permissions: string[],
+    check?: (before: RoleDefinition, after: Permission[]) => Promise<void>,
+  ): Promise<RoleDefinition> {
+    const unknown = permissions.filter((permission) => !isPermission(permission));
+    if (unknown.length) throw new BadRequestException(`Unknown permissions: ${unknown.join(', ')}`);
+    const next = [...new Set(permissions)] as Permission[];
+    await this.ensureInitialized();
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const stored = await this.store.getRole(roleId);
+      if (!stored) throw new NotFoundException(`Role ${roleId} not found`);
+      if (check) await check(this.toDefinition(stored.doc), next);
+      const updated: RoleDoc = { ...stored.doc, permissions: next, updatedAt: new Date().toISOString() };
+      try {
+        await this.store.replaceRole(updated, stored.version);
+        return this.toDefinition(updated);
+      } catch (error) {
+        if (!(error instanceof VersionConflictError)) throw error;
+      }
+    }
+    throw new ConflictException(`Role ${roleId} was changed by someone else, please try again`);
+  }
+
+  /** Assigns a role (idempotent). 404 for an unknown role; the caller checks the user exists. */
   async assignRoleToUser(userId: string, roleId: string, assignedBy?: string): Promise<UserRole> {
-    const role = await this.getRole(roleId);
-    if (!role) {
-      throw new Error(`Role ${roleId} not found`);
-    }
-
-    const userRole: UserRole = {
-      userId,
-      roleId,
-      assignedAt: new Date(),
-      assignedBy,
-    };
-
-    // Store in memory for fallback
-    if (!(this as any).inMemoryUserRoles) {
-      (this as any).inMemoryUserRoles = new Map<string, Set<string>>();
-    }
-    const userRoles = (this as any).inMemoryUserRoles.get(userId) || new Set<string>();
-    userRoles.add(roleId);
-    (this as any).inMemoryUserRoles.set(userId, userRoles);
-
-    if (!this.elasticsearchService) {
-      console.warn('ElasticsearchService not available, role assignment stored in-memory only');
-      return userRole;
-    }
-
-    try {
-      await this.elasticsearchService.index({
-        index: `${this.indexPrefix}-user-roles`,
-        id: `${userId}-${roleId}`,
-        document: userRole,
-      });
-
-      return userRole;
-    } catch (error) {
-      console.error(`Failed to assign role to user:`, error);
-      // Don't throw - we've already stored in memory
-      return userRole;
-    }
+    await this.requireRole(roleId);
+    const userRole: UserRole = { userId, roleId, assignedAt: new Date().toISOString(), assignedBy };
+    await this.store.putAssignment(userRole);
+    return userRole;
   }
 
-  /**
-   * Remove role from user
-   */
+  /** 404 when the user doesn't have the role */
   async removeRoleFromUser(userId: string, roleId: string): Promise<void> {
-    if (!this.elasticsearchService) {
-      console.warn('ElasticsearchService not available, role removal not persisted');
-      return;
-    }
-
-    try {
-      await this.elasticsearchService.delete({
-        index: `${this.indexPrefix}-user-roles`,
-        id: `${userId}-${roleId}`,
-      });
-    } catch (error) {
-      console.error(`Failed to remove role from user:`, error);
-      throw error;
+    await this.ensureInitialized();
+    if (!(await this.store.deleteAssignment(userId, roleId))) {
+      throw new NotFoundException(`User ${userId} does not have role ${roleId}`);
     }
   }
 
-  /**
-   * Get all roles for a user
-   */
   async getUserRoles(userId: string): Promise<RoleDefinition[]> {
-    // Check in-memory storage first (for when Elasticsearch is not available)
-    if (!this.elasticsearchService) {
-      if ((this as any).inMemoryUserRoles) {
-        const userRoles = (this as any).inMemoryUserRoles.get(userId);
-        if (userRoles && userRoles.size > 0) {
-          const roleIds = Array.from(userRoles);
-          const roles = await Promise.all(roleIds.map((id: any) => this.getRole(String(id))));
-          return roles.filter((role): role is RoleDefinition => role !== null);
-        }
-      }
-      return [];
-    }
-
-    try {
-      const result = await this.elasticsearchService.search<UserRole>({
-        index: `${this.indexPrefix}-user-roles`,
-        query: {
-          term: { userId },
-        },
-        size: 100,
-      });
-
-      const roleIds = result.hits.hits.map(hit => hit._source.roleId);
-      const roles = await Promise.all(roleIds.map(id => this.getRole(id)));
-      
-      return roles.filter((role): role is RoleDefinition => role !== null);
-    } catch (error) {
-      console.error(`Failed to get user roles:`, error);
-      // Fallback to in-memory if available
-      if ((this as any).inMemoryUserRoles) {
-        const userRoles = (this as any).inMemoryUserRoles.get(userId);
-        if (userRoles && userRoles.size > 0) {
-          const roleIds = Array.from(userRoles);
-          const roles = await Promise.all(roleIds.map((id: any) => this.getRole(String(id))));
-          return roles.filter((role): role is RoleDefinition => role !== null);
-        }
-      }
-      return [];
-    }
+    const roleIds = (await this.getRoleIdsByUser([userId])).get(userId) ?? [];
+    if (roleIds.length === 0) return [];
+    const roles = await this.getRoles();
+    return roles.filter((role) => roleIds.includes(role.id));
   }
 
-  /**
-   * Get all users with a specific role
-   */
+  /** Role ids per user, for many users at once */
+  async getRoleIdsByUser(userIds: string[]): Promise<Map<string, string[]>> {
+    await this.ensureInitialized();
+    const result = new Map<string, string[]>(userIds.map((id) => [id, []]));
+    if (userIds.length === 0) return result;
+    for (const assignment of await this.store.assignmentsForUsers(userIds)) {
+      result.get(assignment.userId)?.push(assignment.roleId);
+    }
+    for (const ids of result.values()) ids.sort();
+    return result;
+  }
+
+  /** Ids of users with the role. 404 for an unknown role. */
   async getUsersWithRole(roleId: string): Promise<string[]> {
-    if (!this.elasticsearchService) {
-      return [];
-    }
-
-    try {
-      const result = await this.elasticsearchService.search<UserRole>({
-        index: `${this.indexPrefix}-user-roles`,
-        query: {
-          term: { roleId },
-        },
-        size: 1000,
-      });
-
-      return result.hits.hits.map(hit => hit._source.userId);
-    } catch (error) {
-      console.error(`Failed to get users with role:`, error);
-      return [];
-    }
+    await this.requireRole(roleId);
+    const assignments = await this.store.assignmentsForRoles([roleId]);
+    return [...new Set(assignments.map((assignment) => assignment.userId))];
   }
 
-  /**
-   * Check if user has permission
-   */
+  /** Assignments that grant a permission, given role permissions (the stored ones by default) */
+  async getAssignmentsWithPermission(permission: Permission, roles?: RoleDefinition[]): Promise<UserRole[]> {
+    const roleIds = (roles ?? (await this.getRoles()))
+      .filter((role) => role.permissions.includes(permission))
+      .map((role) => role.id);
+    if (roleIds.length === 0) return [];
+    return this.store.assignmentsForRoles(roleIds);
+  }
+
+  /** Role ids and the union of their permissions */
+  async getAccess(userId: string): Promise<{ roles: string[]; permissions: Permission[] }> {
+    const roles = await this.getUserRoles(userId);
+    const permissions = new Set<Permission>();
+    roles.forEach((role) => role.permissions.forEach((permission) => permissions.add(permission)));
+    return { roles: roles.map((role) => role.id), permissions: [...permissions].sort() };
+  }
+
   async hasPermission(userId: string, permission: Permission): Promise<boolean> {
-    // Ensure default user has design system manager role (for in-memory fallback)
-    const defaultUserId = process.env.DEFAULT_USER_ID || 'current-user';
-    if (userId === defaultUserId || userId === 'current-user' || userId === 'default-user') {
-      // Always grant permissions to default user (they have design system manager role)
-      return true;
-    }
-
-    const userRoles = await this.getUserRoles(userId);
-    
-    for (const role of userRoles) {
-      if (role.permissions.includes(permission)) {
-        return true;
-      }
-    }
-
-    return false;
+    return (await this.getAccess(userId)).permissions.includes(permission);
   }
 
-  /**
-   * Get all permissions
-   */
+  /** Every permission in the enum, with a label and category */
   getAllPermissions(): { value: Permission; label: string; category: string }[] {
-    return [
-      // Component permissions
-      { value: Permission.COMPONENT_VIEW, label: 'View Components', category: 'Components' },
-      { value: Permission.COMPONENT_CREATE, label: 'Create Components', category: 'Components' },
-      { value: Permission.COMPONENT_EDIT, label: 'Edit Components', category: 'Components' },
-      { value: Permission.COMPONENT_DELETE, label: 'Delete Components', category: 'Components' },
-      { value: Permission.COMPONENT_APPROVE, label: 'Approve Components', category: 'Components' },
-      
-      // Token permissions
-      { value: Permission.TOKEN_VIEW, label: 'View Tokens', category: 'Design Tokens' },
-      { value: Permission.TOKEN_CREATE, label: 'Create Tokens', category: 'Design Tokens' },
-      { value: Permission.TOKEN_EDIT, label: 'Edit Tokens', category: 'Design Tokens' },
-      { value: Permission.TOKEN_DELETE, label: 'Delete Tokens', category: 'Design Tokens' },
-      
-      // Pattern permissions
-      { value: Permission.PATTERN_VIEW, label: 'View Patterns', category: 'Patterns' },
-      { value: Permission.PATTERN_CREATE, label: 'Create Patterns', category: 'Patterns' },
-      { value: Permission.PATTERN_EDIT, label: 'Edit Patterns', category: 'Patterns' },
-      { value: Permission.PATTERN_DELETE, label: 'Delete Patterns', category: 'Patterns' },
-      
-      // Review permissions
-      { value: Permission.REVIEW_VIEW, label: 'View Reviews', category: 'Reviews' },
-      { value: Permission.REVIEW_CREATE, label: 'Create Reviews', category: 'Reviews' },
-      { value: Permission.REVIEW_APPROVE, label: 'Approve Reviews', category: 'Reviews' },
-      { value: Permission.REVIEW_REJECT, label: 'Reject Reviews', category: 'Reviews' },
-      { value: Permission.REVIEW_ADMIN, label: 'Review Administration', category: 'Reviews' },
-      
-      // Admin permissions
-      { value: Permission.ADMIN_SYSTEM_HEALTH, label: 'System Health', category: 'Administration' },
-      { value: Permission.ADMIN_GOVERNANCE, label: 'Governance', category: 'Administration' },
-      { value: Permission.ADMIN_AUDIT, label: 'Audit Logs', category: 'Administration' },
-      { value: Permission.ADMIN_BANNERS, label: 'Site Banners', category: 'Administration' },
-      { value: Permission.ADMIN_RBAC, label: 'Role Management', category: 'Administration' },
-      
-      // Roadmap & Feedback permissions
-      { value: Permission.ROADMAP_VIEW, label: 'View Roadmap', category: 'Roadmap & Feedback' },
-      { value: Permission.ROADMAP_EDIT, label: 'Edit Roadmap', category: 'Roadmap & Feedback' },
-      { value: Permission.FEEDBACK_CREATE, label: 'Create Feedback', category: 'Roadmap & Feedback' },
-      { value: Permission.FEEDBACK_VOTE, label: 'Vote on Feedback', category: 'Roadmap & Feedback' },
-      
-      // Style permissions
-      { value: Permission.STYLE_MANAGE, label: 'Manage Styles', category: 'Style' },
-      { value: Permission.STYLE_APPROVE, label: 'Approve Styles', category: 'Style' },
-      
-      // Design permissions
-      { value: Permission.DESIGN_CREATE, label: 'Create Designs', category: 'Design' },
-      { value: Permission.DESIGN_EDIT, label: 'Edit Designs', category: 'Design' },
-      { value: Permission.DESIGN_APPROVE, label: 'Approve Designs', category: 'Design' },
-    ];
+    return ALL_PERMISSIONS.map((value) => ({
+      value,
+      label: PERMISSION_LABELS[value],
+      category: PERMISSION_CATEGORIES[value.split(':')[0]] ?? 'Other',
+    }));
   }
 }
-

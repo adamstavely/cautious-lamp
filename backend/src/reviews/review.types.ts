@@ -137,7 +137,7 @@ export interface Team {
   updatedAt: string;
 }
 
-/** Who is acting, from the self-asserted x-user-email / x-user-name headers */
+/** Who is acting: the signed-in user, or the person an API key says it acts for (see request-context.ts) */
 export interface ActingUser {
   email: string | null;
   name: string | null;

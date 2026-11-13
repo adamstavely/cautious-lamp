@@ -1,4 +1,5 @@
 export class VoteRequestDto {
-  userId: string;
+  /** Ignored: the voter is the signed-in principal (docs/AUTH.md) */
+  userId?: string;
 }
 

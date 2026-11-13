@@ -26,8 +26,8 @@
       </template>
     </nav>
 
-    <!-- Admin Section -->
-    <div class="px-2 pb-2">
+    <!-- Admin Section (only for people who can open it) -->
+    <div v-if="canAccessPath('/admin')" class="px-2 pb-2">
       <router-link
         to="/admin"
         @click="handleSidebarClick"
@@ -59,6 +59,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useTheme } from 'vuetify';
+import { canAccessPath } from '../router/rbacGuards.js';
 
 const route = useRoute();
 const theme = useTheme();

@@ -2,15 +2,15 @@
   <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
     <!-- Drawer -->
     <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
+
     <!-- Main Content Area -->
-    <div 
+    <div
       class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
       :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
     >
       <!-- Breadcrumbs -->
       <Breadcrumbs />
-      
+
       <div class="h-full overflow-y-auto">
         <div class="p-8">
         <!-- Hero Section -->
@@ -48,320 +48,202 @@
             </div>
           </div>
         </div>
-
         <!-- Tabs -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="flex gap-2 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+        <div class="max-w-7xl mx-auto mb-6">
+          <div class="flex flex-wrap gap-2 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'" role="tablist">
             <button
-              @click="activeTab = 'dashboard'"
+              v-for="tab in TABS"
+              :key="tab.id"
+              type="button"
+              role="tab"
+              :aria-selected="activeTab === tab.id"
               class="px-6 py-3 font-medium transition-colors relative"
-              :class="activeTab === 'dashboard'
+              :class="activeTab === tab.id
                 ? (isDarkMode ? 'text-indigo-400' : 'text-indigo-600')
                 : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
+              @click="activeTab = tab.id"
             >
-              Dashboard
-              <div 
-                v-if="activeTab === 'dashboard'"
-                class="absolute bottom-0 left-0 right-0 h-0.5"
-                :class="isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600'"
-              ></div>
-            </button>
-            <button
-              @click="activeTab = 'reports'"
-              class="px-6 py-3 font-medium transition-colors relative"
-              :class="activeTab === 'reports'
-                ? (isDarkMode ? 'text-indigo-400' : 'text-indigo-600')
-                : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
-            >
-              Report History
-              <div 
-                v-if="activeTab === 'reports'"
-                class="absolute bottom-0 left-0 right-0 h-0.5"
-                :class="isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600'"
-              ></div>
-            </button>
-            <button
-              @click="activeTab = 'multi-app'"
-              class="px-6 py-3 font-medium transition-colors relative"
-              :class="activeTab === 'multi-app'
-                ? (isDarkMode ? 'text-indigo-400' : 'text-indigo-600')
-                : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
-            >
-              Multi-Application
-              <div 
-                v-if="activeTab === 'multi-app'"
-                class="absolute bottom-0 left-0 right-0 h-0.5"
-                :class="isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600'"
-              ></div>
-            </button>
-            <button
-              @click="activeTab = 'schedules'"
-              class="px-6 py-3 font-medium transition-colors relative"
-              :class="activeTab === 'schedules'
-                ? (isDarkMode ? 'text-indigo-400' : 'text-indigo-600')
-                : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
-            >
-              Schedules
-              <div 
-                v-if="activeTab === 'schedules'"
-                class="absolute bottom-0 left-0 right-0 h-0.5"
-                :class="isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600'"
-              ></div>
-            </button>
-            <button
-              @click="activeTab = 'slas'"
-              class="px-6 py-3 font-medium transition-colors relative"
-              :class="activeTab === 'slas'
-                ? (isDarkMode ? 'text-indigo-400' : 'text-indigo-600')
-                : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
-            >
-              SLA Management
-              <div 
-                v-if="activeTab === 'slas'"
-                class="absolute bottom-0 left-0 right-0 h-0.5"
-                :class="isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600'"
-              ></div>
+              {{ tab.label }}
+              <div v-if="activeTab === tab.id" class="absolute bottom-0 left-0 right-0 h-0.5" :class="isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600'"></div>
             </button>
           </div>
         </div>
 
+        <div class="max-w-7xl mx-auto mb-6">
+          <InlineNotice :notice="notice" @dismiss="clearNotice" />
+        </div>
+
         <!-- Dashboard Tab -->
         <div v-if="activeTab === 'dashboard'" class="max-w-7xl mx-auto space-y-6">
-          <!-- Application Selector -->
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="flex items-center justify-between">
+          <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
+            <div class="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h3 class="text-lg font-semibold mb-2 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">apps</span>
-                  Select Application
+                <h3 class="text-lg font-semibold mb-2 flex items-center gap-2" :class="headingClass">
+                  <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">apps</span>
+                  Application
                 </h3>
-                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Choose an application to view accessibility reports
+                <p class="text-sm" :class="mutedClass">
+                  Choose an application to see its latest report.
+                  <router-link v-if="applicationsLoaded && applications.length === 0" to="/admin/applications/register" class="underline">Register one first.</router-link>
                 </p>
               </div>
-              <Dropdown
-                v-if="applicationOptions.length > 0"
-                v-model="selectedApplicationId"
-                :options="applicationOptions"
-                :is-dark-mode="isDarkMode"
-                label="Application"
-                class="min-w-[300px]"
-                @update:model-value="loadReport"
-              />
+              <label class="sr-only" for="a11y-app">Application</label>
+              <select id="a11y-app" v-model="selectedApplicationId" class="min-w-[300px] px-4 py-2 rounded-lg border" :class="inputClass">
+                <option value="" disabled>{{ applications.length ? 'Select an application' : 'No applications' }}</option>
+                <option v-for="app in applications" :key="app.id" :value="app.id">{{ app.name }}</option>
+              </select>
+            </div>
+
+            <!-- Generate -->
+            <div v-if="canAdmin && selectedApplicationId" class="mt-6 pt-6 border-t space-y-4" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+              <fieldset class="flex flex-wrap items-center gap-4 text-sm" :class="labelClass">
+                <legend class="sr-only">What to scan</legend>
+                <label class="flex items-center gap-2"><input v-model="generateSource" type="radio" value="url" class="accent-indigo-600" /> Public URL (rendered in a browser)</label>
+                <label class="flex items-center gap-2"><input v-model="generateSource" type="radio" value="html" class="accent-indigo-600" /> Paste HTML</label>
+              </fieldset>
+              <div v-if="generateSource === 'url'">
+                <label for="a11y-url" class="block text-sm mb-1" :class="labelClass">Page URL</label>
+                <input
+                  id="a11y-url"
+                  v-model.trim="generateUrl"
+                  type="url"
+                  :placeholder="selectedApplication?.applicationUrl || 'https://app.example.com'"
+                  class="w-full px-4 py-2 rounded-lg border"
+                  :class="inputClass"
+                />
+                <p class="text-xs mt-1" :class="mutedClass">Leave empty to use the application's URL{{ selectedApplication?.applicationUrl ? '' : ' (this application has none)' }}.</p>
+              </div>
+              <div v-else>
+                <label for="a11y-html" class="block text-sm mb-1" :class="labelClass">HTML</label>
+                <textarea id="a11y-html" v-model="generateHtml" rows="6" spellcheck="false" class="w-full px-4 py-2 rounded-lg border font-mono text-xs" :class="inputClass"></textarea>
+                <p class="text-xs mt-1" :class="mutedClass">Checked without a browser, so colour contrast is listed as needing review rather than tested.</p>
+              </div>
+              <button
+                type="button"
+                class="px-4 py-2 rounded-lg font-medium bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
+                :disabled="loading || !canGenerate"
+                @click="generateReport"
+              >
+                {{ loading ? 'Scanning…' : 'Generate Report' }}
+              </button>
             </div>
           </div>
 
-          <!-- Loading State -->
-          <div v-if="loading" class="flex items-center justify-center py-12">
+          <div v-if="loading" class="flex items-center justify-center py-12" role="status">
             <div class="text-center">
-              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Generating accessibility report...</p>
+              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" aria-hidden="true"></div>
+              <p :class="mutedClass">Generating accessibility report…</p>
             </div>
           </div>
 
-          <!-- Report Dashboard -->
           <div v-else-if="currentReport" class="space-y-6">
+            <p class="text-sm" :class="mutedClass">
+              {{ currentReport.applicationName }} · {{ formatDate(currentReport.generatedAt) }} ·
+              {{ currentReport.source === 'url' ? `URL ${currentReport.url || ''} (browser)` : 'Supplied HTML (no browser)' }}
+              <span v-if="currentReport.scheduled"> · scheduled</span>
+            </p>
+
             <!-- WCAG Compliance Overview -->
             <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div 
-                class="rounded-lg shadow-sm border p-6"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  <span class="material-symbols-outlined text-lg" :class="getScoreColor(currentReport.complianceScore)">check_circle</span>
+              <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
+                <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="mutedClass">
+                  <span class="material-symbols-outlined text-lg" :class="getScoreColor(currentReport.complianceScore)" aria-hidden="true">check_circle</span>
                   Compliance Score
                 </div>
-                <div class="text-4xl font-bold mb-2" :class="getScoreColor(currentReport.complianceScore)">
-                  {{ currentReport.complianceScore }}%
-                </div>
-                <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  {{ currentReport.wcagLevel === 'AA' ? 'WCAG 2.1 AA' : currentReport.wcagLevel === 'AAA' ? 'WCAG 2.1 AAA' : currentReport.wcagLevel === 'A' ? 'WCAG 2.1 A' : 'Non-Compliant' }}
-                </div>
+                <div class="text-4xl font-bold mb-2" :class="getScoreColor(currentReport.complianceScore)">{{ currentReport.complianceScore }}%</div>
+                <div class="text-sm" :class="mutedClass">{{ levelLabel(currentReport.wcagLevel) }}</div>
               </div>
 
-              <div 
-                class="rounded-lg shadow-sm border p-6"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  <span class="material-symbols-outlined text-lg text-red-500">error</span>
+              <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
+                <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="mutedClass">
+                  <span class="material-symbols-outlined text-lg text-red-500" aria-hidden="true">error</span>
                   Critical Issues
                 </div>
-                <div class="text-4xl font-bold text-red-500">
-                  {{ currentReport.criticalIssues }}
-                </div>
-                <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Blocking accessibility
-                </div>
+                <div class="text-4xl font-bold text-red-500">{{ currentReport.criticalIssues }}</div>
+                <div class="text-sm" :class="mutedClass">Blocking accessibility</div>
               </div>
 
-              <div 
-                class="rounded-lg shadow-sm border p-6"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  <span class="material-symbols-outlined text-lg text-orange-500">warning</span>
+              <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
+                <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="mutedClass">
+                  <span class="material-symbols-outlined text-lg text-orange-500" aria-hidden="true">warning</span>
                   Total Issues
                 </div>
-                <div class="text-4xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  {{ currentReport.totalIssues }}
-                </div>
-                <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                <div class="text-4xl font-bold" :class="headingClass">{{ currentReport.totalIssues }}</div>
+                <div class="text-sm" :class="mutedClass">
                   {{ currentReport.highIssues }} high, {{ currentReport.moderateIssues }} moderate, {{ currentReport.lowIssues }} low
+                  <span v-if="currentReport.needsReview"> · {{ currentReport.needsReview }} need manual review</span>
                 </div>
               </div>
 
-              <div 
-                class="rounded-lg shadow-sm border p-6"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  <span class="material-symbols-outlined text-lg" :class="currentReport.trend.scoreChange >= 0 ? 'text-green-500' : 'text-red-500'">
+              <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
+                <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="mutedClass">
+                  <span class="material-symbols-outlined text-lg" :class="currentReport.trend.scoreChange >= 0 ? 'text-green-500' : 'text-red-500'" aria-hidden="true">
                     {{ currentReport.trend.scoreChange >= 0 ? 'trending_up' : 'trending_down' }}
                   </span>
                   Trend
                 </div>
-                <div class="text-4xl font-bold" :class="currentReport.trend.scoreChange >= 0 ? 'text-green-500' : 'text-red-500'">
-                  {{ currentReport.trend.scoreChange >= 0 ? '+' : '' }}{{ currentReport.trend.scoreChange.toFixed(1) }}%
-                </div>
-                <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  {{ currentReport.trend.fixedIssues }} fixed, {{ currentReport.trend.newIssues }} new
-                </div>
+                <template v-if="currentReport.previousReportId">
+                  <div class="text-4xl font-bold" :class="currentReport.trend.scoreChange >= 0 ? 'text-green-500' : 'text-red-500'">
+                    {{ currentReport.trend.scoreChange >= 0 ? '+' : '' }}{{ currentReport.trend.scoreChange.toFixed(1) }}
+                  </div>
+                  <div class="text-sm" :class="mutedClass">{{ currentReport.trend.fixedIssues }} fixed, {{ currentReport.trend.newIssues }} new</div>
+                </template>
+                <div v-else class="text-sm mt-3" :class="mutedClass">First report for this application.</div>
               </div>
             </div>
 
             <!-- Issues by Category -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">category</span>
+            <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="headingClass">
+                <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">category</span>
                 Issues by Category
               </h3>
-              <div class="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div v-for="(count, category) in currentReport.issuesByCategory" :key="category" class="text-center">
-                  <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ count }}
-                  </div>
-                  <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ formatCategoryName(category) }}
-                  </div>
+                  <div class="text-2xl font-bold mb-1" :class="headingClass">{{ count }}</div>
+                  <div class="text-xs" :class="mutedClass">{{ formatCategoryName(category) }}</div>
                 </div>
               </div>
             </div>
 
             <!-- Prioritized Fixes -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">priority_high</span>
+            <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h3 class="text-lg font-semibold flex items-center gap-2" :class="headingClass">
+                  <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">priority_high</span>
                   Prioritized Fixes
                 </h3>
-                <div class="flex items-center gap-2">
-                  <button
-                    @click="exportToPDF"
-                    class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                    :class="isDarkMode 
-                      ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                  >
-                    <span class="material-symbols-outlined text-sm">picture_as_pdf</span>
-                    Export PDF
-                  </button>
-                  <button
-                    @click="generateReport"
-                    class="px-4 py-2 rounded-lg font-medium transition-colors"
-                    :class="isDarkMode 
-                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-                  >
-                    Generate New Report
-                  </button>
-                </div>
+                <button type="button" class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2" :class="secondaryButton" @click="exportToPDF">
+                  <span class="material-symbols-outlined text-sm" aria-hidden="true">picture_as_pdf</span>
+                  Export PDF
+                </button>
               </div>
+              <p v-if="currentReport.prioritizedFixes.length === 0" class="text-sm" :class="mutedClass">No automated violations found.</p>
               <div class="space-y-3">
-                <div
-                  v-for="fix in currentReport.prioritizedFixes.slice(0, 10)"
-                  :key="fix.id"
-                  class="p-4 rounded-lg border"
-                  :class="getSeverityClass(fix.severity)"
-                >
-                  <div class="flex items-start justify-between mb-2">
-                    <div class="flex-1">
-                      <div class="flex items-center gap-2 mb-1">
-                        <span class="px-2 py-1 rounded text-xs font-medium" :class="getSeverityBadgeClass(fix.severity)">
-                          {{ fix.severity ? String(fix.severity).toUpperCase() : 'UNKNOWN' }}
-                        </span>
-                        <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          {{ fix.rule }}
-                        </span>
-                      </div>
-                      <p class="text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        {{ fix.description }}
-                      </p>
-                      <div class="flex items-center gap-4 text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <span>WCAG {{ fix.wcagCriterion }}</span>
-                        <span>{{ fix.affectedElements }} elements</span>
-                        <span>Effort: {{ fix.effort }}</span>
-                        <span>Priority: {{ fix.priority.toFixed(1) }}</span>
-                      </div>
-                    </div>
+                <div v-for="fix in currentReport.prioritizedFixes.slice(0, 10)" :key="fix.id" class="p-4 rounded-lg border" :class="getSeverityClass(fix.severity)">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="px-2 py-1 rounded text-xs font-medium" :class="getSeverityBadgeClass(fix.severity)">{{ fix.severity }}</span>
+                    <span class="text-sm font-semibold" :class="headingClass">{{ fix.rule }}</span>
                   </div>
-                  <div class="mt-3 p-3 rounded" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                    <div class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Recommendation:
-                    </div>
-                    <div class="text-sm mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      {{ fix.recommendation }}
-                    </div>
-                    
-                    <!-- Code Examples -->
-                    <div v-if="fix.codeExamples && fix.codeExamples.length > 0" class="mt-4 space-y-4">
-                      <div class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        Code Examples
-                      </div>
-                      <div
-                        v-for="(example, idx) in fix.codeExamples"
-                        :key="idx"
-                        class="space-y-2"
-                      >
-                        <p class="text-xs italic" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                          {{ example.explanation }}
-                        </p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div>
-                            <p class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-red-300' : 'text-red-600'">
-                              Before
-                            </p>
-                            <pre class="text-xs p-2 rounded overflow-x-auto" :class="isDarkMode ? 'bg-slate-900 text-gray-300 border border-red-800' : 'bg-red-50 text-red-900 border border-red-200'"><code>{{ example.before }}</code></pre>
-                          </div>
-                          <div>
-                            <p class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-green-300' : 'text-green-600'">
-                              After
-                            </p>
-                            <pre class="text-xs p-2 rounded overflow-x-auto" :class="isDarkMode ? 'bg-slate-900 text-gray-300 border border-green-800' : 'bg-green-50 text-green-900 border border-green-200'"><code>{{ example.after }}</code></pre>
-                          </div>
+                  <p class="text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ fix.description }}</p>
+                  <div class="flex flex-wrap items-center gap-4 text-xs" :class="mutedClass">
+                    <span>WCAG {{ fix.wcagCriterion }}</span>
+                    <span>{{ fix.affectedElements }} elements</span>
+                    <span>Effort: {{ fix.effort }}</span>
+                    <span>Priority: {{ fix.priority.toFixed(1) }}</span>
+                    <a v-if="fix.helpUrl" :href="fix.helpUrl" target="_blank" rel="noopener noreferrer" class="underline">How to fix</a>
+                  </div>
+                  <div v-if="fix.codeExamples && fix.codeExamples.length > 0" class="mt-3 p-3 rounded space-y-4" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                    <div v-for="(example, idx) in fix.codeExamples" :key="idx" class="space-y-2">
+                      <p class="text-xs italic" :class="mutedClass">{{ example.explanation }}</p>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <p class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-red-300' : 'text-red-600'">Before</p>
+                          <pre class="text-xs p-2 rounded overflow-x-auto" :class="isDarkMode ? 'bg-slate-900 text-gray-300 border border-red-800' : 'bg-red-50 text-red-900 border border-red-200'"><code>{{ example.before }}</code></pre>
+                        </div>
+                        <div>
+                          <p class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-green-300' : 'text-green-600'">After</p>
+                          <pre class="text-xs p-2 rounded overflow-x-auto" :class="isDarkMode ? 'bg-slate-900 text-gray-300 border border-green-800' : 'bg-green-50 text-green-900 border border-green-200'"><code>{{ example.after }}</code></pre>
                         </div>
                       </div>
                     </div>
@@ -371,356 +253,205 @@
             </div>
 
             <!-- WCAG Criteria Breakdown -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">checklist</span>
-                WCAG Criteria Compliance
+            <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
+              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="headingClass">
+                <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">checklist</span>
+                WCAG Criteria
               </h3>
+              <p class="text-xs mb-4" :class="mutedClass">Automated checks (axe-core, WCAG 2.x A and AA). Passing them does not prove conformance; criteria marked "Needs review" must be checked by hand.</p>
               <div class="space-y-4">
-                <div
-                  v-for="(criterion, key) in currentReport.wcagCriteria"
-                  :key="key"
-                  class="rounded-lg border p-4"
-                  :class="criterion.status === 'pass' 
-                    ? (isDarkMode ? 'bg-green-900/20 border-green-700' : 'bg-green-50 border-green-200')
-                    : criterion.status === 'fail'
-                    ? (isDarkMode ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200')
-                    : (isDarkMode ? 'bg-yellow-900/20 border-yellow-700' : 'bg-yellow-50 border-yellow-200')"
-                >
+                <div v-for="(criterion, key) in currentReport.wcagCriteria" :key="key" class="rounded-lg border p-4" :class="criterionClass(criterion.status)">
                   <div class="flex items-start justify-between mb-2">
                     <div class="flex-1">
                       <div class="flex items-center gap-2 mb-1">
-                        <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          {{ criterion.criterion }}
-                        </span>
-                        <span class="px-2 py-0.5 rounded text-xs" :class="criterion.level === 'AAA' 
-                          ? (isDarkMode ? 'bg-purple-700 text-purple-200' : 'bg-purple-100 text-purple-700')
-                          : criterion.level === 'AA'
-                          ? (isDarkMode ? 'bg-blue-700 text-blue-200' : 'bg-blue-100 text-blue-700')
-                          : (isDarkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700')"
-                        >
+                        <span class="text-sm font-semibold" :class="headingClass">{{ criterion.criterion }}</span>
+                        <span class="px-2 py-0.5 rounded text-xs" :class="criterion.level === 'AA' ? (isDarkMode ? 'bg-blue-700 text-blue-200' : 'bg-blue-100 text-blue-700') : (isDarkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700')">
                           Level {{ criterion.level }}
                         </span>
                       </div>
-                      <p class="text-xs mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        {{ criterion.description }}
-                      </p>
+                      <p class="text-xs mb-2" :class="mutedClass">{{ criterion.description }}</p>
                     </div>
                     <div class="text-right ml-4">
-                      <div class="text-lg font-bold" :class="criterion.status === 'pass' 
-                        ? 'text-green-600' 
-                        : criterion.status === 'fail'
-                        ? 'text-red-600'
-                        : 'text-yellow-600'"
-                      >
-                        {{ criterion.issues }}
-                      </div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        {{ criterion.status === 'pass' ? 'Pass' : criterion.status === 'fail' ? 'Fail' : 'Warning' }}
-                      </div>
+                      <div class="text-lg font-bold" :class="criterion.status === 'pass' ? 'text-green-600' : criterion.status === 'fail' ? 'text-red-600' : 'text-yellow-600'">{{ criterion.issues }}</div>
+                      <div class="text-xs" :class="mutedClass">{{ CRITERION_STATUS[criterion.status] }}</div>
                     </div>
                   </div>
-                  
-                  <!-- Failing Elements -->
-                  <div v-if="criterion.failingElements && Array.isArray(criterion.failingElements) && criterion.failingElements.length > 0" class="mt-3 pt-3 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <div class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Failing Elements ({{ criterion.failingElements.length }}):
-                    </div>
+                  <div v-if="criterion.failingElements.length > 0" class="mt-3 pt-3 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                    <div class="text-xs font-medium mb-2" :class="labelClass">Failing elements ({{ criterion.failingElements.length }}):</div>
                     <div class="space-y-2">
-                      <div
-                        v-for="(element, idx) in criterion.failingElements"
-                        :key="element.id || idx"
-                        class="p-2 rounded text-xs"
-                        :class="getElementImpactClass(element.impact)"
-                      >
-                        <div class="font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          {{ element.message }}
+                      <div v-for="(element, idx) in criterion.failingElements" :key="`${element.id}-${idx}`" class="p-2 rounded text-xs" :class="getElementImpactClass(element.impact)">
+                        <div class="font-medium mb-1" :class="headingClass">{{ element.message }}</div>
+                        <div class="flex flex-wrap items-center gap-3" :class="mutedClass">
+                          <span v-if="element.target" class="font-mono">{{ element.target }}</span>
+                          <span v-if="element.impact" class="px-1.5 py-0.5 rounded font-medium" :class="getSeverityBadgeClass(element.impact)">{{ element.impact }}</span>
                         </div>
-                        <div class="flex items-center gap-3 text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                          <span v-if="element.file" class="flex items-center gap-1">
-                            <span class="material-symbols-outlined text-xs">description</span>
-                            {{ element.file }}
-                            <span v-if="element.line">:{{ element.line }}</span>
-                          </span>
-                          <span v-if="element.impact" class="px-1.5 py-0.5 rounded text-xs font-medium" :class="getSeverityBadgeClass(element.impact)">
-                            {{ element.impact }}
-                          </span>
-                        </div>
-                        <div v-if="element.element" class="mt-1 font-mono text-xs p-1 rounded" :class="isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
-                          {{ element.element }}
-                        </div>
+                        <div v-if="element.element" class="mt-1 font-mono p-1 rounded break-all" :class="isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'">{{ element.element }}</div>
                       </div>
                     </div>
-                  </div>
-                  <!-- Debug: Show if failingElements is missing or empty -->
-                  <div v-else-if="criterion.issues > 0" class="mt-3 pt-3 border-t text-xs italic" :class="isDarkMode ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'">
-                    No failing elements data available ({{ criterion.issues }} issues reported)
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- No Report State -->
-          <div v-else class="text-center py-12">
-            <p class="text-lg mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-              No report available. Generate a report to view accessibility metrics.
+          <div v-else-if="selectedApplicationId" class="text-center py-12">
+            <p class="text-lg" :class="mutedClass">
+              No report for this application yet.{{ canAdmin ? ' Generate one above.' : '' }}
             </p>
-            <button
-              @click="generateReport"
-              class="px-6 py-3 rounded-lg font-medium transition-colors"
-              :class="isDarkMode 
-                ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-            >
-              Generate Report
-            </button>
           </div>
         </div>
 
         <!-- Report History Tab -->
         <div v-if="activeTab === 'reports'" class="max-w-7xl mx-auto">
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              <span class="material-symbols-outlined text-indigo-600">history</span>
+          <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="headingClass">
+              <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">history</span>
               Report History
             </h3>
             <div v-if="reports.length === 0" class="text-center py-8">
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">No reports generated yet.</p>
+              <p :class="mutedClass">No reports generated yet.</p>
             </div>
-            <div v-else class="space-y-3">
-              <div
+            <ul v-else class="space-y-3">
+              <li
                 v-for="report in reports"
                 :key="report.id"
-                @click="loadReportById(report.id)"
-                class="p-4 rounded-lg border cursor-pointer transition-colors"
+                class="p-4 rounded-lg border flex flex-wrap items-center justify-between gap-4"
                 :class="currentReport?.id === report.id
                   ? (isDarkMode ? 'bg-indigo-900/20 border-indigo-600' : 'bg-indigo-50 border-indigo-500')
-                  : (isDarkMode ? 'bg-slate-800 border-gray-700 hover:bg-slate-700' : 'bg-white border-gray-200 hover:bg-gray-50')"
+                  : (isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200')"
               >
-                <div class="flex items-center justify-between">
-                  <div>
-                    <div class="font-semibold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ report.applicationName }}
-                    </div>
-                    <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      {{ formatDate(report.generatedAt) }}
-                    </div>
-                  </div>
-                  <div class="text-right">
-                    <div class="text-2xl font-bold mb-1" :class="getScoreColor(report.complianceScore)">
-                      {{ report.complianceScore }}%
-                    </div>
-                    <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      {{ report.totalIssues }} issues
-                    </div>
-                  </div>
+                <button type="button" class="flex-1 text-left" @click="openReport(report.id)">
+                  <span class="block font-semibold mb-1" :class="headingClass">{{ report.applicationName }}</span>
+                  <span class="block text-sm" :class="mutedClass">
+                    {{ formatDate(report.generatedAt) }} · {{ report.source === 'url' ? 'URL' : 'HTML' }}{{ report.scheduled ? ' · scheduled' : '' }}
+                  </span>
+                </button>
+                <div class="text-right">
+                  <div class="text-2xl font-bold mb-1" :class="getScoreColor(report.complianceScore)">{{ report.complianceScore }}%</div>
+                  <div class="text-xs" :class="mutedClass">{{ report.totalIssues }} issues</div>
                 </div>
-              </div>
-            </div>
+                <template v-if="canAdmin">
+                  <button v-if="confirmingDelete === `report:${report.id}`" type="button" class="px-3 py-1 rounded text-sm bg-red-600 text-white" @click="deleteReport(report.id)">Confirm delete</button>
+                  <button v-else type="button" class="px-3 py-1 rounded text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" @click="confirmingDelete = `report:${report.id}`">Delete</button>
+                </template>
+              </li>
+            </ul>
           </div>
         </div>
 
         <!-- Schedules Tab -->
         <div v-if="activeTab === 'schedules'" class="max-w-7xl mx-auto">
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">schedule</span>
+          <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-lg font-semibold flex items-center gap-2" :class="headingClass">
+                <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">schedule</span>
                 Scheduled Reports
               </h3>
-              <button
-                @click="showScheduleModal = true"
-                class="px-4 py-2 rounded-lg font-medium transition-colors"
-                :class="isDarkMode 
-                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-              >
+              <button v-if="canAdmin" type="button" class="px-4 py-2 rounded-lg font-medium bg-indigo-600 hover:bg-indigo-700 text-white" @click="openScheduleModal()">
                 Create Schedule
               </button>
             </div>
+            <p class="text-xs mb-4" :class="mutedClass">The backend checks for due schedules every minute and scans the page in a browser. Times are UTC. Reports appear in the history; nothing is emailed.</p>
             <div v-if="schedules.length === 0" class="text-center py-8">
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">No schedules configured.</p>
+              <p :class="mutedClass">No schedules configured.</p>
             </div>
-            <div v-else class="space-y-3">
-              <div
-                v-for="schedule in schedules"
-                :key="schedule.id"
-                class="p-4 rounded-lg border"
-                :class="isDarkMode 
-                  ? 'bg-slate-800 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="flex items-center justify-between">
+            <ul v-else class="space-y-3">
+              <li v-for="schedule in schedules" :key="schedule.id" class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
+                <div class="flex flex-wrap items-center justify-between gap-4">
                   <div>
-                    <div class="font-semibold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ getApplicationName(schedule.applicationId) }}
-                    </div>
-                    <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      {{ schedule.frequency }} at {{ schedule.time }}
+                    <div class="font-semibold mb-1" :class="headingClass">{{ getApplicationName(schedule.applicationId) }}</div>
+                    <div class="text-sm" :class="mutedClass">
+                      {{ schedule.frequency }} at {{ schedule.time }} UTC
                       <span v-if="schedule.frequency === 'weekly'"> on {{ getDayName(schedule.dayOfWeek) }}</span>
-                      <span v-if="schedule.frequency === 'monthly'"> on day {{ schedule.dayOfMonth }}</span>
+                      <span v-if="schedule.frequency === 'monthly'"> on day {{ schedule.dayOfMonth }}{{ schedule.dayOfMonth > 28 ? ' (or the last day of shorter months)' : '' }}</span>
                     </div>
-                    <div v-if="schedule.nextRun" class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                      Next run: {{ formatDate(schedule.nextRun) }}
+                    <div class="text-xs mt-1" :class="mutedClass">{{ schedule.url || 'Application URL' }}</div>
+                    <div class="text-xs mt-1" :class="mutedClass">
+                      <span v-if="schedule.enabled">Next run: {{ formatDate(schedule.nextRun) }}</span>
+                      <span v-if="schedule.lastRun"> · Last run: {{ formatDate(schedule.lastRun) }} ({{ schedule.lastStatus === 'failed' ? 'failed' : 'ok' }})</span>
                     </div>
+                    <div v-if="schedule.lastStatus === 'failed' && schedule.lastError" class="text-xs mt-1 text-red-600">{{ schedule.lastError }}</div>
                   </div>
                   <div class="flex items-center gap-2">
-                    <span 
-                      class="px-2 py-1 rounded text-xs font-medium"
-                      :class="schedule.enabled 
-                        ? (isDarkMode ? 'bg-green-700 text-green-200' : 'bg-green-100 text-green-700')
-                        : (isDarkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700')"
-                    >
+                    <span class="px-2 py-1 rounded text-xs font-medium" :class="schedule.enabled ? (isDarkMode ? 'bg-green-700 text-green-200' : 'bg-green-100 text-green-700') : (isDarkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700')">
                       {{ schedule.enabled ? 'Enabled' : 'Disabled' }}
                     </span>
-                    <button
-                      @click="toggleSchedule(schedule.id)"
-                      class="px-3 py-1 rounded text-sm"
-                      :class="isDarkMode 
-                        ? 'bg-slate-700 hover:bg-slate-600 text-white' 
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                    >
-                      {{ schedule.enabled ? 'Disable' : 'Enable' }}
-                    </button>
-                    <button
-                      @click="deleteSchedule(schedule.id)"
-                      class="px-3 py-1 rounded text-sm text-red-600 hover:bg-red-50"
-                    >
-                      Delete
-                    </button>
+                    <template v-if="canAdmin">
+                      <button type="button" class="px-3 py-1 rounded text-sm" :class="secondaryButton" @click="toggleSchedule(schedule)">{{ schedule.enabled ? 'Disable' : 'Enable' }}</button>
+                      <button type="button" class="px-3 py-1 rounded text-sm" :class="secondaryButton" @click="openScheduleModal(schedule)">Edit</button>
+                      <button v-if="confirmingDelete === `schedule:${schedule.id}`" type="button" class="px-3 py-1 rounded text-sm bg-red-600 text-white" @click="deleteSchedule(schedule.id)">Confirm delete</button>
+                      <button v-else type="button" class="px-3 py-1 rounded text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" @click="confirmingDelete = `schedule:${schedule.id}`">Delete</button>
+                    </template>
                   </div>
                 </div>
-              </div>
-            </div>
+              </li>
+            </ul>
           </div>
         </div>
 
         <!-- Multi-Application Dashboard Tab -->
         <div v-if="activeTab === 'multi-app'" class="max-w-7xl mx-auto space-y-6">
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              <span class="material-symbols-outlined text-indigo-600">dashboard</span>
-              Multi-Application Compliance Dashboard
+          <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="headingClass">
+              <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">dashboard</span>
+              Multi-Application Compliance
             </h3>
-            
             <div v-if="complianceSummary" class="space-y-6">
-              <!-- Summary Cards -->
-              <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-sm mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Total Applications</div>
-                  <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ complianceSummary.totalApplications }}
-                  </div>
+                  <div class="text-sm mb-1" :class="mutedClass">Applications</div>
+                  <div class="text-2xl font-bold" :class="headingClass">{{ complianceSummary.totalApplications }}</div>
+                  <div class="text-xs" :class="mutedClass">{{ complianceSummary.reportedApplications }} with a report</div>
                 </div>
                 <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-green-900/20 border border-green-700' : 'bg-green-50 border border-green-200'">
-                  <div class="text-sm mb-1" :class="isDarkMode ? 'text-green-300' : 'text-green-700'">Compliant</div>
-                  <div class="text-2xl font-bold text-green-600">
-                    {{ complianceSummary.compliantApplications }}
-                  </div>
+                  <div class="text-sm mb-1" :class="isDarkMode ? 'text-green-300' : 'text-green-700'">Meeting SLA</div>
+                  <div class="text-2xl font-bold text-green-600">{{ complianceSummary.compliantApplications }}</div>
+                </div>
+                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-yellow-900/20 border border-yellow-700' : 'bg-yellow-50 border border-yellow-200'">
+                  <div class="text-sm mb-1" :class="isDarkMode ? 'text-yellow-300' : 'text-yellow-700'">At risk</div>
+                  <div class="text-2xl font-bold text-yellow-600">{{ complianceSummary.atRiskApplications }}</div>
                 </div>
                 <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-red-900/20 border border-red-700' : 'bg-red-50 border border-red-200'">
-                  <div class="text-sm mb-1" :class="isDarkMode ? 'text-red-300' : 'text-red-700'">Non-Compliant</div>
-                  <div class="text-2xl font-bold text-red-600">
-                    {{ complianceSummary.nonCompliantApplications }}
-                  </div>
+                  <div class="text-sm mb-1" :class="isDarkMode ? 'text-red-300' : 'text-red-700'">Not meeting SLA</div>
+                  <div class="text-2xl font-bold text-red-600">{{ complianceSummary.nonCompliantApplications }}</div>
+                  <div class="text-xs" :class="mutedClass">{{ complianceSummary.unassessedApplications }} not assessed</div>
                 </div>
                 <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-sm mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Average Score</div>
-                  <div class="text-2xl font-bold" :class="getScoreColor(complianceSummary.averageScore)">
-                    {{ complianceSummary.averageScore.toFixed(1) }}%
+                  <div class="text-sm mb-1" :class="mutedClass">Average score</div>
+                  <div class="text-2xl font-bold" :class="complianceSummary.reportedApplications ? getScoreColor(complianceSummary.averageScore) : mutedClass">
+                    {{ complianceSummary.reportedApplications ? `${complianceSummary.averageScore.toFixed(1)}%` : '—' }}
                   </div>
                 </div>
               </div>
 
-              <!-- Applications Table -->
               <div class="overflow-x-auto">
                 <table class="w-full">
                   <thead>
                     <tr class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Application</th>
-                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Score</th>
-                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">WCAG Level</th>
-                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Issues</th>
-                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">SLA Status</th>
-                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Last Report</th>
-                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Trend</th>
+                      <th v-for="column in SUMMARY_COLUMNS" :key="column" scope="col" class="text-left py-3 px-4 text-sm font-semibold" :class="labelClass">{{ column }}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr
-                      v-for="app in complianceSummary.applications"
-                      :key="app.applicationId"
-                      @click="app.latestReportId && loadReportById(app.latestReportId)"
-                      class="border-b cursor-pointer hover:bg-opacity-50 transition-colors"
-                      :class="isDarkMode 
-                        ? 'border-gray-700 hover:bg-indigo-900/20' 
-                        : 'border-gray-200 hover:bg-indigo-50'"
-                    >
-                      <td class="py-3 px-4 font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ app.applicationName }}
+                    <tr v-for="app in complianceSummary.applications" :key="app.applicationId" class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+                      <td class="py-3 px-4 font-medium" :class="headingClass">
+                        <button v-if="app.latestReportId" type="button" class="underline text-left" @click="openReport(app.latestReportId)">{{ app.applicationName }}</button>
+                        <span v-else>{{ app.applicationName }}</span>
                       </td>
                       <td class="py-3 px-4">
-                        <span class="text-lg font-bold" :class="getScoreColor(app.complianceScore)">
-                          {{ app.complianceScore }}%
+                        <span v-if="app.complianceScore !== null" class="text-lg font-bold" :class="getScoreColor(app.complianceScore)">{{ app.complianceScore }}%</span>
+                        <span v-else :class="mutedClass">—</span>
+                      </td>
+                      <td class="py-3 px-4 text-sm" :class="labelClass">{{ app.wcagLevel ? levelLabel(app.wcagLevel) : '—' }}</td>
+                      <td class="py-3 px-4 text-sm" :class="labelClass">{{ app.complianceScore !== null ? `${app.totalIssues} (${app.criticalIssues} critical, ${app.highIssues} high)` : '—' }}</td>
+                      <td class="py-3 px-4">
+                        <span class="px-2 py-1 rounded text-xs font-medium" :class="slaBadge(app.slaStatus)">{{ SLA_LABELS[app.slaStatus] }}</span>
+                      </td>
+                      <td class="py-3 px-4 text-sm" :class="mutedClass">{{ app.lastReportDate ? formatDate(app.lastReportDate) : 'Never' }}</td>
+                      <td class="py-3 px-4">
+                        <span v-if="app.trend" class="text-xs" :class="app.trend.scoreChange >= 0 ? 'text-green-500' : 'text-red-500'">
+                          {{ app.trend.scoreChange >= 0 ? '+' : '' }}{{ app.trend.scoreChange.toFixed(1) }}
                         </span>
-                      </td>
-                      <td class="py-3 px-4">
-                        <span class="px-2 py-1 rounded text-xs font-medium"
-                          :class="app.wcagLevel === 'AA' || app.wcagLevel === 'AAA' 
-                            ? (isDarkMode ? 'bg-green-700 text-green-200' : 'bg-green-100 text-green-700')
-                            : (isDarkMode ? 'bg-red-700 text-red-200' : 'bg-red-100 text-red-700')"
-                        >
-                          {{ app.wcagLevel === 'AA' ? 'WCAG 2.1 AA' : app.wcagLevel === 'AAA' ? 'WCAG 2.1 AAA' : app.wcagLevel === 'A' ? 'WCAG 2.1 A' : 'Non-Compliant' }}
-                        </span>
-                      </td>
-                      <td class="py-3 px-4 text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        {{ app.totalIssues }} ({{ app.criticalIssues }} critical, {{ app.highIssues }} high)
-                      </td>
-                      <td class="py-3 px-4">
-                        <span class="px-2 py-1 rounded text-xs font-medium"
-                          :class="app.slaStatus === 'compliant'
-                            ? (isDarkMode ? 'bg-green-700 text-green-200' : 'bg-green-100 text-green-700')
-                            : app.slaStatus === 'at-risk'
-                            ? (isDarkMode ? 'bg-yellow-700 text-yellow-200' : 'bg-yellow-100 text-yellow-700')
-                            : (isDarkMode ? 'bg-red-700 text-red-200' : 'bg-red-100 text-red-700')"
-                        >
-                          {{ app.slaStatus ? app.slaStatus.toUpperCase() : 'N/A' }}
-                        </span>
-                      </td>
-                      <td class="py-3 px-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        {{ app.lastReportDate ? formatDate(app.lastReportDate) : 'Never' }}
-                      </td>
-                      <td class="py-3 px-4">
-                        <div v-if="app.trend" class="flex items-center gap-1">
-                          <span class="material-symbols-outlined text-sm" :class="app.trend.scoreChange >= 0 ? 'text-green-500' : 'text-red-500'">
-                            {{ app.trend.scoreChange >= 0 ? 'trending_up' : 'trending_down' }}
-                          </span>
-                          <span class="text-xs" :class="app.trend.scoreChange >= 0 ? 'text-green-500' : 'text-red-500'">
-                            {{ app.trend.scoreChange >= 0 ? '+' : '' }}{{ app.trend.scoreChange.toFixed(1) }}%
-                          </span>
-                        </div>
-                        <span v-else class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">No trend</span>
+                        <span v-else class="text-xs" :class="mutedClass">—</span>
                       </td>
                     </tr>
                   </tbody>
@@ -728,251 +459,110 @@
               </div>
             </div>
             <div v-else class="text-center py-8">
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading compliance summary...</p>
+              <p :class="mutedClass">Loading compliance summary…</p>
             </div>
           </div>
         </div>
 
         <!-- SLA Management Tab -->
         <div v-if="activeTab === 'slas'" class="max-w-7xl mx-auto space-y-6">
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
+          <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">gavel</span>
-                Compliance SLA Management
+              <h3 class="text-lg font-semibold flex items-center gap-2" :class="headingClass">
+                <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">gavel</span>
+                Compliance SLAs
               </h3>
-              <button
-                @click="showSLAModal = true"
-                class="px-4 py-2 rounded-lg font-medium transition-colors"
-                :class="isDarkMode 
-                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-              >
-                Create SLA
-              </button>
+              <button v-if="canAdmin" type="button" class="px-4 py-2 rounded-lg font-medium bg-indigo-600 hover:bg-indigo-700 text-white" @click="openSLAModal()">Create SLA</button>
             </div>
+            <p class="text-xs mb-4" :class="mutedClass">One SLA per application. Non-compliant: below the target score or level, or more critical issues than allowed. At risk: more high issues than allowed, at a limit, or within 5 points of the target score.</p>
             <div v-if="slas.length === 0" class="text-center py-8">
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">No SLAs configured. Create one to track compliance targets.</p>
+              <p :class="mutedClass">No SLAs configured.</p>
             </div>
-            <div v-else class="space-y-3">
-              <div
-                v-for="sla in slas"
-                :key="sla.id"
-                class="p-4 rounded-lg border"
-                :class="isDarkMode 
-                  ? 'bg-slate-800 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="flex items-center justify-between">
+            <ul v-else class="space-y-3">
+              <li v-for="sla in slas" :key="sla.id" class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
+                <div class="flex flex-wrap items-center justify-between gap-4">
                   <div class="flex-1">
-                    <div class="font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ getApplicationName(sla.applicationId) }}
-                    </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <div class="text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Target Score</div>
-                        <div class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ sla.targetScore }}%</div>
-                      </div>
-                      <div>
-                        <div class="text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Target Level</div>
-                        <div class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">WCAG 2.1 {{ sla.targetLevel }}</div>
-                      </div>
-                      <div>
-                        <div class="text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Max Critical Issues</div>
-                        <div class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ sla.criticalIssuesThreshold }}</div>
-                      </div>
-                      <div>
-                        <div class="text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Max High Issues</div>
-                        <div class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ sla.highIssuesThreshold }}</div>
-                      </div>
-                    </div>
+                    <div class="font-semibold mb-2" :class="headingClass">{{ getApplicationName(sla.applicationId) }}</div>
+                    <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div><dt class="text-xs mb-1" :class="mutedClass">Target score</dt><dd class="font-medium" :class="headingClass">{{ sla.targetScore }}%</dd></div>
+                      <div><dt class="text-xs mb-1" :class="mutedClass">Target level</dt><dd class="font-medium" :class="headingClass">WCAG 2.x {{ sla.targetLevel }}</dd></div>
+                      <div><dt class="text-xs mb-1" :class="mutedClass">Max critical issues</dt><dd class="font-medium" :class="headingClass">{{ sla.criticalIssuesThreshold }}</dd></div>
+                      <div><dt class="text-xs mb-1" :class="mutedClass">Max high issues</dt><dd class="font-medium" :class="headingClass">{{ sla.highIssuesThreshold }}</dd></div>
+                    </dl>
                   </div>
-                  <div class="flex items-center gap-2 ml-4">
-                    <button
-                      @click="editSLA(sla)"
-                      class="px-3 py-1 rounded text-sm"
-                      :class="isDarkMode 
-                        ? 'bg-slate-700 hover:bg-slate-600 text-white' 
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      @click="deleteSLA(sla.id)"
-                      class="px-3 py-1 rounded text-sm text-red-600 hover:bg-red-50"
-                    >
-                      Delete
-                    </button>
+                  <div v-if="canAdmin" class="flex items-center gap-2">
+                    <button type="button" class="px-3 py-1 rounded text-sm" :class="secondaryButton" @click="openSLAModal(sla)">Edit</button>
+                    <button v-if="confirmingDelete === `sla:${sla.id}`" type="button" class="px-3 py-1 rounded text-sm bg-red-600 text-white" @click="deleteSLA(sla.id)">Confirm delete</button>
+                    <button v-else type="button" class="px-3 py-1 rounded text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" @click="confirmingDelete = `sla:${sla.id}`">Delete</button>
                   </div>
                 </div>
-              </div>
-            </div>
+              </li>
+            </ul>
           </div>
         </div>
         </div>
       </div>
     </div>
 
-    <!-- Create Schedule Modal -->
-    <div
-      v-if="showScheduleModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      @click.self="closeScheduleModal"
-    >
-      <div 
-        class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="schedule-modal-title"
-      >
-        <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-          <div class="flex items-center justify-between">
-            <h2 id="schedule-modal-title" class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              <span class="material-symbols-outlined text-indigo-600">schedule</span>
-              Create Schedule
-            </h2>
-            <button
-              @click="closeScheduleModal"
-              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-              aria-label="Close modal"
-            >
-              <span class="material-symbols-outlined" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">close</span>
-            </button>
-          </div>
+    <!-- Schedule Modal -->
+    <div v-if="showScheduleModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="closeScheduleModal" @keydown.esc="closeScheduleModal">
+      <div class="rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" role="dialog" aria-modal="true" aria-labelledby="schedule-modal-title">
+        <div class="p-6 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+          <h2 id="schedule-modal-title" class="text-xl font-semibold flex items-center gap-2" :class="headingClass">
+            <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">schedule</span>
+            {{ editingSchedule ? 'Edit Schedule' : 'Create Schedule' }}
+          </h2>
+          <button type="button" class="p-1 rounded" :class="isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'" aria-label="Close" @click="closeScheduleModal">
+            <span class="material-symbols-outlined" :class="mutedClass" aria-hidden="true">close</span>
+          </button>
         </div>
-        
-        <form @submit.prevent="saveSchedule" class="p-6 space-y-4">
-          <!-- Application Selection -->
+        <form class="p-6 space-y-4" @submit.prevent="saveSchedule">
           <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Application
-            </label>
-            <Dropdown
-              v-model="scheduleForm.applicationId"
-              :options="applicationOptions.filter(opt => opt.value !== '')"
-              :is-dark-mode="isDarkMode"
-              label="Select Application"
-            />
+            <label for="schedule-app" class="block text-sm font-medium mb-2" :class="labelClass">Application</label>
+            <select id="schedule-app" v-model="scheduleForm.applicationId" required :disabled="!!editingSchedule" class="w-full px-4 py-2 rounded-lg border" :class="inputClass">
+              <option value="" disabled>Select an application</option>
+              <option v-for="app in applications" :key="app.id" :value="app.id">{{ app.name }}</option>
+            </select>
           </div>
-
-          <!-- Frequency -->
           <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Frequency
-            </label>
-            <Dropdown
-              v-model="scheduleForm.frequency"
-              :options="[
-                { value: 'daily', label: 'Daily' },
-                { value: 'weekly', label: 'Weekly' },
-                { value: 'monthly', label: 'Monthly' }
-              ]"
-              :is-dark-mode="isDarkMode"
-            />
+            <label for="schedule-url" class="block text-sm font-medium mb-2" :class="labelClass">Page URL</label>
+            <input id="schedule-url" v-model.trim="scheduleForm.url" type="url" :placeholder="applicationUrlFor(scheduleForm.applicationId) || 'https://app.example.com'" class="w-full px-4 py-2 rounded-lg border" :class="inputClass" />
+            <p class="text-xs mt-1" :class="mutedClass">Leave empty to use the application's URL.</p>
           </div>
-
-          <!-- Day of Week (for weekly) -->
-          <div v-if="scheduleForm.frequency === 'weekly'">
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Day of Week
-            </label>
-            <Dropdown
-              v-model="scheduleForm.dayOfWeek"
-              :options="[
-                { value: 0, label: 'Sunday' },
-                { value: 1, label: 'Monday' },
-                { value: 2, label: 'Tuesday' },
-                { value: 3, label: 'Wednesday' },
-                { value: 4, label: 'Thursday' },
-                { value: 5, label: 'Friday' },
-                { value: 6, label: 'Saturday' }
-              ]"
-              :is-dark-mode="isDarkMode"
-            />
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label for="schedule-frequency" class="block text-sm font-medium mb-2" :class="labelClass">Frequency</label>
+              <select id="schedule-frequency" v-model="scheduleForm.frequency" class="w-full px-4 py-2 rounded-lg border" :class="inputClass">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            <div>
+              <label for="schedule-time" class="block text-sm font-medium mb-2" :class="labelClass">Time (UTC)</label>
+              <input id="schedule-time" v-model="scheduleForm.time" type="time" required class="w-full px-4 py-2 rounded-lg border" :class="inputClass" />
+            </div>
+            <div v-if="scheduleForm.frequency === 'weekly'">
+              <label for="schedule-dow" class="block text-sm font-medium mb-2" :class="labelClass">Day of week</label>
+              <select id="schedule-dow" v-model.number="scheduleForm.dayOfWeek" class="w-full px-4 py-2 rounded-lg border" :class="inputClass">
+                <option v-for="(day, index) in DAYS" :key="day" :value="index">{{ day }}</option>
+              </select>
+            </div>
+            <div v-if="scheduleForm.frequency === 'monthly'">
+              <label for="schedule-dom" class="block text-sm font-medium mb-2" :class="labelClass">Day of month</label>
+              <input id="schedule-dom" v-model.number="scheduleForm.dayOfMonth" type="number" min="1" max="31" required class="w-full px-4 py-2 rounded-lg border" :class="inputClass" />
+              <p class="text-xs mt-1" :class="mutedClass">29–31 run on the last day of shorter months.</p>
+            </div>
           </div>
-
-          <!-- Day of Month (for monthly) -->
-          <div v-if="scheduleForm.frequency === 'monthly'">
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Day of Month
-            </label>
-            <input
-              v-model.number="scheduleForm.dayOfMonth"
-              type="number"
-              min="1"
-              max="31"
-              class="w-full px-4 py-2 rounded-lg border"
-              :class="isDarkMode 
-                ? 'bg-slate-700 border-slate-600 text-white' 
-                : 'bg-white border-gray-300 text-gray-900'"
-            />
+          <div class="flex items-center gap-2">
+            <input id="schedule-enabled" v-model="scheduleForm.enabled" type="checkbox" class="accent-indigo-600" />
+            <label for="schedule-enabled" class="text-sm" :class="labelClass">Enabled</label>
           </div>
-
-          <!-- Time -->
-          <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Time
-            </label>
-            <input
-              v-model="scheduleForm.time"
-              type="time"
-              class="w-full px-4 py-2 rounded-lg border"
-              :class="isDarkMode 
-                ? 'bg-slate-700 border-slate-600 text-white' 
-                : 'bg-white border-gray-300 text-gray-900'"
-            />
-          </div>
-
-          <!-- Recipients -->
-          <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Email Recipients (comma-separated)
-            </label>
-            <input
-              v-model="scheduleForm.recipients"
-              type="text"
-              placeholder="email1@example.com, email2@example.com"
-              class="w-full px-4 py-2 rounded-lg border"
-              :class="isDarkMode 
-                ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400' 
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-            />
-          </div>
-
-          <!-- Enabled -->
-          <div class="flex items-center">
-            <input
-              v-model="scheduleForm.enabled"
-              type="checkbox"
-              id="schedule-enabled"
-              class="accent-indigo-600"
-            />
-            <label for="schedule-enabled" class="ml-2 text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Enable schedule immediately
-            </label>
-          </div>
-
-          <!-- Actions -->
           <div class="flex gap-4 pt-4">
-            <button
-              type="submit"
-              class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
-            >
-              Create Schedule
+            <button type="submit" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-50" :disabled="savingForm">
+              {{ editingSchedule ? 'Save Schedule' : 'Create Schedule' }}
             </button>
-            <button
-              type="button"
-              @click="closeScheduleModal"
-              class="flex-1 px-4 py-2 rounded-lg border transition-colors font-medium"
-              :class="isDarkMode 
-                ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'"
-            >
+            <button type="button" class="flex-1 px-4 py-2 rounded-lg border font-medium" :class="isDarkMode ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'" @click="closeScheduleModal">
               Cancel
             </button>
           </div>
@@ -980,144 +570,55 @@
       </div>
     </div>
 
-    <!-- Create/Edit SLA Modal -->
-    <div
-      v-if="showSLAModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      @click.self="closeSLAModal"
-    >
-      <div 
-        class="rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-        :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="sla-modal-title"
-      >
-        <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-          <div class="flex items-center justify-between">
-            <h2 id="sla-modal-title" class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              <span class="material-symbols-outlined text-indigo-600">gavel</span>
-              {{ editingSLA ? 'Edit SLA' : 'Create SLA' }}
-            </h2>
-            <button
-              @click="closeSLAModal"
-              class="p-1 rounded transition-colors"
-              :class="isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'"
-              aria-label="Close modal"
-            >
-              <span class="material-symbols-outlined" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">close</span>
-            </button>
-          </div>
+    <!-- SLA Modal -->
+    <div v-if="showSLAModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="closeSLAModal" @keydown.esc="closeSLAModal">
+      <div class="rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" role="dialog" aria-modal="true" aria-labelledby="sla-modal-title">
+        <div class="p-6 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
+          <h2 id="sla-modal-title" class="text-xl font-semibold flex items-center gap-2" :class="headingClass">
+            <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">gavel</span>
+            {{ editingSLA ? 'Edit SLA' : 'Create SLA' }}
+          </h2>
+          <button type="button" class="p-1 rounded" :class="isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'" aria-label="Close" @click="closeSLAModal">
+            <span class="material-symbols-outlined" :class="mutedClass" aria-hidden="true">close</span>
+          </button>
         </div>
-        
-        <form @submit.prevent="editingSLA ? updateSLA() : createSLA()" class="p-6 space-y-4">
-          <!-- Application Selection -->
+        <form class="p-6 space-y-4" @submit.prevent="saveSLA">
           <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Application
-            </label>
-            <Dropdown
-              v-model="slaForm.applicationId"
-              :options="applicationOptions.filter(opt => opt.value !== '')"
-              :is-dark-mode="isDarkMode"
-              label="Select Application"
-              :disabled="!!editingSLA"
-            />
+            <label for="sla-app" class="block text-sm font-medium mb-2" :class="labelClass">Application</label>
+            <select id="sla-app" v-model="slaForm.applicationId" required :disabled="!!editingSLA" class="w-full px-4 py-2 rounded-lg border" :class="inputClass">
+              <option value="" disabled>Select an application</option>
+              <option v-for="app in applications" :key="app.id" :value="app.id" :disabled="!editingSLA && slaApplicationIds.has(app.id)">
+                {{ app.name }}{{ !editingSLA && slaApplicationIds.has(app.id) ? ' (has an SLA)' : '' }}
+              </option>
+            </select>
           </div>
-
-          <!-- Target Score -->
-          <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Target Compliance Score (%)
-            </label>
-            <input
-              v-model.number="slaForm.targetScore"
-              type="number"
-              min="0"
-              max="100"
-              step="1"
-              class="w-full px-4 py-2 rounded-lg border"
-              :class="isDarkMode 
-                ? 'bg-slate-700 border-slate-600 text-white' 
-                : 'bg-white border-gray-300 text-gray-900'"
-            />
-            <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-              Minimum compliance score required (0-100)
-            </p>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label for="sla-score" class="block text-sm font-medium mb-2" :class="labelClass">Target score (%)</label>
+              <input id="sla-score" v-model.number="slaForm.targetScore" type="number" min="0" max="100" step="1" required class="w-full px-4 py-2 rounded-lg border" :class="inputClass" />
+            </div>
+            <div>
+              <label for="sla-level" class="block text-sm font-medium mb-2" :class="labelClass">Target WCAG level</label>
+              <select id="sla-level" v-model="slaForm.targetLevel" class="w-full px-4 py-2 rounded-lg border" :class="inputClass">
+                <option value="A">A</option>
+                <option value="AA">AA</option>
+                <option value="AAA">AAA (not tested automatically, so never met)</option>
+              </select>
+            </div>
+            <div>
+              <label for="sla-critical" class="block text-sm font-medium mb-2" :class="labelClass">Max critical issues</label>
+              <input id="sla-critical" v-model.number="slaForm.criticalIssuesThreshold" type="number" min="0" step="1" required class="w-full px-4 py-2 rounded-lg border" :class="inputClass" />
+            </div>
+            <div>
+              <label for="sla-high" class="block text-sm font-medium mb-2" :class="labelClass">Max high issues</label>
+              <input id="sla-high" v-model.number="slaForm.highIssuesThreshold" type="number" min="0" step="1" required class="w-full px-4 py-2 rounded-lg border" :class="inputClass" />
+            </div>
           </div>
-
-          <!-- Target WCAG Level -->
-          <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Target WCAG Level
-            </label>
-            <Dropdown
-              v-model="slaForm.targetLevel"
-              :options="[
-                { value: 'A', label: 'WCAG 2.1 A' },
-                { value: 'AA', label: 'WCAG 2.1 AA' },
-                { value: 'AAA', label: 'WCAG 2.1 AAA' }
-              ]"
-              :is-dark-mode="isDarkMode"
-            />
-          </div>
-
-          <!-- Critical Issues Threshold -->
-          <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Maximum Critical Issues
-            </label>
-            <input
-              v-model.number="slaForm.criticalIssuesThreshold"
-              type="number"
-              min="0"
-              step="1"
-              class="w-full px-4 py-2 rounded-lg border"
-              :class="isDarkMode 
-                ? 'bg-slate-700 border-slate-600 text-white' 
-                : 'bg-white border-gray-300 text-gray-900'"
-            />
-            <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-              Maximum number of critical issues allowed before SLA violation
-            </p>
-          </div>
-
-          <!-- High Issues Threshold -->
-          <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Maximum High Issues
-            </label>
-            <input
-              v-model.number="slaForm.highIssuesThreshold"
-              type="number"
-              min="0"
-              step="1"
-              class="w-full px-4 py-2 rounded-lg border"
-              :class="isDarkMode 
-                ? 'bg-slate-700 border-slate-600 text-white' 
-                : 'bg-white border-gray-300 text-gray-900'"
-            />
-            <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-              Maximum number of high severity issues allowed before at-risk status
-            </p>
-          </div>
-
-          <!-- Actions -->
           <div class="flex gap-4 pt-4">
-            <button
-              type="submit"
-              class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
-            >
-              {{ editingSLA ? 'Update SLA' : 'Create SLA' }}
+            <button type="submit" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-50" :disabled="savingForm">
+              {{ editingSLA ? 'Save SLA' : 'Create SLA' }}
             </button>
-            <button
-              type="button"
-              @click="closeSLAModal"
-              class="flex-1 px-4 py-2 rounded-lg border transition-colors font-medium"
-              :class="isDarkMode 
-                ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'"
-            >
+            <button type="button" class="flex-1 px-4 py-2 rounded-lg border font-medium" :class="isDarkMode ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'" @click="closeSLAModal">
               Cancel
             </button>
           </div>
@@ -1128,58 +629,81 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import { ref, computed, watch, onMounted } from 'vue';
 import jsPDF from 'jspdf';
+import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
+import { useAuth } from '../composables/useAuth.js';
+import apiClient, { apiErrorMessage } from '../services/api.js';
+
+const TABS = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'reports', label: 'Report History' },
+  { id: 'multi-app', label: 'Multi-Application' },
+  { id: 'schedules', label: 'Schedules' },
+  { id: 'slas', label: 'SLA Management' },
+];
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const SUMMARY_COLUMNS = ['Application', 'Score', 'WCAG level', 'Issues', 'SLA', 'Last report', 'Trend'];
+const SLA_LABELS = {
+  compliant: 'Meets SLA',
+  'at-risk': 'At risk',
+  'non-compliant': 'Not meeting SLA',
+  'no-sla': 'No SLA',
+  'no-report': 'No report yet',
+};
+const CRITERION_STATUS = { pass: 'Pass', fail: 'Fail', review: 'Needs review' };
 
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(false);
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
+const { hasPermission } = useAuth();
+const canAdmin = computed(() => hasPermission('admin:governance'));
+
 const activeTab = ref('dashboard');
-const complianceSummary = ref(null);
-const slas = ref([]);
-const showSLAModal = ref(false);
-const slaForm = ref({
-  applicationId: '',
-  targetScore: 90,
-  targetLevel: 'AA',
-  criticalIssuesThreshold: 0,
-  highIssuesThreshold: 5,
-});
-const editingSLA = ref(null);
-const loading = ref(false);
+const applications = ref([]);
+const applicationsLoaded = ref(false);
 const selectedApplicationId = ref('');
+const loading = ref(false);
 const currentReport = ref(null);
 const reports = ref([]);
 const schedules = ref([]);
-const applications = ref([]);
+const slas = ref([]);
+const complianceSummary = ref(null);
+const confirmingDelete = ref(null);
+const savingForm = ref(false);
+
+const generateSource = ref('url');
+const generateUrl = ref('');
+const generateHtml = ref('');
+
 const showScheduleModal = ref(false);
-const scheduleForm = ref({
-  applicationId: '',
-  frequency: 'daily',
-  dayOfWeek: 1,
-  dayOfMonth: 1,
-  time: '09:00',
-  recipients: '',
-  enabled: true
-});
+const editingSchedule = ref(null);
+const blankSchedule = () => ({ applicationId: selectedApplicationId.value || '', url: '', frequency: 'weekly', dayOfWeek: 1, dayOfMonth: 1, time: '09:00', enabled: true });
+const scheduleForm = ref(blankSchedule());
 
-const applicationOptions = computed(() => {
-  return [
-    { value: '', label: 'Select Application' },
-    ...applications.value.map(app => ({
-      value: app.id,
-      label: app.name
-    }))
-  ];
-});
+const showSLAModal = ref(false);
+const editingSLA = ref(null);
+const blankSLA = () => ({ applicationId: '', targetScore: 90, targetLevel: 'AA', criticalIssuesThreshold: 0, highIssuesThreshold: 5 });
+const slaForm = ref(blankSLA());
 
+// ---------- Presentation ----------
+const cardClass = computed(() => (isDarkMode.value ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'));
+const headingClass = computed(() => (isDarkMode.value ? 'text-white' : 'text-gray-900'));
+const mutedClass = computed(() => (isDarkMode.value ? 'text-gray-400' : 'text-gray-600'));
+const labelClass = computed(() => (isDarkMode.value ? 'text-gray-300' : 'text-gray-700'));
+const inputClass = computed(() => (isDarkMode.value ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'));
+const secondaryButton = computed(() => (isDarkMode.value ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'));
 
-
-
+const selectedApplication = computed(() => applications.value.find((a) => a.id === selectedApplicationId.value) ?? null);
+const slaApplicationIds = computed(() => new Set(slas.value.map((s) => s.applicationId)));
+const canGenerate = computed(() =>
+  generateSource.value === 'html' ? !!generateHtml.value.trim() : !!(generateUrl.value || selectedApplication.value?.applicationUrl),
+);
 
 const getScoreColor = (score) => {
   if (score >= 95) return 'text-green-500';
@@ -1188,294 +712,330 @@ const getScoreColor = (score) => {
   return 'text-red-500';
 };
 
-const formatCategoryName = (category) => {
-  return category
+const levelLabel = (level) => (level === 'Non-Compliant' ? 'Fails WCAG A' : `No automated WCAG ${level} failures`);
+
+const formatCategoryName = (category) =>
+  category
     .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, str => str.toUpperCase())
+    .replace(/^./, (s) => s.toUpperCase())
     .trim();
-};
 
-const getSeverityClass = (severity) => {
-  if (!severity) return isDarkMode.value ? 'bg-slate-800 border border-gray-700' : 'bg-white border border-gray-200';
-  
-  const severityUpper = String(severity).toUpperCase();
-  const base = isDarkMode.value ? 'bg-slate-800 border' : 'bg-white border';
-  
-  if (severityUpper === 'CRITICAL') {
-    return base + (isDarkMode.value ? ' border-red-700' : ' border-red-200');
-  } else if (severityUpper === 'HIGH') {
-    return base + (isDarkMode.value ? ' border-orange-700' : ' border-orange-200');
-  } else if (severityUpper === 'MODERATE') {
-    return base + (isDarkMode.value ? ' border-yellow-700' : ' border-yellow-200');
-  } else if (severityUpper === 'LOW') {
-    return base + (isDarkMode.value ? ' border-blue-700' : ' border-blue-200');
-  } else if (severityUpper === 'INFO') {
-    return base + (isDarkMode.value ? ' border-gray-700' : ' border-gray-200');
-  }
-  return base + (isDarkMode.value ? ' border-gray-700' : ' border-gray-200');
+const IMPACT_STYLES = {
+  CRITICAL: ['red'],
+  HIGH: ['orange'],
+  MODERATE: ['yellow'],
+  LOW: ['blue'],
+  INFO: ['gray'],
 };
+const colorFor = (impact) => IMPACT_STYLES[String(impact || '').toUpperCase()]?.[0] ?? 'gray';
 
-const getSeverityBadgeClass = (severity) => {
-  if (!severity) return isDarkMode.value ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700';
-  
-  const severityUpper = String(severity).toUpperCase();
-  
-  if (severityUpper === 'CRITICAL') {
-    return isDarkMode.value ? 'bg-red-700 text-red-200' : 'bg-red-100 text-red-700';
-  } else if (severityUpper === 'HIGH') {
-    return isDarkMode.value ? 'bg-orange-700 text-orange-200' : 'bg-orange-100 text-orange-700';
-  } else if (severityUpper === 'MODERATE') {
-    return isDarkMode.value ? 'bg-yellow-700 text-yellow-200' : 'bg-yellow-100 text-yellow-700';
-  } else if (severityUpper === 'LOW') {
-    return isDarkMode.value ? 'bg-blue-700 text-blue-200' : 'bg-blue-100 text-blue-700';
-  } else if (severityUpper === 'INFO') {
-    return isDarkMode.value ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700';
-  }
-  return isDarkMode.value ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700';
+// Full class strings so Tailwind keeps them
+const BORDER = {
+  red: ['border-red-200', 'border-red-700'],
+  orange: ['border-orange-200', 'border-orange-700'],
+  yellow: ['border-yellow-200', 'border-yellow-700'],
+  blue: ['border-blue-200', 'border-blue-700'],
+  gray: ['border-gray-200', 'border-gray-700'],
 };
-
-const getElementImpactClass = (impact) => {
-  if (!impact) return isDarkMode.value ? 'bg-gray-900/20 border border-gray-700' : 'bg-gray-50 border border-gray-200';
-  
-  const impactUpper = String(impact).toUpperCase();
-  
-  if (impactUpper === 'CRITICAL') {
-    return isDarkMode.value ? 'bg-red-900/20 border border-red-700' : 'bg-red-50 border border-red-200';
-  } else if (impactUpper === 'HIGH') {
-    return isDarkMode.value ? 'bg-orange-900/20 border border-orange-700' : 'bg-orange-50 border border-orange-200';
-  } else if (impactUpper === 'MODERATE') {
-    return isDarkMode.value ? 'bg-yellow-900/20 border border-yellow-700' : 'bg-yellow-50 border border-yellow-200';
-  } else if (impactUpper === 'LOW') {
-    return isDarkMode.value ? 'bg-blue-900/20 border border-blue-700' : 'bg-blue-50 border border-blue-200';
-  } else if (impactUpper === 'INFO') {
-    return isDarkMode.value ? 'bg-gray-900/20 border border-gray-700' : 'bg-gray-50 border border-gray-200';
-  }
-  return isDarkMode.value ? 'bg-gray-900/20 border border-gray-700' : 'bg-gray-50 border border-gray-200';
+const BADGE = {
+  red: ['bg-red-100 text-red-700', 'bg-red-700 text-red-200'],
+  orange: ['bg-orange-100 text-orange-700', 'bg-orange-700 text-orange-200'],
+  yellow: ['bg-yellow-100 text-yellow-700', 'bg-yellow-700 text-yellow-200'],
+  blue: ['bg-blue-100 text-blue-700', 'bg-blue-700 text-blue-200'],
+  gray: ['bg-gray-100 text-gray-700', 'bg-gray-700 text-gray-200'],
 };
-
-const formatDate = (date) => {
-  if (!date) return 'N/A';
-  if (typeof date === 'string') {
-    date = new Date(date);
-  }
-  if (!(date instanceof Date) || isNaN(date.getTime())) {
-    return 'Invalid Date';
-  }
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+const PANEL = {
+  red: ['bg-red-50 border border-red-200', 'bg-red-900/20 border border-red-700'],
+  orange: ['bg-orange-50 border border-orange-200', 'bg-orange-900/20 border border-orange-700'],
+  yellow: ['bg-yellow-50 border border-yellow-200', 'bg-yellow-900/20 border border-yellow-700'],
+  blue: ['bg-blue-50 border border-blue-200', 'bg-blue-900/20 border border-blue-700'],
+  gray: ['bg-gray-50 border border-gray-200', 'bg-gray-900/20 border border-gray-700'],
 };
+const pick = (table, impact) => table[colorFor(impact)][isDarkMode.value ? 1 : 0];
+const getSeverityClass = (severity) => `${isDarkMode.value ? 'bg-slate-800' : 'bg-white'} border ${pick(BORDER, severity)}`;
+const getSeverityBadgeClass = (severity) => pick(BADGE, severity);
+const getElementImpactClass = (impact) => pick(PANEL, impact);
+const criterionClass = (status) =>
+  status === 'pass'
+    ? isDarkMode.value ? 'bg-green-900/20 border-green-700' : 'bg-green-50 border-green-200'
+    : status === 'fail'
+      ? isDarkMode.value ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200'
+      : isDarkMode.value ? 'bg-yellow-900/20 border-yellow-700' : 'bg-yellow-50 border-yellow-200';
+const slaBadge = (status) =>
+  ({
+    compliant: isDarkMode.value ? 'bg-green-700 text-green-200' : 'bg-green-100 text-green-700',
+    'at-risk': isDarkMode.value ? 'bg-yellow-700 text-yellow-200' : 'bg-yellow-100 text-yellow-700',
+    'non-compliant': isDarkMode.value ? 'bg-red-700 text-red-200' : 'bg-red-100 text-red-700',
+  })[status] ?? (isDarkMode.value ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700');
 
-const getDayName = (dayOfWeek) => {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return days[dayOfWeek] || '';
+const formatDate = (value) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return 'N/A';
+  return date.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
+const getDayName = (day) => DAYS[day] ?? '';
+const getApplicationName = (id) => applications.value.find((a) => a.id === id)?.name ?? id;
+const applicationUrlFor = (id) => applications.value.find((a) => a.id === id)?.applicationUrl ?? '';
+const fail = (error, fallback) => showNotice(apiErrorMessage(error, fallback), 'error');
 
-const getApplicationName = (applicationId) => {
-  const app = applications.value.find(a => a.id === applicationId);
-  return app?.name || applicationId;
-};
-
+// ---------- Loading ----------
 const loadApplications = async () => {
   try {
-    const response = await axios.get('/api/v1/design-system/applications');
-    applications.value = response.data.applications || [];
+    const { data } = await apiClient.get('/api/v1/applications');
+    applications.value = data.applications ?? [];
   } catch (error) {
-    console.error('Error loading applications:', error);
-  }
-};
-
-const generateReport = async () => {
-  if (!selectedApplicationId.value || selectedApplicationId.value === '') {
-    alert('Please select an application');
-    return;
-  }
-
-  loading.value = true;
-  try {
-    const response = await axios.post(`/api/v1/accessibility-reports/generate/${selectedApplicationId.value}`);
-    const report = response.data;
-    // Debug: Log the generated report structure
-    console.log('Generated report:', report);
-    if (report.wcagCriteria) {
-      console.log('WCAG Criteria sample:', Object.values(report.wcagCriteria)[0]);
-      Object.values(report.wcagCriteria).forEach((criterion, idx) => {
-        console.log(`Criterion ${idx}:`, criterion.criterion, 'failingElements:', criterion.failingElements);
-      });
-    }
-    currentReport.value = report;
-    await loadReports();
-  } catch (error) {
-    console.error('Error generating report:', error);
-    alert('Failed to generate report');
+    fail(error, 'Could not load applications.');
   } finally {
-    loading.value = false;
-  }
-};
-
-const loadReport = async () => {
-  if (!selectedApplicationId.value || selectedApplicationId.value === '') {
-    currentReport.value = null;
-    return;
-  }
-
-  loading.value = true;
-  try {
-    const response = await axios.get(`/api/v1/accessibility-reports/reports?applicationId=${selectedApplicationId.value}`);
-    reports.value = response.data || [];
-    if (reports.value.length > 0) {
-      const report = reports.value[0];
-      // Debug: Log the report structure
-      console.log('Loaded report from dropdown:', report);
-      if (report.wcagCriteria) {
-        console.log('WCAG Criteria sample:', Object.values(report.wcagCriteria)[0]);
-      }
-      currentReport.value = report;
-    } else {
-      currentReport.value = null;
-    }
-  } catch (error) {
-    console.error('Error loading report:', error);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const loadReportById = async (reportId) => {
-  try {
-    const response = await axios.get(`/api/v1/accessibility-reports/reports/${reportId}`);
-    // Convert date string to Date object if needed
-    const report = response.data;
-    if (report.generatedAt && typeof report.generatedAt === 'string') {
-      report.generatedAt = new Date(report.generatedAt);
-    }
-    // Debug: Log the report structure to check for failingElements
-    console.log('Loaded report:', report);
-    if (report.wcagCriteria) {
-      console.log('WCAG Criteria sample:', Object.values(report.wcagCriteria)[0]);
-      Object.values(report.wcagCriteria).forEach((criterion, idx) => {
-        console.log(`Criterion ${idx}:`, criterion.criterion, 'failingElements:', criterion.failingElements);
-      });
-    }
-    currentReport.value = report;
-    // Switch to dashboard tab to show the report
-    activeTab.value = 'dashboard';
-    // Also set the selected application to match the report
-    if (currentReport.value?.applicationId) {
-      selectedApplicationId.value = currentReport.value.applicationId;
-    }
-  } catch (error) {
-    console.error('Error loading report:', error);
-    alert('Failed to load report. Please try again.');
+    applicationsLoaded.value = true;
   }
 };
 
 const loadReports = async () => {
   try {
-    const response = await axios.get('/api/v1/accessibility-reports/reports');
-    console.log('Reports API response:', response.data);
-    reports.value = Array.isArray(response.data) ? response.data : [];
-    console.log('Reports loaded:', reports.value.length, reports.value);
+    const { data } = await apiClient.get('/api/v1/accessibility-reports/reports');
+    reports.value = data;
   } catch (error) {
-    console.error('Error loading reports:', error);
-    reports.value = [];
+    fail(error, 'Could not load reports.');
   }
 };
 
 const loadSchedules = async () => {
   try {
-    const response = await axios.get('/api/v1/accessibility-reports/schedules');
-    console.log('Schedules API response:', response.data);
-    schedules.value = Array.isArray(response.data) ? response.data : [];
-    console.log('Schedules loaded:', schedules.value.length, schedules.value);
+    const { data } = await apiClient.get('/api/v1/accessibility-reports/schedules');
+    schedules.value = data;
   } catch (error) {
-    console.error('Error loading schedules:', error);
-    schedules.value = [];
+    fail(error, 'Could not load schedules.');
   }
 };
 
-const toggleSchedule = async (scheduleId) => {
+const loadSLAs = async () => {
   try {
-    if (!Array.isArray(schedules.value)) {
-      await loadSchedules();
-    }
-    const schedule = schedules.value.find(s => s.id === scheduleId);
-    if (schedule) {
-      await axios.put(`/api/v1/accessibility-reports/schedules/${scheduleId}`, {
-        enabled: !schedule.enabled
-      });
-      await loadSchedules();
-    }
+    const { data } = await apiClient.get('/api/v1/accessibility-reports/slas');
+    slas.value = data;
   } catch (error) {
-    console.error('Error toggling schedule:', error);
+    fail(error, 'Could not load SLAs.');
   }
 };
 
-const deleteSchedule = async (scheduleId) => {
-  if (!confirm('Are you sure you want to delete this schedule?')) {
+const loadComplianceSummary = async () => {
+  try {
+    const { data } = await apiClient.get('/api/v1/accessibility-reports/summary');
+    complianceSummary.value = data;
+  } catch (error) {
+    fail(error, 'Could not load the compliance summary.');
+  }
+};
+
+const openReport = async (reportId) => {
+  try {
+    const { data } = await apiClient.get(`/api/v1/accessibility-reports/reports/${encodeURIComponent(reportId)}`);
+    currentReport.value = data;
+    if (selectedApplicationId.value !== data.applicationId) {
+      skipNextLoad = true;
+      selectedApplicationId.value = data.applicationId;
+    }
+    activeTab.value = 'dashboard';
+  } catch (error) {
+    fail(error, 'Could not load the report.');
+  }
+};
+
+/** The latest report for the selected application */
+const loadLatestReport = async () => {
+  currentReport.value = null;
+  if (!selectedApplicationId.value) return;
+  try {
+    const { data } = await apiClient.get('/api/v1/accessibility-reports/reports', { params: { applicationId: selectedApplicationId.value } });
+    if (data.length) await openReport(data[0].id);
+  } catch (error) {
+    fail(error, 'Could not load the latest report.');
+  }
+};
+
+let skipNextLoad = false;
+watch(selectedApplicationId, () => {
+  generateUrl.value = '';
+  if (skipNextLoad) {
+    skipNextLoad = false;
     return;
   }
+  loadLatestReport();
+});
 
+// ---------- Reports ----------
+const generateReport = async () => {
+  loading.value = true;
   try {
-    await axios.delete(`/api/v1/accessibility-reports/schedules/${scheduleId}`);
-    await loadSchedules();
+    const body = generateSource.value === 'html' ? { html: generateHtml.value } : generateUrl.value ? { url: generateUrl.value } : {};
+    const { data } = await apiClient.post(`/api/v1/accessibility-reports/generate/${encodeURIComponent(selectedApplicationId.value)}`, body);
+    currentReport.value = data;
+    showNotice(`Report generated: score ${data.complianceScore}%, ${data.totalIssues} issues.`, 'success');
+    loadReports();
+    complianceSummary.value = null;
   } catch (error) {
-    console.error('Error deleting schedule:', error);
+    fail(error, 'Could not generate the report.');
+  } finally {
+    loading.value = false;
   }
+};
+
+const deleteReport = async (reportId) => {
+  try {
+    await apiClient.delete(`/api/v1/accessibility-reports/reports/${encodeURIComponent(reportId)}`);
+    reports.value = reports.value.filter((r) => r.id !== reportId);
+    if (currentReport.value?.id === reportId) currentReport.value = null;
+    complianceSummary.value = null;
+    showNotice('Report deleted.', 'success');
+  } catch (error) {
+    fail(error, 'Could not delete the report.');
+  } finally {
+    confirmingDelete.value = null;
+  }
+};
+
+// ---------- Schedules ----------
+const openScheduleModal = (schedule = null) => {
+  editingSchedule.value = schedule;
+  scheduleForm.value = schedule
+    ? {
+        applicationId: schedule.applicationId,
+        url: schedule.url ?? '',
+        frequency: schedule.frequency,
+        dayOfWeek: schedule.dayOfWeek ?? 1,
+        dayOfMonth: schedule.dayOfMonth ?? 1,
+        time: schedule.time,
+        enabled: schedule.enabled,
+      }
+    : blankSchedule();
+  showScheduleModal.value = true;
 };
 
 const closeScheduleModal = () => {
   showScheduleModal.value = false;
-  scheduleForm.value = {
-    applicationId: '',
-    frequency: 'daily',
-    dayOfWeek: 1,
-    dayOfMonth: 1,
-    time: '09:00',
-    recipients: '',
-    enabled: true
-  };
+  editingSchedule.value = null;
+};
+
+const schedulePayload = () => {
+  const form = scheduleForm.value;
+  const body = { frequency: form.frequency, time: form.time, enabled: form.enabled };
+  if (form.frequency === 'weekly') body.dayOfWeek = form.dayOfWeek;
+  if (form.frequency === 'monthly') body.dayOfMonth = form.dayOfMonth;
+  if (form.url) body.url = form.url;
+  return body;
 };
 
 const saveSchedule = async () => {
-  if (!scheduleForm.value.applicationId || scheduleForm.value.applicationId === '') {
-    alert('Please select an application');
-    return;
-  }
-
+  savingForm.value = true;
   try {
-    const scheduleData = {
-      applicationId: scheduleForm.value.applicationId,
-      frequency: scheduleForm.value.frequency,
-      time: scheduleForm.value.time,
-      enabled: scheduleForm.value.enabled,
-      recipients: scheduleForm.value.recipients
-        ? scheduleForm.value.recipients.split(',').map(email => email.trim()).filter(email => email)
-        : []
-    };
-
-    if (scheduleForm.value.frequency === 'weekly') {
-      scheduleData.dayOfWeek = scheduleForm.value.dayOfWeek;
-    } else if (scheduleForm.value.frequency === 'monthly') {
-      scheduleData.dayOfMonth = scheduleForm.value.dayOfMonth;
+    if (editingSchedule.value) {
+      // An empty URL clears a custom URL so the application's URL is used
+      const body = { ...schedulePayload(), url: scheduleForm.value.url || '' };
+      await apiClient.put(`/api/v1/accessibility-reports/schedules/${encodeURIComponent(editingSchedule.value.id)}`, body);
+    } else {
+      await apiClient.post('/api/v1/accessibility-reports/schedules', { applicationId: scheduleForm.value.applicationId, ...schedulePayload() });
     }
-
-    await axios.post('/api/v1/accessibility-reports/schedules', scheduleData);
-    await loadSchedules();
+    showNotice(editingSchedule.value ? 'Schedule saved.' : 'Schedule created.', 'success');
     closeScheduleModal();
+    await loadSchedules();
   } catch (error) {
-    console.error('Error creating schedule:', error);
-    alert('Failed to create schedule. Please try again.');
+    fail(error, 'Could not save the schedule.');
+  } finally {
+    savingForm.value = false;
   }
 };
 
+const toggleSchedule = async (schedule) => {
+  try {
+    await apiClient.put(`/api/v1/accessibility-reports/schedules/${encodeURIComponent(schedule.id)}`, { enabled: !schedule.enabled });
+    await loadSchedules();
+  } catch (error) {
+    fail(error, 'Could not change the schedule.');
+  }
+};
+
+const deleteSchedule = async (scheduleId) => {
+  try {
+    await apiClient.delete(`/api/v1/accessibility-reports/schedules/${encodeURIComponent(scheduleId)}`);
+    schedules.value = schedules.value.filter((s) => s.id !== scheduleId);
+    showNotice('Schedule deleted.', 'success');
+  } catch (error) {
+    fail(error, 'Could not delete the schedule.');
+  } finally {
+    confirmingDelete.value = null;
+  }
+};
+
+// ---------- SLAs ----------
+const openSLAModal = (sla = null) => {
+  editingSLA.value = sla;
+  slaForm.value = sla
+    ? {
+        applicationId: sla.applicationId,
+        targetScore: sla.targetScore,
+        targetLevel: sla.targetLevel,
+        criticalIssuesThreshold: sla.criticalIssuesThreshold,
+        highIssuesThreshold: sla.highIssuesThreshold,
+      }
+    : blankSLA();
+  showSLAModal.value = true;
+};
+
+const closeSLAModal = () => {
+  showSLAModal.value = false;
+  editingSLA.value = null;
+};
+
+const saveSLA = async () => {
+  savingForm.value = true;
+  try {
+    const { applicationId, ...targets } = slaForm.value;
+    if (editingSLA.value) {
+      await apiClient.put(`/api/v1/accessibility-reports/slas/${encodeURIComponent(editingSLA.value.id)}`, targets);
+    } else {
+      await apiClient.post('/api/v1/accessibility-reports/slas', { applicationId, ...targets });
+    }
+    showNotice(editingSLA.value ? 'SLA saved.' : 'SLA created.', 'success');
+    closeSLAModal();
+    complianceSummary.value = null;
+    await loadSLAs();
+  } catch (error) {
+    fail(error, 'Could not save the SLA.');
+  } finally {
+    savingForm.value = false;
+  }
+};
+
+const deleteSLA = async (slaId) => {
+  try {
+    await apiClient.delete(`/api/v1/accessibility-reports/slas/${encodeURIComponent(slaId)}`);
+    slas.value = slas.value.filter((s) => s.id !== slaId);
+    complianceSummary.value = null;
+    showNotice('SLA deleted.', 'success');
+  } catch (error) {
+    fail(error, 'Could not delete the SLA.');
+  } finally {
+    confirmingDelete.value = null;
+  }
+};
+
+watch(activeTab, (tab) => {
+  confirmingDelete.value = null;
+  if (tab === 'multi-app' && !complianceSummary.value) loadComplianceSummary();
+});
+
+onMounted(async () => {
+  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
+    drawerOpen.value = true;
+    sessionStorage.removeItem('openDrawerOnLoad');
+  }
+  await loadApplications();
+  await Promise.all([loadReports(), loadSchedules(), loadSLAs()]);
+});
+
+// ---------- PDF export ----------
 const exportToPDF = () => {
   if (!currentReport.value) {
-    alert('No report available to export');
+    showNotice('Open a report first.', 'info');
     return;
   }
 
@@ -1860,12 +1420,11 @@ const exportToPDF = () => {
         doc.text(messageLines, textStartX, yPos);
         yPos += messageLines.length * 3.5 + 1;
         
-        // File and line info
-        if (element.file) {
+        // Element selector
+        if (element.target) {
           doc.setFontSize(7);
           doc.setTextColor(100, 100, 100);
-          const fileInfo = element.line ? `${element.file}:${element.line}` : element.file;
-          doc.text(`File: ${fileInfo}`, textStartX, yPos);
+          doc.text(doc.splitTextToSize(`Selector: ${element.target}`, pageWidth - textStartX - margin), textStartX, yPos);
           yPos += lineHeight - 1;
         }
         
@@ -1956,153 +1515,6 @@ const exportToPDF = () => {
   const filename = `accessibility-report-${currentReport.value.applicationName.replace(/\s+/g, '-').toLowerCase()}-${reportDate.toISOString().split('T')[0]}.pdf`;
   doc.save(filename);
 };
-
-onMounted(async () => {
-  // Auto-open drawer if navigating from sidebar
-  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-    drawerOpen.value = true;
-    sessionStorage.removeItem('openDrawerOnLoad');
-  }
-  
-  isDarkMode.value = document.documentElement.classList.contains('dark');
-  
-  // Watch for dark mode changes
-  const observer = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-});
-
-const loadComplianceSummary = async () => {
-  try {
-    const response = await axios.get('/api/v1/accessibility-reports/summary');
-    complianceSummary.value = response.data;
-  } catch (error) {
-    console.error('Error loading compliance summary:', error);
-    complianceSummary.value = null;
-  }
-};
-
-const loadSLAs = async () => {
-  try {
-    const response = await axios.get('/api/v1/accessibility-reports/slas');
-    slas.value = Array.isArray(response.data) ? response.data : [];
-  } catch (error) {
-    console.error('Error loading SLAs:', error);
-    slas.value = [];
-  }
-};
-
-const createSLA = async () => {
-  if (!slaForm.value.applicationId || slaForm.value.applicationId === '') {
-    alert('Please select an application');
-    return;
-  }
-
-  try {
-    await axios.post('/api/v1/accessibility-reports/slas', slaForm.value);
-    await loadSLAs();
-    await loadComplianceSummary(); // Refresh compliance summary to update SLA status
-    closeSLAModal();
-  } catch (error) {
-    console.error('Error creating SLA:', error);
-    alert('Failed to create SLA. Please try again.');
-  }
-};
-
-const editSLA = (sla) => {
-  editingSLA.value = sla;
-  slaForm.value = {
-    applicationId: sla.applicationId,
-    targetScore: sla.targetScore,
-    targetLevel: sla.targetLevel,
-    criticalIssuesThreshold: sla.criticalIssuesThreshold,
-    highIssuesThreshold: sla.highIssuesThreshold,
-  };
-  showSLAModal.value = true;
-};
-
-const updateSLA = async () => {
-  if (!editingSLA.value) return;
-
-  try {
-    await axios.put(`/api/v1/accessibility-reports/slas/${editingSLA.value.id}`, slaForm.value);
-    await loadSLAs();
-    await loadComplianceSummary(); // Refresh compliance summary to update SLA status
-    closeSLAModal();
-  } catch (error) {
-    console.error('Error updating SLA:', error);
-    alert('Failed to update SLA. Please try again.');
-  }
-};
-
-const deleteSLA = async (slaId) => {
-  if (!confirm('Are you sure you want to delete this SLA?')) {
-    return;
-  }
-
-  try {
-    await axios.delete(`/api/v1/accessibility-reports/slas/${slaId}`);
-    await loadSLAs();
-    if (activeTab.value === 'multi-app') {
-      await loadComplianceSummary();
-    }
-  } catch (error) {
-    console.error('Error deleting SLA:', error);
-    alert('Failed to delete SLA. Please try again.');
-  }
-};
-
-const closeSLAModal = () => {
-  showSLAModal.value = false;
-  editingSLA.value = null;
-  slaForm.value = {
-    applicationId: '',
-    targetScore: 90,
-    targetLevel: 'AA',
-    criticalIssuesThreshold: 0,
-    highIssuesThreshold: 5,
-  };
-};
-
-// Watch activeTab to load data when switching tabs
-watch(activeTab, (newTab) => {
-  if (newTab === 'multi-app' && !complianceSummary.value) {
-    loadComplianceSummary();
-  } else if (newTab === 'slas' && slas.value.length === 0) {
-    loadSLAs();
-  }
-});
-
-onMounted(async () => {
-  // Auto-open drawer if navigating from sidebar
-  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-    drawerOpen.value = true;
-    sessionStorage.removeItem('openDrawerOnLoad');
-  }
-  
-  isDarkMode.value = document.documentElement.classList.contains('dark');
-  
-  // Watch for dark mode changes
-  const observer = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-
-  await loadApplications();
-  await loadReports();
-  await loadSchedules();
-  await loadComplianceSummary();
-  await loadSLAs();
-});
 </script>
 
 <style scoped>
@@ -2110,4 +1522,3 @@ onMounted(async () => {
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 </style>
-

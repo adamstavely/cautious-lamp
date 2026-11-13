@@ -150,59 +150,13 @@
               <!-- Tab Content -->
               <!-- Review Links Tab -->
               <div v-if="activeTab === 'links'" id="tabpanel-links" role="tabpanel" aria-labelledby="tab-links" class="p-8">
-        <!-- Admin key: the /admin routes need ADMIN_API_KEY, kept in this browser only -->
-        <form
-          v-if="needsAdminKey || editingAdminKey"
-          class="mb-6 p-4 rounded-lg border"
-          :class="isDarkMode ? 'border-amber-900 bg-amber-950/30' : 'border-amber-200 bg-amber-50'"
-          @submit.prevent="saveAdminKey"
+        <!-- Managing review links needs the admin:users permission (the server's /admin routes check it) -->
+        <div
+          v-if="!canManageReviews"
+          class="mb-6 rounded-xl border border-solid px-4 py-3 text-sm border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
+          role="status"
         >
-          <label for="admin-api-key" class="block text-sm font-medium mb-1" :class="isDarkMode ? 'text-amber-200' : 'text-amber-900'">
-            {{ adminKeyRejected ? 'The admin API key was rejected. Enter the correct key.' : 'Enter the admin API key to manage review links.' }}
-          </label>
-          <p class="text-xs mb-3" :class="isDarkMode ? 'text-amber-300/80' : 'text-amber-800'">
-            This is the server's ADMIN_API_KEY. It is stored in this browser only.
-          </p>
-          <div class="flex flex-wrap items-center gap-2">
-            <input
-              id="admin-api-key"
-              v-model="adminKeyInput"
-              type="password"
-              autocomplete="off"
-              placeholder="Admin API key"
-              class="flex-1 min-w-[220px] px-3 py-2 border rounded-lg text-sm focus:ring-2"
-              :class="isDarkMode
-                ? 'border-slate-600 focus:ring-indigo-400 bg-slate-700 text-gray-100 placeholder-gray-400'
-                : 'border-gray-300 focus:ring-indigo-500 bg-white text-gray-900 placeholder-gray-500'"
-            />
-            <button
-              type="submit"
-              :disabled="!adminKeyInput.trim()"
-              class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50"
-              :class="isDarkMode ? 'bg-indigo-500 hover:bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'"
-            >
-              Save key
-            </button>
-            <button
-              v-if="editingAdminKey && !needsAdminKey"
-              type="button"
-              class="px-4 py-2 text-sm font-medium rounded-lg"
-              :class="isDarkMode ? 'text-gray-300 hover:text-gray-100' : 'text-gray-600 hover:text-gray-900'"
-              @click="editingAdminKey = false"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-        <div v-else-if="!demoMode" class="mb-4 flex justify-end">
-          <button
-            type="button"
-            class="text-xs font-medium"
-            :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'"
-            @click="editingAdminKey = true; adminKeyInput = ''"
-          >
-            Change admin key
-          </button>
+          You don't have access to manage review links. Ask an administrator for the admin:users permission.
         </div>
         <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
         <v-data-table
@@ -605,13 +559,11 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { getCurrentUser, isMockMode } from '../mockData.js';
+import { useAuth } from '../composables/useAuth.js';
 import {
   adminAPI,
   teamsAPI,
   apiErrorMessage,
-  isAdminKeyError,
-  getAdminApiKey,
-  setAdminApiKey,
 } from '../services/api.js';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
@@ -648,15 +600,12 @@ const selectedTeam = ref(null);
 const deletingTeam = ref(null);
 const newTeamName = ref('');
 
-// Admin key (real API only; demo mode needs none)
+// Review links are managed with the signed-in user's token; the server requires admin:users
 const demoMode = isMockMode();
-const hasAdminKey = ref(!!getAdminApiKey());
-const adminKeyRejected = ref(false);
-const editingAdminKey = ref(false);
-const adminKeyInput = ref('');
-const needsAdminKey = computed(() => !demoMode && (!hasAdminKey.value || adminKeyRejected.value));
+const { hasPermission } = useAuth();
+const canManageReviews = computed(() => hasPermission('admin:users'));
 
-// The acting user, read once when the page opens (it only changes when switched elsewhere)
+// The signed-in user, read once when the page opens
 const currentUser = getCurrentUser();
 
 // The admin API returns every review. Demo mode mimics role scoping so each demo role sees a sensible list.
@@ -699,35 +648,14 @@ const minDate = computed(() => {
   return new Date().toISOString().split('T')[0];
 });
 
-/** Report a failed admin call; a missing or rejected key brings up the key prompt. */
+/** Report a failed admin call (a 403 reads "You don't have access to this"). */
 const handleAdminError = (error, fallback) => {
   console.error(fallback, error);
-  if (!demoMode && isAdminKeyError(error)) {
-    adminKeyRejected.value = hasAdminKey.value;
-    hasAdminKey.value = !!getAdminApiKey();
-    showNotice(
-      hasAdminKey.value ? 'The admin API key was rejected.' : 'Enter the admin API key to manage review links.',
-      'warning'
-    );
-    return;
-  }
   showNotice(apiErrorMessage(error, fallback), 'error');
 };
 
-const saveAdminKey = () => {
-  const key = adminKeyInput.value.trim();
-  if (!key) return;
-  setAdminApiKey(key);
-  hasAdminKey.value = true;
-  adminKeyRejected.value = false;
-  editingAdminKey.value = false;
-  adminKeyInput.value = '';
-  clearNotice();
-  loadLinks();
-};
-
 const loadLinks = async () => {
-  if (needsAdminKey.value) return;
+  if (!canManageReviews.value) return;
   loadingLinks.value = true;
   try {
     links.value = await adminAPI.getReviews(true); // always load all, including expired

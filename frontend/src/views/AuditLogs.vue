@@ -455,6 +455,7 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
+import { authHeaders } from '../services/api.js';
 
 const route = useRoute();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -516,7 +517,7 @@ const loadLogs = async () => {
     params.append('limit', limit.value.toString());
     params.append('offset', offset.value.toString());
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/audit/logs?${params}`);
+    const response = await fetch(`${API_BASE_URL}/api/v1/audit/logs?${params}`, { headers: authHeaders() });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -538,7 +539,7 @@ const loadStats = async () => {
     if (filters.value.startDate) params.append('startDate', filters.value.startDate);
     if (filters.value.endDate) params.append('endDate', filters.value.endDate);
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/audit/stats?${params}`);
+    const response = await fetch(`${API_BASE_URL}/api/v1/audit/stats?${params}`, { headers: authHeaders() });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -560,7 +561,7 @@ const exportLogs = async (format) => {
     if (filters.value.endDate) params.append('endDate', filters.value.endDate);
     params.append('format', format);
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/audit/export?${params}`);
+    const response = await fetch(`${API_BASE_URL}/api/v1/audit/export?${params}`, { headers: authHeaders() });
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

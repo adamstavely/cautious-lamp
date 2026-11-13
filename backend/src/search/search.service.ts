@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DesignSystemService } from '../design-system/design-system.service';
+import { WorkspacesService } from '../workspaces/workspaces.service';
+import { AuthPrincipal } from '../auth/principal';
 
 export interface SearchResult {
   id: string;
@@ -26,15 +28,18 @@ export interface SearchFilters {
 export class SearchService {
   constructor(
     private readonly designSystemService: DesignSystemService,
+    private readonly workspacesService: WorkspacesService,
   ) {}
 
   /**
-   * Perform advanced search with filters
+   * Perform advanced search with filters. Workspaces are searched only when a
+   * principal is given, and only those it can see.
    */
-  search(
+  async search(
     query: string,
     filters?: SearchFilters,
-  ): SearchResult[] {
+    principal?: AuthPrincipal,
+  ): Promise<SearchResult[]> {
     const results: SearchResult[] = [];
 
     // Search components
@@ -111,8 +116,8 @@ export class SearchService {
     }
 
     // Search workspaces
-    if (!filters?.type || filters.type.includes('workspace')) {
-      const workspaces = this.designSystemService.getAllWorkspaces();
+    if (principal && (!filters?.type || filters.type.includes('workspace'))) {
+      const workspaces = await this.workspacesService.list(principal);
       workspaces.forEach(workspace => {
         const score = this.calculateRelevanceScore(query, {
           title: workspace.name,
@@ -217,11 +222,11 @@ export class SearchService {
   /**
    * Get available search filters
    */
-  getAvailableFilters(): {
+  async getAvailableFilters(principal?: AuthPrincipal): Promise<{
     types: Array<{ value: string; label: string; count: number }>;
     categories: Array<{ value: string; label: string; count: number }>;
     commonProps: Array<{ value: string; label: string; count: number }>;
-  } {
+  }> {
     const components = this.designSystemService.getAllComponents();
     const tokens = this.designSystemService.getAllTokens();
 
@@ -231,7 +236,7 @@ export class SearchService {
       token: tokens.length,
       pattern: 0, // Would come from patterns library
       guideline: 0,
-      workspace: this.designSystemService.getAllWorkspaces().length,
+      workspace: principal ? (await this.workspacesService.list(principal)).length : 0,
     };
 
     // Count by category

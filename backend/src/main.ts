@@ -12,6 +12,7 @@ if (process.env.OTEL_ENABLED !== 'false') {
 }
 
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { APP_GUARD } from '@nestjs/core';
@@ -19,7 +20,9 @@ import { CustomThrottlerGuard } from './common/rate-limiting/rate-limit.guard';
 
 async function bootstrap() {
   // rawBody keeps the exact request bytes for webhook signature checks
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
+  // Governance scans accept up to 512KB of pasted code; Nest's default limit is 100KB
+  app.useBodyParser('json', { limit: '1mb' });
   
   app.useGlobalPipes(new ValidationPipe());
   

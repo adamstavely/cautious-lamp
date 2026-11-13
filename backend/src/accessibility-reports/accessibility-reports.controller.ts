@@ -1,164 +1,104 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query } from '@nestjs/common';
-import { AccessibilityReportsService, ReportSchedule, ComplianceSLA } from './accessibility-reports.service';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
+import { AuthPrincipal, Principal, RequirePermission } from '../auth/principal';
+import { Permission } from '../rbac/rbac.service';
+import { CreateScheduleDto, CreateSlaDto, GenerateReportDto, UpdateScheduleDto, UpdateSlaDto, strictBody } from './accessibility-reports.dto';
+import { AccessibilityReportsService } from './accessibility-reports.service';
 
+/**
+ * Accessibility reports, schedules and SLAs (docs/GOVERNANCE.md). Reads need
+ * any signed-in caller; everything that changes data needs admin:governance.
+ */
 @Controller('api/v1/accessibility-reports')
 export class AccessibilityReportsController {
-  constructor(
-    private readonly reportsService: AccessibilityReportsService,
-  ) {}
+  constructor(private readonly reports: AccessibilityReportsService) {}
 
   @Post('generate/:applicationId')
-  async generateReport(
-    @Param('applicationId') applicationId: string,
-    @Body() options?: { scheduled?: boolean; scheduleId?: string }
-  ) {
-    const report = await this.reportsService.generateReport(applicationId, options);
-    // Serialize Date objects to ISO strings for JSON response
-    return {
-      ...report,
-      generatedAt: report.generatedAt instanceof Date ? report.generatedAt.toISOString() : report.generatedAt,
-    };
+  @RequirePermission(Permission.ADMIN_GOVERNANCE)
+  generateReport(@Param('applicationId') applicationId: string, @Body(strictBody()) body: GenerateReportDto, @Principal() principal: AuthPrincipal) {
+    return this.reports.generateReport(applicationId, body ?? {}, principal);
   }
 
-  /**
-   * Multi-Application Compliance Dashboard
-   */
   @Get('summary')
-  async getComplianceSummary() {
-    return this.reportsService.getMultiApplicationComplianceSummary();
+  getComplianceSummary() {
+    return this.reports.getComplianceSummary();
   }
 
   @Get('reports')
-  async getReports(@Query('applicationId') applicationId?: string) {
-    const reports = this.reportsService.getReports(applicationId);
-    // Serialize Date objects to ISO strings for JSON response
-    return reports.map(report => ({
-      ...report,
-      generatedAt: report.generatedAt instanceof Date ? report.generatedAt.toISOString() : report.generatedAt,
-      trend: report.trend,
-    }));
+  getReports(@Query('applicationId') applicationId?: string) {
+    return this.reports.getReports(applicationId || undefined);
   }
 
   @Get('reports/:reportId')
-  async getReport(@Param('reportId') reportId: string) {
-    const report = this.reportsService.getReport(reportId);
-    if (!report) {
-      throw new Error(`Report ${reportId} not found`);
-    }
-    // Serialize Date objects to ISO strings for JSON response
-    return {
-      ...report,
-      generatedAt: report.generatedAt instanceof Date ? report.generatedAt.toISOString() : report.generatedAt,
-    };
+  getReport(@Param('reportId') reportId: string) {
+    return this.reports.getReport(reportId);
   }
 
+  @Delete('reports/:reportId')
+  @HttpCode(204)
+  @RequirePermission(Permission.ADMIN_GOVERNANCE)
+  async deleteReport(@Param('reportId') reportId: string) {
+    await this.reports.deleteReport(reportId);
+  }
+
+  // ---------------------------------------------------------- schedules
+
   @Get('schedules')
-  async getSchedules(@Query('applicationId') applicationId?: string) {
-    const schedules = this.reportsService.getSchedules(applicationId);
-    // Serialize Date objects to ISO strings for JSON response
-    return schedules.map(schedule => ({
-      ...schedule,
-      lastRun: schedule.lastRun instanceof Date ? schedule.lastRun.toISOString() : schedule.lastRun,
-      nextRun: schedule.nextRun instanceof Date ? schedule.nextRun.toISOString() : schedule.nextRun,
-    }));
+  getSchedules(@Query('applicationId') applicationId?: string) {
+    return this.reports.getSchedules(applicationId || undefined);
+  }
+
+  @Get('schedules/:scheduleId')
+  getSchedule(@Param('scheduleId') scheduleId: string) {
+    return this.reports.getSchedule(scheduleId);
   }
 
   @Post('schedules')
-  async createSchedule(@Body() schedule: Omit<ReportSchedule, 'id' | 'nextRun'>) {
-    return this.reportsService.createSchedule(schedule);
+  @RequirePermission(Permission.ADMIN_GOVERNANCE)
+  createSchedule(@Body(strictBody()) body: CreateScheduleDto, @Principal() principal: AuthPrincipal) {
+    return this.reports.createSchedule(body, principal);
   }
 
   @Put('schedules/:scheduleId')
-  async updateSchedule(
-    @Param('scheduleId') scheduleId: string,
-    @Body() updates: Partial<ReportSchedule>
-  ) {
-    const schedule = this.reportsService.updateSchedule(scheduleId, updates);
-    if (!schedule) {
-      throw new Error(`Schedule ${scheduleId} not found`);
-    }
-    return schedule;
+  @RequirePermission(Permission.ADMIN_GOVERNANCE)
+  updateSchedule(@Param('scheduleId') scheduleId: string, @Body(strictBody()) body: UpdateScheduleDto) {
+    return this.reports.updateSchedule(scheduleId, body);
   }
 
   @Delete('schedules/:scheduleId')
+  @HttpCode(204)
+  @RequirePermission(Permission.ADMIN_GOVERNANCE)
   async deleteSchedule(@Param('scheduleId') scheduleId: string) {
-    const deleted = this.reportsService.deleteSchedule(scheduleId);
-    if (!deleted) {
-      throw new Error(`Schedule ${scheduleId} not found`);
-    }
-    return { success: true };
+    await this.reports.deleteSchedule(scheduleId);
   }
 
-  /**
-   * SLA Management
-   */
-  @Post('slas')
-  async createSLA(@Body() sla: Omit<ComplianceSLA, 'id' | 'createdAt' | 'updatedAt'>) {
-    const newSLA = this.reportsService.createSLA(sla);
-    return {
-      ...newSLA,
-      createdAt: newSLA.createdAt instanceof Date ? newSLA.createdAt.toISOString() : newSLA.createdAt,
-      updatedAt: newSLA.updatedAt instanceof Date ? newSLA.updatedAt.toISOString() : newSLA.updatedAt,
-    };
-  }
+  // --------------------------------------------------------------- SLAs
 
   @Get('slas')
-  async getAllSLAs(@Query('applicationId') applicationId?: string) {
-    if (applicationId) {
-      const sla = this.reportsService.getSLAByApplication(applicationId);
-      if (!sla) {
-        return null;
-      }
-      return {
-        ...sla,
-        createdAt: sla.createdAt instanceof Date ? sla.createdAt.toISOString() : sla.createdAt,
-        updatedAt: sla.updatedAt instanceof Date ? sla.updatedAt.toISOString() : sla.updatedAt,
-      };
-    }
-    const slas = this.reportsService.getAllSLAs();
-    return slas.map(sla => ({
-      ...sla,
-      createdAt: sla.createdAt instanceof Date ? sla.createdAt.toISOString() : sla.createdAt,
-      updatedAt: sla.updatedAt instanceof Date ? sla.updatedAt.toISOString() : sla.updatedAt,
-    }));
+  getSLAs(@Query('applicationId') applicationId?: string) {
+    return this.reports.getSLAs(applicationId || undefined);
   }
 
   @Get('slas/:slaId')
-  async getSLA(@Param('slaId') slaId: string) {
-    const sla = this.reportsService.getSLA(slaId);
-    if (!sla) {
-      throw new Error(`SLA ${slaId} not found`);
-    }
-    return {
-      ...sla,
-      createdAt: sla.createdAt instanceof Date ? sla.createdAt.toISOString() : sla.createdAt,
-      updatedAt: sla.updatedAt instanceof Date ? sla.updatedAt.toISOString() : sla.updatedAt,
-    };
+  getSLA(@Param('slaId') slaId: string) {
+    return this.reports.getSLA(slaId);
+  }
+
+  @Post('slas')
+  @RequirePermission(Permission.ADMIN_GOVERNANCE)
+  createSLA(@Body(strictBody()) body: CreateSlaDto) {
+    return this.reports.createSLA(body);
   }
 
   @Put('slas/:slaId')
-  async updateSLA(
-    @Param('slaId') slaId: string,
-    @Body() updates: Partial<Omit<ComplianceSLA, 'id' | 'createdAt'>>
-  ) {
-    const sla = this.reportsService.updateSLA(slaId, updates);
-    if (!sla) {
-      throw new Error(`SLA ${slaId} not found`);
-    }
-    return {
-      ...sla,
-      createdAt: sla.createdAt instanceof Date ? sla.createdAt.toISOString() : sla.createdAt,
-      updatedAt: sla.updatedAt instanceof Date ? sla.updatedAt.toISOString() : sla.updatedAt,
-    };
+  @RequirePermission(Permission.ADMIN_GOVERNANCE)
+  updateSLA(@Param('slaId') slaId: string, @Body(strictBody()) body: UpdateSlaDto) {
+    return this.reports.updateSLA(slaId, body);
   }
 
   @Delete('slas/:slaId')
+  @HttpCode(204)
+  @RequirePermission(Permission.ADMIN_GOVERNANCE)
   async deleteSLA(@Param('slaId') slaId: string) {
-    const deleted = this.reportsService.deleteSLA(slaId);
-    if (!deleted) {
-      throw new Error(`SLA ${slaId} not found`);
-    }
-    return { success: true };
+    await this.reports.deleteSLA(slaId);
   }
 }
-

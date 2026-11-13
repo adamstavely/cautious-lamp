@@ -8,6 +8,7 @@ import { Observable } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { AuditService, AuditAction } from './audit.service';
 import { Request } from 'express';
+import type { AuthedRequest } from '../auth/principal';
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
@@ -17,10 +18,11 @@ export class AuditInterceptor implements NestInterceptor {
     const request = context.switchToHttp().getRequest<Request>();
     const { method, url, body, ip, headers } = request;
     
-    // Extract user information from request (adjust based on your auth implementation)
-    const userId = (request as any).user?.id || (request as any).user?.userId || 'anonymous';
-    const userName = (request as any).user?.name || (request as any).user?.username || 'Unknown';
-    const userEmail = (request as any).user?.email || undefined;
+    // Set by the global AuthGuard; absent on public routes
+    const principal = (request as AuthedRequest).principal;
+    const userId = principal?.id || 'anonymous';
+    const userName = principal?.name || 'Unknown';
+    const userEmail = principal?.email || undefined;
 
     // Determine action based on HTTP method
     let action: AuditAction = AuditAction.API_CALL;
@@ -128,7 +130,16 @@ export class AuditInterceptor implements NestInterceptor {
     }
 
     // Remove sensitive fields
-    const sensitiveFields = ['password', 'token', 'apiKey', 'secret', 'authorization'];
+    const sensitiveFields = [
+      'password',
+      'currentPassword',
+      'newPassword',
+      'token',
+      'accessToken',
+      'apiKey',
+      'secret',
+      'authorization',
+    ];
     const sanitized = { ...body };
 
     for (const field of sensitiveFields) {

@@ -134,7 +134,7 @@ import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 
 const route = useRoute();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -151,7 +151,7 @@ const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
 const loadSession = async () => {
   loading.value = true;
   try {
-    const response = await axios.get(
+    const response = await apiClient.get(
       `${API_BASE_URL}/session-replay/projects/${route.params.id}/sessions/${route.params.sessionId}`
     );
     session.value = response.data;

@@ -5,7 +5,7 @@ import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestDto } from './dto/update-request.dto';
 import { TransitionStatusDto } from './dto/transition-status.dto';
 import { AddCommentDto } from './dto/add-comment.dto';
-import { VoteRequestDto } from './dto/vote-request.dto';
+import { AuthPrincipal, Principal } from '../auth/principal';
 
 @Controller('api/v1/component-requests')
 export class ComponentRequestsController {
@@ -14,9 +14,11 @@ export class ComponentRequestsController {
     private readonly keyManagementService: KeyManagementService,
   ) {}
 
-  private validateRequest(authHeader?: string): void {
-    this.keyManagementService.assertValidApiKey(authHeader);
-  }
+  /**
+   * No-op: the global AuthGuard has already authenticated the caller (a user
+   * token or an API key, docs/AUTH.md). Kept so the call sites stay as they were.
+   */
+  private validateRequest(_authHeader?: string): void {}
 
   @Get('test')
   testRoute() {
@@ -125,11 +127,11 @@ export class ComponentRequestsController {
   @Post(':id/vote')
   voteRequest(
     @Param('id') id: string,
-    @Body() voteDto: VoteRequestDto,
+    @Principal() principal: AuthPrincipal,
     @Headers('authorization') authHeader?: string,
   ) {
     this.validateRequest(authHeader);
-    const request = this.requestsService.voteRequest(id, voteDto.userId);
+    const request = this.requestsService.voteRequest(id, principal.id);
     if (!request) {
       throw new BadRequestException(`Request '${id}' not found`);
     }
@@ -140,6 +142,7 @@ export class ComponentRequestsController {
   transitionStatus(
     @Param('id') id: string,
     @Body() transitionDto: TransitionStatusDto,
+    @Principal() principal: AuthPrincipal,
     @Headers('authorization') authHeader?: string,
   ) {
     this.validateRequest(authHeader);
@@ -147,7 +150,7 @@ export class ComponentRequestsController {
       const request = this.requestsService.transitionStatus(
         id,
         transitionDto.status,
-        transitionDto.userId,
+        principal.id,
         transitionDto.comment
       );
       if (!request) {
@@ -196,11 +199,12 @@ export class ComponentRequestsController {
   @Post(':id/approve')
   approveRequest(
     @Param('id') id: string,
-    @Body() body: { userId: string; stage?: 'design' | 'technical' | 'final' },
+    @Body() body: { stage?: 'design' | 'technical' | 'final' },
+    @Principal() principal: AuthPrincipal,
     @Headers('authorization') authHeader?: string,
   ) {
     this.validateRequest(authHeader);
-    const request = this.requestsService.approveRequest(id, body.userId, body.stage);
+    const request = this.requestsService.approveRequest(id, principal.id, body.stage);
     if (!request) {
       throw new BadRequestException(`Request '${id}' not found`);
     }
@@ -210,11 +214,12 @@ export class ComponentRequestsController {
   @Post(':id/reject')
   rejectRequest(
     @Param('id') id: string,
-    @Body() body: { userId: string; reason: string },
+    @Body() body: { reason: string },
+    @Principal() principal: AuthPrincipal,
     @Headers('authorization') authHeader?: string,
   ) {
     this.validateRequest(authHeader);
-    const request = this.requestsService.rejectRequest(id, body.userId, body.reason);
+    const request = this.requestsService.rejectRequest(id, principal.id, body.reason);
     if (!request) {
       throw new BadRequestException(`Request '${id}' not found`);
     }

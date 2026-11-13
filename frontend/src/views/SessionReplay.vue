@@ -303,7 +303,7 @@ import { useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { useDrawer } from '../composables/useDrawer.js';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 
 const router = useRouter();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -332,7 +332,7 @@ const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
 const loadProjects = async () => {
   loading.value = true;
   try {
-    const response = await axios.get(`${API_BASE_URL}/session-replay/projects`);
+    const response = await apiClient.get(`${API_BASE_URL}/session-replay/projects`);
     projects.value = response.data;
   } catch (error) {
     console.error('Failed to load projects:', error);
@@ -362,7 +362,7 @@ const closeCreateProjectModal = () => {
 const createProject = async () => {
   creating.value = true;
   try {
-    await axios.post(`${API_BASE_URL}/session-replay/projects`, newProject.value);
+    await apiClient.post(`${API_BASE_URL}/session-replay/projects`, newProject.value);
     window.showToast?.('Project created successfully', 'success');
     await loadProjects();
     closeCreateProjectModal();

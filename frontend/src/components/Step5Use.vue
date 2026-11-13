@@ -271,7 +271,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 import jsPDF from 'jspdf';
 
 const props = defineProps({
@@ -343,7 +343,7 @@ const exportPDF = async () => {
   // Fetch contrast results from backend
   let contrastResults = [];
   try {
-    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/analyze`, {
+    const response = await apiClient.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/analyze`, {
       colors: props.palette.colors.map((c) => ({ hex: c.hex })),
     });
     contrastResults = response.data.contrastResults || [];
@@ -640,7 +640,7 @@ const exportBrandGuidelines = async () => {
   // Fetch contrast results from backend
   let contrastResults = [];
   try {
-    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/analyze`, {
+    const response = await apiClient.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/analyze`, {
       colors: props.palette.colors.map((c) => ({ hex: c.hex })),
     });
     contrastResults = response.data.contrastResults || [];
@@ -1644,11 +1644,11 @@ const savePalette = async () => {
     if (props.palette.id) {
       // Update existing palette
       console.log('Updating existing palette:', props.palette.id);
-      response = await axios.put(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/${props.palette.id}`, paletteData);
+      response = await apiClient.put(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes/${props.palette.id}`, paletteData);
     } else {
       // Create new palette
       console.log('Creating new palette');
-      response = await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes`, paletteData);
+      response = await apiClient.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/palettes`, paletteData);
     }
 
     console.log('Save response:', response.data);

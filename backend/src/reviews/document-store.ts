@@ -27,13 +27,20 @@ export class VersionConflictError extends Error {
   }
 }
 
+/** Thrown by `create` when a document with that id already exists */
+export class DuplicateDocumentError extends Error {
+  constructor(id: string) {
+    super(`Document ${id} already exists`);
+  }
+}
+
 /**
  * The storage the reviews module needs: whole-document reads and
  * compare-and-swap writes. Kept small so tests can swap in a fake.
  */
 export interface DocumentStore<T extends { id: string }> {
   get(id: string): Promise<StoredDoc<T> | null>;
-  /** Fails if a document with that id already exists */
+  /** Throws DuplicateDocumentError if a document with that id already exists */
   create(doc: T): Promise<void>;
   /** Writes only if the stored copy is still at `version`, else throws VersionConflictError */
   replace(doc: T, version: DocVersion): Promise<void>;
@@ -76,6 +83,7 @@ export class EsDocumentStore<T extends { id: string }> implements DocumentStore<
     try {
       await this.es.index({ index: this.index, id: doc.id, document: doc, op_type: 'create', refresh: 'wait_for' });
     } catch (error) {
+      if (esStatusCode(error) === 409) throw new DuplicateDocumentError(doc.id);
       throw this.mapError(error, 'write');
     }
   }

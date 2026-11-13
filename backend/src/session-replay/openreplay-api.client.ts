@@ -58,6 +58,8 @@ export class OpenReplayApiClient {
         'Content-Type': 'application/json',
       },
       timeout: 30000,
+      // The base URL is checked against SSRF (openreplay-url.ts); a redirect must not lead elsewhere
+      maxRedirects: 0,
     });
   }
 
@@ -188,7 +190,7 @@ export class OpenReplayApiClient {
     }
 
     const configStr = Object.keys(configObj).length > 0 
-      ? `\n  window.OpenReplay.config(${JSON.stringify(configObj, null, 2)});`
+      ? `\n  window.OpenReplay.config(${scriptLiteral(configObj, 2)});`
       : '';
 
     return `<!-- OpenReplay Session Replay -->
@@ -199,8 +201,18 @@ export class OpenReplayApiClient {
     r[e].s=s;
     r[e].a=a;
     r[e].y=y;
-  })(window,0,"${ingestPoint}","${projectKey}","openreplay");${configStr}
+  })(window,0,${scriptLiteral(ingestPoint)},${scriptLiteral(projectKey)},"openreplay");${configStr}
 </script>`;
   }
 }
 
+/**
+ * A JS literal that is safe inside an inline <script>: JSON, with `<`, U+2028
+ * and U+2029 escaped so a value can't close the tag or break the line.
+ */
+function scriptLiteral(value: unknown, indent?: number): string {
+  return JSON.stringify(value, null, indent)
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}

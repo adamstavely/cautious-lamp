@@ -1,31 +1,34 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { KeyManagementService } from './key-management.service';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import type { AuthedRequest } from '../../auth/principal';
+import { Permission } from '../../rbac/rbac.service';
+
+function principalOf(context: ExecutionContext) {
+  const principal = context.switchToHttp().getRequest<AuthedRequest>().principal;
+  if (!principal) throw new UnauthorizedException('Sign in or send a valid API key');
+  return principal;
+}
 
 /**
- * Requires a valid API key in the Authorization header. Guards run before
+ * Requires an authenticated caller: a signed-in user or an API key. The
+ * global AuthGuard has already checked the credential and set
+ * `req.principal`; this only makes sure it ran. Guards run before
  * interceptors, so uploads are rejected before anything is written to disk.
  */
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
-  constructor(private readonly keyManagementService: KeyManagementService) {}
-
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
-    this.keyManagementService.assertValidApiKey(request.headers?.authorization);
+    principalOf(context);
     return true;
   }
 }
 
-/**
- * Requires the admin key (ADMIN_API_KEY) in the Authorization header.
- */
+/** Requires the admin:users permission, which the admin key (ADMIN_API_KEY) has */
 @Injectable()
 export class AdminKeyGuard implements CanActivate {
-  constructor(private readonly keyManagementService: KeyManagementService) {}
-
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
-    this.keyManagementService.assertAdminKey(request.headers?.authorization);
+    if (!principalOf(context).permissions.has(Permission.ADMIN_USERS)) {
+      throw new ForbiddenException(`Requires ${Permission.ADMIN_USERS}`);
+    }
     return true;
   }
 }

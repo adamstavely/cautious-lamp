@@ -228,16 +228,21 @@ export class DesignSystemAPI {
   }
 
   /** POST /compliance/scan-application */
+  /**
+   * Scan an application. Supply its code (`codebase`) or a public `url` for the
+   * server to fetch; with neither, the server returns 400.
+   */
   async scanApplicationCodebase(
     applicationId: string,
-    codebase?: unknown,
+    codebase?: { html?: string; css?: string; javascript?: string },
     categories?: string[],
+    url?: string,
   ): Promise<{
     applicationId: string;
     scannedAt: string;
     checks: ComplianceCheck[];
   }> {
-    const response = await this.client.post('/compliance/scan-application', { applicationId, codebase, categories });
+    const response = await this.client.post('/compliance/scan-application', { applicationId, codebase, categories, url });
     return response.data;
   }
 

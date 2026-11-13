@@ -194,6 +194,7 @@ import InlineNotice from '../components/InlineNotice.vue';
 import { useDarkMode } from '../composables/useDarkMode.js';
 import { useNotice } from '../composables/useNotice.js';
 import apiClient from '../services/api.js';
+import { authState } from '../services/auth.js';
 
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = useDarkMode();
@@ -308,7 +309,7 @@ const submitForm = async () => {
   clearNotice();
 
   try {
-    const user = localStorage.getItem('currentDesigner') || 'Anonymous User';
+    const user = authState.user?.name || authState.user?.email || 'Anonymous User';
     const localScore = calculateScore();
     
     const payload = {
