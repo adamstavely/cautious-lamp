@@ -3,7 +3,7 @@ module.exports = {
   rootDir: 'src',
   testRegex: '.*\\.spec\\.ts$',
   transform: {
-    '^.+\\.(t|j)s$': ['ts-jest', { tsconfig: { allowJs: true } }],
+    '^.+\\.(t|j)s$': ['ts-jest', { tsconfig: '<rootDir>/../tsconfig.spec.json' }],
   },
   // jsdom 27 depends on parse5 8 and entities 6, which ship ESM only, so Jest
   // has to transform them like source files.
