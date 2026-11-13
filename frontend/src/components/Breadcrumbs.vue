@@ -5,16 +5,16 @@
     data-ds-path="@design-system/components/breadcrumbs"
     class="px-8 pt-6 pb-4 border-b"
     :class="isDarkMode 
-      ? 'border-gray-700 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
-      : 'border-gray-200 bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50'"
+      ? 'border-slate-800 bg-slate-950' 
+      : 'border-slate-200 bg-[#fff]'"
   >
     <div class="flex items-center gap-2 text-sm">
       <router-link
         to="/"
         class="transition-colors"
         :class="isDarkMode 
-          ? 'text-gray-400 hover:text-indigo-400' 
-          : 'text-gray-500 hover:text-indigo-600'"
+          ? 'text-slate-400 hover:text-[#9dbcf0]' 
+          : 'text-slate-500 hover:text-[#2f5ea8]'"
       >
         Home
       </router-link>
@@ -23,14 +23,14 @@
         :key="index"
         class="flex items-center gap-2"
       >
-        <span :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">/</span>
+        <span :class="isDarkMode ? 'text-slate-600' : 'text-slate-300'">/</span>
         <button
           v-if="index < crumbs.length - 1 && crumb.path"
           @click="handleClick(crumb.path)"
           class="transition-colors"
           :class="isDarkMode 
-            ? 'text-gray-400 hover:text-indigo-400' 
-            : 'text-gray-500 hover:text-indigo-600'"
+            ? 'text-slate-400 hover:text-[#9dbcf0]' 
+            : 'text-slate-500 hover:text-[#2f5ea8]'"
         >
           {{ crumb.label }}
         </button>
@@ -39,15 +39,15 @@
           :to="crumb.path"
           class="transition-colors"
           :class="isDarkMode 
-            ? 'text-gray-400 hover:text-indigo-400' 
-            : 'text-gray-500 hover:text-indigo-600'"
+            ? 'text-slate-400 hover:text-[#9dbcf0]' 
+            : 'text-slate-500 hover:text-[#2f5ea8]'"
         >
           {{ crumb.label }}
         </router-link>
         <span
           v-else
           class="font-medium"
-          :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'"
+          :class="isDarkMode ? 'text-white' : 'text-slate-900'"
         >
           {{ crumb.label }}
         </span>
