@@ -2,7 +2,7 @@
   <nav 
     data-ds-component="topnav"
     data-ds-path="@design-system/components/topnav"
-    class="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 shadow-sm relative" 
+    class="sticky top-0 z-40 bg-[#fff] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 relative" 
     role="navigation" 
     aria-label="Top navigation"
   >
@@ -25,22 +25,10 @@
           class="transition-transform group-hover:scale-110 flex-shrink-0"
           aria-hidden="true"
         >
-          <defs>
-            <linearGradient id="caretGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" style="stop-color:#312e81;stop-opacity:1" />
-              <stop offset="50%" style="stop-color:#3730a3;stop-opacity:1" />
-              <stop offset="100%" style="stop-color:#4338ca;stop-opacity:1" />
-            </linearGradient>
-            <linearGradient id="caretGradientDark" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-              <stop offset="50%" style="stop-color:#a5b4fc;stop-opacity:1" />
-              <stop offset="100%" style="stop-color:#c7d2fe;stop-opacity:1" />
-            </linearGradient>
-          </defs>
           <!-- Left caret < (width: 4 units, from x=6 to x=10) -->
           <path 
             d="M10 6 L6 12 L10 18" 
-            :stroke="isDarkMode ? 'url(#caretGradientDark)' : 'url(#caretGradient)'"
+            :stroke="isDarkMode ? '#9dbcf0' : '#2f5ea8'"
             stroke-width="2.5" 
             stroke-linecap="round" 
             stroke-linejoin="round"
@@ -49,14 +37,14 @@
           <!-- Right caret > (width: 4 units, from x=9 to x=13, overlapping left by 1 unit = 25%) -->
           <path 
             d="M13 6 L17 12 L13 18" 
-            :stroke="isDarkMode ? 'url(#caretGradientDark)' : 'url(#caretGradient)'"
+            :stroke="isDarkMode ? '#9dbcf0' : '#2f5ea8'"
             stroke-width="2.5" 
             stroke-linecap="round" 
             stroke-linejoin="round"
             fill="none"
           />
         </svg>
-        <span class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-300 dark:via-indigo-400 dark:to-indigo-500 bg-clip-text text-transparent whitespace-nowrap hidden sm:inline">DESIGN.COM</span>
+        <span class="text-lg sm:text-xl font-semibold tracking-tight text-slate-900 dark:text-white whitespace-nowrap hidden sm:inline">DESIGN.COM</span>
       </router-link>
       
       <!-- Center Search Bar -->
@@ -64,7 +52,7 @@
         <div class="w-full max-w-2xl mx-4 sm:mx-8">
           <div class="relative" ref="searchContainer">
             <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-xl pointer-events-none"
-              :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
+              :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'"
               aria-hidden="true"
             >
               search
@@ -79,10 +67,10 @@
               @keydown.down.prevent="navigateSearchResults(1)"
               @keydown.up.prevent="navigateSearchResults(-1)"
               @keydown.enter.prevent="selectSearchResult"
-              class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-colors"
+              class="w-full h-10 pl-10 pr-4 border rounded-full focus:outline-none focus:ring-2 focus:ring-[#2f5ea8]/40 dark:focus:ring-[#9dbcf0]/40 text-sm transition-colors"
               :class="isDarkMode 
-                ? 'border-slate-600 bg-slate-700 text-gray-100 placeholder-gray-400' 
-                : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'"
+                ? 'border-slate-800 bg-slate-900 text-slate-100 placeholder-slate-500 focus:border-[#6f93d1]' 
+                : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:border-[#8fb0e8] focus:bg-[#fff]'"
               aria-label="Search design system"
               aria-expanded="showSearchResults"
               aria-haspopup="listbox"
@@ -245,10 +233,10 @@
       <div class="flex items-center gap-4 px-4 sm:px-6 lg:px-8 flex-shrink-0">
         <!-- Live Chat -->
         <button
-          class="relative flex items-center justify-center p-2 rounded-lg transition-colors"
+          class="relative flex items-center justify-center p-2 rounded-full transition-colors"
           :class="isDarkMode 
-            ? 'text-gray-300 hover:text-indigo-400 hover:bg-indigo-900/20' 
-            : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'"
+            ? 'text-slate-400 hover:text-[#9dbcf0] hover:bg-slate-900' 
+            : 'text-slate-500 hover:text-[#2f5ea8] hover:bg-slate-100'"
           title="Live Chat"
           aria-label="Live Chat"
         >
@@ -258,10 +246,10 @@
         <!-- Feedback -->
         <router-link
           to="/feedback"
-          class="relative flex items-center justify-center p-2 rounded-lg transition-colors"
+          class="relative flex items-center justify-center p-2 rounded-full transition-colors"
           :class="isDarkMode 
-            ? 'text-gray-300 hover:text-indigo-400 hover:bg-indigo-900/20' 
-            : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'"
+            ? 'text-slate-400 hover:text-[#9dbcf0] hover:bg-slate-900' 
+            : 'text-slate-500 hover:text-[#2f5ea8] hover:bg-slate-100'"
           title="Roadmap & Feedback"
           aria-label="View roadmap and submit feedback"
         >
@@ -272,10 +260,10 @@
         <div class="relative" ref="notificationsContainer">
           <button
             @click="toggleNotifications"
-            class="relative flex items-center justify-center p-2 rounded-lg transition-colors"
+            class="relative flex items-center justify-center p-2 rounded-full transition-colors"
             :class="isDarkMode 
-              ? 'text-gray-300 hover:text-indigo-400 hover:bg-indigo-900/20' 
-              : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'"
+              ? 'text-slate-400 hover:text-[#9dbcf0] hover:bg-slate-900' 
+              : 'text-slate-500 hover:text-[#2f5ea8] hover:bg-slate-100'"
             title="Notifications"
             :aria-label="`Notifications${totalNotificationCount > 0 ? `, ${totalNotificationCount} unread` : ''}`"
             :aria-expanded="showNotifications"
@@ -287,7 +275,7 @@
               class="absolute top-1 right-1 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-xs font-semibold px-1"
               :class="breakingChangeNotifications.length > 0 
                 ? (isDarkMode ? 'bg-red-400 text-red-900' : 'bg-red-600 text-white')
-                : (isDarkMode ? 'bg-indigo-400 text-indigo-900' : 'bg-indigo-600 text-white')"
+                : (isDarkMode ? 'bg-[#9dbcf0] text-slate-950' : 'bg-[#2f5ea8] text-white')"
               aria-hidden="true"
             >
               {{ totalNotificationCount > 9 ? '9+' : totalNotificationCount }}
@@ -537,14 +525,14 @@
 
         <!-- User Avatar -->
         <button
-          class="flex items-center gap-2 p-1 rounded-lg transition-colors"
-          :class="isDarkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'"
+          class="flex items-center gap-2 p-1 rounded-full transition-colors"
+          :class="isDarkMode ? 'hover:bg-slate-900' : 'hover:bg-slate-100'"
           title="User Menu"
           aria-label="User menu"
           aria-haspopup="true"
         >
-          <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold"
-            :class="isDarkMode ? 'bg-indigo-500' : 'bg-indigo-600'"
+          <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold"
+            :class="isDarkMode ? 'bg-[#263a5c] text-[#cfdffb]' : 'bg-[#dce8fb] text-[#2f5ea8]'"
             aria-hidden="true"
           >
             A
@@ -553,10 +541,10 @@
 
         <!-- App Picker -->
         <button
-          class="flex items-center justify-center p-2 rounded-lg transition-colors"
+          class="flex items-center justify-center p-2 rounded-full transition-colors"
           :class="isDarkMode 
-            ? 'text-gray-300 hover:text-indigo-400 hover:bg-indigo-900/20' 
-            : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'"
+            ? 'text-slate-400 hover:text-[#9dbcf0] hover:bg-slate-900' 
+            : 'text-slate-500 hover:text-[#2f5ea8] hover:bg-slate-100'"
           title="Switch App"
           aria-label="Switch application"
         >
