@@ -61,8 +61,11 @@ export class SecurityAuditService {
       this.logger.warn(`[SECURITY HIGH] ${event.description}`, event);
     }
 
-    // Check for suspicious activity patterns
-    await this.checkSuspiciousActivity(event);
+    // Check for suspicious activity patterns. Skip events this check raised
+    // itself: their descriptions match the patterns, which would loop forever.
+    if (event.type !== 'suspicious_activity') {
+      await this.checkSuspiciousActivity(event);
+    }
   }
 
   /**

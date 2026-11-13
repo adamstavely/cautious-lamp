@@ -1,14 +1,16 @@
 import { Controller, Get, Post, Body, Param, Query, Headers, BadRequestException } from '@nestjs/common';
 import { ContributionWorkflowService, ContributionGuideline, ContributionTemplate, ContributionCheck } from './contribution-workflow.service';
+import { KeyManagementService } from '../common/security/key-management.service';
 
 @Controller('contribution-workflow')
 export class ContributionWorkflowController {
-  constructor(private readonly contributionService: ContributionWorkflowService) {}
+  constructor(
+    private readonly contributionService: ContributionWorkflowService,
+    private readonly keyManagementService: KeyManagementService,
+  ) {}
 
   private validateRequest(authHeader?: string): void {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new BadRequestException('Authorization header required');
-    }
+    this.keyManagementService.assertValidApiKey(authHeader);
   }
 
   // ==================== Guidelines ====================

@@ -48,6 +48,23 @@ export class ErrorHandler {
       return error;
     }
 
+    // Handle timeout errors first: ETIMEDOUT also counts as a connection
+    // error, and a timeout should be reported as 408, not 503
+    if (this.isTimeoutError(error)) {
+      this.logger.error(`${contextMsg}Timeout error`, error);
+      
+      return new HttpException(
+        this.createApiError(
+          HttpStatus.REQUEST_TIMEOUT,
+          'Request timeout - the operation took too long',
+          'TimeoutError',
+          {},
+          ['Retry the request', 'Check network connectivity', 'Reduce the size of the request if applicable'],
+        ),
+        HttpStatus.REQUEST_TIMEOUT,
+      );
+    }
+
     // Handle connection errors
     if (this.isConnectionError(error)) {
       const message = this.getConnectionErrorMessage(error);
@@ -80,22 +97,6 @@ export class ErrorHandler {
           ['Check the request payload format', 'Verify all required fields are provided', 'Ensure data types match expected formats'],
         ),
         HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    // Handle timeout errors
-    if (this.isTimeoutError(error)) {
-      this.logger.error(`${contextMsg}Timeout error`, error);
-      
-      return new HttpException(
-        this.createApiError(
-          HttpStatus.REQUEST_TIMEOUT,
-          'Request timeout - the operation took too long',
-          'TimeoutError',
-          {},
-          ['Retry the request', 'Check network connectivity', 'Reduce the size of the request if applicable'],
-        ),
-        HttpStatus.REQUEST_TIMEOUT,
       );
     }
 

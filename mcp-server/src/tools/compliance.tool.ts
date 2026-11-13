@@ -1,12 +1,15 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
 import { apiClient } from '../api-client';
+import { getComponent } from './components.tool';
 
 export interface ComplianceRule {
-  id: string;
+  id?: string;
   name: string;
   description: string;
   enabled: boolean;
-  severity: 'info' | 'warning' | 'error';
+  category?: string;
+  severity?: 'info' | 'warning' | 'error' | 'warn';
 }
 
 export interface ComplianceCheck {
@@ -30,6 +33,42 @@ export interface ComplianceScanResult {
   };
 }
 
+/**
+ * Shape returned by `POST /api/v1/compliance/scan` for the design-system scope.
+ */
+interface BackendScanResult {
+  scope: string;
+  passed: number;
+  warnings: number;
+  failed: number;
+  checks: ComplianceCheck[];
+}
+
+/**
+ * `GET /api/v1/rules/export` returns `{ rules: [...], version, exportedAt }` (axios
+ * already parses it). Older/alternative shapes (a bare array, or a JSON string)
+ * are accepted too.
+ */
+function extractRules(rulesExport: unknown): ComplianceRule[] {
+  let data = rulesExport;
+  if (typeof data === 'string') {
+    try {
+      data = JSON.parse(data);
+    } catch {
+      return [];
+    }
+  }
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data && typeof data === 'object' && Array.isArray((data as { rules?: unknown }).rules)) {
+    return (data as { rules: ComplianceRule[] }).rules;
+  }
+  return [];
+}
+
+export const getComplianceRulesSchema = z.object({});
+
 export const getComplianceRulesTool: Tool = {
   name: 'get_compliance_rules',
   description: 'List all compliance rules',
@@ -40,18 +79,13 @@ export const getComplianceRulesTool: Tool = {
 };
 
 export async function getComplianceRules(): Promise<{ rules: ComplianceRule[] }> {
-  // The backend exports rules, we'll parse them
-  const rulesExport = await apiClient.get<string>('/rules/export', undefined, 'compliance');
-  
-  // Parse the exported rules format (assuming JSON)
-  try {
-    const rules = JSON.parse(rulesExport);
-    return { rules: Array.isArray(rules) ? rules : [] };
-  } catch {
-    // If it's not JSON, return empty array
-    return { rules: [] };
-  }
+  const rulesExport = await apiClient.get<unknown>('/rules/export', undefined, 'compliance');
+  return { rules: extractRules(rulesExport) };
 }
+
+export const scanComponentSchema = z.object({
+  componentId: z.string().min(1),
+});
 
 export const scanComponentTool: Tool = {
   name: 'scan_component',
@@ -69,11 +103,32 @@ export const scanComponentTool: Tool = {
 };
 
 export async function scanComponent(args: { componentId: string }): Promise<ComplianceScanResult> {
-  const result = await apiClient.post<ComplianceScanResult>('/compliance/scan', {
-    componentId: args.componentId,
-  }, 'compliance');
-  return result;
+  // The backend scans the whole design system (it has no per-component scope)
+  // and tags each check with the component's *name*, so resolve the name first
+  // and filter the checks down to this component.
+  const component = await getComponent({ id: args.componentId });
+  const result = await apiClient.post<BackendScanResult>('/compliance/scan', {
+    scope: 'design-system',
+  });
+
+  const matches = (value?: string) =>
+    !!value && (value === component.name || value === component.id || value === args.componentId);
+  const checks = (result?.checks || []).filter((check) => matches(check.component));
+
+  return {
+    checks,
+    summary: {
+      total: checks.length,
+      pass: checks.filter((c) => c.status === 'pass').length,
+      warning: checks.filter((c) => c.status === 'warning').length,
+      error: checks.filter((c) => c.status === 'error').length,
+    },
+  };
 }
+
+export const exportRulesSchema = z.object({
+  format: z.enum(['json', 'eslint']).optional(),
+});
 
 export const exportRulesTool: Tool = {
   name: 'export_rules',
@@ -92,14 +147,8 @@ export const exportRulesTool: Tool = {
 };
 
 export async function exportRules(args: { format?: 'json' | 'eslint' }): Promise<string> {
-  const rules = await apiClient.get<string>('/rules/export', args.format ? { format: args.format } : undefined, 'compliance');
-  
-  if (args.format === 'eslint') {
-    // Convert to ESLint format if needed
-    // This is a placeholder - actual conversion would depend on backend format
-    return rules;
-  }
-  
-  return rules;
-}
+  const rules = await apiClient.get<unknown>('/rules/export', args.format ? { format: args.format } : undefined, 'compliance');
 
+  // The backend returns a JSON object; MCP text content must be a string
+  return typeof rules === 'string' ? rules : JSON.stringify(rules, null, 2);
+}

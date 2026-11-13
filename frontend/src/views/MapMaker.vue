@@ -232,6 +232,8 @@
                             : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
                         />
                         <button
+                          type="button"
+                          aria-label="Remove region"
                           @click="choroplethData.splice(index, 1)"
                           class="px-2 py-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                           :disabled="choroplethData.length <= 1"
@@ -305,6 +307,8 @@
                                 : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
                             />
                             <button
+                              type="button"
+                              aria-label="Remove location"
                               @click="flowMapData.nodes.splice(index, 1)"
                               class="px-2 py-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                               :disabled="flowMapData.nodes.length <= 2"
@@ -361,6 +365,8 @@
                                 : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
                             />
                             <button
+                              type="button"
+                              aria-label="Remove flow"
                               @click="flowMapData.links.splice(index, 1)"
                               class="px-2 py-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                             >
@@ -397,19 +403,40 @@
                       <span class="material-symbols-outlined text-indigo-600">preview</span>
                       Preview
                     </h3>
-                    <!-- Back button for drill-down -->
-                    <button
-                      v-if="mapConfig.mapType === 'world' && drillDownState.level === 'country'"
-                      @click="handleDrillUp"
-                      class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                      :class="isDarkMode 
-                        ? 'bg-slate-800 text-white hover:bg-slate-700 border border-gray-700' 
-                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'"
-                    >
-                      <span class="material-symbols-outlined text-base">arrow_back</span>
-                      Back to World
-                    </button>
+                    <div class="flex items-center gap-2 flex-wrap justify-end">
+                      <!-- Back button for drill-down -->
+                      <button
+                        v-if="mapConfig.mapType === 'world' && drillDownState.level === 'country'"
+                        type="button"
+                        @click="handleDrillUp"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                        :class="isDarkMode 
+                          ? 'bg-slate-800 text-white hover:bg-slate-700 border border-gray-700' 
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'"
+                      >
+                        <span class="material-symbols-outlined text-base" aria-hidden="true">arrow_back</span>
+                        Back to World
+                      </button>
+                      <!-- Export -->
+                      <button
+                        v-for="format in ['png', 'svg']"
+                        :key="format"
+                        type="button"
+                        @click="format === 'png' ? exportPNG() : exportSVG()"
+                        :disabled="format === 'png' && exporting"
+                        :aria-label="`Export map as ${format.toUpperCase()}`"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                        :class="isDarkMode 
+                          ? 'bg-slate-800 text-white hover:bg-slate-700 border border-gray-700' 
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'"
+                      >
+                        <span class="material-symbols-outlined text-base" aria-hidden="true">download</span>
+                        {{ format.toUpperCase() }}
+                      </button>
+                    </div>
                   </div>
+
+                  <InlineNotice :notice="notice" class="mb-3" @dismiss="clearNotice" />
                   
                   <!-- Breadcrumb navigation -->
                   <div v-if="mapConfig.mapType === 'world' && drillDownState.breadcrumbs.length > 0" class="mb-2 flex items-center gap-2 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
@@ -428,9 +455,11 @@
                     <!-- Choropleth Map -->
                     <ChoroplethMapSVG 
                       v-if="selectedMapType === 'choropleth'"
+                      ref="mapViewRef"
                       :data="choroplethData" 
                       :colors="colorSchemes[mapConfig.colorScheme] || colorSchemes.default"
                       :mapType="mapConfig.mapType || 'us'"
+                      :projectionType="mapConfig.mapProjection"
                       :showAllRegions="mapConfig.showAllRegions !== false"
                       :drillDownState="drillDownState"
                       :onDrillDown="handleDrillDown"
@@ -440,9 +469,11 @@
                     <!-- Flow Map -->
                     <FlowMapSVG 
                       v-else-if="selectedMapType === 'flowMap'"
+                      ref="mapViewRef"
                       :data="flowMapData" 
                       :colors="colorSchemes[mapConfig.colorScheme] || colorSchemes.default"
                       :mapType="mapConfig.mapType || 'us'"
+                      :projectionType="mapConfig.mapProjection"
                     />
                   </div>
                 </div>
@@ -456,15 +487,19 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, h } from 'vue';
+import { ref, shallowRef, computed, watch, onBeforeUnmount, h } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { loadTopoJSON, getGeoJSONFeatures, mapDataToFeatures, getFeatureCentroid, getDefaultMapUrls, getCountryMapUrl, getCountryObjectName } from '../utils/mapData.js';
+import InlineNotice from '../components/InlineNotice.vue';
+import { loadTopoJSON, getGeoJSONFeatures, mapDataByFeatureName, getFeatureCentroid, getDefaultMapUrls, getCountryMapUrl, getCountryObjectName } from '../utils/mapData.js';
 import { createProjection, createPathGenerator, projectCoordinates, fitProjectionToFeatures } from '../utils/mapProjections.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
 
 const mapTypes = [
   { value: 'choropleth', label: 'Choropleth Map', icon: 'map', description: 'Geographic regions colored by data values' },
@@ -532,558 +567,403 @@ const flowMapData = ref({
   ]
 });
 
+/**
+ * Parse a user-entered value as a number. Inputs bound with v-model.number
+ * give '' when empty, and pasted values may carry thousands separators.
+ * Returns NaN for anything that is not a finite number.
+ */
+const toNumber = (value) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : NaN;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value.replace(/[,\s]/g, ''));
+    return Number.isFinite(parsed) ? parsed : NaN;
+  }
+  return NaN;
+};
+
+const formatValue = (value) => (Number.isFinite(value) ? value.toLocaleString() : String(value));
+
+const formatCompact = (value) => {
+  try {
+    return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+  } catch {
+    return formatValue(value);
+  }
+};
+
+/** Text that stays readable on any fill: dark text with a white halo. */
+const labelAttrs = {
+  fill: '#111827',
+  stroke: '#ffffff',
+  'stroke-width': 3,
+  'stroke-linejoin': 'round',
+  'paint-order': 'stroke',
+  'font-size': 12,
+  'font-weight': 'bold',
+  style: { pointerEvents: 'none' }
+};
+
+const centeredMessage = (text, className = 'text-gray-500') =>
+  h('div', { class: 'absolute inset-0 flex items-center justify-center' }, [
+    h('div', { class: className, role: className.includes('red') ? 'alert' : 'status' }, text)
+  ]);
+
+/**
+ * Shared plumbing for both map components: measures the container (which is
+ * always rendered, so the ResizeObserver can attach on mount), loads TopoJSON
+ * with a request id so a stale load can never overwrite a newer one, and
+ * rebuilds the projection from the current fit whenever the size changes.
+ *
+ * `getSource` returns { kind, url, objectName } or { error }; kind is 'us',
+ * 'world' or 'country' (a drill-down, fitted to the country's features).
+ */
+function useMapSurface(props, getSource) {
+  const containerRef = ref(null);
+  const svgRef = ref(null);
+  const width = ref(800);
+  const height = ref(500);
+  const loading = ref(true);
+  const error = ref(null);
+  const features = shallowRef([]);
+  const fit = shallowRef(null);
+  let requestId = 0;
+  let resizeObserver = null;
+
+  const measure = () => {
+    const el = containerRef.value;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      width.value = Math.round(rect.width);
+      height.value = Math.round(rect.height);
+    }
+  };
+
+  watch(containerRef, (el) => {
+    resizeObserver?.disconnect();
+    resizeObserver = null;
+    if (!el) return;
+    measure();
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(measure);
+      resizeObserver.observe(el);
+    }
+  }, { flush: 'post' });
+
+  onBeforeUnmount(() => {
+    requestId++; // drop any load still in flight
+    resizeObserver?.disconnect();
+    resizeObserver = null;
+  });
+
+  // Rebuilt on resize or projection change, keeping the current fit (US
+  // states, world sphere or the drilled-down country).
+  const projection = computed(() => {
+    const current = fit.value;
+    if (!current) return null;
+    const w = width.value;
+    const hgt = height.value;
+    if (current.kind === 'country') {
+      return fitProjectionToFeatures(createProjection('us', w, hgt), current.features, w, hgt, 20);
+    }
+    if (current.kind === 'world') {
+      return createProjection('world', w, hgt, props.projectionType || 'equalEarth');
+    }
+    return createProjection('us', w, hgt, undefined, { type: 'FeatureCollection', features: current.features });
+  });
+
+  const pathGenerator = computed(() => (projection.value ? createPathGenerator(projection.value) : null));
+
+  // Path strings are the expensive part; compute them once per projection.
+  const paths = computed(() => {
+    const gen = pathGenerator.value;
+    if (!gen) return [];
+    return features.value.map((feature) => gen(feature));
+  });
+
+  const load = async (sourceKey) => {
+    const id = ++requestId;
+    const source = JSON.parse(sourceKey);
+    loading.value = true;
+    error.value = null;
+    try {
+      if (source.error) throw new Error(source.error);
+      const topoJson = await loadTopoJSON(source.url);
+      if (id !== requestId) return;
+      const geoFeatures = getGeoJSONFeatures(topoJson, source.objectName);
+      features.value = geoFeatures;
+      fit.value = { kind: source.kind, features: geoFeatures };
+    } catch (err) {
+      if (id !== requestId) return;
+      console.error('Error loading map data:', err);
+      error.value = err.message || 'Failed to load map data';
+      features.value = [];
+      fit.value = null;
+    } finally {
+      if (id === requestId) loading.value = false;
+    }
+  };
+
+  // One watcher over everything that decides which file to load, keyed by a
+  // string so a new-but-equal drill-down object does not trigger a reload.
+  watch(() => JSON.stringify(getSource()), load, { immediate: true });
+
+  /** Wrap content in the always-present, measured container. */
+  const renderSurface = (content) => {
+    let inner;
+    if (loading.value) inner = centeredMessage('Loading map...');
+    else if (error.value) inner = centeredMessage(`Error: ${error.value}`, 'text-red-500');
+    else if (!projection.value || !features.value.length) inner = centeredMessage('No map data available');
+    else inner = content();
+    return h('div', { ref: containerRef, class: 'w-full h-full relative', style: { minHeight: '300px' } }, [inner]);
+  };
+
+  return { containerRef, svgRef, width, height, loading, error, features, projection, paths, renderSurface };
+}
+
+const baseMapSource = (mapType) => {
+  const urls = getDefaultMapUrls();
+  return mapType === 'world'
+    ? { kind: 'world', url: urls.world, objectName: 'countries' }
+    : { kind: 'us', url: urls.us, objectName: 'states' };
+};
+
 // Choropleth Map SVG Component
 const ChoroplethMapSVG = {
-  props: ['data', 'colors', 'mapType', 'showAllRegions', 'drillDownState', 'onDrillDown', 'onDrillUp'],
-  setup(props) {
-    const containerRef = ref(null);
-    const width = ref(800);
-    const height = ref(500);
-    const loading = ref(true);
-    const error = ref(null);
-    const topoJsonData = ref(null);
-    const features = ref([]);
-    const projection = ref(null);
-    const pathGenerator = ref(null);
-    
-    // Update dimensions on resize
-    const updateDimensions = () => {
-      if (containerRef.value) {
-        const rect = containerRef.value.getBoundingClientRect();
-        width.value = rect.width || 800;
-        height.value = rect.height || 500;
-        
-        // Recreate projection with new dimensions
-        if (props.mapType) {
-          const mapTypeValue = props.mapType || 'us';
-          const proj = createProjection(mapTypeValue, width.value, height.value);
-          projection.value = proj;
-          pathGenerator.value = createPathGenerator(proj);
-        }
+  props: ['data', 'colors', 'mapType', 'projectionType', 'showAllRegions', 'drillDownState', 'onDrillDown', 'onDrillUp'],
+  setup(props, { expose }) {
+    const surface = useMapSurface(props, () => {
+      const state = props.drillDownState;
+      if (props.mapType === 'world' && state?.level === 'country' && state.selectedCountry) {
+        const url = getCountryMapUrl(state.selectedCountry);
+        if (!url) return { error: `Detailed map data not available for ${state.selectedCountry}` };
+        return { kind: 'country', url, objectName: getCountryObjectName(state.selectedCountry) };
       }
-    };
-    
-    // Calculate color scale
-    const colorScale = computed(() => {
-      if (!props.data || props.data.length === 0) return () => props.colors[0] || '#ccc';
-      
-      const values = props.data.map(r => r.value);
+      return baseMapSource(props.mapType);
+    });
+    const { svgRef, width, height, features, projection, paths, renderSurface } = surface;
+    const hovered = ref(null);
+
+    expose({ getSvgElement: () => svgRef.value });
+
+    // Rows with a usable name and a numeric value
+    const validData = computed(() => (props.data || [])
+      .map((row) => ({ ...row, name: typeof row?.name === 'string' ? row.name.trim() : row?.name, value: toNumber(row?.value) }))
+      .filter((row) => row.name && Number.isFinite(row.value)));
+
+    // Keyed by the feature's own name, so "CA" and "California" both colour California
+    const regionByFeature = computed(() => {
+      if (!features.value.length) return new Map();
+      return mapDataByFeatureName(validData.value, features.value);
+    });
+
+    // Sequential schemes run dark → light; higher values get the darker colours.
+    const ramp = computed(() => {
+      const colors = props.colors?.length ? props.colors : ['#6366f1'];
+      return [...colors].reverse();
+    });
+
+    // Bin the values on the map into equal-width classes, one per colour.
+    const scale = computed(() => {
+      const values = Array.from(regionByFeature.value.values(), (r) => r.value);
+      if (!values.length) return null;
       const min = Math.min(...values);
       const max = Math.max(...values);
-      const range = max - min || 1;
-      
-      return (value) => {
-        const normalizedValue = (value - min) / range;
-        const colorIndex = Math.floor(normalizedValue * (props.colors.length - 1));
-        return props.colors[colorIndex] || props.colors[0] || '#ccc';
-      };
+      const n = ramp.value.length;
+      const span = max - min;
+      const binOf = (value) => (span === 0 ? n - 1 : Math.min(n - 1, Math.max(0, Math.floor(((value - min) / span) * n))));
+      const bins = span === 0
+        ? [{ color: ramp.value[n - 1], from: min, to: max }]
+        : ramp.value.map((color, i) => ({ color, from: min + (span * i) / n, to: min + (span * (i + 1)) / n }));
+      return { min, max, color: (value) => ramp.value[binOf(value)], bins };
     });
-    
-    // Map data regions to features
-    const dataFeatureMap = computed(() => {
-      if (!features.value.length || !props.data) return new Map();
-      return mapDataToFeatures(props.data, features.value);
-    });
-    
-    // Get default color for regions without data
+
     const defaultColor = '#e5e7eb';
-    
-    // Load TopoJSON data
-    onMounted(async () => {
-      try {
-        loading.value = true;
-        error.value = null;
-        
-        const mapType = props.mapType || 'us';
-        const mapUrls = getDefaultMapUrls();
-        const url = mapType === 'us' ? mapUrls.us : mapUrls.world;
-        const objectName = mapType === 'us' ? 'states' : 'countries';
-        
-        // Load TopoJSON
-        const topoJson = await loadTopoJSON(url);
-        topoJsonData.value = topoJson;
-        
-        // Convert to GeoJSON features
-        const geoFeatures = getGeoJSONFeatures(topoJson, objectName);
-        features.value = geoFeatures;
-        
-        // Create projection
-        const mapTypeValue = props.mapType || 'us';
-        const proj = createProjection(mapTypeValue, width.value, height.value);
-        projection.value = proj;
-        
-        // Create path generator
-        pathGenerator.value = createPathGenerator(proj);
-        
-        // Set up resize observer after initial render
-        await nextTick();
-        if (containerRef.value) {
-          const resizeObserver = new ResizeObserver(() => {
-            updateDimensions();
-          });
-          resizeObserver.observe(containerRef.value);
-          
-          // Cleanup on unmount
-          onBeforeUnmount(() => {
-            resizeObserver.disconnect();
-          });
-        }
-        
-        loading.value = false;
-      } catch (err) {
-        console.error('Error loading map data:', err);
-        error.value = err.message || 'Failed to load map data';
-        loading.value = false;
-      }
-    });
-    
-    // Watch for mapType changes
-    watch(() => props.mapType, async (newMapType) => {
-      if (!newMapType) return;
-      
-      try {
-        loading.value = true;
-        error.value = null;
-        
-        const mapUrls = getDefaultMapUrls();
-        const url = newMapType === 'us' ? mapUrls.us : mapUrls.world;
-        const objectName = newMapType === 'us' ? 'states' : 'countries';
-        
-        const topoJson = await loadTopoJSON(url);
-        topoJsonData.value = topoJson;
-        
-        const geoFeatures = getGeoJSONFeatures(topoJson, objectName);
-        features.value = geoFeatures;
-        
-        const proj = createProjection(newMapType, width.value, height.value);
-        projection.value = proj;
-        pathGenerator.value = createPathGenerator(proj);
-        
-        loading.value = false;
-      } catch (err) {
-        console.error('Error loading map data:', err);
-        error.value = err.message || 'Failed to load map data';
-        loading.value = false;
-      }
-    });
-    
-    // Watch for drill-down state changes
-    watch(() => props.drillDownState, async (newState) => {
-      if (!newState || !props.mapType || props.mapType !== 'world') return;
-      
-      // If drilling down to a country
-      if (newState.level === 'country' && newState.selectedCountry) {
-        try {
-          loading.value = true;
-          error.value = null;
-          
-          const countryUrl = getCountryMapUrl(newState.selectedCountry);
-          if (!countryUrl) {
-            error.value = `Detailed map data not available for ${newState.selectedCountry}`;
-            loading.value = false;
-            return;
-          }
-          
-          const objectName = getCountryObjectName(newState.selectedCountry);
-          const topoJson = await loadTopoJSON(countryUrl);
-          topoJsonData.value = topoJson;
-          
-          const geoFeatures = getGeoJSONFeatures(topoJson, objectName);
-          features.value = geoFeatures;
-          
-          // Create projection focused on the country
-          const proj = createProjection('us', width.value, height.value);
-          projection.value = proj;
-          
-          // Fit projection to features
-          if (geoFeatures.length > 0) {
-            fitProjectionToFeatures(proj, geoFeatures, width.value, height.value, 20);
-          }
-          
-          pathGenerator.value = createPathGenerator(proj);
-          
-          loading.value = false;
-        } catch (err) {
-          console.error('Error loading country map data:', err);
-          error.value = err.message || 'Failed to load country map data';
-          loading.value = false;
-        }
-      } else if (newState.level === 'world') {
-        // Return to world view
-        try {
-          loading.value = true;
-          error.value = null;
-          
-          const mapUrls = getDefaultMapUrls();
-          const topoJson = await loadTopoJSON(mapUrls.world);
-          topoJsonData.value = topoJson;
-          
-          const geoFeatures = getGeoJSONFeatures(topoJson, 'countries');
-          features.value = geoFeatures;
-          
-          const proj = createProjection('world', width.value, height.value);
-          projection.value = proj;
-          pathGenerator.value = createPathGenerator(proj);
-          
-          loading.value = false;
-        } catch (err) {
-          console.error('Error loading world map data:', err);
-          error.value = err.message || 'Failed to load world map data';
-          loading.value = false;
-        }
-      }
-    }, { deep: true });
-    
-    // Handle feature click for drill-down
+
+    const isClickable = () => props.mapType === 'world' && props.drillDownState?.level === 'world';
+
     const handleFeatureClick = (feature) => {
-      if (props.mapType === 'world' && props.drillDownState?.level === 'world') {
-        const countryName = feature.properties?.name;
-        if (countryName && props.onDrillDown) {
-          props.onDrillDown(countryName);
-        }
+      if (!isClickable()) return;
+      const countryName = feature.properties?.name;
+      if (countryName && props.onDrillDown) {
+        props.onDrillDown(countryName);
       }
     };
-    
-    return () => {
-      if (loading.value) {
-        return h('div', {
-          class: 'flex items-center justify-center w-full h-full',
-          style: { minHeight: '300px' }
-        }, [
-          h('div', { class: 'text-gray-500' }, 'Loading map...')
-        ]);
-      }
-      
-      if (error.value) {
-        return h('div', {
-          class: 'flex items-center justify-center w-full h-full',
-          style: { minHeight: '300px' }
-        }, [
-          h('div', { class: 'text-red-500' }, `Error: ${error.value}`)
-        ]);
-      }
-      
-      if (!pathGenerator.value || !features.value.length) {
-        return h('div', {
-          class: 'flex items-center justify-center w-full h-full',
-          style: { minHeight: '300px' }
-        }, [
-          h('div', { class: 'text-gray-500' }, 'No map data available')
-        ]);
-      }
-      
-      // Determine which features to render
-      const featuresToRender = props.showAllRegions !== false 
-        ? features.value 
-        : features.value.filter(f => {
-            const featureName = f.properties?.name;
-            // Check if any data region matches this feature
-            return Array.from(dataFeatureMap.value.keys()).some(name => {
-              const mappedFeature = dataFeatureMap.value.get(name);
-              return mappedFeature && mappedFeature.properties?.name === featureName;
-            });
-          });
-      
-      return h('div', {
-        ref: containerRef,
-        class: 'w-full h-full'
-      }, [
-        h('svg', {
-          width: width.value,
-          height: height.value,
-          viewBox: `0 0 ${width.value} ${height.value}`,
-          class: 'w-full h-full',
-          role: 'img',
-          'aria-label': 'Choropleth map showing regional data values'
-        }, [
-        // Render all features
-        ...featuresToRender.map((feature, index) => {
-          const featureName = feature.properties?.name;
-          const hasData = dataFeatureMap.value.has(featureName);
-          const dataRegion = hasData ? props.data.find(r => r.name === featureName) : null;
-          
-          const color = dataRegion 
-            ? colorScale.value(dataRegion.value)
-            : defaultColor;
-          
-          const pathData = pathGenerator.value(feature);
-          if (!pathData) return null;
-          
-          // Calculate centroid for label
-          const centroid = getFeatureCentroid(feature);
-          const [centroidX, centroidY] = projection.value(centroid) || [0, 0];
-          
-          const isClickable = props.mapType === 'world' && props.drillDownState?.level === 'world';
-          
-          return h('g', { key: `region-${index}` }, [
-            h('path', {
-              d: pathData,
-              fill: color,
-              stroke: '#fff',
-              'stroke-width': 0.5,
-              'aria-label': dataRegion 
-                ? `${featureName}: ${dataRegion.value}` 
-                : featureName,
-              tabindex: isClickable ? 0 : -1,
-              role: isClickable ? 'button' : 'img',
-              style: { cursor: isClickable ? 'pointer' : 'default', transition: 'all 0.2s' },
-              onClick: isClickable ? () => handleFeatureClick(feature) : undefined,
-              onMouseenter: isClickable ? (e) => {
-                e.target.style.fill = color === defaultColor ? '#9ca3af' : color;
-                e.target.style.opacity = '0.9';
-                e.target.style.stroke = '#6366f1';
-                e.target.style.strokeWidth = '2';
-                e.target.setAttribute('title', `Click to view regions of ${featureName}`);
-              } : undefined,
-              onMouseleave: isClickable ? (e) => {
-                e.target.style.fill = color;
-                e.target.style.opacity = '1';
-                e.target.style.stroke = '#fff';
-                e.target.style.strokeWidth = '0.5';
-                e.target.removeAttribute('title');
-              } : undefined
-            }),
-            // Only show label if there's data for this region
-            dataRegion ? h('text', {
-              x: centroidX,
-              y: centroidY,
-              'text-anchor': 'middle',
-              'dominant-baseline': 'middle',
-              fill: '#000',
-              'font-size': 12,
-              'font-weight': 'bold',
-              style: { pointerEvents: 'none' }
-            }, featureName) : null
-          ]);
-        })
-      ])
+
+    const renderLegend = () => {
+      const s = scale.value;
+      if (!s) return null;
+      const sw = 18;
+      const sh = 12;
+      const rowH = 18;
+      const boxW = 150;
+      const boxH = s.bins.length * rowH + 12;
+      const x = 12;
+      const y = Math.max(12, height.value - boxH - 12);
+      return h('g', { transform: `translate(${x}, ${y})`, 'aria-hidden': 'true' }, [
+        h('rect', { width: boxW, height: boxH, rx: 6, fill: '#ffffff', 'fill-opacity': 0.85, stroke: '#d1d5db' }),
+        ...[...s.bins].reverse().map((bin, i) => h('g', { transform: `translate(8, ${6 + i * rowH})` }, [
+          h('rect', { width: sw, height: sh, fill: bin.color, stroke: '#9ca3af', 'stroke-width': 0.5 }),
+          h('text', { x: sw + 6, y: sh / 2, 'dominant-baseline': 'middle', 'font-size': 11, fill: '#374151' },
+            bin.from === bin.to ? formatCompact(bin.from) : `${formatCompact(bin.from)} – ${formatCompact(bin.to)}`)
+        ]))
       ]);
     };
+
+    return () => renderSurface(() => {
+      const proj = projection.value;
+      const clickable = isClickable();
+      const regions = regionByFeature.value;
+      const colorFor = scale.value?.color;
+      const items = [];
+      let hoveredPath = null;
+
+      features.value.forEach((feature, index) => {
+        const featureName = feature.properties?.name ?? `Region ${index + 1}`;
+        const dataRegion = regions.get(featureName) || null;
+        if (props.showAllRegions === false && !dataRegion) return;
+        const pathData = paths.value[index];
+        if (!pathData) return;
+
+        const color = dataRegion && colorFor ? colorFor(dataRegion.value) : defaultColor;
+        const valueText = dataRegion ? `: ${formatValue(dataRegion.value)}` : '';
+        const label = clickable ? `${featureName}${valueText}. Activate to view its regions.` : `${featureName}${valueText}`;
+        const isHovered = clickable && hovered.value === index;
+        if (isHovered) hoveredPath = pathData;
+
+        items.push(h('g', { key: `region-${index}` }, [
+          h('path', {
+            d: pathData,
+            fill: isHovered && color === defaultColor ? '#9ca3af' : color,
+            stroke: '#fff',
+            'stroke-width': 0.5,
+            'aria-label': label,
+            tabindex: clickable ? 0 : undefined,
+            role: clickable ? 'button' : undefined,
+            style: { cursor: clickable ? 'pointer' : 'default', outline: 'none' },
+            onClick: clickable ? () => handleFeatureClick(feature) : undefined,
+            onKeydown: clickable ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+                e.preventDefault();
+                handleFeatureClick(feature);
+              }
+            } : undefined,
+            onMouseenter: clickable ? () => { hovered.value = index; } : undefined,
+            onMouseleave: clickable ? () => { if (hovered.value === index) hovered.value = null; } : undefined,
+            onFocus: clickable ? () => { hovered.value = index; } : undefined,
+            onBlur: clickable ? () => { if (hovered.value === index) hovered.value = null; } : undefined
+          }, [h('title', clickable ? `${featureName}${valueText} — click to view its regions` : `${featureName}${valueText}`)])
+        ]));
+      });
+
+      // Labels for regions with data, drawn above all shapes
+      const labels = [];
+      features.value.forEach((feature, index) => {
+        const featureName = feature.properties?.name;
+        if (!featureName || !regions.has(featureName) || !paths.value[index]) return;
+        const point = proj(getFeatureCentroid(feature));
+        if (!point || !Number.isFinite(point[0]) || !Number.isFinite(point[1])) return;
+        labels.push(h('text', { key: `label-${index}`, x: point[0], y: point[1], 'text-anchor': 'middle', 'dominant-baseline': 'middle', ...labelAttrs }, featureName));
+      });
+
+      const summary = Array.from(regions.entries(), ([name, row]) => `${name}: ${formatValue(row.value)}`).join('; ');
+      const area = props.drillDownState?.level === 'country' && props.mapType === 'world'
+        ? props.drillDownState.selectedCountry
+        : (props.mapType === 'world' ? 'the world' : 'the United States');
+
+      return h('svg', {
+        ref: svgRef,
+        xmlns: 'http://www.w3.org/2000/svg',
+        width: width.value,
+        height: height.value,
+        viewBox: `0 0 ${width.value} ${height.value}`,
+        class: 'w-full h-full block',
+        role: clickable ? 'group' : 'img',
+        'aria-label': `Choropleth map of ${area}${summary ? `. ${summary}` : ''}`
+      }, [
+        ...items,
+        hoveredPath ? h('path', { d: hoveredPath, fill: 'none', stroke: '#6366f1', 'stroke-width': 2, style: { pointerEvents: 'none' } }) : null,
+        ...labels,
+        renderLegend()
+      ]);
+    });
   }
 };
 
 // Flow Map SVG Component
 const FlowMapSVG = {
-  props: ['data', 'colors', 'mapType'],
-  setup(props) {
-    const containerRef = ref(null);
-    const width = ref(800);
-    const height = ref(500);
-    const loading = ref(true);
-    const error = ref(null);
-    const topoJsonData = ref(null);
-    const features = ref([]);
-    const projection = ref(null);
-    const pathGenerator = ref(null);
-    
-    // Update dimensions on resize
-    const updateDimensions = () => {
-      if (containerRef.value) {
-        const rect = containerRef.value.getBoundingClientRect();
-        width.value = rect.width || 800;
-        height.value = rect.height || 500;
-        
-        // Recreate projection with new dimensions
-        if (props.mapType) {
-          const mapTypeValue = props.mapType || 'us';
-          const proj = createProjection(mapTypeValue, width.value, height.value);
-          projection.value = proj;
-          pathGenerator.value = createPathGenerator(proj);
-        }
-      }
-    };
-    
-    // Project nodes to screen coordinates
+  props: ['data', 'colors', 'mapType', 'projectionType'],
+  setup(props, { expose }) {
+    const { svgRef, width, height, features, projection, paths, renderSurface } =
+      useMapSurface(props, () => baseMapSource(props.mapType));
+
+    expose({ getSvgElement: () => svgRef.value });
+
+    // Project nodes to screen coordinates; nodes without valid coordinates, or
+    // outside the projection (e.g. London on the US map), are left out.
     const nodes = computed(() => {
-      if (!projection.value || !props.data?.nodes) return [];
-      
-      return props.data.nodes.map((node, index) => {
-        let x, y;
-        
-        // Use lat/lng if available, otherwise fall back to x/y
-        if (node.lat !== undefined && node.lng !== undefined) {
-          const projected = projectCoordinates(projection.value, node.lng, node.lat);
-          if (projected) {
-            [x, y] = projected;
-          } else {
-            // Fallback to x/y if projection fails
-            x = node.x || 200;
-            y = node.y || 200;
-          }
-        } else if (node.x !== undefined && node.y !== undefined) {
-          x = node.x;
-          y = node.y;
-        } else {
-          // Default position
-          x = 200;
-          y = 200;
-        }
-        
-        return {
-          ...node,
-          x,
-          y,
-          color: props.colors[index % props.colors.length],
-          radius: 15
-        };
+      const proj = projection.value;
+      if (!proj || !props.data?.nodes) return [];
+      const colors = props.colors?.length ? props.colors : ['#6366f1'];
+      return props.data.nodes.flatMap((node, index) => {
+        const lat = toNumber(node.lat);
+        const lng = toNumber(node.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return [];
+        const projected = projectCoordinates(proj, lng, lat);
+        if (!projected || !Number.isFinite(projected[0]) || !Number.isFinite(projected[1])) return [];
+        return [{ ...node, x: projected[0], y: projected[1], color: colors[index % colors.length], radius: 10 }];
       });
     });
-    
+
     const links = computed(() => {
       if (!props.data?.links) return [];
-      
+      const colors = props.colors?.length ? props.colors : ['#888888'];
+      const values = props.data.links.map((l) => Math.abs(toNumber(l.value))).filter(Number.isFinite);
+      const maxValue = Math.max(0, ...values);
+
       return props.data.links.map((link, index) => {
-        const sourceNode = nodes.value.find(n => n.id === link.source);
-        const targetNode = nodes.value.find(n => n.id === link.target);
-        if (!sourceNode || !targetNode) return null;
-        
+        const sourceNode = nodes.value.find((n) => n.id === link.source);
+        const targetNode = nodes.value.find((n) => n.id === link.target);
+        if (!sourceNode || !targetNode || sourceNode === targetNode) return null;
+        const value = toNumber(link.value);
+
         const dx = targetNode.x - sourceNode.x;
         const dy = targetNode.y - sourceNode.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const angle = Math.atan2(dy, dx);
-        
-        // Use a consistent color based on link index instead of random
-        const colorIndex = index % props.colors.length;
-        const color = props.colors[colorIndex] || '#888';
-        
+
         return {
           ...link,
+          value,
+          sourceLabel: sourceNode.label || sourceNode.id,
+          targetLabel: targetNode.label || targetNode.id,
           sourceX: sourceNode.x,
           sourceY: sourceNode.y,
           targetX: targetNode.x,
           targetY: targetNode.y,
-          distance,
-          angle,
-          strokeWidth: Math.max(2, link.value / 10),
-          color: color + '80' // Add transparency
+          distance: Math.sqrt(dx * dx + dy * dy),
+          angle: Math.atan2(dy, dx),
+          // 2px for the smallest flows up to 12px for the largest
+          strokeWidth: maxValue > 0 && Number.isFinite(value) ? 2 + (Math.abs(value) / maxValue) * 10 : 2,
+          color: colors[index % colors.length] || '#888888'
         };
       }).filter(Boolean);
     });
-    
-    // Load TopoJSON data
-    onMounted(async () => {
-      try {
-        loading.value = true;
-        error.value = null;
-        
-        const mapType = props.mapType || 'us';
-        const mapUrls = getDefaultMapUrls();
-        const url = mapType === 'us' ? mapUrls.us : mapUrls.world;
-        const objectName = mapType === 'us' ? 'states' : 'countries';
-        
-        // Load TopoJSON
-        const topoJson = await loadTopoJSON(url);
-        topoJsonData.value = topoJson;
-        
-        // Convert to GeoJSON features
-        const geoFeatures = getGeoJSONFeatures(topoJson, objectName);
-        features.value = geoFeatures;
-        
-        // Create projection
-        const mapTypeValue = props.mapType || 'us';
-        const proj = createProjection(mapTypeValue, width.value, height.value);
-        projection.value = proj;
-        
-        // Create path generator
-        pathGenerator.value = createPathGenerator(proj);
-        
-        // Set up resize observer after initial render
-        await nextTick();
-        if (containerRef.value) {
-          const resizeObserver = new ResizeObserver(() => {
-            updateDimensions();
-          });
-          resizeObserver.observe(containerRef.value);
-          
-          // Cleanup on unmount
-          onBeforeUnmount(() => {
-            resizeObserver.disconnect();
-          });
-        }
-        
-        loading.value = false;
-      } catch (err) {
-        console.error('Error loading map data:', err);
-        error.value = err.message || 'Failed to load map data';
-        loading.value = false;
-      }
-    });
-    
-    // Watch for mapType changes
-    watch(() => props.mapType, async (newMapType) => {
-      if (!newMapType) return;
-      
-      try {
-        loading.value = true;
-        error.value = null;
-        
-        const mapUrls = getDefaultMapUrls();
-        const url = newMapType === 'us' ? mapUrls.us : mapUrls.world;
-        const objectName = newMapType === 'us' ? 'states' : 'countries';
-        
-        const topoJson = await loadTopoJSON(url);
-        topoJsonData.value = topoJson;
-        
-        const geoFeatures = getGeoJSONFeatures(topoJson, objectName);
-        features.value = geoFeatures;
-        
-        const proj = createProjection(newMapType, width.value, height.value);
-        projection.value = proj;
-        pathGenerator.value = createPathGenerator(proj);
-        
-        loading.value = false;
-      } catch (err) {
-        console.error('Error loading map data:', err);
-        error.value = err.message || 'Failed to load map data';
-        loading.value = false;
-      }
-    });
-    
-    return () => {
-      if (loading.value) {
-        return h('div', {
-          class: 'flex items-center justify-center w-full h-full',
-          style: { minHeight: '300px' }
-        }, [
-          h('div', { class: 'text-gray-500' }, 'Loading map...')
-        ]);
-      }
-      
-      if (error.value) {
-        return h('div', {
-          class: 'flex items-center justify-center w-full h-full',
-          style: { minHeight: '300px' }
-        }, [
-          h('div', { class: 'text-red-500' }, `Error: ${error.value}`)
-        ]);
-      }
-      
-      if (!pathGenerator.value || !features.value.length) {
-        return h('div', {
-          class: 'flex items-center justify-center w-full h-full',
-          style: { minHeight: '300px' }
-        }, [
-          h('div', { class: 'text-gray-500' }, 'No map data available')
-        ]);
-      }
-      
-      return h('div', {
-        ref: containerRef,
-        class: 'w-full h-full'
+
+    return () => renderSurface(() => {
+      const summary = links.value.map((l) => `${l.sourceLabel} to ${l.targetLabel}: ${formatValue(l.value)}`).join('; ');
+      return h('svg', {
+        ref: svgRef,
+        xmlns: 'http://www.w3.org/2000/svg',
+        width: width.value,
+        height: height.value,
+        viewBox: `0 0 ${width.value} ${height.value}`,
+        class: 'w-full h-full block',
+        role: 'img',
+        'aria-label': `Flow map of ${props.mapType === 'world' ? 'the world' : 'the United States'}${summary ? `. ${summary}` : ''}`
       }, [
-        h('svg', {
-          width: width.value,
-          height: height.value,
-          viewBox: `0 0 ${width.value} ${height.value}`,
-          class: 'w-full h-full',
-          role: 'img',
-          'aria-label': 'Flow map showing movement between locations'
-        }, [
-        // Map background - render all features
+        // Map background
         ...features.value.map((feature, index) => {
-          const pathData = pathGenerator.value(feature);
+          const pathData = paths.value[index];
           if (!pathData) return null;
-          
           return h('path', {
             key: `map-feature-${index}`,
             d: pathData,
@@ -1101,19 +981,19 @@ const FlowMapSVG = {
           const controlX = midX - Math.sin(link.angle) * controlOffset;
           const controlY = midY + Math.cos(link.angle) * controlOffset;
           const path = `M ${link.sourceX} ${link.sourceY} Q ${controlX} ${controlY} ${link.targetX} ${link.targetY}`;
-          
+
           return h('path', {
             key: `link-${index}`,
             d: path,
             stroke: link.color,
             'stroke-width': link.strokeWidth,
+            'stroke-linecap': 'round',
             fill: 'none',
-            opacity: 0.6,
-            'aria-label': `Flow from ${props.data.nodes.find(n => n.id === link.source)?.label || link.source} to ${props.data.nodes.find(n => n.id === link.target)?.label || link.target}: ${link.value}`
-          });
+            opacity: 0.6
+          }, [h('title', `${link.sourceLabel} → ${link.targetLabel}: ${formatValue(link.value)}`)]);
         }),
         // Nodes
-        ...nodes.value.map((node, index) => 
+        ...nodes.value.map((node, index) =>
           h('g', { key: `node-${index}` }, [
             h('circle', {
               cx: node.x,
@@ -1121,27 +1001,19 @@ const FlowMapSVG = {
               r: node.radius,
               fill: node.color,
               stroke: '#fff',
-              'stroke-width': 2,
-              'aria-label': `Location: ${node.label}`,
-              tabindex: 0,
-              role: 'button',
-              style: { cursor: 'pointer' }
-            }),
+              'stroke-width': 2
+            }, [h('title', node.label || node.id)]),
             h('text', {
               x: node.x,
-              y: node.y + node.radius + 15,
+              y: node.y + node.radius + 12,
               'text-anchor': 'middle',
               'dominant-baseline': 'middle',
-              fill: '#000',
-              'font-size': 12,
-              'font-weight': 'bold',
-              style: { pointerEvents: 'none' }
+              ...labelAttrs
             }, node.label)
           ])
         )
-        ])
       ]);
-    };
+    });
   }
 };
 
@@ -1171,35 +1043,123 @@ const handleMapTypeChange = () => {
   };
 };
 
-let darkModeObserver = null;
-let darkModeInterval = null;
+// ---- Export -------------------------------------------------------------
 
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
+const mapViewRef = ref(null);
+const exporting = ref(false);
 
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
+// Presentation properties copied from the live SVG onto the export, so it
+// looks the same outside the page (no Tailwind, no app fonts).
+const EXPORT_STYLE_PROPS = [
+  'fill', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-opacity', 'stroke-linecap',
+  'stroke-linejoin', 'opacity', 'paint-order', 'font-family', 'font-size', 'font-weight',
+  'text-anchor', 'dominant-baseline'
+];
+
+const exportFileName = (ext) => {
+  const kind = selectedMapType.value === 'flowMap' ? 'flow-map' : 'choropleth-map';
+  const area = mapConfig.value.mapType === 'world' && drillDownState.value.level === 'country' && drillDownState.value.selectedCountry
+    ? drillDownState.value.selectedCountry
+    : mapConfig.value.mapType;
+  const slug = String(area).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return `${kind}-${slug || 'map'}.${ext}`;
+};
+
+const serializeMapSvg = () => {
+  const svg = mapViewRef.value?.getSvgElement?.();
+  if (!svg) throw new Error('The map has not finished loading yet.');
+
+  const [, , vbWidth, vbHeight] = (svg.getAttribute('viewBox') || '').split(/\s+/).map(Number);
+  const width = vbWidth || svg.clientWidth || 800;
+  const height = vbHeight || svg.clientHeight || 500;
+
+  const clone = svg.cloneNode(true);
+  const sources = [svg, ...svg.querySelectorAll('*')];
+  const targets = [clone, ...clone.querySelectorAll('*')];
+  sources.forEach((source, i) => {
+    const target = targets[i];
+    const computedStyle = window.getComputedStyle(source);
+    const declarations = EXPORT_STYLE_PROPS
+      .map((prop) => [prop, computedStyle.getPropertyValue(prop)])
+      .filter(([, value]) => value && value !== 'normal' && value !== 'auto')
+      .map(([prop, value]) => `${prop}:${value}`);
+    target.setAttribute('style', declarations.join(';'));
+    target.removeAttribute('class');
+    target.removeAttribute('tabindex');
+  });
+
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  clone.setAttribute('width', String(width));
+  clone.setAttribute('height', String(height));
+
+  // Same background as the preview panel
+  const background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  background.setAttribute('width', '100%');
+  background.setAttribute('height', '100%');
+  background.setAttribute('fill', isDarkMode.value ? '#1e293b' : '#f9fafb');
+  clone.insertBefore(background, clone.firstChild);
+
+  const markup = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(clone)}`;
+  return { markup, width, height };
+};
+
+const downloadBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+const exportSVG = () => {
+  try {
+    const { markup } = serializeMapSvg();
+    downloadBlob(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }), exportFileName('svg'));
+    showNotice('Map exported as SVG.', 'success');
+  } catch (err) {
+    console.error('SVG export failed:', err);
+    showNotice(err.message || 'Could not export the map as SVG.', 'error');
   }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
+};
+
+const exportPNG = async () => {
+  if (exporting.value) return;
+  exporting.value = true;
+  let url = null;
+  try {
+    const { markup, width, height } = serializeMapSvg();
+    url = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }));
+    const image = new Image();
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = () => reject(new Error('Could not render the map as an image.'));
+      image.src = url;
+    });
+
+    const pixelRatio = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(width * pixelRatio);
+    canvas.height = Math.round(height * pixelRatio);
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Canvas is not available in this browser.');
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not create the PNG.'))), 'image/png');
+    });
+    downloadBlob(blob, exportFileName('png'));
+    showNotice('Map exported as PNG.', 'success');
+  } catch (err) {
+    console.error('PNG export failed:', err);
+    showNotice(err.message || 'Could not export the map as PNG.', 'error');
+  } finally {
+    if (url) URL.revokeObjectURL(url);
+    exporting.value = false;
   }
-});
+};
 </script>
 
 <style scoped>

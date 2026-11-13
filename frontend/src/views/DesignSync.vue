@@ -669,8 +669,8 @@ import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Dropdown from '../components/Dropdown.vue';
 
-const API_BASE_URL = 'http://localhost:3000/api/v1';
-const API_KEY = 'test-api-key-123';
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
+const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();

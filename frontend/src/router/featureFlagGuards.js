@@ -88,7 +88,10 @@ export async function checkFeatureFlagGuard(to) {
       ? JSON.parse(localStorage.getItem('userGroups'))
       : undefined;
     
-    const enabled = await OpenFeature.getBooleanValue(flagKey, false, { userId, userGroups });
+    // Default to enabled: the flag service returns the default when it can't
+    // reach the backend, and a slow or rate-limited request shouldn't hide pages.
+    // Only a flag that is explicitly off redirects.
+    const enabled = await OpenFeature.getBooleanValue(flagKey, true, { userId, userGroups });
     
     if (!enabled) {
       // Feature is disabled, redirect to home

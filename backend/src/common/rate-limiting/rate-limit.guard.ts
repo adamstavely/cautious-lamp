@@ -1,56 +1,31 @@
 import { Injectable, ExecutionContext } from '@nestjs/common';
 import { ThrottlerGuard, ThrottlerException } from '@nestjs/throttler';
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { RATE_LIMIT_PER_MINUTE } from './rate-limit.config';
 
 /**
- * Custom rate limit guard that provides better error messages
- * and supports API key-based rate limiting
+ * Rate limit guard with clearer errors and per-IP tracking
  */
 @Injectable()
 export class CustomThrottlerGuard extends ThrottlerGuard {
   protected async throwThrottlingException(context: ExecutionContext): Promise<void> {
-    const request = context.switchToHttp().getRequest<Request>();
     const response = context.switchToHttp().getResponse<Response>();
-    
-    // Get rate limit info
-    const limit = 100; // Default limit
-    const retryAfter = 60; // Default 60 seconds
-    
-    // Add rate limit headers
-    response.setHeader('X-RateLimit-Limit', limit);
+    const retryAfter = 60;
+
+    response.setHeader('X-RateLimit-Limit', RATE_LIMIT_PER_MINUTE);
     response.setHeader('X-RateLimit-Remaining', '0');
-    response.setHeader('X-RateLimit-Reset', new Date(Date.now() + retryAfter * 1000).toISOString());
     response.setHeader('Retry-After', retryAfter.toString());
 
     throw new ThrottlerException(
-      `Rate limit exceeded. Maximum ${limit} requests per minute. ` +
-      `Please retry after ${retryAfter} seconds. ` +
-      `If you need higher limits, contact support or upgrade your plan.`
+      `Rate limit exceeded: at most ${RATE_LIMIT_PER_MINUTE} requests per minute. Retry after ${retryAfter} seconds.`,
     );
   }
 
+  /**
+   * Count requests per client IP. Keying by the Authorization header let
+   * anyone get a fresh allowance by sending a new random token each time.
+   */
   protected async getTracker(req: Record<string, any>): Promise<string> {
-    // Use API key if available, otherwise use IP address
-    const authHeader = req.headers?.authorization;
-    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
-      const apiKey = authHeader.substring(7);
-      // Hash the API key for tracking (don't expose it)
-      return `api-key:${this.hashString(apiKey)}`;
-    }
-    
-    // Fall back to IP address
-    return req.ip || req.connection?.remoteAddress || 'unknown';
-  }
-
-  private hashString(str: string): string {
-    // Simple hash for tracking (not cryptographic)
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash).toString(36);
+    return req.ip || req.socket?.remoteAddress || 'unknown';
   }
 }
-

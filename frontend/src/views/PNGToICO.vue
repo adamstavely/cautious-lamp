@@ -147,8 +147,9 @@
                 <!-- File Upload -->
                 <div
                   @drop.prevent="handleDrop"
-                  @dragover.prevent
-                  @dragenter.prevent
+                  @dragover.prevent="isDragging = true"
+                  @dragenter.prevent="isDragging = true"
+                  @dragleave.prevent="isDragging = false"
                   class="border-2 border-dashed rounded-lg p-8 text-center transition-colors mb-4"
                   :class="isDragging
                     ? (isDarkMode 
@@ -293,6 +294,8 @@
                   </div>
                 </div>
 
+                <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
+
                 <!-- Convert Button -->
                 <button
                   @click="handleConvert()"
@@ -335,7 +338,7 @@
                   </div>
                   <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                     <p><strong>Original Size:</strong> {{ imageWidth }}×{{ imageHeight }}px</p>
-                    <p v-if="selectedSizes.length > 0"><strong>ICO Sizes:</strong> {{ selectedSizes.join('×') }}, {{ selectedSizes.join('×') }}</p>
+                    <p v-if="conversionMode === 'png-to-ico' && selectedSizes.length > 0"><strong>ICO Sizes:</strong> {{ sortedSizes().map((size) => `${size}×${size}`).join(', ') }}</p>
                   </div>
                 </div>
                 <div v-else class="flex items-center justify-center p-12 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
@@ -353,13 +356,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 const isDragging = ref(false);
 const isConverting = ref(false);
 const selectedFile = ref(null);
@@ -372,10 +379,10 @@ const webpOutputFormat = ref('png');
 
 const icoSizes = [16, 32, 48, 64, 128, 256];
 const selectedSizes = ref([16, 32, 48]);
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-
-
-
+// ICO directory entries are conventionally ordered smallest first.
+const sortedSizes = () => [...new Set(selectedSizes.value)].sort((a, b) => a - b);
 
 const switchMode = (mode) => {
   if (conversionMode.value !== mode) {
@@ -428,74 +435,70 @@ const handleConvert = () => {
   }
 };
 
+const expectedTypeLabel = () =>
+  conversionMode.value === 'png-to-ico' ? 'PNG' : conversionMode.value === 'bmp-to-png' ? 'BMP' : 'WebP';
+
+const isValidForMode = (file) => {
+  const name = file.name.toLowerCase();
+  if (conversionMode.value === 'png-to-ico') {
+    return file.type === 'image/png' || name.endsWith('.png');
+  }
+  if (conversionMode.value === 'bmp-to-png') {
+    return ['image/bmp', 'image/x-ms-bmp', 'image/x-bmp'].includes(file.type) || name.endsWith('.bmp');
+  }
+  return file.type === 'image/webp' || name.endsWith('.webp');
+};
+
+const acceptFile = (file) => {
+  if (!file) return;
+  if (isValidForMode(file)) {
+    processFile(file);
+  } else {
+    showNotice(`Please choose a ${expectedTypeLabel()} image file.`, 'error');
+  }
+};
+
 const handleDrop = (e) => {
   isDragging.value = false;
-  const files = e.dataTransfer.files;
-  if (files.length > 0) {
-    const file = files[0];
-    let isValid = false;
-    
-    if (conversionMode.value === 'png-to-ico') {
-      isValid = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
-    } else if (conversionMode.value === 'bmp-to-png') {
-      isValid = file.type === 'image/bmp' || file.name.toLowerCase().endsWith('.bmp');
-    } else if (conversionMode.value === 'webp-to-png' || conversionMode.value === 'webp-to-jpg') {
-      isValid = file.type === 'image/webp' || file.name.toLowerCase().endsWith('.webp');
-    }
-    
-    if (isValid) {
-      processFile(file);
-    } else {
-      const expectedType = conversionMode.value === 'png-to-ico' ? 'PNG' : 
-                           conversionMode.value === 'bmp-to-png' ? 'BMP' : 'WebP';
-      alert(`Please upload a ${expectedType} image file.`);
-    }
-  }
+  acceptFile(e.dataTransfer?.files?.[0]);
 };
 
 const handleFileSelect = (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    let isValid = false;
-    
-    if (conversionMode.value === 'png-to-ico') {
-      isValid = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
-    } else if (conversionMode.value === 'bmp-to-png') {
-      isValid = file.type === 'image/bmp' || file.name.toLowerCase().endsWith('.bmp');
-    } else if (conversionMode.value === 'webp-to-png' || conversionMode.value === 'webp-to-jpg') {
-      isValid = file.type === 'image/webp' || file.name.toLowerCase().endsWith('.webp');
-    }
-    
-    if (isValid) {
-      processFile(file);
-    } else {
-      const expectedType = conversionMode.value === 'png-to-ico' ? 'PNG' : 
-                           conversionMode.value === 'bmp-to-png' ? 'BMP' : 'WebP';
-      alert(`Please select a ${expectedType} image file.`);
-    }
-  }
+  acceptFile(e.target.files?.[0]);
 };
 
 const processFile = (file) => {
-  if (file.size > 10 * 1024 * 1024) {
-    alert('File size must be less than 10MB.');
+  if (file.size > MAX_FILE_SIZE) {
+    showNotice('File size must be less than 10MB.', 'error');
     return;
   }
-  
+
+  clearNotice();
   selectedFile.value = file;
-  
+
   // Create preview
   const reader = new FileReader();
   reader.onload = (e) => {
-    previewUrl.value = e.target.result;
-    
-    // Get image dimensions
+    // Ignore a read that finished after another file was chosen.
+    if (selectedFile.value !== file) return;
+    const dataUrl = e.target.result;
     const img = new Image();
     img.onload = () => {
-      imageWidth.value = img.width;
-      imageHeight.value = img.height;
+      if (selectedFile.value !== file) return;
+      previewUrl.value = dataUrl;
+      imageWidth.value = img.naturalWidth;
+      imageHeight.value = img.naturalHeight;
     };
-    img.src = e.target.result;
+    img.onerror = () => {
+      if (selectedFile.value !== file) return;
+      clearFile();
+      showNotice('That file could not be read as an image.', 'error');
+    };
+    img.src = dataUrl;
+  };
+  reader.onerror = () => {
+    clearFile();
+    showNotice('Could not read the file.', 'error');
   };
   reader.readAsDataURL(file);
 };
@@ -510,58 +513,72 @@ const clearFile = () => {
   }
 };
 
-const convertBmpToPng = async () => {
-  if (!selectedFile.value) {
-    return;
-  }
+// "logo.PNG" -> "logo.ico"; a name without an extension gets one appended.
+const outputName = (name, extension) => {
+  const base = name.replace(/\.[^./\\]+$/, '') || 'image';
+  return `${base}.${extension}`;
+};
 
-  isConverting.value = true;
+const downloadBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // Revoke after the click has been handled, or some browsers cancel the download.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+};
 
-  try {
-    // Read the BMP file
-    const arrayBuffer = await selectedFile.value.arrayBuffer();
-    
-    // Create an image from the BMP data
-    const blob = new Blob([arrayBuffer], { type: 'image/bmp' });
-    const url = URL.createObjectURL(blob);
-    
+const loadImage = (file) =>
+  new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
-      // Create a canvas and draw the image
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      
-      // Convert canvas to PNG blob
-      canvas.toBlob((pngBlob) => {
-        if (pngBlob) {
-          // Download the PNG file
-          const downloadUrl = URL.createObjectURL(pngBlob);
-          const a = document.createElement('a');
-          a.href = downloadUrl;
-          a.download = selectedFile.value.name.replace(/\.bmp$/i, '.png');
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(downloadUrl);
-        }
-        URL.revokeObjectURL(url);
-        isConverting.value = false;
-      }, 'image/png');
+      URL.revokeObjectURL(url);
+      resolve(img);
     };
-    
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      alert('Failed to convert BMP image. Please try again.');
-      isConverting.value = false;
+      reject(new Error('Could not decode image'));
     };
-    
     img.src = url;
+  });
+
+const canvasToBlob = (canvas, type, quality) =>
+  new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Canvas export failed'))), type, quality);
+  });
+
+// Re-encode an image to PNG or JPEG. JPEG has no alpha, so it gets a white
+// background instead of transparent pixels turning black.
+const reencode = async (file, mimeType, quality) => {
+  const img = await loadImage(file);
+  const canvas = document.createElement('canvas');
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  if (mimeType === 'image/jpeg') {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  ctx.drawImage(img, 0, 0);
+  return canvasToBlob(canvas, mimeType, quality);
+};
+
+const convertBmpToPng = async () => {
+  if (!selectedFile.value) return;
+  isConverting.value = true;
+  const file = selectedFile.value;
+  try {
+    const pngBlob = await reencode(file, 'image/png');
+    downloadBlob(pngBlob, outputName(file.name, 'png'));
+    showNotice('PNG downloaded.', 'success');
   } catch (error) {
     console.error('Conversion error:', error);
-    alert('Failed to convert image. Please try again.');
+    showNotice('Failed to convert the BMP image. Please try another file.', 'error');
+  } finally {
     isConverting.value = false;
   }
 };
@@ -580,199 +597,95 @@ const convertToICO = async () => {
   }
 
   isConverting.value = true;
+  const file = selectedFile.value;
 
   try {
-    // Read the PNG file
-    const arrayBuffer = await selectedFile.value.arrayBuffer();
-    
-    // Create ICO file
-    const icoData = await createICOFile(arrayBuffer, selectedSizes.value);
-    
-    // Download the ICO file
-    const blob = new Blob([icoData], { type: 'image/x-icon' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = selectedFile.value.name.replace('.png', '.ico');
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const icoData = await createICOFile(file, sortedSizes());
+    downloadBlob(new Blob([icoData], { type: 'image/x-icon' }), outputName(file.name, 'ico'));
+    showNotice('ICO downloaded.', 'success');
   } catch (error) {
     console.error('Conversion error:', error);
-    alert('Failed to convert image. Please try again.');
+    showNotice('Failed to convert the image. Please try another file.', 'error');
   } finally {
     isConverting.value = false;
   }
 };
 
-const createICOFile = async (pngData, sizes) => {
-  // This is a simplified ICO creation
-  // In a production environment, you'd want to use a proper ICO library
-  // For now, we'll create a basic ICO structure
-  
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  const img = new Image();
-  
-  return new Promise((resolve, reject) => {
-    img.onload = () => {
-      try {
-        // ICO file structure:
-        // Header (6 bytes): Reserved (2), Type (2), Count (2)
-        // Directory entries (16 bytes each): Width, Height, Colors, Reserved, Planes, BitCount, Size, Offset
-        // Image data for each size
-        
-        const entries = sizes.length;
-        const headerSize = 6;
-        const directorySize = entries * 16;
-        let offset = headerSize + directorySize;
-        
-        // Calculate total size
-        let totalSize = offset;
-        const imageDataArray = [];
-        
-        sizes.forEach(size => {
-          canvas.width = size;
-          canvas.height = size;
-          ctx.drawImage(img, 0, 0, size, size);
-          const pngData = canvas.toDataURL('image/png').split(',')[1];
-          const decoded = atob(pngData);
-          const bytes = new Uint8Array(decoded.length);
-          for (let i = 0; i < decoded.length; i++) {
-            bytes[i] = decoded.charCodeAt(i);
-          }
-          imageDataArray.push(bytes);
-          totalSize += bytes.length;
-        });
-        
-        // Create ICO buffer
-        const buffer = new ArrayBuffer(totalSize);
-        const view = new DataView(buffer);
-        
-        // Write header
-        view.setUint16(0, 0, true); // Reserved
-        view.setUint16(2, 1, true); // Type (1 = ICO)
-        view.setUint16(4, entries, true); // Count
-        
-        // Write directory entries and collect image data
-        sizes.forEach((size, index) => {
-          const entryOffset = 6 + (index * 16);
-          const imageData = imageDataArray[index];
-          
-          // Directory entry
-          view.setUint8(entryOffset, size === 256 ? 0 : size); // Width
-          view.setUint8(entryOffset + 1, size === 256 ? 0 : size); // Height
-          view.setUint8(entryOffset + 2, 0); // Colors (0 = no palette)
-          view.setUint8(entryOffset + 3, 0); // Reserved
-          view.setUint16(entryOffset + 4, 1, true); // Planes
-          view.setUint16(entryOffset + 6, 32, true); // BitCount (32 = RGBA)
-          view.setUint32(entryOffset + 8, imageData.length, true); // Size
-          view.setUint32(entryOffset + 12, offset, true); // Offset
-          
-          // Write image data
-          const imageView = new Uint8Array(buffer, offset, imageData.length);
-          imageView.set(imageData);
-          
-          offset += imageData.length;
-        });
-        
-        resolve(buffer);
-      } catch (error) {
-        reject(error);
-      }
-    };
-    
-    img.onerror = reject;
-    const blob = new Blob([pngData], { type: 'image/png' });
-    img.src = URL.createObjectURL(blob);
+/**
+ * Build an ICO file whose images are PNG-encoded (supported since Windows
+ * Vista and by every browser).
+ *
+ * ICONDIR (6 bytes, little-endian): reserved=0, type=1 (icon), count
+ * ICONDIRENTRY (16 bytes each): width, height (0 means 256), colorCount=0,
+ *   reserved=0, planes=1, bitCount=32, bytesInRes, imageOffset
+ * followed by each image's PNG bytes at its offset.
+ */
+const createICOFile = async (file, sizes) => {
+  const img = await loadImage(file);
+  const images = [];
+
+  for (const size of sizes) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    // Fit the image inside the square, keeping its aspect ratio (transparent padding).
+    const scale = Math.min(size / img.naturalWidth, size / img.naturalHeight);
+    const w = img.naturalWidth * scale;
+    const h = img.naturalHeight * scale;
+    ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+    const blob = await canvasToBlob(canvas, 'image/png');
+    images.push({ size, bytes: new Uint8Array(await blob.arrayBuffer()) });
+  }
+
+  const headerSize = 6;
+  const entrySize = 16;
+  let offset = headerSize + entrySize * images.length;
+  const totalSize = images.reduce((sum, image) => sum + image.bytes.length, offset);
+
+  const buffer = new ArrayBuffer(totalSize);
+  const view = new DataView(buffer);
+  const out = new Uint8Array(buffer);
+
+  view.setUint16(0, 0, true); // Reserved
+  view.setUint16(2, 1, true); // Type (1 = icon)
+  view.setUint16(4, images.length, true); // Image count
+
+  images.forEach(({ size, bytes }, index) => {
+    const entry = headerSize + index * entrySize;
+    view.setUint8(entry, size >= 256 ? 0 : size); // Width
+    view.setUint8(entry + 1, size >= 256 ? 0 : size); // Height
+    view.setUint8(entry + 2, 0); // Color count (0 = no palette)
+    view.setUint8(entry + 3, 0); // Reserved
+    view.setUint16(entry + 4, 1, true); // Color planes
+    view.setUint16(entry + 6, 32, true); // Bits per pixel
+    view.setUint32(entry + 8, bytes.length, true); // Image data size
+    view.setUint32(entry + 12, offset, true); // Image data offset
+    out.set(bytes, offset);
+    offset += bytes.length;
   });
+
+  return buffer;
 };
 
 const convertWebP = async () => {
-  if (!selectedFile.value) {
-    return;
-  }
-
+  if (!selectedFile.value) return;
   isConverting.value = true;
-
+  const file = selectedFile.value;
+  const toJpeg = conversionMode.value === 'webp-to-jpg' || webpOutputFormat.value === 'jpg';
   try {
-    // Read the WebP file
-    const arrayBuffer = await selectedFile.value.arrayBuffer();
-    
-    // Create an image from the WebP data
-    const blob = new Blob([arrayBuffer], { type: 'image/webp' });
-    const url = URL.createObjectURL(blob);
-    
-    const img = new Image();
-    img.onload = () => {
-      // Create a canvas and draw the image
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      
-      // Determine MIME type and format
-      let mimeType = 'image/png';
-      let quality = undefined;
-      let extension = 'png';
-      
-      if (webpOutputFormat.value === 'jpg' || conversionMode.value === 'webp-to-jpg') {
-        mimeType = 'image/jpeg';
-        quality = 0.92;
-        extension = 'jpg';
-      }
-      
-      // Convert canvas to blob
-      const blobCallback = (convertedBlob) => {
-        if (convertedBlob) {
-          // Download the converted file
-          const downloadUrl = URL.createObjectURL(convertedBlob);
-          const a = document.createElement('a');
-          a.href = downloadUrl;
-          a.download = selectedFile.value.name.replace(/\.webp$/i, `.${extension}`);
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(downloadUrl);
-        }
-        URL.revokeObjectURL(url);
-        isConverting.value = false;
-      };
-      
-      if (mimeType === 'image/jpeg') {
-        canvas.toBlob(blobCallback, mimeType, quality);
-      } else {
-        canvas.toBlob(blobCallback, mimeType);
-      }
-    };
-    
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      alert('Failed to convert WebP image. Please try again.');
-      isConverting.value = false;
-    };
-    
-    img.src = url;
+    const blob = toJpeg ? await reencode(file, 'image/jpeg', 0.92) : await reencode(file, 'image/png');
+    downloadBlob(blob, outputName(file.name, toJpeg ? 'jpg' : 'png'));
+    showNotice(`${toJpeg ? 'JPG' : 'PNG'} downloaded.`, 'success');
   } catch (error) {
     console.error('Conversion error:', error);
-    alert('Failed to convert image. Please try again.');
+    showNotice('Failed to convert the WebP image. Please try another file.', 'error');
+  } finally {
     isConverting.value = false;
   }
 };
-
-onMounted(() => {
-  // Watch for dark mode changes
-  const observer = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-});
 </script>
 
 <style scoped>

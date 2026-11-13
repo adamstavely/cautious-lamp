@@ -5,10 +5,15 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { logger } from './logger.js';
 import {
   CallToolRequestSchema,
+  CallToolResult,
+  ErrorCode,
+  Tool,
   ListResourcesRequestSchema,
   ListToolsRequestSchema,
+  McpError,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
 
 // Import tools
 import {
@@ -18,6 +23,9 @@ import {
   getTokens,
   getToken,
   searchTokens,
+  getTokensSchema,
+  getTokenSchema,
+  searchTokensSchema,
 } from './tools/tokens.tool.js';
 
 import {
@@ -29,6 +37,10 @@ import {
   getComponent,
   getComponentCode,
   searchComponents,
+  getComponentsSchema,
+  getComponentSchema,
+  getComponentCodeSchema,
+  searchComponentsSchema,
 } from './tools/components.tool.js';
 
 import {
@@ -38,6 +50,9 @@ import {
   getPatterns,
   getPattern,
   getPatternsByComponent,
+  getPatternsSchema,
+  getPatternSchema,
+  getPatternsByComponentSchema,
 } from './tools/patterns.tool.js';
 
 import {
@@ -47,6 +62,9 @@ import {
   getComplianceRules,
   scanComponent,
   exportRules,
+  getComplianceRulesSchema,
+  scanComponentSchema,
+  exportRulesSchema,
 } from './tools/compliance.tool.js';
 
 import {
@@ -60,6 +78,11 @@ import {
   getAssetById,
   searchAssets,
   getAssetTypes,
+  getAssetsSchema,
+  getIconsSchema,
+  getAssetByIdSchema,
+  searchAssetsSchema,
+  getAssetTypesSchema,
 } from './tools/assets.tool.js';
 
 import {
@@ -68,11 +91,22 @@ import {
   createReviewTool,
   updateReviewTool,
   searchReviewsTool,
+  getReviewCommentsTool,
+  addReviewCommentTool,
   getReviews,
   getReview,
   createReview,
   updateReview,
   searchReviews,
+  getReviewComments,
+  addReviewComment,
+  getReviewsSchema,
+  getReviewSchema,
+  createReviewSchema,
+  updateReviewSchema,
+  searchReviewsSchema,
+  getReviewCommentsSchema,
+  addReviewCommentSchema,
 } from './tools/reviews.tool.js';
 
 // Import resources
@@ -86,7 +120,185 @@ import {
   readDesignSystemResource,
 } from './resources/design-system.resource.js';
 
-class DesignSystemMCPServer {
+/**
+ * Every tool this server exposes, in the order they are listed to clients.
+ */
+export const TOOLS: Tool[] = [
+  // Tokens tools
+  getTokensTool,
+  getTokenTool,
+  searchTokensTool,
+  // Components tools
+  getComponentsTool,
+  getComponentTool,
+  getComponentCodeTool,
+  searchComponentsTool,
+  // Patterns tools
+  getPatternsTool,
+  getPatternTool,
+  getPatternsByComponentTool,
+  // Compliance tools
+  getComplianceRulesTool,
+  scanComponentTool,
+  exportRulesTool,
+  // Assets tools
+  getAssetsTool,
+  getIconsTool,
+  getAssetByIdTool,
+  searchAssetsTool,
+  getAssetTypesTool,
+  // Reviews tools
+  getReviewsTool,
+  getReviewTool,
+  createReviewTool,
+  updateReviewTool,
+  searchReviewsTool,
+  getReviewCommentsTool,
+  addReviewCommentTool,
+];
+
+/**
+ * Validate a tool's arguments against its zod schema. Invalid input becomes an
+ * McpError(InvalidParams) that `callTool` turns into an `isError` tool result,
+ * so a bad call never surfaces as an unhandled exception.
+ */
+function parseArgs<S extends z.ZodTypeAny>(schema: S, tool: string, args: unknown): z.infer<S> {
+  const result = schema.safeParse(args);
+  if (!result.success) {
+    const issues = result.error.issues
+      .map((issue) => `${issue.path.length > 0 ? issue.path.join('.') : '(root)'}: ${issue.message}`)
+      .join('; ');
+    throw new McpError(ErrorCode.InvalidParams, `Invalid arguments for tool ${tool}: ${issues}`);
+  }
+  return result.data;
+}
+
+function jsonResult(value: unknown): CallToolResult {
+  return {
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify(value, null, 2),
+      },
+    ],
+  };
+}
+
+function textResult(text: string): CallToolResult {
+  return {
+    content: [
+      {
+        type: 'text',
+        text,
+      },
+    ],
+  };
+}
+
+/**
+ * Remove secrets from tool arguments before they are logged.
+ */
+function redactArgs(args: Record<string, unknown>): Record<string, unknown> {
+  return 'password' in args ? { ...args, password: '[redacted]' } : args;
+}
+
+/**
+ * Run a tool by name. Missing arguments are treated as `{}`; arguments are
+ * validated against the tool's schema; every failure (invalid input, unknown
+ * tool, API error) is returned as an `isError` result rather than thrown.
+ */
+export async function callTool(name: string, rawArgs?: Record<string, unknown>): Promise<CallToolResult> {
+  const args = rawArgs ?? {};
+
+  try {
+    switch (name) {
+      // Tokens
+      case 'get_tokens':
+        return jsonResult(await getTokens(parseArgs(getTokensSchema, name, args)));
+      case 'get_token':
+        return jsonResult(await getToken(parseArgs(getTokenSchema, name, args)));
+      case 'search_tokens':
+        return jsonResult(await searchTokens(parseArgs(searchTokensSchema, name, args)));
+
+      // Components
+      case 'get_components':
+        return jsonResult(await getComponents(parseArgs(getComponentsSchema, name, args)));
+      case 'get_component':
+        return jsonResult(await getComponent(parseArgs(getComponentSchema, name, args)));
+      case 'get_component_code':
+        return textResult(await getComponentCode(parseArgs(getComponentCodeSchema, name, args)));
+      case 'search_components':
+        return jsonResult(await searchComponents(parseArgs(searchComponentsSchema, name, args)));
+
+      // Patterns
+      case 'get_patterns':
+        return jsonResult(await getPatterns(parseArgs(getPatternsSchema, name, args)));
+      case 'get_pattern':
+        return jsonResult(await getPattern(parseArgs(getPatternSchema, name, args)));
+      case 'get_patterns_by_component':
+        return jsonResult(await getPatternsByComponent(parseArgs(getPatternsByComponentSchema, name, args)));
+
+      // Compliance
+      case 'get_compliance_rules':
+        parseArgs(getComplianceRulesSchema, name, args);
+        return jsonResult(await getComplianceRules());
+      case 'scan_component':
+        return jsonResult(await scanComponent(parseArgs(scanComponentSchema, name, args)));
+      case 'export_rules':
+        return textResult(await exportRules(parseArgs(exportRulesSchema, name, args)));
+
+      // Assets
+      case 'get_assets':
+        return jsonResult(await getAssets(parseArgs(getAssetsSchema, name, args)));
+      case 'get_icons':
+        return jsonResult(await getIcons(parseArgs(getIconsSchema, name, args)));
+      case 'get_asset_by_id':
+        return jsonResult(await getAssetById(parseArgs(getAssetByIdSchema, name, args)));
+      case 'search_assets':
+        return jsonResult(await searchAssets(parseArgs(searchAssetsSchema, name, args)));
+      case 'get_asset_types':
+        parseArgs(getAssetTypesSchema, name, args);
+        return jsonResult(await getAssetTypes());
+
+      // Reviews
+      case 'get_reviews':
+        return jsonResult(await getReviews(parseArgs(getReviewsSchema, name, args)));
+      case 'get_review':
+        return jsonResult(await getReview(parseArgs(getReviewSchema, name, args)));
+      case 'create_review':
+        return jsonResult(await createReview(parseArgs(createReviewSchema, name, args)));
+      case 'update_review':
+        return jsonResult(await updateReview(parseArgs(updateReviewSchema, name, args)));
+      case 'search_reviews':
+        return jsonResult(await searchReviews(parseArgs(searchReviewsSchema, name, args)));
+      case 'get_review_comments':
+        return jsonResult(await getReviewComments(parseArgs(getReviewCommentsSchema, name, args)));
+      case 'add_review_comment':
+        return jsonResult(await addReviewComment(parseArgs(addReviewCommentSchema, name, args)));
+
+      default:
+        throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Tool execution failed', {
+      tool: name,
+      error: errorMessage,
+      args: redactArgs(args),
+    });
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error: ${errorMessage}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+export class DesignSystemMCPServer {
   private server: Server;
 
   constructor() {
@@ -110,285 +322,14 @@ class DesignSystemMCPServer {
     // List available tools
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       return {
-        tools: [
-          // Tokens tools
-          getTokensTool,
-          getTokenTool,
-          searchTokensTool,
-          // Components tools
-          getComponentsTool,
-          getComponentTool,
-          getComponentCodeTool,
-          searchComponentsTool,
-          // Patterns tools
-          getPatternsTool,
-          getPatternTool,
-          getPatternsByComponentTool,
-          // Compliance tools
-          getComplianceRulesTool,
-          scanComponentTool,
-          exportRulesTool,
-          // Assets tools
-          getAssetsTool,
-          getIconsTool,
-          getAssetByIdTool,
-          searchAssetsTool,
-          getAssetTypesTool,
-          // Reviews tools
-          getReviewsTool,
-          getReviewTool,
-          createReviewTool,
-          updateReviewTool,
-          searchReviewsTool,
-        ],
+        tools: TOOLS,
       };
     });
 
     // Handle tool calls
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
-
-      try {
-        switch (name) {
-          // Tokens
-          case 'get_tokens':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await getTokens(args as any), null, 2),
-                },
-              ],
-            };
-          case 'get_token':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await getToken(args as any), null, 2),
-                },
-              ],
-            };
-          case 'search_tokens':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await searchTokens(args as any), null, 2),
-                },
-              ],
-            };
-
-          // Components
-          case 'get_components':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await getComponents(args as any), null, 2),
-                },
-              ],
-            };
-          case 'get_component':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await getComponent(args as any), null, 2),
-                },
-              ],
-            };
-          case 'get_component_code':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: await getComponentCode(args as any),
-                },
-              ],
-            };
-          case 'search_components':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await searchComponents(args as any), null, 2),
-                },
-              ],
-            };
-
-          // Patterns
-          case 'get_patterns':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await getPatterns(args as any), null, 2),
-                },
-              ],
-            };
-          case 'get_pattern':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await getPattern(args as any), null, 2),
-                },
-              ],
-            };
-          case 'get_patterns_by_component':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await getPatternsByComponent(args as any), null, 2),
-                },
-              ],
-            };
-
-          // Compliance
-          case 'get_compliance_rules':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await getComplianceRules(), null, 2),
-                },
-              ],
-            };
-          case 'scan_component':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await scanComponent(args as any), null, 2),
-                },
-              ],
-            };
-          case 'export_rules':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: await exportRules(args as any),
-                },
-              ],
-            };
-
-          // Assets
-          case 'get_assets':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await getAssets(args as any), null, 2),
-                },
-              ],
-            };
-          case 'get_icons':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await getIcons(args as any), null, 2),
-                },
-              ],
-            };
-          case 'get_asset_by_id':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await getAssetById(args as any), null, 2),
-                },
-              ],
-            };
-          case 'search_assets':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await searchAssets(args as any), null, 2),
-                },
-              ],
-            };
-          case 'get_asset_types':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await getAssetTypes(), null, 2),
-                },
-              ],
-            };
-
-          // Reviews
-          case 'get_reviews':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await getReviews(args as any), null, 2),
-                },
-              ],
-            };
-          case 'get_review':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await getReview(args as any), null, 2),
-                },
-              ],
-            };
-          case 'create_review':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await createReview(args as any), null, 2),
-                },
-              ],
-            };
-          case 'update_review':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await updateReview(args as any), null, 2),
-                },
-              ],
-            };
-          case 'search_reviews':
-            return {
-              content: [
-                {
-                  type: 'text',
-                  text: JSON.stringify(await searchReviews(args as any), null, 2),
-                },
-              ],
-            };
-
-          default:
-            throw new Error(`Unknown tool: ${name}`);
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error('Tool execution failed', {
-          tool: name,
-          error: errorMessage,
-          args,
-        });
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${errorMessage}`,
-            },
-          ],
-          isError: true,
-        };
-      }
+      return await callTool(name, args);
     });
 
     // List available resources
@@ -457,13 +398,15 @@ class DesignSystemMCPServer {
   }
 }
 
-// Start the server
-const server = new DesignSystemMCPServer();
-server.run().catch((error) => {
-  logger.error('Fatal error starting server', {
-    error: error instanceof Error ? error.message : String(error),
-    stack: error instanceof Error ? error.stack : undefined,
+// Start the server when run directly (not when imported, e.g. by tests)
+if (require.main === module) {
+  const server = new DesignSystemMCPServer();
+  server.run().catch((error) => {
+    logger.error('Fatal error starting server', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    process.exit(1);
   });
-  process.exit(1);
-});
+}
 

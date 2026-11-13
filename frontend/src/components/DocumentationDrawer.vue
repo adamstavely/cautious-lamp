@@ -4,12 +4,12 @@
   <div 
     v-if="!isOpen" 
     class="fixed left-24 top-16 h-[calc(100vh-4rem)] w-12 border-r z-30 flex items-start justify-center pt-4 transition-all duration-300"
-    :class="isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'"
+    :class="isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-[#fff] border-slate-200'"
   >
     <button
       @click="toggle"
-      class="p-2 rounded-lg transition-colors"
-      :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+      class="p-2 rounded-full transition-colors"
+      :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
       title="Open drawer"
     >
       <span class="material-symbols-outlined">menu</span>
@@ -19,19 +19,19 @@
   <!-- Drawer - when open -->
   <div 
     v-if="isOpen"
-    class="fixed left-24 top-16 h-[calc(100vh-4rem)] w-64 shadow-xl overflow-y-auto z-30 border-r transition-transform duration-300 ease-in-out"
-    :class="isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'"
+    class="fixed left-24 top-16 h-[calc(100vh-4rem)] w-64 overflow-y-auto z-30 border-r transition-transform duration-300 ease-in-out"
+    :class="isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-[#fff] border-slate-200'"
   >
     <!-- Drawer Content -->
     <div class="p-6">
       <!-- Foundations - only show when not on patterns route -->
       <div v-if="showMainSections" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Foundations</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Foundations</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            class="p-2 rounded-full transition-colors"
+            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -42,10 +42,10 @@
             v-for="item in filteredFoundations"
             :key="item.link"
             @click="navigateToDoc(item.link)"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+            class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
             :class="isDarkMode 
-              ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'"
+              ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
           >
             <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
             <span class="font-medium">{{ item.text }}</span>
@@ -56,11 +56,11 @@
       <!-- Patterns - only show when on patterns route -->
       <div v-if="showPatterns" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Patterns</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Patterns</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            class="p-2 rounded-full transition-colors"
+            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -71,15 +71,15 @@
           <div class="space-y-1">
             <router-link
               to="/patterns"
-              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
               :class="[
                 isActive('/patterns') && route.path === '/patterns'
                   ? (isDarkMode 
-                    ? 'text-indigo-400 bg-indigo-900/20' 
-                    : 'text-indigo-600 bg-indigo-50')
+                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                   : (isDarkMode
-                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
               ]"
             >
               <span class="material-symbols-outlined text-lg">view_quilt</span>
@@ -91,15 +91,15 @@
           <div class="space-y-1">
             <router-link
               to="/patterns/status"
-              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
               :class="[
                 isActive('/patterns/status')
                   ? (isDarkMode 
-                    ? 'text-indigo-400 bg-indigo-900/20' 
-                    : 'text-indigo-600 bg-indigo-50')
+                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                   : (isDarkMode
-                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
               ]"
             >
               <span class="material-symbols-outlined text-lg">check_circle</span>
@@ -109,21 +109,21 @@
 
           <!-- Design Patterns -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Design Patterns</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Design Patterns</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredDesignPatterns"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -134,22 +134,22 @@
 
           <!-- Interaction Patterns -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Interaction Patterns</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Interaction Patterns</h4>
             <div class="space-y-1">
               <a
                 v-for="item in filteredInteractionPatterns"
                 :key="item.link"
                 href="#"
                 @click.prevent="navigateToDoc(item.link)"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -160,21 +160,21 @@
 
           <!-- Code Patterns -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Code Patterns</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Code Patterns</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredCodePatterns"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -188,11 +188,11 @@
       <!-- Components - only show when on components route -->
       <div v-if="showComponents" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Components</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Components</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            class="p-2 rounded-full transition-colors"
+            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -203,15 +203,15 @@
             <div class="space-y-1">
               <router-link
                 to="/components"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive('/components')
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">widgets</span>
@@ -221,21 +221,21 @@
 
           <!-- Utilities -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Utilities</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Utilities</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredComponentUtilities"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <ScanEye v-if="item.icon === 'scan-eye'" :size="20" :stroke-width="2" />
@@ -247,21 +247,21 @@
 
           <!-- Components -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Components</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Components</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredComponentItems"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <Pipette v-if="item.icon === 'pipette'" :size="20" :stroke-width="2" />
@@ -277,11 +277,11 @@
       <!-- Getting Started - only show when on getting started route -->
       <div v-if="showGettingStarted" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Getting Started</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Getting Started</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            class="p-2 rounded-full transition-colors"
+            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -294,15 +294,15 @@
               v-for="item in filteredGettingStartedBasics.filter(item => item.link === '/getting-started')"
               :key="item.link"
               :to="item.link"
-              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
               :class="[
                 isActive(item.link)
                   ? (isDarkMode 
-                    ? 'text-indigo-400 bg-indigo-900/20' 
-                    : 'text-indigo-600 bg-indigo-50')
+                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                   : (isDarkMode
-                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
               ]"
             >
               <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -312,21 +312,21 @@
 
           <!-- About -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">About</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">About</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredGettingStartedBasics.filter(item => item.link !== '/getting-started')"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -337,21 +337,21 @@
 
           <!-- Design Principles -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Design Principles</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Design Principles</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredGettingStartedPrinciples"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -362,21 +362,21 @@
 
           <!-- Setup & Installation -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Setup & Installation</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Setup & Installation</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredGettingStartedSetup"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -387,21 +387,21 @@
 
           <!-- Foundations -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Foundations</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Foundations</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredGettingStartedFoundations"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -412,21 +412,21 @@
 
           <!-- Resources & Support -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Resources & Support</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Resources & Support</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredGettingStartedResources"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -440,11 +440,11 @@
       <!-- Tools - only show when on tools route -->
       <div v-if="showTools" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Tools</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Tools</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            class="p-2 rounded-full transition-colors"
+            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -457,15 +457,15 @@
                 v-for="item in filteredToolGroups.overview"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -475,21 +475,21 @@
 
           <!-- Color -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Color</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Color</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredToolGroups.color"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <SwatchBook v-if="item.icon === 'swatch-book'" :size="20" :stroke-width="2" />
@@ -501,21 +501,21 @@
 
           <!-- Text & Content -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Text & Content</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Text & Content</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredToolGroups.text"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <TextInitial v-if="item.icon === 'text-initial'" :size="20" :stroke-width="2" />
@@ -528,21 +528,21 @@
 
           <!-- Development -->
           <div v-if="filteredToolGroups.development.length > 0">
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Development</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Development</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredToolGroups.development"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -553,21 +553,21 @@
 
           <!-- Image & Video -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Image & Video</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Image & Video</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredToolGroups.image"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <Captions v-if="item.icon === 'captions'" :size="20" :stroke-width="2" />
@@ -579,22 +579,22 @@
 
           <!-- References -->
           <div v-if="filteredToolGroups.references && filteredToolGroups.references.length > 0">
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">References</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">References</h4>
             <div class="space-y-1">
               <a
                 v-for="item in filteredToolGroups.references"
                 :key="item.link"
                 href="#"
                 @click.prevent="navigateToDoc(item.link)"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -608,11 +608,11 @@
       <!-- Data Viz - only show when on data-viz route -->
       <div v-if="showDataViz" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Data Visualization</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Data Visualization</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            class="p-2 rounded-full transition-colors"
+            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -623,15 +623,15 @@
           <div class="space-y-1">
             <router-link
               to="/data-viz"
-              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
               :class="[
                 isActive('/data-viz') && route.path === '/data-viz'
                   ? (isDarkMode 
-                    ? 'text-indigo-400 bg-indigo-900/20' 
-                    : 'text-indigo-600 bg-indigo-50')
+                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                   : (isDarkMode
-                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
               ]"
             >
               <span class="material-symbols-outlined text-lg">bar_chart</span>
@@ -641,21 +641,21 @@
           
           <!-- Guidance -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Guidance</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Guidance</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredDataVizGuidance"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -666,21 +666,21 @@
 
           <!-- Generators -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Generators</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Generators</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredDataVizGenerators"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -691,21 +691,21 @@
 
           <!-- Utilities -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Utilities</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Utilities</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredDataVizUtilities"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -719,11 +719,11 @@
       <!-- Review - only show when on review route -->
       <div v-if="showReview" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Review</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Review</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            class="p-2 rounded-full transition-colors"
+            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -734,15 +734,15 @@
             v-for="item in filteredReviewItems"
             :key="item.link"
             :to="item.link"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+            class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
             :class="[
               isActive(item.link)
                 ? (isDarkMode 
-                  ? 'text-indigo-400 bg-indigo-900/20' 
-                  : 'text-indigo-600 bg-indigo-50')
+                  ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                  : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                 : (isDarkMode
-                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                  ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
             ]"
           >
             <FolderKanban v-if="item.icon === 'folder-kanban'" :size="20" :stroke-width="2" />
@@ -753,21 +753,21 @@
 
         <!-- Utilities -->
         <div class="mt-6">
-          <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Utilities</h4>
+          <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Utilities</h4>
           <nav class="space-y-1">
             <router-link
               v-for="item in filteredReviewUtilities"
               :key="item.link"
               :to="item.link"
-              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
               :class="[
                 isActive(item.link)
                   ? (isDarkMode 
-                    ? 'text-indigo-400 bg-indigo-900/20' 
-                    : 'text-indigo-600 bg-indigo-50')
+                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                   : (isDarkMode
-                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
               ]"
             >
               <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -780,11 +780,11 @@
       <!-- HCD - only show when on research route -->
       <div v-if="showResearch" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Human-Centered Design</h3>
+          <h3 class="text-sm font-semibold tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Human-Centered Design</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            class="p-2 rounded-full transition-colors"
+            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -795,15 +795,15 @@
           <div class="space-y-1">
             <router-link
               to="/research"
-              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
               :class="[
                 isActive('/research')
                   ? (isDarkMode 
-                    ? 'text-indigo-400 bg-indigo-900/20' 
-                    : 'text-indigo-600 bg-indigo-50')
+                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                   : (isDarkMode
-                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
               ]"
             >
               <span class="material-symbols-outlined text-lg">note_stack</span>
@@ -813,21 +813,21 @@
           
           <!-- HCD Guidelines -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">HCD Guidelines</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">HCD Guidelines</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredHumanCenteredDesign"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -838,21 +838,21 @@
 
           <!-- Research Artifacts -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Research Artifacts</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Research Artifacts</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredResearchArtifacts"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -863,21 +863,21 @@
 
           <!-- UX Research Tools -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">UX Research Tools</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">UX Research Tools</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredUxResearchTools"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -891,11 +891,11 @@
       <!-- Guidelines - only show when on guidelines route -->
       <div v-if="showGuidelines" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Foundations</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Foundations</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            class="p-2 rounded-full transition-colors"
+            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -906,15 +906,15 @@
           <div class="space-y-1">
             <router-link
               to="/guidelines"
-              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
               :class="[
                 isActive('/guidelines') && route.path === '/guidelines'
                   ? (isDarkMode 
-                    ? 'text-indigo-400 bg-indigo-900/20' 
-                    : 'text-indigo-600 bg-indigo-50')
+                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                   : (isDarkMode
-                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
               ]"
             >
               <span class="material-symbols-outlined text-lg">menu_book</span>
@@ -924,22 +924,22 @@
           
           <!-- Foundations -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Foundations</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Foundations</h4>
             <div class="space-y-1">
               <a
                 v-for="item in filteredFoundations"
                 :key="item.link"
                 href="#"
                 @click.prevent="navigateToDoc(item.link)"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -959,15 +959,15 @@
                 :key="item.link"
                 href="#"
                 @click.prevent="navigateToDoc(item.link)"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -978,22 +978,22 @@
           
           <!-- Artificial Intelligence -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Artificial Intelligence</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Artificial Intelligence</h4>
             <div class="space-y-1">
               <a
                 v-for="item in filteredArtificialIntelligence.filter(item => item.link.startsWith('/guidelines/ai/'))"
                 :key="item.link"
                 href="#"
                 @click.prevent="navigateToDoc(item.link)"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -1007,11 +1007,11 @@
       <!-- Design Assets - only show when on design assets route -->
       <div v-if="showDesignAssets" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Design Assets</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Design Assets</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            class="p-2 rounded-full transition-colors"
+            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -1024,15 +1024,15 @@
               v-for="item in filteredDesignAssets.filter(item => item.link === '/design-assets')"
               :key="item.link"
               :to="item.link"
-              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
               :class="[
                 isActive(item.link)
                   ? (isDarkMode 
-                    ? 'text-indigo-400 bg-indigo-900/20' 
-                    : 'text-indigo-600 bg-indigo-50')
+                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                   : (isDarkMode
-                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
               ]"
             >
               <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -1042,21 +1042,21 @@
           
           <!-- Icons & Fonts -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Icons & Fonts</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Icons & Fonts</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredDesignAssets.filter(item => item.link === '/design-assets/icons' || item.link === '/design-assets/font-library' || item.link === '/design-assets/country-flags')"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -1067,21 +1067,21 @@
 
           <!-- Seals & Logos -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Seals & Logos</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Seals & Logos</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredDesignAssets.filter(item => item.link === '/design-assets/company-logos' || item.link === '/design-assets/capability-logos' || item.link === '/design-assets/internal-seals' || item.link === '/design-assets/usg-seals')"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -1092,21 +1092,21 @@
 
           <!-- Visuals -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Visuals</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Visuals</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredDesignAssets.filter(item => item.link === '/design-assets/illustrations' || item.link === '/design-assets/interactives' || item.link === '/design-assets/stock-photos')"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -1120,11 +1120,11 @@
       <!-- Admin - only show when on admin route -->
       <div v-if="showAdmin" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Admin</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Admin</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            class="p-2 rounded-full transition-colors"
+            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -1135,15 +1135,15 @@
             v-for="item in filteredAdminItems"
             :key="item.link"
             :to="item.link"
-            class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+            class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
             :class="[
               isActive(item.link)
                 ? (isDarkMode 
-                  ? 'text-indigo-400 bg-indigo-900/20' 
-                  : 'text-indigo-600 bg-indigo-50')
+                  ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                  : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                 : (isDarkMode
-                  ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                  ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
             ]"
           >
             <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -1155,11 +1155,11 @@
       <!-- Tokens - only show when on tokens route -->
       <div v-if="showTokens" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Tokens</h3>
+          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Tokens</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white hover:bg-slate-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'"
+            class="p-2 rounded-full transition-colors"
+            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
             title="Close drawer"
           >
             <span class="material-symbols-outlined">left_panel_close</span>
@@ -1172,15 +1172,15 @@
               v-for="item in filteredTokenItems.filter(item => item.link === '/tokens')"
               :key="item.link"
               :to="item.link"
-              class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
               :class="[
                 isActive(item.link)
                   ? (isDarkMode 
-                    ? 'text-indigo-400 bg-indigo-900/20' 
-                    : 'text-indigo-600 bg-indigo-50')
+                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                   : (isDarkMode
-                    ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
               ]"
             >
               <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -1190,21 +1190,21 @@
 
           <!-- Studio -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Studio</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Studio</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredTokenItems.filter(item => item.link === '/tokens/studio' || item.link === '/tokens/ai-builder' || item.link === '/tokens/playground')"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -1215,21 +1215,21 @@
 
           <!-- Library -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Library</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Library</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredTokenItems.filter(item => item.link === '/tokens/library' || item.link === '/tokens/color-palettes')"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -1240,21 +1240,21 @@
 
           <!-- Utilities -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">Utilities</h4>
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Utilities</h4>
             <nav class="space-y-1">
               <router-link
                 v-for="item in filteredTokenUtilities"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors group w-full text-left"
+                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
                 :class="[
                   isActive(item.link)
                     ? (isDarkMode 
-                      ? 'text-indigo-400 bg-indigo-900/20' 
-                      : 'text-indigo-600 bg-indigo-50')
+                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
+                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
                     : (isDarkMode
-                      ? 'text-gray-300 hover:bg-slate-700 hover:text-white' 
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')
+                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
                 ]"
               >
                 <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -1622,7 +1622,8 @@ const dataVizUtilities = [
 
 const dataVizGuidance = [
   { text: 'Types of Dashboards', link: '/data-viz/types-of-dashboards', icon: 'dashboard' },
-  { text: 'Dashboard Patterns', link: '/data-viz/dashboard-patterns', icon: 'pattern' }
+  { text: 'Dashboard Patterns', link: '/data-viz/dashboard-patterns', icon: 'pattern' },
+  { text: 'Dashboard Design', link: '/data-viz/dashboard-design', icon: 'space_dashboard' }
 ];
 
 const showAdmin = computed(() => {
@@ -1683,7 +1684,8 @@ const showDataViz = computed(() => {
   }
   // Also show for data visualization tool routes
   if (path === '/tools/chart-builder' || path === '/tools/timeline-generator' || 
-      path === '/tools/table-generator' || path === '/tools/color-scale') {
+      path === '/tools/table-generator' || path === '/tools/color-scale' ||
+      path === '/tools/map-maker') {
     return true;
   }
   return false;
@@ -1697,7 +1699,8 @@ const showTools = computed(() => {
   if (path === '/tools/nasa-tlx' || path === '/tools/sus' || path === '/tools/heuristic-evaluation' || 
       path === '/theme-builder' || path === '/tools/visual-regression' ||
       path === '/tools/chart-builder' || path === '/tools/timeline-generator' || 
-      path === '/tools/table-generator' || path === '/tools/color-scale') {
+      path === '/tools/table-generator' || path === '/tools/color-scale' ||
+      path === '/tools/map-maker') {
     return false;
   }
   // Include reference pages in Tools drawer
@@ -1938,16 +1941,8 @@ const loadDrawerFlags = async () => {
 let flagUpdateHandler = null;
 
 onMounted(async () => {
-  // Load flags on mount
-  await loadDrawerFlags();
-  
-  // Listen for feature flag updates and refresh drawer flags
-  flagUpdateHandler = () => {
-    loadDrawerFlags();
-  };
-  window.addEventListener('feature-flags-updated', flagUpdateHandler);
-  
-  // Dark mode observer
+  // Dark mode observer, set up before the flag request so a failed or slow
+  // request can't leave the drawer stuck on the theme it loaded with
   darkModeObserver = new MutationObserver(() => {
     isDarkMode.value = document.documentElement.classList.contains('dark');
   });
@@ -1971,6 +1966,15 @@ onMounted(async () => {
     }
   };
   window.addEventListener('keydown', escapeHandler);
+  
+  // Listen for feature flag updates and refresh drawer flags
+  flagUpdateHandler = () => {
+    loadDrawerFlags();
+  };
+  window.addEventListener('feature-flags-updated', flagUpdateHandler);
+  
+  // Load flags on mount
+  await loadDrawerFlags();
 });
 
 onBeforeUnmount(() => {

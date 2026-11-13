@@ -298,6 +298,7 @@
                 >
                   Calculate Color
                 </button>
+                <InlineNotice :notice="notice" class="mt-4" @dismiss="clearNotice" />
               </div>
             </div>
 
@@ -313,6 +314,7 @@
                 <span class="material-symbols-outlined text-indigo-600">check_circle</span>
                 Calculated Color
               </h2>
+              <InlineNotice :notice="copyNotice" class="mb-4" @dismiss="clearCopyNotice" />
               
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Color Preview -->
@@ -327,12 +329,12 @@
                   ></div>
                   <div 
                     class="w-full h-32 rounded-lg border-2"
-                    :style="{ backgroundColor: referenceColor }"
+                    :style="{ backgroundColor: sampleColors.bg }"
                     :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
                   >
                     <div 
                       class="w-full h-full flex items-center justify-center text-lg font-semibold"
-                      :style="{ color: calculatedColorHex }"
+                      :style="{ color: sampleColors.fg }"
                     >
                       Sample Text
                     </div>
@@ -525,18 +527,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { apcach, crToBg, crToFg, maxChroma, apcachToCss, setContrast, setChroma, setHue, cssToApcach } from 'apcach';
+import { apcach, crToBg, crToFg, maxChroma, apcachToCss, setContrast, setChroma, setHue } from 'apcach';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-
-
-
-
+const { notice, showNotice, clearNotice } = useNotice();
+const { notice: copyNotice, showNotice: showCopyNotice, clearNotice: clearCopyNotice } = useNotice();
 
 // Calculator state
 const contrastModel = ref('apca');
@@ -592,106 +595,144 @@ const calculatedColorP3 = computed(() => {
   }
 });
 
+// Contrast limits per model: APCA Lc 0..108, WCAG ratio 1..21.
+const contrastRange = () => (contrastModel.value === 'apca' ? [0, 108] : [1, 21]);
+const clampContrast = (value) => {
+  const [min, max] = contrastRange();
+  return Math.max(min, Math.min(max, value));
+};
+const wrapHue = (h) => ((h % 360) + 360) % 360;
+
+// The two scales are not comparable, so switching model resets to a sensible default.
+watch(contrastModel, (model) => {
+  contrastRatio.value = model === 'apca' ? 60 : 4.5;
+});
+
+// With the reference as background, the calculated color is the text, and vice versa.
+const sampleColors = computed(() =>
+  colorPosition.value === 'bg'
+    ? { bg: referenceColor.value, fg: calculatedColorHex.value }
+    : { bg: calculatedColorHex.value, fg: referenceColor.value }
+);
+
+// Sync the inputs with the color apcach actually produced.
+const syncInputs = (color) => {
+  contrastRatio.value = color.contrastConfig?.cr ?? contrastRatio.value;
+  if (typeof color.chroma === 'number') chroma.value = Math.round(color.chroma * 1000) / 1000;
+  if (typeof color.hue === 'number') hue.value = Math.round(color.hue * 10) / 10;
+};
+
 const calculateColor = () => {
+  const cr = Number(contrastRatio.value);
+  const c = Number(chroma.value);
+  const h = Number(hue.value);
+  const limit = Number(maxChromaLimit.value);
+  if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(referenceColor.value).trim()) && !/^(rgb|hsl|oklch|oklab|lab|lch|color)\(/i.test(String(referenceColor.value).trim())) {
+    showNotice('Enter the reference color as a hex value (e.g. #ffffff) or a CSS color function.', 'error');
+    return;
+  }
+  if (!Number.isFinite(cr)) {
+    showNotice('Enter a contrast value.', 'error');
+    return;
+  }
+  if (!useMaxChroma.value && (!Number.isFinite(c) || c < 0)) {
+    showNotice('Chroma must be a number of 0 or more.', 'error');
+    return;
+  }
+  if (!Number.isFinite(h)) {
+    showNotice('Hue must be a number between 0 and 360.', 'error');
+    return;
+  }
+
   try {
-    const chromaValue = useMaxChroma.value 
-      ? (maxChromaLimit.value ? maxChroma(maxChromaLimit.value) : maxChroma())
-      : chroma.value;
-    
+    const chromaValue = useMaxChroma.value
+      ? (Number.isFinite(limit) && limit > 0 ? maxChroma(Math.min(limit, 0.37)) : maxChroma())
+      : Math.min(c, 0.37);
+
+    // crToBg: the reference is the background and we solve for the foreground;
+    // crToFg: the reference is the foreground and we solve for the background.
+    // Signature: crToBg(color, contrast, model?, direction?)
     const crFunction = colorPosition.value === 'bg' ? crToBg : crToFg;
-    
-    // crToBg/crToFg returns a color that apcach can use directly
-    // The signature is: crToBg(color, contrast, model?, direction?)
-    const baseColor = crFunction(
-      referenceColor.value,
-      contrastRatio.value,
+    const contrastConfig = crFunction(
+      referenceColor.value.trim(),
+      clampContrast(cr),
       contrastModel.value,
       searchDirection.value
     );
-    
-    // apcach takes (baseColor, chroma, hue) where baseColor comes from crToBg/crToFg
-    calculatedColor.value = apcach(baseColor, chromaValue, hue.value);
+
+    const result = apcach(contrastConfig, chromaValue, wrapHue(h));
+    if (!Number.isFinite(result?.lightness)) {
+      throw new Error('apcach returned no lightness');
+    }
+    calculatedColor.value = result;
+    syncInputs(result);
+    clearNotice();
   } catch (error) {
     console.error('Error calculating color:', error);
-    alert('Error calculating color. Please check your inputs.');
+    showNotice('Could not calculate a color. Please check your inputs.', 'error');
   }
 };
 
+// apcach's setters mutate the contrast config they are given, so hand them a copy.
+const cloneColor = (color) => ({ ...color, contrastConfig: { ...color.contrastConfig } });
+
 const adjustContrast = () => {
   if (!calculatedColor.value) return;
+  const delta = Number(contrastAdjustment.value);
+  if (!Number.isFinite(delta)) return;
   try {
-    const currentContrast = contrastRatio.value;
-    const newContrast = currentContrast + contrastAdjustment.value;
-    const clampedContrast = Math.max(
-      contrastModel.value === 'apca' ? 0 : 1,
-      Math.min(contrastModel.value === 'apca' ? 108 : 21, newContrast)
-    );
-    contrastRatio.value = clampedContrast;
-    calculatedColor.value = setContrast(calculatedColor.value, clampedContrast);
+    const current = Number(calculatedColor.value.contrastConfig?.cr ?? contrastRatio.value);
+    const clampedContrast = clampContrast(current + delta);
+    calculatedColor.value = setContrast(cloneColor(calculatedColor.value), clampedContrast);
+    syncInputs(calculatedColor.value);
   } catch (error) {
     console.error('Error adjusting contrast:', error);
+    showNotice('Could not adjust the contrast.', 'error');
   }
 };
 
 const adjustChroma = () => {
   if (!calculatedColor.value) return;
+  const delta = Number(chromaAdjustment.value);
+  if (!Number.isFinite(delta)) return;
   try {
-    calculatedColor.value = setChroma(calculatedColor.value, (c) => c + chromaAdjustment.value);
+    calculatedColor.value = setChroma(cloneColor(calculatedColor.value), (c) => Number(c) + delta);
+    syncInputs(calculatedColor.value);
   } catch (error) {
     console.error('Error adjusting chroma:', error);
+    showNotice('Could not adjust the chroma.', 'error');
   }
 };
 
 const adjustHue = () => {
   if (!calculatedColor.value) return;
+  const delta = Number(hueAdjustment.value);
+  if (!Number.isFinite(delta)) return;
   try {
-    calculatedColor.value = setHue(calculatedColor.value, (h) => h + hueAdjustment.value);
+    // Hue is an angle: wrap it (apcach would clamp 370 to 360).
+    calculatedColor.value = setHue(cloneColor(calculatedColor.value), wrapHue(Number(calculatedColor.value.hue) + delta));
+    syncInputs(calculatedColor.value);
   } catch (error) {
     console.error('Error adjusting hue:', error);
+    showNotice('Could not adjust the hue.', 'error');
   }
 };
 
 const copyToClipboard = async (text) => {
+  if (!text) return;
   try {
     await navigator.clipboard.writeText(text);
-    // You could add a toast notification here
+    showCopyNotice(`Copied ${text}`, 'success');
   } catch (error) {
     console.error('Failed to copy:', error);
+    showCopyNotice('Could not copy to the clipboard.', 'error');
   }
 };
-
-let darkModeObserver = null;
-let darkModeInterval = null;
 
 onMounted(() => {
   if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
     drawerOpen.value = true;
     sessionStorage.removeItem('openDrawerOnLoad');
-  }
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
   }
 });
 </script>

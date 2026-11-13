@@ -1,9 +1,10 @@
 import { Resource } from '@modelcontextprotocol/sdk/types.js';
 import { apiClient } from '../api-client';
+import { rootPath } from '../api-root';
 import { logger } from '../logger.js';
 import { Token } from '../tools/tokens.tool';
 import { Component } from '../tools/components.tool';
-import { ComponentPattern } from '../tools/patterns.tool';
+import { ComponentPattern, PatternsResponse, toPatternsResponse } from '../tools/patterns.tool';
 
 export interface DesignSystemResource extends Resource {
   uri: string;
@@ -63,7 +64,9 @@ export async function readDesignSystemResource(uri: string): Promise<string> {
   }
   
   if (uri === 'design-system://patterns') {
-    const response = await apiClient.get<{ patterns: ComponentPattern[] }>('/patterns-library/patterns', undefined, 'patterns');
+    // Patterns library is mounted at the server root, and returns a bare array
+    const data = await apiClient.get<ComponentPattern[] | PatternsResponse>(rootPath('/patterns-library/patterns'), undefined, 'patterns');
+    const response = toPatternsResponse(data);
     logger.debug('Design system resource read', { uri, count: response.patterns.length });
     return JSON.stringify(response.patterns, null, 2);
   }

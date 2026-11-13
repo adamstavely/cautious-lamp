@@ -25,9 +25,12 @@ const prettyFormat = winston.format.combine(
 );
 
 // Create transports
+// stdout is the MCP stdio JSON-RPC channel, so every level must go to stderr.
+// Anything written to stdout that isn't a JSON-RPC message breaks the client.
 const transports: winston.transport[] = [
   new winston.transports.Console({
     format: logFormat === 'pretty' ? prettyFormat : customFormat,
+    stderrLevels: Object.keys(winston.config.npm.levels),
   }),
 ];
 

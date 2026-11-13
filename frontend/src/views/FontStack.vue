@@ -234,7 +234,7 @@
                     <div 
                       class="leading-relaxed" 
                       :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                      :style="{ fontFamily: fontStack.join(', ') }"
+                      :style="{ fontFamily: fontFamilyValue }"
                     >
                       The quick brown fox jumps over the lazy dog. This demonstrates how the font stack falls back to system fonts if the primary font fails to load.
                     </div>
@@ -250,11 +250,12 @@
                       class="font-mono text-sm break-all" 
                       :class="isDarkMode ? 'text-green-300' : 'text-green-400'"
                     >
-                      font-family: {{ fontStack.map(f => `'${f}'`).join(', ') }};
+                      font-family: {{ fontFamilyValue }};
                     </div>
                   </div>
                   
                   <!-- Copy Button -->
+                  <InlineNotice :notice="stackNotice" @dismiss="clearStackNotice" />
                   <button @click="copyFontStack" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
                     Copy CSS
                   </button>
@@ -386,8 +387,9 @@
                         ? 'bg-slate-700 text-white border-gray-600' 
                         : 'bg-white text-gray-900 border-gray-200'"
                     >
-                      https://fonts.googleapis.com/css2?family={{ selectedFontForSubsetting.replace(/\s/g, '+') }}:wght@{{ selectedWeightForSubsetting }}&subset={{ selectedSubsets.join(',') }}
+                      {{ subsetUrl }}
                     </div>
+                    <InlineNotice :notice="subsetNotice" class="mb-3" @dismiss="clearSubsetNotice" />
                     <button @click="copySubsetURL" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
                       Copy URL
                     </button>
@@ -403,16 +405,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
 import { CaseSensitive } from 'lucide-vue-next';
 import fontData from '../assets/fonts.json';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice: stackNotice, showNotice: showStackNotice, clearNotice: clearStackNotice } = useNotice();
+const { notice: subsetNotice, showNotice: showSubsetNotice, clearNotice: clearSubsetNotice } = useNotice();
 const selectedFontForStack = ref('');
 const fontStack = ref(['Arial', 'Helvetica', 'sans-serif']);
 const newFontInStack = ref('');
@@ -420,6 +427,37 @@ const defaultFontStack = ref(['Arial', 'Helvetica', 'sans-serif']);
 const selectedFontForSubsetting = ref('');
 const selectedWeightForSubsetting = ref('');
 const selectedSubsets = ref([]);
+
+// CSS generic families are keywords and must not be quoted ('sans-serif' in
+// quotes means a font literally named "sans-serif").
+const GENERIC_FAMILIES = new Set([
+  'serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui',
+  'ui-serif', 'ui-sans-serif', 'ui-monospace', 'ui-rounded', 'math', 'emoji', 'fangsong',
+]);
+
+const formatFamily = (name) => {
+  if (GENERIC_FAMILIES.has(name.toLowerCase())) return name.toLowerCase();
+  return `'${name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+};
+
+const fontFamilyValue = computed(() => fontStack.value.map(formatFamily).join(', '));
+
+// Load the selected Google font so the preview actually shows it.
+const loadedFontLinks = new Map();
+watch(selectedFontForStack, (name) => {
+  const font = fontData.find((f) => f.name === name);
+  if (!font?.url || loadedFontLinks.has(font.url) || !font.url.startsWith('https://fonts.googleapis.com/')) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = font.url;
+  document.head.appendChild(link);
+  loadedFontLinks.set(font.url, link);
+});
+
+onBeforeUnmount(() => {
+  loadedFontLinks.forEach((link) => link.remove());
+  loadedFontLinks.clear();
+});
 
 // Create font options for dropdown
 const fontOptions = computed(() => {
@@ -435,10 +473,17 @@ function getSelectedFontForStack() {
 }
 
 function addToFontStack(fontName) {
-  if (!fontName || !fontName.trim()) return;
-  const trimmed = fontName.trim();
-  if (!fontStack.value.includes(trimmed)) {
-    fontStack.value.push(trimmed);
+  // Strip quotes/separators people paste from CSS ("'Inter', ...").
+  const trimmed = (fontName || '').replace(/["';,{}]/g, '').trim();
+  if (!trimmed) return;
+  if (!fontStack.value.some((f) => f.toLowerCase() === trimmed.toLowerCase())) {
+    // Keep a trailing generic family last, so it stays the final fallback.
+    const last = fontStack.value[fontStack.value.length - 1];
+    if (last && GENERIC_FAMILIES.has(last.toLowerCase()) && !GENERIC_FAMILIES.has(trimmed.toLowerCase())) {
+      fontStack.value.splice(fontStack.value.length - 1, 0, trimmed);
+    } else {
+      fontStack.value.push(trimmed);
+    }
   }
   newFontInStack.value = '';
 }
@@ -458,11 +503,11 @@ function resetFontStack() {
 }
 
 function copyFontStack() {
-  const css = `font-family: ${fontStack.value.map(f => `'${f}'`).join(', ')};`;
+  const css = `font-family: ${fontFamilyValue.value};`;
   navigator.clipboard.writeText(css).then(() => {
-    alert('Font stack CSS copied to clipboard!');
+    showStackNotice('Font stack CSS copied to clipboard.', 'success');
   }).catch(() => {
-    alert('Failed to copy to clipboard');
+    showStackNotice('Failed to copy to clipboard.', 'error');
   });
 }
 
@@ -476,10 +521,9 @@ function buildFontStack(fontName) {
   };
   
   const font = fontData.find(f => f.name === fontName);
-  if (font && font.tags && font.tags.length > 0) {
-    return stacks[font.tags[0]] || stacks['sans-serif'];
-  }
-  return stacks['sans-serif'];
+  const stack = (font?.tags?.length && stacks[font.tags[0]]) || stacks['sans-serif'];
+  // Drop duplicates (e.g. choosing Arial itself)
+  return stack.filter((name, i) => stack.indexOf(name) === i);
 }
 
 // Font Subsetting functions
@@ -491,7 +535,8 @@ function getSelectedFontForSubsetting() {
 function getAvailableWeightsForSubsetting() {
   const font = getSelectedFontForSubsetting();
   if (!font || !font.weights) return [];
-  return font.weights.sort((a, b) => parseInt(a) - parseInt(b));
+  // Copy before sorting: don't mutate the shared font data.
+  return [...font.weights].sort((a, b) => parseInt(a) - parseInt(b));
 }
 
 function getAvailableSubsetsForFont() {
@@ -507,7 +552,7 @@ function getAvailableSubsetsForFont() {
     { value: 'greek-ext', label: 'Greek Extended', base: 'greek' },
     { value: 'arabic', label: 'Arabic', base: 'arabic' },
     { value: 'devanagari', label: 'Devanagari', base: 'devanagari' },
-    { value: 'chinese', label: 'Chinese', base: 'chinese' }
+    { value: 'chinese-simplified', label: 'Chinese (Simplified)', base: 'chinese' }
   ];
   
   // Filter to only show subsets for scripts the font supports
@@ -516,13 +561,21 @@ function getAvailableSubsetsForFont() {
   });
 }
 
+// The css2 API ignores `subset`; the original css API still honours it.
+const subsetUrl = computed(() => {
+  if (!selectedFontForSubsetting.value || selectedSubsets.value.length === 0 || !selectedWeightForSubsetting.value) return '';
+  const family = encodeURIComponent(selectedFontForSubsetting.value).replace(/%20/g, '+');
+  const weight = encodeURIComponent(selectedWeightForSubsetting.value);
+  const subsets = selectedSubsets.value.map(encodeURIComponent).join(',');
+  return `https://fonts.googleapis.com/css?family=${family}:${weight}&subset=${subsets}&display=swap`;
+});
+
 function copySubsetURL() {
-  if (!selectedFontForSubsetting.value || selectedSubsets.value.length === 0 || !selectedWeightForSubsetting.value) return;
-  const url = `https://fonts.googleapis.com/css2?family=${selectedFontForSubsetting.value.replace(/\s/g, '+')}:wght@${selectedWeightForSubsetting.value}&subset=${selectedSubsets.value.join(',')}`;
-  navigator.clipboard.writeText(url).then(() => {
-    alert('Font subset URL copied to clipboard!');
+  if (!subsetUrl.value) return;
+  navigator.clipboard.writeText(subsetUrl.value).then(() => {
+    showSubsetNotice('Font subset URL copied to clipboard.', 'success');
   }).catch(() => {
-    alert('Failed to copy to clipboard');
+    showSubsetNotice('Failed to copy to clipboard.', 'error');
   });
 }
 
@@ -557,35 +610,6 @@ const weightOptions = computed(() => {
 
 
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>

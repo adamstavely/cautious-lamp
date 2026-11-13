@@ -9,8 +9,55 @@
           <div class="flex gap-4" style="min-height: calc(100vh - 200px);">
             <!-- Main Content Area -->
             <div class="flex-1 overflow-y-auto space-y-4">
+      <InlineNotice :notice="notice" @dismiss="clearNotice" />
+
+      <!-- Loading -->
+      <div v-if="loadState === 'loading'" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
+        <div class="p-8 text-center">
+          <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'">Loading review…</p>
+        </div>
+      </div>
+
+      <!-- Expired, not shared, not found, or failed to load -->
+      <div v-else-if="errorState" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg" role="alert">
+        <div class="p-8 text-center">
+          <div class="flex justify-center mb-4">
+            <div :class="isDarkMode ? 'bg-red-900/20' : 'bg-red-100'" class="w-16 h-16 rounded-full flex items-center justify-center">
+              <svg :class="isDarkMode ? 'text-red-400' : 'text-red-600'" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <h2 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-2xl font-bold mb-2">{{ errorState.title }}</h2>
+          <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="mb-4">{{ errorState.message }}</p>
+          <button
+            v-if="errorState.retry"
+            @click="retryLoad"
+            class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors"
+            :class="isDarkMode ? 'bg-indigo-500 hover:bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+
+      <!-- Waiting for the password -->
+      <div v-else-if="loadState === 'password'" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
+        <div class="p-8 text-center">
+          <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="mb-4">This review is password protected.</p>
+          <button
+            v-if="!passwordRequired"
+            @click="passwordRequired = true"
+            class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors"
+            :class="isDarkMode ? 'bg-indigo-500 hover:bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'"
+          >
+            Enter password
+          </button>
+        </div>
+      </div>
+
       <!-- Completed Review Message -->
-      <div v-if="reviewCompleted" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
+      <div v-else-if="reviewCompleted" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
         <div class="p-8 text-center">
           <div class="flex justify-center mb-4">
             <div :class="isDarkMode ? 'bg-green-900/20' : 'bg-green-100'" class="w-16 h-16 rounded-full flex items-center justify-center">
@@ -26,11 +73,11 @@
       </div>
 
       <!-- File Preview Section -->
-      <div v-if="!reviewCompleted && (!passwordRequired || passwordValidated)" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
+      <div v-else :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
         <div :class="isDarkMode ? 'border-slate-700' : 'border-gray-200'" class="border-b px-6 py-4">
           <div class="flex items-center justify-between mb-3">
             <div class="flex-1">
-              <h2 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-xl font-bold mb-2">{{ metadata.filename }}</h2>
+              <h2 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-xl font-bold mb-2 flex items-center gap-3 flex-wrap">{{ metadata.filename }} <DemoDataBadge /></h2>
               <p v-if="metadata.designer" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'" class="text-sm">Designer: {{ metadata.designer }}</p>
             </div>
             <div class="flex items-center gap-3">
@@ -73,10 +120,10 @@
           ref="previewFrameRef"
           :url="previewUrl" 
           :review-id="reviewId"
+          :version-id="selectedVersion"
+          :content-type="previewContentType"
           :read-only="reviewCompleted"
-          @annotation-added="handleAnnotationAdded"
-          @annotation-updated="handleAnnotationUpdated"
-          @annotation-deleted="handleAnnotationDeleted"
+          @annotations-changed="handleAnnotationsChanged"
         />
           </div>
           
@@ -97,7 +144,10 @@
                   <PreviewFrame 
                     :url="leftPreviewUrl" 
                     :review-id="reviewId"
-                    :read-only="reviewCompleted"
+                    :version-id="leftVersion"
+                    :content-type="leftContentType"
+                    :sync-annotations="false"
+                    read-only
                   />
                 </div>
               </div>
@@ -116,7 +166,10 @@
                   <PreviewFrame 
                     :url="rightPreviewUrl" 
                     :review-id="reviewId"
-                    :read-only="reviewCompleted"
+                    :version-id="rightVersion"
+                    :content-type="rightContentType"
+                    :sync-annotations="false"
+                    read-only
                   />
                 </div>
               </div>
@@ -127,12 +180,14 @@
 
     <PasswordPrompt
       v-model="passwordRequired"
+      :error="passwordError"
+      :loading="passwordSubmitting"
       @submit="submitPassword"
     />
     </div>
 
     <!-- Right Sidebar -->
-    <div v-if="passwordValidated || reviewCompleted" class="w-72 flex-shrink-0">
+    <div v-if="loadState === 'ready'" class="w-72 flex-shrink-0">
       <div class="space-y-4">
         <!-- Designer Tools Card -->
         <div v-if="isDesigner && !reviewCompleted" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
@@ -144,9 +199,9 @@
               </svg>
               <h3 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-sm font-bold uppercase tracking-wider">DESIGNER TOOLS</h3>
             </div>
-            <div class="grid gap-2" :class="metadata.password ? 'grid-cols-4' : 'grid-cols-3'">
-              <!-- Change Password -->
-              <v-tooltip v-if="metadata.password" text="Change Password">
+            <div class="grid gap-2 grid-cols-4">
+              <!-- Set or change the password (the API never returns it, only hasPassword) -->
+              <v-tooltip :text="metadata.hasPassword ? 'Change Password' : 'Set Password'">
                 <template #activator="{ props }">
                   <button
                     @click="handleChangePassword"
@@ -226,6 +281,8 @@
           :designer="metadata.designer"
           :workflow-history="metadata.workflowHistory || []"
           :review-completed="reviewCompleted"
+          :resubmit-target="resubmitTarget"
+          :bypass-client-review="!!metadata.bypassClientReview"
           @workflow-approve="handleApprove"
           @workflow-reject="handleReject"
           @workflow-move-to-client-review="handleMoveToClientReview"
@@ -255,10 +312,20 @@
       @version-uploaded="handleVersionUploaded"
     />
 
+    <!-- Request Changes Modal -->
+    <PromptModal
+      v-model="showRejectModal"
+      title="Request Changes"
+      label="What needs to change? (optional)"
+      placeholder="Reason for the designer"
+      :required="false"
+      @submit="confirmReject"
+    />
+
     <!-- Change Password Modal -->
     <PromptModal
       v-model="showPasswordModal"
-      title="Change Password"
+      :title="metadata.hasPassword ? 'Change Password' : 'Set Password'"
       label="Enter new password (leave empty to remove password)"
       placeholder="Enter new password or leave empty"
       type="password"
@@ -392,25 +459,18 @@
       @confirm="confirmMarkCompleted"
     />
 
-    <!-- Alert Modal -->
-    <AlertModal
-      v-model="showAlert"
-      :title="alertTitle"
-      :message="alertMessage"
-      :type="alertType"
-    />
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import VersionSelector from '../components/review-ui/VersionSelector.vue';
 import PreviewFrame from '../components/review-ui/PreviewFrame.vue';
 import CommentsSidebar from '../components/review-ui/CommentsSidebar.vue';
@@ -418,33 +478,52 @@ import WorkflowCard from '../components/review-ui/WorkflowCard.vue';
 import VersionUploadModal from '../components/review-ui/VersionUploadModal.vue';
 import PromptModal from '../components/review-ui/PromptModal.vue';
 import PasswordPrompt from '../components/review-ui/PasswordPrompt.vue';
-import AlertModal from '../components/review-ui/AlertModal.vue';
 import ConfirmModal from '../components/review-ui/ConfirmModal.vue';
-import { mockAPI, isMockMode, mockReviews } from '../mockData.js';
-import { reviewAPI, workflowAPI, commentAPI, versionAPI, passwordAPI } from '../services/api.js';
+import DemoDataBadge from '../components/review-ui/DemoDataBadge.vue';
+import { getCurrentUser } from '../mockData.js';
+import {
+  reviewAPI,
+  workflowAPI,
+  commentAPI,
+  passwordAPI,
+  reviewPasswords,
+  isPasswordRequired,
+  errorStatus,
+  apiErrorMessage,
+} from '../services/api.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 
 const route = useRoute();
-const reviewId = route.params.id;
+// The review shown follows the route, so navigating between reviews reloads
+const reviewId = computed(() => String(route.params.id || ''));
 
-// Check if dark mode is active - make it reactive
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 
-// Watch for dark class changes on html element using MutationObserver
-let darkModeObserver = null;
-let darkModeInterval = null;
+// The acting user, read once (identity is switched elsewhere and the page reloaded)
+const user = getCurrentUser();
+const currentUserRole = ref(user.role || 'designer'); // 'designer', 'client', 'art_director', 'creative_director'
+
+const REVIEW_STAGES = ['client_review', 'art_director_review', 'creative_director_review'];
+const emptyReview = () => ({ filename: '', versions: [], workflowState: 'draft', workflowHistory: [], hasPassword: false });
+
+// 'loading' | 'ready' | 'password' | 'expired' | 'completed' | 'forbidden' | 'notfound' | 'error'
+const loadState = ref('loading');
+const loadErrorMessage = ref('');
 
 const previewFrameRef = ref(null);
-
-const metadata = ref({ filename: '', versions: [], workflowState: 'draft', workflowHistory: [] });
+const metadata = ref(emptyReview());
 const selectedVersion = ref('');
 const previewUrl = ref('');
-const password = ref('');
-const passwordRequired = ref(false);
-const passwordValidated = ref(false);
+const previewContentType = ref(null);
 const comments = ref([]);
 const reviewCompleted = ref(false);
-const currentUser = ref('Current User'); // In real app, this would come from auth
-const currentUserRole = ref(localStorage.getItem('userRole') || 'designer'); // 'designer', 'client', 'art_director', 'creative_director'
+
+// Password prompt
+const passwordRequired = ref(false);
+const passwordError = ref('');
+const passwordSubmitting = ref(false);
 
 // Comparison mode state
 const comparisonMode = ref(false);
@@ -452,554 +531,389 @@ const leftVersion = ref('');
 const rightVersion = ref('');
 const leftPreviewUrl = ref('');
 const rightPreviewUrl = ref('');
-
-// Alert modal state
-const showAlert = ref(false);
-const alertTitle = ref('');
-const alertMessage = ref('');
-const alertType = ref('error');
+const leftContentType = ref(null);
+const rightContentType = ref(null);
 
 // Designer tools modals state
 const showUploadModal = ref(false);
 const showPasswordModal = ref(false);
 const showSharingModal = ref(false);
 const showConfirmModal = ref(false);
+const showRejectModal = ref(false);
 const confirmModalTitle = ref('');
 const confirmModalMessage = ref('');
-const sharingType = ref('anyone'); // 'anyone' or 'restricted'
+const sharingType = ref('anyone'); // 'anyone' or 'restricted' (API: 'approved_emails')
 const approvedPeople = ref(['']);
 
+/** 410 means either completed or expired; the API says which */
+const goneState = (error) => (error?.response?.data?.reason === 'completed' ? 'completed' : 'expired');
+
+const errorStates = {
+  expired: { title: 'This review link has expired', message: 'Ask the designer to extend it if you still need access.' },
+  completed: { title: 'Review complete', message: 'The designer has marked this review as complete, so it no longer accepts feedback.' },
+  forbidden: { title: "This review hasn't been shared with you", message: 'Ask the designer to add your email address to the review.' },
+  notfound: { title: 'Review not found', message: 'The link may be wrong, or the review may have been deleted.' },
+};
+const errorState = computed(() => {
+  if (loadState.value === 'error') return { title: 'The review could not be loaded', message: loadErrorMessage.value, retry: true };
+  return errorStates[loadState.value] || null;
+});
+
+const isDesigner = computed(() => {
+  return currentUserRole.value === 'designer' || (!!metadata.value.designerEmail && metadata.value.designerEmail === user.email);
+});
+
+// After a rejection the review is back in draft; resubmit to the stage that rejected it
+const resubmitTarget = computed(() => {
+  if (metadata.value.workflowState !== 'draft') return null;
+  const history = [...(metadata.value.workflowHistory || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  const rejectedAt = history.findIndex((entry) => entry.action === 'rejected');
+  if (rejectedAt === -1) return null;
+  // Resubmitted since then? Then there's nothing to resubmit.
+  if (history.slice(0, rejectedAt).some((entry) => entry.action === 'resubmitted' || entry.action === 'moved_to_review')) return null;
+  const stage = history.slice(rejectedAt).find((entry) => REVIEW_STAGES.includes(entry.stage))?.stage;
+  return stage || null;
+});
+
+/* ---------------------------------------------------------------------- */
+/* Errors                                                                  */
+/* ---------------------------------------------------------------------- */
+
+/** Handle a failed call: switch to the right page state, or show a notice. */
+const handleError = (error, fallback) => {
+  console.error(fallback, error);
+  const status = errorStatus(error);
+  if (isPasswordRequired(error)) {
+    reviewPasswords.clear(reviewId.value);
+    passwordError.value = '';
+    loadState.value = 'password';
+    passwordRequired.value = true;
+    return;
+  }
+  if (status === 410) {
+    loadState.value = goneState(error);
+    return;
+  }
+  if (status === 403) {
+    loadState.value = 'forbidden';
+    return;
+  }
+  showNotice(apiErrorMessage(error, fallback), 'error');
+};
+
+/* ---------------------------------------------------------------------- */
+/* Loading                                                                 */
+/* ---------------------------------------------------------------------- */
+
+// Each load gets a token; responses for an older review or version are dropped
+let reviewToken = 0;
+let versionToken = 0;
+let commentsToken = 0;
+const compareTokens = { left: 0, right: 0 };
+
+const applyReview = (review) => {
+  metadata.value = { ...emptyReview(), ...review };
+  reviewCompleted.value = !!review.completed;
+};
+
+const resetPage = () => {
+  reviewToken += 1;
+  versionToken += 1;
+  commentsToken += 1;
+  compareTokens.left += 1;
+  compareTokens.right += 1;
+  loadState.value = 'loading';
+  loadErrorMessage.value = '';
+  metadata.value = emptyReview();
+  selectedVersion.value = '';
+  previewUrl.value = '';
+  previewContentType.value = null;
+  comments.value = [];
+  reviewCompleted.value = false;
+  comparisonMode.value = false;
+  leftVersion.value = '';
+  rightVersion.value = '';
+  leftPreviewUrl.value = '';
+  rightPreviewUrl.value = '';
+  passwordRequired.value = false;
+  passwordError.value = '';
+  clearNotice();
+};
+
+// Pick the version to show: keep the current one if it still exists, else the latest
+const chooseVersion = (versions, preferred) => {
+  if (!versions?.length) return '';
+  if (preferred && versions.some((v) => v.id === preferred)) return preferred;
+  return versions[versions.length - 1].id;
+};
+
+const loadReview = async ({ password } = {}) => {
+  const id = reviewId.value;
+  if (!id) return;
+  const token = ++reviewToken;
+
+  try {
+    const review = password !== undefined ? await reviewAPI.getReview(id, password) : await reviewAPI.getReview(id);
+    if (token !== reviewToken) return;
+    if (password) reviewPasswords.set(id, password);
+
+    applyReview(review);
+    passwordRequired.value = false;
+    passwordError.value = '';
+    loadState.value = 'ready';
+    trackReviewView(id);
+
+    selectedVersion.value = chooseVersion(review.versions, selectedVersion.value);
+    if (reviewCompleted.value) {
+      // Completed reviews show their comments, read-only, without the preview
+      await loadComments();
+      return;
+    }
+    await loadVersion();
+  } catch (error) {
+    if (token !== reviewToken) return;
+    if (isPasswordRequired(error)) {
+      reviewPasswords.clear(id);
+      passwordError.value = password ? 'That password is not correct.' : '';
+      loadState.value = 'password';
+      passwordRequired.value = true;
+      return;
+    }
+    const status = errorStatus(error);
+    if (status === 410) loadState.value = goneState(error);
+    else if (status === 403) loadState.value = 'forbidden';
+    else if (status === 404) loadState.value = 'notfound';
+    else {
+      console.error('Failed to load review:', error);
+      loadErrorMessage.value = apiErrorMessage(error, 'Please try again.');
+      loadState.value = 'error';
+    }
+  }
+};
+
+/** Re-fetch the review after a change (keeps the page as it is on failure). */
+const refreshReview = async () => {
+  const id = reviewId.value;
+  const token = reviewToken;
+  try {
+    const review = await reviewAPI.getReview(id);
+    if (token !== reviewToken || id !== reviewId.value) return null;
+    applyReview(review);
+    return review;
+  } catch (error) {
+    handleError(error, 'Failed to refresh the review.');
+    return null;
+  }
+};
+
+const submitPassword = async (input) => {
+  passwordSubmitting.value = true;
+  try {
+    await loadReview({ password: input });
+  } finally {
+    passwordSubmitting.value = false;
+  }
+};
+
+const retryLoad = () => {
+  loadState.value = 'loading';
+  loadReview();
+};
+
+/** URL and content type to preview for a version (URL reviews without versions show their link). */
+const fetchVersionPreview = async (versionId) => {
+  const review = metadata.value;
+  if (!versionId) {
+    return review.sourceType === 'url' && review.url ? { url: review.url, contentType: null } : { url: '', contentType: null };
+  }
+  const version = review.versions.find((v) => v.id === versionId);
+  const url = await reviewAPI.getVersion(reviewId.value, versionId);
+  return { url, contentType: version?.contentType || null };
+};
+
 const loadVersion = async () => {
+  const token = ++versionToken;
   try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      const res = await mockAPI.getVersion(reviewId, selectedVersion.value);
-      previewUrl.value = res.url;
-      await loadComments();
-    } else {
-      const url = await reviewAPI.getVersion(reviewId, selectedVersion.value);
-      previewUrl.value = url;
-      await loadComments();
-    }
+    const { url, contentType } = await fetchVersionPreview(selectedVersion.value);
+    if (token !== versionToken) return;
+    previewContentType.value = contentType;
+    previewUrl.value = url;
   } catch (error) {
-    console.error('Failed to load version:', error);
+    if (token !== versionToken) return;
+    previewUrl.value = '';
+    handleError(error, 'Failed to load this version.');
   }
+  if (token === versionToken) await loadComments();
 };
 
-const loadLeftVersion = async () => {
+const loadSide = async (side) => {
+  const token = ++compareTokens[side];
+  const versionId = side === 'left' ? leftVersion.value : rightVersion.value;
   try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      const res = await mockAPI.getVersion(reviewId, leftVersion.value);
-      leftPreviewUrl.value = res.url;
-    } else {
-      const url = await reviewAPI.getVersion(reviewId, leftVersion.value);
+    const { url, contentType } = await fetchVersionPreview(versionId);
+    if (token !== compareTokens[side]) return;
+    if (side === 'left') {
+      leftContentType.value = contentType;
       leftPreviewUrl.value = url;
-    }
-  } catch (error) {
-    console.error('Failed to load left version:', error);
-  }
-};
-
-const loadRightVersion = async () => {
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      const res = await mockAPI.getVersion(reviewId, rightVersion.value);
-      rightPreviewUrl.value = res.url;
     } else {
-      const url = await reviewAPI.getVersion(reviewId, rightVersion.value);
+      rightContentType.value = contentType;
       rightPreviewUrl.value = url;
     }
   } catch (error) {
-    console.error('Failed to load right version:', error);
+    if (token !== compareTokens[side]) return;
+    handleError(error, 'Failed to load this version.');
   }
 };
 
+const loadLeftVersion = () => loadSide('left');
+const loadRightVersion = () => loadSide('right');
+
 const toggleComparisonMode = () => {
   comparisonMode.value = !comparisonMode.value;
-  
-  if (comparisonMode.value && metadata.value.versions.length >= 2) {
-    // Initialize comparison with first two versions
-    leftVersion.value = metadata.value.versions[0].id;
-    rightVersion.value = metadata.value.versions.length > 1 ? metadata.value.versions[1].id : metadata.value.versions[0].id;
+
+  const versions = metadata.value.versions;
+  if (comparisonMode.value && versions.length >= 2) {
+    // Compare the two latest versions
+    leftVersion.value = versions[versions.length - 2].id;
+    rightVersion.value = versions[versions.length - 1].id;
     loadLeftVersion();
     loadRightVersion();
   }
 };
 
-const openInNewTab = () => {
-  if (previewUrl.value) {
-    window.open(previewUrl.value, '_blank');
+const openInNewTab = async () => {
+  // Signed file links expire after 10 minutes, so fetch a fresh one. Open the tab first
+  // (synchronously, so it isn't blocked as a popup), then point it at the file.
+  const win = window.open('about:blank', '_blank');
+  if (!win) {
+    showNotice('Your browser blocked the new tab. Allow pop-ups for this site and try again.', 'warning');
+    return;
   }
-};
-
-
-const submitPassword = async (input) => {
+  win.opener = null;
   try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      const res = await mockAPI.getReview(reviewId, input);
-      metadata.value = res;
-      selectedVersion.value = res.versions[0].id;
-      passwordValidated.value = true;
-      loadVersion();
-    } else {
-      const res = await reviewAPI.getReview(reviewId, input);
-      metadata.value = res;
-      selectedVersion.value = res.versions[0].id;
-      passwordValidated.value = true;
-      loadVersion();
-    }
-  } catch {
-    showAlertMessage('Error', 'Invalid password', 'error');
-  }
-};
-
-const showAlertMessage = (title, message, type = 'error') => {
-  alertTitle.value = title;
-  alertMessage.value = message;
-  alertType.value = type;
-  showAlert.value = true;
-};
-
-// Comment handling functions
-const handleCommentAdded = async (comment) => {
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      await mockAPI.addComment(reviewId, comment);
-      await loadComments();
-      // Refresh annotations in WebViewer to sync
-      if (previewFrameRef.value) {
-        await previewFrameRef.value.refreshAnnotations();
-      }
-    } else {
-      await commentAPI.addComment(reviewId, comment.text, comment.version, comment.type, comment.resolved);
-      await loadComments();
-      // Refresh annotations in WebViewer to sync
-      if (previewFrameRef.value) {
-        await previewFrameRef.value.refreshAnnotations();
-      }
-    }
+    const { url } = await fetchVersionPreview(selectedVersion.value);
+    if (url) win.location.href = url;
+    else win.close();
   } catch (error) {
-    console.error('Failed to add comment:', error);
+    win.close();
+    handleError(error, 'Failed to open the file.');
   }
 };
 
-const handleCommentUpdated = async (commentId, updates) => {
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      await mockAPI.updateComment(reviewId, commentId, updates);
-      await loadComments();
-      // Refresh annotations in WebViewer to sync
-      if (previewFrameRef.value) {
-        await previewFrameRef.value.refreshAnnotations();
-      }
-    } else {
-      await commentAPI.updateComment(reviewId, commentId, updates);
-      await loadComments();
-      // Refresh annotations in WebViewer to sync
-      if (previewFrameRef.value) {
-        await previewFrameRef.value.refreshAnnotations();
-      }
-    }
-  } catch (error) {
-    console.error('Failed to update comment:', error);
-  }
-};
-
-const handleReplyAdded = async (commentId, reply) => {
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      await mockAPI.addReply(reviewId, commentId, reply);
-      await loadComments();
-      // Refresh annotations in WebViewer to sync
-      if (previewFrameRef.value) {
-        await previewFrameRef.value.refreshAnnotations();
-      }
-    } else {
-      await commentAPI.addReply(reviewId, commentId, reply.text);
-      await loadComments();
-      // Refresh annotations in WebViewer to sync
-      if (previewFrameRef.value) {
-        await previewFrameRef.value.refreshAnnotations();
-      }
-    }
-  } catch (error) {
-    console.error('Failed to add reply:', error);
-  }
-};
-
-const handleEmojiReactionToggled = async (commentId, emoji) => {
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      await mockAPI.toggleEmojiReaction(reviewId, commentId, emoji);
-      await loadComments();
-      // Refresh annotations in WebViewer to sync
-      if (previewFrameRef.value) {
-        await previewFrameRef.value.refreshAnnotations();
-      }
-    } else {
-      await commentAPI.toggleReaction(reviewId, commentId, emoji);
-      await loadComments();
-      // Refresh annotations in WebViewer to sync
-      if (previewFrameRef.value) {
-        await previewFrameRef.value.refreshAnnotations();
-      }
-    }
-  } catch (error) {
-    console.error('Failed to toggle emoji reaction:', error);
-  }
-};
-
-const handleEmojiReactionToggledReply = async (commentId, replyId, emoji) => {
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      await mockAPI.toggleEmojiReactionReply(reviewId, commentId, replyId, emoji);
-      await loadComments();
-      // Refresh annotations in WebViewer to sync
-      if (previewFrameRef.value) {
-        await previewFrameRef.value.refreshAnnotations();
-      }
-    } else {
-      await commentAPI.toggleReplyReaction(reviewId, commentId, replyId, emoji);
-      await loadComments();
-      // Refresh annotations in WebViewer to sync
-      if (previewFrameRef.value) {
-        await previewFrameRef.value.refreshAnnotations();
-      }
-    }
-  } catch (error) {
-    console.error('Failed to toggle emoji reaction on reply:', error);
-  }
-};
-
-// Annotation handling functions (from WebViewer - syncs with backend)
-const handleAnnotationAdded = async (comment) => {
-  // Annotation already saved to backend via PreviewFrame
-  // Just reload comments to sync CommentsSidebar
-  await loadComments();
-};
-
-const handleAnnotationUpdated = async (comment) => {
-  // Annotation already updated in backend via PreviewFrame
-  // Just reload comments to sync CommentsSidebar
-  await loadComments();
-};
-
-const handleAnnotationDeleted = async (comment) => {
-  // Annotation already deleted from backend via PreviewFrame
-  // Just reload comments to sync CommentsSidebar
-  await loadComments();
-};
-
-// History helper functions (moved from CommentsSidebar)
-const sortedHistory = computed(() => {
-  if (!metadata.value.workflowHistory || !Array.isArray(metadata.value.workflowHistory) || metadata.value.workflowHistory.length === 0) {
-    return [];
-  }
-  // Sort by timestamp, newest first
-  const sorted = [...metadata.value.workflowHistory].sort((a, b) => {
-    const dateA = new Date(a.timestamp);
-    const dateB = new Date(b.timestamp);
-    return dateB - dateA; // Newest first
-  });
-  return sorted;
-});
-
-const formatTimestamp = (timestamp) => {
-  if (!timestamp) return 'Unknown date';
-  try {
-    return new Date(timestamp).toLocaleString();
-  } catch (error) {
-    return 'Invalid date';
-  }
-};
-
-const getHistoryLabel = (stage, action) => {
-  const stageLabels = {
-    'draft': 'Draft',
-    'client_review': 'Client Review',
-    'client_approved': 'Client Approved',
-    'art_director_review': 'Art Director Review',
-    'art_director_approved': 'Art Director Approved',
-    'ad_changes_requested': 'AD Changes Requested',
-    'creative_director_review': 'Creative Director Review',
-    'cd_changes_requested': 'CD Changes Requested',
-    'approved': 'Approved & Released'
-  };
-  
-  const actionLabels = {
-    'uploaded': 'Uploaded',
-    'created_from_url': 'Created from URL',
-    'moved_to_review': 'Moved to Review',
-    'approved': 'Approved',
-    'rejected': 'Rejected',
-    'resubmitted': 'Resubmitted',
-    'version_uploaded': 'Version Uploaded',
-    'extended': 'Expiration Extended',
-    'password_set': 'Password Set',
-    'password_removed': 'Password Removed'
-  };
-  
-  const stageLabel = stageLabels[stage] || stage;
-  const actionLabel = actionLabels[action] || action;
-  
-  // For version uploads, include version label if available
-  if (action === 'version_uploaded') {
-    return actionLabel;
-  }
-  
-  return `${stageLabel} - ${actionLabel}`;
-};
+/* ---------------------------------------------------------------------- */
+/* Comments                                                                */
+/* ---------------------------------------------------------------------- */
 
 const loadComments = async () => {
+  const id = reviewId.value;
+  const token = ++commentsToken;
   try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      // Load all comments for the review (not filtered by version)
-      // This allows seeing all comments across versions
-      const res = await mockAPI.getComments(reviewId);
-      // Create new object references to ensure Vue reactivity detects nested changes
-      comments.value = res.map(comment => ({
-        ...comment,
-        reactions: comment.reactions ? [...comment.reactions] : [],
-        replies: comment.replies ? comment.replies.map(reply => ({
-          ...reply,
-          reactions: reply.reactions ? [...reply.reactions] : []
-        })) : []
-      }));
-    } else {
-      const res = await commentAPI.getComments(reviewId, selectedVersion.value);
-      // Create new object references to ensure Vue reactivity detects nested changes
-      comments.value = res.map(comment => ({
-        ...comment,
-        reactions: comment.reactions ? [...comment.reactions] : [],
-        replies: comment.replies ? comment.replies.map(reply => ({
-          ...reply,
-          reactions: reply.reactions ? [...reply.reactions] : []
-        })) : []
-      }));
-    }
+    // Completed reviews show every version's comments
+    const versionId = reviewCompleted.value ? null : selectedVersion.value || null;
+    const res = await commentAPI.getComments(id, versionId);
+    if (token !== commentsToken) return;
+    comments.value = res || [];
   } catch (error) {
-    console.error('Failed to load comments:', error);
-    comments.value = [];
+    if (token !== commentsToken) return;
+    handleError(error, 'Failed to load comments.');
   }
 };
 
-const getHistoryColor = (action) => {
-  const colors = {
-    'uploaded': 'blue',
-    'created_from_url': 'blue',
-    'moved_to_review': 'indigo',
-    'approved': 'green',
-    'rejected': 'red',
-    'resubmitted': 'orange',
-    'version_uploaded': 'purple',
-    'extended': 'teal',
-    'password_set': 'amber',
-    'password_removed': 'orange'
-  };
-  return colors[action] || 'grey';
-};
-
-// Workflow helper functions
-const getWorkflowLabel = (state) => {
-  const labels = {
-    'draft': 'Draft',
-    'client_review': 'Client Review',
-    'client_approved': 'Client Approved',
-    'art_director_review': 'Art Director Review',
-    'art_director_approved': 'Art Director Approved',
-    'ad_changes_requested': 'AD Changes Requested',
-    'creative_director_review': 'Creative Director Review',
-    'cd_changes_requested': 'CD Changes Requested',
-    'approved': 'Approved & Released'
-  };
-  return labels[state] || state;
-};
-
-const getWorkflowColor = (state) => {
-  const colors = {
-    'draft': 'grey',
-    'client_review': 'blue',
-    'client_approved': 'light-blue',
-    'art_director_review': 'purple',
-    'art_director_approved': 'deep-purple',
-    'ad_changes_requested': 'orange',
-    'creative_director_review': 'indigo',
-    'cd_changes_requested': 'orange',
-    'approved': 'green'
-  };
-  return colors[state] || 'grey';
-};
-
-const isDesigner = computed(() => {
-  return currentUserRole.value === 'designer' || metadata.value.designer === currentUser.value;
-});
-
-const canApproveWorkflow = computed(() => {
-  const state = metadata.value.workflowState;
-  const role = currentUserRole.value;
-  
-  if (state === 'client_review' && role === 'client') return true;
-  if (state === 'art_director_review' && role === 'art_director') return true;
-  if (state === 'creative_director_review' && role === 'creative_director') return true;
-  
-  return false;
-});
-
-const getWorkflowActionText = () => {
-  const state = metadata.value.workflowState;
-  if (state === 'client_review') return 'Client Approval';
-  if (state === 'art_director_review') return 'Approve for Creative Director Review';
-  if (state === 'creative_director_review') return 'Approve and Release';
-  return '';
-};
-
-const handleApprove = async () => {
+/** Run a comment change, then reload the comments. */
+const commentAction = async (action, failure) => {
   try {
-    const useMockMode = await isMockMode();
-    const state = metadata.value.workflowState;
-    
-    if (useMockMode) {
-      const updatedReview = await mockAPI.approveWorkflowStage(reviewId, state, currentUser.value);
-      // Update metadata with the returned review data
-      if (updatedReview) {
-        metadata.value = { ...updatedReview };
-      } else {
-        // Fallback: reload review data
-        const res = await mockAPI.getReview(reviewId);
-        metadata.value = { ...res };
-      }
-    } else {
-      const updatedReview = await workflowAPI.approve(reviewId, state);
-      // Update metadata with the returned review data
-      metadata.value = { ...updatedReview };
-    }
-    
-    showAlertMessage('Success', 'Workflow stage approved successfully', 'success');
+    await action();
   } catch (error) {
-    console.error('Failed to approve workflow stage:', error);
-    showAlertMessage('Error', 'Failed to approve workflow stage', 'error');
+    handleError(error, failure);
+  }
+  await loadComments();
+};
+
+const handleCommentAdded = (comment) =>
+  commentAction(() => commentAPI.addComment(reviewId.value, comment), 'Failed to add the comment.');
+
+const handleCommentUpdated = (commentId, updates) =>
+  commentAction(() => commentAPI.updateComment(reviewId.value, commentId, updates), 'Failed to update the comment.');
+
+const handleReplyAdded = (commentId, text) =>
+  commentAction(() => commentAPI.addReply(reviewId.value, commentId, text), 'Failed to add the reply.');
+
+const handleEmojiReactionToggled = (commentId, emoji) =>
+  commentAction(() => commentAPI.toggleReaction(reviewId.value, commentId, emoji), 'Failed to update the reaction.');
+
+const handleEmojiReactionToggledReply = (commentId, replyId, emoji) =>
+  commentAction(() => commentAPI.toggleReplyReaction(reviewId.value, commentId, replyId, emoji), 'Failed to update the reaction.');
+
+// Annotations drawn in the viewer are saved as comments by PreviewFrame
+const handleAnnotationsChanged = ({ error }) => {
+  if (error) handleError(error, 'Failed to save your annotation.');
+  loadComments();
+};
+
+/* ---------------------------------------------------------------------- */
+/* Workflow                                                                */
+/* ---------------------------------------------------------------------- */
+
+/** Run a workflow change that returns the updated review. */
+const workflowAction = async (action, success, failure) => {
+  try {
+    const updated = await action();
+    if (updated) applyReview(updated);
+    showNotice(success, 'success');
+  } catch (error) {
+    handleError(error, failure);
   }
 };
 
-const handleReject = async () => {
-  try {
-    const useMockMode = await isMockMode();
-    const state = metadata.value.workflowState;
-    
-    if (useMockMode) {
-      await mockAPI.rejectWorkflowStage(reviewId, state, currentUser.value);
-    } else {
-      const updatedReview = await workflowAPI.reject(reviewId, state);
-      metadata.value = { ...updatedReview };
-    }
-    
-    // Reload review data
-    const useMock = await isMockMode();
-    if (useMock) {
-      const res = await mockAPI.getReview(reviewId);
-      metadata.value = { ...res }; // Create new object reference for reactivity
-    } else {
-      const res = await reviewAPI.getReview(reviewId);
-      metadata.value = { ...res };
-    }
-    
-    const rejectionMessage = state === 'art_director_review' 
-      ? 'Art Director changes requested.' 
-      : state === 'creative_director_review'
-      ? 'Creative Director changes requested.'
-      : 'Workflow stage rejected. Sent back to client review.';
-    showAlertMessage('Success', rejectionMessage, 'success');
-  } catch (error) {
-    console.error('Failed to reject workflow stage:', error);
-    showAlertMessage('Error', 'Failed to reject workflow stage', 'error');
-  }
+const handleApprove = () => {
+  const stage = metadata.value.workflowState;
+  return workflowAction(() => workflowAPI.approve(reviewId.value, stage), 'Workflow stage approved.', 'Failed to approve the workflow stage.');
 };
 
-const handleMoveToClientReview = async () => {
-  try {
-    const useMockMode = await isMockMode();
-    
-    if (useMockMode) {
-      await mockAPI.moveToClientReview(reviewId);
-    } else {
-      const updatedReview = await workflowAPI.moveToClientReview(reviewId);
-      metadata.value = { ...updatedReview };
-      showAlertMessage('Success', 'Review sent to client for approval', 'success');
-      return;
-    }
-    
-    // Reload review data
-    const res = await mockAPI.getReview(reviewId);
-    metadata.value = { ...res }; // Create new object reference for reactivity
-    
-    showAlertMessage('Success', 'Review sent to client for approval', 'success');
-  } catch (error) {
-    console.error('Failed to move to client review:', error);
-    showAlertMessage('Error', 'Failed to send to client review', 'error');
-  }
+const handleReject = () => {
+  showRejectModal.value = true;
 };
 
-const handleMoveToArtDirectorReview = async () => {
-  try {
-    const useMockMode = await isMockMode();
-    
-    if (useMockMode) {
-      await mockAPI.moveToArtDirectorReview(reviewId);
-    } else {
-      const updatedReview = await workflowAPI.moveToArtDirectorReview(reviewId);
-      metadata.value = { ...updatedReview };
-      return;
-    }
-    
-    // Reload review data
-    const res = await mockAPI.getReview(reviewId);
-    metadata.value = { ...res }; // Create new object reference for reactivity
-    
-    showAlertMessage('Success', 'Review sent to Art Director for approval', 'success');
-  } catch (error) {
-    console.error('Failed to move to Art Director review:', error);
-    showAlertMessage('Error', 'Failed to send to Art Director review', 'error');
-  }
+const confirmReject = (reason) => {
+  const stage = metadata.value.workflowState;
+  return workflowAction(
+    () => workflowAPI.reject(reviewId.value, stage, (reason || '').trim() || null),
+    'Changes requested. The review is back with the designer.',
+    'Failed to request changes.'
+  );
 };
 
-const handleResubmitForReview = async () => {
-  try {
-    const useMockMode = await isMockMode();
-    const state = metadata.value.workflowState;
-    const targetStage = state === 'ad_changes_requested' ? 'art_director_review' : 'creative_director_review';
-    
-    if (useMockMode) {
-      await mockAPI.resubmitForReview(reviewId, state);
-    } else {
-      const updatedReview = await workflowAPI.resubmit(reviewId, targetStage);
-      metadata.value = { ...updatedReview };
-      const stageLabel = targetStage === 'art_director_review' ? 'Art Director' : 'Creative Director';
-      showAlertMessage('Success', `Review resubmitted for ${stageLabel} review`, 'success');
-      return;
-    }
-    
-    // Reload review data
-    const res = await mockAPI.getReview(reviewId);
-    metadata.value = { ...res }; // Create new object reference for reactivity
-    
-    const stageLabel = state === 'ad_changes_requested' ? 'Art Director' : 'Creative Director';
-    showAlertMessage('Success', `Review resubmitted for ${stageLabel} review`, 'success');
-  } catch (error) {
-    console.error('Failed to resubmit for review:', error);
-    showAlertMessage('Error', 'Failed to resubmit for review', 'error');
-  }
+// Reviews that bypass client review go from draft straight to the Art Director
+const handleMoveToClientReview = () =>
+  metadata.value.bypassClientReview
+    ? workflowAction(
+      () => workflowAPI.moveToArtDirectorReview(reviewId.value),
+      'Review sent to the Art Director for approval.',
+      'Failed to send to Art Director review.'
+    )
+    : workflowAction(
+      () => workflowAPI.moveToClientReview(reviewId.value),
+      'Review sent to the client for approval.',
+      'Failed to send to client review.'
+    );
+
+const handleMoveToArtDirectorReview = () =>
+  workflowAction(
+    () => workflowAPI.moveToArtDirectorReview(reviewId.value),
+    'Review sent to the Art Director for approval.',
+    'Failed to send to Art Director review.'
+  );
+
+const handleResubmitForReview = () => {
+  const targetStage = resubmitTarget.value;
+  if (!targetStage) return;
+  return workflowAction(
+    () => workflowAPI.resubmit(reviewId.value, targetStage),
+    'Review resubmitted.',
+    'Failed to resubmit the review.'
+  );
 };
 
-// Designer tools handler functions
 const handleMarkCompleted = () => {
   confirmModalTitle.value = 'Mark Review as Complete';
   confirmModalMessage.value = `Are you sure you want to mark "${metadata.value.filename}" as complete? The review link will be disabled, but comments and information will be preserved.`;
@@ -1007,44 +921,28 @@ const handleMarkCompleted = () => {
 };
 
 const confirmMarkCompleted = async () => {
-  try {
-    const useMockMode = await isMockMode();
-    
-    if (useMockMode) {
-      // Use mockAPI to mark review as completed (this will also deactivate the link)
-      await mockAPI.markReviewCompleted(reviewId, currentUser.value);
-    } else {
-      // Use real API
-      const updatedReview = await reviewAPI.completeReview(reviewId);
-      metadata.value = { ...updatedReview };
-      reviewCompleted.value = true;
-      showConfirmModal.value = false;
-      showAlertMessage('Success', 'Review marked as complete', 'success');
-      return;
-    }
-    
-    // Reload review data
-    const res = await mockAPI.getReview(reviewId);
-    metadata.value = { ...res };
-    reviewCompleted.value = res.completed || false;
-    
-    showAlertMessage('Success', 'Review marked as complete. The link is now disabled.', 'success');
-  } catch (error) {
-    console.error('Failed to mark review as complete:', error);
-    showAlertMessage('Error', 'Failed to mark review as complete. Please try again.', 'error');
+  await workflowAction(
+    () => reviewAPI.completeReview(reviewId.value),
+    'Review marked as complete.',
+    'Failed to mark the review as complete.'
+  );
+  // Completing a review also expires its link, so further reads would be 410; keep what's on screen.
+  if (reviewCompleted.value) {
+    comparisonMode.value = false;
   }
 };
+
+/* ---------------------------------------------------------------------- */
+/* Designer tools                                                          */
+/* ---------------------------------------------------------------------- */
 
 const handleChangePassword = () => {
   showPasswordModal.value = true;
 };
 
 const handleSharingSettings = () => {
-  // Initialize sharing settings from metadata
-  sharingType.value = metadata.value.sharingMode || 'anyone';
-  approvedPeople.value = metadata.value.approvedEmails && metadata.value.approvedEmails.length > 0
-    ? [...metadata.value.approvedEmails, '']
-    : [''];
+  sharingType.value = metadata.value.sharingMode === 'approved_emails' ? 'restricted' : 'anyone';
+  approvedPeople.value = metadata.value.approvedEmails?.length ? [...metadata.value.approvedEmails, ''] : [''];
   showSharingModal.value = true;
 };
 
@@ -1061,183 +959,62 @@ const removeApprovedPerson = (index) => {
 };
 
 const handleSharingChanged = async () => {
+  const restricted = sharingType.value === 'restricted';
+  const emails = restricted ? approvedPeople.value.map((email) => email.trim()).filter(Boolean) : [];
+  if (restricted && emails.length === 0) {
+    showNotice('Add at least one email address, or share with anyone who has the link.', 'error');
+    return;
+  }
   try {
-    const useMockMode = await isMockMode();
-    const finalSharingMode = sharingType.value === 'restricted' ? 'restricted' : 'anyone';
-    const finalApprovedEmails = sharingType.value === 'restricted'
-      ? approvedPeople.value.filter(email => email.trim() !== '')
-      : [];
-    
-    if (useMockMode) {
-      // Update mock data
-      const review = mockReviews.find(r => r.id === reviewId);
-      if (review) {
-        review.sharingMode = finalSharingMode;
-        review.approvedEmails = finalApprovedEmails;
-        
-        // Add history entry for sharing change
-        if (!review.workflowHistory) {
-          review.workflowHistory = [];
-        }
-        review.workflowHistory.push({
-          stage: review.workflowState || 'draft',
-          action: 'sharing_changed',
-          user: review.designer || 'Designer',
-          timestamp: new Date().toISOString()
-        });
-        
-        // Reload review data to get updated history
-        const res = await mockAPI.getReview(reviewId);
-        metadata.value = { ...res };
-      }
-    } else {
-      // Use real API
-      const updatedReview = await reviewAPI.updateSharing(reviewId, finalSharingMode, finalApprovedEmails);
-      metadata.value = { ...updatedReview };
-    }
-    
+    const updated = await reviewAPI.updateSharing(reviewId.value, restricted ? 'approved_emails' : 'anyone', emails);
+    applyReview(updated);
     showSharingModal.value = false;
-    showAlertMessage('Success', 'Sharing settings updated successfully!', 'success');
+    showNotice('Sharing settings updated.', 'success');
   } catch (error) {
-    console.error('Failed to update sharing settings:', error);
-    showAlertMessage('Error', 'Failed to update sharing settings. Please try again.', 'error');
+    handleError(error, 'Failed to update sharing settings.');
   }
 };
 
 const handlePasswordChanged = async (passwordValue) => {
+  const password = (passwordValue || '').trim();
   try {
-    const useMockMode = await isMockMode();
-    
-    if (useMockMode) {
-      // Update mock data
-      const review = mockReviews.find(r => r.id === reviewId);
-      if (review) {
-        review.password = passwordValue;
-        
-        // Add history entry for any password change
-        if (!review.workflowHistory) {
-          review.workflowHistory = [];
-        }
-        review.workflowHistory.push({
-          stage: review.workflowState || 'draft',
-          action: passwordValue ? 'password_set' : 'password_removed',
-          user: review.designer || 'Designer',
-          timestamp: new Date().toISOString()
-        });
-        
-        // Reload review data to get updated history
-        const res = await mockAPI.getReview(reviewId);
-        metadata.value = { ...res };
-      }
-    } else {
-      // Use real API
-      const updatedReview = await passwordAPI.updatePassword(reviewId, passwordValue);
-      metadata.value = { ...updatedReview };
-    }
-    
-    const message = passwordValue 
-      ? 'Password updated successfully!'
-      : 'Password removed successfully!';
-    showAlertMessage('Success', message, 'success');
+    const { hasPassword } = await passwordAPI.updatePassword(reviewId.value, password);
+    metadata.value = { ...metadata.value, hasPassword };
+    showNotice(password ? 'Password updated.' : 'Password removed.', 'success');
+    refreshReview(); // pick up the history entry
   } catch (error) {
-    console.error('Failed to change password:', error);
-    showAlertMessage('Error', 'Failed to change password. Please try again.', 'error');
+    handleError(error, 'Failed to change the password.');
   }
 };
 
-const handleExtendExpiration = async () => {
-  try {
-    const useMockMode = await isMockMode();
-    
-    if (useMockMode) {
-      // Update mock data
-      const review = mockReviews.find(r => r.id === reviewId);
-      if (review) {
-        const newExpiresAt = new Date();
-        newExpiresAt.setDate(newExpiresAt.getDate() + 30);
-        newExpiresAt.setHours(23, 59, 59, 999);
-        review.expiresAt = newExpiresAt.toISOString();
-        
-        // Add history entry
-        if (!review.workflowHistory) {
-          review.workflowHistory = [];
-        }
-        review.workflowHistory.push({
-          stage: review.workflowState || 'draft',
-          action: 'extended',
-          user: review.designer || 'Designer',
-          timestamp: new Date().toISOString(),
-          days: 30
-        });
-        
-        // Reload review data to get updated history
-        const res = await mockAPI.getReview(reviewId);
-        metadata.value = { ...res };
-      }
-    } else {
-      // Use real API
-      const updatedReview = await passwordAPI.extendExpiration(reviewId, 30);
-      metadata.value = { ...updatedReview };
-    }
-    
-    showAlertMessage('Success', 'Expiration date extended by 30 days!', 'success');
-  } catch (error) {
-    console.error('Failed to extend expiration:', error);
-    showAlertMessage('Error', 'Failed to extend expiration date. Please try again.', 'error');
-  }
-};
+const handleExtendExpiration = () =>
+  workflowAction(
+    () => passwordAPI.extendExpiration(reviewId.value, 30),
+    'Expiration extended by 30 days.',
+    'Failed to extend the expiration date.'
+  );
 
 const handleUploadNewVersion = () => {
   showUploadModal.value = true;
 };
 
-const handleVersionUploaded = async () => {
-  // Reload review data to get new version
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      const res = await mockAPI.getReview(reviewId);
-      metadata.value = { ...res };
-      // Auto-select the new version
-      if (res.versions && res.versions.length > 0) {
-        selectedVersion.value = res.versions[res.versions.length - 1].id;
-        await loadVersion();
-      }
-    } else {
-      const res = await axios.get(`/review/${reviewId}`);
-      metadata.value = { ...res.data };
-      if (res.data.versions && res.data.versions.length > 0) {
-        selectedVersion.value = res.data.versions[res.data.versions.length - 1].id;
-        await loadVersion();
-      }
-    }
-    showAlertMessage('Success', 'New version uploaded successfully!', 'success');
-  } catch (error) {
-    console.error('Failed to reload review after version upload:', error);
-  }
+const handleVersionUploaded = async (version) => {
+  const review = await refreshReview();
+  if (!review) return;
+  // Show the new version (or the latest, if the server's id differs)
+  selectedVersion.value = chooseVersion(review.versions, version?.id);
+  showNotice('New version uploaded.', 'success');
+  await loadVersion();
 };
 
-// Track when a review is viewed (for clients)
-const trackReviewView = (reviewId) => {
+// Remember reviews a client opened, for their "recently viewed" list
+const trackReviewView = (id) => {
   if (currentUserRole.value !== 'client') return;
-  
   try {
     const stored = localStorage.getItem('recentlyViewedLinks');
-    const viewedIds = stored ? JSON.parse(stored) : [];
-    
-    // Remove if already exists (to move to front)
-    const index = viewedIds.indexOf(reviewId);
-    if (index > -1) {
-      viewedIds.splice(index, 1);
-    }
-    
-    // Add to front
-    viewedIds.unshift(reviewId);
-    
-    // Keep only last 20
-    const trimmed = viewedIds.slice(0, 20);
-    
-    localStorage.setItem('recentlyViewedLinks', JSON.stringify(trimmed));
+    const viewedIds = (stored ? JSON.parse(stored) : []).filter((viewed) => viewed !== id);
+    viewedIds.unshift(id);
+    localStorage.setItem('recentlyViewedLinks', JSON.stringify(viewedIds.slice(0, 20)));
   } catch (error) {
     console.error('Failed to track review view:', error);
   }
@@ -1245,104 +1022,12 @@ const trackReviewView = (reviewId) => {
 
 // Update document title when metadata changes
 watch(() => metadata.value.filename, (newFilename) => {
-  if (newFilename) {
-    document.title = `${newFilename} - Design Review`;
-  } else {
-    document.title = 'Design Review';
-  }
+  document.title = newFilename ? `${newFilename} - Design Review` : 'Design Review';
 });
 
-onMounted(async () => {
-  // Set up dark mode observer
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  // Also check periodically as a fallback
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  // Check immediately
-  checkDarkMode();
-  
-  // Check every 100ms as fallback
-  darkModeInterval = setInterval(checkDarkMode, 100);
-  
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      const res = await mockAPI.getReview(reviewId);
-      console.log('Loaded review:', res);
-      console.log('WorkflowHistory:', res.workflowHistory);
-      metadata.value = { ...res }; // Create new object reference for reactivity
-      reviewCompleted.value = res.completed || false;
-      
-      // Track view for clients
-      if (currentUserRole.value === 'client') {
-        trackReviewView(reviewId);
-      }
-      
-      if (reviewCompleted.value) {
-        // Comments are loaded automatically by WebViewer when document loads
-        return;
-      }
-      
-      selectedVersion.value = res.versions[0].id;
-      passwordValidated.value = true;
-      loadVersion();
-      
-      // Initialize comparison versions if switching to comparison mode
-      if (comparisonMode.value && res.versions.length >= 2) {
-        leftVersion.value = res.versions[0].id;
-        rightVersion.value = res.versions.length > 1 ? res.versions[1].id : res.versions[0].id;
-      }
-    } else {
-      const res = await reviewAPI.getReview(reviewId);
-      console.log('Loaded review:', res);
-      console.log('WorkflowHistory:', res.workflowHistory);
-      metadata.value = { ...res }; // Create new object reference for reactivity
-      reviewCompleted.value = res.completed || false;
-      
-      // Track view for clients
-      if (currentUserRole.value === 'client') {
-        trackReviewView(reviewId);
-      }
-      
-      if (reviewCompleted.value) {
-        // Comments are loaded automatically by WebViewer when document loads
-        return;
-      }
-      
-      selectedVersion.value = res.versions[0].id;
-      passwordValidated.value = true;
-      loadVersion();
-      
-      // Initialize comparison versions if switching to comparison mode
-      if (comparisonMode.value && res.versions.length >= 2) {
-        leftVersion.value = res.versions[0].id;
-        rightVersion.value = res.versions.length > 1 ? res.versions[1].id : res.versions[0].id;
-      }
-    }
-  } catch (err) {
-    if (err.response?.status === 401) {
-      passwordRequired.value = true;
-    }
-  }
-});
-
-// Cleanup observer and interval on unmount
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
+// Load (and reload when the route moves to another review)
+watch(reviewId, () => {
+  resetPage();
+  loadReview();
+}, { immediate: true });
 </script>

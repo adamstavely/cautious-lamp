@@ -35,6 +35,7 @@
                     <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
                       Review Management
                     </h1>
+                    <DemoDataBadge />
                   </div>
                   <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
                     Manage review links, teams, and batch operations. Control access, extend expiration dates, and oversee all review activities.
@@ -46,7 +47,7 @@
                     </span>
                     <span class="flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
+                      {{ loadingLinks ? 'Loading…' : `Updated ${loadedAt ? loadedAt.toLocaleTimeString() : ''}` }}
                     </span>
                   </div>
                 </div>
@@ -149,7 +150,63 @@
               <!-- Tab Content -->
               <!-- Review Links Tab -->
               <div v-if="activeTab === 'links'" id="tabpanel-links" role="tabpanel" aria-labelledby="tab-links" class="p-8">
+        <!-- Admin key: the /admin routes need ADMIN_API_KEY, kept in this browser only -->
+        <form
+          v-if="needsAdminKey || editingAdminKey"
+          class="mb-6 p-4 rounded-lg border"
+          :class="isDarkMode ? 'border-amber-900 bg-amber-950/30' : 'border-amber-200 bg-amber-50'"
+          @submit.prevent="saveAdminKey"
+        >
+          <label for="admin-api-key" class="block text-sm font-medium mb-1" :class="isDarkMode ? 'text-amber-200' : 'text-amber-900'">
+            {{ adminKeyRejected ? 'The admin API key was rejected. Enter the correct key.' : 'Enter the admin API key to manage review links.' }}
+          </label>
+          <p class="text-xs mb-3" :class="isDarkMode ? 'text-amber-300/80' : 'text-amber-800'">
+            This is the server's ADMIN_API_KEY. It is stored in this browser only.
+          </p>
+          <div class="flex flex-wrap items-center gap-2">
+            <input
+              id="admin-api-key"
+              v-model="adminKeyInput"
+              type="password"
+              autocomplete="off"
+              placeholder="Admin API key"
+              class="flex-1 min-w-[220px] px-3 py-2 border rounded-lg text-sm focus:ring-2"
+              :class="isDarkMode
+                ? 'border-slate-600 focus:ring-indigo-400 bg-slate-700 text-gray-100 placeholder-gray-400'
+                : 'border-gray-300 focus:ring-indigo-500 bg-white text-gray-900 placeholder-gray-500'"
+            />
+            <button
+              type="submit"
+              :disabled="!adminKeyInput.trim()"
+              class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50"
+              :class="isDarkMode ? 'bg-indigo-500 hover:bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'"
+            >
+              Save key
+            </button>
+            <button
+              v-if="editingAdminKey && !needsAdminKey"
+              type="button"
+              class="px-4 py-2 text-sm font-medium rounded-lg"
+              :class="isDarkMode ? 'text-gray-300 hover:text-gray-100' : 'text-gray-600 hover:text-gray-900'"
+              @click="editingAdminKey = false"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+        <div v-else-if="!demoMode" class="mb-4 flex justify-end">
+          <button
+            type="button"
+            class="text-xs font-medium"
+            :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'"
+            @click="editingAdminKey = true; adminKeyInput = ''"
+          >
+            Change admin key
+          </button>
+        </div>
+        <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
         <v-data-table
+          :loading="loadingLinks"
           :items="filteredLinks"
           :headers="headers"
           item-value="id"
@@ -546,32 +603,42 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
-import axios from 'axios';
-import { mockAPI, isMockMode, mockReviews, getCurrentUser, getFilteredReviews } from '../mockData.js';
+import { ref, onMounted, computed } from 'vue';
+import { getCurrentUser, isMockMode } from '../mockData.js';
+import {
+  adminAPI,
+  teamsAPI,
+  apiErrorMessage,
+  isAdminKeyError,
+  getAdminApiKey,
+  setAdminApiKey,
+} from '../services/api.js';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import PromptModal from '../components/review-ui/PromptModal.vue';
 import ConfirmModal from '../components/review-ui/ConfirmModal.vue';
 import AlertModal from '../components/review-ui/AlertModal.vue';
 import DatePickerModal from '../components/review-ui/DatePickerModal.vue';
 import TeamEditModal from '../components/review-ui/TeamEditModal.vue';
 import TeamMembersModal from '../components/review-ui/TeamMembersModal.vue';
+import DemoDataBadge from '../components/review-ui/DemoDataBadge.vue';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const DAY = 24 * 60 * 60 * 1000;
+
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
 const links = ref([]);
 const selectedIds = ref([]);
 const teams = ref([]);
 const activeTab = ref('links');
+const loadingLinks = ref(false);
+const loadedAt = ref(null);
 
-
-
-
-
-let darkModeObserver = null;
-let darkModeInterval = null;
 const showCreateTeamModal = ref(false);
 const showEditTeamModal = ref(false);
 const showMembersModal = ref(false);
@@ -581,31 +648,26 @@ const selectedTeam = ref(null);
 const deletingTeam = ref(null);
 const newTeamName = ref('');
 
-// Get current user context
-const currentUser = computed(() => getCurrentUser());
-const currentUserRole = computed(() => currentUser.value.role);
-const currentUserEmail = computed(() => currentUser.value.email);
-const currentUserTeamId = computed(() => currentUser.value.teamId);
+// Admin key (real API only; demo mode needs none)
+const demoMode = isMockMode();
+const hasAdminKey = ref(!!getAdminApiKey());
+const adminKeyRejected = ref(false);
+const editingAdminKey = ref(false);
+const adminKeyInput = ref('');
+const needsAdminKey = computed(() => !demoMode && (!hasAdminKey.value || adminKeyRejected.value));
 
-// Filter links based on user role
+// The acting user, read once when the page opens (it only changes when switched elsewhere)
+const currentUser = getCurrentUser();
+
+// The admin API returns every review. Demo mode mimics role scoping so each demo role sees a sensible list.
 const filteredLinks = computed(() => {
-  if (currentUserRole.value === 'creative_director') {
-    // Creative Director sees all links across all teams
-    return links.value;
-  } else if (currentUserRole.value === 'art_director') {
-    // Art Director sees all links in their team
-    return links.value.filter(link => {
-      const review = mockReviews.find(r => r.filename === link.filename);
-      return review && review.teamId === currentUserTeamId.value;
-    });
-  } else if (currentUserRole.value === 'designer') {
-    // Designer sees only their own links
-    return links.value.filter(link => {
-      return link.designer === currentUser.value.name || 
-             mockReviews.find(r => r.filename === link.filename)?.designerEmail === currentUserEmail.value;
-    });
+  if (!demoMode) return links.value;
+  if (currentUser.role === 'art_director') {
+    return links.value.filter(link => link.teamId === currentUser.teamId);
   }
-  // Default: return all (for admins)
+  if (currentUser.role === 'designer') {
+    return links.value.filter(link => link.designerEmail === currentUser.email);
+  }
   return links.value;
 });
 
@@ -637,99 +699,109 @@ const minDate = computed(() => {
   return new Date().toISOString().split('T')[0];
 });
 
+/** Report a failed admin call; a missing or rejected key brings up the key prompt. */
+const handleAdminError = (error, fallback) => {
+  console.error(fallback, error);
+  if (!demoMode && isAdminKeyError(error)) {
+    adminKeyRejected.value = hasAdminKey.value;
+    hasAdminKey.value = !!getAdminApiKey();
+    showNotice(
+      hasAdminKey.value ? 'The admin API key was rejected.' : 'Enter the admin API key to manage review links.',
+      'warning'
+    );
+    return;
+  }
+  showNotice(apiErrorMessage(error, fallback), 'error');
+};
+
+const saveAdminKey = () => {
+  const key = adminKeyInput.value.trim();
+  if (!key) return;
+  setAdminApiKey(key);
+  hasAdminKey.value = true;
+  adminKeyRejected.value = false;
+  editingAdminKey.value = false;
+  adminKeyInput.value = '';
+  clearNotice();
+  loadLinks();
+};
+
 const loadLinks = async () => {
+  if (needsAdminKey.value) return;
+  loadingLinks.value = true;
   try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      const res = await mockAPI.getAdminLinks(true); // Always load all links
-      links.value = res;
-    } else {
-      const res = await axios.get('/admin', {
-        params: { expired: true }, // Always load all links
-        headers: { 'x-admin-token': localStorage.getItem('adminToken') },
-      });
-      links.value = res.data;
-    }
+    links.value = await adminAPI.getReviews(true); // always load all, including expired
+    // Drop selections for reviews that no longer exist
+    const ids = new Set(links.value.map(link => link.id));
+    selectedIds.value = selectedIds.value.filter(id => ids.has(id));
+    loadedAt.value = new Date();
   } catch (error) {
-    console.error('Failed to load links:', error);
+    handleAdminError(error, 'Failed to load review links.');
+  } finally {
+    loadingLinks.value = false;
   }
 };
 
 const isExpired = (item) => {
   if (!item.expiresAt) return false;
-  const expirationDate = new Date(item.expiresAt);
-  return expirationDate < new Date();
+  return new Date(item.expiresAt) < new Date();
 };
 
-const reactivate = async (id) => {
+/** Run an admin action, then reload the list. */
+const runAdminAction = async (action, successMessage, failureMessage) => {
   try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      // Reactivate by extending 30 days from now
-      await mockAPI.overrideLink(id, 30);
-    } else {
-      // For real API, set expiration to 30 days from now
-      const newExpirationDate = new Date();
-      newExpirationDate.setDate(newExpirationDate.getDate() + 30);
-      await axios.post(`/admin/${id}/override`, { 
-        expirationDate: newExpirationDate.toISOString().split('T')[0] 
-      }, {
-        headers: { 'x-admin-token': localStorage.getItem('adminToken') },
-      });
-    }
-    showAlertMessage('Success', 'Link reactivated successfully! Expiration set to 30 days from now.', 'success');
-    loadLinks();
+    const result = await action();
+    if (successMessage) showNotice(typeof successMessage === 'function' ? successMessage(result) : successMessage, 'success');
+    await loadLinks();
+    return true;
   } catch (error) {
-    console.error('Failed to reactivate link:', error);
-    showAlertMessage('Error', 'Failed to reactivate link', 'error');
+    handleAdminError(error, failureMessage);
+    return false;
   }
 };
 
-const extend = async (id) => {
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      await mockAPI.extendLink(id);
-    } else {
-      await axios.post(`/admin/${id}/extend`, {}, {
-        headers: { 'x-admin-token': localStorage.getItem('adminToken') },
-      });
-    }
-    loadLinks();
-  } catch (error) {
-    console.error('Failed to extend link:', error);
-    showAlertMessage('Error', 'Failed to extend link expiration', 'error');
-  }
-};
+const reactivate = (id) => runAdminAction(
+  () => adminAPI.reactivateReview(id),
+  'Link reactivated.',
+  'Failed to reactivate link.'
+);
+
+const extend = (id) => runAdminAction(
+  () => adminAPI.extendReview(id, 7),
+  'Expiration extended by 7 days.',
+  'Failed to extend link expiration.'
+);
 
 const openOverrideDialog = (id) => {
   pendingOverrideId.value = id;
   showOverrideDialog.value = true;
 };
 
+// Set a new expiry date by extending by the days between the current expiry (or today) and that date
 const handleOverrideSubmit = async (date) => {
-  if (!date || !pendingOverrideId.value) return;
-  
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      // Calculate days from today to selected date
-      const today = new Date();
-      const selectedDate = new Date(date);
-      const diffTime = selectedDate - today;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      await mockAPI.overrideLink(pendingOverrideId.value, diffDays);
-    } else {
-      await axios.post(`/admin/${pendingOverrideId.value}/override`, { expirationDate: date }, {
-        headers: { 'x-admin-token': localStorage.getItem('adminToken') },
-      });
-    }
-    pendingOverrideId.value = null;
-    loadLinks();
-  } catch (error) {
-    console.error('Failed to override link:', error);
-    showAlertMessage('Error', 'Failed to override expiration date', 'error');
+  const id = pendingOverrideId.value;
+  pendingOverrideId.value = null;
+  if (!date || !id) return;
+
+  const item = links.value.find(link => link.id === id);
+  const from = Math.max(Date.now(), item?.expiresAt ? new Date(item.expiresAt).getTime() : 0);
+  // End of the chosen day, local time
+  const target = new Date(`${date}T23:59:59`).getTime();
+  const days = Math.ceil((target - from) / DAY);
+  if (!(days >= 1 && days <= 365)) {
+    showNotice(
+      days < 1
+        ? 'Pick a date after the current expiration date.'
+        : 'The expiration can be extended by at most 365 days at a time.',
+      'error'
+    );
+    return;
   }
+  await runAdminAction(
+    () => adminAPI.extendReview(id, days),
+    `Expiration extended by ${days} day${days === 1 ? '' : 's'}.`,
+    'Failed to change the expiration date.'
+  );
 };
 
 const openPasswordDialog = (id) => {
@@ -738,24 +810,15 @@ const openPasswordDialog = (id) => {
 };
 
 const handlePasswordSubmit = async (newPassword) => {
-  if (!pendingPasswordId.value) return;
-  
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      await mockAPI.resetPassword(pendingPasswordId.value, newPassword || '');
-    } else {
-      await axios.post(`/admin/${pendingPasswordId.value}/reset-password`, { password: newPassword || null }, {
-        headers: { 'x-admin-token': localStorage.getItem('adminToken') },
-      });
-    }
-    showAlertMessage('Success', 'Password updated successfully!', 'success');
-    pendingPasswordId.value = null;
-    loadLinks();
-  } catch (error) {
-    console.error('Failed to reset password:', error);
-    showAlertMessage('Error', 'Failed to update password. Please try again.', 'error');
-  }
+  const id = pendingPasswordId.value;
+  pendingPasswordId.value = null;
+  if (!id) return;
+  const password = (newPassword || '').trim();
+  await runAdminAction(
+    () => adminAPI.resetPassword(id, password),
+    password ? 'Password updated.' : 'Password removed.',
+    'Failed to update the password.'
+  );
 };
 
 const openDeleteConfirm = (id) => {
@@ -764,23 +827,10 @@ const openDeleteConfirm = (id) => {
 };
 
 const handleDeleteConfirm = async () => {
-  if (!pendingDeleteId.value) return;
-  
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      await mockAPI.deleteLink(pendingDeleteId.value);
-    } else {
-      await axios.delete(`/admin/${pendingDeleteId.value}`, {
-        headers: { 'x-admin-token': localStorage.getItem('adminToken') },
-      });
-    }
-    pendingDeleteId.value = null;
-    loadLinks();
-  } catch (error) {
-    console.error('Failed to delete link:', error);
-    showAlertMessage('Error', 'Failed to delete link', 'error');
-  }
+  const id = pendingDeleteId.value;
+  pendingDeleteId.value = null;
+  if (!id) return;
+  await runAdminAction(() => adminAPI.deleteReview(id), 'Review deleted.', 'Failed to delete the review.');
 };
 
 const openBatchDeleteConfirm = () => {
@@ -789,56 +839,24 @@ const openBatchDeleteConfirm = () => {
 };
 
 const handleBatchDeleteConfirm = async () => {
-  try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      await mockAPI.batchDelete(selectedIds.value);
-    } else {
-      await axios.post('/admin/batch-delete', { ids: selectedIds.value }, {
-        headers: { 'x-admin-token': localStorage.getItem('adminToken') },
-      });
-    }
-    selectedIds.value = [];
-    loadLinks();
-  } catch (error) {
-    console.error('Failed to batch delete:', error);
-    showAlertMessage('Error', 'Failed to delete selected links', 'error');
-  }
+  const ids = [...selectedIds.value];
+  if (!ids.length) return;
+  const ok = await runAdminAction(
+    () => adminAPI.batchDelete(ids),
+    (result) => `${result?.deleted ?? ids.length} review${(result?.deleted ?? ids.length) === 1 ? '' : 's'} deleted.`,
+    'Failed to delete the selected reviews.'
+  );
+  if (ok) selectedIds.value = [];
 };
 
 const copyReviewUrl = async (item) => {
+  const reviewUrl = `${window.location.origin}/review/${encodeURIComponent(item.id)}`;
   try {
-    // Extract review ID from admin link ID
-    // Admin links have IDs like "admin-1" or "admin-review-123"
-    // Reviews have IDs like "review-1" or "review-123"
-    let reviewId;
-    
-    if (item.id.includes('review-')) {
-      // Extract review ID: admin-review-123 -> review-123
-      const match = item.id.match(/review-[^/]+/);
-      reviewId = match ? match[0] : item.id.replace('admin-', 'review-');
-    } else if (item.id.startsWith('admin-')) {
-      // Legacy format: admin-1 -> review-1
-      const num = item.id.replace('admin-', '');
-      reviewId = `review-${num}`;
-    } else if (item.reviewId) {
-      // Use reviewId field if available (from real API)
-      reviewId = item.reviewId;
-    } else {
-      // Fallback: assume it's already a review ID
-      reviewId = item.id;
-    }
-    
-    // Generate the full URL
-    const reviewUrl = `${window.location.origin}/review/${reviewId}`;
-    
-    // Copy to clipboard
     await navigator.clipboard.writeText(reviewUrl);
-    
-    showAlertMessage('Success', 'Review URL copied to clipboard!', 'success');
+    showNotice('Review URL copied to clipboard.', 'success');
   } catch (error) {
     console.error('Failed to copy URL:', error);
-    showAlertMessage('Error', 'Failed to copy URL to clipboard', 'error');
+    showNotice(`Couldn't copy automatically. The link is ${reviewUrl}`, 'warning');
   }
 };
 
@@ -851,61 +869,34 @@ const showAlertMessage = (title, message, type = 'info') => {
 
 const formatDate = (dateString) => {
   if (!dateString) return '';
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return dateString; // Invalid date, return as-is
-    
-    // Extract date components using UTC to avoid timezone issues
-    const year = date.getUTCFullYear();
-    const month = date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
-    const day = date.getUTCDate();
-    
-    return `${month} ${day}, ${year}`;
-  } catch (error) {
-    // If it's already a formatted string, try to parse it differently
-    if (typeof dateString === 'string' && dateString.includes('T')) {
-      const dateOnly = dateString.split('T')[0];
-      const [y, m, d] = dateOnly.split('-');
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return `${monthNames[parseInt(m) - 1]} ${parseInt(d)}, ${y}`;
-    }
-    return dateString;
-  }
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return dateString;
+  const month = date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+  return `${month} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
 };
 
 // Teams functions
 const loadTeams = async () => {
   try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      teams.value = await mockAPI.getTeams();
-    } else {
-      const res = await axios.get('/teams');
-      teams.value = res.data;
-    }
+    teams.value = await teamsAPI.getTeams();
   } catch (error) {
     console.error('Failed to load teams:', error);
-    showAlertMessage('Error', 'Failed to load teams', 'error');
+    showAlertMessage('Error', apiErrorMessage(error, 'Failed to load teams.'), 'error');
   }
 };
 
 const handleCreateTeam = async (teamName) => {
-  if (!teamName.trim()) return;
-  
+  if (!teamName || !teamName.trim()) return;
+
   try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      await mockAPI.createTeam(teamName.trim());
-    } else {
-      await axios.post('/teams', { name: teamName.trim() });
-    }
+    await teamsAPI.createTeam(teamName.trim());
     showCreateTeamModal.value = false;
     newTeamName.value = '';
     showAlertMessage('Success', 'Team created successfully!', 'success');
     await loadTeams();
   } catch (error) {
     console.error('Failed to create team:', error);
-    showAlertMessage('Error', 'Failed to create team. Please try again.', 'error');
+    showAlertMessage('Error', apiErrorMessage(error, 'Failed to create team.'), 'error');
   }
 };
 
@@ -930,11 +921,9 @@ const manageTeamMembers = (team) => {
   showMembersModal.value = true;
 };
 
+// The members dialog stays open and reports each change itself; just refresh the list behind it
 const handleMembersUpdated = () => {
-  showMembersModal.value = false;
-  selectedTeam.value = null;
   loadTeams();
-  showAlertMessage('Success', 'Team members updated successfully!', 'success');
 };
 
 const confirmDeleteTeam = (team) => {
@@ -944,57 +933,22 @@ const confirmDeleteTeam = (team) => {
 
 const handleDeleteTeam = async () => {
   if (!deletingTeam.value) return;
-  
+
   try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      await mockAPI.deleteTeam(deletingTeam.value.id);
-    } else {
-      await axios.delete(`/teams/${deletingTeam.value.id}`);
-    }
+    await teamsAPI.deleteTeam(deletingTeam.value.id);
     showDeleteTeamConfirm.value = false;
     deletingTeam.value = null;
     showAlertMessage('Success', 'Team deleted successfully!', 'success');
     await loadTeams();
   } catch (error) {
     console.error('Failed to delete team:', error);
-    showAlertMessage('Error', 'Failed to delete team. Please try again.', 'error');
+    showAlertMessage('Error', apiErrorMessage(error, 'Failed to delete team.'), 'error');
   }
 };
 
 onMounted(() => {
-  // Set up dark mode observer
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  // Also check periodically as a fallback
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  // Check immediately
-  checkDarkMode();
-  
-  // Check every 100ms as fallback
-  darkModeInterval = setInterval(checkDarkMode, 100);
-  
   loadLinks();
   loadTeams();
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
 });
 </script>
 

@@ -299,9 +299,17 @@
                   >
                     <!-- Linear Progress -->
                     <div v-if="config.type === 'linear'">
-                      <div class="relative" :style="getLinearProgressStyles()">
+                      <div
+                        class="relative"
+                        :style="getLinearProgressStyles()"
+                        role="progressbar"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        :aria-valuenow="progressValue"
+                        :aria-label="config.label || 'Progress'"
+                      >
                         <div 
-                          class="h-full rounded-full relative"
+                          class="h-full rounded-full"
                           :style="getLinearProgressFillStyles()"
                         >
                           <span v-if="config.labelPosition === 'inside' && config.label" 
@@ -322,14 +330,22 @@
 
                     <!-- Circular Progress -->
                     <div v-if="config.type === 'circular'" class="flex justify-center">
-                      <div class="relative" :style="getCircularProgressStyles()">
+                      <div
+                        class="relative"
+                        :style="getCircularProgressStyles()"
+                        role="progressbar"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        :aria-valuenow="progressValue"
+                        :aria-label="config.label || 'Progress'"
+                      >
                         <svg :width="getCircularSize()" :height="getCircularSize()" class="transform -rotate-90">
                           <circle
                             :cx="getCircularSize() / 2"
                             :cy="getCircularSize() / 2"
                             :r="(getCircularSize() - 16) / 2"
                             fill="none"
-                            :stroke="config.trackColor"
+                            :stroke="getStateColors().track"
                             stroke-width="8"
                           />
                           <circle
@@ -337,7 +353,7 @@
                             :cy="getCircularSize() / 2"
                             :r="(getCircularSize() - 16) / 2"
                             fill="none"
-                            :stroke="config.fillColor"
+                            :stroke="getStateColors().fill"
                             stroke-width="8"
                             :stroke-dasharray="getCircularCircumference()"
                             :stroke-dashoffset="getCircularOffset()"
@@ -365,9 +381,17 @@
 
                     <!-- Step Indicator -->
                     <div v-if="config.type === 'steps'" class="space-y-4">
-                      <div class="flex items-center justify-between">
+                      <div
+                        class="flex items-center justify-between"
+                        role="progressbar"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        :aria-valuenow="progressValue"
+                        :aria-valuetext="`Step ${completedSteps} of ${STEP_COUNT} complete`"
+                        :aria-label="config.label || 'Progress'"
+                      >
                         <div 
-                          v-for="(step, index) in 5"
+                          v-for="(step, index) in STEP_COUNT"
                           :key="index"
                           class="flex items-center"
                         >
@@ -375,15 +399,15 @@
                             class="rounded-full flex items-center justify-center font-medium"
                             :style="getStepStyles(index)"
                           >
-                            <span v-if="index < Math.floor(config.value / 20)" class="material-symbols-outlined text-sm">check</span>
+                            <span v-if="index < completedSteps" class="material-symbols-outlined text-sm">check</span>
                             <span v-else class="text-xs">{{ index + 1 }}</span>
                           </div>
                           <div 
-                            v-if="index < 4"
+                            v-if="index < STEP_COUNT - 1"
                             class="h-1 mx-1"
                             :style="{ 
                               width: '40px',
-                              backgroundColor: index < Math.floor(config.value / 20) ? config.fillColor : config.trackColor
+                              backgroundColor: index < completedSteps ? getStateColors().fill : getStateColors().track
                             }"
                           ></div>
                         </div>
@@ -452,6 +476,7 @@
                           Copy
                         </button>
                       </div>
+                      <InlineNotice :notice="notice" class="mb-2" @dismiss="clearNotice" />
                       <textarea
                         :value="generatedCode"
                         readonly
@@ -473,13 +498,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
+const STEP_COUNT = 5;
 
 const progressTypes = [
   { label: 'Linear Bar', value: 'linear', icon: 'linear_scale' },
@@ -516,6 +546,14 @@ const config = ref({
 
 const selectedExportFormat = ref('react');
 
+// 0-100, whatever the input gives.
+const progressValue = computed(() => {
+  const n = Number(config.value.value);
+  return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0;
+});
+
+const completedSteps = computed(() => Math.floor(progressValue.value / (100 / STEP_COUNT)));
+
 const getStateColors = () => {
   const stateMap = {
     default: { fill: config.value.fillColor, track: config.value.trackColor },
@@ -548,7 +586,7 @@ const getLinearProgressStyles = () => {
 const getLinearProgressFillStyles = () => {
   const colors = getStateColors();
   const styles = {
-    width: `${config.value.value}%`,
+    width: `${progressValue.value}%`,
     height: '100%',
     borderRadius: '9999px',
     transition: config.value.animated ? 'width 0.3s ease' : 'none',
@@ -598,7 +636,7 @@ const getCircularCircumference = () => {
 
 const getCircularOffset = () => {
   const circumference = getCircularCircumference();
-  return circumference - (config.value.value / 100) * circumference;
+  return circumference - (progressValue.value / 100) * circumference;
 };
 
 const getCircularProgressStyles = () => {
@@ -610,7 +648,7 @@ const getCircularProgressStyles = () => {
 
 const getStepStyles = (index) => {
   const colors = getStateColors();
-  const isCompleted = index < Math.floor(config.value / 20);
+  const isCompleted = index < completedSteps.value;
   const sizeMap = {
     sm: { width: '32px', height: '32px', fontSize: '12px' },
     md: { width: '40px', height: '40px', fontSize: '14px' },
@@ -624,17 +662,24 @@ const getStepStyles = (index) => {
   };
 };
 
+const STRIPES = 'linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent)';
+
 const generatedCode = computed(() => {
+  const c = config.value;
   const colors = getStateColors();
-  
+  // Strings go through JSON.stringify so quotes in the label can't break the code.
+  const q = (value) => JSON.stringify(String(value ?? ''));
+  const value = progressValue.value;
+
   if (selectedExportFormat.value === 'react') {
-    if (config.value.type === 'linear') {
+    if (c.type === 'linear') {
       return `import React from 'react';
 
+// Needs this keyframe once in your CSS for animated stripes:
+// @keyframes progress-stripes { from { background-position: 1rem 0; } to { background-position: 0 0; } }
+
 export interface ProgressProps {
-  value: number;
-  type?: 'linear' | 'circular' | 'steps';
-  variant?: 'default' | 'success' | 'warning' | 'error';
+  value?: number;
   size?: 'sm' | 'md' | 'lg';
   fillColor?: string;
   trackColor?: string;
@@ -645,101 +690,102 @@ export interface ProgressProps {
   showPercentage?: boolean;
 }
 
+const sizeStyles: Record<string, React.CSSProperties> = {
+  sm: { height: '8px' },
+  md: { height: '12px' },
+  lg: { height: '16px' }
+};
+
 export const Progress: React.FC<ProgressProps> = ({
-  value,
-  type = '${config.value.type}',
-  variant = '${config.value.state}',
-  size = '${config.value.size}',
-  fillColor = '${colors.fill}',
-  trackColor = '${colors.track}',
-  label = '${config.value.label}',
-  labelPosition = '${config.value.labelPosition}',
-  animated = ${config.value.animated},
-  striped = ${config.value.striped},
-  showPercentage = ${config.value.showPercentage}
+  value = ${value},
+  size = ${q(c.size)},
+  fillColor = ${q(colors.fill)},
+  trackColor = ${q(colors.track)},
+  label = ${q(c.label)},
+  labelPosition = ${q(c.labelPosition)},
+  animated = ${Boolean(c.animated)},
+  striped = ${Boolean(c.striped)},
+  showPercentage = ${Boolean(c.showPercentage)}
 }) => {
-  const sizeStyles = {
-    sm: { height: '8px' },
-    md: { height: '12px' },
-    lg: { height: '16px' }
-  };
-  
+  const clamped = Math.min(100, Math.max(0, value));
+  const text = [label, showPercentage ? \`\${clamped}%\` : ''].filter(Boolean).join(' ');
+
   return (
     <div className="w-full">
       <div
         className="relative rounded-full overflow-hidden"
-        style={{
-          width: '100%',
-          backgroundColor: trackColor,
-          ...sizeStyles[size]
-        }}
+        style={{ width: '100%', backgroundColor: trackColor, ...sizeStyles[size] }}
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={clamped}
+        aria-label={label || 'Progress'}
       >
         <div
           className="h-full rounded-full"
           style={{
-            width: \`\${value}%\`,
+            width: \`\${clamped}%\`,
             backgroundColor: fillColor,
             transition: animated ? 'width 0.3s ease' : 'none',
-            backgroundImage: striped ? \`linear-gradient(45deg, \${fillColor} 25%, transparent 25%, transparent 50%, \${fillColor} 50%, \${fillColor} 75%, transparent 75%, transparent)\` : 'none',
-            backgroundSize: striped ? '1rem 1rem' : 'auto'
+            backgroundImage: striped ? '${STRIPES}' : 'none',
+            backgroundSize: striped ? '1rem 1rem' : 'auto',
+            animation: striped && animated ? 'progress-stripes 1s linear infinite' : 'none'
           }}
-        >
-          {labelPosition === 'inside' && label && (
-            <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white">
-              {label} {showPercentage && \`\${value}%\`}
-            </span>
-          )}
-        </div>
+        />
+        {labelPosition === 'inside' && text && (
+          <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white">
+            {text}
+          </span>
+        )}
       </div>
-      {labelPosition === 'outside' && label && (
-        <p className="text-sm mt-2">
-          {label} {showPercentage && \`\${value}%\`}
-        </p>
-      )}
+      {labelPosition === 'outside' && text && <p className="text-sm mt-2">{text}</p>}
     </div>
   );
 };`;
-    } else if (config.value.type === 'circular') {
+    } else if (c.type === 'circular') {
       return `import React from 'react';
 
 export interface CircularProgressProps {
-  value: number;
-  variant?: 'default' | 'success' | 'warning' | 'error';
+  value?: number;
   size?: 'sm' | 'md' | 'lg';
   fillColor?: string;
   trackColor?: string;
   label?: string;
   labelPosition?: 'inside' | 'outside' | 'none';
+  animated?: boolean;
   showPercentage?: boolean;
 }
 
+const sizeMap: Record<string, number> = { sm: 80, md: 120, lg: 160 };
+
 export const CircularProgress: React.FC<CircularProgressProps> = ({
-  value,
-  variant = '${config.value.state}',
-  size = '${config.value.size}',
-  fillColor = '${colors.fill}',
-  trackColor = '${colors.track}',
-  label = '${config.value.label}',
-  labelPosition = '${config.value.labelPosition}',
-  showPercentage = ${config.value.showPercentage}
+  value = ${value},
+  size = ${q(c.size)},
+  fillColor = ${q(colors.fill)},
+  trackColor = ${q(colors.track)},
+  label = ${q(c.label)},
+  labelPosition = ${q(c.labelPosition)},
+  animated = ${Boolean(c.animated)},
+  showPercentage = ${Boolean(c.showPercentage)}
 }) => {
-  const sizeMap = { sm: 80, md: 120, lg: 160 };
+  const clamped = Math.min(100, Math.max(0, value));
   const diameter = sizeMap[size];
   const radius = (diameter - 16) / 2;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (value / 100) * circumference;
-  
+  const offset = circumference - (clamped / 100) * circumference;
+
   return (
-    <div className="relative" style={{ width: \`\${diameter}px\`, height: \`\${diameter}px\` }}>
-      <svg width={diameter} height={diameter} className="transform -rotate-90">
-        <circle
-          cx={diameter / 2}
-          cy={diameter / 2}
-          r={radius}
-          fill="none"
-          stroke={trackColor}
-          strokeWidth="8"
-        />
+    <div
+      className="relative"
+      style={{ width: \`\${diameter}px\`, height: \`\${diameter}px\` }}
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={clamped}
+      aria-label={label || 'Progress'}
+    >
+      <svg width={diameter} height={diameter} style={{ transform: 'rotate(-90deg)' }} aria-hidden="true">
+        <circle cx={diameter / 2} cy={diameter / 2} r={radius} fill="none" stroke={trackColor} strokeWidth="8" />
         <circle
           cx={diameter / 2}
           cy={diameter / 2}
@@ -749,13 +795,13 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
           strokeWidth="8"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className="transition-all duration-300"
+          style={{ transition: animated ? 'stroke-dashoffset 0.3s ease' : 'none' }}
         />
       </svg>
       {labelPosition !== 'none' && (
         <div className="absolute inset-0 flex items-center justify-center flex-col">
           {label && <span className="text-sm font-medium">{label}</span>}
-          {showPercentage && <span className="text-lg font-bold">\${value}%</span>}
+          {showPercentage && <span className="text-lg font-bold">{clamped}%</span>}
         </div>
       )}
     </div>
@@ -765,8 +811,7 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
       return `import React from 'react';
 
 export interface StepProgressProps {
-  value: number;
-  variant?: 'default' | 'success' | 'warning' | 'error';
+  value?: number;
   size?: 'sm' | 'md' | 'lg';
   fillColor?: string;
   trackColor?: string;
@@ -775,28 +820,37 @@ export interface StepProgressProps {
   steps?: number;
 }
 
+const sizeMap: Record<string, React.CSSProperties> = {
+  sm: { width: '32px', height: '32px', fontSize: '12px' },
+  md: { width: '40px', height: '40px', fontSize: '14px' },
+  lg: { width: '48px', height: '48px', fontSize: '16px' }
+};
+
 export const StepProgress: React.FC<StepProgressProps> = ({
-  value,
-  variant = '${config.value.state}',
-  size = '${config.value.size}',
-  fillColor = '${colors.fill}',
-  trackColor = '${colors.track}',
-  label = '${config.value.label}',
-  showPercentage = ${config.value.showPercentage},
-  steps = 5
+  value = ${value},
+  size = ${q(c.size)},
+  fillColor = ${q(colors.fill)},
+  trackColor = ${q(colors.track)},
+  label = ${q(c.label)},
+  showPercentage = ${Boolean(c.showPercentage)},
+  steps = ${STEP_COUNT}
 }) => {
-  const sizeMap = {
-    sm: { width: '32px', height: '32px', fontSize: '12px' },
-    md: { width: '40px', height: '40px', fontSize: '14px' },
-    lg: { width: '48px', height: '48px', fontSize: '16px' }
-  };
-  
-  const completedSteps = Math.floor(value / (100 / steps));
-  
+  const stepCount = Math.max(1, Math.floor(steps));
+  const clamped = Math.min(100, Math.max(0, value));
+  const completedSteps = Math.floor(clamped / (100 / stepCount));
+
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between">
-        {Array.from({ length: steps }).map((_, index) => (
+      <div
+        className="flex items-center justify-between"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={clamped}
+        aria-valuetext={\`Step \${completedSteps} of \${stepCount} complete\`}
+        aria-label={label || 'Progress'}
+      >
+        {Array.from({ length: stepCount }).map((_, index) => (
           <React.Fragment key={index}>
             <div
               className="rounded-full flex items-center justify-center font-medium"
@@ -808,13 +862,10 @@ export const StepProgress: React.FC<StepProgressProps> = ({
             >
               {index < completedSteps ? '✓' : index + 1}
             </div>
-            {index < steps - 1 && (
+            {index < stepCount - 1 && (
               <div
                 className="h-1 mx-1"
-                style={{
-                  width: '40px',
-                  backgroundColor: index < completedSteps ? fillColor : trackColor
-                }}
+                style={{ width: '40px', backgroundColor: index < completedSteps ? fillColor : trackColor }}
               />
             )}
           </React.Fragment>
@@ -822,7 +873,7 @@ export const StepProgress: React.FC<StepProgressProps> = ({
       </div>
       {label && (
         <p className="text-sm text-center mt-4">
-          {label} {showPercentage && \`\${value}%\`}
+          {label} {showPercentage && \`\${clamped}%\`}
         </p>
       )}
     </div>
@@ -830,31 +881,195 @@ export const StepProgress: React.FC<StepProgressProps> = ({
 };`;
     }
   } else if (selectedExportFormat.value === 'vue') {
-    // Vue component code would go here - similar structure
-    return `<!-- Vue component code - similar structure to React -->`;
+    const templateOpen = String.fromCharCode(60) + 'template' + String.fromCharCode(62);
+    const templateClose = String.fromCharCode(60) + '/' + 'template' + String.fromCharCode(62);
+    const scriptSetupOpen = String.fromCharCode(60) + 'script setup' + String.fromCharCode(62);
+    const scriptClose = String.fromCharCode(60) + '/' + 'script' + String.fromCharCode(62);
+
+    let template;
+    if (c.type === 'linear') {
+      template = `
+  <div class="w-full">
+    <div
+      class="relative rounded-full overflow-hidden"
+      :style="{ width: '100%', backgroundColor: trackColor, height: heights[size] }"
+      role="progressbar"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      :aria-valuenow="clamped"
+      :aria-label="label || 'Progress'"
+    >
+      <div class="h-full rounded-full" :style="fillStyle"></div>
+      <span
+        v-if="labelPosition === 'inside' && text"
+        class="absolute inset-0 flex items-center justify-center text-xs font-medium text-white"
+      >{{ text }}</span>
+    </div>
+    <p v-if="labelPosition === 'outside' && text" class="text-sm mt-2">{{ text }}</p>
+  </div>
+`;
+    } else if (c.type === 'circular') {
+      template = `
+  <div
+    class="relative"
+    :style="{ width: diameter + 'px', height: diameter + 'px' }"
+    role="progressbar"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    :aria-valuenow="clamped"
+    :aria-label="label || 'Progress'"
+  >
+    <svg :width="diameter" :height="diameter" style="transform: rotate(-90deg)" aria-hidden="true">
+      <circle :cx="diameter / 2" :cy="diameter / 2" :r="radius" fill="none" :stroke="trackColor" stroke-width="8" />
+      <circle
+        :cx="diameter / 2"
+        :cy="diameter / 2"
+        :r="radius"
+        fill="none"
+        :stroke="fillColor"
+        stroke-width="8"
+        :stroke-dasharray="circumference"
+        :stroke-dashoffset="circumference - (clamped / 100) * circumference"
+        :style="{ transition: animated ? 'stroke-dashoffset 0.3s ease' : 'none' }"
+      />
+    </svg>
+    <div v-if="labelPosition !== 'none'" class="absolute inset-0 flex items-center justify-center flex-col">
+      <span v-if="label" class="text-sm font-medium">{{ label }}</span>
+      <span v-if="showPercentage" class="text-lg font-bold">{{ clamped }}%</span>
+    </div>
+  </div>
+`;
+    } else {
+      template = `
+  <div class="w-full">
+    <div
+      class="flex items-center justify-between"
+      role="progressbar"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      :aria-valuenow="clamped"
+      :aria-valuetext="\`Step \${completedSteps} of \${steps} complete\`"
+      :aria-label="label || 'Progress'"
+    >
+      <template v-for="(step, index) in steps" :key="index">
+        <div
+          class="rounded-full flex items-center justify-center font-medium"
+          :style="{
+            ...stepSizes[size],
+            backgroundColor: index < completedSteps ? fillColor : trackColor,
+            color: index < completedSteps ? '#ffffff' : '#6b7280'
+          }"
+        >{{ index < completedSteps ? '✓' : index + 1 }}</div>
+        <div
+          v-if="index < steps - 1"
+          class="h-1 mx-1"
+          :style="{ width: '40px', backgroundColor: index < completedSteps ? fillColor : trackColor }"
+        ></div>
+      </template>
+    </div>
+    <p v-if="text" class="text-sm text-center mt-4">{{ text }}</p>
+  </div>
+`;
+    }
+
+    return templateOpen + template + templateClose + `
+
+` + scriptSetupOpen + `
+import { computed } from 'vue';
+
+const props = defineProps({
+  value: { type: Number, default: ${value} },
+  size: { type: String, default: ${q(c.size)} },
+  fillColor: { type: String, default: ${q(colors.fill)} },
+  trackColor: { type: String, default: ${q(colors.track)} },
+  label: { type: String, default: ${q(c.label)} },
+  labelPosition: { type: String, default: ${q(c.labelPosition)} },
+  animated: { type: Boolean, default: ${Boolean(c.animated)} },
+  striped: { type: Boolean, default: ${Boolean(c.striped)} },
+  showPercentage: { type: Boolean, default: ${Boolean(c.showPercentage)} },
+  steps: { type: Number, default: ${STEP_COUNT} }
+});
+
+const heights = { sm: '8px', md: '12px', lg: '16px' };
+const stepSizes = {
+  sm: { width: '32px', height: '32px', fontSize: '12px' },
+  md: { width: '40px', height: '40px', fontSize: '14px' },
+  lg: { width: '48px', height: '48px', fontSize: '16px' }
+};
+const diameters = { sm: 80, md: 120, lg: 160 };
+
+const clamped = computed(() => Math.min(100, Math.max(0, props.value)));
+const text = computed(() => [props.label, props.showPercentage ? \`\${clamped.value}%\` : ''].filter(Boolean).join(' '));
+const diameter = computed(() => diameters[props.size]);
+const radius = computed(() => (diameter.value - 16) / 2);
+const circumference = computed(() => 2 * Math.PI * radius.value);
+const completedSteps = computed(() => Math.floor(clamped.value / (100 / Math.max(1, props.steps))));
+
+const fillStyle = computed(() => ({
+  width: \`\${clamped.value}%\`,
+  backgroundColor: props.fillColor,
+  transition: props.animated ? 'width 0.3s ease' : 'none',
+  backgroundImage: props.striped ? '${STRIPES}' : 'none',
+  backgroundSize: props.striped ? '1rem 1rem' : 'auto',
+  animation: props.striped && props.animated ? 'progress-stripes 1s linear infinite' : 'none'
+}));
+` + scriptClose + `
+
+<style>
+@keyframes progress-stripes {
+  from { background-position: 1rem 0; }
+  to { background-position: 0 0; }
+}
+</style>`;
   } else {
+    const heights = { sm: '8px', md: '12px', lg: '16px' };
     return `/* CSS for Progress Indicator */
 .progress-linear {
+  position: relative;
   width: 100%;
+  height: ${heights[c.size] || '12px'};
   background-color: ${colors.track};
   border-radius: 9999px;
   overflow: hidden;
 }
 
 .progress-fill {
+  width: ${value}%; /* set from your progress value */
   height: 100%;
   background-color: ${colors.fill};
   border-radius: 9999px;
-  transition: width 0.3s ease;
-}`;
+  transition: ${c.animated ? 'width 0.3s ease' : 'none'};
+}
+
+.progress-fill.progress-striped {
+  background-image: ${STRIPES};
+  background-size: 1rem 1rem;
+}
+
+.progress-fill.progress-striped.progress-animated {
+  animation: progress-stripes 1s linear infinite;
+}
+
+@keyframes progress-stripes {
+  from { background-position: 1rem 0; }
+  to { background-position: 0 0; }
+}
+
+/* Usage:
+<div class="progress-linear" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${value}">
+  <div class="progress-fill${c.striped ? ' progress-striped' : ''}${c.striped && c.animated ? ' progress-animated' : ''}"></div>
+</div>
+*/`;
   }
 });
 
 const copyCode = async () => {
   try {
     await navigator.clipboard.writeText(generatedCode.value);
+    showNotice('Code copied to clipboard.', 'success');
   } catch (error) {
     console.error('Copy failed:', error);
+    showNotice('Could not copy to the clipboard. Select the code and copy it manually.', 'error');
   }
 };
 
@@ -862,35 +1077,6 @@ const copyCode = async () => {
 
 
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style>

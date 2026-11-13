@@ -4,8 +4,10 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { TriggerTestDto } from './dto/trigger-test.dto';
 import { parsePaginationParams } from '../common/pagination/pagination.types';
+import { ApiKeyGuard } from '../common/security/api-key.guard';
 
 @Controller('api/v1/visual-regression')
+@UseGuards(ApiKeyGuard)
 export class VisualRegressionController {
   constructor(private readonly visualRegressionService: VisualRegressionService) {}
 
@@ -86,16 +88,6 @@ export class VisualRegressionController {
     return { message: 'Diff rejected successfully' };
   }
 
-  @Post('webhooks/argos')
-  @HttpCode(200)
-  async handleArgosWebhook(
-    @Body() payload: any,
-    @Headers('x-argos-signature') signature?: string,
-    @Headers('x-argos-event') event?: string,
-  ) {
-    return this.visualRegressionService.handleWebhook(payload, signature, event);
-  }
-
   // Analytics & Reporting
   @Get('projects/:id/analytics')
   async getProjectAnalytics(
@@ -159,5 +151,25 @@ export class VisualRegressionController {
   @Get('projects/:id/notifications')
   async getNotificationConfig(@Param('id') projectId: string) {
     return this.visualRegressionService.getNotificationConfig(projectId);
+  }
+}
+
+/**
+ * Argos calls this without an API key, so it lives outside the guarded
+ * controller. Each request must carry a valid signature instead.
+ */
+@Controller('api/v1/visual-regression')
+export class ArgosWebhookController {
+  constructor(private readonly visualRegressionService: VisualRegressionService) {}
+
+  @Post('webhooks/argos')
+  @HttpCode(200)
+  async handleArgosWebhook(
+    @Body() payload: any,
+    @Request() req: { rawBody?: Buffer },
+    @Headers('x-argos-signature') signature?: string,
+    @Headers('x-argos-event') event?: string,
+  ) {
+    return this.visualRegressionService.handleWebhook(payload, signature, event, req.rawBody);
   }
 }

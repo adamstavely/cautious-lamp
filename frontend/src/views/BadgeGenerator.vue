@@ -373,6 +373,7 @@
                           Copy
                         </button>
                       </div>
+                      <InlineNotice :notice="notice" class="mb-2" @dismiss="clearNotice" />
                       <textarea
                         :value="generatedCode"
                         readonly
@@ -394,13 +395,26 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
+
+const SHADOW = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)';
+const RIBBON_CLIP = 'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)';
+const VARIANT_COLORS = {
+  success: { bg: '#10b981', text: '#ffffff' },
+  warning: { bg: '#f59e0b', text: '#ffffff' },
+  error: { bg: '#ef4444', text: '#ffffff' },
+  info: { bg: '#3b82f6', text: '#ffffff' }
+};
 
 const badgeStyles = [
   { label: 'Rounded', value: 'rounded' },
@@ -452,14 +466,7 @@ const getIconName = () => {
 
 const getStateColors = (state = null) => {
   const stateToUse = state || config.value.state;
-  const colorMap = {
-    default: { bg: config.value.backgroundColor, text: config.value.textColor },
-    success: { bg: '#10b981', text: '#ffffff' },
-    warning: { bg: '#f59e0b', text: '#ffffff' },
-    error: { bg: '#ef4444', text: '#ffffff' },
-    info: { bg: '#3b82f6', text: '#ffffff' }
-  };
-  return colorMap[stateToUse] || colorMap.default;
+  return VARIANT_COLORS[stateToUse] || { bg: config.value.backgroundColor, text: config.value.textColor };
 };
 
 const getBadgeClasses = (stateOverride = null) => {
@@ -516,27 +523,32 @@ const getBadgeStyles = (stateOverride = null) => {
     styles.borderRadius = `${config.value.borderRadius}px`;
     styles.position = 'relative';
     // Add ribbon tail effect with clip-path - creates a diagonal cut on the right
-    styles.clipPath = 'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)';
+    styles.clipPath = RIBBON_CLIP;
     styles.paddingRight = '12px';
   } else {
     styles.borderRadius = `${config.value.borderRadius}px`;
   }
   
   if (config.value.hasShadow) {
-    styles.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)';
+    styles.boxShadow = SHADOW;
   }
   
   return styles;
 };
 
 const generatedCode = computed(() => {
-  const colors = getStateColors();
-  
+  const c = config.value;
+  // String values go through JSON.stringify so quotes/backticks in the badge
+  // text can't break the generated code.
+  const q = (value) => JSON.stringify(String(value ?? ''));
+  const radius = Math.max(0, Number(c.borderRadius) || 0);
+  const variantColors = JSON.stringify(VARIANT_COLORS, null, 2);
+
   if (selectedExportFormat.value === 'react') {
     return `import React from 'react';
 
 export interface BadgeProps {
-  text: string;
+  text?: string;
   variant?: 'default' | 'success' | 'warning' | 'error' | 'info';
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   icon?: 'check' | 'close' | 'star' | 'info' | 'warning' | '';
@@ -548,55 +560,68 @@ export interface BadgeProps {
   hasShadow?: boolean;
 }
 
+const VARIANT_COLORS: Record<string, { bg: string; text: string }> = ${variantColors};
+
+const sizeClasses: Record<string, string> = {
+  xs: 'text-xs px-2 py-0.5',
+  sm: 'text-sm px-2.5 py-1',
+  md: 'text-sm px-3 py-1.5',
+  lg: 'text-base px-4 py-2',
+  xl: 'text-lg px-5 py-2.5'
+};
+
+const medalSizeClasses: Record<string, string> = {
+  xs: 'text-xs w-8 h-8',
+  sm: 'text-sm w-10 h-10',
+  md: 'text-base w-12 h-12',
+  lg: 'text-lg w-14 h-14',
+  xl: 'text-xl w-16 h-16'
+};
+
+const iconMap: Record<string, string> = {
+  check: '✓',
+  close: '✕',
+  star: '★',
+  info: 'ℹ',
+  warning: '⚠'
+};
+
 export const Badge: React.FC<BadgeProps> = ({
-  text,
-  variant = '${config.value.state}',
-  size = '${config.value.size}',
-  icon = '${config.value.icon || ''}',
-  iconPosition = '${config.value.iconPosition}',
-  style = '${config.value.style}',
-  backgroundColor = '${colors.bg}',
-  textColor = '${colors.text}',
-  borderRadius = ${config.value.borderRadius},
-  hasShadow = ${config.value.hasShadow}
+  text = ${q(c.text || 'Badge')},
+  variant = ${q(c.state)},
+  size = ${q(c.size)},
+  icon = ${q(c.icon || '')},
+  iconPosition = ${q(c.iconPosition)},
+  style = ${q(c.style)},
+  backgroundColor = ${q(c.backgroundColor)},
+  textColor = ${q(c.textColor)},
+  borderRadius = ${radius},
+  hasShadow = ${Boolean(c.hasShadow)}
 }) => {
-  const sizeClasses = {
-    xs: 'text-xs px-2 py-0.5',
-    sm: 'text-sm px-2.5 py-1',
-    md: 'text-sm px-3 py-1.5',
-    lg: 'text-base px-4 py-2',
-    xl: 'text-lg px-5 py-2.5'
-  };
-  
-  const styleClasses = {
-    rounded: 'rounded-lg',
-    pill: 'rounded-full',
-    ribbon: 'rounded-lg',
-    medal: 'rounded-full',
-    tag: 'rounded'
-  };
-  
-  const iconMap = {
-    check: '✓',
-    close: '✕',
-    star: '★',
-    info: 'ℹ',
-    warning: '⚠'
-  };
-  
+  const colors = VARIANT_COLORS[variant] || { bg: backgroundColor, text: textColor };
+
+  const shapeStyle: React.CSSProperties =
+    style === 'medal'
+      ? { borderRadius: '50%', aspectRatio: '1', minWidth: '40px', minHeight: '40px', justifyContent: 'center' }
+      : style === 'ribbon'
+        ? { borderRadius: \`\${borderRadius}px\`, clipPath: '${RIBBON_CLIP}', paddingRight: '12px' }
+        : { borderRadius: style === 'pill' ? '9999px' : \`\${borderRadius}px\` };
+
+  const sizeClass = style === 'medal' ? medalSizeClasses[size] : sizeClasses[size];
+
   return (
     <span
-      className={\`inline-flex items-center font-medium \${sizeClasses[size]} \${styleClasses[style]}\`}
+      className={\`inline-flex items-center font-medium \${sizeClass}\`}
       style={{
-        backgroundColor,
-        color: textColor,
-        borderRadius: style === 'pill' ? '9999px' : \`\${borderRadius}px\`,
-        boxShadow: hasShadow ? '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)' : 'none'
+        backgroundColor: colors.bg,
+        color: colors.text,
+        boxShadow: hasShadow ? '${SHADOW}' : 'none',
+        ...shapeStyle
       }}
     >
-      {icon && iconPosition === 'left' && <span className="mr-1">{iconMap[icon]}</span>}
+      {icon && iconPosition === 'left' && <span className="mr-1" aria-hidden="true">{iconMap[icon]}</span>}
       {text}
-      {icon && iconPosition === 'right' && <span className="ml-1">{iconMap[icon]}</span>}
+      {icon && iconPosition === 'right' && <span className="ml-1" aria-hidden="true">{iconMap[icon]}</span>}
     </span>
   );
 };`;
@@ -606,17 +631,16 @@ export const Badge: React.FC<BadgeProps> = ({
     const templateClose = String.fromCharCode(60) + '/' + 'template' + String.fromCharCode(62);
     const scriptSetupOpen = String.fromCharCode(60) + 'script setup' + String.fromCharCode(62);
     const scriptClose = String.fromCharCode(60) + '/' + 'script' + String.fromCharCode(62);
-    
     return templateOpen + `
   <span
     :class="badgeClasses"
     :style="badgeStyles"
   >
-    <span v-if="icon && iconPosition === 'left'" class="material-symbols-outlined text-sm mr-1">
+    <span v-if="icon && iconPosition === 'left'" class="material-symbols-outlined text-sm mr-1" aria-hidden="true">
       {{ iconName }}
     </span>
     {{ text }}
-    <span v-if="icon && iconPosition === 'right'" class="material-symbols-outlined text-sm ml-1">
+    <span v-if="icon && iconPosition === 'right'" class="material-symbols-outlined text-sm ml-1" aria-hidden="true">
       {{ iconName }}
     </span>
   </span>
@@ -628,50 +652,52 @@ import { computed } from 'vue';
 const props = defineProps({
   text: {
     type: String,
-    required: true
+    default: ${q(c.text || 'Badge')}
   },
   variant: {
     type: String,
-    default: '${config.value.state}',
+    default: ${q(c.state)},
     validator: (value) => ['default', 'success', 'warning', 'error', 'info'].includes(value)
   },
   size: {
     type: String,
-    default: '${config.value.size}',
+    default: ${q(c.size)},
     validator: (value) => ['xs', 'sm', 'md', 'lg', 'xl'].includes(value)
   },
   icon: {
     type: String,
-    default: '${config.value.icon || ''}',
+    default: ${q(c.icon || '')},
     validator: (value) => ['', 'check', 'close', 'star', 'info', 'warning'].includes(value)
   },
   iconPosition: {
     type: String,
-    default: '${config.value.iconPosition}',
+    default: ${q(c.iconPosition)},
     validator: (value) => ['left', 'right'].includes(value)
   },
   style: {
     type: String,
-    default: '${config.value.style}',
+    default: ${q(c.style)},
     validator: (value) => ['rounded', 'pill', 'ribbon', 'medal', 'tag'].includes(value)
   },
   backgroundColor: {
     type: String,
-    default: '${colors.bg}'
+    default: ${q(c.backgroundColor)}
   },
   textColor: {
     type: String,
-    default: '${colors.text}'
+    default: ${q(c.textColor)}
   },
   borderRadius: {
     type: Number,
-    default: ${config.value.borderRadius}
+    default: ${radius}
   },
   hasShadow: {
     type: Boolean,
-    default: ${config.value.hasShadow}
+    default: ${Boolean(c.hasShadow)}
   }
 });
+
+const VARIANT_COLORS = ${variantColors};
 
 const sizeClasses = {
   xs: 'text-xs px-2 py-0.5',
@@ -681,12 +707,12 @@ const sizeClasses = {
   xl: 'text-lg px-5 py-2.5'
 };
 
-const styleClasses = {
-  rounded: 'rounded-lg',
-  pill: 'rounded-full',
-  ribbon: 'rounded-lg',
-  medal: 'rounded-full',
-  tag: 'rounded'
+const medalSizeClasses = {
+  xs: 'text-xs w-8 h-8',
+  sm: 'text-sm w-10 h-10',
+  md: 'text-base w-12 h-12',
+  lg: 'text-lg w-14 h-14',
+  xl: 'text-xl w-16 h-16'
 };
 
 const iconMap = {
@@ -698,32 +724,49 @@ const iconMap = {
 };
 
 const badgeClasses = computed(() => {
-  return \`inline-flex items-center font-medium \${sizeClasses[props.size]} \${styleClasses[props.style]}\`;
+  const sizeClass = props.style === 'medal' ? medalSizeClasses[props.size] : sizeClasses[props.size];
+  return \`inline-flex items-center font-medium \${sizeClass}\`;
 });
 
 const badgeStyles = computed(() => {
-  return {
-    backgroundColor: props.backgroundColor,
-    color: props.textColor,
+  const colors = VARIANT_COLORS[props.variant] || { bg: props.backgroundColor, text: props.textColor };
+  const styles = {
+    backgroundColor: colors.bg,
+    color: colors.text,
     borderRadius: props.style === 'pill' ? '9999px' : \`\${props.borderRadius}px\`,
-    boxShadow: props.hasShadow ? '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)' : 'none'
+    boxShadow: props.hasShadow ? '${SHADOW}' : 'none'
   };
+  if (props.style === 'medal') {
+    Object.assign(styles, { borderRadius: '50%', aspectRatio: '1', minWidth: '40px', minHeight: '40px', justifyContent: 'center' });
+  } else if (props.style === 'ribbon') {
+    Object.assign(styles, { clipPath: '${RIBBON_CLIP}', paddingRight: '12px' });
+  }
+  return styles;
 });
 
-const iconName = computed(() => {
-  return props.icon ? iconMap[props.icon] : '';
-});
+const iconName = computed(() => (props.icon ? iconMap[props.icon] : ''));
 ` + scriptClose;
   } else {
+    const shape = c.style === 'pill'
+      ? '  border-radius: 9999px;'
+      : c.style === 'medal'
+        ? '  border-radius: 50%;\n  aspect-ratio: 1;\n  min-width: 40px;\n  min-height: 40px;\n  justify-content: center;'
+        : c.style === 'ribbon'
+          ? `  border-radius: ${radius}px;\n  clip-path: ${RIBBON_CLIP};\n  padding-right: 12px;`
+          : `  border-radius: ${radius}px;`;
+    const variants = Object.entries(VARIANT_COLORS)
+      .map(([name, colors]) => `.badge-${name} {\n  background-color: ${colors.bg};\n  color: ${colors.text};\n}`)
+      .join('\n\n');
     return `.badge {
   display: inline-flex;
   align-items: center;
   font-weight: 500;
-  background-color: ${colors.bg};
-  color: ${colors.text};
-  border-radius: ${config.value.style === 'pill' ? '9999px' : `${config.value.borderRadius}px`};
-  ${config.value.hasShadow ? 'box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);' : ''}
+  background-color: ${c.backgroundColor};
+  color: ${c.textColor};
+${shape}${c.hasShadow ? `\n  box-shadow: ${SHADOW};` : ''}
 }
+
+${variants}
 
 .badge-xs {
   font-size: 0.75rem;
@@ -748,16 +791,19 @@ const iconName = computed(() => {
 .badge-xl {
   font-size: 1.125rem;
   padding: 0.625rem 1.25rem;
-}`;
+}
+
+/* Usage: <span class="badge badge-${c.size}${c.state !== 'default' ? ` badge-${c.state}` : ''}">${String(c.text || 'Badge').replace(/[<>&]|\*\//g, '')}</span> */`;
   }
 });
 
 const copyCode = async () => {
   try {
     await navigator.clipboard.writeText(generatedCode.value);
-    // Could add toast notification here
+    showNotice('Code copied to clipboard.', 'success');
   } catch (error) {
     console.error('Copy failed:', error);
+    showNotice('Could not copy to the clipboard. Select the code and copy it manually.', 'error');
   }
 };
 
@@ -765,35 +811,6 @@ const copyCode = async () => {
 
 
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { EncryptionService } from './encryption.service';
 
@@ -24,7 +24,63 @@ export class KeyManagementService {
   private readonly logger = new Logger(KeyManagementService.name);
   private readonly keys = new Map<string, ApiKeyMetadata>();
 
-  constructor(private readonly encryptionService: EncryptionService) {}
+  /** Hashes of the keys configured through API_KEYS (comma-separated). */
+  private readonly configuredKeyHashes: Set<string>;
+
+  constructor(private readonly encryptionService: EncryptionService) {
+    this.configuredKeyHashes = new Set(
+      (process.env.API_KEYS ?? '')
+        .split(',')
+        .map((key) => key.trim())
+        .filter(Boolean)
+        .map((key) => this.hashKey(key)),
+    );
+    if (this.configuredKeyHashes.size === 0) {
+      this.logger.warn('API_KEYS is not set: only keys created through the API will be accepted');
+    }
+  }
+
+  /**
+   * Whether a key is one of the configured keys or a live managed key
+   */
+  isValidApiKey(apiKey: string | undefined): boolean {
+    if (!apiKey) return false;
+    return this.configuredKeyHashes.has(this.hashKey(apiKey)) || this.validateKey(apiKey) !== null;
+  }
+
+  /**
+   * Whether a key matches ADMIN_API_KEY. Admin routes are closed when it isn't set.
+   */
+  isAdminKey(apiKey: string | undefined): boolean {
+    const adminKey = process.env.ADMIN_API_KEY;
+    if (!adminKey || !apiKey) return false;
+    const expected = Buffer.from(this.hashKey(adminKey));
+    const actual = Buffer.from(this.hashKey(apiKey));
+    return crypto.timingSafeEqual(expected, actual);
+  }
+
+  /**
+   * Throws unless the Authorization header carries a valid API key
+   */
+  assertValidApiKey(authHeader: string | undefined): void {
+    if (!this.isValidApiKey(KeyManagementService.extractKey(authHeader))) {
+      throw new UnauthorizedException('Invalid or missing API key');
+    }
+  }
+
+  /**
+   * Throws unless the Authorization header carries the admin key
+   */
+  assertAdminKey(authHeader: string | undefined): void {
+    if (!this.isAdminKey(KeyManagementService.extractKey(authHeader))) {
+      throw new UnauthorizedException('Admin API key required');
+    }
+  }
+
+  static extractKey(authHeader: string | undefined): string | undefined {
+    if (!authHeader) return undefined;
+    return authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+  }
 
   /**
    * Create a new API key

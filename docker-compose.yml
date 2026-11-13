@@ -6,14 +6,16 @@ services:
     container_name: color-palette-elasticsearch
     environment:
       - discovery.type=single-node
+      # Security is off for local development only. The port is bound to
+      # 127.0.0.1 so the unauthenticated node isn't reachable from the network.
+      # Enable xpack security and set ELASTICSEARCH_USERNAME/PASSWORD for any
+      # shared or deployed environment.
       - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - "127.0.0.1:9200:9200"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
 
 volumes:
   elasticsearch_data:
-

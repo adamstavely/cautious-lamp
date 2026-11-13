@@ -1,5 +1,13 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
 import { apiClient } from '../api-client';
+import { rootPath } from '../api-root';
+
+// The patterns library controller is mounted at `/patterns-library` on the
+// server root, not under the `/api/v1` prefix the API base URL points at.
+const PATTERNS_PATH = '/patterns-library/patterns';
+
+const patternCategorySchema = z.enum(['layout', 'navigation', 'forms', 'data-display', 'feedback', 'overlays', 'other']);
 
 export interface ComponentPattern {
   id: string;
@@ -25,6 +33,24 @@ export interface PatternsResponse {
   patterns: ComponentPattern[];
   count: number;
 }
+
+/**
+ * The backend returns a bare array of patterns; wrap it so callers get a
+ * consistent `{ patterns, count }` shape (an already-wrapped response passes through).
+ */
+export function toPatternsResponse(data: ComponentPattern[] | PatternsResponse): PatternsResponse {
+  if (Array.isArray(data)) {
+    return { patterns: data, count: data.length };
+  }
+  const patterns = Array.isArray(data?.patterns) ? data.patterns : [];
+  return { patterns, count: patterns.length };
+}
+
+export const getPatternsSchema = z.object({
+  category: patternCategorySchema.optional(),
+  tags: z.string().optional(),
+  search: z.string().optional(),
+});
 
 export const getPatternsTool: Tool = {
   name: 'get_patterns',
@@ -55,8 +81,13 @@ export async function getPatterns(args: { category?: string; tags?: string; sear
   if (args.tags) params.tags = args.tags;
   if (args.search) params.search = args.search;
 
-  return await apiClient.get<PatternsResponse>('/patterns-library/patterns', params, 'patterns');
+  const data = await apiClient.get<ComponentPattern[] | PatternsResponse>(rootPath(PATTERNS_PATH), params, 'patterns');
+  return toPatternsResponse(data);
 }
+
+export const getPatternSchema = z.object({
+  id: z.string().min(1),
+});
 
 export const getPatternTool: Tool = {
   name: 'get_pattern',
@@ -74,8 +105,12 @@ export const getPatternTool: Tool = {
 };
 
 export async function getPattern(args: { id: string }): Promise<ComponentPattern> {
-  return await apiClient.get<ComponentPattern>(`/patterns-library/patterns/${encodeURIComponent(args.id)}`, { id: args.id }, 'patterns');
+  return await apiClient.get<ComponentPattern>(rootPath(`${PATTERNS_PATH}/${encodeURIComponent(args.id)}`), undefined, 'patterns');
 }
+
+export const getPatternsByComponentSchema = z.object({
+  componentId: z.string().min(1),
+});
 
 export const getPatternsByComponentTool: Tool = {
   name: 'get_patterns_by_component',
@@ -93,6 +128,11 @@ export const getPatternsByComponentTool: Tool = {
 };
 
 export async function getPatternsByComponent(args: { componentId: string }): Promise<PatternsResponse> {
-  return await apiClient.get<PatternsResponse>(`/patterns-library/patterns/component/${encodeURIComponent(args.componentId)}`, { componentId: args.componentId }, 'patterns');
+  const data = await apiClient.get<ComponentPattern[] | PatternsResponse>(
+    rootPath(`${PATTERNS_PATH}/component/${encodeURIComponent(args.componentId)}`),
+    undefined,
+    'patterns'
+  );
+  return toPatternsResponse(data);
 }
 

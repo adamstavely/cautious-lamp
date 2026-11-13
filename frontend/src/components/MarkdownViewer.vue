@@ -106,6 +106,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { marked } from 'marked';
+import { spot } from '../utils/spotIllustrations.js';
 
 const props = defineProps({
   docPath: {
@@ -362,6 +363,11 @@ const foundationHeroCards = {
       <rect x="130" y="100" width="40" height="25" rx="2" fill="url(#dashboardGradient)" opacity="0.2" stroke="url(#dashboardGradient)" stroke-width="1"/>
       <rect x="130" y="130" width="40" height="25" rx="2" fill="url(#dashboardGradient)" opacity="0.2" stroke="url(#dashboardGradient)" stroke-width="1"/>
     </svg>`
+  },
+  '/data-viz/dashboard-design': {
+    title: 'Dashboard Design',
+    description: 'Design dashboards around the decisions people need to make: choose the right dashboard type, prioritize what matters, and keep data easy to scan.',
+    svg: spot('foundations/dashboard-types'),
   },
   '/data-viz/dashboard-patterns': {
     title: 'Dashboard Patterns',
@@ -684,7 +690,7 @@ const isVitePressPagePath = (docPath) => {
     '/hcd/principles', '/hcd/research', '/hcd/accessibility',
     '/patterns', '/patterns/navigation', '/patterns/data-display', '/patterns/layout', '/patterns/forms', '/patterns/feedback',
     '/guidelines/tui-guidance', '/tui-guidance',
-    '/data-viz/types-of-dashboards', '/data-viz/dashboard-patterns',
+    '/data-viz/types-of-dashboards', '/data-viz/dashboard-patterns', '/data-viz/dashboard-design',
     '/'
   ];
   
@@ -769,6 +775,7 @@ const getFilePath = (docPath) => {
     '/tui-guidance': '/docs/guidelines/tui-guidance.md',
     '/data-viz/types-of-dashboards': '/docs/data-viz/types-of-dashboards.md',
     '/data-viz/dashboard-patterns': '/docs/data-viz/dashboard-patterns.md',
+    '/data-viz/dashboard-design': '/docs/data-viz/dashboard-design.md',
     '/': '/docs/index.md'
   };
   

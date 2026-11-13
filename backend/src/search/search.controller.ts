@@ -1,14 +1,16 @@
-import { Controller, Get, Query, Headers, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Query, Headers } from '@nestjs/common';
 import { SearchService, SearchFilters } from './search.service';
+import { KeyManagementService } from '../common/security/key-management.service';
 
 @Controller('api/v1/search')
 export class SearchController {
-  constructor(private readonly searchService: SearchService) {}
+  constructor(
+    private readonly searchService: SearchService,
+    private readonly keyManagementService: KeyManagementService,
+  ) {}
 
   private validateRequest(authHeader?: string): void {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new BadRequestException('Authorization header required');
-    }
+    this.keyManagementService.assertValidApiKey(authHeader);
   }
 
   @Get()

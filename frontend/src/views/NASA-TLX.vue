@@ -288,22 +288,10 @@
                     </span>
                   </button>
                 </div>
+                <InlineNotice :notice="notice" @dismiss="clearNotice" />
               </form>
             </div>
 
-            <!-- Success Message -->
-            <div
-              v-if="showSuccess"
-              class="rounded-lg p-4 mb-6 border"
-              :class="isDarkMode 
-                ? 'bg-green-900/30 border-green-700 text-green-300' 
-                : 'bg-green-50 border-green-300 text-green-800'"
-            >
-              <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined">check_circle</span>
-                <span>Assessment submitted successfully! Data has been saved to Elasticsearch for analysis.</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -312,17 +300,42 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
+import apiClient from '../services/api.js';
 
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 const isSubmitting = ref(false);
-const showSuccess = ref(false);
+
+const RATING_FIELDS = {
+  mentalDemand: 'Mental demand',
+  physicalDemand: 'Physical demand',
+  temporalDemand: 'Temporal demand',
+  performance: 'Performance',
+  effort: 'Effort',
+  frustration: 'Frustration',
+};
+
+// A user-facing reason the submission failed.
+const describeSubmitError = (error) => {
+  const status = error.response?.status;
+  const message = error.response?.data?.message;
+  const detail = Array.isArray(message) ? message.join(' ') : message;
+  if (status === 503) {
+    return `Storage is unavailable, so the assessment was not saved. Please try again later.${detail ? ` (${detail})` : ''}`;
+  }
+  if (detail) return `The assessment was not saved: ${detail}`;
+  if (status) return `The assessment was not saved (HTTP ${status}). Please try again.`;
+  return 'Could not reach the server, so the assessment was not saved. Check your connection and try again.';
+};
 
 const form = ref({
   systemName: '',
@@ -347,32 +360,40 @@ const systemOptions = ref([
 
 
 
+const validate = () => {
+  if (!form.value.systemName) return 'Choose the system or application you are assessing.';
+  if (!form.value.task.trim()) return 'Describe the task you are evaluating.';
+  for (const [key, label] of Object.entries(RATING_FIELDS)) {
+    const value = form.value[key];
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 100) {
+      return `${label} must be a rating from 0 to 100.`;
+    }
+  }
+  return null;
+};
+
 const submitForm = async () => {
-  if (!form.value.systemName || !form.value.task) {
-    alert('Please fill in all required fields.');
+  const problem = validate();
+  if (problem) {
+    showNotice(problem, 'error');
     return;
   }
 
   isSubmitting.value = true;
-  showSuccess.value = false;
+  clearNotice();
 
   try {
-    const apiKey = localStorage.getItem('apiKey') || 'dev-key';
     const user = localStorage.getItem('currentDesigner') || 'Anonymous User';
     
     const payload = {
       ...form.value,
+      task: form.value.task.trim(),
       user,
     };
 
-    await axios.post('http://localhost:3000/api/v1/nasa-tlx', payload, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    await apiClient.post('/api/v1/nasa-tlx', payload);
 
-    showSuccess.value = true;
+    showNotice('Assessment submitted and saved.', 'success');
     
     // Reset form
     form.value = {
@@ -385,30 +406,13 @@ const submitForm = async () => {
       effort: 50,
       frustration: 50,
     };
-
-    // Hide success message after 5 seconds
-    setTimeout(() => {
-      showSuccess.value = false;
-    }, 5000);
   } catch (error) {
     console.error('Failed to submit NASA-TLX:', error);
-    alert('Failed to submit assessment. Please try again.');
+    showNotice(describeSubmitError(error), 'error');
   } finally {
     isSubmitting.value = false;
   }
 };
-
-onMounted(() => {
-  // Watch for dark mode changes
-  const observer = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-});
 </script>
 
 <style scoped>

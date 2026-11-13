@@ -3,66 +3,46 @@
     id="navigation" 
     data-ds-component="sidebar"
     data-ds-path="@design-system/components/sidebar"
-    class="sticky top-0 h-screen text-white flex flex-col flex-shrink-0 w-24 transition-colors z-50 bg-indigo-800 dark:bg-indigo-900" 
+    class="side sticky top-0 h-screen flex flex-col flex-shrink-0 w-24 transition-colors z-50" 
     aria-label="Main navigation"
   >
     <!-- Navigation Items -->
-    <nav class="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-4" role="navigation" aria-label="Main navigation">
+    <nav class="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-4 px-2" role="navigation" aria-label="Main navigation">
       <template v-for="(item, index) in menuItems" :key="item.path">
         <router-link
           :to="item.path"
           @click="handleSidebarClick"
-          :class="[
-            'flex flex-col items-center px-3 py-3 relative group mb-2',
-            isActive(item.path)
-              ? (isDarkMode 
-                ? 'border border-indigo-300 rounded-lg bg-indigo-400/30' 
-                : 'border border-indigo-400 rounded-lg bg-indigo-500/30')
-              : (isDarkMode
-                ? 'hover:bg-indigo-400/30 rounded-lg'
-                : 'hover:bg-indigo-700/50 rounded-lg')
-          ]"
+          :class="['side-item mb-1', { on: isActive(item.path) }]"
         >
-          <span class="material-symbols-outlined flex-shrink-0 mb-2" aria-hidden="true">{{ item.icon }}</span>
-          <span class="font-medium text-sm text-center">{{ item.label }}</span>
+          <span class="material-symbols-outlined side-ic" aria-hidden="true">{{ item.icon }}</span>
+          <span class="side-label">{{ item.label }}</span>
         </router-link>
         <!-- Divider after HCD and Design Assets -->
         <div 
           v-if="item.path === '/research' || item.path === '/design-assets'"
-          class="h-px mx-4 mb-2"
-          :class="isDarkMode ? 'bg-indigo-700' : 'bg-indigo-600'"
+          class="side-divider"
           aria-hidden="true"
         ></div>
       </template>
     </nav>
 
     <!-- Admin Section -->
-    <div class="px-3 pb-2">
+    <div class="px-2 pb-2">
       <router-link
         to="/admin"
         @click="handleSidebarClick"
-        :class="[
-          'flex flex-col items-center px-3 py-3 relative group',
-          isActive('/admin')
-            ? (isDarkMode 
-              ? 'border border-indigo-300 rounded-lg bg-indigo-400/30' 
-              : 'border border-indigo-400 rounded-lg bg-indigo-500/30')
-            : (isDarkMode
-              ? 'hover:bg-indigo-400/30 rounded-lg'
-              : 'hover:bg-indigo-700/50 rounded-lg')
-        ]"
+        :class="['side-item', { on: isActive('/admin') }]"
       >
-        <span class="material-symbols-outlined flex-shrink-0 mb-2" aria-hidden="true">admin_panel_settings</span>
-        <span class="font-medium text-sm text-center">Admin</span>
+        <span class="material-symbols-outlined side-ic" aria-hidden="true">admin_panel_settings</span>
+        <span class="side-label">Admin</span>
       </router-link>
     </div>
 
     <!-- Dark Mode Toggle -->
-    <div class="p-4">
+    <div class="px-2 pb-4">
       <button
         @click="toggleDarkMode"
-        class="flex items-center justify-center p-2 rounded-lg transition-colors relative group w-full"
-        :class="isDarkMode ? 'hover:bg-indigo-400/30' : 'hover:bg-indigo-700/50'"
+        class="side-item w-full"
         :title="isDarkMode ? 'Light Mode' : 'Dark Mode'"
         :aria-label="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
         aria-pressed="false"
@@ -179,3 +159,30 @@ const isActive = (path) => {
 };
 </script>
 
+<style scoped>
+.side {
+  @apply bg-[#fff] border-r border-slate-200 text-slate-600 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-400;
+}
+.side-item {
+  @apply flex flex-col items-center gap-1.5 px-1 py-2.5 rounded-xl transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-900 dark:hover:text-white;
+}
+.side-item.on {
+  @apply bg-[#f2f6fd] text-[#2f5ea8] dark:bg-[#263a5c]/40 dark:text-[#9dbcf0];
+}
+.side-ic {
+  @apply text-slate-400 transition-colors dark:text-slate-500;
+}
+.side-item:hover .side-ic,
+.side-item.on .side-ic {
+  @apply text-[#2f5ea8] dark:text-[#9dbcf0];
+}
+.side-label {
+  @apply text-xs font-medium text-center leading-tight;
+}
+.side-item.on .side-label {
+  @apply font-semibold;
+}
+.side-divider {
+  @apply h-px mx-3 my-2 bg-slate-200 dark:bg-slate-800;
+}
+</style>

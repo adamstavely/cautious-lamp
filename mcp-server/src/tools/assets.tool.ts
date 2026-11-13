@@ -1,5 +1,8 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
 import { apiClient } from '../api-client';
+
+const assetTypeSchema = z.enum(['image', 'icon', 'illustration', 'logo', 'other']);
 
 export interface WorkspaceAsset {
   id: string;
@@ -33,6 +36,12 @@ export interface WorkspaceIcon {
   createdBy: string;
 }
 
+export const getAssetsSchema = z.object({
+  workspaceId: z.string().min(1),
+  type: assetTypeSchema.optional(),
+  userId: z.string().optional(),
+});
+
 export const getAssetsTool: Tool = {
   name: 'get_assets',
   description: 'Retrieve all assets for a workspace with optional type filter (image, icon, illustration, logo, other)',
@@ -65,6 +74,12 @@ export async function getAssets(args: { workspaceId: string; type?: string; user
   return await apiClient.get<WorkspaceAsset[]>(`/workspaces/${encodeURIComponent(args.workspaceId)}/assets`, params, 'assets');
 }
 
+export const getIconsSchema = z.object({
+  workspaceId: z.string().min(1),
+  iconSet: z.string().optional(),
+  userId: z.string().optional(),
+});
+
 export const getIconsTool: Tool = {
   name: 'get_icons',
   description: 'Get all icons for a workspace with optional iconSet filter',
@@ -95,6 +110,11 @@ export async function getIcons(args: { workspaceId: string; iconSet?: string; us
 
   return await apiClient.get<WorkspaceIcon[]>(`/workspaces/${encodeURIComponent(args.workspaceId)}/icons`, params, 'assets');
 }
+
+export const getAssetByIdSchema = z.object({
+  workspaceId: z.string().min(1),
+  assetId: z.string().min(1),
+});
 
 export const getAssetByIdTool: Tool = {
   name: 'get_asset_by_id',
@@ -127,6 +147,12 @@ export async function getAssetById(args: { workspaceId: string; assetId: string 
   
   return asset;
 }
+
+export const searchAssetsSchema = z.object({
+  workspaceId: z.string().min(1),
+  query: z.string(),
+  type: assetTypeSchema.optional(),
+});
 
 export const searchAssetsTool: Tool = {
   name: 'search_assets',
@@ -163,6 +189,8 @@ export async function searchAssets(args: { workspaceId: string; query: string; t
       asset.tags?.some((tag) => tag.toLowerCase().includes(queryLower))
   );
 }
+
+export const getAssetTypesSchema = z.object({});
 
 export const getAssetTypesTool: Tool = {
   name: 'get_asset_types',

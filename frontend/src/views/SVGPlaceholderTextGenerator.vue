@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex transition-colors duration-300">
+  <div class="w-full h-full bg-[#fff] dark:bg-slate-950 text-slate-900 dark:text-slate-100 relative flex">
     <!-- Drawer -->
     <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
     
@@ -12,79 +12,58 @@
       <Breadcrumbs />
       
       <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="hero-section rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden transition-all duration-300">
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      SVG Placeholder Text Generator
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Generate placeholder SVG text for your designs. Create customizable text placeholders with alignment, spacing, and styling options.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">image</span>
-                      SVG Generator
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-              </div>
+        <div class="max-w-6xl mx-auto px-6 md:px-10 py-12 md:py-16">
+          <!-- Hero -->
+          <section class="grid md:grid-cols-[1fr_auto] items-center gap-10 pb-12 mb-12 border-b border-slate-200 dark:border-slate-800">
+            <div>
+              <router-link to="/tools" class="inline-flex items-center gap-1 text-sm font-medium tracking-wide text-[#2f5ea8] dark:text-[#9dbcf0] mb-4 hover:underline underline-offset-4">
+                <span class="material-symbols-outlined text-base" aria-hidden="true">arrow_back</span>
+                Tools
+              </router-link>
+              <h1 class="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05] mb-5">SVG placeholder text</h1>
+              <p class="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
+                Generate placeholder SVG text for your designs, with control over alignment, spacing,
+                size and color.
+              </p>
             </div>
-          </div>
+            <div class="spot hidden md:block w-48 h-48 lg:w-56 lg:h-56" aria-hidden="true" v-html="spot('guidelines/text-graphics')"></div>
+          </section>
 
           <!-- Main Tool Section -->
-          <div class="max-w-7xl mx-auto">
+          <div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <!-- Control Panel -->
               <div class="lg:col-span-1">
-                <div 
-                  class="control-panel rounded-2xl shadow-lg p-6 transition-colors duration-300"
-                  :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
-                >
-                  <h2 
-                    class="text-xl font-bold mb-6 transition-colors duration-300"
-                    :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                  >
+                <div class="control-panel panel">
+                  <h2 class="text-lg font-semibold tracking-tight mb-6">
                     Take more control...
                   </h2>
 
                   <!-- Alignment -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-3 text-gray-700 dark:text-gray-300 transition-colors duration-300">Align</label>
+                    <label class="block text-sm font-medium mb-3 text-slate-600 dark:text-slate-400">Align</label>
                     <div class="flex gap-2">
                       <button
                         @click="alignment = 'left'"
-                        class="w-10 h-10 rounded-full border-2 transition-all duration-300 flex items-center justify-center"
-                        :class="alignment === 'left' 
-                          ? 'border-indigo-600 bg-indigo-600 text-white' 
-                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400'"
+                        class="seg"
+                        :class="{ on: alignment === 'left' }"
+                        aria-label="Align left"
                       >
                         <span class="material-symbols-outlined text-lg">format_align_left</span>
                       </button>
                       <button
                         @click="alignment = 'center'"
-                        class="w-10 h-10 rounded-full border-2 transition-all duration-300 flex items-center justify-center"
-                        :class="alignment === 'center' 
-                          ? 'border-indigo-600 bg-indigo-600 text-white' 
-                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400'"
+                        class="seg"
+                        :class="{ on: alignment === 'center' }"
+                        aria-label="Align center"
                       >
                         <span class="material-symbols-outlined text-lg">format_align_center</span>
                       </button>
                       <button
                         @click="alignment = 'right'"
-                        class="w-10 h-10 rounded-full border-2 transition-all duration-300 flex items-center justify-center"
-                        :class="alignment === 'right' 
-                          ? 'border-indigo-600 bg-indigo-600 text-white' 
-                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400'"
+                        class="seg"
+                        :class="{ on: alignment === 'right' }"
+                        aria-label="Align right"
                       >
                         <span class="material-symbols-outlined text-lg">format_align_right</span>
                       </button>
@@ -93,7 +72,7 @@
 
                   <!-- Radius Slider -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">
+                    <label class="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">
                       Radius: {{ radius }}px
                     </label>
                     <input
@@ -101,13 +80,13 @@
                       v-model.number="radius"
                       min="0"
                       max="20"
-                      class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 transition-colors duration-300"
+                      class="range"
                     />
                   </div>
 
                   <!-- Words Slider -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">
+                    <label class="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">
                       Words: {{ words }}
                     </label>
                     <input
@@ -115,13 +94,13 @@
                       v-model.number="words"
                       min="1"
                       max="20"
-                      class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 transition-colors duration-300"
+                      class="range"
                     />
                   </div>
 
                   <!-- Lines Slider -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">
+                    <label class="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">
                       Lines: {{ lines }}
                     </label>
                     <input
@@ -129,13 +108,13 @@
                       v-model.number="lines"
                       min="1"
                       max="10"
-                      class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 transition-colors duration-300"
+                      class="range"
                     />
                   </div>
 
                   <!-- Height Slider -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">
+                    <label class="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">
                       Height: {{ height }}px
                     </label>
                     <input
@@ -143,13 +122,13 @@
                       v-model.number="height"
                       min="8"
                       max="40"
-                      class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 transition-colors duration-300"
+                      class="range"
                     />
                   </div>
 
                   <!-- Spacing Slider -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">
+                    <label class="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">
                       Spacing: {{ spacing }}px
                     </label>
                     <input
@@ -157,16 +136,16 @@
                       v-model.number="spacing"
                       min="4"
                       max="32"
-                      class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600 transition-colors duration-300"
+                      class="range"
                     />
                   </div>
 
                   <!-- Colors -->
                   <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">Colors</label>
+                    <label class="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-400">Colors</label>
                     <div class="flex items-center gap-3">
                       <div
-                        class="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-600 cursor-pointer transition-colors duration-300"
+                        class="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700 cursor-pointer"
                         :style="{ backgroundColor: color }"
                         @click="showColorPicker = !showColorPicker"
                       ></div>
@@ -174,11 +153,11 @@
                         v-if="showColorPicker"
                         type="color"
                         v-model="color"
-                        class="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-600 cursor-pointer transition-colors duration-300"
+                        class="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700 cursor-pointer"
                       />
                       <button
                         @click="showColorPicker = !showColorPicker"
-                        class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 transition-colors"
+                        class="seg" aria-label="Pick a color"
                       >
                         <span class="material-symbols-outlined text-lg">add</span>
                       </button>
@@ -189,14 +168,14 @@
                   <div class="flex gap-3">
                     <button
                       @click="refresh"
-                      class="flex-1 px-4 py-2 rounded-full border-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2"
+                      class="btn btn-secondary flex-1"
                     >
                       <span class="material-symbols-outlined text-lg">refresh</span>
                       Refresh
                     </button>
                     <button
                       @click="downloadSVG"
-                      class="flex-1 px-4 py-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                      class="btn btn-primary flex-1"
                     >
                       <span class="material-symbols-outlined text-lg">download</span>
                       Download
@@ -207,20 +186,14 @@
 
               <!-- Preview Area -->
               <div class="lg:col-span-2">
-                <div 
-                  class="preview-area rounded-2xl shadow-lg p-6 transition-colors duration-300"
-                  :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
-                >
-                  <div 
-                    class="relative border-2 border-dashed rounded-xl p-8 min-h-[500px] transition-colors duration-300"
-                    :class="isDarkMode 
-                      ? 'border-indigo-600 bg-slate-900' 
-                      : 'border-indigo-300 bg-gray-50'"
-                  >
+                <div class="preview-area panel">
+                  <div class="relative border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 min-h-[500px] bg-slate-50 dark:bg-slate-900">
+                    <InlineNotice :notice="notice" class="mb-4 mr-14" @dismiss="clearNotice" />
                     <button
                       @click="copySVG"
-                      class="absolute top-4 right-4 w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-colors duration-300 flex items-center justify-center"
+                      class="seg absolute top-4 right-4"
                       title="Copy SVG"
+                      aria-label="Copy SVG"
                     >
                       <span class="material-symbols-outlined text-lg">content_copy</span>
                     </button>
@@ -234,8 +207,24 @@
                         alignItems: alignment === 'center' ? 'center' : alignment === 'right' ? 'flex-end' : 'flex-start',
                         gap: spacing + 'px'
                       }"
-                      v-html="svgContent"
-                    ></div>
+                    >
+                      <div
+                        v-for="(lineWords, lineIndex) in layout"
+                        :key="lineIndex"
+                        style="display: flex; gap: 8px; align-items: center;"
+                      >
+                        <div
+                          v-for="(width, wordIndex) in lineWords"
+                          :key="wordIndex"
+                          :style="{
+                            width: width + 'px',
+                            height: safeNumber(height, 8, 40, 16) + 'px',
+                            backgroundColor: safeColor,
+                            borderRadius: safeNumber(radius, 0, 20, 8) + 'px',
+                          }"
+                        ></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -248,13 +237,18 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { spot } from '../utils/spotIllustrations.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
 const alignment = ref('left');
 const radius = ref(8);
 const words = ref(8);
@@ -264,173 +258,114 @@ const spacing = ref(8);
 const color = ref('#9ca3af');
 const showColorPicker = ref(false);
 
+const MAX_LINE_WIDTH = 600; // Maximum width of a line, in px
+const WORD_SPACING = 8; // Space between words, in px
+const SVG_MARGIN = 20;
+const SVG_WIDTH = MAX_LINE_WIDTH + SVG_MARGIN * 2;
 
-
-
-
-// Generate random word widths (simulating text)
-const generateWordWidths = (numWords) => {
-  const widths = [];
-  for (let i = 0; i < numWords; i++) {
-    // Random width between 30 and 100 pixels to simulate word lengths
-    // Add some variation to make words more realistic
-    widths.push(Math.random() * 70 + 30);
-  }
-  return widths;
+// Clamp a slider value to its range (sliders can briefly hold '' or NaN).
+const safeNumber = (value, min, max, fallback) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
 };
 
-// Store word widths to maintain consistency
-const wordWidthsCache = ref([]);
+// Only a hex color may reach the SVG/HTML output.
+const safeColor = computed(() => (/^#[0-9a-f]{3,8}$/i.test(color.value) ? color.value : '#9ca3af'));
 
-// Generate SVG content
-const svgContent = computed(() => {
-  if (wordWidthsCache.value.length === 0) {
-    wordWidthsCache.value = generateWordWidths(words.value * lines.value);
-  }
-  
-  const svgLines = [];
-  const maxLineWidth = 600; // Maximum width for a line
-  const wordSpacing = 8; // Space between words
+// Random word widths between 30 and 100px, to simulate text
+const generateWordWidths = (numWords) =>
+  Array.from({ length: numWords }, () => Math.round(Math.random() * 70 + 30));
+
+// Lines of word widths. Generated once per refresh so the preview, the copied
+// SVG and the downloaded SVG are all the same layout.
+const layout = ref([]);
+
+const generateLayout = () => {
+  const lineCount = Math.round(safeNumber(lines.value, 1, 10, 3));
+  const wordCount = Math.round(safeNumber(words.value, 1, 20, 8));
+  const wordWidths = generateWordWidths(wordCount * lineCount);
+  const lineWidthVariation = [0.7, 0.5, 0.8, 0.6, 0.9, 0.65, 0.75, 0.55, 0.85, 0.6];
+  const result = [];
   let wordIndex = 0;
-  
-  for (let lineIndex = 0; lineIndex < lines.value; lineIndex++) {
+
+  for (let lineIndex = 0; lineIndex < lineCount; lineIndex++) {
     const lineWords = [];
     let currentLineWidth = 0;
-    
-    // Calculate target line width - vary it for each line to ensure different lengths
-    // First line: 70-90% of max, second: 50-70%, third: 80-100%, etc.
-    const lineWidthVariation = [0.7, 0.5, 0.8, 0.6, 0.9, 0.65, 0.75, 0.55, 0.85, 0.6];
-    const targetLineWidth = maxLineWidth * (lineWidthVariation[lineIndex % lineWidthVariation.length] + Math.random() * 0.2);
-    
-    // Add words until we approach the target width (with some randomness)
-    while (wordIndex < wordWidthsCache.value.length && currentLineWidth < targetLineWidth) {
-      const wordWidth = wordWidthsCache.value[wordIndex];
-      const wouldExceedMax = currentLineWidth + wordWidth + wordSpacing > maxLineWidth;
-      
-      // Stop if we'd exceed max width, or if we've reached a reasonable length
-      if (wouldExceedMax && lineWords.length > 0) {
-        break;
-      }
-      
-      // Sometimes stop early to create shorter lines (30% chance after minimum 2 words)
-      if (lineWords.length >= 2 && currentLineWidth >= targetLineWidth * 0.6 && Math.random() < 0.3) {
-        break;
-      }
-      
-      lineWords.push(wordWidth);
-      currentLineWidth += wordWidth + wordSpacing;
-      wordIndex++;
-    }
-    
-    // Ensure each line has at least one word
-    if (lineWords.length === 0 && wordIndex < wordWidthsCache.value.length) {
-      lineWords.push(wordWidthsCache.value[wordIndex]);
-      wordIndex++;
-    }
-    
-    // Create HTML for this line
-    let lineHTML = '<div style="display: flex; gap: 8px; align-items: center;">';
-    lineWords.forEach((width) => {
-      lineHTML += `<div style="width: ${width}px; height: ${height.value}px; background-color: ${color.value}; border-radius: ${radius.value}px;"></div>`;
-    });
-    lineHTML += '</div>';
-    
-    svgLines.push(lineHTML);
-  }
-  
-  return svgLines.join('');
-});
+    // Vary the target width per line so lines have different lengths
+    const targetLineWidth =
+      MAX_LINE_WIDTH * Math.min(1, lineWidthVariation[lineIndex % lineWidthVariation.length] + Math.random() * 0.2);
 
-// Generate SVG as downloadable string
-const generateSVGString = () => {
-  // Use cached word widths or generate new ones
-  const wordWidths = wordWidthsCache.value.length > 0 
-    ? wordWidthsCache.value 
-    : generateWordWidths(words.value * lines.value);
-  
-  const svgWidth = 800;
-  const svgHeight = lines.value * (height.value + spacing.value) + spacing.value;
-  
-  let svg = `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">`;
-  
-  let currentY = spacing.value;
-  const maxLineWidth = svgWidth - 40;
-  const wordSpacing = 8;
-  let wordIndex = 0;
-  
-  for (let lineIndex = 0; lineIndex < lines.value; lineIndex++) {
-    const lineWords = [];
-    let currentLineWidth = 0;
-    
-    // Calculate target line width - vary it for each line to ensure different lengths
-    const lineWidthVariation = [0.7, 0.5, 0.8, 0.6, 0.9, 0.65, 0.75, 0.55, 0.85, 0.6];
-    const targetLineWidth = maxLineWidth * (lineWidthVariation[lineIndex % lineWidthVariation.length] + Math.random() * 0.2);
-    
-    // Add words until we approach the target width (with some randomness)
     while (wordIndex < wordWidths.length && currentLineWidth < targetLineWidth) {
       const wordWidth = wordWidths[wordIndex];
-      const wouldExceedMax = currentLineWidth + wordWidth + wordSpacing > maxLineWidth;
-      
-      // Stop if we'd exceed max width, or if we've reached a reasonable length
-      if (wouldExceedMax && lineWords.length > 0) {
-        break;
-      }
-      
+      const extra = lineWords.length > 0 ? WORD_SPACING : 0;
+      if (currentLineWidth + extra + wordWidth > MAX_LINE_WIDTH && lineWords.length > 0) break;
       // Sometimes stop early to create shorter lines (30% chance after minimum 2 words)
-      if (lineWords.length >= 2 && currentLineWidth >= targetLineWidth * 0.6 && Math.random() < 0.3) {
-        break;
-      }
-      
+      if (lineWords.length >= 2 && currentLineWidth >= targetLineWidth * 0.6 && Math.random() < 0.3) break;
       lineWords.push(wordWidth);
-      currentLineWidth += wordWidth + wordSpacing;
+      currentLineWidth += extra + wordWidth;
       wordIndex++;
     }
-    
+
     // Ensure each line has at least one word
-    if (lineWords.length === 0 && wordIndex < wordWidths.length) {
-      lineWords.push(wordWidths[wordIndex]);
+    if (lineWords.length === 0) {
+      lineWords.push(wordWidths[wordIndex] ?? 60);
       wordIndex++;
     }
-    
-    const totalLineWidth = lineWords.reduce((sum, w) => sum + w, 0) + (lineWords.length - 1) * wordSpacing;
-    
-    let currentX = alignment.value === 'center' 
-      ? (svgWidth - totalLineWidth) / 2
-      : alignment.value === 'right'
-      ? svgWidth - totalLineWidth - 20
-      : 20;
-    
-    lineWords.forEach((width) => {
-      svg += `<rect x="${currentX}" y="${currentY}" width="${width}" height="${height.value}" fill="${color.value}" rx="${radius.value}" ry="${radius.value}"/>`;
-      currentX += width + wordSpacing;
-    });
-    
-    currentY += height.value + spacing.value;
+    result.push(lineWords);
   }
-  
+  layout.value = result;
+};
+
+// Build the SVG from the current layout. All values are numbers or a validated
+// hex color, so nothing user-typed is interpolated unescaped.
+const generateSVGString = () => {
+  const h = safeNumber(height.value, 8, 40, 16);
+  const gap = safeNumber(spacing.value, 4, 32, 8);
+  const r = safeNumber(radius.value, 0, 20, 8);
+  const fill = safeColor.value;
+  const lineRows = layout.value;
+  const svgHeight = lineRows.length * (h + gap) + gap;
+
+  let svg = `<svg width="${SVG_WIDTH}" height="${svgHeight}" viewBox="0 0 ${SVG_WIDTH} ${svgHeight}" xmlns="http://www.w3.org/2000/svg">`;
+  let currentY = gap;
+
+  lineRows.forEach((lineWords) => {
+    const totalLineWidth = lineWords.reduce((sum, w) => sum + w, 0) + (lineWords.length - 1) * WORD_SPACING;
+    let currentX =
+      alignment.value === 'center'
+        ? (SVG_WIDTH - totalLineWidth) / 2
+        : alignment.value === 'right'
+        ? SVG_WIDTH - totalLineWidth - SVG_MARGIN
+        : SVG_MARGIN;
+
+    lineWords.forEach((width) => {
+      svg += `<rect x="${currentX}" y="${currentY}" width="${width}" height="${h}" fill="${fill}" rx="${r}" ry="${r}"/>`;
+      currentX += width + WORD_SPACING;
+    });
+    currentY += h + gap;
+  });
+
   svg += '</svg>';
   return svg;
 };
 
 const refresh = () => {
-  // Generate new random word widths
-  wordWidthsCache.value = generateWordWidths(words.value * lines.value);
+  generateLayout();
 };
 
 const copySVG = async () => {
-  const svgString = generateSVGString();
   try {
-    await navigator.clipboard.writeText(svgString);
-    // Could add a toast notification here
-    alert('SVG copied to clipboard!');
+    await navigator.clipboard.writeText(generateSVGString());
+    showNotice('SVG copied to clipboard.', 'success');
   } catch (error) {
     console.error('Failed to copy:', error);
+    showNotice('Could not copy to the clipboard. Use Download instead.', 'error');
   }
 };
 
 const downloadSVG = () => {
-  const svgString = generateSVGString();
-  const blob = new Blob([svgString], { type: 'image/svg+xml' });
+  const blob = new Blob([generateSVGString()], { type: 'image/svg+xml' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -438,130 +373,69 @@ const downloadSVG = () => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
-let darkModeObserver = null;
-let darkModeInterval = null;
+// New word count or line count: lay out fresh lines
+watch([words, lines], generateLayout);
 
-// Watch for changes to words or lines value and regenerate
-watch([words, lines], () => {
-  wordWidthsCache.value = generateWordWidths(words.value * lines.value);
-});
-
-// Watch for dark mode changes and force update
-watch(isDarkMode, () => {
-  // Force a reactive update when dark mode changes
-  // This ensures all computed properties and styles update immediately
-  nextTick(() => {
-    // Trigger any necessary re-renders
-  });
-});
-
-onMounted(() => {
-  // Initialize word widths
-  wordWidthsCache.value = generateWordWidths(words.value * lines.value);
-  
-  // Improved dark mode detection with immediate callback
-  const updateDarkMode = () => {
-    const wasDark = isDarkMode.value;
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-    // Force update if state changed
-    if (wasDark !== isDarkMode.value) {
-      // Trigger reactivity
-      nextTick(() => {});
-    }
-  };
-  
-  darkModeObserver = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-        updateDarkMode();
-      }
-    });
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-    attributeOldValue: true
-  });
-  
-  // Initial check
-  updateDarkMode();
-  
-  // Fallback interval check (less frequent)
-  darkModeInterval = setInterval(updateDarkMode, 50);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
+onMounted(generateLayout);
 </script>
 
-<style>
-/* Force transitions on all background color changes - use attribute selectors to catch both light and dark classes */
-[class*="bg-white"][class*="dark:bg-slate-800"],
-[class*="bg-gray-50"][class*="dark:bg-slate-900"] {
-  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-/* More specific targeting for the card elements */
-.control-panel,
-.preview-area {
-  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-/* Target nested divs with background colors */
-.control-panel > div[class*="bg-"],
-.preview-area > div[class*="bg-"] {
-  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-/* Universal rule for all elements in these containers */
-.control-panel *,
-.preview-area * {
-  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-</style>
-
 <style scoped>
-/* Ensure smooth transitions for key elements */
-.control-panel,
-.preview-area,
-.hero-section {
-  transition-property: background-color, border-color, color !important;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
-  transition-duration: 300ms !important;
+.spot :deep(svg) {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
-input[type="range"] {
+.panel {
+  @apply rounded-2xl border border-slate-200 bg-[#fff] p-6 dark:border-slate-800 dark:bg-slate-900/40;
+}
+
+.seg {
+  @apply w-10 h-10 rounded-full border border-solid border-slate-200 bg-[#fff] text-slate-600 flex items-center justify-center transition-colors hover:border-[#8fb0e8] hover:text-[#2f5ea8] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-[#6f93d1] dark:hover:text-[#9dbcf0];
+}
+.seg.on {
+  @apply border-[#2f5ea8] bg-[#2f5ea8] text-white dark:border-[#9dbcf0] dark:bg-[#9dbcf0] dark:text-slate-950;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full text-sm font-medium transition-colors;
+}
+.btn-primary {
+  @apply bg-[#2f5ea8] text-white hover:bg-[#264d8b] dark:bg-[#9dbcf0] dark:text-slate-950 dark:hover:bg-[#b8cff5];
+}
+.btn-secondary {
+  @apply border border-solid border-slate-300 text-slate-800 hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900;
+}
+
+.range {
+  @apply w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 cursor-pointer;
   -webkit-appearance: none;
   appearance: none;
 }
-
-input[type="range"]::-webkit-slider-thumb {
+.range::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #4f46e5;
+  background: #2f5ea8;
   cursor: pointer;
 }
-
-input[type="range"]::-moz-range-thumb {
+.range::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #4f46e5;
+  background: #2f5ea8;
   cursor: pointer;
   border: none;
 }
+.range:is(.dark *)::-webkit-slider-thumb {
+  background: #9dbcf0;
+}
+.range:is(.dark *)::-moz-range-thumb {
+  background: #9dbcf0;
+}
 </style>
-

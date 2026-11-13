@@ -250,6 +250,7 @@
                     Copy
                   </button>
                 </div>
+                <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <!-- HTML Code View -->
                   <div>
@@ -276,7 +277,7 @@
                     >
                       <div 
                         v-if="output"
-                        v-html="output"
+                        v-html="previewHtml"
                       ></div>
                       <div 
                         v-else
@@ -297,18 +298,24 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
+const MAX_COUNT = 100;
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const variant = ref('classic');
 const type = ref('paragraphs');
 const count = ref(3);
 const output = ref('');
+const outputIsHtml = ref(false);
 const htmlOptions = ref({
   links: false,
   bold: false,
@@ -374,307 +381,237 @@ const getCurrentVariant = () => {
   return variants[variant.value] || variants.classic;
 };
 
-// Helper function to randomly apply HTML formatting to words
+// Everything placed into the generated HTML is escaped first, so the preview
+// (rendered with v-html) can only ever contain the tags this generator adds.
+const escapeHtml = (value) =>
+  String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const hasHtmlOptions = () => Object.values(htmlOptions.value).some(Boolean);
+
+const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1);
+const cleanWord = (word) => word.replace(/[.,!?;:]/g, '');
+
+// Count from the input, clamped to 1..MAX_COUNT (the input can be empty or out of range).
+const safeCount = () => {
+  const n = Math.floor(Number(count.value));
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(n, MAX_COUNT);
+};
+
+// Randomly apply inline HTML formatting to words (input is plain, unescaped text)
 const applyHTMLFormatting = (text) => {
-  if (!Object.values(htmlOptions.value).some(v => v)) {
-    return text; // No HTML formatting selected
-  }
-
   const words = text.split(/(\s+)/);
-  const formattedWords = words.map((word) => {
-    if (!word.trim() || word.match(/^\s+$/)) {
-      return word; // Preserve whitespace
-    }
-
-    let formatted = word;
-    const rand = Math.random();
-
-    // Apply formatting with priority: code > links > bold/italic
-    // Only one inline format per word to avoid nesting issues
-    if (htmlOptions.value.code && rand < 0.15) {
-      formatted = `<code>${formatted}</code>`;
-    } else if (htmlOptions.value.links && rand < 0.2) {
-      formatted = `<a href="#">${formatted}</a>`;
-    } else {
-      // Can combine bold and italic
-      if (htmlOptions.value.bold && Math.random() < 0.3) {
-        formatted = `<strong>${formatted}</strong>`;
+  return words
+    .map((word) => {
+      if (!word.trim()) {
+        return word; // Preserve whitespace
       }
-      if (htmlOptions.value.italic && Math.random() < 0.3) {
-        formatted = `<em>${formatted}</em>`;
+
+      if (!hasHtmlOptions()) return word; // plain text; escaped for the preview
+      let formatted = escapeHtml(word);
+      const rand = Math.random();
+
+      // Only one of code/link per word to avoid nesting issues
+      if (htmlOptions.value.code && rand < 0.15) {
+        formatted = `<code>${formatted}</code>`;
+      } else if (htmlOptions.value.links && rand < 0.2) {
+        formatted = `<a href="#">${formatted}</a>`;
+      } else {
+        // Can combine bold and italic
+        if (htmlOptions.value.bold && Math.random() < 0.3) {
+          formatted = `<strong>${formatted}</strong>`;
+        }
+        if (htmlOptions.value.italic && Math.random() < 0.3) {
+          formatted = `<em>${formatted}</em>`;
+        }
       }
-    }
-
-    return formatted;
-  });
-
-  return formattedWords.join('');
+      return formatted;
+    })
+    .join('');
 };
 
-// Helper to wrap text in block-level HTML elements
-const wrapInBlockElements = (content, paragraphs) => {
-  if (type.value !== 'paragraphs' || paragraphs.length === 0) {
-    return content;
+// Build an HTML list of the given words, choosing randomly among the enabled list types.
+const buildHtmlList = (items) => {
+  const kinds = [];
+  if (htmlOptions.value.unorderedLists) kinds.push('ul');
+  if (htmlOptions.value.orderedLists) kinds.push('ol');
+  if (htmlOptions.value.definitionLists) kinds.push('dl');
+  if (kinds.length === 0 || items.length === 0) return '';
+  const kind = kinds[Math.floor(Math.random() * kinds.length)];
+  const labels = items.map((item) => escapeHtml(capitalize(cleanWord(item))));
+
+  if (kind === 'dl') {
+    const rows = [];
+    for (let i = 0; i < labels.length; i += 2) {
+      rows.push(`  <dt>${labels[i]}</dt>`);
+      rows.push(`  <dd>${labels[i + 1] ?? labels[i]} description text.</dd>`);
+    }
+    return `<dl>\n${rows.join('\n')}\n</dl>`;
   }
+  return `<${kind}>\n${labels.map((label) => `  <li>${label}</li>`).join('\n')}\n</${kind}>`;
+};
 
-  const parts = content.split('\n\n');
-  let result = [...parts];
+const pickDistinct = (n, used) => {
+  const free = [];
+  for (let i = 0; i < n; i++) if (!used.has(i)) free.push(i);
+  if (free.length === 0) return -1;
+  const index = free[Math.floor(Math.random() * free.length)];
+  used.add(index);
+  return index;
+};
 
-  // Add headers (only for paragraphs type)
-  if (htmlOptions.value.headers && result.length > 0) {
-    const headerLevels = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
-    const numHeaders = Math.min(Math.floor(result.length / 3), 2); // Max 2 headers
-    
-    const usedIndices = new Set();
+const stripTags = (html) => html.replace(/<[^>]*>/g, '');
+
+// Add block-level elements around/next to the generated paragraphs without
+// dropping any of them. `blocks` are already-escaped paragraph strings.
+const addBlockElements = (blocks) => {
+  const before = blocks.map(() => []);
+  const after = blocks.map(() => []);
+  const wrapped = [...blocks];
+  const used = new Set();
+
+  if (htmlOptions.value.headers) {
+    const headerLevels = ['h2', 'h3', 'h4'];
+    const numHeaders = Math.max(1, Math.min(Math.floor(blocks.length / 3), 2));
     for (let i = 0; i < numHeaders; i++) {
-      let headerIndex;
-      do {
-        headerIndex = Math.floor(Math.random() * result.length);
-      } while (usedIndices.has(headerIndex));
-      usedIndices.add(headerIndex);
-      
-      const headerLevel = headerLevels[Math.floor(Math.random() * headerLevels.length)];
-      // Extract first few words for header, removing HTML tags
-      const headerText = result[headerIndex]
-        .replace(/<[^>]*>/g, '')
-        .split(' ')
-        .slice(0, 5)
-        .join(' ');
-      
-      result[headerIndex] = `<${headerLevel}>${headerText}</${headerLevel}>`;
+      const index = pickDistinct(blocks.length, used);
+      if (index < 0) break;
+      const level = headerLevels[Math.floor(Math.random() * headerLevels.length)];
+      const headerText = stripTags(blocks[index]).split(' ').slice(0, 5).join(' ').replace(/[.,!?;:]+$/, '');
+      before[index].push(`<${level}>${headerText}</${level}>`);
     }
   }
 
-  // Add blockquotes
-  if (htmlOptions.value.blockquotes && result.length > 0 && Math.random() < 0.4) {
-    const quoteIndex = Math.floor(Math.random() * result.length);
-    result[quoteIndex] = `<blockquote>${result[quoteIndex]}</blockquote>`;
+  const blockIndex = () => Math.floor(Math.random() * blocks.length);
+
+  if (htmlOptions.value.blockquotes && blocks.length > 1 && Math.random() < 0.6) {
+    const index = blockIndex();
+    wrapped[index] = `<blockquote>${wrapped[index]}</blockquote>`;
   }
 
-  // Add code blocks (pre/code)
-  if (htmlOptions.value.code && result.length > 0 && Math.random() < 0.3) {
-    const codeIndex = Math.floor(Math.random() * result.length);
-    // Extract text without HTML tags for code block
-    const codeText = result[codeIndex]
-      .replace(/<[^>]*>/g, '')
-      .split(' ')
-      .slice(0, 10)
-      .join(' ');
-    result[codeIndex] = `<pre><code>${codeText}</code></pre>`;
+  if (htmlOptions.value.code && Math.random() < 0.5) {
+    const index = blockIndex();
+    const codeText = stripTags(blocks[index]).split(' ').slice(0, 10).join(' ');
+    after[index].push(`<pre><code>${codeText}</code></pre>`);
   }
 
-  return result.join('\n\n');
+  return blocks
+    .flatMap((_, i) => [
+      ...before[i],
+      wrapped[i].startsWith('<blockquote>') ? wrapped[i] : `<p>${wrapped[i]}</p>`,
+      ...after[i],
+    ])
+    .join('\n\n');
 };
 
-
-
-
+const splitSentences = (text) =>
+  text
+    .split(/[.!?]+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length > 0)
+    .map((sentence) => `${sentence}.`);
 
 const generateParagraphs = (num) => {
   const currentVariant = getCurrentVariant();
-  // Split text into sentences
-  const sentences = currentVariant.text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-  
-  // Target 3-5 sentences per paragraph for natural flow
+  const sentences = splitSentences(currentVariant.text);
+
   const sentencesPerParagraph = 4;
   const paragraphs = [];
-  
   for (let i = 0; i < num; i++) {
     const paragraphSentences = [];
     for (let j = 0; j < sentencesPerParagraph; j++) {
-      const sentenceIndex = (i * sentencesPerParagraph + j) % sentences.length;
-      let sentence = sentences[sentenceIndex].trim();
-      // Ensure sentence ends with punctuation
-      if (!sentence.match(/[.!?]$/)) {
-        sentence += '.';
-      }
-      paragraphSentences.push(sentence);
+      paragraphSentences.push(sentences[(i * sentencesPerParagraph + j) % sentences.length]);
     }
-    let paragraph = paragraphSentences.join(' ');
-    
-    // Apply inline HTML formatting
-    paragraph = applyHTMLFormatting(paragraph);
-    
-    paragraphs.push(paragraph);
+    paragraphs.push(applyHTMLFormatting(paragraphSentences.join(' ')));
   }
-  
-  let result = paragraphs.join('\n\n');
-  
-  // Add lists if requested
-  if ((htmlOptions.value.unorderedLists || htmlOptions.value.orderedLists || htmlOptions.value.definitionLists) && Math.random() < 0.4) {
-    const listItems = currentVariant.text.split(' ').filter(w => w.length > 3).slice(0, 5);
-    let listHTML = '';
-    
-    if (htmlOptions.value.definitionLists && Math.random() < 0.5) {
-      listHTML = '<dl>\n';
-      listItems.forEach((item, idx) => {
-        if (idx % 2 === 0) {
-          listHTML += `  <dt>${item.charAt(0).toUpperCase() + item.slice(1).replace(/[.,!?;:]/g, '')}</dt>\n`;
-        } else {
-          listHTML += `  <dd>${item.charAt(0).toUpperCase() + item.slice(1).replace(/[.,!?;:]/g, '')} description text.</dd>\n`;
-        }
-      });
-      listHTML += '</dl>';
-    } else if (htmlOptions.value.orderedLists && Math.random() < 0.5) {
-      listHTML = '<ol>\n';
-      listItems.forEach(item => {
-        const cleanItem = item.replace(/[.,!?;:]/g, '');
-        listHTML += `  <li>${cleanItem.charAt(0).toUpperCase() + cleanItem.slice(1)}</li>\n`;
-      });
-      listHTML += '</ol>';
-    } else if (htmlOptions.value.unorderedLists) {
-      listHTML = '<ul>\n';
-      listItems.forEach(item => {
-        const cleanItem = item.replace(/[.,!?;:]/g, '');
-        listHTML += `  <li>${cleanItem.charAt(0).toUpperCase() + cleanItem.slice(1)}</li>\n`;
-      });
-      listHTML += '</ul>';
-    }
-    
-    if (listHTML) {
-      result += '\n\n' + listHTML;
-    }
+
+  if (!hasHtmlOptions()) {
+    return paragraphs.join('\n\n');
   }
-  
-  // Apply block-level formatting
-  result = wrapInBlockElements(result, paragraphs);
-  
+
+  let result = addBlockElements(paragraphs);
+  const listHTML = buildHtmlList(currentVariant.text.split(' ').filter((w) => w.length > 3).slice(0, 5));
+  if (listHTML) {
+    result += '\n\n' + listHTML;
+  }
   return result;
 };
 
-const generateWords = (num) => {
-  const currentVariant = getCurrentVariant();
-  const words = currentVariant.text.split(' ').filter(w => w.length > 0);
-  const result = [];
-  for (let i = 0; i < num; i++) {
-    result.push(words[i % words.length]);
-  }
-  let text = result.join(' ');
-  return applyHTMLFormatting(text);
+// The corpus repeated as needed to produce n words.
+const takeWords = (num) => {
+  const words = getCurrentVariant().text.split(' ').filter((w) => w.length > 0);
+  return Array.from({ length: num }, (_, i) => words[i % words.length]);
 };
 
+const generateWords = (num) => applyHTMLFormatting(takeWords(num).join(' '));
+
 const generateSentences = (num) => {
-  const currentVariant = getCurrentVariant();
-  const sentences = currentVariant.text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-  const result = [];
-  for (let i = 0; i < num; i++) {
-    const sentence = sentences[i % sentences.length].trim();
-    result.push(sentence + (sentence.endsWith('.') ? '' : '.'));
-  }
-  let text = result.join(' ');
-  return applyHTMLFormatting(text);
+  const sentences = splitSentences(getCurrentVariant().text);
+  const result = Array.from({ length: num }, (_, i) => sentences[i % sentences.length]);
+  return applyHTMLFormatting(result.join(' '));
 };
 
 const generateLists = (num) => {
-  const currentVariant = getCurrentVariant();
-  const words = currentVariant.text.split(' ').filter(w => w.length > 0);
-  const items = words.slice(0, Math.min(num, words.length));
-  
-  // If HTML list options are enabled, generate HTML lists
-  if (htmlOptions.value.unorderedLists || htmlOptions.value.orderedLists || htmlOptions.value.definitionLists) {
-    let listHTML = '';
-    
-    if (htmlOptions.value.definitionLists && Math.random() < 0.4) {
-      listHTML = '<dl>\n';
-      items.forEach((item, idx) => {
-        const cleanItem = item.replace(/[.,!?;:]/g, '');
-        if (idx % 2 === 0) {
-          listHTML += `  <dt>${cleanItem.charAt(0).toUpperCase() + cleanItem.slice(1)}</dt>\n`;
-        } else {
-          listHTML += `  <dd>${cleanItem.charAt(0).toUpperCase() + cleanItem.slice(1)} description text.</dd>\n`;
-        }
-      });
-      listHTML += '</dl>';
-    } else if (htmlOptions.value.orderedLists && Math.random() < 0.5) {
-      listHTML = '<ol>\n';
-      items.forEach(item => {
-        const cleanItem = item.replace(/[.,!?;:]/g, '');
-        listHTML += `  <li>${cleanItem.charAt(0).toUpperCase() + cleanItem.slice(1)}</li>\n`;
-      });
-      listHTML += '</ol>';
-    } else if (htmlOptions.value.unorderedLists) {
-      listHTML = '<ul>\n';
-      items.forEach(item => {
-        const cleanItem = item.replace(/[.,!?;:]/g, '');
-        listHTML += `  <li>${cleanItem.charAt(0).toUpperCase() + cleanItem.slice(1)}</li>\n`;
-      });
-      listHTML += '</ul>';
-    } else {
-      // Fallback to plain numbered list
-      return items.map((word, index) => {
-        const cleanWord = word.replace(/[.,!?;:]/g, '');
-        return `${index + 1}. ${cleanWord.charAt(0).toUpperCase() + cleanWord.slice(1)}`;
-      }).join('\n');
-    }
-    
-    return listHTML;
-  }
-  
-  // Default: plain numbered list
-  return items.map((word, index) => {
-    const cleanWord = word.replace(/[.,!?;:]/g, '');
-    return `${index + 1}. ${cleanWord.charAt(0).toUpperCase() + cleanWord.slice(1)}`;
-  }).join('\n');
+  const items = takeWords(num);
+  const listHTML = buildHtmlList(items);
+  if (listHTML) return listHTML;
+
+  // Plain numbered list
+  return items.map((word, index) => `${index + 1}. ${capitalize(cleanWord(word))}`).join('\n');
 };
 
 const generate = () => {
+  const num = safeCount();
+  count.value = num;
   let result = '';
-  
+
   if (type.value === 'paragraphs') {
-    result = generateParagraphs(count.value);
+    result = generateParagraphs(num);
   } else if (type.value === 'words') {
-    result = generateWords(count.value);
+    result = generateWords(num);
   } else if (type.value === 'sentences') {
-    result = generateSentences(count.value);
+    result = generateSentences(num);
   } else if (type.value === 'lists') {
-    result = generateLists(count.value);
+    result = generateLists(num);
   }
-  
+
   output.value = result;
+  // A plain numbered list is produced when no list type is enabled.
+  outputIsHtml.value = hasHtmlOptions() && /</.test(result);
 };
+
+// Output that is plain text (no HTML options, or a plain numbered list) is
+// escaped and its line breaks kept; HTML output was escaped while it was built.
+const previewHtml = computed(() => {
+  const text = output.value;
+  if (!text) return '';
+  if (outputIsHtml.value) return text;
+  return text
+    .split(/\n{2,}/)
+    .map((block) => `<p>${escapeHtml(block).replace(/\n/g, '<br>')}</p>`)
+    .join('');
+});
 
 const copyToClipboard = async () => {
   if (!output.value) return;
-  
+
   try {
     await navigator.clipboard.writeText(output.value);
-    // You could add a toast notification here
+    showNotice('Copied to clipboard.', 'success');
   } catch (error) {
     console.error('Failed to copy:', error);
+    showNotice('Could not copy to the clipboard. Select the text and copy it manually.', 'error');
   }
 };
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
 onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-  
   // Generate initial text
   generate();
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
 });
 </script>
 

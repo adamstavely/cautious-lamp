@@ -9,7 +9,6 @@ import { VisualRegressionModule } from '../visual-regression/visual-regression.m
 import { SessionReplayModule } from '../session-replay/session-replay.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { SecurityModule } from '../common/security/security.module';
-import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
   imports: [VisualRegressionModule, SessionReplayModule, forwardRef(() => AnalyticsModule), SecurityModule],

@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace backend
+      - run: npm test --workspace backend
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check:sfc --workspace frontend
+      - run: npm run build --workspace frontend
+
+  packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # The CLI depends on the SDK, so the SDK builds first.
+      - run: npm run build --workspace sdk
+      - run: npm test --workspace sdk --if-present
+      - run: npm run build --workspace cli
+      - run: npm test --workspace cli --if-present
+      - run: npm run build --workspace mcp-server
+      - run: npm test --workspace mcp-server
+      - run: npm run build --workspace eslint-plugin-design-system
+      - run: npm test --workspace eslint-plugin-design-system

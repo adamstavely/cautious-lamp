@@ -1,6 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, HttpException, ServiceUnavailableException } from '@nestjs/common';
 import { chromium, Browser, Page } from 'playwright';
 import { transformToDTCG, DembrandtOutput } from './dembrandt-to-dtcg.transformer';
+import { assertPublicHttpUrl } from '../common/security/url-safety';
+
+/** Each extraction runs a full Chromium; more than this at once exhausts the server */
+const MAX_CONCURRENT_EXTRACTIONS = 2;
 
 export interface ExtractionOptions {
   darkMode?: boolean;
@@ -11,6 +15,29 @@ export interface ExtractionOptions {
 @Injectable()
 export class DesignExtractionService {
   private readonly logger = new Logger(DesignExtractionService.name);
+  private running = 0;
+  private readonly waiting: Array<() => void> = [];
+
+  /** Waits for a free extraction slot */
+  private async acquireSlot(): Promise<void> {
+    if (this.running < MAX_CONCURRENT_EXTRACTIONS) {
+      this.running++;
+      return;
+    }
+    if (this.waiting.length >= 10) {
+      throw new ServiceUnavailableException('Too many extractions in progress, please try again shortly');
+    }
+    await new Promise<void>((resolve) => this.waiting.push(resolve));
+  }
+
+  private releaseSlot(): void {
+    const next = this.waiting.shift();
+    if (next) {
+      next();
+    } else {
+      this.running--;
+    }
+  }
 
   /**
    * Extract design tokens from a URL using Playwright
@@ -24,16 +51,10 @@ export class DesignExtractionService {
       throw new Error('URL is required and must be a string');
     }
     
-    // Ensure URL has protocol
-    const normalizedUrl = this.normalizeUrl(url);
-    
-    // Validate normalized URL
-    try {
-      new URL(normalizedUrl);
-    } catch (e) {
-      throw new Error(`Invalid URL: ${url}`);
-    }
+    // Ensure URL has protocol, and that it points at the public internet
+    const normalizedUrl = (await assertPublicHttpUrl(this.normalizeUrl(url))).toString();
 
+    await this.acquireSlot();
     let browser: Browser | null = null;
     try {
       // Launch browser
@@ -47,6 +68,27 @@ export class DesignExtractionService {
           : { width: 1920, height: 1080 },
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         colorScheme: options.darkMode ? 'dark' : 'light',
+      });
+
+      // Check every request the page makes, so redirects and subresources
+      // can't reach internal addresses either
+      const checkedHosts = new Map<string, boolean>();
+      await context.route('**/*', async (route) => {
+        const requestUrl = route.request().url();
+        if (requestUrl.startsWith('data:') || requestUrl.startsWith('blob:')) {
+          return route.continue();
+        }
+        let host: string;
+        try {
+          host = new URL(requestUrl).host;
+        } catch {
+          return route.abort('blockedbyclient');
+        }
+        if (!checkedHosts.has(host)) {
+          const allowed = await assertPublicHttpUrl(requestUrl).then(() => true, () => false);
+          checkedHosts.set(host, allowed);
+        }
+        return checkedHosts.get(host) ? route.continue() : route.abort('blockedbyclient');
       });
 
       const page = await context.newPage();
@@ -144,11 +186,13 @@ export class DesignExtractionService {
       return extractedData;
     } catch (error) {
       this.logger.error(`Error extracting design tokens: ${error.message}`, error.stack);
-      throw new Error(`Failed to extract design tokens: ${error.message}`);
+      if (error instanceof HttpException) throw error;
+      throw new BadRequestException('Could not load that page to extract design tokens');
     } finally {
       if (browser) {
         await browser.close();
       }
+      this.releaseSlot();
     }
   }
 

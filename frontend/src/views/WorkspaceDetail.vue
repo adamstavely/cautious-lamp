@@ -2653,8 +2653,8 @@ const newStyleDictionary = ref({ name: '', description: '', format: 'style-dicti
 const newGuideline = ref({ title: '', description: '', category: '', tags: [] });
 const sharing = ref(false);
 
-const API_BASE_URL = 'http://localhost:3000/api/v1';
-const API_KEY = 'test-api-key-123';
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
+const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 const CURRENT_USER_ID = 'user-123';
 const CURRENT_USER_EMAIL = 'user@example.com';
 

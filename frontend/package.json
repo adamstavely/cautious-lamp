@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "docs:dev": "vitepress dev docs --port 5175",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "check:sfc": "node scripts/check-sfc.mjs"
   },
   "dependencies": {
     "@adobe/leonardo-contrast-colors": "^1.0.0",
@@ -39,6 +40,8 @@
     "chroma-js": "^3.1.2",
     "d3-geo": "^3.1.0",
     "docx": "^8.5.0",
+    "dompurify": "^3.4.17",
+    "hsluv": "^1.0.2",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.3",
     "jszip": "^3.10.1",

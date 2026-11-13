@@ -30,6 +30,7 @@
               <input
                 ref="fileInput"
                 type="file"
+                :accept="ACCEPTED_TYPES.join(',')"
                 @change="handleFileChange"
                 class="hidden"
                 required
@@ -52,7 +53,7 @@
                 </p>
                 
                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                  PDF, AI, Sketch, Figma, or other design files
+                  PDF, PNG, JPEG, GIF, WebP or SVG, up to 50MB
                 </p>
                 
                 <!-- Selected File Preview -->
@@ -116,6 +117,7 @@
             color="primary"
             class="mb-3"
           />
+          <InlineNotice :notice="notice" class="mb-3" @dismiss="clearNotice" />
           <div class="d-flex justify-end ga-2">
             <v-btn
               variant="text"
@@ -136,20 +138,14 @@
       </v-card-text>
     </v-card>
 
-    <!-- Alert Modal -->
-    <AlertModal
-      v-model="showAlert"
-      title="Upload Error"
-      message="Failed to upload version. Please try again."
-      type="error"
-    />
   </v-dialog>
 </template>
 
 <script setup>
 import { ref, watch } from 'vue';
-import { mockAPI, isMockMode } from '../../mockData.js';
-import AlertModal from './AlertModal.vue';
+import { versionAPI, apiErrorMessage } from '../../services/api.js';
+import { useNotice } from '../../composables/useNotice.js';
+import InlineNotice from '../InlineNotice.vue';
 
 const props = defineProps({
   modelValue: Boolean,
@@ -158,6 +154,10 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'version-uploaded']);
 
+// What the review service accepts (docs/REVIEW_API.md)
+const ACCEPTED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'];
+const MAX_SIZE = 50 * 1024 * 1024;
+
 const file = ref(null);
 const fileInput = ref(null);
 const isDragging = ref(false);
@@ -165,7 +165,7 @@ const versionLabel = ref('');
 const versionNotes = ref('');
 const versionType = ref('minor');
 const uploading = ref(false);
-const showAlert = ref(false);
+const { notice, showNotice, clearNotice } = useNotice();
 
 const versionTypes = [
   { title: 'Minor Update', value: 'minor' },
@@ -182,23 +182,35 @@ watch(() => props.modelValue, (newVal) => {
     versionLabel.value = '';
     versionNotes.value = '';
     versionType.value = 'minor';
+    clearNotice();
     if (fileInput.value) {
       fileInput.value.value = '';
     }
   }
 });
 
+const selectFile = (selected) => {
+  if (!selected) return;
+  if (!ACCEPTED_TYPES.includes(selected.type)) {
+    showNotice('Choose a PDF, PNG, JPEG, GIF, WebP or SVG file.', 'error');
+    return;
+  }
+  if (selected.size > MAX_SIZE) {
+    showNotice('That file is larger than 50MB.', 'error');
+    return;
+  }
+  clearNotice();
+  file.value = selected;
+};
+
 const handleFileChange = (event) => {
-  file.value = event.target.files[0];
+  selectFile(event.target.files[0]);
   isDragging.value = false;
 };
 
 const handleDrop = (event) => {
   isDragging.value = false;
-  const droppedFiles = event.dataTransfer.files;
-  if (droppedFiles.length > 0) {
-    file.value = droppedFiles[0];
-  }
+  selectFile(event.dataTransfer.files[0]);
 };
 
 const removeFile = () => {
@@ -223,51 +235,24 @@ const formatFileSize = (bytes) => {
 };
 
 const uploadVersion = async () => {
-  if (!file.value || !versionLabel.value.trim()) return;
-  
+  if (!file.value || !versionLabel.value.trim() || uploading.value) return;
+
   uploading.value = true;
-  
+  clearNotice();
+
   try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      // Use mock API
-      const newVersion = await mockAPI.uploadVersion(
-        props.reviewId,
-        file.value.name,
-        versionLabel.value.trim(),
-        versionNotes.value.trim(),
-        versionType.value
-      );
-      
-      emit('version-uploaded', newVersion);
-      
-      // Close modal
-      emit('update:modelValue', false);
-    } else {
-      // Use real API
-      const formData = new FormData();
-      formData.append('file', file.value);
-      formData.append('label', versionLabel.value.trim());
-      formData.append('notes', versionNotes.value.trim());
-      formData.append('type', versionType.value);
-      
-      const response = await fetch(`/review/${props.reviewId}/versions`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'x-admin-token': localStorage.getItem('adminToken')
-        }
-      });
-      
-      const newVersion = await response.json();
-      emit('version-uploaded', newVersion);
-      
-      // Close modal
-      emit('update:modelValue', false);
-    }
+    const newVersion = await versionAPI.uploadVersion(
+      props.reviewId,
+      file.value,
+      versionLabel.value.trim(),
+      versionNotes.value.trim(),
+      versionType.value
+    );
+    emit('version-uploaded', newVersion);
+    emit('update:modelValue', false);
   } catch (error) {
     console.error('Failed to upload version:', error);
-    showAlert.value = true;
+    showNotice(apiErrorMessage(error, 'Failed to upload version.'), 'error');
   } finally {
     uploading.value = false;
   }

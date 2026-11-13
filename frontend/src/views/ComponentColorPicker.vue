@@ -248,6 +248,7 @@
                 </div>
               </div>
               <div class="p-6">
+                <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
                 <div class="rounded-lg p-4 overflow-x-auto" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
                   <pre class="text-green-400 text-sm font-mono"><code>{{ generatedCode }}</code></pre>
                 </div>
@@ -927,7 +928,12 @@ const openColorPicker = (event) => {
                       {{ formatSize(performanceData.gzippedSize) }}
                     </div>
                     <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                      {{ Math.round((performanceData.gzippedSize / performanceData.totalSize) * 100) }}% compression
+                      <template v-if="performanceData.totalSize > 0">
+                        {{ Math.round((performanceData.gzippedSize / performanceData.totalSize) * 100) }}% of source
+                      </template>
+                      <template v-if="performanceData.brotliSize != null">
+                        · brotli {{ formatSize(performanceData.brotliSize) }}
+                      </template>
                     </div>
                   </div>
                 </div>
@@ -983,6 +989,19 @@ const openColorPicker = (event) => {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div v-else-if="performanceError" class="p-12 text-center">
+                <span class="material-symbols-outlined text-4xl mb-4 block" :class="isDarkMode ? 'text-red-400' : 'text-red-500'">error</span>
+                <p class="text-sm font-medium mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                  {{ performanceError }}
+                </p>
+                <button
+                  @click="loadPerformanceData"
+                  class="px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                >
+                  Retry
+                </button>
               </div>
 
               <div v-else class="p-12 text-center">
@@ -1283,11 +1302,15 @@ import Dropdown from '../components/Dropdown.vue';
 import ComponentDependencyGraphCard from '../components/ComponentDependencyGraphCard.vue';
 import BreakingChangeAlert from '../components/BreakingChangeAlert.vue';
 import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
-import axios from 'axios';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
+import InlineNotice from '../components/InlineNotice.vue';
+import apiClient from '../services/api.js';
 
 const route = useRoute();
 const { getComponent } = useComponentPatternStatus();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const previewDarkMode = ref(false);
 const codeFormat = ref('vue');
@@ -1303,9 +1326,7 @@ const componentStatus = computed(() => {
 // Performance data
 const performanceData = ref(null);
 const performanceLoading = ref(false);
-
-const API_BASE_URL = 'http://localhost:3000/api/v1';
-const API_KEY = 'test-api-key-123';
+const performanceError = ref('');
 
 // Map route paths to component IDs
 const getComponentId = () => {
@@ -1350,7 +1371,8 @@ const getBrowserIcon = (browserName) => {
     'Safari': `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="194.5 190.1 135.1 135.1" class="w-full h-full"><style>.b{color-interpolation-filters:srgb}.c{flood-opacity:.31}</style><defs><linearGradient id="safari-a" x1="132.55" x2="134.37" y1="111.67" y2="-105.3" xlink:href="#safari-b"><stop offset="0" stop-color="#d2d2d2"/><stop offset=".53" stop-color="#f2f2f2"/><stop offset="1" stop-color="#fff"/></linearGradient><linearGradient id="safari-b" gradientUnits="userSpaceOnUse"/><linearGradient id="safari-c" x1="65.44" x2="67.4" y1="115.72" y2="17.14" xlink:href="#safari-b"><stop offset="0" stop-color="#005ad5"/><stop offset=".16" stop-color="#0875f0"/><stop offset=".31" stop-color="#218cee"/><stop offset=".63" stop-color="#27a5f3"/><stop offset=".81" stop-color="#25aaf2"/><stop offset="1" stop-color="#21aaef"/></linearGradient><linearGradient id="safari-d" x1="158.7" x2="176.28" y1="96.71" y2="79.53" xlink:href="#safari-b"><stop offset="0" stop-color="#c72e24"/><stop offset="1" stop-color="#fd3b2f"/></linearGradient><filter id="safari-e" class="b"><feFlood flood-opacity=".28"/><feComposite in2="SourceGraphic" operator="in"/><feGaussianBlur stdDeviation="3"/><feOffset dx=".3" dy="2.8"/><feComposite in="SourceGraphic"/></filter><filter id="safari-f" class="b"><feFlood class="c"/><feComposite class="c" in2="SourceGraphic" operator="out"/><feGaussianBlur flood-opacity=".3" stdDeviation=".7"/><feOffset dy="1.8"/><feComposite in2="SourceGraphic" operator="atop"/></filter><filter id="safari-g" class="b"><feFlood flood-opacity=".61"/><feComposite in2="SourceGraphic" operator="in"/><feGaussianBlur stdDeviation=".5"/><feOffset dx=".8" dy=".8"/><feComposite in="SourceGraphic" result="A"/><feColorMatrix values="0 0 0 -1 0 0 0 0 -1 0 0 0 0 -1 0 0 0 0 1 0"/><feFlood flood-opacity=".4"/><feComposite in2="A" operator="in"/><feGaussianBlur stdDeviation="3.8"/><feOffset dx="2.3" dy="3.3"/><feComposite in="A"/></filter><filter id="safari-h" width="110%" height="110%" x="-1%" y="-1%"><feGaussianBlur in="SourceAlpha" stdDeviation=".4"/><feOffset dx=".1" dy=".2"/><feComponentTransfer result="A"><feFuncA type="linear"/></feComponentTransfer><feFlood flood-color="rgba(0,0,0,0.5)"/><feComposite in2="A" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><radialGradient id="safari-i" cx="-69.88" cy="69.29" r="54.01" gradientTransform="matrix(.9023 -.01249 .0377 2.7234 -9.44 -120.29)" xlink:href="#safari-b"><stop offset="0" stop-color="#24a5f3" stop-opacity=".01"/><stop offset="1" stop-color="#1e8ceb" stop-opacity=".98"/></radialGradient><radialGradient id="safari-j" cx="109.35" cy="13.76" r="93.08" gradientTransform="matrix(-.01822 1.0922 -1.042 -.01765 136.95 -115.33)" xlink:href="#safari-b"><stop offset="0" stop-opacity="0"/><stop offset=".96" stop-color="#5488d6" stop-opacity="0"/><stop offset="1" stop-color="#5d96eb"/></radialGradient></defs><rect width="220" height="220" x="22" y="-106.53" fill="url(#safari-a)" filter="url(#safari-e)" ry="49" transform="matrix(.56938 0 0 .56921 186.86 255.75)"/><g filter="url(#safari-f)" transform="translate(194.2 190.07)"><ellipse cx="67.77" cy="67.73" fill="url(#safari-c)" paint-order="stroke fill markers" rx="54.01" ry="53.98"/><ellipse cx="-69.88" cy="69.29" fill="url(#safari-i)" rx="54.01" ry="53.98" transform="translate(137.65 -1.55)"/></g><ellipse cx="120" cy="14.15" fill="url(#safari-j)" rx="93.08" ry="93.67" transform="matrix(.58082 0 0 .57636 192.3 249.63)"/><g filter="url(#safari-g)" transform="matrix(.58289 0 0 .56508 196.8 181.63)"><path fill="#cac7c8" d="m46 191.66.73.35 72.18-48.2-7.34-8.95L46 191.66Z"/><path fill="#fbfffc" d="m45.8 190.87.2.8 65.57-56.8-6.95-8.92-58.83 64.92Z"/><path fill="url(#safari-d)" d="m118.91 143.81-7.35-8.95 66.08-57.2.27.73-59 65.42Z"/><path fill="#fb645c" d="m104.62 125.95 6.94 8.92 66.08-57.2-.65-.35-72.37 48.63Z"/></g><path stroke="#fff" stroke-linecap="round" stroke-miterlimit="1" stroke-width="1.33" d="m286.59 278.44 3.14-2.14m-11.23-17.8 7.8-1.37m-8.32-2.9 3.78-.3m-3.3-12.47 7.8 1.38m-8.2 3.03 3.76.38m-1.2-13.05 7.47 2.73m-3.77-10.5 6.86 3.96m-1.87-10.96 6.07 5.09m.05-11.07 5.09 6.07m1.97-10.99 3.97 6.86m3.7-10.53 2.71 7.43m5.62-9.62 1.37 7.8m15.62-7.89-1.38 7.8m9.82-5.6-2.72 7.42m10.5-3.75-3.96 6.86m10.98-1.89-5.12 6.07m16.18 6.96-6.87 3.96m10.45 3.88-7.45 2.7m9.64 5.6-7.82 1.38m7.81 15.79-7.82-1.39m5.6 9.7-7.44-2.71m3.8 10.47-6.87-3.95m1.91 10.98-6.07-5.07m-.05 11.2-5.1-6.08m-1.95 10.99-4-6.88m-3.87 10.5-2.7-7.43m-5.61 9.61-1.37-7.78m-15.78 7.75 1.4-7.86m-9.7 5.58 2.72-7.47m-10.5 3.73 3.97-6.87m-10.96 1.9 5.08-6.03m-8.26 3.13 2.75-2.68m3.84 8.23 2.2-3.1m5.2 7.44 1.66-3.45m6.43 6.47 1.02-3.7m7.52 5.32.43-3.82m8.08 3.8-.31-3.84m8.81 2.33-.97-3.69m9.06.75-1.58-3.48m9.05-.76-2.16-3.18m8.78-2.38-2.68-2.73m8.24-3.85-3.11-2.2m7.42-5.2-3.47-1.67m6.42-6.41-3.7-1.03m5.17-7.46-3.78-.37m3.8-8.24-3.81.3m2.35-8.8-3.7.97m.8-9.06-3.49 1.61m-1.03-9.12-3.2 2.2m-2.12-8.62-2.72 2.7m-3.84-8.28-2.23 3.12m-5.21-7.45-1.66 3.44m-6.55-6.32-1.02 3.63m-7.42-5.2-.38 3.81m-8.09-3.66.28 3.8m-8.79-2.34.95 3.68m-8.9-.72 1.61 3.46m-9.06.82 2.18 3.16m-8.82 2.27 2.68 2.7m-8.25 3.85 3.1 2.23m-7.44 5.17 3.42 1.66m-6.3 6.36 3.7 1.05m-3.71 24.39 3.7-.91m-2.44 5.03 7.48-2.72m-5.86 6.73 3.5-1.61m-1.53 5.43 6.87-3.95m-13.33-20.52 7.96.01m41.16-41.44v-7.96m.02 98.74.01-7.94m49.33-41.4-7.95-.01" filter="url(#safari-h)" transform="translate(-65 7.73)"/></svg>`,
     'Edge': `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 27600 27600" class="w-full h-full" preserveAspectRatio="xMidYMid meet"><defs><linearGradient id="edge-a" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0078d4"/><stop offset="1" stop-color="#0078d4"/></linearGradient><linearGradient id="edge-b" x1="6870" x2="24704" y1="18705" y2="18705" xlink:href="#edge-a"><stop offset="0" stop-color="#0c59a4"/><stop offset="1" stop-color="#114a8b"/></linearGradient><linearGradient id="edge-c" x1="16272" x2="5133" y1="10968" y2="23102" xlink:href="#edge-a"><stop offset="0" stop-color="#1b9de2"/><stop offset=".16" stop-color="#1595df"/><stop offset=".67" stop-color="#0680d7"/><stop offset="1" stop-color="#0078d4"/></linearGradient><radialGradient id="edge-d" cx="16720" cy="18747" r="9538" xlink:href="#edge-a"><stop offset=".72" stop-opacity="0"/><stop offset=".95" stop-opacity=".53"/><stop offset="1"/></radialGradient><radialGradient id="edge-e" cx="7130" cy="19866" r="14324" gradientTransform="matrix(.14843 -.98892 .79688 .1196 -8759 25542)" xlink:href="#edge-a"><stop offset=".76" stop-opacity="0"/><stop offset=".95" stop-opacity=".5"/><stop offset="1"/></radialGradient><radialGradient id="edge-f" cx="2523" cy="4680" r="20243" gradientTransform="matrix(-.03715 .99931 -2.12836 -.07913 13579 3530)" xlink:href="#edge-a"><stop offset="0" stop-color="#35c1f1"/><stop offset=".11" stop-color="#34c1ed"/><stop offset=".23" stop-color="#2fc2df"/><stop offset=".31" stop-color="#2bc3d2"/><stop offset=".67" stop-color="#36c752"/></radialGradient><radialGradient id="edge-g" cx="24247" cy="7758" r="9734" gradientTransform="matrix(.28109 .95968 -.78353 .22949 24510 -16292)" xlink:href="#edge-a"><stop offset="0" stop-color="#66eb6e"/><stop offset="1" stop-color="#66eb6e" stop-opacity="0"/></radialGradient></defs><path id="edge-h" d="M24105 20053a9345 9345 0 01-1053 472 10202 10202 0 01-3590 646c-4732 0-8855-3255-8855-7432 0-1175 680-2193 1643-2729-4280 180-5380 4640-5380 7253 0 7387 6810 8137 8276 8137 791 0 1984-230 2704-456l130-44a12834 12834 0 006660-5282c220-350-168-757-535-565z"/><path id="edge-i" d="M11571 25141a7913 7913 0 01-2273-2137 8145 8145 0 01-1514-4740 8093 8093 0 013093-6395 8082 8082 0 011373-859c312-148 846-414 1554-404a3236 3236 0 012569 1297 3184 3184 0 01636 1866c0-21 2446-7960-8005-7960-4390 0-8004 4166-8004 7820 0 2319 538 4170 1212 5604a12833 12833 0 007684 6757 12795 12795 0 003908 610c1414 0 2774-233 4045-656a7575 7575 0 01-6278-803z"/><path id="edge-j" d="M16231 15886c-80 105-330 250-330 566 0 260 170 512 472 723 1438 1003 4149 868 4156 868a5954 5954 0 003027-839 6147 6147 0 001133-850 6180 6180 0 001910-4437c26-2242-796-3732-1133-4392-2120-4141-6694-6525-11668-6525-7011 0-12703 5635-12798 12620 47-3654 3679-6605 7996-6605 350 0 2346 34 4200 1007 1634 858 2490 1894 3086 2921 618 1067 728 2415 728 2952s-271 1333-780 1990z"/><use fill="url(#edge-b)" xlink:href="#edge-h"/><use fill="url(#edge-d)" opacity=".35" xlink:href="#edge-h"/><use fill="url(#edge-c)" xlink:href="#edge-i"/><use fill="url(#edge-e)" opacity=".4" xlink:href="#edge-i"/><use fill="url(#edge-f)" xlink:href="#edge-j"/><use fill="url(#edge-g)" xlink:href="#edge-j"/></svg>`
   };
-  return icons[browserName] || icons['Chrome'];
+  // Only these static, in-file SVG strings ever reach v-html; unknown names render nothing
+  return Object.prototype.hasOwnProperty.call(icons, browserName) ? icons[browserName] : '';
 };
 
 const loadPerformanceData = async () => {
@@ -1361,16 +1383,18 @@ const loadPerformanceData = async () => {
   }
 
   performanceLoading.value = true;
+  performanceError.value = '';
   try {
-    const response = await axios.post(
-      `${API_BASE_URL}/performance/bundle-analysis/analyze`,
-      { componentId, includeDependencies: true },
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
-    );
+    // Sizes are measured on the server from the component's stored source (zlib gzip/brotli)
+    const response = await apiClient.post('/api/v1/performance/bundle-analysis/analyze', {
+      componentId,
+      includeDependencies: true,
+    });
     performanceData.value = response.data;
   } catch (error) {
-    console.error('Error loading performance data:', error);
     performanceData.value = null;
+    const message = error?.response?.data?.message;
+    performanceError.value = (Array.isArray(message) ? message.join('; ') : message) || 'Could not load performance data.';
   } finally {
     performanceLoading.value = false;
   }
@@ -1751,7 +1775,7 @@ const downloadComponentCodemod = () => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
 // Helper function to generate React code - defined outside component to avoid Vue parsing
@@ -1902,78 +1926,36 @@ const generatedCode = computed(() => {
   return generateCodeForFormat(codeFormat.value);
 });
 
-const copyCode = async () => {
+const copyText = async (text, label) => {
   try {
-    await navigator.clipboard.writeText(generatedCode.value);
-    // Could add a toast notification here
+    await navigator.clipboard.writeText(text);
+    showNotice(`${label} copied to clipboard.`, 'success');
   } catch (err) {
-    console.error('Failed to copy:', err);
+    showNotice('Failed to copy to clipboard.', 'error');
   }
 };
 
-const exportAsVue = async () => {
-  codeFormat.value = 'vue';
+const copyCode = () => copyText(generatedCode.value, 'Code');
+
+const FORMAT_LABELS = { vue: 'Vue code', react: 'React code', 'react-native': 'React Native code', html: 'HTML code' };
+
+const exportAsFormat = async (format) => {
+  codeFormat.value = format;
   await nextTick();
-  const vueCode = generateCodeForFormat('vue');
-  await navigator.clipboard.writeText(vueCode);
+  await copyText(generateCodeForFormat(format), FORMAT_LABELS[format]);
 };
 
-const exportAsReact = async () => {
-  codeFormat.value = 'react';
-  await nextTick();
-  const reactCode = generateCodeForFormat('react');
-  await navigator.clipboard.writeText(reactCode);
-};
-
-const exportAsReactNative = async () => {
-  codeFormat.value = 'react-native';
-  await nextTick();
-  const reactNativeCode = generateCodeForFormat('react-native');
-  await navigator.clipboard.writeText(reactNativeCode);
-};
-
-const exportAsHTML = async () => {
-  codeFormat.value = 'html';
-  await nextTick();
-  const htmlCode = generateCodeForFormat('html');
-  await navigator.clipboard.writeText(htmlCode);
-};
+const exportAsVue = () => exportAsFormat('vue');
+const exportAsReact = () => exportAsFormat('react');
+const exportAsReactNative = () => exportAsFormat('react-native');
+const exportAsHTML = () => exportAsFormat('html');
 
 
 
 
-
-let darkModeObserver = null;
-let darkModeInterval = null;
 
 onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-  
-  // Load performance data
   loadPerformanceData();
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
 });
 </script>
 

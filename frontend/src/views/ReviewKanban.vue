@@ -28,6 +28,7 @@
                     <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
                       Kanban View
                     </span>
+                    <DemoDataBadge />
                   </div>
                   <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
                     Track all your design review requests in a visual kanban board. See where each review is in the workflow and manage them efficiently.
@@ -39,7 +40,7 @@
                     </span>
                     <span class="flex items-center gap-2">
                       <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
+                      {{ loading ? 'Loading…' : `Updated ${loadedAt ? loadedAt.toLocaleTimeString() : ''}` }}
                     </span>
                   </div>
                 </div>
@@ -68,6 +69,7 @@
 
           <!-- Kanban Board -->
           <div class="max-w-7xl mx-auto">
+            <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <!-- Draft Column -->
               <div class="w-full">
@@ -313,21 +315,25 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { mockAPI, isMockMode, mockReviews } from '../mockData.js';
+import InlineNotice from '../components/InlineNotice.vue';
+import DemoDataBadge from '../components/review-ui/DemoDataBadge.vue';
+import { getCurrentUser, isMockMode } from '../mockData.js';
+import { reviewAPI, apiErrorMessage } from '../services/api.js';
 
 const router = useRouter();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
 const reviews = ref([]);
-
-
-
-
+const loading = ref(false);
+const loadedAt = ref(null);
 
 // Workflow helper functions
 const getWorkflowLabel = (state) => {
@@ -360,14 +366,13 @@ const getWorkflowColor = (state) => {
   return colors[state] || 'grey';
 };
 
-// Get current user (in real app, this would come from auth)
-const currentUser = ref(localStorage.getItem('currentDesigner') || 'Sarah Johnson');
-const currentUserEmail = ref(localStorage.getItem('currentUserEmail') || 'sarah@example.com');
-const currentUserRole = ref(localStorage.getItem('userRole') || 'designer');
+// The acting user, read once when the board opens
+const user = getCurrentUser();
 
-// Filter reviews by state
+// Filter reviews by state. Drafts that were sent back show under Changes Requested instead.
 const getReviewsByState = (state) => {
-  return reviews.value.filter(review => (review.workflowState || 'draft') === state);
+  return reviews.value.filter(review =>
+    (review.workflowState || 'draft') === state && !(state === 'draft' && review.changesRequested));
 };
 
 const getReviewsInReview = () => {
@@ -377,10 +382,11 @@ const getReviewsInReview = () => {
   });
 };
 
+// A rejection returns the review to draft; the API flags it with changesRequested.
 const getReviewsChangesRequested = () => {
   return reviews.value.filter(review => {
     const state = review.workflowState || 'draft';
-    return ['ad_changes_requested', 'cd_changes_requested'].includes(state);
+    return (state === 'draft' && review.changesRequested) || ['ad_changes_requested', 'cd_changes_requested'].includes(state);
   });
 };
 
@@ -394,73 +400,44 @@ const getReviewsApproved = () => {
 const formatDate = (dateString) => {
   if (!dateString) return 'No date';
   const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return 'No date';
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
 const openReview = (review) => {
-  router.push(`/review/${review.reviewId || review.id}`);
+  router.push(`/review/${encodeURIComponent(review.reviewId || review.id)}`);
 };
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(async () => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-  
-  // Load reviews
+const loadReviews = async () => {
+  loading.value = true;
   try {
-    const useMockMode = await isMockMode();
-    if (useMockMode) {
-      // Get reviews from mockReviews where designer matches current user
-      const designerReviews = mockReviews.filter(review => {
-        if (currentUserRole.value === 'designer') {
-          return review.designer === currentUser.value || review.designerEmail === currentUserEmail.value;
-        }
-        // For other roles, show all reviews
-        return true;
-      });
-      
-      // Convert to the format expected by the kanban board
-      reviews.value = designerReviews.map(review => ({
-        id: review.id,
-        reviewId: review.id,
-        filename: review.filename || `Review ${review.id}`,
-        workflowState: review.workflowState || 'draft',
-        createdAt: review.createdAt || review.workflowHistory?.[0]?.timestamp || new Date().toISOString(),
-        completed: review.completed || false
-      }));
-    } else {
-      // In a real app, fetch from API
-      // const response = await reviewAPI.getByDesigner(currentUser.value);
-      // reviews.value = response.data;
+    // The server returns only the reviews this user may see
+    const { reviews: list } = await reviewAPI.listReviews();
+    let visible = list || [];
+    // Demo data isn't scoped by a server; show a designer only their own reviews
+    if (isMockMode() && user.role === 'designer') {
+      visible = visible.filter(review => review.designerEmail === user.email);
     }
+    reviews.value = visible.map(review => ({
+      id: review.id,
+      reviewId: review.id,
+      filename: review.filename || `Review ${review.id}`,
+      workflowState: review.workflowState || 'draft',
+      changesRequested: !!review.changesRequested,
+      createdAt: review.createdAt,
+      completed: !!review.completed
+    }));
+    loadedAt.value = new Date();
+    clearNotice();
   } catch (error) {
     console.error('Error loading reviews:', error);
+    showNotice(apiErrorMessage(error, 'Failed to load reviews.'), 'error');
+  } finally {
+    loading.value = false;
   }
-});
+};
 
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
+onMounted(loadReviews);
 </script>
 
 <style scoped>

@@ -86,7 +86,8 @@
                         id="color-input"
                         v-model="inputColor"
                         type="text"
-                        @input="convertColor"
+                        :aria-invalid="inputError ? 'true' : 'false'"
+                        aria-describedby="color-input-error"
                         placeholder="#7AC600"
                         class="flex-1 px-3 py-2 border rounded-lg text-sm font-mono"
                         :class="isDarkMode 
@@ -106,6 +107,13 @@
                       ></button>
                     </div>
                     
+                    <p
+                      v-if="inputError"
+                      id="color-input-error"
+                      class="text-sm mb-4"
+                      :class="isDarkMode ? 'text-red-300' : 'text-red-700'"
+                    >{{ inputError }}</p>
+
                     <!-- Color Swatch -->
                     <div 
                       class="w-full h-32 rounded-lg border-2"
@@ -151,6 +159,9 @@
                     ? 'bg-slate-900 border-gray-700' 
                     : 'bg-white border-gray-200'"
                 >
+                  <div v-if="notice && !showBulkModal" class="p-4 pb-0">
+                    <InlineNotice :notice="notice" @dismiss="clearNotice" />
+                  </div>
                   <div class="overflow-x-auto">
                     <table class="w-full">
                       <thead>
@@ -265,6 +276,7 @@
               Clear
             </button>
           </div>
+          <InlineNotice v-if="notice" class="mt-4" :notice="notice" @dismiss="clearNotice" />
           <div v-if="bulkResults.length > 0" class="mt-6">
             <h4 class="font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Results</h4>
             <div class="max-h-96 overflow-y-auto border rounded-lg" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
@@ -287,14 +299,19 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import chroma from 'chroma-js';
+import { Hsluv } from 'hsluv';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const inputColor = ref('#7AC600');
 const currentColor = ref('#7AC600');
@@ -309,178 +326,242 @@ const bulkResults = ref('');
 
 
 const conversions = ref([]);
+const inputError = ref('');
 
-const convertColor = () => {
-  try {
-    const color = chroma(inputColor.value);
-    currentColor.value = color.hex();
-    
-    const rgb = color.rgb();
-    const hsl = color.hsl();
-    const hsv = color.hsv();
-    const lab = color.lab();
-    const lch = color.lch();
-    const cmyk = color.cmyk();
-    const xyz = color.rgb().map(v => v / 255);
-    
-    // Convert RGB to XYZ (simplified conversion)
-    const rgbNorm = rgb.map(v => {
-      v = v / 255;
-      return v > 0.04045 ? Math.pow((v + 0.055) / 1.055, 2.4) : v / 12.92;
-    });
-    
-    const xyzValue = [
-      (rgbNorm[0] * 0.4124564 + rgbNorm[1] * 0.3575761 + rgbNorm[2] * 0.1804375) * 100,
-      (rgbNorm[0] * 0.2126729 + rgbNorm[1] * 0.7151522 + rgbNorm[2] * 0.0721750) * 100,
-      (rgbNorm[0] * 0.0193339 + rgbNorm[1] * 0.1191920 + rgbNorm[2] * 0.9503041) * 100
-    ];
-    
-    // OKLAB conversion (approximation)
-    const okLab = convertToOKLAB(rgb);
-    
-    // OKLCH conversion
-    const okLch = convertToOKLCH(okLab);
-    
-    // Pantone approximation (simplified - would need a lookup table for accurate conversion)
-    const pantone = approximatePantone(rgb);
-    
-    conversions.value = [
-      {
-        name: 'HEX',
-        channels: '',
-        string: color.hex().toLowerCase()
-      },
-      {
-        name: 'RGB',
-        channels: `R: ${rgb[0]}, G: ${rgb[1]}, B: ${rgb[2]}`,
-        string: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`
-      },
-      {
-        name: 'HSL',
-        channels: `H: ${hsl[0].toFixed(2)}, S: ${(hsl[1] * 100).toFixed(0)}, L: ${(hsl[2] * 100).toFixed(2)}`,
-        string: `hsl(${hsl[0].toFixed(2)}, ${(hsl[1] * 100).toFixed(0)}%, ${(hsl[2] * 100).toFixed(2)}%)`
-      },
-      {
-        name: 'HSV',
-        channels: `H: ${hsv[0].toFixed(2)}, S: ${(hsv[1] * 100).toFixed(0)}, V: ${(hsv[2] * 100).toFixed(2)}`,
-        string: `hsv(${hsv[0].toFixed(2)}, ${(hsv[1] * 100).toFixed(0)}, ${(hsv[2] * 100).toFixed(2)})`
-      },
-      {
-        name: 'LAB',
-        channels: `L: ${lab[0].toFixed(2)}, A: ${lab[1].toFixed(2)}, B: ${lab[2].toFixed(2)}`,
-        string: `lab(${lab[0].toFixed(2)}%, ${lab[1].toFixed(2)}, ${lab[2].toFixed(2)})`
-      },
-      {
-        name: 'LCH',
-        channels: `L: ${lch[0].toFixed(2)}, C: ${lch[1].toFixed(2)}, H: ${lch[2].toFixed(2)}`,
-        string: `lch(${lch[0].toFixed(2)}%, ${lch[1].toFixed(2)}, ${lch[2].toFixed(2)})`
-      },
-      {
-        name: 'OKLAB',
-        channels: `L: ${okLab[0].toFixed(2)}, A: ${okLab[1].toFixed(2)}, B: ${okLab[2].toFixed(2)}`,
-        string: `oklab(${okLab[0].toFixed(2)}%, ${okLab[1].toFixed(2)}, ${okLab[2].toFixed(2)})`
-      },
-      {
-        name: 'OKLCH',
-        channels: `L: ${okLch[0].toFixed(2)}, C: ${okLch[1].toFixed(2)}, H: ${okLch[2].toFixed(2)}`,
-        string: `oklch(${okLch[0].toFixed(2)}%, ${okLch[1].toFixed(2)}, ${okLch[2].toFixed(2)})`
-      },
-      {
-        name: 'HSLuv',
-        channels: `H (L): ${hsl[0].toFixed(2)}, S (U): ${(hsl[1] * 100).toFixed(0)}, L (V): ${(hsl[2] * 100).toFixed(2)}`,
-        string: `hsluv(${hsl[0].toFixed(2)}, ${(hsl[1] * 100).toFixed(0)}, ${(hsl[2] * 100).toFixed(2)})`
-      },
-      {
-        name: 'CAM02',
-        channels: `L: ${lab[0].toFixed(2)}, A: ${lab[1].toFixed(2)}, B: ${lab[2].toFixed(2)}`,
-        string: `jab(${lab[0].toFixed(2)}, ${lab[1].toFixed(2)}, ${lab[2].toFixed(2)})`
-      },
-      {
-        name: 'CAM02p',
-        channels: `L: ${lch[0].toFixed(2)}, C: ${lch[1].toFixed(2)}, H: ${lch[2].toFixed(2)}`,
-        string: `jch(${lch[0].toFixed(2)}, ${lch[1].toFixed(2)}, ${lch[2].toFixed(2)})`
-      },
-      {
-        name: 'CMYK',
-        channels: `C: ${cmyk[0].toFixed(2)}, M: ${cmyk[1].toFixed(2)}, Y: ${cmyk[2].toFixed(2)}, K: ${cmyk[3].toFixed(2)}`,
-        string: `cmyk(${cmyk[0].toFixed(2)}, ${cmyk[1].toFixed(2)}, ${cmyk[2].toFixed(2)}, ${cmyk[3].toFixed(2)})`
-      },
-      {
-        name: 'XYZ',
-        channels: `X: ${xyzValue[0].toFixed(2)}, Y: ${xyzValue[1].toFixed(2)}, Z: ${xyzValue[2].toFixed(2)}`,
-        string: `xyz(${xyzValue[0].toFixed(2)}, ${xyzValue[1].toFixed(2)}, ${xyzValue[2].toFixed(2)})`
-      },
-      {
-        name: 'Pantone',
-        channels: '',
-        string: pantone
-      }
-    ];
-  } catch (error) {
-    console.error('Error converting color:', error);
-    conversions.value = [];
-  }
+// ---------------------------------------------------------------------------
+// Colour maths (sRGB, CSS Color 4 matrices; OKLab per Björn Ottosson)
+// ---------------------------------------------------------------------------
+
+// Fixed-precision number without "-0".
+const fmt = (value, digits = 2) => {
+  const n = Number.isFinite(value) ? value : 0;
+  const s = n.toFixed(digits);
+  return Number(s) === 0 ? (0).toFixed(digits) : s;
 };
 
-// Convert RGB to OKLAB (simplified approximation)
-const convertToOKLAB = (rgb) => {
-  const r = rgb[0] / 255;
-  const g = rgb[1] / 255;
-  const b = rgb[2] / 255;
-  
+// sRGB channel (0-255) to linear light (0-1).
+const srgbToLinear = (v) => {
+  const c = v / 255;
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+};
+
+const mul3 = (m, v) => m.map((row) => row[0] * v[0] + row[1] * v[1] + row[2] * v[2]);
+
+const LIN_SRGB_TO_XYZ_D65 = [
+  [0.41239079926595934, 0.357584339383878, 0.1804807884018343],
+  [0.21263900587151027, 0.715168678767756, 0.07219231536073371],
+  [0.01933081871559182, 0.11919477979462598, 0.9505321522496607],
+];
+
+// Bradford chromatic adaptation D65 -> D50 (CSS lab()/lch() are D50).
+const XYZ_D65_TO_D50 = [
+  [1.0479298208405488, 0.022946793341019088, -0.05019222954313557],
+  [0.029627815688159344, 0.990434484573249, -0.01707382502938514],
+  [-0.009243058152591178, 0.015055144896577895, 0.7521316354461029],
+];
+const D50_WHITE = [0.3457 / 0.3585, 1, (1 - 0.3457 - 0.3585) / 0.3585];
+
+// XYZ (D65), Y of white = 1.
+const rgbToXyzD65 = (rgb) => mul3(LIN_SRGB_TO_XYZ_D65, rgb.map(srgbToLinear));
+
+// CIE Lab relative to D50, as used by CSS lab().
+const rgbToLabD50 = (rgb) => {
+  const xyz = mul3(XYZ_D65_TO_D50, rgbToXyzD65(rgb));
+  const epsilon = 216 / 24389;
+  const kappa = 24389 / 27;
+  const f = xyz.map((v, i) => {
+    const x = v / D50_WHITE[i];
+    return x > epsilon ? Math.cbrt(x) : (kappa * x + 16) / 116;
+  });
+  return [116 * f[1] - 16, 500 * (f[0] - f[1]), 200 * (f[1] - f[2])];
+};
+
+// OKLab: linear sRGB -> LMS -> cube root -> Lab. L is 0-1; a/b roughly ±0.4.
+const rgbToOklab = (rgb) => {
+  const [r, g, b] = rgb.map(srgbToLinear);
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
   const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
   const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
-  
-  const l_ = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s;
-  const a_ = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s;
-  const b_ = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s;
-  
   return [
-    (l_ + 0.3963377774 * a_ + 0.2158037573 * b_) * 100,
-    (l_ - 0.1055613458 * a_ - 0.0638541728 * b_) * 100,
-    (l_ - 0.0894841775 * a_ - 1.2914855480 * b_) * 100
+    0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
   ];
 };
 
-// Convert OKLAB to OKLCH
-const convertToOKLCH = (oklab) => {
-  const l = oklab[0];
-  const a = oklab[1];
-  const b = oklab[2];
-  
+// Rectangular (L, a, b) to polar (L, C, h). Below `epsilon` chroma the colour
+// is treated as achromatic and the hue reported as 0 rather than noise.
+const toPolar = ([L, a, b], epsilon) => {
   const c = Math.sqrt(a * a + b * b);
-  const h = Math.atan2(b, a) * (180 / Math.PI);
-  const h_ = h < 0 ? h + 360 : h;
-  
-  return [l, c, h_];
+  let h = c < epsilon ? 0 : (Math.atan2(b, a) * 180) / Math.PI;
+  if (h < 0) h += 360;
+  return [L, c, h];
 };
 
-// Approximate Pantone (simplified - would need a lookup table for accurate conversion)
-const approximatePantone = (rgb) => {
-  // This is a very simplified approximation
-  // In a real implementation, you'd need a Pantone color lookup table
-  const hue = chroma.rgb(rgb[0], rgb[1], rgb[2]).hsl()[0] || 0;
-  const lightness = chroma.rgb(rgb[0], rgb[1], rgb[2]).luminance();
-  
-  // Very basic approximation based on hue ranges
-  if (hue >= 50 && hue <= 90 && lightness > 0.3) {
-    return 'Pantone 376C';
-  } else if (hue >= 200 && hue <= 250) {
-    return 'Pantone 285C';
-  } else if (hue >= 0 && hue <= 30) {
-    return 'Pantone 186C';
-  } else {
-    return 'Pantone N/A';
+// Hue that is NaN for greys (chroma.js) shown as 0.
+const hue = (h) => (Number.isFinite(h) ? h : 0);
+
+const toHsluv = (hex) => {
+  const conv = new Hsluv();
+  conv.hex = hex.slice(0, 7);
+  conv.hexToHsluv();
+  return [hue(conv.hsluv_h), conv.hsluv_s, conv.hsluv_l];
+};
+
+// A small table of Pantone coated colours with Pantone's published sRGB
+// equivalents. The nearest entry (by OKLab distance) is only a rough guide:
+// Pantone is a printed ink system and has no exact sRGB conversion.
+const PANTONE_SAMPLES = [
+  ['Yellow C', '#FEDD00'], ['109 C', '#FFD100'], ['123 C', '#FFC72C'], ['7406 C', '#F1C400'],
+  ['1375 C', '#FF9E1B'], ['151 C', '#FF8200'], ['1505 C', '#FF6900'], ['Orange 021 C', '#FE5000'],
+  ['Red 032 C', '#EF3340'], ['485 C', '#DA291C'], ['1795 C', '#D22630'], ['186 C', '#C8102E'],
+  ['199 C', '#D50032'], ['200 C', '#BA0C2F'], ['7421 C', '#651D32'], ['219 C', '#DA1884'],
+  ['Rhodamine Red C', '#E10098'], ['254 C', '#84329B'], ['Violet C', '#440099'], ['2685 C', '#330072'],
+  ['Reflex Blue C', '#001489'], ['286 C', '#0033A0'], ['293 C', '#003DA5'], ['300 C', '#005EB8'],
+  ['285 C', '#0072CE'], ['3005 C', '#0077C8'], ['Process Blue C', '#0085CA'], ['299 C', '#00A3E0'],
+  ['311 C', '#05C3DE'], ['320 C', '#009CA6'], ['3275 C', '#00B2A9'], ['Green C', '#00AB84'],
+  ['347 C', '#009A44'], ['355 C', '#009639'], ['354 C', '#00B140'], ['368 C', '#78BE20'],
+  ['376 C', '#84BD00'], ['382 C', '#C4D600'], ['534 C', '#1B365D'], ['289 C', '#0C2340'],
+  ['7546 C', '#253746'], ['432 C', '#333F48'], ['469 C', '#693F23'], ['4625 C', '#4F2C1D'],
+  ['7527 C', '#D6D2C4'], ['Cool Gray 1 C', '#D9D9D6'], ['Cool Gray 5 C', '#B1B3B3'],
+  ['Cool Gray 9 C', '#75787B'], ['Cool Gray 11 C', '#53565A'], ['Black C', '#2D2926'],
+].map(([name, hex]) => ({ name, hex, oklab: rgbToOklab(chroma(hex).rgb()) }));
+
+const nearestPantone = (rgb) => {
+  const target = rgbToOklab(rgb);
+  let best = PANTONE_SAMPLES[0];
+  let bestDistance = Infinity;
+  for (const sample of PANTONE_SAMPLES) {
+    const d = Math.hypot(
+      sample.oklab[0] - target[0],
+      sample.oklab[1] - target[1],
+      sample.oklab[2] - target[2],
+    );
+    if (d < bestDistance) {
+      bestDistance = d;
+      best = sample;
+    }
   }
+  return { ...best, distance: bestDistance };
+};
+
+// CSS alpha suffix for the space-separated colour functions.
+const alphaSuffix = (alpha) => (alpha < 1 ? ` / ${fmt(alpha, 3).replace(/\.?0+$/, '')}` : '');
+
+const hslString = (hsl, alpha) => {
+  const [h, s, l] = [hue(hsl[0]), hsl[1] * 100, hsl[2] * 100];
+  return alpha < 1
+    ? `hsla(${fmt(h)}, ${fmt(s)}%, ${fmt(l)}%, ${fmt(alpha, 3).replace(/\.?0+$/, '')})`
+    : `hsl(${fmt(h)}, ${fmt(s)}%, ${fmt(l)}%)`;
+};
+
+const rgbString = (rgb, alpha) => (alpha < 1
+  ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${fmt(alpha, 3).replace(/\.?0+$/, '')})`
+  : `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`);
+
+const convertColor = () => {
+  const raw = inputColor.value.trim();
+  if (!raw) {
+    inputError.value = '';
+    conversions.value = [];
+    return;
+  }
+  let color;
+  try {
+    color = chroma(raw);
+  } catch (error) {
+    inputError.value = 'Not a recognised colour. Try a hex value, a CSS colour function (rgb, hsl, lab, lch, oklab, oklch) or a colour name.';
+    conversions.value = [];
+    return;
+  }
+  inputError.value = '';
+  currentColor.value = color.hex();
+
+  const alpha = color.alpha();
+  const rgb = color.rgb();
+  const hsl = color.hsl();
+  const hsv = color.hsv();
+  const cmyk = color.cmyk();
+  const xyz = rgbToXyzD65(rgb);
+  const lab = rgbToLabD50(rgb);
+  const lch = toPolar(lab, 0.0015);
+  const okLab = rgbToOklab(rgb);
+  const okLch = toPolar(okLab, 0.00004);
+  const hsluv = toHsluv(color.hex('rgb'));
+  const pantone = nearestPantone(rgb);
+  const a = alphaSuffix(alpha);
+
+  conversions.value = [
+    {
+      name: 'HEX',
+      channels: alpha < 1 ? `Alpha: ${fmt(alpha, 3)}` : '',
+      string: color.hex().toLowerCase()
+    },
+    {
+      name: 'RGB',
+      channels: `R: ${rgb[0]}, G: ${rgb[1]}, B: ${rgb[2]}`,
+      string: rgbString(rgb, alpha)
+    },
+    {
+      name: 'HSL',
+      channels: `H: ${fmt(hue(hsl[0]))}, S: ${fmt(hsl[1] * 100)}, L: ${fmt(hsl[2] * 100)}`,
+      string: hslString(hsl, alpha)
+    },
+    {
+      name: 'HSV',
+      channels: `H: ${fmt(hue(hsv[0]))}, S: ${fmt(hsv[1] * 100)}, V: ${fmt(hsv[2] * 100)}`,
+      string: `hsv(${fmt(hue(hsv[0]))}, ${fmt(hsv[1] * 100)}%, ${fmt(hsv[2] * 100)}%)`
+    },
+    {
+      name: 'LAB (CIE, D50)',
+      channels: `L: ${fmt(lab[0])}, A: ${fmt(lab[1])}, B: ${fmt(lab[2])}`,
+      string: `lab(${fmt(lab[0])}% ${fmt(lab[1])} ${fmt(lab[2])}${a})`
+    },
+    {
+      name: 'LCH (CIE, D50)',
+      channels: `L: ${fmt(lch[0])}, C: ${fmt(lch[1])}, H: ${fmt(lch[2])}`,
+      string: `lch(${fmt(lch[0])}% ${fmt(lch[1])} ${fmt(lch[2])}${a})`
+    },
+    {
+      name: 'OKLAB',
+      channels: `L: ${fmt(okLab[0], 4)}, A: ${fmt(okLab[1], 4)}, B: ${fmt(okLab[2], 4)}`,
+      string: `oklab(${fmt(okLab[0] * 100)}% ${fmt(okLab[1], 4)} ${fmt(okLab[2], 4)}${a})`
+    },
+    {
+      name: 'OKLCH',
+      channels: `L: ${fmt(okLch[0], 4)}, C: ${fmt(okLch[1], 4)}, H: ${fmt(okLch[2])}`,
+      string: `oklch(${fmt(okLch[0] * 100)}% ${fmt(okLch[1], 4)} ${fmt(okLch[2])}${a})`
+    },
+    {
+      name: 'HSLuv',
+      channels: `H: ${fmt(hsluv[0])}, S: ${fmt(hsluv[1])}, L: ${fmt(hsluv[2])}`,
+      string: `hsluv(${fmt(hsluv[0])}, ${fmt(hsluv[1])}%, ${fmt(hsluv[2])}%)`
+    },
+    {
+      name: 'CMYK (naive)',
+      channels: `C: ${fmt(cmyk[0] * 100)}, M: ${fmt(cmyk[1] * 100)}, Y: ${fmt(cmyk[2] * 100)}, K: ${fmt(cmyk[3] * 100)}`,
+      string: `device-cmyk(${fmt(cmyk[0] * 100)}% ${fmt(cmyk[1] * 100)}% ${fmt(cmyk[2] * 100)}% ${fmt(cmyk[3] * 100)}%)`
+    },
+    {
+      name: 'XYZ (D65)',
+      channels: `X: ${fmt(xyz[0] * 100)}, Y: ${fmt(xyz[1] * 100)}, Z: ${fmt(xyz[2] * 100)}`,
+      string: `color(xyz-d65 ${fmt(xyz[0], 4)} ${fmt(xyz[1], 4)} ${fmt(xyz[2], 4)}${a})`
+    },
+    {
+      name: 'Pantone (nearest, approximate)',
+      channels: `Closest of ${PANTONE_SAMPLES.length} common coated colours (${pantone.hex}); ΔEok ${fmt(pantone.distance * 100, 1)}`,
+      string: `PANTONE ${pantone.name}`
+    }
+  ];
 };
 
 const copyToClipboard = async (text) => {
   try {
     await navigator.clipboard.writeText(text);
-    // Could add a toast notification here
+    showNotice('Copied to clipboard.', 'success');
   } catch (error) {
     console.error('Failed to copy:', error);
+    showNotice('Could not copy to the clipboard.', 'error');
   }
 };
 
@@ -532,11 +613,28 @@ const handleColorPickerApply = (color) => {
   showColorPicker.value = false;
 };
 
+// Split on commas / whitespace / newlines, but not inside parentheses, so
+// "rgb(122, 198, 0)" stays one colour.
+const splitColorList = (text) => {
+  const colors = [];
+  let current = '';
+  let depth = 0;
+  for (const ch of text) {
+    if (ch === '(') depth++;
+    if (ch === ')') depth = Math.max(0, depth - 1);
+    if (depth === 0 && /[,\s]/.test(ch)) {
+      if (current.trim()) colors.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) colors.push(current.trim());
+  return colors;
+};
+
 const convertBulk = () => {
-  const colors = bulkInput.value
-    .split(/[,\n\s]+/)
-    .map(c => c.trim())
-    .filter(c => c.length > 0);
+  const colors = splitColorList(bulkInput.value);
   
   const results = [];
   
@@ -549,8 +647,11 @@ const convertBulk = () => {
       
       results.push(`${colorInput}:`);
       results.push(`  HEX: ${hex}`);
-      results.push(`  RGB: rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`);
-      results.push(`  HSL: hsl(${hsl[0].toFixed(2)}, ${(hsl[1] * 100).toFixed(0)}%, ${(hsl[2] * 100).toFixed(2)}%)`);
+      const alpha = color.alpha();
+      const okLch = toPolar(rgbToOklab(rgb), 0.00004);
+      results.push(`  RGB: ${rgbString(rgb, alpha)}`);
+      results.push(`  HSL: ${hslString(hsl, alpha)}`);
+      results.push(`  OKLCH: oklch(${fmt(okLch[0] * 100)}% ${fmt(okLch[1], 4)} ${fmt(okLch[2])}${alphaSuffix(alpha)})`);
       results.push('');
     } catch (error) {
       results.push(`${colorInput}: Invalid color`);
@@ -574,36 +675,8 @@ watch(inputColor, () => {
   convertColor();
 });
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
 onMounted(() => {
   convertColor();
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
 });
 </script>
 

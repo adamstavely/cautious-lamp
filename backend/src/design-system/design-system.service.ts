@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, Optional, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException, ServiceUnavailableException, Optional, Inject, forwardRef } from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
 import { ComplianceScannerService, ScannerContext } from './compliance-scanner.service';
 import { ApplicationScannerService, ApplicationScanContext } from './application-scanner.service';
@@ -6,6 +6,8 @@ import { VisualRegressionService } from '../visual-regression/visual-regression.
 import { SessionReplayService } from '../session-replay/session-replay.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { EncryptionService } from '../common/security/encryption.service';
+import { NotFoundException as BundleComponentNotFound } from '@nestjs/common';
+import { analyzeAllBundles, analyzeComponentBundle } from './bundle-analysis.service';
 
 export interface Token {
   name: string;
@@ -451,7 +453,7 @@ export interface ComplianceCheck {
 
 @Injectable()
 export class DesignSystemService {
-  private apiKeys = new Map<string, { name: string; createdAt: Date; encryptedKey?: string }>();
+  private readonly logger = new Logger(DesignSystemService.name);
   private applications = new Map<string, Application>();
   private workspaces = new Map<string, Workspace>();
   private workspaceFonts = new Map<string, WorkspaceFont>();
@@ -486,19 +488,6 @@ export class DesignSystemService {
   ) {
     this.scannerService = new ComplianceScannerService();
     this.applicationScanner = new ApplicationScannerService();
-    // Store encrypted keys for test keys
-    const testKey = 'test-api-key-123';
-    const devKey = 'dev-key';
-    this.apiKeys.set(testKey, { 
-      name: 'Default Test Key', 
-      createdAt: new Date(),
-      encryptedKey: this.encryptionService?.encrypt(testKey) || undefined,
-    });
-    this.apiKeys.set(devKey, { 
-      name: 'Development Key', 
-      createdAt: new Date(),
-      encryptedKey: this.encryptionService?.encrypt(devKey) || undefined,
-    });
   }
 
   // Set analytics service (called by module to avoid circular dependency)
@@ -562,22 +551,6 @@ export class DesignSystemService {
         tags: ['mobile', 'ios', 'android']
       }
     });
-  }
-
-  validateApiKey(apiKey: string): boolean {
-    return this.apiKeys.has(apiKey);
-  }
-
-  createApiKey(name: string): string {
-    const apiKey = `ds_${this.generateRandomString(32)}`;
-    // Encrypt the key before storing
-    const encryptedKey = this.encryptionService?.encrypt(apiKey);
-    this.apiKeys.set(apiKey, { 
-      name, 
-      createdAt: new Date(),
-      encryptedKey,
-    });
-    return apiKey;
   }
 
   private generateRandomString(length: number): string {
@@ -2306,105 +2279,65 @@ export const Table = ({
   }
 
   /**
-   * Calculate test coverage for a component based on its props and test generation
+   * Test coverage for a component.
+   *
+   * The design system stores no test runs or coverage reports for its
+   * components, so there is no coverage to report: the percentages are null and
+   * `available` is false. What can be stated truthfully is the component's
+   * testable surface, counted from its real prop definitions.
    */
   calculateTestCoverage(componentId: string): {
-    statements: number;
-    branches: number;
-    functions: number;
-    lines: number;
-    lastUpdated?: string;
+    componentId: string;
+    componentName: string;
+    available: boolean;
+    reason: string;
+    statements: number | null;
+    branches: number | null;
+    functions: number | null;
+    lines: number | null;
+    surface: {
+      props: number;
+      requiredProps: number;
+      booleanProps: number;
+      enumProps: number;
+      enumOptions: number;
+      functionProps: number;
+      /** One case per prop, plus one per extra enum option and the false state of each boolean */
+      suggestedTestCases: number;
+    };
   } {
     const component = this.getComponentById(componentId);
     if (!component) {
-      // Return default coverage if component not found
-      return {
-        statements: 0,
-        branches: 0,
-        functions: 0,
-        lines: 0,
-      };
+      throw new BundleComponentNotFound(`Component '${componentId}' not found`);
     }
 
     const props = component.props || [];
-    if (props.length === 0) {
-      // No props means basic coverage
-      return {
-        statements: 45,
-        branches: 30,
-        functions: 50,
-        lines: 45,
-        lastUpdated: new Date().toISOString(),
-      };
-    }
-
-    // Calculate coverage based on props
-    // Each prop adds potential test coverage
-    let totalTestableItems = 0;
-    let coveredItems = 0;
-
-    props.forEach(prop => {
-      // Statements: Each prop can generate multiple test statements
-      if (prop.options && prop.options.length > 0) {
-        // Enum prop: each option is a test case
-        totalTestableItems += prop.options.length * 2; // 2 statements per option (mount + assertion)
-        coveredItems += prop.options.length * 2; // All enum values are tested
-      } else if (prop.type === 'boolean') {
-        // Boolean: true and false states
-        totalTestableItems += 4; // 2 states × 2 statements
-        coveredItems += 4;
-      } else {
-        // Other types: at least one test
-        totalTestableItems += 2;
-        coveredItems += 2;
-      }
-
-      // Branches: Each prop creates conditional branches
-      if (prop.required) {
-        totalTestableItems += 2; // required vs optional branch
-        coveredItems += 2;
-      }
-      if (prop.options && prop.options.length > 0) {
-        totalTestableItems += prop.options.length; // Each option is a branch
-        coveredItems += prop.options.length;
-      }
-    });
-
-    // Functions: Each prop that's a function prop
-    const functionProps = props.filter(p => 
-      p.type === 'function' || 
-      p.name.toLowerCase().includes('on') || 
-      p.name.toLowerCase().includes('handle')
-    );
-    totalTestableItems += functionProps.length * 3; // Each function prop has 3 test functions
-    coveredItems += functionProps.length * 3;
-
-    // Base coverage for component structure
-    const baseStatements = 10;
-    const baseBranches = 5;
-    const baseFunctions = 8;
-    const baseLines = 10;
-
-    // Calculate percentages (cap at 100%)
-    const statements = Math.min(95, Math.round(
-      baseStatements + (coveredItems / Math.max(totalTestableItems, 1)) * 70
-    ));
-    const branches = Math.min(90, Math.round(
-      baseBranches + (props.length * 15) + (functionProps.length * 10)
-    ));
-    const functions = Math.min(95, Math.round(
-      baseFunctions + (functionProps.length * 20) + (props.length * 5)
-    ));
-    const lines = Math.min(92, Math.round(
-      baseLines + (coveredItems / Math.max(totalTestableItems, 1)) * 65
-    ));
+    const enumProps = props.filter(p => Array.isArray(p.options) && p.options.length > 0);
+    const booleanProps = props.filter(p => p.type === 'boolean');
+    const enumOptions = enumProps.reduce((sum, p) => sum + p.options!.length, 0);
+    const suggestedTestCases =
+      props.length +
+      enumProps.reduce((sum, p) => sum + (p.options!.length - 1), 0) +
+      booleanProps.length;
 
     return {
-      statements,
-      branches,
-      functions,
-      lines,
-      lastUpdated: new Date().toISOString(),
+      componentId: component.id,
+      componentName: component.name,
+      available: false,
+      reason: 'No test runs or coverage reports are recorded for this component, so coverage cannot be reported.',
+      statements: null,
+      branches: null,
+      functions: null,
+      lines: null,
+      surface: {
+        props: props.length,
+        requiredProps: props.filter(p => p.required).length,
+        booleanProps: booleanProps.length,
+        enumProps: enumProps.length,
+        enumOptions,
+        functionProps: props.filter(p => p.type === 'function').length,
+        suggestedTestCases,
+      },
     };
   }
 
@@ -3539,99 +3472,20 @@ export const Table = ({
     return this.performanceBudgets.delete(id);
   }
 
-  // Bundle Size Analysis
+  // Bundle Size Analysis: raw, gzip and brotli sizes measured from the stored
+  // component source with zlib (see bundle-analysis.service.ts)
   getBundleAnalysis() {
-    // Analyze all components with actual dependency sizes
-    const analysis = this.components.map(component => {
-      const vueCode = component.code.vue || '';
-      const reactCode = component.code.react || '';
-      const vueSize = Buffer.byteLength(vueCode, 'utf8');
-      const reactSize = Buffer.byteLength(reactCode, 'utf8');
-      const totalSize = vueSize + reactSize;
-      
-      // Calculate actual dependencies size
-      let dependenciesSize = 0;
-      const dependencies = component.dependencies || [];
-      const analyzedDeps: string[] = [];
-      
-      dependencies.forEach(depId => {
-        const dep = this.components.find(c => c.id === depId);
-        if (dep) {
-          const depVueSize = Buffer.byteLength(dep.code.vue || '', 'utf8');
-          const depReactSize = Buffer.byteLength(dep.code.react || '', 'utf8');
-          dependenciesSize += depVueSize + depReactSize;
-          analyzedDeps.push(depId);
-        }
-      });
-      
-      return {
-        componentId: component.id,
-        componentName: component.name,
-        vueSize,
-        reactSize,
-        totalSize,
-        dependenciesSize,
-        totalWithDeps: totalSize + dependenciesSize,
-        dependencies: analyzedDeps,
-        gzippedSize: Math.round(totalSize * 0.3), // Estimate (actual gzip would require compression)
-        status: totalSize > 50000 ? 'warning' : totalSize > 100000 ? 'error' : 'pass'
-      };
-    });
-    
-    return {
-      components: analysis,
-      summary: {
-        totalComponents: analysis.length,
-        totalSize: analysis.reduce((sum, a) => sum + a.totalSize, 0),
-        averageSize: analysis.length > 0 ? Math.round(analysis.reduce((sum, a) => sum + a.totalSize, 0) / analysis.length) : 0,
-        largestComponent: analysis.length > 0 ? analysis.reduce((max, a) => a.totalSize > max.totalSize ? a : max, analysis[0]) : null,
-        smallestComponent: analysis.length > 0 ? analysis.reduce((min, a) => a.totalSize < min.totalSize ? a : min, analysis[0]) : null
-      }
-    };
+    return analyzeAllBundles(this.components);
   }
 
   analyzeBundle(componentId?: string, includeDependencies: boolean = true) {
     if (componentId) {
       const component = this.components.find(c => c.id === componentId);
       if (!component) {
-        throw new Error(`Component ${componentId} not found`);
+        throw new BundleComponentNotFound(`Component '${componentId}' not found`);
       }
-      
-      const vueCode = component.code.vue || '';
-      const reactCode = component.code.react || '';
-      const vueSize = Buffer.byteLength(vueCode, 'utf8');
-      const reactSize = Buffer.byteLength(reactCode, 'utf8');
-      const totalSize = vueSize + reactSize;
-      
-      let dependenciesSize = 0;
-      const analyzedDeps: string[] = [];
-      
-      if (includeDependencies && component.dependencies) {
-        component.dependencies.forEach(depId => {
-          const dep = this.components.find(c => c.id === depId);
-          if (dep) {
-            const depVueSize = Buffer.byteLength(dep.code.vue || '', 'utf8');
-            const depReactSize = Buffer.byteLength(dep.code.react || '', 'utf8');
-            dependenciesSize += depVueSize + depReactSize;
-            analyzedDeps.push(depId);
-          }
-        });
-      }
-      
-      return {
-        componentId: component.id,
-        componentName: component.name,
-        vueSize,
-        reactSize,
-        totalSize,
-        dependenciesSize,
-        totalWithDeps: totalSize + dependenciesSize,
-        dependencies: analyzedDeps,
-        gzippedSize: Math.round(totalSize * 0.3),
-        status: totalSize > 50000 ? 'warning' : totalSize > 100000 ? 'error' : 'pass'
-      };
+      return analyzeComponentBundle(component, this.components, includeDependencies !== false);
     }
-    
     return this.getBundleAnalysis();
   }
 
@@ -3921,30 +3775,22 @@ export const Table = ({
       createdAt: new Date().toISOString(),
     };
 
+    return this.storeSurveyResponse('nasa-tlx', document);
+  }
+
+  /**
+   * Stores a survey response. Fails with 503 rather than reporting a save that didn't happen.
+   */
+  private async storeSurveyResponse<T extends object>(index: string, document: T): Promise<T & { id: string }> {
     if (!this.elasticsearchService) {
-      // Return mock response if Elasticsearch is not available
-      return {
-        id: `mock-${Date.now()}`,
-        ...document,
-      };
+      throw new ServiceUnavailableException('Survey storage is not configured');
     }
-
     try {
-      const result = await this.elasticsearchService.index({
-        index: 'nasa-tlx',
-        document,
-      });
-
-      return {
-        id: result._id,
-        ...document,
-      };
+      const result = await this.elasticsearchService.index({ index, document, refresh: 'wait_for' });
+      return { id: result._id, ...document };
     } catch (error) {
-      // Return mock response if Elasticsearch fails
-      return {
-        id: `mock-${Date.now()}`,
-        ...document,
-      };
+      this.logger.error(`Failed to store ${index} response: ${(error as Error).message}`);
+      throw new ServiceUnavailableException('Survey storage is unavailable, please try again later');
     }
   }
 
@@ -3989,31 +3835,7 @@ export const Table = ({
       createdAt: new Date().toISOString(),
     };
 
-    if (!this.elasticsearchService) {
-      // Return mock response if Elasticsearch is not available
-      return {
-        id: `mock-${Date.now()}`,
-        ...document,
-      };
-    }
-
-    try {
-      const result = await this.elasticsearchService.index({
-        index: 'sus-scores',
-        document,
-      });
-
-      return {
-        id: result._id,
-        ...document,
-      };
-    } catch (error) {
-      // Return mock response if Elasticsearch fails
-      return {
-        id: `mock-${Date.now()}`,
-        ...document,
-      };
-    }
+    return this.storeSurveyResponse('sus-scores', document);
   }
 
   // Heuristic Evaluation
@@ -4043,29 +3865,7 @@ export const Table = ({
       createdAt: new Date().toISOString(),
     };
 
-    if (!this.elasticsearchService) {
-      return {
-        id: `mock-${Date.now()}`,
-        ...document,
-      };
-    }
-
-    try {
-      const result = await this.elasticsearchService.index({
-        index: 'heuristic-evaluations',
-        document,
-      });
-
-      return {
-        id: result._id,
-        ...document,
-      };
-    } catch (error) {
-      return {
-        id: `mock-${Date.now()}`,
-        ...document,
-      };
-    }
+    return this.storeSurveyResponse('heuristic-evaluations', document);
   }
 
   // Component metadata for Loupe Tool

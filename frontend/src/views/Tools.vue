@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
+  <div class="w-full h-full bg-[#fff] dark:bg-slate-950 text-slate-900 dark:text-slate-100 relative flex">
     <!-- Drawer -->
     <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" @navigate-doc="handleDocNavigation" />
     
@@ -24,639 +24,55 @@
       <div v-else class="h-full overflow-y-auto">
         <!-- Breadcrumbs -->
         <Breadcrumbs />
-        
-        <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-16">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <!-- Background texture/grain effect -->
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Tools
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Powerful design tools to help you create, iterate, and refine your design system. From gradient generators to color palette builders, access all the tools you need in one place.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                    <defs>
-                      <linearGradient id="toolsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Stylized tools icon -->
-                    <rect x="40" y="40" width="50" height="50" rx="4" fill="url(#toolsGradient)" opacity="0.3" transform="rotate(45 65 65)"/>
-                    <rect x="110" y="40" width="50" height="50" rx="4" fill="url(#toolsGradient)" opacity="0.5" transform="rotate(45 135 65)"/>
-                    <rect x="40" y="110" width="50" height="50" rx="4" fill="url(#toolsGradient)" opacity="0.4" transform="rotate(45 65 135)"/>
-                    <rect x="110" y="110" width="50" height="50" rx="4" fill="url(#toolsGradient)" opacity="0.6" transform="rotate(45 135 135)"/>
-                    <circle cx="65" cy="65" r="8" fill="rgba(255,255,255,0.4)"/>
-                    <circle cx="135" cy="65" r="8" fill="rgba(255,255,255,0.4)"/>
-                    <circle cx="65" cy="135" r="8" fill="rgba(255,255,255,0.4)"/>
-                    <circle cx="135" cy="135" r="8" fill="rgba(255,255,255,0.4)"/>
-                  </svg>
+
+        <div class="max-w-6xl mx-auto px-6 md:px-10 py-12 md:py-16">
+          <!-- Hero -->
+          <section class="grid md:grid-cols-[1fr_auto] items-center gap-10 pb-14 md:pb-16 border-b border-slate-200 dark:border-slate-800">
+            <div>
+              <p class="text-sm font-medium tracking-wide text-[#2f5ea8] dark:text-[#9dbcf0] mb-4">Check, generate, convert</p>
+              <h1 class="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] mb-5">Tools</h1>
+              <p class="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
+                Tools to help you create, iterate and refine your design system, from gradient
+                generators to contrast checkers, all in one place.
+              </p>
+            </div>
+            <div class="spot hidden md:block w-64 h-64 lg:w-72 lg:h-72" aria-hidden="true" v-html="spot('site/tools')"></div>
+          </section>
+
+          <!-- Popular -->
+          <section class="py-14 md:py-16">
+            <div class="section-head">
+              <h2>Popular tools</h2>
+              <p>The ones teams reach for most.</p>
+            </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
+              <router-link v-for="tool in popular" :key="tool.to" :to="tool.to" class="tool group">
+                <div class="spot w-14 h-14 shrink-0" aria-hidden="true" v-html="spot(tool.art)"></div>
+                <div class="min-w-0">
+                  <h3 class="font-medium group-hover:text-[#2f5ea8] dark:group-hover:text-[#9dbcf0] transition-colors">{{ tool.title }}</h3>
+                  <p class="text-sm text-slate-500 dark:text-slate-400">{{ tool.body }}</p>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Browse Tools Section -->
-        <div class="max-w-7xl mx-auto mb-16">
-          <div class="mb-8">
-            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Browse tools
-            </h2>
-          </div>
-          
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <!-- Tool Card 1: Gradient Generator -->
-            <router-link 
-              to="/tools/gradient-generator" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">gradient</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Gradient Generator
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Create beautiful CSS gradients with custom stops.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 2: Palette Builder -->
-            <router-link 
-              to="/palette-builder" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <SwatchBook :size="48" :stroke-width="2" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Palette Builder
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Build comprehensive color palettes with AI suggestions.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 3: Lorem Ipsum Generator -->
-            <router-link 
-              to="/tools/lorem-ipsum" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <TextInitial :size="48" :stroke-width="2" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Lorem Ipsum Generator
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Generate placeholder text for your designs.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 4: SVG Placeholder Text Generator -->
-            <router-link 
-              to="/tools/svg-placeholder-text" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">image</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                SVG Placeholder Text
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Generate placeholder SVG text with customizable styling.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 5: SEO Tagging Generator -->
-            <router-link 
-              to="/tools/seo-tagging" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <Tag :size="48" :stroke-width="2" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                SEO Tagging Generator
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Generate SEO meta tags and structured data.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 6: Color Scale Generator -->
-            <router-link 
-              to="/tools/color-scale" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">format_color_fill</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Color Scale Generator
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Generate accessible color scales using Leonardo Color.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 6: Color Converter -->
-            <router-link 
-              to="/tools/color-converter" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">swap_horiz</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Color Converter
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Convert colors between different formats and spaces.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 7: Color Contrast -->
-            <router-link 
-              to="/tools/color-contrast" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">contrast</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Color Contrast
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Check WCAG accessibility standards for color combinations.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 7.5: APCA Calculator -->
-            <router-link 
-              to="/tools/apca-calculator" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">calculate</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                APCA Calculator
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Compose colors with consistent APCA contrast ratios.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 8: Photosensitivity Analysis -->
-            <router-link 
-              to="/tools/photosensitivity" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">visibility</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Photosensitivity Analysis
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Analyze video content for photosensitive epileptic risks using IRIS.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 12: Image Converter -->
-            <router-link 
-              to="/tools/png-to-ico" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">image</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Image Converter
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Convert PNG images to ICO format for favicons and app icons.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 13: Alt Text Generator -->
-            <router-link 
-              to="/tools/alt-text-generator" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <Captions :size="48" :stroke-width="2" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Alt Text Generator
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Generate accessible, descriptive alt text for images to improve web accessibility.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 14: PX Unit Converter -->
-            <router-link 
-              to="/tools/px-converter" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">straighten</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                PX Unit Converter
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Convert pixel values to REM, EM, percentage, and Tailwind units with customizable base sizes.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 15: CSS Converter -->
-            <router-link 
-              to="/tools/css-converter" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">code</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                CSS Converter
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Convert CSS to LESS, SASS, and SCSS preprocessor formats with nesting and variable support.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 16: HTML Viewer -->
-            <router-link 
-              to="/tools/html-viewer" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">preview</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                HTML Viewer
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                View and render HTML, CSS, and JavaScript code in real-time with live preview.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 17: HTML Escaper -->
-            <router-link 
-              to="/tools/html-escaper" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">lock</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                HTML Escaper
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Escape and unescape HTML special characters to prevent XSS attacks and display HTML as text.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 18: Image Compressor -->
-            <router-link 
-              to="/tools/image-compressor" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">compress</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Image Compressor
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Compress PNG, JPG, and GIF images to reduce file size while maintaining quality.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 19: Chart Builder -->
-            <router-link 
-              to="/tools/chart-builder" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">bar_chart</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Chart Builder
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Create beautiful charts and graphs including line, bar, pie, doughnut, scatter plots, and more.
-              </p>
-            </router-link>
-
-
-            <!-- Tool Card 21: Spacing Scale Generator -->
-            <router-link 
-              to="/tools/spacing-scale" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">space_dashboard</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Spacing Scale Generator
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Generate consistent spacing scales using mathematical ratios for padding, margin, and gaps.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 22: Box Shadow Generator -->
-            <router-link 
-              to="/tools/box-shadow" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">layers</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Box Shadow Generator
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Create beautiful box shadows with custom offsets, blur, spread, and color. Support for multiple shadows.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 23: Border Radius Generator -->
-            <router-link 
-              to="/tools/border-radius" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">rounded_corner</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Border Radius Generator
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Generate border radius values with individual corner controls. Perfect for rounded corners on UI elements.
-              </p>
-            </router-link>
-
-            <!-- Tool Card 24: CSS Animation Generator -->
-            <router-link 
-              to="/tools/css-animation" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">animation</span>
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                CSS Animation Generator
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Create smooth CSS animations with keyframe editor. Generate animations for transform, opacity, colors, and more.
-              </p>
-            </router-link>
-          </div>
-        </div>
-
-        <!-- Featured Tools Section -->
-        <div class="max-w-7xl mx-auto">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-950 dark:via-indigo-900 dark:to-indigo-800">
-            <div class="mb-8">
-              <h2 class="text-4xl md:text-5xl font-bold text-white">
-                Popular tools
-              </h2>
-            </div>
-            
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-              <router-link to="/tools/gradient-generator" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">Gradient Generator</h3>
-                <p class="text-white/80 text-sm">Create beautiful gradients with custom stops, angles, and color interpolation for your designs.</p>
-              </router-link>
-              <router-link to="/palette-builder" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">Palette Builder</h3>
-                <p class="text-white/80 text-sm">Build comprehensive color palettes with advanced tools for harmony, contrast, and accessibility.</p>
-              </router-link>
-              <router-link to="/tools/lorem-ipsum" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">Lorem Ipsum Generator</h3>
-                <p class="text-white/80 text-sm">Generate placeholder text for your designs with customizable paragraphs, words, sentences, or lists.</p>
-              </router-link>
-              <router-link to="/tools/svg-placeholder-text" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">SVG Placeholder Text</h3>
-                <p class="text-white/80 text-sm">Generate placeholder SVG text with customizable alignment, spacing, colors, and styling options.</p>
-              </router-link>
-              <router-link to="/tools/seo-tagging" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">SEO Tagging Generator</h3>
-                <p class="text-white/80 text-sm">Generate SEO meta tags, Open Graph tags, and structured data for optimal search engine optimization.</p>
-              </router-link>
-              <router-link to="/tools/color-scale" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">Color Scale Generator</h3>
-                <p class="text-white/80 text-sm">Generate accessible color scales using Adobe's Leonardo Color with sequential, diverging, and qualitative options.</p>
-              </router-link>
-              <router-link to="/tools/color-contrast" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">Color Contrast Checker</h3>
-                <p class="text-white/80 text-sm">Ensure your color combinations meet WCAG accessibility standards for text readability.</p>
-              </router-link>
-              <router-link to="/tools/apca-calculator" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">APCA Calculator</h3>
-                <p class="text-white/80 text-sm">Compose colors with consistent APCA contrast ratios using the modern contrast standard.</p>
-              </router-link>
-              <router-link to="/tools/html-viewer" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 class="text-white font-semibold text-xl mb-2">HTML Viewer</h3>
-                <p class="text-white/80 text-sm">View and render HTML, CSS, and JavaScript code in real-time, showing exactly how the code would appear in a web browser.</p>
               </router-link>
             </div>
-          </div>
-        </div>
-        </div>
+          </section>
+
+          <!-- All tools -->
+          <section class="py-14 md:py-16 border-t border-slate-200 dark:border-slate-800">
+            <div class="section-head">
+              <h2>All tools</h2>
+              <p>Everything for color, type, layout, content, images and code.</p>
+            </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <router-link v-for="tool in tools" :key="tool.to" :to="tool.to" class="card group">
+                <div class="spot w-16 h-16 -ml-1 mb-2" aria-hidden="true" v-html="spot(tool.art)"></div>
+                <h3 class="card-title">
+                  {{ tool.title }}
+                  <span class="material-symbols-outlined arrow" aria-hidden="true">arrow_forward</span>
+                </h3>
+                <p class="card-body">{{ tool.body }}</p>
+              </router-link>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -664,16 +80,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import MarkdownViewer from '../components/MarkdownViewer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { MonitorCog, Tag, TextInitial, SwatchBook, Captions } from 'lucide-vue-next';
 import { useDrawer } from '../composables/useDrawer.js';
+import { spot } from '../utils/spotIllustrations.js';
 
 const route = useRoute();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const currentDocLink = ref(null);
 
@@ -694,51 +109,97 @@ const handleDocNavigation = (link) => {
   }
 };
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
 onMounted(() => {
   // Auto-open drawer if navigating from sidebar
   if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
     drawerOpen.value = true;
     sessionStorage.removeItem('openDrawerOnLoad');
   }
-  
-  // Handle route on mount - check if we're on a reference page
-  if (route.path.startsWith('/tools/references/')) {
-    currentDocLink.value = route.path;
-  }
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
 });
 
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
+// Keep the reference content in step with the route (on mount and when moving
+// between /tools/references/* pages, or back to /tools).
+watch(
+  () => route.path,
+  (path) => {
+    if (path.startsWith('/tools/references/')) {
+      currentDocLink.value = path;
+    } else if (path === '/tools' || path === '/tools/') {
+      currentDocLink.value = null;
+    }
+  },
+  { immediate: true },
+);
+
+const tools = [
+  { title: 'Gradient generator', to: '/tools/gradient-generator', art: 'tools/gradient-generator', body: 'Create CSS gradients with custom stops.' },
+  { title: 'Palette builder', to: '/palette-builder', art: 'foundations/color-palettes', body: 'Build color palettes with AI suggestions.' },
+  { title: 'Lorem ipsum generator', to: '/tools/lorem-ipsum', art: 'tools/lorem-ipsum-generator', body: 'Generate placeholder text for your designs.' },
+  { title: 'SVG placeholder text', to: '/tools/svg-placeholder-text', art: 'guidelines/text-graphics', body: 'Generate placeholder SVG text with custom styling.' },
+  { title: 'SEO tagging generator', to: '/tools/seo-tagging', art: 'tools/seo-tagging-generator', body: 'Generate SEO meta tags and structured data.' },
+  { title: 'Color scale generator', to: '/tools/color-scale', art: 'tools/color-scale-generator', body: 'Generate accessible color scales using Leonardo.' },
+  { title: 'Color converter', to: '/tools/color-converter', art: 'tools/color-converter', body: 'Convert colors between formats and color spaces.' },
+  { title: 'Color contrast checker', to: '/tools/color-contrast', art: 'tools/color-contrast-checker', body: 'Check color pairs against WCAG.' },
+  { title: 'APCA calculator', to: '/tools/apca-calculator', art: 'tools/apca-calculator', body: 'Compose colors with consistent APCA contrast.' },
+  { title: 'Photosensitivity analysis', to: '/tools/photosensitivity', art: 'admin/photosensitivity-analysis', body: 'Check video for photosensitive seizure risks with IRIS.' },
+  { title: 'Image converter', to: '/tools/png-to-ico', art: 'tools/png-to-ico', body: 'Convert PNG images to ICO for favicons and app icons.' },
+  { title: 'Alt text generator', to: '/tools/alt-text-generator', art: 'tools/alt-text-generator', body: 'Write descriptive, accessible alt text for images.' },
+  { title: 'PX unit converter', to: '/tools/px-converter', art: 'tools/px-converter', body: 'Convert pixels to REM, EM, percent and Tailwind units.' },
+  { title: 'CSS converter', to: '/tools/css-converter', art: 'tools/css-converter', body: 'Convert CSS to LESS, Sass and SCSS.' },
+  { title: 'HTML viewer', to: '/tools/html-viewer', art: 'tools/html-viewer', body: 'Render HTML, CSS and JavaScript with a live preview.' },
+  { title: 'HTML escaper', to: '/tools/html-escaper', art: 'tools/html-escaper', body: 'Escape and unescape HTML special characters.' },
+  { title: 'Image compressor', to: '/tools/image-compressor', art: 'tools/image-compressor', body: 'Shrink PNG, JPG and GIF files while keeping quality.' },
+  { title: 'Chart builder', to: '/tools/chart-builder', art: 'tools/chart-builder', body: 'Make line, bar, pie, scatter and other charts.' },
+  { title: 'Spacing scale generator', to: '/tools/spacing-scale', art: 'tools/spacing-scale-generator', body: 'Generate spacing scales from a ratio.' },
+  { title: 'Box shadow generator', to: '/tools/box-shadow', art: 'tools/box-shadow-generator', body: 'Layer shadows with custom offset, blur and spread.' },
+  { title: 'Border radius generator', to: '/tools/border-radius', art: 'tools/border-radius-generator', body: 'Set corner radii individually or all at once.' },
+  { title: 'CSS animation generator', to: '/tools/css-animation', art: 'tools/css-animation-generator', body: 'Build keyframe animations for transform, opacity and color.' },
+];
+
+// Same set the old "Popular tools" band featured.
+const popularPaths = [
+  '/tools/gradient-generator', '/palette-builder', '/tools/lorem-ipsum',
+  '/tools/svg-placeholder-text', '/tools/seo-tagging', '/tools/color-scale',
+  '/tools/color-contrast', '/tools/apca-calculator', '/tools/html-viewer',
+];
+const popular = popularPaths.map((path) => tools.find((tool) => tool.to === path));
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.spot :deep(svg) {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.section-head {
+  @apply flex flex-col gap-1 mb-8;
+}
+.section-head h2 {
+  @apply text-2xl md:text-3xl font-semibold tracking-tight;
+}
+.section-head p {
+  @apply text-slate-600 dark:text-slate-400;
+}
+
+.card {
+  @apply block rounded-2xl p-5 border border-slate-200 bg-[#fff] transition-all hover:border-[#8fb0e8] hover:shadow-[0_8px_24px_-12px_rgba(47,94,168,0.25)] dark:border-slate-800 dark:bg-slate-900/40 dark:hover:border-[#6f93d1];
+}
+.card-title {
+  @apply flex items-center gap-1.5 text-lg font-semibold mb-1.5;
+}
+.card-body {
+  @apply text-sm leading-relaxed text-slate-600 dark:text-slate-400;
+}
+
+.tool {
+  @apply flex items-center gap-4 rounded-xl p-2 -mx-2 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors;
+}
+
+.arrow {
+  @apply text-base text-slate-400 transition-transform;
+}
+.group:hover .arrow {
+  @apply translate-x-1 text-[#2f5ea8] dark:text-[#9dbcf0];
 }
 </style>
-

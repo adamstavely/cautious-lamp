@@ -1032,7 +1032,7 @@ export class ApplicationScannerService {
     });
     
     // Check for heading hierarchy
-    const headings = html.match(/<h[1-6][^>]*>/gi) || [];
+    const headings: string[] = html.match(/<h[1-6][^>]*>/gi) ?? [];
     let previousLevel = 0;
     
     headings.forEach((heading, index) => {

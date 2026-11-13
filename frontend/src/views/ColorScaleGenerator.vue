@@ -603,6 +603,8 @@
                     <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">download</span>
                     Export
                   </h2>
+
+                  <InlineNotice :notice="notice" class="mb-3" @dismiss="clearNotice" />
                   
                   <div class="flex flex-col gap-2">
                     <button
@@ -895,16 +897,20 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
 import Dropdown from '../components/Dropdown.vue';
 import chroma from 'chroma-js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
 const previewDarkMode = ref(false);
 const scaleType = ref('sequential');
 const generatedScale = ref([]);
@@ -985,9 +991,21 @@ const updateQualitativeColors = () => {
   qualitativeColors.value = qualitativeColorsInput.value
     .split(',')
     .map(c => c.trim())
-    .filter(c => c.length > 0);
+    .filter(c => c.length > 0 && chroma.valid(c));
   generateScale();
 };
+
+// Number of steps from the input, clamped to the input's 3..20 range.
+const stepCount = () => {
+  const n = Math.round(Number(settings.value.steps));
+  if (!Number.isFinite(n)) return 9;
+  return Math.min(20, Math.max(3, n));
+};
+
+// Only colors chroma can parse (text inputs can hold half-typed values).
+const validColors = (colors) => colors.filter((c) => typeof c === 'string' && chroma.valid(c));
+const backgroundColor = () =>
+  chroma.valid(settings.value.backgroundColor) ? settings.value.backgroundColor : '#ffffff';
 
 const generateScale = () => {
   try {
@@ -1004,181 +1022,101 @@ const generateScale = () => {
 };
 
 const generateSequentialScale = () => {
-  if (sequentialColors.value.length === 0) return;
-  
+  const colors = validColors(sequentialColors.value);
+  if (colors.length === 0) return;
+
+  const steps = stepCount();
   const contrastRatio = parseFloat(settings.value.contrast) || 1.0;
-  const bgColor = settings.value.backgroundColor || '#ffffff';
-  
+  const bgColor = backgroundColor();
+
+  const chromaFallback = () =>
+    colors.length === 1
+      ? chroma.scale([colors[0], chroma(colors[0]).darken(2)]).mode('lch').colors(steps)
+      : chroma.scale(colors).mode('lch').colors(steps);
+
   try {
     // Use contrast-based generation if contrast ratio > 1.0
     if (contrastRatio > 1.0) {
       let scale = [];
-      
-      if (sequentialColors.value.length === 1) {
+
+      if (colors.length === 1) {
         // Single color: generate scale from base to target contrast
-        scale = generateContrastBasedScale(sequentialColors.value[0], bgColor, contrastRatio, settings.value.steps, 'sequential');
+        scale = generateContrastBasedScale(colors[0], bgColor, contrastRatio, steps, 'sequential');
       } else {
-        // Multiple colors: generate contrast-based scales between each pair
-        const segments = sequentialColors.value.length - 1;
-        const stepsPerSegment = Math.ceil(settings.value.steps / sequentialColors.value.length);
-        
+        // Multiple colors: split the steps - 1 intervals across the segments so
+        // the scale has exactly `steps` colors, sharing each boundary color.
+        const segments = colors.length - 1;
+        const intervals = steps - 1;
+        const base = Math.floor(intervals / segments);
+        const remainder = intervals % segments;
+
         for (let i = 0; i < segments; i++) {
-          const startColor = sequentialColors.value[i];
-          const endColor = sequentialColors.value[i + 1];
-          
-          // Generate contrast-based scale for this segment
+          const segmentIntervals = base + (i < remainder ? 1 : 0);
           const segmentScale = generateContrastBasedScaleBetweenColors(
-            startColor,
-            endColor,
+            colors[i],
+            colors[i + 1],
             bgColor,
             contrastRatio,
-            stepsPerSegment
+            segmentIntervals + 1
           );
-          
-          // Add colors (avoid duplicates at boundaries)
-          if (i === 0) {
-            scale.push(...segmentScale);
-          } else {
-            scale.push(...segmentScale.slice(1)); // Skip first to avoid duplicate
-          }
-        }
-        
-        // Trim to desired number of steps
-        scale = scale.slice(0, settings.value.steps);
-        
-        // If we have fewer colors than steps, interpolate the final segment
-        if (scale.length < settings.value.steps) {
-          const remainingSteps = settings.value.steps - scale.length;
-          const lastColor = sequentialColors.value[sequentialColors.value.length - 1];
-          const finalSegment = generateContrastBasedScale(lastColor, bgColor, contrastRatio, remainingSteps + 1, 'sequential');
-          scale.push(...finalSegment.slice(1));
+          scale.push(...(i === 0 ? segmentScale : segmentScale.slice(1)));
         }
       }
-      
+
       generatedScale.value = applyAdjustments(scale);
     } else {
-      // Fallback to chroma for no contrast requirement
-      if (sequentialColors.value.length === 1) {
-        const baseColor = sequentialColors.value[0];
-        const scale = chroma.scale([baseColor, chroma(baseColor).darken(2)])
-          .mode('lch')
-          .colors(settings.value.steps);
-        
-        generatedScale.value = applyAdjustments(scale);
-      } else {
-        const scale = chroma.scale(sequentialColors.value)
-          .mode('lch')
-          .colors(settings.value.steps);
-        
-        generatedScale.value = applyAdjustments(scale);
-      }
+      generatedScale.value = applyAdjustments(chromaFallback());
     }
   } catch (error) {
     console.error('Error generating sequential scale:', error);
-    // Fallback to chroma
-    if (sequentialColors.value.length === 1) {
-      const baseColor = sequentialColors.value[0];
-      const scale = chroma.scale([baseColor, chroma(baseColor).darken(2)])
-        .mode('lch')
-        .colors(settings.value.steps);
-      
-      generatedScale.value = applyAdjustments(scale);
-    } else {
-      const scale = chroma.scale(sequentialColors.value)
-        .mode('lch')
-        .colors(settings.value.steps);
-      
-      generatedScale.value = applyAdjustments(scale);
-    }
+    generatedScale.value = applyAdjustments(chromaFallback());
   }
 };
 
 const generateDivergingScale = () => {
-  if (divergingColors.value.length === 0) return;
-  
+  const colors = validColors(divergingColors.value);
+  if (colors.length === 0) return;
+
+  const steps = stepCount();
   const contrastRatio = parseFloat(settings.value.contrast) || 1.0;
-  const bgColor = settings.value.backgroundColor || '#ffffff';
-  
+  const bgColor = backgroundColor();
+
+  const chromaFallback = () => {
+    if (colors.length === 1) {
+      return chroma.scale(['#ffffff', colors[0]]).mode('lch').colors(steps);
+    }
+    const stops = colors.length === 2 ? [colors[0], '#ffffff', colors[1]] : colors;
+    return chroma.scale(stops).mode('lch').colors(steps);
+  };
+
   try {
     // Use contrast-based generation if contrast ratio > 1.0
     if (contrastRatio > 1.0) {
       let scale = [];
-      
-      if (divergingColors.value.length === 1) {
+
+      if (colors.length === 1) {
         // Single color: generate scale from background to target contrast
-        scale = generateContrastBasedScale(divergingColors.value[0], bgColor, contrastRatio, settings.value.steps, 'diverging');
+        scale = generateContrastBasedScale(colors[0], bgColor, contrastRatio, steps, 'diverging');
       } else {
-        // Multiple colors: generate contrast-based scales between colors
-        const midPoint = Math.floor(settings.value.steps / 2);
-        const leftSteps = midPoint + (settings.value.steps % 2);
-        const rightSteps = settings.value.steps - leftSteps + 1;
-        
-        // Left side: from first color to background
-        const leftScale = generateContrastBasedScaleBetweenColors(
-          divergingColors.value[0],
-          bgColor,
-          bgColor,
-          contrastRatio,
-          leftSteps
-        );
-        
-        // Right side: from background to last color
-        const rightScale = generateContrastBasedScaleBetweenColors(
-          bgColor,
-          divergingColors.value[divergingColors.value.length - 1],
-          bgColor,
-          contrastRatio,
-          rightSteps
-        );
-        
+        // Two arms that meet at the background: each runs from the target
+        // contrast at its end color down to (no contrast with) the background.
+        const leftSteps = Math.ceil(steps / 2);
+        const rightSteps = steps - leftSteps + 1; // shares the midpoint
+
+        const leftScale = generateContrastBasedScale(colors[0], bgColor, contrastRatio, leftSteps, 'diverging').reverse();
+        const rightScale = generateContrastBasedScale(colors[colors.length - 1], bgColor, contrastRatio, rightSteps, 'diverging');
+
         // Combine scales (avoid duplicate at midpoint)
         scale = [...leftScale, ...rightScale.slice(1)];
-        
-        // Trim to desired number of steps
-        scale = scale.slice(0, settings.value.steps);
       }
-      
+
       generatedScale.value = applyAdjustments(scale);
     } else {
-      // Fallback to chroma
-      if (divergingColors.value.length === 1) {
-        const scale = chroma.scale(['#ffffff', divergingColors.value[0]])
-          .mode('lch')
-          .colors(settings.value.steps);
-        
-        generatedScale.value = applyAdjustments(scale);
-      } else {
-        const colors = divergingColors.value.length === 2 
-          ? [divergingColors.value[0], '#ffffff', divergingColors.value[1]]
-          : divergingColors.value;
-        
-        const scale = chroma.scale(colors)
-          .mode('lch')
-          .colors(settings.value.steps);
-        
-        generatedScale.value = applyAdjustments(scale);
-      }
+      generatedScale.value = applyAdjustments(chromaFallback());
     }
   } catch (error) {
     console.error('Error generating diverging scale:', error);
-    // Fallback to chroma
-    if (divergingColors.value.length === 1) {
-      const scale = chroma.scale(['#ffffff', divergingColors.value[0]])
-        .mode('lch')
-        .colors(settings.value.steps);
-      
-      generatedScale.value = applyAdjustments(scale);
-    } else {
-      const colors = divergingColors.value.length === 2 
-        ? [divergingColors.value[0], '#ffffff', divergingColors.value[1]]
-        : divergingColors.value;
-      
-      const scale = chroma.scale(colors)
-        .mode('lch')
-        .colors(settings.value.steps);
-      
-      generatedScale.value = applyAdjustments(scale);
-    }
+    generatedScale.value = applyAdjustments(chromaFallback());
   }
 };
 
@@ -1286,6 +1224,8 @@ const generateContrastBasedScale = (baseColor, bgColor, targetRatio, steps, type
   const scale = [];
   const ratios = [];
   
+  if (steps <= 1) return [findColorAtContrast(baseColor, bgColor, targetRatio, true)];
+
   // Generate ratios from 1.0 (no contrast) to targetRatio
   for (let i = 0; i < steps; i++) {
     const ratio = 1.0 + (targetRatio - 1.0) * (i / (steps - 1));
@@ -1328,7 +1268,7 @@ const generateContrastBasedScaleBetweenColors = (startColor, endColor, bgColor, 
   
   // Generate intermediate colors between start and end
   for (let i = 0; i < steps; i++) {
-    const t = i / (steps - 1); // 0 to 1
+    const t = steps > 1 ? i / (steps - 1) : 0; // 0 to 1
     
     // Interpolate between start and end colors
     const interpolatedColor = chroma.mix(startColor, endColor, t, 'lch').hex();
@@ -1351,40 +1291,48 @@ const generateContrastBasedScaleBetweenColors = (startColor, endColor, bgColor, 
 };
 
 const applyAdjustments = (scale) => {
+  const brightness = Number(settings.value.brightness);
+  const saturation = Number(settings.value.saturation);
   return scale.map(color => {
     let c = chroma(color);
-    if (settings.value.brightness !== 50) {
-      const brightnessDiff = (settings.value.brightness - 50) / 50;
-      c = c.brighten(brightnessDiff);
+    if (Number.isFinite(brightness) && brightness !== 50) {
+      c = c.brighten((brightness - 50) / 50);
     }
-    if (settings.value.saturation !== 100) {
-      const satDiff = (settings.value.saturation - 100) / 100;
-      c = c.saturate(satDiff);
+    // Saturation is a percentage of the color's own chroma: 0% is gray.
+    if (Number.isFinite(saturation) && saturation !== 100) {
+      const [l, ch, h] = c.lch();
+      if (ch > 0.5 && Number.isFinite(h)) {
+        c = chroma.lch(l, ch * Math.max(0, saturation) / 100, h);
+      }
     }
     return c.hex();
   });
 };
 
 const generateQualitativeScale = () => {
-  if (qualitativeColors.value.length === 0) return;
-  
-  // Generate intermediate colors between the provided colors
-  const stepsPerColor = Math.ceil(settings.value.steps / qualitativeColors.value.length);
+  const colors = validColors(qualitativeColors.value);
+  if (colors.length === 0) return;
+  const steps = stepCount();
+
+  // Generate intermediate colors between the provided colors. Each segment
+  // stops short of the next color, so boundary colors are not repeated.
+  const stepsPerColor = Math.ceil(steps / colors.length);
   const scale = [];
   
-  for (let i = 0; i < qualitativeColors.value.length; i++) {
-    const currentColor = qualitativeColors.value[i];
-    const nextColor = qualitativeColors.value[(i + 1) % qualitativeColors.value.length];
+  for (let i = 0; i < colors.length; i++) {
+    const currentColor = colors[i];
+    const nextColor = colors[(i + 1) % colors.length];
     
     const colorScale = chroma.scale([currentColor, nextColor])
       .mode('lch')
-      .colors(stepsPerColor);
+      .colors(stepsPerColor + 1)
+      .slice(0, stepsPerColor);
     
     scale.push(...colorScale);
   }
   
   // Trim to desired number of steps
-  const trimmedScale = scale.slice(0, settings.value.steps);
+  const trimmedScale = scale.slice(0, steps);
   generatedScale.value = applyAdjustments(trimmedScale);
 };
 
@@ -1508,8 +1456,9 @@ const getDeltaE = (color1, color2) => {
 const getColorForValue = (value) => {
   // Normalize value to 0-1 range
   const normalized = Math.max(0, Math.min(1, value));
-  // Map to scale index
-  const index = Math.floor(normalized * (generatedScale.value.length - 1));
+  // Map to scale index (equal-width buckets)
+  const length = generatedScale.value.length;
+  const index = Math.min(length - 1, Math.floor(normalized * length));
   return generatedScale.value[index] || generatedScale.value[0];
 };
 
@@ -1533,10 +1482,13 @@ const generateVisualizationData = () => {
     y: Math.sin(i / 3) * 0.3 + 0.5 + Math.random() * 0.2,
   }));
 
-  // Generate RGB channels data
-  generateRGBChannels();
+  refreshScaleCharts();
+};
 
-  // Draw color wheel and 3D plot
+// Charts that are derived from the scale itself (the sample data above stays
+// the same when only the scale changes).
+const refreshScaleCharts = () => {
+  generateRGBChannels();
   nextTick(() => {
     drawColorWheel();
     draw3DColorSpace();
@@ -1555,7 +1507,7 @@ const generateRGBChannels = () => {
   
   generatedScale.value.forEach((color, index) => {
     const rgb = chroma(color).rgb();
-    const x = (index / (steps - 1)) * 100;
+    const x = steps > 1 ? (index / (steps - 1)) * 100 : 50;
     channelData.r.push({ x, y: rgb[0] });
     channelData.g.push({ x, y: rgb[1] });
     channelData.b.push({ x, y: rgb[2] });
@@ -1585,8 +1537,9 @@ const drawColorWheel = () => {
   if (!canvas || generatedScale.value.length === 0) return;
   
   const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width;
-  canvas.height = rect.height;
+  if (rect.width < 1 || rect.height < 1) return;
+  canvas.width = Math.floor(rect.width);
+  canvas.height = Math.floor(rect.height);
   
   const ctx = canvas.getContext('2d');
   const centerX = canvas.width / 2;
@@ -1606,8 +1559,9 @@ const drawColorWheel = () => {
       const dist = Math.sqrt(dx * dx + dy * dy);
       
       if (dist <= radius) {
+        // Same mapping as the path below: hue 0 at the top, increasing clockwise.
         const angle = Math.atan2(dy, dx);
-        const hue = (angle + Math.PI) / (2 * Math.PI) * 360;
+        const hue = ((angle + Math.PI / 2) * 180 / Math.PI + 360) % 360;
         const saturation = Math.min(100, (dist / radius) * 100);
         const lightness = 50;
         
@@ -1681,8 +1635,9 @@ const draw3DColorSpace = () => {
   if (!canvas || generatedScale.value.length === 0) return;
   
   const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width;
-  canvas.height = rect.height;
+  if (rect.width < 1 || rect.height < 1) return;
+  canvas.width = Math.floor(rect.width);
+  canvas.height = Math.floor(rect.height);
   
   const ctx = canvas.getContext('2d');
   
@@ -1795,25 +1750,24 @@ const areaChartPoints = computed(() => {
   return `${firstX},${bottomY} ${points.join(' ')} ${lastX},${bottomY}`;
 });
 
-const copyColor = async (color) => {
+const copyText = async (text, successMessage) => {
   try {
-    await navigator.clipboard.writeText(color);
-    // You could add a toast notification here
+    await navigator.clipboard.writeText(text);
+    showNotice(successMessage, 'success');
   } catch (error) {
     console.error('Failed to copy:', error);
+    showNotice('Could not copy to the clipboard. Check your browser permissions.', 'error');
   }
 };
+
+const copyColor = (color) => copyText(color, `${color} copied to clipboard.`);
 
 const exportCSS = () => {
   const css = generatedScale.value.map((color, index) => {
     return `  --color-scale-${index + 1}: ${color};`;
   }).join('\n');
   
-  const fullCSS = `:root {\n${css}\n}`;
-  
-  navigator.clipboard.writeText(fullCSS).then(() => {
-    alert('CSS variables copied to clipboard!');
-  });
+  copyText(`:root {\n${css}\n}`, 'CSS variables copied to clipboard.');
 };
 
 const exportJSON = () => {
@@ -1823,9 +1777,7 @@ const exportJSON = () => {
     settings: settings.value,
   }, null, 2);
   
-  navigator.clipboard.writeText(json).then(() => {
-    alert('JSON copied to clipboard!');
-  });
+  copyText(json, 'JSON copied to clipboard.');
 };
 
 const exportTableau = () => {
@@ -1864,9 +1816,9 @@ const exportTableau = () => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
   
-  alert('Tableau XML file downloaded! Place it in your "My Tableau Repository" directory and restart Tableau.');
+  showNotice('Preferences.tps downloaded. Place it in your "My Tableau Repository" folder and restart Tableau.', 'success');
 };
 
 const openColorPicker = (target, event) => {
@@ -1944,6 +1896,10 @@ const openColorPicker = (target, event) => {
 };
 
 const handleColorPickerApply = (color) => {
+  if (!pickerTarget.value) {
+    showColorPicker.value = false;
+    return;
+  }
   if (pickerTarget.value.startsWith('sequential-')) {
     const index = parseInt(pickerTarget.value.split('-')[1]);
     if (!isNaN(index) && sequentialColors.value[index] !== undefined) {
@@ -1976,7 +1932,7 @@ watch(scaleType, () => {
 });
 
 watch(generatedScale, () => {
-  generateVisualizationData();
+  refreshScaleCharts();
 }, { deep: true });
 
 watch(isDarkMode, () => {
@@ -1986,37 +1942,9 @@ watch(isDarkMode, () => {
   });
 });
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
 onMounted(() => {
   generateScale();
   generateVisualizationData();
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
 });
 </script>
 

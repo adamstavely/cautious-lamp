@@ -780,7 +780,7 @@
                     : 'bg-green-50 border border-green-200'"
                 >
                   <p class="text-xs" :class="isDarkMode ? 'text-green-300' : 'text-green-700'">
-                    <strong>✅ What You'll Get:</strong> The wizard generates a complete Stencil.js component file (.tsx), unit tests (.spec.tsx), documentation (Markdown), and a README. All code follows Stencil.js best practices and web component standards.
+                    <strong>✅ What You'll Get:</strong> The wizard generates a complete Stencil.js component file (.tsx), a stylesheet (.css), unit tests (.spec.ts), documentation (Markdown), and a README. All code follows Stencil.js best practices and web component standards.
                   </p>
                 </div>
               </div>
@@ -791,7 +791,7 @@
                     <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Generated Files</h3>
                     <div class="flex items-center gap-2">
                       <button 
-                        v-for="file in ['component', 'test', 'documentation', 'readme']"
+                        v-for="file in ['component', 'styles', 'test', 'documentation', 'readme']"
                         :key="file"
                         @click="activeFile = file"
                         class="px-3 py-1 rounded text-sm font-medium transition-colors capitalize"
@@ -821,14 +821,39 @@
                     </button>
                     <button 
                       @click="downloadAll"
-                      class="px-4 py-2 rounded-lg border transition-colors text-sm font-medium"
+                      :disabled="zipping"
+                      class="px-4 py-2 rounded-lg border transition-colors text-sm font-medium disabled:opacity-50"
                       :class="isDarkMode 
                         ? 'border-gray-700 text-gray-300 hover:bg-slate-700' 
                         : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
                     >
-                      Download All
+                      {{ zipping ? 'Zipping...' : 'Download All (.zip)' }}
                     </button>
                   </div>
+                </div>
+
+                <div
+                  v-if="createdComponent"
+                  class="p-4 rounded-lg border flex flex-col md:flex-row md:items-center gap-3"
+                  :class="isDarkMode ? 'bg-green-900/20 border-green-800' : 'bg-green-50 border-green-200'"
+                >
+                  <div class="flex-1">
+                    <p class="text-sm font-semibold" :class="isDarkMode ? 'text-green-300' : 'text-green-800'">
+                      Component created
+                    </p>
+                    <p class="text-sm" :class="isDarkMode ? 'text-green-200' : 'text-green-700'">
+                      Registered in the design system as <code class="font-mono font-semibold">{{ createdComponent.componentId }}</code>
+                      with {{ createdComponent.files.length }} generated files. Files are not saved on the server; download them below.
+                    </p>
+                  </div>
+                  <button
+                    @click="downloadZip(createdComponent.files, createdComponent.componentId)"
+                    :disabled="zipping"
+                    class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <span class="material-symbols-outlined text-base">download</span>
+                    Download {{ createdComponent.componentId }}.zip
+                  </button>
                 </div>
               </div>
 
@@ -856,6 +881,8 @@
               </div>
             </div>
 
+            <InlineNotice :notice="notice" class="mt-6" @dismiss="clearNotice" />
+
             <!-- Navigation Buttons -->
             <div class="flex items-center justify-between mt-8 pt-6 border-t"
               :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
@@ -880,10 +907,10 @@
               <button 
                 v-else
                 @click="createComponent"
-                :disabled="creating"
+                :disabled="creating || !!createdComponent || !componentData.name || !componentData.description || !componentData.category"
                 class="px-6 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {{ creating ? 'Creating...' : 'Create Component' }}
+                {{ creating ? 'Creating...' : createdComponent ? 'Created' : 'Create Component' }}
               </button>
             </div>
           </div>
@@ -895,19 +922,21 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import axios from 'axios';
+import { ref, reactive, onMounted, computed, watch } from 'vue';
+import JSZip from 'jszip';
+import apiClient from '../services/api.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
+import InlineNotice from '../components/InlineNotice.vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Dropdown from '../components/Dropdown.vue';
 
-const API_BASE_URL = 'http://localhost:3000/api/v1';
-const API_KEY = 'test-api-key-123';
+const SCAFFOLD_API = '/api/v1/component-scaffolding';
 
-const router = useRouter();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const currentStep = ref(0);
 const selectedTemplateId = ref(null);
@@ -916,6 +945,15 @@ const generatedComponent = ref(null);
 const activeFile = ref('component');
 const generating = ref(false);
 const creating = ref(false);
+// { componentId, files: [{ path, content }] } from POST /component-scaffolding/create
+const createdComponent = ref(null);
+const zipping = ref(false);
+
+const errorMessage = (error, fallback) => {
+  const message = error?.response?.data?.message;
+  if (Array.isArray(message)) return message.join('; ');
+  return message || fallback;
+};
 
 const steps = [
   { title: 'Basic Info', key: 'basic' },
@@ -966,6 +1004,12 @@ const propTypeOptions = [
   { value: 'enum', label: 'Enum' },
 ];
 
+// Output generated from an earlier configuration no longer matches it
+watch(componentData, () => {
+  generatedComponent.value = null;
+  createdComponent.value = null;
+}, { deep: true });
+
 const templateOptions = computed(() => {
   return [
     { value: '', label: 'Start from scratch' },
@@ -979,13 +1023,11 @@ const templateOptions = computed(() => {
 
 const loadTemplates = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/component-scaffolding/templates`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
-    templates.value = response.data || [];
+    const response = await apiClient.get(`${SCAFFOLD_API}/templates`);
+    templates.value = Array.isArray(response.data) ? response.data : [];
   } catch (error) {
-    console.error('Error loading templates:', error);
     templates.value = [];
+    showNotice(errorMessage(error, 'Could not load templates. You can still start from scratch.'), 'warning');
   }
 };
 
@@ -993,23 +1035,24 @@ const loadTemplate = async (templateId) => {
   if (!templateId) return;
   
   try {
-    const template = await axios.get(`${API_BASE_URL}/component-scaffolding/templates/${templateId}`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
-    
+    const template = await apiClient.get(`${SCAFFOLD_API}/templates/${encodeURIComponent(templateId)}`);
+
     if (template.data) {
       componentData.name = template.data.name;
       componentData.description = template.data.description;
       componentData.category = template.data.category;
-      componentData.props = template.data.defaultProps.map(p => ({
+      componentData.props = (template.data.defaultProps || []).map(p => ({
         ...p,
         optionsString: p.options?.join(', ') || '',
       }));
-      componentData.styles = template.data.defaultStyles;
-      componentData.slots = template.data.defaultSlots;
+      componentData.styles = { ...(template.data.defaultStyles || {}) };
+      componentData.slots = [...(template.data.defaultSlots || [])];
+      // The configuration changed, so earlier output no longer matches it
+      generatedComponent.value = null;
+      createdComponent.value = null;
     }
   } catch (error) {
-    console.error('Error loading template:', error);
+    showNotice(errorMessage(error, 'Could not load that template.'), 'error');
   }
 };
 
@@ -1074,71 +1117,51 @@ const previousStep = () => {
   }
 };
 
+// Props for the API: enum options come from the comma-separated text field
+const buildInput = () => ({
+  ...componentData,
+  props: componentData.props.map(prop => {
+    const { optionsString, ...rest } = prop;
+    return {
+      ...rest,
+      options: prop.type === 'enum' && optionsString
+        ? optionsString.split(',').map(v => v.trim()).filter(v => v)
+        : undefined,
+    };
+  }),
+});
+
 const generateComponent = async () => {
   generating.value = true;
+  clearNotice();
   try {
-    // Prepare props for API (convert optionsString to options array)
-    const propsForApi = componentData.props.map(prop => {
-      const { optionsString, ...rest } = prop;
-      return {
-        ...rest,
-        options: prop.type === 'enum' && optionsString ? optionsString.split(',').map(v => v.trim()).filter(v => v) : undefined,
-      };
-    });
-
-    const input = {
-      ...componentData,
-      props: propsForApi,
-    };
-
-    const response = await axios.post(
-      `${API_BASE_URL}/component-scaffolding/scaffold`,
-      input,
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
-    );
-    
+    const response = await apiClient.post(`${SCAFFOLD_API}/scaffold`, buildInput());
     generatedComponent.value = response.data;
+    createdComponent.value = null;
   } catch (error) {
-    console.error('Error generating component:', error);
-    alert('Failed to generate component. Please try again.');
+    showNotice(errorMessage(error, 'Failed to generate component. Please try again.'), 'error');
   } finally {
     generating.value = false;
   }
 };
 
 const createComponent = async () => {
-  if (!generatedComponent.value) {
-    await generateComponent();
-  }
-
+  if (creating.value) return;
   creating.value = true;
+  clearNotice();
   try {
-    const propsForApi = componentData.props.map(prop => {
-      const { optionsString, ...rest } = prop;
-      return {
-        ...rest,
-        options: prop.type === 'enum' && optionsString ? optionsString.split(',').map(v => v.trim()).filter(v => v) : undefined,
-      };
-    });
-
-    const input = {
-      ...componentData,
-      props: propsForApi,
-    };
-
-    const response = await axios.post(
-      `${API_BASE_URL}/component-scaffolding/create`,
-      input,
-      { headers: { Authorization: `Bearer ${API_KEY}` } }
-    );
-    
-    if (response.data.success) {
-      // Navigate to the component page
-      router.push(`/components/${response.data.componentId}`);
+    if (!generatedComponent.value) {
+      await generateComponent();
+      if (!generatedComponent.value) return;
     }
+    const response = await apiClient.post(`${SCAFFOLD_API}/create`, buildInput());
+    createdComponent.value = {
+      componentId: response.data.componentId,
+      files: Array.isArray(response.data.files) ? response.data.files : [],
+    };
+    showNotice(`Component "${response.data.componentId}" was added to the design system.`, 'success');
   } catch (error) {
-    console.error('Error creating component:', error);
-    alert('Failed to create component. Please try again.');
+    showNotice(errorMessage(error, 'Failed to create component. Please try again.'), 'error');
   } finally {
     creating.value = false;
   }
@@ -1150,6 +1173,8 @@ const getActiveFileContent = () => {
   switch (activeFile.value) {
     case 'component':
       return generatedComponent.value.componentCode;
+    case 'styles':
+      return generatedComponent.value.styleCode || '';
     case 'test':
       return generatedComponent.value.testCode;
     case 'documentation':
@@ -1165,39 +1190,64 @@ const copyActiveFile = async () => {
   const content = getActiveFileContent();
   try {
     await navigator.clipboard.writeText(content);
-    alert('Copied to clipboard!');
+    showNotice('Copied to clipboard.', 'success');
   } catch (error) {
-    console.error('Error copying:', error);
-    alert('Failed to copy to clipboard.');
+    showNotice('Failed to copy to clipboard.', 'error');
+  }
+};
+
+const kebabName = () => componentData.name
+  .trim()
+  .replace(/([a-z])([A-Z])/g, '$1-$2')
+  .toLowerCase()
+  .replace(/[-_\s]+/g, '-')
+  .replace(/^-+|-+$/g, '') || 'component';
+
+// The same layout the backend returns from /create
+const filesFromGenerated = () => {
+  const g = generatedComponent.value;
+  if (!g) return [];
+  const tag = kebabName();
+  const files = [
+    { path: `src/components/${tag}/${tag}.tsx`, content: g.componentCode },
+    { path: `src/components/${tag}/${tag}.css`, content: g.styleCode || '' },
+    { path: `src/components/${tag}/${tag}.spec.ts`, content: g.testCode },
+    { path: `docs/${tag}.md`, content: g.documentation },
+    { path: 'README.md', content: g.readme },
+  ];
+  if (g.stencilConfig) files.push({ path: 'stencil.config.ts', content: g.stencilConfig });
+  return files;
+};
+
+const downloadZip = async (files, baseName) => {
+  if (!files.length) return;
+  zipping.value = true;
+  try {
+    const zip = new JSZip();
+    const folder = zip.folder(baseName);
+    files.forEach(file => folder.file(file.path, file.content ?? ''));
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${baseName}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  } catch (error) {
+    showNotice('Could not build the zip file.', 'error');
+  } finally {
+    zipping.value = false;
   }
 };
 
 const downloadAll = () => {
-  if (!generatedComponent.value) return;
-  
-  const componentName = componentData.name.toLowerCase().replace(/\s+/g, '-');
-  const files = [
-    { name: `${componentName}.tsx`, content: generatedComponent.value.componentCode },
-    { name: `${componentName}.spec.tsx`, content: generatedComponent.value.testCode },
-    { name: `${componentName}.md`, content: generatedComponent.value.documentation },
-    { name: 'README.md', content: generatedComponent.value.readme },
-  ];
-
-  files.forEach(file => {
-    const blob = new Blob([file.content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = file.name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  });
+  if (createdComponent.value) {
+    return downloadZip(createdComponent.value.files, createdComponent.value.componentId);
+  }
+  return downloadZip(filesFromGenerated(), kebabName());
 };
-
-let darkModeObserver = null;
-let darkModeInterval = null;
 
 onMounted(() => {
   // Auto-open drawer if navigating from sidebar
@@ -1205,33 +1255,8 @@ onMounted(() => {
     drawerOpen.value = true;
     sessionStorage.removeItem('openDrawerOnLoad');
   }
-  
-  loadTemplates();
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
 
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
+  loadTemplates();
 });
 </script>
 

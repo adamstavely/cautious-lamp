@@ -167,9 +167,9 @@ export const componentMetadataService = {
    */
   async loadFromAPI() {
     try {
-      const response = await fetch('http://localhost:3000/api/v1/component-metadata', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/component-metadata`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('apiKey') || 'dev-key'}`,
+          'Authorization': `Bearer ${localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || ''}`,
         },
       });
       

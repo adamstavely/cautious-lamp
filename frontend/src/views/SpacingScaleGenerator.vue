@@ -349,13 +349,14 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const baseSpacing = ref(4);
 const selectedRatio = ref('major-third');
@@ -373,20 +374,32 @@ const ratios = {
   'major-third': 1.333,
   'perfect-fourth': 1.5,
   'golden-ratio': 1.618,
-  'minor-third': 1.2,
-  'custom': customRatio.value
+  'minor-third': 1.2
 };
 
+const DEFAULT_BASE = 4;
+const DEFAULT_RATIO = 1.333;
+
+// A cleared number input yields ''; 0, negative or non-numeric bases would give
+// negative/NaN spacing, so fall back to the default.
+const effectiveBase = computed(() => {
+  const n = Number(baseSpacing.value);
+  return baseSpacing.value === '' || !Number.isFinite(n) || n <= 0 ? DEFAULT_BASE : n;
+});
+
+// A ratio of 1 or less makes the scale flat or inverted (and 0 divides by zero),
+// so anything outside (1, 4] falls back to the default.
 const currentRatio = computed(() => {
   if (selectedRatio.value === 'custom') {
-    return customRatio.value;
+    const n = Number(customRatio.value);
+    return customRatio.value === '' || !Number.isFinite(n) || n <= 1 || n > 4 ? DEFAULT_RATIO : n;
   }
-  return ratios[selectedRatio.value];
+  return ratios[selectedRatio.value] ?? DEFAULT_RATIO;
 });
 
 const computedSpacingScale = computed(() => {
   const ratio = currentRatio.value;
-  const base = baseSpacing.value;
+  const base = effectiveBase.value;
   
   // Generate scale: xs, sm, base, md, lg, xl, 2xl, 3xl, 4xl, 5xl
   // Using negative powers for smaller values and positive for larger
@@ -404,12 +417,17 @@ const computedSpacingScale = computed(() => {
   };
 });
 
-// Watch for ratio changes
-watch(selectedRatio, (newValue) => {
-  if (newValue === 'custom' && customRatio.value === 1.333) {
-    // Custom ratio is already initialized, no action needed
-  }
-});
+const downloadFile = (content, type, filename) => {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+};
 
 const exportFormat = (format) => {
   const scale = computedSpacingScale.value;
@@ -425,13 +443,7 @@ const exportFormat = (format) => {
     css += '.spacing-sm { padding: var(--spacing-sm); }\n';
     css += '.spacing-base { padding: var(--spacing-base); }\n';
     
-    const blob = new Blob([css], { type: 'text/css' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `spacing-scale-${Date.now()}.css`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(css, 'text/css', `spacing-scale-${Date.now()}.css`);
   } else if (format === 'tailwind') {
     let config = `// tailwind.config.js\nmodule.exports = {\n  theme: {\n    extend: {\n      spacing: {\n`;
     Object.entries(scale).forEach(([name, value]) => {
@@ -439,29 +451,17 @@ const exportFormat = (format) => {
     });
     config += `      },\n    },\n  },\n};\n`;
     
-    const blob = new Blob([config], { type: 'text/javascript' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `spacing-scale-tailwind-${Date.now()}.js`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(config, 'text/javascript', `spacing-scale-tailwind-${Date.now()}.js`);
   } else if (format === 'json') {
     const config = {
       type: 'spacing-scale',
-      base: baseSpacing.value,
+      base: effectiveBase.value,
       ratio: currentRatio.value,
       ratioName: selectedRatio.value,
       scale: scale
     };
     
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `spacing-scale-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(JSON.stringify(config, null, 2), 'application/json', `spacing-scale-${Date.now()}.json`);
   }
 };
 
@@ -469,35 +469,6 @@ const exportFormat = (format) => {
 
 
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>

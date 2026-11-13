@@ -1638,12 +1638,13 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 
 // Conversion modes grouped by category
@@ -1739,7 +1740,7 @@ const needsViewportHeight = computed(() => {
 });
 
 const breakpointsTable = computed(() => {
-  const testPx = pxValue.value || 192;
+  const testPx = hasValue(pxValue.value) ? pxValue.value : 192;
   return commonBreakpoints.map(bp => {
     return {
       px: bp,
@@ -1748,40 +1749,45 @@ const breakpointsTable = computed(() => {
   });
 });
 
+// A typed number, including 0 (v-model.number gives '' for an empty field).
+const hasValue = (v) => v !== '' && v !== null && v !== undefined && Number.isFinite(Number(v));
+// A usable divisor / base size.
+const isNonZero = (v) => hasValue(v) && Number(v) !== 0;
+
 // Conversion functions
 const convertPxToRem = () => {
-  if (pxValue.value && rootFontSize.value) {
+  if (hasValue(pxValue.value) && isNonZero(rootFontSize.value)) {
     remValue.value = parseFloat((pxValue.value / rootFontSize.value).toFixed(4));
   }
 };
 
 const convertRemToPx = () => {
-  if (remValue.value && rootFontSize.value) {
+  if (hasValue(remValue.value) && isNonZero(rootFontSize.value)) {
     pxValue.value = parseFloat((remValue.value * rootFontSize.value).toFixed(1));
   }
 };
 
 const convertPxToEm = () => {
-  if (pxValue.value && parentFontSize.value) {
+  if (hasValue(pxValue.value) && isNonZero(parentFontSize.value)) {
     emValue.value = parseFloat((pxValue.value / parentFontSize.value).toFixed(4));
   }
 };
 
 const convertEmToPx = () => {
-  if (emValue.value && parentFontSize.value) {
+  if (hasValue(emValue.value) && isNonZero(parentFontSize.value)) {
     pxValue.value = parseFloat((emValue.value * parentFontSize.value).toFixed(1));
   }
 };
 
 const convertPxToPercent = () => {
-  if (pxValue.value) {
+  if (hasValue(pxValue.value) && (percentageContext.value !== 'font-size' || isNonZero(parentFontSize.value))) {
     const baseSize = percentageContext.value === 'font-size' ? parentFontSize.value : 100;
     percentValue.value = parseFloat(((pxValue.value / baseSize) * 100).toFixed(2));
   }
 };
 
 const convertPercentToPx = () => {
-  if (percentValue.value) {
+  if (hasValue(percentValue.value)) {
     const baseSize = percentageContext.value === 'font-size' ? parentFontSize.value : 100;
     pxValue.value = parseFloat(((percentValue.value / 100) * baseSize).toFixed(1));
   }
@@ -1806,7 +1812,7 @@ const convertBaseToPx = () => {
 };
 
 const convertPxToTailwind = () => {
-  if (!pxValue.value || !rootFontSize.value) {
+  if (!hasValue(pxValue.value) || !isNonZero(rootFontSize.value)) {
     tailwindValue.value = '';
     tailwindClass.value = '';
     return;
@@ -1835,92 +1841,92 @@ const convertPxToTailwind = () => {
 
 // PX to VH conversions
 const convertPxToVh = () => {
-  if (pxValue.value && viewportHeight.value) {
+  if (hasValue(pxValue.value) && isNonZero(viewportHeight.value)) {
     vhValue.value = parseFloat(((pxValue.value / viewportHeight.value) * 100).toFixed(4));
   }
 };
 
 const convertVhToPx = () => {
-  if (vhValue.value && viewportHeight.value) {
+  if (hasValue(vhValue.value) && isNonZero(viewportHeight.value)) {
     pxValue.value = parseFloat(((vhValue.value / 100) * viewportHeight.value).toFixed(1));
   }
 };
 
 // PX to PT conversions
 const convertPxToPt = () => {
-  if (pxValue.value) {
+  if (hasValue(pxValue.value)) {
     ptValue.value = parseFloat((pxValue.value * 0.75).toFixed(2));
   }
 };
 
 const convertPtToPx = () => {
-  if (ptValue.value) {
+  if (hasValue(ptValue.value)) {
     pxValue.value = parseFloat((ptValue.value / 0.75).toFixed(1));
   }
 };
 
 // PX to IN conversions
 const convertPxToIn = () => {
-  if (pxValue.value) {
+  if (hasValue(pxValue.value)) {
     inValue.value = parseFloat((pxValue.value / 96).toFixed(4));
   }
 };
 
 const convertInToPx = () => {
-  if (inValue.value) {
+  if (hasValue(inValue.value)) {
     pxValue.value = parseFloat((inValue.value * 96).toFixed(1));
   }
 };
 
 // PX to PC conversions
 const convertPxToPc = () => {
-  if (pxValue.value) {
+  if (hasValue(pxValue.value)) {
     pcValue.value = parseFloat((pxValue.value / 16).toFixed(4));
   }
 };
 
 const convertPcToPx = () => {
-  if (pcValue.value) {
+  if (hasValue(pcValue.value)) {
     pxValue.value = parseFloat((pcValue.value * 16).toFixed(1));
   }
 };
 
 // PX to CM conversions
 const convertPxToCm = () => {
-  if (pxValue.value) {
+  if (hasValue(pxValue.value)) {
     cmValue.value = parseFloat((pxValue.value / 37.795).toFixed(4));
   }
 };
 
 const convertCmToPx = () => {
-  if (cmValue.value) {
+  if (hasValue(cmValue.value)) {
     pxValue.value = parseFloat((cmValue.value * 37.795).toFixed(1));
   }
 };
 
 // PX to MM conversions
 const convertPxToMm = () => {
-  if (pxValue.value) {
+  if (hasValue(pxValue.value)) {
     mmValue.value = parseFloat((pxValue.value / 3.7795).toFixed(4));
   }
 };
 
 const convertMmToPx = () => {
-  if (mmValue.value) {
+  if (hasValue(mmValue.value)) {
     pxValue.value = parseFloat((mmValue.value * 3.7795).toFixed(1));
   }
 };
 
 // REM to VW conversions
 const convertRemToVw = () => {
-  if (remValue.value && rootFontSize.value && viewportWidth.value) {
+  if (hasValue(remValue.value) && isNonZero(rootFontSize.value) && isNonZero(viewportWidth.value)) {
     const px = remValue.value * rootFontSize.value;
     vwValue.value = parseFloat(((px / viewportWidth.value) * 100).toFixed(4));
   }
 };
 
 const convertVwToRem = () => {
-  if (vwValue.value && rootFontSize.value && viewportWidth.value) {
+  if (hasValue(vwValue.value) && isNonZero(rootFontSize.value) && isNonZero(viewportWidth.value)) {
     const px = (vwValue.value / 100) * viewportWidth.value;
     remValue.value = parseFloat((px / rootFontSize.value).toFixed(4));
   }
@@ -1928,14 +1934,14 @@ const convertVwToRem = () => {
 
 // EM to VW conversions
 const convertEmToVw = () => {
-  if (emValue.value && parentFontSize.value && viewportWidth.value) {
+  if (hasValue(emValue.value) && isNonZero(parentFontSize.value) && isNonZero(viewportWidth.value)) {
     const px = emValue.value * parentFontSize.value;
     vwValue.value = parseFloat(((px / viewportWidth.value) * 100).toFixed(4));
   }
 };
 
 const convertVwToEm = () => {
-  if (vwValue.value && parentFontSize.value && viewportWidth.value) {
+  if (hasValue(vwValue.value) && isNonZero(parentFontSize.value) && isNonZero(viewportWidth.value)) {
     const px = (vwValue.value / 100) * viewportWidth.value;
     emValue.value = parseFloat((px / parentFontSize.value).toFixed(4));
   }
@@ -1943,27 +1949,27 @@ const convertVwToEm = () => {
 
 // VH to VW conversions
 const convertVhToVw = () => {
-  if (vhValue.value && viewportHeight.value && viewportWidth.value) {
+  if (hasValue(vhValue.value) && isNonZero(viewportHeight.value) && isNonZero(viewportWidth.value)) {
     vwValue.value = parseFloat(((vhValue.value / 100) * viewportHeight.value / viewportWidth.value * 100).toFixed(4));
   }
 };
 
 const convertVwToVh = () => {
-  if (vwValue.value && viewportHeight.value && viewportWidth.value) {
+  if (hasValue(vwValue.value) && isNonZero(viewportHeight.value) && isNonZero(viewportWidth.value)) {
     vhValue.value = parseFloat(((vwValue.value / 100) * viewportWidth.value / viewportHeight.value * 100).toFixed(4));
   }
 };
 
 // PT to VW conversions
 const convertPtToVw = () => {
-  if (ptValue.value && viewportWidth.value) {
+  if (hasValue(ptValue.value) && isNonZero(viewportWidth.value)) {
     const px = ptValue.value / 0.75;
     vwValue.value = parseFloat(((px / viewportWidth.value) * 100).toFixed(4));
   }
 };
 
 const convertVwToPt = () => {
-  if (vwValue.value && viewportWidth.value) {
+  if (hasValue(vwValue.value) && isNonZero(viewportWidth.value)) {
     const px = (vwValue.value / 100) * viewportWidth.value;
     ptValue.value = parseFloat((px * 0.75).toFixed(2));
   }
@@ -1971,14 +1977,14 @@ const convertVwToPt = () => {
 
 // IN to VW conversions
 const convertInToVw = () => {
-  if (inValue.value && viewportWidth.value) {
+  if (hasValue(inValue.value) && isNonZero(viewportWidth.value)) {
     const px = inValue.value * 96;
     vwValue.value = parseFloat(((px / viewportWidth.value) * 100).toFixed(4));
   }
 };
 
 const convertVwToIn = () => {
-  if (vwValue.value && viewportWidth.value) {
+  if (hasValue(vwValue.value) && isNonZero(viewportWidth.value)) {
     const px = (vwValue.value / 100) * viewportWidth.value;
     inValue.value = parseFloat((px / 96).toFixed(4));
   }
@@ -1986,14 +1992,14 @@ const convertVwToIn = () => {
 
 // PC to VW conversions
 const convertPcToVw = () => {
-  if (pcValue.value && viewportWidth.value) {
+  if (hasValue(pcValue.value) && isNonZero(viewportWidth.value)) {
     const px = pcValue.value * 16;
     vwValue.value = parseFloat(((px / viewportWidth.value) * 100).toFixed(4));
   }
 };
 
 const convertVwToPc = () => {
-  if (vwValue.value && viewportWidth.value) {
+  if (hasValue(vwValue.value) && isNonZero(viewportWidth.value)) {
     const px = (vwValue.value / 100) * viewportWidth.value;
     pcValue.value = parseFloat((px / 16).toFixed(4));
   }
@@ -2001,14 +2007,14 @@ const convertVwToPc = () => {
 
 // CM to VW conversions
 const convertCmToVw = () => {
-  if (cmValue.value && viewportWidth.value) {
+  if (hasValue(cmValue.value) && isNonZero(viewportWidth.value)) {
     const px = cmValue.value * 37.795;
     vwValue.value = parseFloat(((px / viewportWidth.value) * 100).toFixed(4));
   }
 };
 
 const convertVwToCm = () => {
-  if (vwValue.value && viewportWidth.value) {
+  if (hasValue(vwValue.value) && isNonZero(viewportWidth.value)) {
     const px = (vwValue.value / 100) * viewportWidth.value;
     cmValue.value = parseFloat((px / 37.795).toFixed(4));
   }
@@ -2016,14 +2022,14 @@ const convertVwToCm = () => {
 
 // MM to VW conversions
 const convertMmToVw = () => {
-  if (mmValue.value && viewportWidth.value) {
+  if (hasValue(mmValue.value) && isNonZero(viewportWidth.value)) {
     const px = mmValue.value * 3.7795;
     vwValue.value = parseFloat(((px / viewportWidth.value) * 100).toFixed(4));
   }
 };
 
 const convertVwToMm = () => {
-  if (vwValue.value && viewportWidth.value) {
+  if (hasValue(vwValue.value) && isNonZero(viewportWidth.value)) {
     const px = (vwValue.value / 100) * viewportWidth.value;
     mmValue.value = parseFloat((px / 3.7795).toFixed(4));
   }
@@ -2031,7 +2037,7 @@ const convertVwToMm = () => {
 
 // Percentage to VW conversions
 const convertPercentToVw = () => {
-  if (percentValue.value && viewportWidth.value) {
+  if (hasValue(percentValue.value) && isNonZero(viewportWidth.value)) {
     const baseSize = percentageContext.value === 'font-size' ? parentFontSize.value : 100;
     const px = (percentValue.value / 100) * baseSize;
     vwValue.value = parseFloat(((px / viewportWidth.value) * 100).toFixed(4));
@@ -2039,7 +2045,7 @@ const convertPercentToVw = () => {
 };
 
 const convertVwToPercent = () => {
-  if (vwValue.value && viewportWidth.value) {
+  if (hasValue(vwValue.value) && isNonZero(viewportWidth.value) && (percentageContext.value !== 'font-size' || isNonZero(parentFontSize.value))) {
     const baseSize = percentageContext.value === 'font-size' ? parentFontSize.value : 100;
     const px = (vwValue.value / 100) * viewportWidth.value;
     percentValue.value = parseFloat(((px / baseSize) * 100).toFixed(2));
@@ -2121,7 +2127,7 @@ const pxToTailwindTable = computed(() => {
 // Unified conversion table with all units
 const unifiedConversionTable = computed(() => {
   const table = [];
-  const baseSize = parentFontSize.value || rootFontSize.value;
+  const baseSize = isNonZero(parentFontSize.value) ? parentFontSize.value : rootFontSize.value;
   
   // Generate values starting from 8px and incrementing
   // Based on the reference image, we'll generate a comprehensive table
@@ -2174,129 +2180,59 @@ watch(selectedMode, () => {
   baseUnitValue.value = '1rem';
   tailwindValue.value = '';
   tailwindClass.value = '';
+  runCurrentConversion();
 });
+
+// Re-run the conversion for the current mode (after a mode or setting change).
+const runCurrentConversion = () => {
+  if (selectedMode.value === 'px-to-rem') {
+    convertPxToRem();
+  } else if (selectedMode.value === 'px-to-em') {
+    convertPxToEm();
+  } else if (selectedMode.value === 'px-to-vh') {
+    convertPxToVh();
+  } else if (selectedMode.value === 'px-to-pt') {
+    convertPxToPt();
+  } else if (selectedMode.value === 'px-to-in') {
+    convertPxToIn();
+  } else if (selectedMode.value === 'px-to-pc') {
+    convertPxToPc();
+  } else if (selectedMode.value === 'px-to-cm') {
+    convertPxToCm();
+  } else if (selectedMode.value === 'px-to-mm') {
+    convertPxToMm();
+  } else if (selectedMode.value === 'px-to-percent') {
+    convertPxToPercent();
+  } else if (selectedMode.value === 'rem-to-vw') {
+    convertRemToVw();
+  } else if (selectedMode.value === 'em-to-vw') {
+    convertEmToVw();
+  } else if (selectedMode.value === 'vh-to-vw') {
+    convertVhToVw();
+  } else if (selectedMode.value === 'pt-to-vw') {
+    convertPtToVw();
+  } else if (selectedMode.value === 'in-to-vw') {
+    convertInToVw();
+  } else if (selectedMode.value === 'pc-to-vw') {
+    convertPcToVw();
+  } else if (selectedMode.value === 'cm-to-vw') {
+    convertCmToVw();
+  } else if (selectedMode.value === 'mm-to-vw') {
+    convertMmToVw();
+  } else if (selectedMode.value === 'percent-to-vw') {
+    convertPercentToVw();
+  } else if (selectedMode.value === 'base-to-px') {
+    convertBaseToPx();
+  } else if (selectedMode.value === 'px-to-tailwind') {
+    convertPxToTailwind();
+  }
+};
 
 // Watch for configuration changes
-watch([rootFontSize, parentFontSize, percentageContext, viewportWidth, viewportHeight], () => {
-  if (selectedMode.value === 'px-to-rem') {
-    convertPxToRem();
-  } else if (selectedMode.value === 'px-to-em') {
-    convertPxToEm();
-  } else if (selectedMode.value === 'px-to-vh') {
-    convertPxToVh();
-  } else if (selectedMode.value === 'px-to-pt') {
-    convertPxToPt();
-  } else if (selectedMode.value === 'px-to-in') {
-    convertPxToIn();
-  } else if (selectedMode.value === 'px-to-pc') {
-    convertPxToPc();
-  } else if (selectedMode.value === 'px-to-cm') {
-    convertPxToCm();
-  } else if (selectedMode.value === 'px-to-mm') {
-    convertPxToMm();
-  } else if (selectedMode.value === 'px-to-percent') {
-    convertPxToPercent();
-  } else if (selectedMode.value === 'rem-to-vw') {
-    convertRemToVw();
-  } else if (selectedMode.value === 'em-to-vw') {
-    convertEmToVw();
-  } else if (selectedMode.value === 'vh-to-vw') {
-    convertVhToVw();
-  } else if (selectedMode.value === 'pt-to-vw') {
-    convertPtToVw();
-  } else if (selectedMode.value === 'in-to-vw') {
-    convertInToVw();
-  } else if (selectedMode.value === 'pc-to-vw') {
-    convertPcToVw();
-  } else if (selectedMode.value === 'cm-to-vw') {
-    convertCmToVw();
-  } else if (selectedMode.value === 'mm-to-vw') {
-    convertMmToVw();
-  } else if (selectedMode.value === 'percent-to-vw') {
-    convertPercentToVw();
-  } else if (selectedMode.value === 'base-to-px') {
-    convertBaseToPx();
-  } else if (selectedMode.value === 'px-to-tailwind') {
-    convertPxToTailwind();
-  }
-});
+watch([rootFontSize, parentFontSize, percentageContext, viewportWidth, viewportHeight], runCurrentConversion);
 
+onMounted(runCurrentConversion);
 
-
-
-
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  // Initialize conversions based on selected mode
-  if (selectedMode.value === 'px-to-rem') {
-    convertPxToRem();
-  } else if (selectedMode.value === 'px-to-em') {
-    convertPxToEm();
-  } else if (selectedMode.value === 'px-to-vh') {
-    convertPxToVh();
-  } else if (selectedMode.value === 'px-to-pt') {
-    convertPxToPt();
-  } else if (selectedMode.value === 'px-to-in') {
-    convertPxToIn();
-  } else if (selectedMode.value === 'px-to-pc') {
-    convertPxToPc();
-  } else if (selectedMode.value === 'px-to-cm') {
-    convertPxToCm();
-  } else if (selectedMode.value === 'px-to-mm') {
-    convertPxToMm();
-  } else if (selectedMode.value === 'px-to-percent') {
-    convertPxToPercent();
-  } else if (selectedMode.value === 'rem-to-vw') {
-    convertRemToVw();
-  } else if (selectedMode.value === 'em-to-vw') {
-    convertEmToVw();
-  } else if (selectedMode.value === 'vh-to-vw') {
-    convertVhToVw();
-  } else if (selectedMode.value === 'pt-to-vw') {
-    convertPtToVw();
-  } else if (selectedMode.value === 'in-to-vw') {
-    convertInToVw();
-  } else if (selectedMode.value === 'pc-to-vw') {
-    convertPcToVw();
-  } else if (selectedMode.value === 'cm-to-vw') {
-    convertCmToVw();
-  } else if (selectedMode.value === 'mm-to-vw') {
-    convertMmToVw();
-  } else if (selectedMode.value === 'percent-to-vw') {
-    convertPercentToVw();
-  } else if (selectedMode.value === 'base-to-px') {
-    convertBaseToPx();
-  } else if (selectedMode.value === 'px-to-tailwind') {
-    convertPxToTailwind();
-  }
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>

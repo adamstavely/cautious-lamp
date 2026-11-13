@@ -1,14 +1,16 @@
-import { Controller, Get, Query, Headers, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Query, Headers } from '@nestjs/common';
 import { ChangelogAggregationService } from './changelog-aggregation.service';
+import { KeyManagementService } from '../common/security/key-management.service';
 
 @Controller('changelog')
 export class ChangelogAggregationController {
-  constructor(private readonly changelogService: ChangelogAggregationService) {}
+  constructor(
+    private readonly changelogService: ChangelogAggregationService,
+    private readonly keyManagementService: KeyManagementService,
+  ) {}
 
   private validateRequest(authHeader?: string): void {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new BadRequestException('Authorization header required');
-    }
+    this.keyManagementService.assertValidApiKey(authHeader);
   }
 
   @Get('aggregated')

@@ -1,609 +1,518 @@
 #!/usr/bin/env node
 
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import chalk from 'chalk';
-import { DesignSystemAPI } from '@designsystem/api';
+import { DesignSystemAPI, ComplianceCheck } from '@designsystem/api';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
+import {
+  CONFIG_KEYS,
+  displayValue,
+  isConfigKey,
+  loadConfig,
+  resolveSettings,
+  saveConfig,
+} from './config';
+import {
+  CodeFormat,
+  Framework,
+  planComponentCode,
+  planComponentScaffold,
+  planTokenScaffold,
+  writeFiles,
+} from './files';
 
-const program = new Command();
-const configPath = path.join(os.homedir(), '.designsystem', 'config.json');
+/** An expected failure: printed as a one-line error, exit code 1. */
+class CliError extends Error {}
 
-// Load config
-let config: { apiKey?: string; baseURL?: string } = {};
-if (fs.existsSync(configPath)) {
-  try {
-    config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-  } catch (e) {
-    // Ignore config errors
+function getAPI(options: { requireKey?: boolean } = {}): DesignSystemAPI {
+  const { apiKey, baseURL } = resolveSettings();
+  if (!apiKey && options.requireKey !== false) {
+    throw new CliError('API key not found. Set the DS_API_KEY environment variable or run: ds config set apiKey <key>');
   }
+  const timeout = Number(process.env.DS_API_TIMEOUT) || 30000;
+  return new DesignSystemAPI({ apiKey: apiKey?.value ?? '', baseURL: baseURL.value, timeout });
 }
 
-// Ensure config directory exists
-const configDir = path.dirname(configPath);
-if (!fs.existsSync(configDir)) {
-  fs.mkdirSync(configDir, { recursive: true });
+/** Turns axios/HTTP errors into a readable message without leaking request headers. */
+function describeError(error: unknown): string {
+  const err = error as {
+    message?: string;
+    code?: string;
+    config?: { baseURL?: string; url?: string };
+    response?: { status?: number; data?: { message?: unknown; error?: unknown } };
+  };
+  if (err?.response) {
+    const status = err.response.status;
+    const raw = err.response.data?.message ?? err.response.data?.error;
+    const detail = Array.isArray(raw) ? raw.join('; ') : typeof raw === 'string' ? raw : '';
+    return `API request failed (${status})${detail ? `: ${detail}` : ''}`;
+  }
+  if (err?.code === 'ECONNABORTED' || err?.code === 'ETIMEDOUT') {
+    return `Request to ${err.config?.baseURL ?? 'the API'} timed out (set DS_API_TIMEOUT in ms to change the limit)`;
+  }
+  if (err?.code === 'ECONNREFUSED' || err?.code === 'ENOTFOUND') {
+    return `Could not reach the API at ${err.config?.baseURL ?? 'the configured URL'} (${err.code}). Check DS_API_URL or: ds config set baseURL <url>`;
+  }
+  return err?.message ?? String(error);
 }
 
-const getAPI = (): DesignSystemAPI => {
-  const apiKey = process.env.DS_API_KEY || config.apiKey;
-  if (!apiKey) {
-    console.error(chalk.red('Error: API key not found. Set DS_API_KEY environment variable or run: ds config set apiKey <key>'));
-    process.exit(1);
-  }
-  return new DesignSystemAPI({
-    apiKey,
-    baseURL: process.env.DS_API_URL || config.baseURL || 'http://localhost:3000/api/v1',
-  });
-};
-
-program
-  .name('ds')
-  .description('Design System CLI')
-  .version('1.0.0');
-
-// Config commands
-const configCmd = program
-  .command('config')
-  .description('Manage configuration');
-
-configCmd
-  .command('set')
-  .description('Set a configuration value')
-  .argument('<key>', 'Configuration key')
-  .argument('<value>', 'Configuration value')
-  .action((key: string, value: string) => {
-    config[key] = value;
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    console.log(chalk.green(`✓ Set ${key} = ${value}`));
-  });
-
-configCmd
-  .command('get')
-  .description('Get a configuration value')
-  .argument('<key>', 'Configuration key')
-  .action((key: string) => {
-    const value = config[key];
-    if (value) {
-      console.log(value);
-    } else {
-      console.error(chalk.red(`Configuration key '${key}' not found`));
-      process.exit(1);
-    }
-  });
-
-// Token commands
-// Compliance scanning command
-program
-  .command('compliance')
-  .description('Run compliance checks')
-  .option('-s, --scope <scope>', 'Scope: design-system or applications', 'design-system')
-  .option('-a, --application <id>', 'Application ID to scan')
-  .option('-c, --categories <categories>', 'Comma-separated list of rule categories (e.g., accessibility,design-system,ux-hcd)', '')
-  .option('-f, --format <format>', 'Output format (table, json)', 'table')
-  .action(async (options) => {
+/** Wraps an action so every failure prints one error line and sets exit code 1. */
+function run<A extends unknown[]>(fn: (...args: A) => unknown | Promise<unknown>) {
+  return async (...args: A): Promise<void> => {
     try {
-      const api = getAPI();
-      const categories = options.categories ? options.categories.split(',').map((c: string) => c.trim()) : undefined;
-      const result = await api.scanCompliance(options.scope, options.application, categories);
-      
-      if (options.format === 'json') {
-        console.log(JSON.stringify(result, null, 2));
-      } else {
-        console.log(chalk.bold(`\nCompliance Scan Results (${result.scope})\n`));
-        if (categories) {
-          console.log(chalk.dim(`Categories: ${categories.join(', ')}\n`));
+      await fn(...args);
+    } catch (error) {
+      console.error(chalk.red(`Error: ${describeError(error)}`));
+      process.exitCode = 1;
+    }
+  };
+}
+
+function parseCategories(value: string | undefined): string[] | undefined {
+  if (!value) return undefined;
+  const list = value.split(',').map((c) => c.trim()).filter(Boolean);
+  return list.length > 0 ? list : undefined;
+}
+
+function printChecks(checks: ComplianceCheck[]): void {
+  for (const check of checks) {
+    const icon = check.status === 'pass' ? '✓' : check.status === 'warning' ? '⚠' : '✗';
+    const color = check.status === 'pass' ? chalk.green : check.status === 'warning' ? chalk.yellow : chalk.red;
+    console.log(color(`${icon} ${check.rule}`));
+    console.log(`  ${check.message}`);
+    if (check.component) console.log(`  Component: ${check.component}`);
+    if (check.application) console.log(`  Application: ${check.application}`);
+    if (check.file) console.log(`  File: ${check.file}${check.line ? `:${check.line}` : ''}`);
+    console.log('');
+  }
+}
+
+function reportWritten(files: string[], dryRun: boolean, rootDir: string): void {
+  for (const file of files) {
+    const rel = path.relative(rootDir, file) || file;
+    console.log(dryRun ? chalk.yellow(`  would write ${rel}`) : chalk.green(`  wrote ${rel}`));
+  }
+}
+
+export function createProgram(): Command {
+  const program = new Command();
+
+  program.name('ds').description('Design System CLI').version('1.0.0');
+
+  // ---------------------------------------------------------------- config
+  const configCmd = program
+    .command('config')
+    .description('Manage configuration (~/.designsystem/config.json); DS_API_KEY / DS_API_URL env vars override it');
+
+  const keyHelp = `Configuration key (${CONFIG_KEYS.join(', ')})`;
+  const requireKey = (key: string) => {
+    if (!isConfigKey(key)) {
+      throw new CliError(`Unknown configuration key '${key}'. Valid keys: ${CONFIG_KEYS.join(', ')}`);
+    }
+    return key;
+  };
+
+  configCmd
+    .command('set')
+    .description('Set a configuration value')
+    .argument('<key>', keyHelp)
+    .argument('<value>', 'Configuration value')
+    .action(
+      run((key: string, value: string) => {
+        const k = requireKey(key);
+        const config = loadConfig();
+        config[k] = value;
+        saveConfig(config);
+        console.log(chalk.green(`✓ Set ${k} = ${displayValue(k, value)}`));
+      }),
+    );
+
+  configCmd
+    .command('get')
+    .description('Get a configuration value (secrets are masked)')
+    .argument('<key>', keyHelp)
+    .action(
+      run((key: string) => {
+        const k = requireKey(key);
+        const value = loadConfig()[k];
+        if (!value) throw new CliError(`Configuration key '${k}' is not set`);
+        console.log(displayValue(k, value));
+      }),
+    );
+
+  configCmd
+    .command('unset')
+    .description('Remove a configuration value')
+    .argument('<key>', keyHelp)
+    .action(
+      run((key: string) => {
+        const k = requireKey(key);
+        const config = loadConfig();
+        delete config[k];
+        saveConfig(config);
+        console.log(chalk.green(`✓ Unset ${k}`));
+      }),
+    );
+
+  configCmd
+    .command('list')
+    .description('Show the effective settings and where each comes from')
+    .action(
+      run(() => {
+        const { apiKey, baseURL } = resolveSettings();
+        console.log(`apiKey  = ${apiKey ? `${displayValue('apiKey', apiKey.value)} (${apiKey.source})` : chalk.dim('(not set)')}`);
+        console.log(`baseURL = ${baseURL.value} (${baseURL.source})`);
+      }),
+    );
+
+  // ------------------------------------------------------------ compliance
+  program
+    .command('compliance')
+    .description('Run compliance checks (POST /compliance/scan)')
+    .addOption(new Option('-s, --scope <scope>', 'Scope').choices(['design-system', 'applications']).default('design-system'))
+    .option('-a, --application <id>', 'Application ID to scan')
+    .option('-c, --categories <categories>', 'Comma-separated list of rule categories (e.g., accessibility,design-system,ux-hcd)')
+    .addOption(new Option('-f, --format <format>', 'Output format').choices(['table', 'json']).default('table'))
+    .action(
+      run(async (options: { scope: 'design-system' | 'applications'; application?: string; categories?: string; format: string }) => {
+        const api = getAPI();
+        const categories = parseCategories(options.categories);
+        const result = await api.scanCompliance(options.scope, options.application, categories);
+
+        if (options.format === 'json') {
+          console.log(JSON.stringify(result, null, 2));
+          return;
         }
+        console.log(chalk.bold(`\nCompliance Scan Results (${result.scope})\n`));
+        if (categories) console.log(chalk.dim(`Categories: ${categories.join(', ')}\n`));
         console.log(chalk.green(`✓ Passed: ${result.passed}`));
         console.log(chalk.yellow(`⚠ Warnings: ${result.warnings}`));
         console.log(chalk.red(`✗ Failed: ${result.failed}\n`));
-        
-        result.checks.forEach((check: any) => {
-          const icon = check.status === 'pass' ? '✓' : check.status === 'warning' ? '⚠' : '✗';
-          const color = check.status === 'pass' ? chalk.green : check.status === 'warning' ? chalk.yellow : chalk.red;
-          console.log(color(`${icon} ${check.rule}`));
-          console.log(`  ${check.message}`);
-          if (check.component) console.log(`  Component: ${check.component}`);
-          if (check.application) console.log(`  Application: ${check.application}`);
-          if (check.file) console.log(`  File: ${check.file}${check.line ? `:${check.line}` : ''}`);
-          console.log('');
+        printChecks(result.checks ?? []);
+      }),
+    );
+
+  // ---------------------------------------------------------- applications
+  program
+    .command('register')
+    .description('Register an application for compliance scanning (POST /applications/register)')
+    .requiredOption('-n, --name <name>', 'Application name')
+    .option('-r, --repository <repo>', 'Repository URL')
+    .option('-d, --description <text>', 'Description')
+    .option('-v, --app-version <version>', 'Application version')
+    .action(
+      run(async (options: { name: string; repository?: string; description?: string; appVersion?: string }) => {
+        const api = getAPI();
+        const app = await api.registerApplication(options.name, options.repository, options.appVersion, {
+          description: options.description,
         });
-      }
-    } catch (error: any) {
-      console.error(chalk.red(`Error: ${error.message}`));
-      process.exit(1);
-    }
-  });
-
-// Application registration command
-program
-  .command('register')
-  .description('Register an application for compliance scanning')
-  .option('-n, --name <name>', 'Application name', { required: true })
-  .option('-r, --repository <repo>', 'Repository URL')
-  .option('-v, --version <version>', 'Design system version')
-  .action(async (options) => {
-    try {
-      const api = getAPI();
-      const app = await api.registerApplication(options.name, options.repository, options.version);
-      console.log(chalk.green(`✓ Application registered: ${app.id}`));
-      console.log(`  Name: ${app.name}`);
-      if (app.repository) console.log(`  Repository: ${app.repository}`);
-      if (app.version) console.log(`  Version: ${app.version}`);
-    } catch (error: any) {
-      console.error(chalk.red(`Error: ${error.message}`));
-      process.exit(1);
-    }
-  });
-
-// Application list command
-program
-  .command('applications')
-  .description('List registered applications')
-  .action(async () => {
-    try {
-      const api = getAPI();
-      const { applications } = await api.getApplications();
-      console.log(chalk.bold(`\nRegistered Applications (${applications.length})\n`));
-      applications.forEach((app: any) => {
-        console.log(chalk.cyan(app.name));
-        console.log(`  ID: ${app.id}`);
+        console.log(chalk.green(`✓ Application registered: ${app.id}`));
+        console.log(`  Name: ${app.name}`);
         if (app.repository) console.log(`  Repository: ${app.repository}`);
         if (app.version) console.log(`  Version: ${app.version}`);
-        console.log(`  Registered: ${new Date(app.registeredAt).toLocaleDateString()}`);
-        if (app.lastScanned) console.log(`  Last Scanned: ${new Date(app.lastScanned).toLocaleDateString()}`);
-        console.log('');
-      });
-    } catch (error: any) {
-      console.error(chalk.red(`Error: ${error.message}`));
-      process.exit(1);
-    }
-  });
+      }),
+    );
 
-// Application codebase scanning command
-program
-  .command('scan')
-  .description('Scan an application codebase for compliance')
-  .option('-a, --application <id>', 'Application ID to scan', { required: true })
-  .option('-c, --categories <categories>', 'Comma-separated list of rule categories (e.g., accessibility,design-system,ux-hcd)', '')
-  .option('-f, --format <format>', 'Output format (table, json)', 'table')
-  .action(async (options) => {
-    try {
-      const api = getAPI();
-      const categories = options.categories ? options.categories.split(',').map((c: string) => c.trim()) : undefined;
-      const result = await api.scanApplicationCodebase(options.application, undefined, categories);
-      
-      if (options.format === 'json') {
-        console.log(JSON.stringify(result, null, 2));
-      } else {
-        console.log(chalk.bold(`\nCompliance Scan Results for Application\n`));
-        if (categories) {
-          console.log(chalk.dim(`Categories: ${categories.join(', ')}\n`));
+  program
+    .command('applications')
+    .description('List registered applications (GET /applications)')
+    .option('--team <teamId>', 'Filter by team ID')
+    .addOption(new Option('--capability <capability>', 'Only apps with this capability enabled').choices(['governance', 'visualRegression', 'sessionReplay']))
+    .addOption(new Option('-f, --format <format>', 'Output format').choices(['table', 'json']).default('table'))
+    .action(
+      run(async (options: { team?: string; capability?: 'governance' | 'visualRegression' | 'sessionReplay'; format: string }) => {
+        const api = getAPI();
+        const { applications } = await api.getApplications({ teamId: options.team, capability: options.capability });
+        if (options.format === 'json') {
+          console.log(JSON.stringify(applications, null, 2));
+          return;
         }
-        console.log(chalk.green(`✓ Passed: ${result.checks.filter((c: any) => c.status === 'pass').length}`));
-        console.log(chalk.yellow(`⚠ Warnings: ${result.checks.filter((c: any) => c.status === 'warning').length}`));
-        console.log(chalk.red(`✗ Failed: ${result.checks.filter((c: any) => c.status === 'error').length}\n`));
-        
-        result.checks.forEach((check: any) => {
-          const icon = check.status === 'pass' ? '✓' : check.status === 'warning' ? '⚠' : '✗';
-          const color = check.status === 'pass' ? chalk.green : check.status === 'warning' ? chalk.yellow : chalk.red;
-          console.log(color(`${icon} ${check.rule}`));
-          console.log(`  ${check.message}`);
-          if (check.component) console.log(`  Component: ${check.component}`);
-          if (check.application) console.log(`  Application: ${check.application}`);
-          if (check.file) console.log(`  File: ${check.file}${check.line ? `:${check.line}` : ''}`);
+        console.log(chalk.bold(`\nRegistered Applications (${applications.length})\n`));
+        for (const app of applications) {
+          console.log(chalk.cyan(app.name));
+          console.log(`  ID: ${app.id}`);
+          if (app.repository) console.log(`  Repository: ${app.repository}`);
+          if (app.version) console.log(`  Version: ${app.version}`);
+          if (app.registeredAt) console.log(`  Registered: ${new Date(app.registeredAt).toLocaleDateString()}`);
+          if (app.lastScanned) console.log(`  Last Scanned: ${new Date(app.lastScanned).toLocaleDateString()}`);
           console.log('');
-        });
-      }
-    } catch (error: any) {
-      console.error(chalk.red(`Error: ${error.message}`));
-      process.exit(1);
-    }
-  });
+        }
+      }),
+    );
 
-program
-  .command('tokens')
-  .description('List all tokens')
-  .option('-c, --category <category>', 'Filter by category')
-  .option('-t, --type <type>', 'Filter by type')
-  .option('--tag <tag>', 'Filter by tag')
-  .option('-f, --format <format>', 'Output format (table, json)', 'table')
-  .action(async (options) => {
-    try {
-      const api = getAPI();
-      const filters: any = {};
-      if (options.category) filters.category = options.category;
-      if (options.type) filters.type = options.type;
-      if (options.tag) filters.tag = options.tag;
+  program
+    .command('scan')
+    .description('Scan an application codebase for compliance (POST /compliance/scan-application)')
+    .requiredOption('-a, --application <id>', 'Application ID to scan')
+    .option('-c, --categories <categories>', 'Comma-separated list of rule categories (e.g., accessibility,design-system,ux-hcd)')
+    .addOption(new Option('-f, --format <format>', 'Output format').choices(['table', 'json']).default('table'))
+    .action(
+      run(async (options: { application: string; categories?: string; format: string }) => {
+        const api = getAPI();
+        const categories = parseCategories(options.categories);
+        const result = await api.scanApplicationCodebase(options.application, undefined, categories);
 
-      const { tokens } = Object.keys(filters).length > 0
-        ? await api.tokensFiltered(filters)
-        : await api.tokens();
+        if (options.format === 'json') {
+          console.log(JSON.stringify(result, null, 2));
+          return;
+        }
+        const checks = result.checks ?? [];
+        console.log(chalk.bold(`\nCompliance Scan Results for ${result.applicationId ?? options.application}\n`));
+        if (categories) console.log(chalk.dim(`Categories: ${categories.join(', ')}\n`));
+        console.log(chalk.green(`✓ Passed: ${checks.filter((c) => c.status === 'pass').length}`));
+        console.log(chalk.yellow(`⚠ Warnings: ${checks.filter((c) => c.status === 'warning').length}`));
+        console.log(chalk.red(`✗ Failed: ${checks.filter((c) => c.status === 'error').length}\n`));
+        printChecks(checks);
+      }),
+    );
 
-      if (options.format === 'json') {
-        console.log(JSON.stringify(tokens, null, 2));
-      } else {
+  // ---------------------------------------------------------------- tokens
+  program
+    .command('tokens')
+    .description('List tokens (GET /tokens)')
+    .option('-c, --category <category>', 'Filter by category')
+    .option('-t, --type <type>', 'Filter by type')
+    .option('--tag <tag>', 'Filter by tag')
+    .addOption(new Option('-f, --format <format>', 'Output format').choices(['table', 'json']).default('table'))
+    .action(
+      run(async (options: { category?: string; type?: string; tag?: string; format: string }) => {
+        const api = getAPI();
+        const filters = { category: options.category, type: options.type, tag: options.tag };
+        const { tokens } =
+          filters.category || filters.type || filters.tag ? await api.tokensFiltered(filters) : await api.tokens();
+
+        if (options.format === 'json') {
+          console.log(JSON.stringify(tokens, null, 2));
+          return;
+        }
         console.log(chalk.bold(`\nFound ${tokens.length} tokens\n`));
-        tokens.forEach((token: any) => {
-          console.log(chalk.cyan(token.name.padEnd(40)) + chalk.gray(token.value));
-          if (token.description) {
-            console.log('  ' + chalk.dim(token.description));
-          }
-        });
-      }
-    } catch (error: any) {
-      console.error(chalk.red(`Error: ${error.message}`));
-      process.exit(1);
-    }
-  });
+        for (const token of tokens) {
+          console.log(chalk.cyan(String(token.name).padEnd(40)) + chalk.gray(String(token.value)));
+          if (token.description) console.log('  ' + chalk.dim(token.description));
+        }
+      }),
+    );
 
-program
-  .command('token <name>')
-  .description('Get a specific token')
-  .action(async (name: string) => {
-    try {
-      const api = getAPI();
-      const token = await api.token(name);
-      console.log(chalk.bold(`\n${token.name}\n`));
-      console.log(`Value:    ${chalk.cyan(token.value)}`);
-      console.log(`Type:     ${token.type}`);
-      console.log(`Category: ${token.category}`);
-      if (token.description) {
-        console.log(`Description: ${token.description}`);
-      }
-      if (token.tags && token.tags.length > 0) {
-        console.log(`Tags:     ${token.tags.join(', ')}`);
-      }
-    } catch (error: any) {
-      console.error(chalk.red(`Error: ${error.message}`));
-      process.exit(1);
-    }
-  });
+  program
+    .command('token <name>')
+    .description('Get a specific token (GET /tokens/:name)')
+    .action(
+      run(async (name: string) => {
+        const api = getAPI();
+        const token = await api.token(name);
+        console.log(chalk.bold(`\n${token.name}\n`));
+        console.log(`Value:    ${chalk.cyan(token.value)}`);
+        console.log(`Type:     ${token.type}`);
+        console.log(`Category: ${token.category}`);
+        if (token.description) console.log(`Description: ${token.description}`);
+        if (token.tags && token.tags.length > 0) console.log(`Tags:     ${token.tags.join(', ')}`);
+      }),
+    );
 
-// Component commands
-program
-  .command('components')
-  .description('List all components')
-  .option('-s, --status <status>', 'Filter by status')
-  .option('-f, --format <format>', 'Output format (table, json)', 'table')
-  .action(async (options) => {
-    try {
-      const api = getAPI();
-      const { components } = options.status
-        ? await api.componentsByStatus(options.status)
-        : await api.components();
+  // ------------------------------------------------------------ components
+  program
+    .command('components')
+    .description('List components (GET /components, or /components/status/:status)')
+    .option('-s, --status <status>', 'Filter by status')
+    .addOption(new Option('-f, --format <format>', 'Output format').choices(['table', 'json']).default('table'))
+    .action(
+      run(async (options: { status?: string; format: string }) => {
+        const api = getAPI();
+        const { components } = options.status ? await api.componentsByStatus(options.status) : await api.components();
 
-      if (options.format === 'json') {
-        console.log(JSON.stringify(components, null, 2));
-      } else {
+        if (options.format === 'json') {
+          console.log(JSON.stringify(components, null, 2));
+          return;
+        }
         console.log(chalk.bold(`\nFound ${components.length} components\n`));
-        components.forEach((component: any) => {
-          const statusColor = component.status === 'production' ? chalk.green : 
-                            component.status === 'in-progress' ? chalk.yellow : chalk.gray;
-          console.log(chalk.cyan(component.id.padEnd(20)) + statusColor(component.status.padEnd(15)) + component.name);
-          if (component.description) {
-            console.log('  ' + chalk.dim(component.description));
-          }
-        });
-      }
-    } catch (error: any) {
-      console.error(chalk.red(`Error: ${error.message}`));
-      process.exit(1);
-    }
-  });
-
-program
-  .command('component <id>')
-  .description('Get a specific component')
-  .option('-c, --code <format>', 'Show code (vue, react)', 'vue')
-  .action(async (id: string, options: any) => {
-    try {
-      const api = getAPI();
-      const component = await api.component(id);
-      console.log(chalk.bold(`\n${component.name} (${component.id})\n`));
-      console.log(`Status:       ${component.status}`);
-      console.log(`Description:  ${component.description}`);
-      if (component.dependencies && component.dependencies.length > 0) {
-        console.log(`Dependencies: ${component.dependencies.join(', ')}`);
-      }
-      if (component.accessibility) {
-        console.log(`WCAG:         ${component.accessibility.wcag}`);
-      }
-      console.log(chalk.bold(`\nProps:\n`));
-      component.props.forEach((prop: any) => {
-        console.log(`  ${chalk.cyan(prop.name.padEnd(20))} ${prop.type} ${prop.required ? chalk.red('*') : ''}`);
-        if (prop.description) {
-          console.log(`    ${chalk.dim(prop.description)}`);
+        for (const component of components) {
+          const statusColor =
+            component.status === 'production' ? chalk.green : component.status === 'in-progress' ? chalk.yellow : chalk.gray;
+          console.log(chalk.cyan(component.id.padEnd(20)) + statusColor(String(component.status).padEnd(15)) + component.name);
+          if (component.description) console.log('  ' + chalk.dim(component.description));
         }
-      });
-      if (options.code && component.code[options.code]) {
-        console.log(chalk.bold(`\n${options.code.toUpperCase()} Code:\n`));
-        console.log(chalk.gray(component.code[options.code]));
-      }
-    } catch (error: any) {
-      console.error(chalk.red(`Error: ${error.message}`));
-      process.exit(1);
-    }
-  });
+      }),
+    );
 
-// Health check
-program
-  .command('health')
-  .description('Check API health')
-  .action(async () => {
-    try {
-      const api = getAPI();
-      const health = await api.health();
-      console.log(chalk.green(`✓ API is healthy`));
-      console.log(`Status:    ${health.status}`);
-      console.log(`Version:   ${health.version}`);
-      console.log(`Timestamp: ${health.timestamp}`);
-    } catch (error: any) {
-      console.error(chalk.red(`Error: ${error.message}`));
-      process.exit(1);
-    }
-  });
-
-// Scaffold commands
-program
-  .command('scaffold <type>')
-  .description('Scaffold a new component or token')
-  .option('-n, --name <name>', 'Name of the component/token')
-  .option('-f, --framework <framework>', 'Framework (vue, react)', 'vue')
-  .action(async (type: string, options: any) => {
-    try {
-      if (type === 'component') {
-        if (!options.name) {
-          console.error(chalk.red('Error: Component name is required. Use --name <name>'));
-          process.exit(1);
+  program
+    .command('component <id>')
+    .description('Get a specific component (GET /components/:id)')
+    .addOption(new Option('-c, --code <format>', 'Show code').choices(['vue', 'react', 'html', 'none']).default('vue'))
+    .action(
+      run(async (id: string, options: { code: CodeFormat | 'none' }) => {
+        const api = getAPI();
+        const component = await api.component(id);
+        console.log(chalk.bold(`\n${component.name} (${component.id})\n`));
+        console.log(`Status:       ${component.status}`);
+        console.log(`Description:  ${component.description}`);
+        if (component.dependencies && component.dependencies.length > 0) {
+          console.log(`Dependencies: ${component.dependencies.join(', ')}`);
         }
-        await scaffoldComponent(options.name, options.framework);
-      } else if (type === 'token') {
-        if (!options.name) {
-          console.error(chalk.red('Error: Token name is required. Use --name <name>'));
-          process.exit(1);
+        if (component.accessibility) console.log(`WCAG:         ${component.accessibility.wcag}`);
+        console.log(chalk.bold(`\nProps:\n`));
+        for (const prop of component.props ?? []) {
+          console.log(`  ${chalk.cyan(prop.name.padEnd(20))} ${prop.type} ${prop.required ? chalk.red('*') : ''}`);
+          if (prop.description) console.log(`    ${chalk.dim(prop.description)}`);
         }
-        await scaffoldToken(options.name);
-      } else {
-        console.error(chalk.red(`Error: Unknown scaffold type '${type}'. Use 'component' or 'token'`));
-        process.exit(1);
-      }
-    } catch (error: any) {
-      console.error(chalk.red(`Error: ${error.message}`));
-      process.exit(1);
-    }
-  });
+        const code = options.code !== 'none' ? component.code?.[options.code] : undefined;
+        if (code) {
+          console.log(chalk.bold(`\n${options.code.toUpperCase()} Code:\n`));
+          console.log(chalk.gray(code));
+        }
+      }),
+    );
 
-// Validation commands
-program
-  .command('validate')
-  .description('Validate design system tokens and components')
-  .option('-t, --type <type>', 'Type to validate (tokens, components, all)', 'all')
-  .option('-f, --file <file>', 'File to validate (JSON)')
-  .action(async (options: any) => {
-    try {
-      if (options.file) {
-        await validateFile(options.file);
-      } else {
-        await validateSystem(options.type);
-      }
-    } catch (error: any) {
-      console.error(chalk.red(`Error: ${error.message}`));
-      process.exit(1);
-    }
-  });
+  // ---------------------------------------------------------------- health
+  program
+    .command('health')
+    .description('Check API health (GET /health, no API key needed)')
+    .action(
+      run(async () => {
+        const health = await getAPI({ requireKey: false }).health();
+        console.log(chalk.green(`✓ API is healthy`));
+        console.log(`Status:    ${health.status}`);
+        console.log(`Version:   ${health.version}`);
+        console.log(`Timestamp: ${health.timestamp}`);
+      }),
+    );
 
-// Migration commands
-program
-  .command('migrate')
-  .description('Migrate components or tokens to new versions')
-  .option('-c, --component <id>', 'Component ID to migrate')
-  .option('-f, --from <version>', 'Source version')
-  .option('-t, --to <version>', 'Target version')
-  .option('--dry-run', 'Show what would be migrated without making changes')
-  .action(async (options: any) => {
-    try {
-      if (!options.component) {
-        console.error(chalk.red('Error: Component ID is required. Use --component <id>'));
-        process.exit(1);
-      }
-      await migrateComponent(options.component, options.from, options.to, options.dryRun);
-    } catch (error: any) {
-      console.error(chalk.red(`Error: ${error.message}`));
-      process.exit(1);
-    }
-  });
+  // -------------------------------------------------------------- scaffold
+  program
+    .command('scaffold')
+    .description('Scaffold a new component (src/components/<name>/) or token (tokens/<name>.json) on disk')
+    .addArgument(program.createArgument('<type>', 'What to scaffold').choices(['component', 'token']))
+    .requiredOption('-n, --name <name>', 'Name of the component/token')
+    .addOption(new Option('--framework <framework>', 'Component framework').choices(['vue', 'react']).default('vue'))
+    .option('-d, --dir <dir>', 'Target project directory', '.')
+    .option('--force', 'Overwrite existing files')
+    .option('--dry-run', 'Show the files that would be written without writing them')
+    .action(
+      run((type: 'component' | 'token', options: { name: string; framework: Framework; dir: string; force?: boolean; dryRun?: boolean }) => {
+        const rootDir = path.resolve(options.dir);
+        const planned =
+          type === 'component'
+            ? planComponentScaffold(rootDir, options.name, options.framework)
+            : planTokenScaffold(rootDir, options.name);
+        const written = writeFiles(planned, { force: options.force, dryRun: options.dryRun });
+        const what = type === 'component' ? `${options.framework} component` : 'token';
+        console.log(
+          options.dryRun
+            ? chalk.yellow(`[DRY RUN] Would scaffold ${what} '${options.name}' in ${rootDir}:`)
+            : chalk.green(`✓ Scaffolded ${what} '${options.name}' in ${rootDir}:`),
+        );
+        reportWritten(written, !!options.dryRun, rootDir);
+      }),
+    );
 
-// Helper functions
-async function scaffoldComponent(name: string, framework: string) {
-  const componentName = name.charAt(0).toUpperCase() + name.slice(1);
-  const dir = path.join(process.cwd(), 'src', 'components', name);
-  
-  if (fs.existsSync(dir)) {
-    console.error(chalk.red(`Error: Component directory already exists: ${dir}`));
-    process.exit(1);
-  }
-  
-  fs.mkdirSync(dir, { recursive: true });
-  
-  if (framework === 'vue') {
-    const vueTemplate = `<template>
-  <div class="${name}">
-    <!-- Component content -->
-  </div>
-</template>
+  // -------------------------------------------------------------- validate
+  program
+    .command('validate')
+    .description('Validate design system tokens and components (from the API, or a local JSON file)')
+    .addOption(new Option('-t, --type <type>', 'Type to validate').choices(['tokens', 'components', 'all']).default('all'))
+    .option('-f, --file <file>', 'Local JSON file to validate instead of the API')
+    .action(
+      run(async (options: { type: 'tokens' | 'components' | 'all'; file?: string }) => {
+        if (options.file) validateFile(options.file);
+        else await validateSystem(options.type);
+      }),
+    );
 
-<script setup>
-// Component logic
-</script>
+  // --------------------------------------------------------------- migrate
+  program
+    .command('migrate')
+    .description("Write a component's current source from the API (GET /components/:id) into the project")
+    .requiredOption('-c, --component <id>', 'Component ID to migrate')
+    .addOption(new Option('--framework <framework>', 'Which code to write').choices(['vue', 'react', 'html']).default('vue'))
+    .option('-d, --dir <dir>', 'Target project directory', '.')
+    .option('--from <version>', 'Source version (informational: the API has no versioned migration endpoint)')
+    .option('--to <version>', 'Target version (informational: the API only serves the current version)')
+    .option('--force', 'Overwrite existing files')
+    .option('--dry-run', 'Show what would be written without writing anything')
+    .action(
+      run(async (options: { component: string; framework: CodeFormat; dir: string; from?: string; to?: string; force?: boolean; dryRun?: boolean }) => {
+        const api = getAPI();
+        const component = await api.component(options.component);
+        const code = component.code?.[options.framework];
+        if (!code) {
+          throw new CliError(`Component '${options.component}' has no ${options.framework} code in the API`);
+        }
+        const rootDir = path.resolve(options.dir);
 
-<style scoped>
-.${name} {
-  /* Component styles */
-}
-</style>
-`;
-    fs.writeFileSync(path.join(dir, `${componentName}.vue`), vueTemplate);
-    
-    const testTemplate = `import { describe, it, expect } from 'vitest';
-import { mount } from '@vue/test-utils';
-import ${componentName} from './${componentName}.vue';
+        console.log(chalk.bold(`\nMigrating ${component.name} (${options.component})`));
+        if (options.from || options.to) {
+          console.log(
+            chalk.yellow(
+              `Note: the API has no versioned migration endpoint, so --from/--to are not applied; ` +
+                `writing the component's current ${options.framework} source.`,
+            ),
+          );
+        }
+        const planned = planComponentCode(rootDir, options.component, options.framework, code);
+        const written = writeFiles(planned, { force: options.force, dryRun: options.dryRun });
+        console.log(options.dryRun ? chalk.yellow('\n[DRY RUN] Would write:') : chalk.green('\n✓ Migration written:'));
+        reportWritten(written, !!options.dryRun, rootDir);
+      }),
+    );
 
-describe('${componentName}', () => {
-  it('renders correctly', () => {
-    const wrapper = mount(${componentName});
-    expect(wrapper.exists()).toBe(true);
-  });
-});
-`;
-    fs.writeFileSync(path.join(dir, `${componentName}.test.js`), testTemplate);
-  } else {
-    const reactTemplate = `import React from 'react';
-
-export const ${componentName} = () => {
-  return (
-    <div className="${name}">
-      {/* Component content */}
-    </div>
-  );
-};
-`;
-    fs.writeFileSync(path.join(dir, `${componentName}.jsx`), reactTemplate);
-    
-    const testTemplate = `import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { ${componentName} } from './${componentName}';
-
-describe('${componentName}', () => {
-  it('renders correctly', () => {
-    render(<${componentName} />);
-    expect(screen.getByRole('generic')).toBeInTheDocument();
-  });
-});
-`;
-    fs.writeFileSync(path.join(dir, `${componentName}.test.js`), testTemplate);
-  }
-  
-  console.log(chalk.green(`✓ Scaffolded ${framework} component '${name}' in ${dir}`));
+  return program;
 }
 
-async function scaffoldToken(name: string) {
-  const tokenFile = path.join(process.cwd(), 'tokens', `${name}.json`);
-  const tokenDir = path.dirname(tokenFile);
-  
-  if (!fs.existsSync(tokenDir)) {
-    fs.mkdirSync(tokenDir, { recursive: true });
-  }
-  
-  if (fs.existsSync(tokenFile)) {
-    console.error(chalk.red(`Error: Token file already exists: ${tokenFile}`));
-    process.exit(1);
-  }
-  
-  const tokenTemplate = {
-    [name]: {
-      value: '#000000',
-      type: 'color',
-      category: 'colors',
-      description: 'Token description'
-    }
-  };
-  
-  fs.writeFileSync(tokenFile, JSON.stringify(tokenTemplate, null, 2));
-  console.log(chalk.green(`✓ Scaffolded token '${name}' in ${tokenFile}`));
-}
-
-async function validateSystem(type: string) {
+async function validateSystem(type: 'tokens' | 'components' | 'all'): Promise<void> {
   const api = getAPI();
   const errors: string[] = [];
-  
+
   if (type === 'tokens' || type === 'all') {
     try {
       const { tokens } = await api.tokens();
-      tokens.forEach((token: any) => {
-        if (!token.name || !token.value || !token.type) {
-          errors.push(`Invalid token: ${token.name || 'unknown'}`);
-        }
-      });
+      for (const token of tokens) {
+        if (!token.name || !token.value || !token.type) errors.push(`Invalid token: ${token.name || 'unknown'}`);
+      }
       console.log(chalk.green(`✓ Validated ${tokens.length} tokens`));
-    } catch (error: any) {
-      errors.push(`Token validation error: ${error.message}`);
+    } catch (error) {
+      errors.push(`Token validation error: ${describeError(error)}`);
     }
   }
-  
+
   if (type === 'components' || type === 'all') {
     try {
       const { components } = await api.components();
-      components.forEach((component: any) => {
-        if (!component.id || !component.name) {
-          errors.push(`Invalid component: ${component.id || 'unknown'}`);
-        }
-      });
+      for (const component of components) {
+        if (!component.id || !component.name) errors.push(`Invalid component: ${component.id || 'unknown'}`);
+      }
       console.log(chalk.green(`✓ Validated ${components.length} components`));
-    } catch (error: any) {
-      errors.push(`Component validation error: ${error.message}`);
+    } catch (error) {
+      errors.push(`Component validation error: ${describeError(error)}`);
     }
   }
-  
+
   if (errors.length > 0) {
-    console.error(chalk.red(`\n✗ Found ${errors.length} validation errors:`));
-    errors.forEach(err => console.error(chalk.red(`  - ${err}`)));
-    process.exit(1);
-  } else {
-    console.log(chalk.green('\n✓ All validations passed'));
+    throw new CliError(`Found ${errors.length} validation errors:\n${errors.map((e) => `  - ${e}`).join('\n')}`);
   }
+  console.log(chalk.green('\n✓ All validations passed'));
 }
 
-async function validateFile(filePath: string) {
-  if (!fs.existsSync(filePath)) {
-    console.error(chalk.red(`Error: File not found: ${filePath}`));
-    process.exit(1);
+function validateFile(filePath: string): void {
+  if (!fs.existsSync(filePath)) throw new CliError(`File not found: ${filePath}`);
+
+  const data: unknown = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new CliError('File must contain a JSON object');
   }
-  
-  try {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const data = JSON.parse(content);
-    
-    // Basic validation
-    if (typeof data !== 'object') {
-      throw new Error('File must contain a JSON object');
-    }
-    
-    console.log(chalk.green(`✓ File '${filePath}' is valid JSON`));
-    
-    // Check for token structure
-    if (data.tokens || Object.keys(data).some(key => data[key].value)) {
-      console.log(chalk.green(`✓ File appears to contain valid token structure`));
-    }
-  } catch (error: any) {
-    console.error(chalk.red(`Error: ${error.message}`));
-    process.exit(1);
-  }
+  console.log(chalk.green(`✓ File '${filePath}' is valid JSON`));
+
+  const record = data as Record<string, unknown>;
+  const looksLikeTokens =
+    'tokens' in record ||
+    Object.values(record).some((v) => !!v && typeof v === 'object' && 'value' in (v as Record<string, unknown>));
+  if (looksLikeTokens) console.log(chalk.green(`✓ File appears to contain valid token structure`));
 }
 
-async function migrateComponent(componentId: string, fromVersion: string | undefined, toVersion: string | undefined, dryRun: boolean) {
-  const api = getAPI();
-  
-  try {
-    const component = await api.component(componentId);
-    
-    console.log(chalk.bold(`\nMigrating ${component.name} (${componentId})`));
-    if (fromVersion) console.log(`From: ${fromVersion}`);
-    if (toVersion) console.log(`To: ${toVersion}`);
-    
-    if (dryRun) {
-      console.log(chalk.yellow('\n[DRY RUN] Would migrate:'));
-      console.log(`  - Update component props`);
-      console.log(`  - Update component code`);
-      console.log(`  - Update tests`);
-    } else {
-      // In a real implementation, this would call a migration API endpoint
-      console.log(chalk.green('\n✓ Migration completed'));
-      console.log(chalk.dim('Note: Actual migration requires API endpoint implementation'));
-    }
-  } catch (error: any) {
-    console.error(chalk.red(`Error: ${error.message}`));
-    process.exit(1);
-  }
+if (require.main === module) {
+  createProgram()
+    .parseAsync(process.argv)
+    .catch((error: unknown) => {
+      console.error(chalk.red(`Error: ${describeError(error)}`));
+      process.exitCode = 1;
+    });
 }

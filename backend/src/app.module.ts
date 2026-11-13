@@ -21,26 +21,19 @@ import { ApiVersioningModule } from './api-versioning/api-versioning.module';
 import { SearchModule } from './search/search.module';
 import { SecurityModule } from './common/security/security.module';
 import { DesignExtractionModule } from './design-extraction/design-extraction.module';
-import { ElasticsearchModule } from '@nestjs/elasticsearch';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { rateLimitConfig } from './common/rate-limiting/rate-limit.config';
 import { APP_GUARD } from '@nestjs/core';
 import { CustomThrottlerGuard } from './common/rate-limiting/rate-limit.guard';
+import { AppElasticsearchModule } from './common/elasticsearch/elasticsearch.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { AltTextModule } from './alt-text/alt-text.module';
 
 @Module({
   imports: [
     ThrottlerModule.forRoot(rateLimitConfig),
-    ElasticsearchModule.registerAsync({
-      useFactory: () => {
-        const node = process.env.ELASTICSEARCH_NODE || 'http://localhost:9200';
-        return {
-          node,
-          // Make connection optional - don't fail if Elasticsearch isn't available
-          maxRetries: 0,
-          requestTimeout: 1000,
-        };
-      },
-    }),
+    AppElasticsearchModule,
+    AltTextModule,
     ColorPaletteModule,
     DesignSystemModule,
     AuditModule,
@@ -63,6 +56,7 @@ import { CustomThrottlerGuard } from './common/rate-limiting/rate-limit.guard';
     SearchModule,
     SecurityModule,
     DesignExtractionModule,
+    ReviewsModule,
   ],
   providers: [
     {

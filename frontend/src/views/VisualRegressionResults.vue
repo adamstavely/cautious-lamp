@@ -100,6 +100,8 @@
             </div>
           </div>
 
+          <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
+
           <!-- Search and Filters -->
           <div class="mb-6 space-y-4">
             <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -311,17 +313,21 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ImageComparisonSlider from '../components/ImageComparisonSlider.vue';
 import EnhancedDiffViewer from '../components/EnhancedDiffViewer.vue';
 import DatePicker from '../components/DatePicker.vue';
 import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 
 const route = useRoute();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 const testRun = ref(null);
 const results = ref([]);
 const loading = ref(false);
@@ -339,6 +345,8 @@ const sortOrder = ref('asc');
 const selectedResults = ref([]);
 let refreshInterval = null;
 let previousStatus = null;
+let unmounted = false;
+let loadSeq = 0;
 
 const filters = ['All', 'Passed', 'Failed', 'New', 'Removed'];
 
@@ -349,61 +357,108 @@ const sortOptions = [
   { value: 'date', label: 'Date' },
 ];
 
-const API_BASE_URL = 'http://localhost:3000/api/v1';
+const API_PATH = '/api/v1/visual-regression';
+const PAGE_LIMIT = 100; // the API's maximum page size
+const MAX_PAGES = 50;
 
+// The server's message or a readable fallback.
+const apiErrorMessage = (err, fallback) => {
+  const status = err?.response?.status;
+  if (status === 401 || status === 403) return 'Your API key was rejected or is missing. Check your API key.';
+  if (status === 404) return 'This test run does not exist.';
+  const message = err?.response?.data?.message;
+  if (Array.isArray(message)) return message.join(' ');
+  if (typeof message === 'string' && message) return message;
+  if (!err?.response) return 'Could not reach the server. Check your connection and try again.';
+  return fallback;
+};
 
+const runPath = () => `${API_PATH}/runs/${encodeURIComponent(route.params.runId)}`;
 
+// Results are paginated ({ data, pagination }); fetch every page.
+const fetchAllResults = async () => {
+  const all = [];
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const response = await apiClient.get(`${runPath()}/results`, { params: { page, limit: PAGE_LIMIT } });
+    const body = response.data;
+    if (Array.isArray(body)) return body;
+    all.push(...(body?.data ?? []));
+    if (!body?.pagination?.hasNext) break;
+  }
+  return all;
+};
 
+const stopAutoRefresh = () => {
+  autoRefresh.value = false;
+  if (refreshInterval) {
+    clearInterval(refreshInterval);
+    refreshInterval = null;
+  }
+};
 
 const loadResults = async () => {
+  const seq = ++loadSeq;
   loading.value = true;
-  error.value = null;
   try {
-    const [runResponse, resultsResponse] = await Promise.all([
-      axios.get(`${API_BASE_URL}/visual-regression/runs/${route.params.runId}`),
-      axios.get(`${API_BASE_URL}/visual-regression/runs/${route.params.runId}/results`),
+    const [runResponse, allResults] = await Promise.all([
+      apiClient.get(runPath()),
+      fetchAllResults(),
     ]);
+    // Only the latest request wins (e.g. a reload after approving vs. an older
+    // auto-refresh, or a run we've navigated away from).
+    if (unmounted || seq !== loadSeq) return;
     testRun.value = runResponse.data;
-    results.value = resultsResponse.data;
+    results.value = allResults;
+    error.value = null;
+    // Drop selections for results that no longer exist
+    const ids = new Set(allResults.map((r) => r.id));
+    selectedResults.value = selectedResults.value.filter((id) => ids.has(id));
     
     // Check if status changed and show notification
     if (previousStatus && previousStatus !== testRun.value.status) {
       if (testRun.value.status === 'completed') {
-        window.showToast?.('Test run completed!', 'success');
+        showNotice('Test run completed.', 'success');
       } else if (testRun.value.status === 'failed') {
-        window.showToast?.('Test run failed', 'error');
+        showNotice('Test run failed.', 'error');
       }
     }
     previousStatus = testRun.value.status;
     
     // Stop auto-refresh if completed
     if (testRun.value.status === 'completed' || testRun.value.status === 'failed') {
-      autoRefresh.value = false;
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-        refreshInterval = null;
-      }
+      stopAutoRefresh();
     }
   } catch (err) {
-    error.value = err.response?.data?.message || err.message || 'Failed to load results';
+    if (unmounted || seq !== loadSeq) return;
     console.error('Failed to load results:', err);
-    window.showToast?.(error.value, 'error');
+    const message = apiErrorMessage(err, 'Failed to load results.');
+    if (testRun.value) {
+      // Keep showing what we have; a background refresh failed.
+      showNotice(message, 'error');
+    } else {
+      error.value = message;
+    }
   } finally {
-    loading.value = false;
+    if (seq === loadSeq) loading.value = false;
   }
 };
+
+// Single request helpers (no reload, no busy flag) shared by single and bulk actions
+const requestApprove = (resultId) =>
+  apiClient.post(`${API_PATH}/results/${encodeURIComponent(resultId)}/approve`);
+const requestReject = (resultId) =>
+  apiClient.post(`${API_PATH}/results/${encodeURIComponent(resultId)}/reject`);
 
 const approveDiff = async (resultId) => {
   if (processing.value) return;
   processing.value = true;
   try {
-    await axios.post(`${API_BASE_URL}/visual-regression/results/${resultId}/approve`);
-    window.showToast?.('Diff approved successfully', 'success');
+    await requestApprove(resultId);
+    showNotice('Diff approved.', 'success');
     await loadResults();
   } catch (err) {
-    const errorMsg = err.response?.data?.message || err.message || 'Failed to approve diff';
-    window.showToast?.(errorMsg, 'error');
     console.error('Failed to approve diff:', err);
+    showNotice(apiErrorMessage(err, 'Failed to approve diff.'), 'error');
   } finally {
     processing.value = false;
   }
@@ -413,13 +468,12 @@ const rejectDiff = async (resultId) => {
   if (processing.value) return;
   processing.value = true;
   try {
-    await axios.post(`${API_BASE_URL}/visual-regression/results/${resultId}/reject`);
-    window.showToast?.('Diff rejected', 'info');
+    await requestReject(resultId);
+    showNotice('Diff rejected.', 'info');
     await loadResults();
   } catch (err) {
-    const errorMsg = err.response?.data?.message || err.message || 'Failed to reject diff';
-    window.showToast?.(errorMsg, 'error');
     console.error('Failed to reject diff:', err);
+    showNotice(apiErrorMessage(err, 'Failed to reject diff.'), 'error');
   } finally {
     processing.value = false;
   }
@@ -441,8 +495,8 @@ const filteredResults = computed(() => {
   
   // Apply search filter
   if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase();
-    filtered = filtered.filter(r => r.testName.toLowerCase().includes(query));
+    const query = searchQuery.value.trim().toLowerCase();
+    filtered = filtered.filter(r => (r.testName || '').toLowerCase().includes(query));
   }
   
   // Apply date range filter (if testRun has dates)
@@ -466,13 +520,13 @@ const filteredResults = computed(() => {
     
     switch (sortBy.value) {
       case 'name':
-        comparison = a.testName.localeCompare(b.testName);
+        comparison = (a.testName || '').localeCompare(b.testName || '');
         break;
       case 'diffPercentage':
         comparison = (a.diffPercentage || 0) - (b.diffPercentage || 0);
         break;
       case 'status':
-        comparison = a.status.localeCompare(b.status);
+        comparison = (a.status || '').localeCompare(b.status || '');
         break;
       case 'date':
         // Use testRun date if available
@@ -488,41 +542,41 @@ const filteredResults = computed(() => {
   return filtered;
 });
 
-const bulkApprove = async () => {
-  if (selectedResults.value.length === 0 || processing.value) return;
+// Run a request per selected result, then reload once and report how many succeeded.
+const runBulk = async (eligible, request, verb) => {
+  const ids = selectedResults.value.filter((id) => {
+    const result = results.value.find((r) => r.id === id);
+    return result && eligible(result);
+  });
+  if (ids.length === 0) {
+    showNotice(`None of the selected results can be ${verb}.`, 'warning');
+    return;
+  }
   processing.value = true;
   try {
-    const promises = selectedResults.value.map(id => approveDiff(id));
-    await Promise.all(promises);
-    window.showToast?.(`Approved ${selectedResults.value.length} results`, 'success');
+    const outcomes = await Promise.allSettled(ids.map((id) => request(id)));
+    const failed = outcomes.filter((o) => o.status === 'rejected').length;
+    const succeeded = ids.length - failed;
+    if (failed > 0) {
+      showNotice(`${verb[0].toUpperCase()}${verb.slice(1)} ${succeeded} of ${ids.length} results; ${failed} failed.`, 'error');
+    } else {
+      showNotice(`${verb[0].toUpperCase()}${verb.slice(1)} ${succeeded} result${succeeded === 1 ? '' : 's'}.`, 'success');
+    }
     selectedResults.value = [];
     await loadResults();
-  } catch (err) {
-    window.showToast?.('Failed to approve some results', 'error');
   } finally {
     processing.value = false;
   }
 };
 
+const bulkApprove = async () => {
+  if (selectedResults.value.length === 0 || processing.value) return;
+  await runBulk((r) => (r.status === 'failed' || r.status === 'new') && !r.approved, requestApprove, 'approved');
+};
+
 const bulkReject = async () => {
   if (selectedResults.value.length === 0 || processing.value) return;
-  processing.value = true;
-  try {
-    const promises = selectedResults.value
-      .map(id => {
-        const result = results.value.find(r => r.id === id);
-        return result && result.status === 'failed' ? rejectDiff(id) : Promise.resolve();
-      })
-      .filter(p => p);
-    await Promise.all(promises);
-    window.showToast?.(`Rejected ${selectedResults.value.length} results`, 'info');
-    selectedResults.value = [];
-    await loadResults();
-  } catch (err) {
-    window.showToast?.('Failed to reject some results', 'error');
-  } finally {
-    processing.value = false;
-  }
+  await runBulk((r) => r.status === 'failed', requestReject, 'rejected');
 };
 
 const getStatusClass = (status) => {
@@ -548,87 +602,76 @@ const getResultStatusClass = (status) => {
 const formatDate = (dateString) => {
   if (!dateString) return 'Never';
   const date = new Date(dateString);
-  return date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? 'Never' : date.toLocaleString();
 };
 
 const toggleAutoRefresh = () => {
-  autoRefresh.value = !autoRefresh.value;
   if (autoRefresh.value) {
-    refreshInterval = setInterval(() => {
-      if (testRun.value && (testRun.value.status === 'running' || testRun.value.status === 'pending')) {
-        loadResults();
-      }
-    }, 5000);
-    window.showToast?.('Auto-refresh enabled', 'info');
-  } else {
-    if (refreshInterval) {
-      clearInterval(refreshInterval);
-      refreshInterval = null;
-    }
-    window.showToast?.('Auto-refresh disabled', 'info');
+    stopAutoRefresh();
+    showNotice('Auto-refresh disabled.', 'info');
+    return;
   }
+  autoRefresh.value = true;
+  refreshInterval = setInterval(() => {
+    if (testRun.value && (testRun.value.status === 'running' || testRun.value.status === 'pending')) {
+      loadResults();
+    }
+  }, 5000);
+  showNotice('Auto-refresh enabled.', 'info');
+};
+
+// Quote a CSV field; prefix values that spreadsheets would run as formulas.
+const csvField = (value) => {
+  let text = String(value ?? '');
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
 };
 
 const exportResults = () => {
+  if (!testRun.value) return;
   try {
-    const data = {
-      testRun: {
-        id: testRun.value.id,
-        status: testRun.value.status,
-        branch: testRun.value.branch,
-        commitSha: testRun.value.commitSha,
-        startedAt: testRun.value.startedAt,
-        completedAt: testRun.value.completedAt,
-      },
-      results: filteredResults.value.map(r => ({
-        testName: r.testName,
-        status: r.status,
-        diffPercentage: r.diffPercentage,
-        approved: r.approved,
-      })),
-      summary: testRun.value.resultsSummary,
-    };
-    
-    // Create CSV
     const csvRows = [
-      ['Test Name', 'Status', 'Diff %', 'Approved'].join(','),
+      ['Test Name', 'Status', 'Diff %', 'Approved'].map(csvField).join(','),
       ...filteredResults.value.map(r => [
-        `"${r.testName}"`,
+        r.testName,
         r.status,
-        r.diffPercentage || 0,
+        r.diffPercentage ?? 0,
         r.approved ? 'Yes' : 'No',
-      ].join(','))
+      ].map(csvField).join(','))
     ];
     
-    const csv = csvRows.join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
+    const csv = csvRows.join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `visual-regression-results-${testRun.value.id}-${Date.now()}.csv`;
+    const safeId = String(testRun.value.id).replace(/[^a-z0-9_-]/gi, '_');
+    a.download = `visual-regression-results-${safeId}-${Date.now()}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
     
-    window.showToast?.('Results exported successfully', 'success');
+    showNotice('Results exported.', 'success');
   } catch (err) {
-    window.showToast?.('Failed to export results', 'error');
+    showNotice('Failed to export results.', 'error');
     console.error('Export failed:', err);
   }
 };
 
 // Keyboard shortcuts
 const handleKeydown = (e) => {
-  // Don't handle shortcuts when typing in inputs
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-    if (e.key === '/') {
-      e.preventDefault();
-      const searchInput = document.querySelector('input[placeholder*="Search"]');
-      if (searchInput) searchInput.focus();
-    }
+  // Leave browser/OS shortcuts (Cmd+R, Ctrl+A, ...) alone
+  if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+  // Don't handle shortcuts while typing (so "/" etc. can be typed in the search box)
+  const target = e.target;
+  if (
+    target instanceof HTMLElement &&
+    (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+  ) {
     return;
   }
+  if (typeof e.key !== 'string') return;
   
   switch (e.key.toLowerCase()) {
     case 'j':
@@ -663,11 +706,12 @@ const handleKeydown = (e) => {
         }
       }
       break;
-    case '/':
+    case '/': {
       e.preventDefault();
       const searchInput = document.querySelector('input[placeholder*="Search"]');
       if (searchInput) searchInput.focus();
       break;
+    }
   }
 };
 
@@ -691,33 +735,32 @@ const toggleResultSelection = (resultId) => {
 };
 
 // Watch for filter/search changes to reset selection
-watch([activeFilter, searchQuery], () => {
+watch([activeFilter, searchQuery, sortBy, sortOrder], () => {
   selectedIndex.value = -1;
+  resultRefs.value = [];
 });
 
-let darkModeObserver = null;
+// Navigating to another run reuses this component.
+watch(() => route.params.runId, (id, oldId) => {
+  if (!id || id === oldId) return;
+  stopAutoRefresh();
+  testRun.value = null;
+  results.value = [];
+  selectedResults.value = [];
+  selectedIndex.value = -1;
+  previousStatus = null;
+  error.value = null;
+  loadResults();
+});
 
 onMounted(() => {
   loadResults();
   document.addEventListener('keydown', handleKeydown);
-
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
 });
 
 onBeforeUnmount(() => {
+  unmounted = true;
   document.removeEventListener('keydown', handleKeydown);
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (refreshInterval) {
-    clearInterval(refreshInterval);
-  }
+  stopAutoRefresh();
 });
 </script>

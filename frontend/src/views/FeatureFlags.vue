@@ -536,7 +536,7 @@ import Breadcrumbs from '../components/Breadcrumbs.vue';
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 let darkModeObserver = null;
 let darkModeInterval = null;

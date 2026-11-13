@@ -1,76 +1,133 @@
 <template>
   <div class="fullscreen-preview">
-    <iframe
-      v-if="previewUrl"
-      :src="previewUrl"
-      class="w-full h-full"
-      frameborder="0"
-    ></iframe>
+    <PreviewFrame
+      v-if="state === 'ready'"
+      :url="previewUrl"
+      :review-id="reviewId"
+      :version-id="versionId"
+      :content-type="contentType"
+      :sync-annotations="false"
+      read-only
+      fill
+    />
     <div v-else class="flex items-center justify-center h-full">
-      <div class="text-center">
-        <p class="text-gray-500">Loading preview...</p>
+      <div class="text-center px-6" :role="state === 'loading' ? 'status' : 'alert'">
+        <p class="text-gray-300">{{ message }}</p>
+        <button
+          v-if="state === 'error'"
+          class="mt-4 px-4 py-2 text-sm font-medium text-white rounded-lg bg-indigo-500 hover:bg-indigo-400 transition-colors"
+          @click="load()"
+        >
+          Try again
+        </button>
       </div>
     </div>
+
+    <PasswordPrompt
+      v-model="showPasswordPrompt"
+      :error="passwordError"
+      :loading="passwordSubmitting"
+      @submit="submitPassword"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { mockAPI, isMockMode } from '../mockData.js';
-import axios from 'axios';
+import PreviewFrame from '../components/review-ui/PreviewFrame.vue';
+import PasswordPrompt from '../components/review-ui/PasswordPrompt.vue';
+import {
+  reviewAPI,
+  reviewPasswords,
+  isPasswordRequired,
+  errorStatus,
+  apiErrorMessage,
+} from '../services/api.js';
 
 const route = useRoute();
-const reviewId = route.params.id;
-const versionId = route.query.version || '';
+const reviewId = computed(() => String(route.params.id || ''));
 
+// 'loading' | 'ready' | 'password' | 'error'
+const state = ref('loading');
+const errorMessage = ref('');
 const previewUrl = ref('');
+const contentType = ref(null);
+const versionId = ref('');
+const showPasswordPrompt = ref(false);
+const passwordError = ref('');
+const passwordSubmitting = ref(false);
 
-onMounted(async () => {
-  try {
-    const useMockMode = await isMockMode();
-    let reviewData = null;
-    
-    if (useMockMode) {
-      // Get review data first to get filename
-      reviewData = await mockAPI.getReview(reviewId);
-      
-      // Get version ID from query param or get first version
-      let version = versionId;
-      if (!version) {
-        version = reviewData.versions[0]?.id;
-      }
-      
-      if (version) {
-        const res = await mockAPI.getVersion(reviewId, version);
-        previewUrl.value = res.url;
-      }
-    } else {
-      // Use real API
-      reviewData = await axios.get(`/review/${reviewId}`);
-      
-      let version = versionId;
-      if (!version) {
-        version = reviewData.data.versions[0]?.id;
-      }
-      
-      if (version) {
-        const res = await axios.get(`/review/${reviewId}/version/${version}`);
-        previewUrl.value = res.data.url;
-      }
-    }
-    
-    // Update document title
-    if (reviewData) {
-      const filename = useMockMode ? reviewData.filename : reviewData.data.filename;
-      if (filename) {
-        document.title = `${filename} - Design Review`;
-      }
-    }
-  } catch (error) {
-    console.error('Failed to load preview:', error);
-  }
+const message = computed(() => {
+  if (state.value === 'loading') return 'Loading preview...';
+  if (state.value === 'password') return 'This review is password protected.';
+  return errorMessage.value;
 });
+
+let loadToken = 0;
+
+const load = async ({ password } = {}) => {
+  const id = reviewId.value;
+  const token = ++loadToken;
+  state.value = 'loading';
+
+  try {
+    const review = password !== undefined ? await reviewAPI.getReview(id, password) : await reviewAPI.getReview(id);
+    if (token !== loadToken) return;
+    if (password) reviewPasswords.set(id, password);
+    showPasswordPrompt.value = false;
+    passwordError.value = '';
+    if (review.filename) document.title = `${review.filename} - Design Review`;
+
+    // ?version=<id>, else the latest version; URL reviews without versions show their link
+    const versions = review.versions || [];
+    const requested = typeof route.query.version === 'string' ? route.query.version : '';
+    const version = versions.find((v) => v.id === requested) || versions[versions.length - 1];
+
+    if (version) {
+      const url = await reviewAPI.getVersion(id, version.id);
+      if (token !== loadToken) return;
+      versionId.value = version.id;
+      contentType.value = version.contentType || null;
+      previewUrl.value = url;
+    } else if (review.sourceType === 'url' && review.url) {
+      versionId.value = '';
+      contentType.value = null;
+      previewUrl.value = review.url;
+    } else {
+      errorMessage.value = 'This review has no file to preview yet.';
+      state.value = 'error';
+      return;
+    }
+    state.value = 'ready';
+  } catch (error) {
+    if (token !== loadToken) return;
+    if (isPasswordRequired(error)) {
+      reviewPasswords.clear(id);
+      passwordError.value = password ? 'That password is not correct.' : '';
+      state.value = 'password';
+      showPasswordPrompt.value = true;
+      return;
+    }
+    console.error('Failed to load preview:', error);
+    const status = errorStatus(error);
+    errorMessage.value = status === 403
+      ? "This review hasn't been shared with you."
+      : apiErrorMessage(error, 'Failed to load the preview.');
+    state.value = 'error';
+  }
+};
+
+const submitPassword = async (password) => {
+  passwordSubmitting.value = true;
+  try {
+    await load({ password });
+  } finally {
+    passwordSubmitting.value = false;
+  }
+};
+
+watch([reviewId, () => route.query.version], () => load(), { immediate: true });
 </script>
 
 <style scoped>
@@ -83,11 +140,4 @@ onMounted(async () => {
   overflow: hidden;
   background: #000;
 }
-
-.fullscreen-preview iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
-}
 </style>
-

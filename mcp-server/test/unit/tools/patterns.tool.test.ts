@@ -31,7 +31,25 @@ describe('Patterns Tool', () => {
       const result = await getPatterns({});
 
       expect(result).toEqual(mockResponse);
-      expect(mockApiClient.get).toHaveBeenCalledWith('/patterns-library/patterns', {}, 'patterns');
+      // Patterns library is mounted at the server root, not under /api/v1
+      expect(mockApiClient.get).toHaveBeenCalledWith('http://localhost:3000/patterns-library/patterns', {}, 'patterns');
+    });
+
+    it('should wrap the bare array the backend returns', async () => {
+      const patterns = [
+        { id: 'pattern1', name: 'Pattern 1', description: 'Test pattern', category: 'layout' as const, createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+      ];
+
+      mockApiClient.get.mockResolvedValue(patterns);
+
+      const result = await getPatterns({ category: 'layout' });
+
+      expect(result).toEqual({ patterns, count: 1 });
+      expect(mockApiClient.get).toHaveBeenCalledWith(
+        'http://localhost:3000/patterns-library/patterns',
+        { category: 'layout' },
+        'patterns'
+      );
     });
   });
 
@@ -51,6 +69,11 @@ describe('Patterns Tool', () => {
       const result = await getPattern({ id: 'pattern1' });
 
       expect(result).toEqual(mockPattern);
+      expect(mockApiClient.get).toHaveBeenCalledWith(
+        'http://localhost:3000/patterns-library/patterns/pattern1',
+        undefined,
+        'patterns'
+      );
     });
   });
 
@@ -68,6 +91,11 @@ describe('Patterns Tool', () => {
       const result = await getPatternsByComponent({ componentId: 'button' });
 
       expect(result).toEqual(mockResponse);
+      expect(mockApiClient.get).toHaveBeenCalledWith(
+        'http://localhost:3000/patterns-library/patterns/component/button',
+        undefined,
+        'patterns'
+      );
     });
   });
 });

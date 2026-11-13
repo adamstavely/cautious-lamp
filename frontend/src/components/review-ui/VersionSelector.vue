@@ -64,47 +64,16 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { useDarkMode } from '../../composables/useDarkMode.js';
 
-// Check if dark mode is active - make it reactive
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-
-// Watch for dark class changes on html element using MutationObserver
-let darkModeObserver = null;
-let darkModeInterval = null;
+const isDarkMode = useDarkMode();
 
 onMounted(() => {
-  // Set up dark mode observer
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  // Also check periodically as a fallback
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  // Check immediately
-  checkDarkMode();
-  
-  // Check every 100ms as fallback
-  darkModeInterval = setInterval(checkDarkMode, 100);
-  
   updateMenuWidth();
   window.addEventListener('resize', updateMenuWidth);
 });
 
 onUnmounted(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
   window.removeEventListener('resize', updateMenuWidth);
 });
 

@@ -3,6 +3,7 @@ import { logger } from './logger';
 
 const CACHE_ENABLED = process.env.CACHE_ENABLED !== 'false';
 const CACHE_TTL_DEFAULT = parseInt(process.env.CACHE_TTL_DEFAULT || '300', 10);
+const CACHE_MAX_KEYS = parseInt(process.env.CACHE_MAX_KEYS || '1000', 10);
 
 // TTL configuration per resource type (in seconds)
 const TTL_CONFIG: Record<string, number> = {
@@ -30,6 +31,7 @@ class Cache {
       stdTTL: CACHE_TTL_DEFAULT,
       checkperiod: 60, // Check for expired keys every 60 seconds
       useClones: false, // Better performance, but be careful with mutations
+      maxKeys: CACHE_MAX_KEYS, // Bound memory; a full cache skips caching instead of growing
     });
 
     this.stats = {
@@ -108,8 +110,20 @@ class Cache {
     const key = this.generateKey(resourceType, params);
     const ttl = customTTL || this.getTTL(resourceType);
 
-    const success = this.cache.set(key, value, ttl);
-    
+    let success: boolean;
+    try {
+      success = this.cache.set(key, value, ttl);
+    } catch (error) {
+      // node-cache throws ECACHEFULL once maxKeys is reached; skip caching rather than fail the request
+      logger.warn('Cache full, skipping cache set', {
+        key,
+        resourceType,
+        maxKeys: CACHE_MAX_KEYS,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+
     if (success) {
       logger.debug('Cache set', { key, resourceType, ttl });
     } else {

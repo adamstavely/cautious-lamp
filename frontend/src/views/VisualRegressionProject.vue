@@ -17,6 +17,18 @@
           <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading project...</p>
         </div>
 
+        <!-- Load error / not found -->
+        <div v-else-if="loadError" class="max-w-7xl mx-auto py-12 text-center">
+          <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">error</span>
+          <p class="text-lg font-medium mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ loadError }}</p>
+          <button
+            @click="router.push('/tools/visual-regression')"
+            class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+          >
+            Back to projects
+          </button>
+        </div>
+
         <!-- Project Content -->
         <div v-else-if="project" class="max-w-7xl mx-auto">
           <!-- Header -->
@@ -36,6 +48,8 @@
               </button>
             </div>
           </div>
+
+          <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
 
           <!-- Tabs -->
           <div class="mb-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
@@ -90,7 +104,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div class="rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
                 <div class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Total Runs</div>
-                <div class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ testRuns.length }}</div>
+                <div class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ totalRunCount }}</div>
               </div>
               <div class="rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
                 <div class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Last Run</div>
@@ -224,14 +238,30 @@
                 <input
                   v-model="projectForm.argosBranch"
                   type="text"
-                  readonly
-                  class="w-full px-4 py-2 border rounded-lg bg-gray-100 dark:bg-slate-600 cursor-not-allowed"
-                  :class="isDarkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-600'"
+                  placeholder="develop"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
                 />
                 <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                  Branch is set to <strong>develop</strong> by default for all projects
+                  The branch new test runs compare against (defaults to <strong>develop</strong>)
                 </p>
               </div>
+
+              <div>
+                <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Argos URL</label>
+                <input
+                  v-model="projectForm.argosBaseUrl"
+                  type="url"
+                  placeholder="https://app.argos-ci.com"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                />
+                <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                  Self-hosted Argos URLs must be on the server's allow-list.
+                </p>
+              </div>
+
+              <InlineNotice :notice="settingsNotice" @dismiss="clearSettingsNotice" />
 
               <div class="flex justify-end gap-3 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
                 <button
@@ -259,21 +289,28 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
-import axios from 'axios';
+import apiClient from '../services/api.js';
 
 const route = useRoute();
 const router = useRouter();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
+const { notice: settingsNotice, showNotice: showSettingsNotice, clearNotice: clearSettingsNotice } = useNotice();
 const project = ref(null);
 const loading = ref(false);
+const loadError = ref('');
 const activeTab = ref('overview');
 const testRuns = ref([]);
+const totalRunCount = ref(0);
 const testRunning = ref(false);
 const saving = ref(false);
 
@@ -281,27 +318,51 @@ const projectForm = ref({
   name: '',
   description: '',
   argosBranch: 'develop',
+  argosBaseUrl: '',
 });
 
-const API_BASE_URL = 'http://localhost:3000/api/v1';
+const API_PATH = '/api/v1/visual-regression';
+const POLL_INTERVAL_MS = 3000;
+const MAX_POLLS = 40; // stop polling after ~2 minutes
+let pollTimer = null;
+let pollCount = 0;
+let unmounted = false;
 
+// The server's message (e.g. the 400 for an Argos URL that isn't allow-listed)
+// or a readable fallback.
+const apiErrorMessage = (error, fallback) => {
+  const status = error?.response?.status;
+  if (status === 401 || status === 403) return 'Your API key was rejected or is missing. Check your API key.';
+  const message = error?.response?.data?.message;
+  if (Array.isArray(message)) return message.join(' ');
+  if (typeof message === 'string' && message) return message;
+  if (!error?.response) return 'Could not reach the server. Check your connection and try again.';
+  return fallback;
+};
 
+const projectPath = () => `${API_PATH}/projects/${encodeURIComponent(route.params.id)}`;
 
-
+const formFromProject = (p) => ({
+  name: p.name,
+  description: p.description || '',
+  argosBranch: p.argosBranch || 'develop',
+  argosBaseUrl: p.argosBaseUrl || '',
+});
 
 const loadProject = async () => {
   loading.value = true;
+  loadError.value = '';
   try {
-    const response = await axios.get(`${API_BASE_URL}/visual-regression/projects/${route.params.id}`);
+    const response = await apiClient.get(projectPath());
     project.value = response.data;
-    projectForm.value = {
-      name: project.value.name,
-      description: project.value.description || '',
-      argosBranch: project.value.argosBranch || 'develop',
-    };
+    projectForm.value = formFromProject(project.value);
     await loadTestRuns();
   } catch (error) {
     console.error('Failed to load project:', error);
+    project.value = null;
+    loadError.value = error?.response?.status === 404
+      ? 'This project does not exist or was deleted.'
+      : apiErrorMessage(error, 'Failed to load project.');
   } finally {
     loading.value = false;
   }
@@ -309,43 +370,83 @@ const loadProject = async () => {
 
 const loadTestRuns = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/visual-regression/projects/${route.params.id}/runs`);
-    testRuns.value = response.data;
+    const response = await apiClient.get(`${projectPath()}/runs`, { params: { page: 1, limit: 100 } });
+    // The endpoint is paginated: { data, pagination }
+    const body = response.data;
+    testRuns.value = Array.isArray(body) ? body : body?.data ?? [];
+    totalRunCount.value = body?.pagination?.total ?? testRuns.value.length;
   } catch (error) {
     console.error('Failed to load test runs:', error);
+    showNotice(apiErrorMessage(error, 'Failed to load test runs.'), 'error');
   }
 };
 
+const hasActiveRun = () => testRuns.value.some((run) => run.status === 'pending' || run.status === 'running');
+
+const stopPolling = () => {
+  clearTimeout(pollTimer);
+  pollTimer = null;
+};
+
+// Refresh the run list until no run is pending/running (or we give up).
+const pollRuns = () => {
+  stopPolling();
+  pollTimer = setTimeout(async () => {
+    if (unmounted) return;
+    await loadTestRuns();
+    pollCount += 1;
+    if (!unmounted && hasActiveRun() && pollCount < MAX_POLLS) {
+      pollRuns();
+    } else {
+      testRunning.value = false;
+    }
+  }, POLL_INTERVAL_MS);
+};
+
 const triggerTest = async () => {
+  if (!project.value) return;
   testRunning.value = true;
   try {
-    const response = await axios.post(`${API_BASE_URL}/visual-regression/projects/${route.params.id}/runs`, {
+    await apiClient.post(`${projectPath()}/runs`, {
       branch: project.value.argosBranch || 'develop',
     });
-    window.showToast?.('Test run started successfully', 'success');
-    // Poll for updates
-    setTimeout(() => {
-      loadTestRuns();
-      testRunning.value = false;
-    }, 2000);
+    showNotice('Test run started.', 'success');
+    pollCount = 0;
+    pollRuns();
   } catch (error) {
-    const errorMsg = error.response?.data?.message || error.message || 'Failed to trigger test';
-    window.showToast?.(errorMsg, 'error');
     console.error('Failed to trigger test:', error);
+    showNotice(apiErrorMessage(error, 'Failed to trigger test.'), 'error');
     testRunning.value = false;
   }
 };
 
 const updateProject = async () => {
+  if (!project.value) return;
+  const name = projectForm.value.name.trim();
+  if (!name) {
+    showSettingsNotice('Project name is required.', 'error');
+    return;
+  }
   saving.value = true;
+  clearSettingsNotice();
   try {
-    await axios.put(`${API_BASE_URL}/visual-regression/projects/${route.params.id}`, projectForm.value);
-    window.showToast?.('Project updated successfully', 'success');
+    const payload = {
+      name,
+      description: projectForm.value.description,
+      argosBranch: projectForm.value.argosBranch.trim() || 'develop',
+    };
+    // Only send the Argos URL when it changed: the server re-checks the
+    // connection (and its allow-list) whenever it is present.
+    const baseUrl = projectForm.value.argosBaseUrl.trim();
+    if (baseUrl && baseUrl !== (project.value.argosBaseUrl || '')) {
+      payload.argosBaseUrl = baseUrl;
+    }
+    await apiClient.put(projectPath(), payload);
+    showSettingsNotice('Project updated successfully.', 'success');
     await loadProject();
   } catch (error) {
-    const errorMsg = error.response?.data?.message || error.message || 'Failed to update project';
-    window.showToast?.(errorMsg, 'error');
     console.error('Failed to update project:', error);
+    showSettingsNotice(apiErrorMessage(error, 'Failed to update project.'), 'error');
   } finally {
     saving.value = false;
   }
@@ -353,12 +454,9 @@ const updateProject = async () => {
 
 const resetForm = () => {
   if (project.value) {
-    projectForm.value = {
-      name: project.value.name,
-      description: project.value.description || '',
-      argosBranch: project.value.argosBranch || 'develop',
-    };
+    projectForm.value = formFromProject(project.value);
   }
+  clearSettingsNotice();
 };
 
 const navigateToResults = (runId) => {
@@ -378,43 +476,31 @@ const getStatusClass = (status) => {
 const formatDate = (dateString) => {
   if (!dateString) return 'Never';
   const date = new Date(dateString);
-  return date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? 'Never' : date.toLocaleString();
 };
 
+// Runs come back newest first
 const lastRun = computed(() => {
   return testRuns.value.length > 0 ? testRuns.value[0] : null;
 });
 
-let darkModeObserver = null;
-let darkModeInterval = null;
+// Navigating from one project to another reuses this component.
+watch(() => route.params.id, (id, oldId) => {
+  if (id && id !== oldId) {
+    stopPolling();
+    testRunning.value = false;
+    activeTab.value = 'overview';
+    loadProject();
+  }
+});
 
 onMounted(() => {
   loadProject();
-
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
 });
 
 onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
+  unmounted = true;
+  stopPolling();
 });
 </script>
 

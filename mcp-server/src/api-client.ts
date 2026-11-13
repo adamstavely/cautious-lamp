@@ -88,6 +88,28 @@ async function retryRequest<T>(
   throw lastError || new Error('Request failed after retries');
 }
 
+/**
+ * Send a non-idempotent request (POST/PUT/DELETE) exactly once. These are never
+ * retried: a timed-out create may already have been applied on the server, and
+ * re-sending it would duplicate the write.
+ */
+async function sendOnce<T>(
+  requestFn: () => Promise<{ data: T }>,
+  context: string
+): Promise<T> {
+  try {
+    const response = await requestFn();
+    return response.data;
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(`Unexpected error: ${String(error)}`);
+    logger.error('Request failed (not retried)', {
+      context,
+      error: err.message,
+    });
+    throw err;
+  }
+}
+
 export class ApiClient {
   private client: AxiosInstance;
   private retryConfig: Required<RetryConfig>;
@@ -148,14 +170,15 @@ export class ApiClient {
           newError.response = error.response;
           newError.isAxiosError = true;
           throw newError;
-        } else if (error.request) {
-          // Request made but no response received
+        } else if (error.request || error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+          // Request made but no response received (including timeouts)
           logger.error('API request timeout', {
             url: error.config?.url,
             baseURL: config.apiBaseUrl,
           });
           const newError = new Error(`API Request failed: No response from server at ${config.apiBaseUrl}`) as any;
-          newError.request = error.request;
+          newError.request = error.request ?? error.config;
+          newError.code = error.code;
           newError.isAxiosError = true;
           throw newError;
         } else {
@@ -167,20 +190,37 @@ export class ApiClient {
     );
   }
 
-  async get<T>(path: string, params?: Record<string, any>, resourceType?: string): Promise<T> {
+  /**
+   * GET with retries. `headers` are sent on this request only (e.g. a review
+   * password, which must never go in the query string). Requests with extra
+   * headers are never cached, since the response can depend on them.
+   */
+  async get<T>(
+    path: string,
+    params?: Record<string, any>,
+    resourceType?: string,
+    headers?: Record<string, string>
+  ): Promise<T> {
     // Try to get from cache first
+    // The path is part of the cache key so different endpoints with the same
+    // params (e.g. workspace assets vs. icons) never share an entry.
+    const cacheParams = { ...params, __path: path };
+    if (headers && Object.keys(headers).length > 0) {
+      resourceType = undefined;
+    }
     if (resourceType) {
-      const cached = cache.get<T>(resourceType, params);
+      const cached = cache.get<T>(resourceType, cacheParams);
       if (cached !== undefined) {
         return cached;
       }
     }
 
-    // If not in cache, make request
+    // If not in cache, make request. GET is a safe, idempotent read, so it is
+    // the only method that retries on timeouts and 5xx responses.
     const result = await retryRequest(
       async () => {
         try {
-          const response = await this.client.get<T>(path, { params });
+          const response = await this.client.get<T>(path, headers ? { params, headers } : { params });
           return response.data;
         } catch (error) {
           if (error instanceof Error) {
@@ -195,28 +235,14 @@ export class ApiClient {
 
     // Cache the result
     if (resourceType) {
-      cache.set(resourceType, result, params);
+      cache.set(resourceType, result, cacheParams);
     }
 
     return result;
   }
 
   async post<T>(path: string, data?: any, invalidateCache?: string): Promise<T> {
-    const result = await retryRequest(
-      async () => {
-        try {
-          const response = await this.client.post<T>(path, data);
-          return response.data;
-        } catch (error) {
-          if (error instanceof Error) {
-            throw error;
-          }
-          throw new Error(`Unexpected error: ${String(error)}`);
-        }
-      },
-      this.retryConfig,
-      `POST ${path}`
-    );
+    const result = await sendOnce(() => this.client.post<T>(path, data), `POST ${path}`);
 
     // Invalidate cache if specified
     if (invalidateCache) {
@@ -227,21 +253,7 @@ export class ApiClient {
   }
 
   async put<T>(path: string, data?: any, invalidateCache?: string): Promise<T> {
-    const result = await retryRequest(
-      async () => {
-        try {
-          const response = await this.client.put<T>(path, data);
-          return response.data;
-        } catch (error) {
-          if (error instanceof Error) {
-            throw error;
-          }
-          throw new Error(`Unexpected error: ${String(error)}`);
-        }
-      },
-      this.retryConfig,
-      `PUT ${path}`
-    );
+    const result = await sendOnce(() => this.client.put<T>(path, data), `PUT ${path}`);
 
     // Invalidate cache if specified
     if (invalidateCache) {
@@ -252,21 +264,7 @@ export class ApiClient {
   }
 
   async delete<T>(path: string, invalidateCache?: string): Promise<T> {
-    const result = await retryRequest(
-      async () => {
-        try {
-          const response = await this.client.delete<T>(path);
-          return response.data;
-        } catch (error) {
-          if (error instanceof Error) {
-            throw error;
-          }
-          throw new Error(`Unexpected error: ${String(error)}`);
-        }
-      },
-      this.retryConfig,
-      `DELETE ${path}`
-    );
+    const result = await sendOnce(() => this.client.delete<T>(path), `DELETE ${path}`);
 
     // Invalidate cache if specified
     if (invalidateCache) {

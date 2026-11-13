@@ -97,6 +97,7 @@
 
         <!-- Projects List -->
         <div class="max-w-7xl mx-auto">
+          <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
           <div class="flex items-center justify-between mb-8">
             <h2 class="text-4xl md:text-5xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
               Projects
@@ -203,6 +204,7 @@
         </div>
 
         <form @submit.prevent="createProject" class="p-6 space-y-6">
+          <InlineNotice :notice="createNotice" @dismiss="clearCreateNotice" />
           <div>
             <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Project Name *</label>
             <input
@@ -247,10 +249,33 @@
               :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
               placeholder="your-org/your-project"
             />
-            <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-              Branch: <strong>develop</strong> (default) | Argos URL: <strong>{{ defaultArgosUrl }}</strong>
-            </p>
           </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Branch</label>
+              <input
+                v-model="newProject.argosBranch"
+                type="text"
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                placeholder="develop"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Argos URL</label>
+              <input
+                v-model="newProject.argosBaseUrl"
+                type="url"
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                :placeholder="defaultArgosUrl"
+              />
+            </div>
+          </div>
+          <p class="text-xs -mt-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+            Self-hosted Argos URLs must be on the server's allow-list.
+          </p>
 
           <div>
             <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Argos API Token *</label>
@@ -290,24 +315,31 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import { useDrawer } from '../composables/useDrawer.js';
-import axios from 'axios';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
+import apiClient from '../services/api.js';
 
 const router = useRouter();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
+const { notice: createNotice, showNotice: showCreateNotice, clearNotice: clearCreateNotice } = useNotice();
 const projects = ref([]);
+// Latest runs per project id ({ runs, total }), used for the status and stats
+const projectRuns = ref({});
 const loading = ref(false);
 const showCreateModal = ref(false);
 const creating = ref(false);
 
 const defaultArgosUrl = 'https://app.argos-ci.com';
 
-const newProject = ref({
+const emptyProject = () => ({
   name: '',
   description: '',
   teamId: 'default-team',
@@ -317,57 +349,85 @@ const newProject = ref({
   argosBranch: 'develop',
 });
 
-const API_BASE_URL = 'http://localhost:3000/api/v1';
+const newProject = ref(emptyProject());
 
+const API_PATH = '/api/v1/visual-regression';
 
+// The server's message (e.g. the 400 for an Argos URL that isn't allow-listed)
+// or a readable fallback.
+const apiErrorMessage = (error, fallback) => {
+  const status = error?.response?.status;
+  if (status === 401 || status === 403) return 'Your API key was rejected or is missing. Check your API key.';
+  const message = error?.response?.data?.message;
+  if (Array.isArray(message)) return message.join(' ');
+  if (typeof message === 'string' && message) return message;
+  if (!error?.response) return 'Could not reach the server. Check your connection and try again.';
+  return fallback;
+};
 
-
+const loadProjectRuns = async (list) => {
+  const entries = await Promise.allSettled(
+    list.map(async (project) => {
+      const response = await apiClient.get(`${API_PATH}/projects/${encodeURIComponent(project.id)}/runs`, {
+        params: { page: 1, limit: 100 },
+      });
+      const body = response.data;
+      const runs = Array.isArray(body) ? body : body?.data ?? [];
+      return [project.id, { runs, total: body?.pagination?.total ?? runs.length }];
+    })
+  );
+  projectRuns.value = Object.fromEntries(
+    entries.filter((entry) => entry.status === 'fulfilled').map((entry) => entry.value)
+  );
+};
 
 const loadProjects = async () => {
   loading.value = true;
   try {
-    const response = await axios.get(`${API_BASE_URL}/visual-regression/projects`);
-    projects.value = response.data;
+    const response = await apiClient.get(`${API_PATH}/projects`);
+    projects.value = Array.isArray(response.data) ? response.data : response.data?.data ?? [];
+    loadProjectRuns(projects.value);
   } catch (error) {
     console.error('Failed to load projects:', error);
+    showNotice(apiErrorMessage(error, 'Failed to load projects.'), 'error');
   } finally {
     loading.value = false;
   }
 };
 
 const openCreateProjectModal = () => {
+  clearCreateNotice();
   showCreateModal.value = true;
 };
 
 const closeCreateProjectModal = () => {
   showCreateModal.value = false;
-  newProject.value = {
-    name: '',
-    description: '',
-    teamId: 'default-team',
-    argosBaseUrl: defaultArgosUrl,
-    argosProjectId: '',
-    argosToken: '',
-    argosBranch: 'develop',
-  };
+  clearCreateNotice();
+  newProject.value = emptyProject();
 };
 
 const createProject = async () => {
   creating.value = true;
+  clearCreateNotice();
   try {
     const payload = {
       ...newProject.value,
-      argosBaseUrl: defaultArgosUrl,
-      argosBranch: 'develop',
+      name: newProject.value.name.trim(),
+      argosProjectId: newProject.value.argosProjectId.trim(),
+      argosBaseUrl: newProject.value.argosBaseUrl.trim() || defaultArgosUrl,
+      argosBranch: newProject.value.argosBranch.trim() || 'develop',
     };
-    await axios.post(`${API_BASE_URL}/visual-regression/projects`, payload);
-    window.showToast?.('Project created successfully', 'success');
-    await loadProjects();
+    await apiClient.post(`${API_PATH}/projects`, payload);
     closeCreateProjectModal();
+    showNotice('Project created successfully.', 'success');
+    await loadProjects();
   } catch (error) {
-    const errorMsg = error.response?.data?.message || error.message || 'Failed to create project. Please check your Argos connection settings.';
-    window.showToast?.(errorMsg, 'error');
+    // e.g. a 400 for an Argos URL that isn't allow-listed, or bad credentials
     console.error('Failed to create project:', error);
+    showCreateNotice(
+      apiErrorMessage(error, 'Failed to create project. Please check your Argos connection settings.'),
+      'error'
+    );
   } finally {
     creating.value = false;
   }
@@ -377,68 +437,63 @@ const navigateToProject = (projectId) => {
   router.push(`/tools/visual-regression/${projectId}`);
 };
 
+const latestRun = (project) => projectRuns.value[project.id]?.runs?.[0] ?? null;
+
 const getProjectStatus = (project) => {
-  // In a real implementation, this would check the last test run status
-  return 'Active';
+  const run = latestRun(project);
+  if (!run) return 'No runs';
+  if (run.status === 'pending' || run.status === 'running') return 'Running';
+  if (run.status === 'failed') return 'Failed';
+  const summary = run.resultsSummary;
+  if (summary && (summary.failed > 0 || summary.new > 0)) return 'Changes';
+  return 'Passing';
 };
 
 const getProjectStatusClass = (project) => {
-  return isDarkMode.value
-    ? 'bg-green-900/30 text-green-400'
-    : 'bg-green-100 text-green-700';
+  const status = getProjectStatus(project);
+  const dark = isDarkMode.value;
+  if (status === 'Passing') return dark ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700';
+  if (status === 'Running') return dark ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-700';
+  if (status === 'Changes') return dark ? 'bg-orange-900/30 text-orange-400' : 'bg-orange-100 text-orange-700';
+  if (status === 'Failed') return dark ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700';
+  return dark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-600';
 };
 
 const formatDate = (dateString) => {
   if (!dateString) return 'Never';
   const date = new Date(dateString);
-  return date.toLocaleDateString();
+  return Number.isNaN(date.getTime()) ? 'Never' : date.toLocaleDateString();
 };
 
+const allLoadedRuns = computed(() => Object.values(projectRuns.value).flatMap((entry) => entry.runs));
+
+// Share of compared screenshots that passed, across the loaded runs
 const overallPassRate = computed(() => {
-  // Calculate from all test runs
-  return 85; // Placeholder
+  let passed = 0;
+  let total = 0;
+  allLoadedRuns.value.forEach((run) => {
+    if (run.resultsSummary?.total) {
+      passed += run.resultsSummary.passed || 0;
+      total += run.resultsSummary.total;
+    }
+  });
+  return total > 0 ? Math.round((passed / total) * 100) : 0;
 });
 
-const totalRuns = computed(() => {
-  // Sum all runs across projects
-  return 0; // Placeholder
-});
+const totalRuns = computed(() =>
+  Object.values(projectRuns.value).reduce((sum, entry) => sum + (entry.total || 0), 0)
+);
 
-const pendingDiffs = computed(() => {
-  // Count unapproved diffs
-  return 0; // Placeholder
-});
-
-let darkModeObserver = null;
-let darkModeInterval = null;
+// Changed or new screenshots in each project's latest run, awaiting review
+const pendingDiffs = computed(() =>
+  projects.value.reduce((sum, project) => {
+    const summary = latestRun(project)?.resultsSummary;
+    return sum + (summary ? (summary.failed || 0) + (summary.new || 0) : 0);
+  }, 0)
+);
 
 onMounted(() => {
   loadProjects();
-
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
 });
 </script>
 

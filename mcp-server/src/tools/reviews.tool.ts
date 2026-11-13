@@ -1,255 +1,491 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
 import { apiClient } from '../api-client';
 
-export interface WorkspaceReview {
+/*
+ * Design reviews, per docs/REVIEW_API.md. The routes live under `/api/v1`
+ * (the API client's base URL): `/reviews`, `/review/...`. Review passwords go
+ * in the `x-review-password` header, never in the URL.
+ */
+
+export const WORKFLOW_STATES = [
+  'draft',
+  'client_review',
+  'client_approved',
+  'art_director_review',
+  'art_director_approved',
+  'creative_director_review',
+  'approved',
+] as const;
+
+export type WorkflowState = (typeof WORKFLOW_STATES)[number];
+
+const workflowStateSchema = z.enum(WORKFLOW_STATES);
+const SHARING_MODES = ['anyone', 'approved_emails'] as const;
+const sharingModeSchema = z.enum(SHARING_MODES);
+type SharingMode = (typeof SHARING_MODES)[number];
+
+export interface ReviewVersion {
   id: string;
-  title: string;
-  description?: string;
-  status: 'pending' | 'in-review' | 'approved' | 'rejected';
+  label?: string;
   url?: string;
-  tags?: string[];
-  workspaceId: string;
-  sharedWith?: string[];
-  isGlobal?: boolean;
-  createdAt: string;
-  createdBy: string;
+  notes?: string;
+  type?: string;
+  filename?: string;
+  contentType?: string | null;
+  size?: number | null;
+  uploadedAt?: string;
+  uploadedBy?: string;
 }
+
+/** `{ [emoji]: [email] }` */
+export type Reactions = Record<string, string[]>;
+
+export interface ReviewReply {
+  id: string;
+  text: string;
+  author?: string;
+  authorEmail?: string | null;
+  timestamp?: string;
+  reactions?: Reactions;
+}
+
+export interface ReviewComment {
+  id: string;
+  text: string;
+  author?: string;
+  authorEmail?: string | null;
+  version?: string | null;
+  type?: string;
+  resolved?: boolean;
+  annotationId?: string;
+  annotationData?: Record<string, unknown>;
+  timestamp?: string;
+  replies?: ReviewReply[];
+  reactions?: Reactions;
+}
+
+export interface Review {
+  id: string;
+  filename?: string;
+  sourceType?: 'upload' | 'url';
+  url?: string;
+  designer?: string;
+  designerEmail?: string;
+  teamId?: string | null;
+  workflowState?: WorkflowState;
+  workflowHistory?: Array<{
+    stage: string;
+    action: string;
+    user?: string;
+    timestamp?: string;
+    reason?: string;
+    versionLabel?: string;
+  }>;
+  bypassClientReview?: boolean;
+  sharingMode?: SharingMode;
+  approvedEmails?: string[];
+  versions?: ReviewVersion[];
+  comments?: ReviewComment[];
+  completed?: boolean;
+  expiresAt?: string;
+  extended?: boolean;
+  hasPassword?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** `GET /reviews` returns `{ reviews, total }`, review summaries without comments or history */
+async function listReviews(filters: { workflowState?: WorkflowState; q?: string; showExpired?: boolean }): Promise<Review[]> {
+  const params: Record<string, string> = {};
+  if (filters.workflowState) params.workflowState = filters.workflowState;
+  if (filters.q) params.q = filters.q;
+  if (filters.showExpired) params.showExpired = 'true';
+  const data = await apiClient.get<{ reviews?: Review[] }>('/reviews', params, 'reviews');
+  return Array.isArray(data?.reviews) ? data.reviews : [];
+}
+
+function reviewPath(reviewId: string, suffix: string = ''): string {
+  return `/review/${encodeURIComponent(reviewId)}${suffix}`;
+}
+
+/** The review password header, when there is one */
+function passwordHeaders(password?: string): Record<string, string> | undefined {
+  return password ? { 'x-review-password': encodeURIComponent(password) } : undefined;
+}
+
+export const getReviewsSchema = z.object({
+  workflowState: workflowStateSchema.optional(),
+  showExpired: z.boolean().optional(),
+});
 
 export const getReviewsTool: Tool = {
   name: 'get_reviews',
-  description: 'Retrieve all reviews for a workspace with optional status filter',
+  description: 'List design reviews with an optional workflow state filter',
   inputSchema: {
     type: 'object',
     properties: {
-      workspaceId: {
+      workflowState: {
         type: 'string',
-        description: 'The workspace ID',
+        enum: [...WORKFLOW_STATES],
+        description: 'Filter reviews by workflow state',
       },
-      status: {
-        type: 'string',
-        enum: ['pending', 'in-review', 'approved', 'rejected'],
-        description: 'Filter reviews by status',
-      },
-      userId: {
-        type: 'string',
-        description: 'Optional user ID for filtering',
+      showExpired: {
+        type: 'boolean',
+        description: 'Include expired reviews',
+        default: false,
       },
     },
-    required: ['workspaceId'],
   },
 };
 
-export async function getReviews(args: { workspaceId: string; status?: string; userId?: string }): Promise<WorkspaceReview[]> {
-  const params: Record<string, string> = { workspaceId: args.workspaceId };
-  if (args.status) params.status = args.status;
-  if (args.userId) params.userId = args.userId;
-
-  return await apiClient.get<WorkspaceReview[]>(`/workspaces/${encodeURIComponent(args.workspaceId)}/reviews`, params, 'reviews');
+export async function getReviews(args: { workflowState?: WorkflowState; showExpired?: boolean }): Promise<Review[]> {
+  return listReviews({ workflowState: args.workflowState, showExpired: args.showExpired });
 }
+
+export const getReviewSchema = z.object({
+  reviewId: z.string().min(1),
+  password: z.string().optional(),
+});
 
 export const getReviewTool: Tool = {
   name: 'get_review',
-  description: 'Get a specific review by ID',
+  description: 'Get a specific design review by ID, including versions, comments and workflow history',
   inputSchema: {
     type: 'object',
     properties: {
-      workspaceId: {
-        type: 'string',
-        description: 'The workspace ID',
-      },
       reviewId: {
         type: 'string',
         description: 'The review ID',
       },
+      password: {
+        type: 'string',
+        description: 'Password, if the review is password protected',
+      },
     },
-    required: ['workspaceId', 'reviewId'],
+    required: ['reviewId'],
   },
 };
 
-export async function getReview(args: { workspaceId: string; reviewId: string }): Promise<WorkspaceReview> {
-  // First get all reviews, then find the one we need
-  const reviews = await getReviews({ workspaceId: args.workspaceId });
-  const review = reviews.find((r) => r.id === args.reviewId);
-  
-  if (!review) {
-    throw new Error(`Review with ID ${args.reviewId} not found in workspace ${args.workspaceId}`);
-  }
-  
-  return review;
+export async function getReview(args: { reviewId: string; password?: string }): Promise<Review> {
+  // Not cached: the response depends on the password and changes as people comment
+  return await apiClient.get<Review>(reviewPath(args.reviewId), {}, undefined, passwordHeaders(args.password));
 }
+
+export const createReviewSchema = z.object({
+  url: z
+    .string()
+    .url()
+    .refine((value) => /^https?:\/\//i.test(value), { message: 'url must be http(s)' }),
+  password: z.string().optional(),
+  bypassClientReview: z.boolean().optional(),
+  sharingMode: sharingModeSchema.optional(),
+  approvedEmails: z.array(z.string()).optional(),
+});
 
 export const createReviewTool: Tool = {
   name: 'create_review',
-  description: 'Create a new design review',
+  description: 'Create a new design review from a URL to the design being reviewed',
   inputSchema: {
     type: 'object',
     properties: {
-      workspaceId: {
-        type: 'string',
-        description: 'The workspace ID',
-      },
-      title: {
-        type: 'string',
-        description: 'Review title',
-      },
-      description: {
-        type: 'string',
-        description: 'Review description',
-      },
-      status: {
-        type: 'string',
-        enum: ['pending', 'in-review', 'approved', 'rejected'],
-        description: 'Initial status',
-        default: 'pending',
-      },
       url: {
         type: 'string',
         description: 'URL to the design or resource being reviewed',
       },
-      tags: {
-        type: 'array',
-        items: { type: 'string' },
-        description: 'Tags for the review',
-      },
-      createdBy: {
+      password: {
         type: 'string',
-        description: 'User ID of the creator',
+        description: 'Optional password to protect the review',
       },
-      sharedWith: {
-        type: 'array',
-        items: { type: 'string' },
-        description: 'Workspace IDs to share with',
-      },
-      isGlobal: {
+      bypassClientReview: {
         type: 'boolean',
-        description: 'Whether the review is global',
+        description: 'Skip client review and go straight to art director review',
         default: false,
       },
+      sharingMode: {
+        type: 'string',
+        enum: [...SHARING_MODES],
+        description: 'Who can open the review link',
+        default: 'anyone',
+      },
+      approvedEmails: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Emails allowed to open the review when sharingMode is approved_emails',
+      },
     },
-    required: ['workspaceId', 'title', 'createdBy'],
+    required: ['url'],
   },
 };
 
 export async function createReview(args: {
-  workspaceId: string;
-  title: string;
-  description?: string;
-  status?: 'pending' | 'in-review' | 'approved' | 'rejected';
-  url?: string;
-  tags?: string[];
-  createdBy: string;
-  sharedWith?: string[];
-  isGlobal?: boolean;
-}): Promise<WorkspaceReview> {
-  return await apiClient.post<WorkspaceReview>(`/workspaces/${encodeURIComponent(args.workspaceId)}/reviews`, {
-    title: args.title,
-    description: args.description,
-    status: args.status || 'pending',
+  url: string;
+  password?: string;
+  bypassClientReview?: boolean;
+  sharingMode?: SharingMode;
+  approvedEmails?: string[];
+}): Promise<{ reviewId: string; review?: Review }> {
+  return await apiClient.post<{ reviewId: string; review?: Review }>('/review/create-from-url', {
     url: args.url,
-    tags: args.tags,
-    createdBy: args.createdBy,
-    sharedWith: args.sharedWith,
-    isGlobal: args.isGlobal,
+    password: args.password,
+    bypassClientReview: args.bypassClientReview ?? false,
+    sharingMode: args.sharingMode ?? 'anyone',
+    approvedEmails: args.approvedEmails ?? [],
   }, 'reviews');
 }
 
+export const REVIEW_ACTIONS = [
+  'approve',
+  'reject',
+  'move_to_client_review',
+  'move_to_art_director_review',
+  'resubmit',
+  'complete',
+  'update_sharing',
+] as const;
+
+export type ReviewAction = (typeof REVIEW_ACTIONS)[number];
+
+export const updateReviewSchema = z
+  .object({
+    reviewId: z.string().min(1),
+    action: z.enum(REVIEW_ACTIONS),
+    stage: workflowStateSchema.optional(),
+    reason: z.string().optional(),
+    targetStage: workflowStateSchema.optional(),
+    sharingMode: sharingModeSchema.optional(),
+    approvedEmails: z.array(z.string()).optional(),
+  })
+  .superRefine((args, ctx) => {
+    if ((args.action === 'approve' || args.action === 'reject') && !args.stage) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['stage'], message: `stage is required for ${args.action}` });
+    }
+    if (args.action === 'resubmit' && !args.targetStage) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['targetStage'], message: 'targetStage is required for resubmit' });
+    }
+    if (args.action === 'update_sharing' && !args.sharingMode) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['sharingMode'], message: 'sharingMode is required for update_sharing' });
+    }
+  });
+
 export const updateReviewTool: Tool = {
   name: 'update_review',
-  description: 'Update an existing review (status, description, tags, etc.)',
+  description:
+    'Advance or change a design review: approve/reject a workflow stage, move it to client or art director review, resubmit, mark complete, or update sharing',
   inputSchema: {
     type: 'object',
     properties: {
-      workspaceId: {
-        type: 'string',
-        description: 'The workspace ID',
-      },
       reviewId: {
         type: 'string',
         description: 'The review ID',
       },
-      title: {
+      action: {
         type: 'string',
-        description: 'Updated title',
+        enum: [...REVIEW_ACTIONS],
+        description: 'What to do to the review',
       },
-      description: {
+      stage: {
         type: 'string',
-        description: 'Updated description',
+        enum: [...WORKFLOW_STATES],
+        description: 'Workflow stage being approved or rejected (required for approve and reject)',
       },
-      status: {
+      reason: {
         type: 'string',
-        enum: ['pending', 'in-review', 'approved', 'rejected'],
-        description: 'Updated status',
+        description: 'Reason for rejecting (reject only)',
       },
-      url: {
+      targetStage: {
         type: 'string',
-        description: 'Updated URL',
+        enum: [...WORKFLOW_STATES],
+        description: 'Stage to resubmit to (required for resubmit)',
       },
-      tags: {
+      sharingMode: {
+        type: 'string',
+        enum: [...SHARING_MODES],
+        description: 'New sharing mode (required for update_sharing)',
+      },
+      approvedEmails: {
         type: 'array',
         items: { type: 'string' },
-        description: 'Updated tags',
+        description: 'Emails allowed when sharingMode is approved_emails (update_sharing only)',
       },
     },
-    required: ['workspaceId', 'reviewId'],
+    required: ['reviewId', 'action'],
   },
 };
 
 export async function updateReview(args: {
-  workspaceId: string;
   reviewId: string;
-  title?: string;
-  description?: string;
-  status?: 'pending' | 'in-review' | 'approved' | 'rejected';
-  url?: string;
-  tags?: string[];
-}): Promise<WorkspaceReview> {
-  const updates: Record<string, any> = {};
-  if (args.title !== undefined) updates.title = args.title;
-  if (args.description !== undefined) updates.description = args.description;
-  if (args.status !== undefined) updates.status = args.status;
-  if (args.url !== undefined) updates.url = args.url;
-  if (args.tags !== undefined) updates.tags = args.tags;
-
-  return await apiClient.put<WorkspaceReview>(
-    `/workspaces/${encodeURIComponent(args.workspaceId)}/reviews/${encodeURIComponent(args.reviewId)}`,
-    updates,
-    'reviews'
-  );
+  action: ReviewAction;
+  stage?: WorkflowState;
+  reason?: string;
+  targetStage?: WorkflowState;
+  sharingMode?: SharingMode;
+  approvedEmails?: string[];
+}): Promise<Review> {
+  switch (args.action) {
+    case 'approve':
+      return await apiClient.post<Review>(reviewPath(args.reviewId, '/workflow/approve'), { stage: args.stage }, 'reviews');
+    case 'reject':
+      return await apiClient.post<Review>(
+        reviewPath(args.reviewId, '/workflow/reject'),
+        args.reason !== undefined ? { stage: args.stage, reason: args.reason } : { stage: args.stage },
+        'reviews'
+      );
+    case 'move_to_client_review':
+      return await apiClient.post<Review>(reviewPath(args.reviewId, '/workflow/move-to-client-review'), undefined, 'reviews');
+    case 'move_to_art_director_review':
+      return await apiClient.post<Review>(reviewPath(args.reviewId, '/workflow/move-to-art-director-review'), undefined, 'reviews');
+    case 'resubmit':
+      return await apiClient.post<Review>(
+        reviewPath(args.reviewId, '/workflow/resubmit'),
+        { targetStage: args.targetStage },
+        'reviews'
+      );
+    case 'complete':
+      return await apiClient.post<Review>(reviewPath(args.reviewId, '/complete'), undefined, 'reviews');
+    case 'update_sharing':
+      return await apiClient.post<Review>(
+        reviewPath(args.reviewId, '/sharing'),
+        { sharingMode: args.sharingMode, approvedEmails: args.approvedEmails ?? [] },
+        'reviews'
+      );
+    default:
+      throw new Error(`Unsupported review action: ${String(args.action)}`);
+  }
 }
+
+export const searchReviewsSchema = z.object({
+  query: z.string(),
+  workflowState: workflowStateSchema.optional(),
+  showExpired: z.boolean().optional(),
+});
 
 export const searchReviewsTool: Tool = {
   name: 'search_reviews',
-  description: 'Search reviews by title, description, or tags',
+  description: 'Search design reviews by filename, designer or designer email',
   inputSchema: {
     type: 'object',
     properties: {
-      workspaceId: {
-        type: 'string',
-        description: 'The workspace ID',
-      },
       query: {
         type: 'string',
         description: 'Search query',
       },
-      status: {
+      workflowState: {
         type: 'string',
-        enum: ['pending', 'in-review', 'approved', 'rejected'],
-        description: 'Optional status filter',
+        enum: [...WORKFLOW_STATES],
+        description: 'Optional workflow state filter',
+      },
+      showExpired: {
+        type: 'boolean',
+        description: 'Include expired reviews',
+        default: false,
       },
     },
-    required: ['workspaceId', 'query'],
+    required: ['query'],
   },
 };
 
-export async function searchReviews(args: { workspaceId: string; query: string; status?: string }): Promise<WorkspaceReview[]> {
-  const reviews = await getReviews({ workspaceId: args.workspaceId, status: args.status });
-  
-  const queryLower = args.query.toLowerCase();
-  return reviews.filter(
-    (review) =>
-      review.title.toLowerCase().includes(queryLower) ||
-      review.description?.toLowerCase().includes(queryLower) ||
-      review.tags?.some((tag) => tag.toLowerCase().includes(queryLower))
+export async function searchReviews(args: {
+  query: string;
+  workflowState?: WorkflowState;
+  showExpired?: boolean;
+}): Promise<Review[]> {
+  // The server matches `q` against filename, designer and designer email
+  return listReviews({ q: args.query, workflowState: args.workflowState, showExpired: args.showExpired });
+}
+
+export const getReviewCommentsSchema = z.object({
+  reviewId: z.string().min(1),
+  versionId: z.string().optional(),
+  password: z.string().optional(),
+});
+
+export const getReviewCommentsTool: Tool = {
+  name: 'get_review_comments',
+  description: 'Get the comments on a design review, optionally for one version',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      reviewId: {
+        type: 'string',
+        description: 'The review ID',
+      },
+      versionId: {
+        type: 'string',
+        description: 'Only return comments on this version',
+      },
+      password: {
+        type: 'string',
+        description: 'Password, if the review is password protected',
+      },
+    },
+    required: ['reviewId'],
+  },
+};
+
+export async function getReviewComments(args: {
+  reviewId: string;
+  versionId?: string;
+  password?: string;
+}): Promise<ReviewComment[]> {
+  const params = args.versionId ? { versionId: args.versionId } : {};
+  return await apiClient.get<ReviewComment[]>(
+    reviewPath(args.reviewId, '/comments'),
+    params,
+    undefined,
+    passwordHeaders(args.password)
   );
 }
 
+export const addReviewCommentSchema = z.object({
+  reviewId: z.string().min(1),
+  text: z.string().min(1),
+  version: z.string().optional(),
+  type: z.string().optional(),
+  resolved: z.boolean().optional(),
+});
+
+export const addReviewCommentTool: Tool = {
+  name: 'add_review_comment',
+  description: 'Add a comment to a design review',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      reviewId: {
+        type: 'string',
+        description: 'The review ID',
+      },
+      text: {
+        type: 'string',
+        description: 'Comment text',
+      },
+      version: {
+        type: 'string',
+        description: 'Version ID the comment applies to (defaults to the latest version)',
+      },
+      type: {
+        type: 'string',
+        description: 'Comment type (defaults to general)',
+      },
+      resolved: {
+        type: 'boolean',
+        description: 'Whether the comment starts resolved',
+        default: false,
+      },
+    },
+    required: ['reviewId', 'text'],
+  },
+};
+
+export async function addReviewComment(args: {
+  reviewId: string;
+  text: string;
+  version?: string;
+  type?: string;
+  resolved?: boolean;
+}): Promise<ReviewComment> {
+  const body: Record<string, unknown> = { text: args.text, resolved: args.resolved ?? false };
+  if (args.version !== undefined) body.version = args.version;
+  if (args.type !== undefined) body.type = args.type;
+  return await apiClient.post<ReviewComment>(reviewPath(args.reviewId, '/comments'), body);
+}

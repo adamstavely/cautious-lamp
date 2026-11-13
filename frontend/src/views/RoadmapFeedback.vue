@@ -1227,8 +1227,8 @@ const rejectReason = ref('');
 const requestAnalytics = ref(null);
 const loadingAnalytics = ref(false);
 
-const API_BASE_URL = 'http://localhost:3000/api/v1';
-const API_KEY = 'test-api-key-123';
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
+const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
 
 // Check RBAC permissions
 const checkPermissions = async () => {
@@ -1246,7 +1246,7 @@ const checkPermissions = async () => {
     canApprove.value = ['design_system_manager', 'review_manager', 'system_owner'].includes(userRole);
     
     const roadmapEditResponse = await axios.get(
-      `http://localhost:3000/api/v1/rbac/users/${userId}/permissions/roadmap:edit`
+      `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/rbac/users/${userId}/permissions/roadmap:edit`
     );
     
     canEditRoadmap.value = roadmapEditResponse.data.hasPermission;

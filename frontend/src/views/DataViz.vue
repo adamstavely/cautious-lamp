@@ -201,6 +201,41 @@
             </router-link>
           </div>
         </div>
+
+        <!-- Guidance Section -->
+        <div class="max-w-7xl mx-auto mb-16">
+          <div class="mb-8">
+            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
+              Dashboard Guidance
+            </h2>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <router-link
+              v-for="guide in guidanceLinks"
+              :key="guide.link"
+              :to="guide.link"
+              class="group rounded-2xl p-6 border transition-all"
+              :class="isDarkMode 
+                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
+                : 'border-gray-300 bg-white hover:border-indigo-500'"
+            >
+              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
+                <span class="material-symbols-outlined text-5xl" aria-hidden="true">{{ guide.icon }}</span>
+              </div>
+              <h3 
+                class="font-semibold text-lg transition-colors mb-2"
+                :class="isDarkMode 
+                  ? 'text-white group-hover:text-indigo-400' 
+                  : 'text-gray-900 group-hover:text-indigo-600'"
+              >
+                {{ guide.text }}
+              </h3>
+              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                {{ guide.description }}
+              </p>
+            </router-link>
+          </div>
+        </div>
         </div>
       </div>
     </div>
@@ -208,17 +243,40 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import MarkdownViewer from '../components/MarkdownViewer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
 
 const route = useRoute();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const currentDocLink = ref(null);
+
+// Guidance docs under public/docs/data-viz, shown in MarkdownViewer at /data-viz/<slug>
+const guidanceLinks = [
+  {
+    text: 'Types of Dashboards',
+    link: '/data-viz/types-of-dashboards',
+    icon: 'dashboard',
+    description: 'Curated versus data-collection dashboards, when to use each, and the design tradeoffs between them.'
+  },
+  {
+    text: 'Dashboard Patterns',
+    link: '/data-viz/dashboard-patterns',
+    icon: 'pattern',
+    description: 'Patterns for data, meta information, visual representations, layout, interaction and color.'
+  },
+  {
+    text: 'Dashboard Design',
+    link: '/data-viz/dashboard-design',
+    icon: 'space_dashboard',
+    description: 'A short overview of curated and data-collection dashboards and their goals.'
+  }
+];
 
 const handleBreadcrumbNavigate = (path) => {
   // Handle navigation from breadcrumbs
@@ -248,9 +306,6 @@ watch(() => route.path, (newPath) => {
   }
 }, { immediate: true });
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
 onMounted(() => {
   // Auto-open drawer if navigating from sidebar
   if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
@@ -262,31 +317,6 @@ onMounted(() => {
   if (route.path.startsWith('/data-viz/') && route.path !== '/data-viz') {
     // Keep the full path for MarkdownViewer
     currentDocLink.value = route.path;
-  }
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
   }
 });
 </script>
