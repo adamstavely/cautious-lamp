@@ -1333,6 +1333,16 @@
                       Export as PNG
                     </button>
                     <button
+                      @click="exportChart('caption')"
+                      class="w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                      :class="isDarkMode 
+                        ? 'bg-slate-700 hover:bg-slate-600 text-white' 
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
+                    >
+                      <span class="material-symbols-outlined text-lg">subtitles</span>
+                      Export caption (TXT)
+                    </button>
+                    <button
                       @click="exportChart('json')"
                       class="w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                       :class="isDarkMode 
@@ -1375,6 +1385,7 @@
                       <span class="material-symbols-outlined text-lg">description</span>
                       Export as Word
                     </button>
+                    <InlineNotice v-if="notice" class="mt-2" :notice="notice" @dismiss="clearNotice" />
                     <p v-if="accessibilityScore < 100" class="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
                       ⚠️ Accessibility score: {{ accessibilityScore }}%. Export will show warnings but is allowed.
                     </p>
@@ -1410,6 +1421,7 @@
 
                   <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-6 min-h-[400px] flex items-center justify-center">
                     <figure 
+                      ref="chartFigure"
                       class="w-full" 
                       style="max-width: 100%; height: 400px;"
                       role="img"
@@ -1626,6 +1638,9 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 import { calculateContrast } from '../composables/useContrast.js';
 import axe from 'axe-core';
 import {
@@ -1645,9 +1660,6 @@ import {
 import { Line as LineChart, Bar as BarChart, Pie as PieChart, Doughnut as DoughnutChart, Scatter as ScatterChart, Radar as RadarChart, Bubble as BubbleChart, PolarArea as PolarAreaChart, Chart } from 'vue-chartjs';
 import { CandlestickController, CandlestickElement } from 'chartjs-chart-financial';
 import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
-// Map utilities removed - maps moved to MapMaker.vue
-// import { loadTopoJSON, getGeoJSONFeatures, mapDataToFeatures, getFeatureCentroid, getDefaultMapUrls } from '../utils/mapData.js';
-// import { createProjection, createPathGenerator, projectCoordinates } from '../utils/mapProjections.js';
 
 // Helper function to draw the color scale legend
 function drawLegend(ctx, x, y, width, height, options, chartArea) {
@@ -1747,8 +1759,12 @@ ChartJS.register(
   colorScaleLegendPlugin
 );
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+// This page's own chart <figure> (exports and the axe scan target it, not the
+// first figure[role="img"] in the document).
+const chartFigure = ref(null);
 
 const selectedChartType = ref('line');
 const chartTypeSectionExpanded = ref(true);
@@ -2450,7 +2466,7 @@ const axeScanResults = ref(null);
 // Generate data table HTML for export
 const generateDataTableHTMLHeaders = () => {
   const headers = dataTableHeaders.value;
-  return headers.map(h => `<th scope="col" style="padding: 8px; text-align: left; border-bottom: 2px solid #e5e7eb; font-weight: 600;">${h.label}</th>`).join('\n                        ');
+  return headers.map(h => `<th scope="col" style="padding: 8px; text-align: left; border-bottom: 2px solid #e5e7eb; font-weight: 600;">${escapeHtml(h.label)}</th>`).join('\n                        ');
 };
 
 const generateDataTableHTMLRows = () => {
@@ -2460,7 +2476,7 @@ const generateDataTableHTMLRows = () => {
       const value = typeof row[header.key] === 'number' 
         ? row[header.key].toLocaleString() + (header.key === 'value' && chartConfig.value.dataUnit ? ' ' + chartConfig.value.dataUnit : '')
         : row[header.key];
-      return `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${value}</td>`;
+      return `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(value ?? '')}</td>`;
     }).join('\n                            ');
     return `<tr>\n                            ${cells}\n                        </tr>`;
   }).join('\n                    ');
@@ -2476,8 +2492,8 @@ const runAxeCoreScan = async () => {
     
     // Find the chart preview container (the parent div that contains the chart)
     // This includes the figure element and potentially the data table
-    const previewSection = document.querySelector('.lg\\:col-span-2 .rounded-lg.shadow-sm.border');
-    const chartContainer = document.querySelector('figure[role="img"]');
+    const chartContainer = chartFigure.value;
+    const previewSection = chartContainer?.closest('.rounded-lg.shadow-sm.border') || null;
     
     // Use the preview section if available, otherwise fall back to chart container
     const scanTarget = previewSection || chartContainer;
@@ -3482,6 +3498,90 @@ const loadSampleData = () => {
   chartConfig.value.title = `${chartTypes.find(t => t.value === chartType)?.label || 'Chart'} Example`;
 };
 
+// Chart.js and plugins for the standalone HTML export, pinned to the versions
+// installed here, with Subresource Integrity hashes of the jsDelivr files.
+const EXPORT_CDN_SCRIPTS = {
+  chartjs: {
+    src: 'https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js',
+    integrity: 'sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ'
+  },
+  financial: {
+    src: 'https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js',
+    integrity: 'sha384-OSSr3vjWsgL3ackkKviJxtoGYpsPeXSwIL4w5W3Ou3TXdA5pdIotbHwQEpFv7x/D'
+  },
+  matrix: {
+    src: 'https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@3.0.0/dist/chartjs-chart-matrix.min.js',
+    integrity: 'sha384-rJ/i5dnMG9QpsJqCMvR1ItW0deXppx40qBosSeiEI3hb9B8msI7j0D22p2rp010u'
+  }
+};
+
+const cdnScriptTag = ({ src, integrity }) =>
+  '<' + `script src="${src}" integrity="${integrity}" crossorigin="anonymous"></` + 'script>';
+
+// Text for HTML element content and quoted attribute values.
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+// JSON that is safe to inline in a <script> element: a closing script tag,
+// "<!--", "&" entities or U+2028/2029 inside a string cannot break out of it.
+const scriptSafeJson = (value, space = 2) => JSON.stringify(value, null, space)
+  .replace(/</g, '\\u003c')
+  .replace(/>/g, '\\u003e')
+  .replace(/&/g, '\\u0026')
+  .replace(/\u2028/g, '\\u2028')
+  .replace(/\u2029/g, '\\u2029');
+
+const exportFileBase = () =>
+  `chart-${(chartConfig.value.title || '').replace(/[^a-z0-9]/gi, '-').toLowerCase() || 'chart'}`;
+
+const downloadBlob = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Revoking straight away can cancel the download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+// Rasterise this page's chart figure.
+const captureChart = async () => {
+  const chartElement = chartFigure.value;
+  if (!chartElement) throw new Error('chart element not found');
+  const html2canvas = (await import('html2canvas')).default;
+  return html2canvas(chartElement, {
+    backgroundColor: isDarkMode.value ? '#0f172a' : '#ffffff',
+    scale: 2
+  });
+};
+
+// The raw data the selected chart type is built from (for the JSON export).
+const chartSourceData = () => {
+  switch (selectedChartType.value) {
+    case 'line':
+    case 'stackedBar':
+    case 'groupedBar':
+    case 'combo':
+      return multiDatasetData.value;
+    case 'gauge': return gaugeData.value;
+    case 'waterfall': return waterfallData.value;
+    case 'candlestick': return candlestickData.value;
+    case 'heatmap': return heatmapData.value;
+    case 'funnel': return funnelData.value;
+    case 'treemap': return treemapData.value;
+    case 'sankey': return sankeyData.value;
+    case 'bulletGraph': return bulletGraphData.value;
+    case 'chordDiagram': return chordDiagramData.value;
+    default: return chartData.value;
+  }
+};
+
 const exportChart = async (format) => {
   // Show warning if accessibility requirements aren't met, but allow export
   const warnings = [];
@@ -3516,213 +3616,50 @@ const exportChart = async (format) => {
     const config = {
       type: selectedChartType.value,
       title: chartConfig.value.title,
-      data: chartData.value,
+      summary: chartConfig.value.summary,
+      keyInsight: chartConfig.value.keyInsight,
+      // The data the selected chart type actually uses.
+      data: chartSourceData(),
       colorScheme: chartConfig.value.colorScheme,
+      ...(chartConfig.value.colorScheme === 'custom' ? { customColors: customColors.value } : {}),
       showLegend: chartConfig.value.showLegend
     };
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `chart-config-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' }), `chart-config-${Date.now()}.json`);
+    showNotice('JSON config downloaded.', 'success');
   } else if (format === 'html') {
-    const colors = colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default;
     const chartType = selectedChartType.value;
     
     // SVG-based charts (choropleth, flowMap, bulletGraph, chordDiagram, treemap, sankey) 
     // don't work with Chart.js HTML export - recommend PNG/PDF instead
     if (chartType === 'choropleth' || chartType === 'flowMap' || chartType === 'bulletGraph' || 
         chartType === 'chordDiagram' || chartType === 'treemap' || chartType === 'sankey') {
-      alert('HTML export is not available for SVG-based charts. Please use PNG or PDF export instead.');
+      showNotice('HTML export is not available for SVG-based charts. Please use PNG or PDF export instead.', 'warning');
       return;
     }
     
-    // Prepare chart data based on chart type
-    let chartDataConfig = '';
-    let chartTypeForExport = chartType;
-    
-    // Handle gauge chart
-    if (chartType === 'gauge') {
-      const value = gaugeData.value.value;
-      const min = gaugeData.value.min;
-      const max = gaugeData.value.max;
-      const range = max - min;
-      const valuePercent = ((value - min) / range) * 100;
-      const remaining = 100 - valuePercent;
-      chartDataConfig = JSON.stringify({
-        labels: ['Value', 'Remaining'],
-        datasets: [{
-          data: [valuePercent, remaining],
-          backgroundColor: [colors[0], '#e5e7eb'],
-          borderWidth: 0
-        }]
-      }, null, 2);
-      chartTypeForExport = 'doughnut';
-    } else if (chartType === 'waterfall') {
-      const base = waterfallData.value.base;
-      const changes = waterfallData.value.changes;
-      const labels = ['Base', ...changes.map(c => c.label), 'Total'];
-      const data = [base];
-      let runningTotal = base;
-      changes.forEach(change => {
-        data.push(change.value);
-        runningTotal += change.value;
-      });
-      data.push(runningTotal);
-      const backgroundColors = [colors[0], ...changes.map(c => c.value >= 0 ? colors[1] : colors[2]), colors[0]];
-      chartDataConfig = JSON.stringify({
-        labels,
-        datasets: [{
-          label: chartConfig.value.title || 'Waterfall',
-          data,
-          backgroundColor: backgroundColors,
-          borderColor: backgroundColors,
-          borderWidth: 2
-        }]
-      }, null, 2);
-      chartTypeForExport = 'bar';
-    } else if (chartType === 'candlestick') {
-      chartDataConfig = JSON.stringify({
-        datasets: [{
-          label: chartConfig.value.title || 'OHLC',
-          data: candlestickData.value.map(item => ({
-            x: new Date(item.date).getTime(),
-            o: item.open,
-            h: item.high,
-            l: item.low,
-            c: item.close
-          }))
-        }]
-      }, null, 2);
-      chartTypeForExport = 'candlestick';
-    } else if (chartType === 'heatmap') {
-      const data = [];
-      heatmapData.value.rows.forEach((row, rowIndex) => {
-        heatmapData.value.columns.forEach((col, colIndex) => {
-          if (heatmapData.value.values[rowIndex] && heatmapData.value.values[rowIndex][colIndex] !== undefined) {
-            data.push({
-              x: colIndex,
-              y: rowIndex,
-              v: heatmapData.value.values[rowIndex][colIndex]
-            });
-          }
-        });
-      });
-      chartDataConfig = JSON.stringify({
-        datasets: [{
-          label: chartConfig.value.title || 'Heatmap',
-          data
-        }]
-      }, null, 2);
-      chartTypeForExport = 'matrix';
-    } else if (chartType === 'funnel') {
-      chartDataConfig = JSON.stringify({
-        labels: funnelData.value.map(item => item.label),
-        datasets: [{
-          label: chartConfig.value.title || 'Funnel',
-          data: funnelData.value.map(item => item.value),
-          backgroundColor: colors.slice(0, funnelData.value.length),
-          borderColor: colors.slice(0, funnelData.value.length),
-          borderWidth: 2
-        }]
-      }, null, 2);
-      chartTypeForExport = 'bar';
-    } else if (chartType === 'treemap' || chartType === 'sankey') {
-      // For treemap and sankey, we'll export as JSON note since they use custom SVG
-      alert('Treemap and Sankey charts use custom SVG rendering and cannot be exported as standalone HTML. Please use JSON export instead.');
-      return;
-    } else if (chartType === 'stackedBar' || chartType === 'groupedBar' || chartType === 'combo') {
-      const labels = multiDatasetData.value[0]?.data.map(item => item.label) || [];
-      const datasets = multiDatasetData.value.map((dataset, index) => {
-        const isLine = chartType === 'combo' && index === multiDatasetData.value.length - 1;
-        return {
-          label: dataset.label,
-          data: dataset.data.map(item => item.value),
-          backgroundColor: isLine ? 'transparent' : (colors[index % colors.length] + '80'),
-          borderColor: colors[index % colors.length],
-          borderWidth: 2,
-          type: isLine ? 'line' : 'bar',
-          fill: false
-        };
-      });
-      chartDataConfig = JSON.stringify({ labels, datasets }, null, 2);
-      chartTypeForExport = 'bar';
-    } else if (chartType === 'scatter') {
-      const scatterData = chartData.value.map((item, index) => ({
-        x: index,
-        y: item.value
-      }));
-      chartDataConfig = JSON.stringify({
-        datasets: [{
-          label: chartConfig.value.title || 'Dataset',
-          data: scatterData,
-          backgroundColor: colors[0] + '80',
-          borderColor: colors[0],
-          borderWidth: 2
-        }]
-      }, null, 2);
-    } else if (chartType === 'bubble') {
-      const bubbleData = chartData.value.map((item, index) => ({
-        x: index,
-        y: item.value,
-        r: Math.abs(item.value) / 5 + 5
-      }));
-      chartDataConfig = JSON.stringify({
-        datasets: [{
-          label: chartConfig.value.title || 'Dataset',
-          data: bubbleData,
-          backgroundColor: colors[0] + '80',
-          borderColor: colors[0],
-          borderWidth: 2
-        }]
-      }, null, 2);
-    } else if (chartType === 'area') {
-      chartDataConfig = JSON.stringify({
-        labels: chartData.value.map(item => item.label),
-        datasets: [{
-          label: chartConfig.value.title || 'Dataset',
-          data: chartData.value.map(item => item.value),
-          backgroundColor: colors[0] + '80',
-          borderColor: colors[0],
-          borderWidth: 2,
-          fill: true
-        }]
-      }, null, 2);
-      chartTypeForExport = 'line';
-    } else if (chartType === 'horizontalBar') {
-      chartDataConfig = JSON.stringify({
-        labels: chartData.value.map(item => item.label),
-        datasets: [{
-          label: chartConfig.value.title || 'Dataset',
-          data: chartData.value.map(item => item.value),
-          backgroundColor: colors[0] + '80',
-          borderColor: colors[0],
-          borderWidth: 2
-        }]
-      }, null, 2);
-      chartTypeForExport = 'bar';
-    } else {
-      const backgroundColor = (chartType === 'line' || chartType === 'bar' || chartType === 'radar')
-        ? colors[0] + '80'
-        : colors.slice(0, chartData.value.length);
-      const borderColor = (chartType === 'line' || chartType === 'bar' || chartType === 'radar')
-        ? colors[0]
-        : colors.slice(0, chartData.value.length);
-      
-      chartDataConfig = JSON.stringify({
-        labels: chartData.value.map(item => item.label),
-        datasets: [{
-          label: chartConfig.value.title || 'Dataset',
-          data: chartData.value.map(item => item.value),
-          backgroundColor: backgroundColor,
-          borderColor: borderColor,
-          borderWidth: 2,
-          fill: chartType === 'line' ? false : undefined
-        }]
-      }, null, 2);
-    }
+    // Export exactly the data the preview renders (multi-line, custom colours,
+    // index-based candlesticks, ...). Function-valued properties such as the
+    // heatmap cell size/colour do not survive JSON and are re-created in the
+    // exported script below.
+    const exportTypeMap = {
+      gauge: 'doughnut',
+      waterfall: 'bar',
+      funnel: 'bar',
+      stackedBar: 'bar',
+      groupedBar: 'bar',
+      combo: 'bar',
+      horizontalBar: 'bar',
+      area: 'line',
+      heatmap: 'matrix',
+      polar: 'polarArea'
+    };
+    const chartTypeForExport = exportTypeMap[chartType] || chartType;
+    const exportData = chartType === 'scatter'
+      ? scatterDataForDisplay.value
+      : chartType === 'bubble'
+        ? bubbleDataForDisplay.value
+        : chartDataForDisplay.value;
+    const chartDataConfig = scriptSafeJson(exportData);
     
     // Prepare chart options
     let chartOptionsConfig = {
@@ -3770,9 +3707,10 @@ const exportChart = async (format) => {
       chartOptionsConfig.circumference = 270;
       chartOptionsConfig.rotation = 225;
     } else if (chartTypeForExport === 'candlestick') {
+      // Category axis over the dates, as in the preview: no date adapter needed.
       chartOptionsConfig.scales = {
-        x: { ticks: {}, grid: {} },
-        y: { ticks: {}, grid: {} }
+        x: { type: 'category', ticks: {}, grid: {} },
+        y: { type: 'linear', ticks: {}, grid: {} }
       };
     } else if (chartTypeForExport === 'matrix') {
       // Matrix chart scales will be set in the HTML script
@@ -3799,7 +3737,11 @@ const exportChart = async (format) => {
       };
     }
     
-    const chartOptionsConfigStr = JSON.stringify(chartOptionsConfig, null, 2);
+    const chartOptionsConfigStr = scriptSafeJson(chartOptionsConfig);
+    const safeTitle = escapeHtml(chartConfig.value.title || 'Chart');
+    const heatmapColors = chartConfig.value.colorScheme === 'custom'
+      ? (customColors.value.length > 0 ? customColors.value : colorSchemes.default)
+      : (colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default);
     
     // Construct closing tags to avoid Vue parser issues
     const closeHead = '</' + 'head>';
@@ -3813,14 +3755,10 @@ const exportChart = async (format) => {
       '<head>',
       '    <meta charset="UTF-8">',
       '    <meta name="viewport" content="width=device-width, initial-scale=1.0">',
-      `    <title>${chartConfig.value.title || 'Chart'}</title>`,
-      '    <' + 'script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></' + 'script>',
-      ...(chartTypeForExport === 'candlestick' ? [
-        '    <' + 'script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@latest/dist/chartjs-chart-financial.min.js"></' + 'script>'
-      ] : []),
-      ...(chartTypeForExport === 'matrix' ? [
-        '    <' + 'script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@latest/dist/chartjs-chart-matrix.min.js"></' + 'script>'
-      ] : []),
+      `    <title>${safeTitle}</title>`,
+      '    ' + cdnScriptTag(EXPORT_CDN_SCRIPTS.chartjs),
+      ...(chartTypeForExport === 'candlestick' ? ['    ' + cdnScriptTag(EXPORT_CDN_SCRIPTS.financial)] : []),
+      ...(chartTypeForExport === 'matrix' ? ['    ' + cdnScriptTag(EXPORT_CDN_SCRIPTS.matrix)] : []),
       '    <style>',
       '        * {',
       '            margin: 0;',
@@ -3859,10 +3797,11 @@ const exportChart = async (format) => {
       closeHead,
       '<body>',
       '    <div class="chart-container">',
-      `        <h1>${chartConfig.value.title || 'Chart'}</h1>`,
-      '        <figure role="img" aria-label="' + (chartConfig.value.title || 'Chart') + '" aria-describedby="chart-summary chart-data-table">',
+      `        <h1>${safeTitle}</h1>`,
+      '        <figure role="img" aria-label="' + safeTitle + '" aria-describedby="chart-summary chart-data-table">',
       '            <canvas id="chartCanvas"></canvas>',
-      `            <figcaption id="chart-summary">${chartConfig.value.summary || ''}</figcaption>`,
+      `            <figcaption id="chart-summary">${escapeHtml(chartConfig.value.summary || '')}</figcaption>`,
+      ...(chartConfig.value.keyInsight ? [`            <p><strong>Key insight:</strong> ${escapeHtml(chartConfig.value.keyInsight)}</p>`] : []),
       '        </figure>',
       '        <div id="chart-data-table" style="margin-top: 30px;">',
       '            <h2>Data Table</h2>',
@@ -3879,19 +3818,32 @@ const exportChart = async (format) => {
       '        </div>',
       '    </div>',
       '    <' + 'script>',
+      '        // Data and options are plain JSON. Callback functions used in the',
+      '        // builder (custom tooltips, tick formatters, legends) are not carried',
+      '        // over, so tooltips and ticks use Chart.js defaults.',
       '        const ctx = document.getElementById(\'chartCanvas\').getContext(\'2d\');',
       `        const chartData = ${chartDataConfig};`,
       `        const chartOptions = ${chartOptionsConfigStr};`,
       '        ',
       ...(chartTypeForExport === 'matrix' ? [
-        '        // Set up matrix chart labels',
-        `        const columnLabels = ${JSON.stringify(heatmapData.value.columns)};`,
-        `        const rowLabels = ${JSON.stringify(heatmapData.value.rows)};`,
+        '        // Matrix cell size, colour and axis labels are functions, so they are set here.',
+        `        const columnLabels = ${scriptSafeJson(heatmapData.value.columns, 0)};`,
+        `        const rowLabels = ${scriptSafeJson(heatmapData.value.rows, 0)};`,
+        `        const scaleColors = ${scriptSafeJson(heatmapColors, 0)};`,
+        '        const cellValues = chartData.datasets[0].data.map(function (d) { return d.v; });',
+        '        const vMin = Math.min.apply(null, cellValues);',
+        '        const vMax = Math.max.apply(null, cellValues);',
+        '        chartData.datasets[0].width = function (c) { const a = c.chart.chartArea || {}; return (a.right - a.left) / columnLabels.length; };',
+        '        chartData.datasets[0].height = function (c) { const a = c.chart.chartArea || {}; return (a.bottom - a.top) / rowLabels.length; };',
+        '        chartData.datasets[0].backgroundColor = function (c) {',
+        '            if (!c.raw || vMax === vMin) return scaleColors[0];',
+        '            return scaleColors[Math.floor(((c.raw.v - vMin) / (vMax - vMin)) * (scaleColors.length - 1))];',
+        '        };',
         '        chartOptions.scales.x.ticks.callback = function(value) { return columnLabels[value] || ""; };',
         '        chartOptions.scales.y.ticks.callback = function(value) { return rowLabels[value] || ""; };'
       ] : []),
       '        new Chart(ctx, {',
-      `            type: '${chartTypeForExport}',`,
+      `            type: ${scriptSafeJson(chartTypeForExport, 0)},`,
       '            data: chartData,',
       '            options: chartOptions',
       '        });',
@@ -3901,66 +3853,32 @@ const exportChart = async (format) => {
     ];
     
     const htmlContent = htmlParts.join('\n');
-    
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `chart-${chartConfig.value.title.replace(/[^a-z0-9]/gi, '-').toLowerCase() || 'chart'}-${Date.now()}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([htmlContent], { type: 'text/html' }), `${exportFileBase()}-${Date.now()}.html`);
+    showNotice('HTML export downloaded.', 'success');
   } else if (format === 'png') {
-    // PNG export with html2canvas
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const chartElement = document.querySelector('figure[role="img"]');
-      if (!chartElement) {
-        alert('Chart element not found');
-        return;
-      }
-      
-      const canvas = await html2canvas(chartElement, {
-        backgroundColor: isDarkMode.value ? '#0f172a' : '#ffffff',
-        scale: 2
-      });
-      
-      canvas.toBlob((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `chart-${chartConfig.value.title.replace(/[^a-z0-9]/gi, '-').toLowerCase() || 'chart'}-${Date.now()}.png`;
-        a.click();
-        URL.revokeObjectURL(url);
-      });
-      
-      // Create caption file
-      const captionText = `${chartConfig.value.title}\n\n${chartConfig.value.summary}\n\nKey Insight: ${chartConfig.value.keyInsight}`;
-      const captionBlob = new Blob([captionText], { type: 'text/plain' });
-      const captionUrl = URL.createObjectURL(captionBlob);
-      const captionLink = document.createElement('a');
-      captionLink.href = captionUrl;
-      captionLink.download = `chart-${chartConfig.value.title.replace(/[^a-z0-9]/gi, '-').toLowerCase() || 'chart'}-caption.txt`;
-      captionLink.click();
-      URL.revokeObjectURL(captionUrl);
+      const canvas = await captureChart();
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Could not encode the PNG');
+      downloadBlob(blob, `${exportFileBase()}-${Date.now()}.png`);
+      showNotice('PNG downloaded. Use "Export caption" for the title, summary and key insight as text.', 'success');
     } catch (error) {
       console.error('PNG export error:', error);
-      alert('PNG export failed. Please try HTML or JSON export.');
+      showNotice(`PNG export failed: ${error.message}. Please try HTML or JSON export.`, 'error');
     }
+  } else if (format === 'caption') {
+    const captionText = [
+      chartConfig.value.title,
+      chartConfig.value.summary,
+      chartConfig.value.keyInsight ? `Key Insight: ${chartConfig.value.keyInsight}` : ''
+    ].filter(Boolean).join('\n\n');
+    downloadBlob(new Blob([captionText], { type: 'text/plain' }), `${exportFileBase()}-caption.txt`);
+    showNotice('Caption downloaded.', 'success');
   } else if (format === 'pdf') {
     // PDF export with jsPDF
     try {
       const { jsPDF } = await import('jspdf');
-      const html2canvas = (await import('html2canvas')).default;
-      const chartElement = document.querySelector('figure[role="img"]');
-      if (!chartElement) {
-        alert('Chart element not found');
-        return;
-      }
-      
-      const canvas = await html2canvas(chartElement, {
-        backgroundColor: isDarkMode.value ? '#0f172a' : '#ffffff',
-        scale: 2
-      });
+      const canvas = await captureChart();
       
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
@@ -3972,30 +3890,45 @@ const exportChart = async (format) => {
       const imgWidth = 280;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      // Add chart image with alt text
-      pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight, chartConfig.value.title, true);
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      // Start a new page when the next `needed` mm would run off this one
+      const ensureRoom = (needed) => {
+        if (yPos + needed > pageHeight - 10) {
+          pdf.addPage();
+          yPos = 15;
+        }
+      };
+      
+      // Add chart image (scaled to fit the first page)
+      const fitHeight = Math.min(imgHeight, pageHeight - 20);
+      const fitWidth = (imgWidth * fitHeight) / imgHeight;
+      pdf.addImage(imgData, 'PNG', 10, 10, fitWidth, fitHeight, undefined, 'FAST');
       
       // Add summary and key insight
-      let yPos = imgHeight + 20;
+      let yPos = fitHeight + 20;
+      ensureRoom(10);
       pdf.setFontSize(16);
-      pdf.text(chartConfig.value.title, 10, yPos);
+      pdf.text(chartConfig.value.title || 'Chart', 10, yPos);
       yPos += 10;
       pdf.setFontSize(12);
       pdf.text('Summary:', 10, yPos);
       yPos += 7;
       pdf.setFontSize(10);
-      const summaryLines = pdf.splitTextToSize(chartConfig.value.summary, 270);
+      const summaryLines = pdf.splitTextToSize(chartConfig.value.summary || '', 270);
+      ensureRoom(summaryLines.length * 7 + 12);
       pdf.text(summaryLines, 10, yPos);
       yPos += summaryLines.length * 7 + 5;
       pdf.setFontSize(12);
       pdf.text('Key Insight:', 10, yPos);
       yPos += 7;
       pdf.setFontSize(10);
-      const insightLines = pdf.splitTextToSize(chartConfig.value.keyInsight, 270);
+      const insightLines = pdf.splitTextToSize(chartConfig.value.keyInsight || '', 270);
+      ensureRoom(insightLines.length * 7 + 12);
       pdf.text(insightLines, 10, yPos);
       yPos += insightLines.length * 7 + 10;
       
       // Add data table
+      ensureRoom(20);
       pdf.setFontSize(12);
       pdf.text('Data Table', 10, yPos);
       yPos += 7;
@@ -4022,69 +3955,62 @@ const exportChart = async (format) => {
           xPos += 40;
         });
         yPos += 5;
-        if (yPos > 280) {
-          pdf.addPage();
-          yPos = 10;
-        }
+        ensureRoom(5);
       });
       
-      pdf.save(`chart-${chartConfig.value.title.replace(/[^a-z0-9]/gi, '-').toLowerCase() || 'chart'}-${Date.now()}.pdf`);
+      pdf.save(`${exportFileBase()}-${Date.now()}.pdf`);
+      showNotice('PDF downloaded.', 'success');
     } catch (error) {
       console.error('PDF export error:', error);
-      alert('PDF export failed. Please try HTML or JSON export.');
+      showNotice(`PDF export failed: ${error.message}. Please try HTML or JSON export.`, 'error');
     }
   } else if (format === 'ppt') {
     // PPT export with pptxgenjs
     try {
       const PptxGenJS = (await import('pptxgenjs')).default;
-      const html2canvas = (await import('html2canvas')).default;
-      const chartElement = document.querySelector('figure[role="img"]');
-      if (!chartElement) {
-        alert('Chart element not found');
-        return;
-      }
-      
-      const canvas = await html2canvas(chartElement, {
-        backgroundColor: isDarkMode.value ? '#0f172a' : '#ffffff',
-        scale: 2
-      });
+      const canvas = await captureChart();
       
       const imgData = canvas.toDataURL('image/png');
       const pptx = new PptxGenJS();
+      pptx.layout = 'LAYOUT_16x9'; // 10 x 5.625 in
       
-      // Add slide with chart
+      // Add slide with chart, everything kept inside the 10 x 5.625 in slide
       const slide = pptx.addSlide();
-      slide.addText(chartConfig.value.title, {
+      slide.addText(chartConfig.value.title || 'Chart', {
         x: 0.5,
-        y: 0.3,
+        y: 0.2,
         w: 9,
         h: 0.5,
         fontSize: 24,
         bold: true
       });
       
+      // Fit the image in a 9 x 3.5 in box, keeping its aspect ratio
+      const aspect = canvas.width / canvas.height;
+      const imgW = Math.min(9, 3.5 * aspect);
+      const imgH = imgW / aspect;
       slide.addImage({
         data: imgData,
-        x: 0.5,
-        y: 1,
-        w: 9,
-        h: 5,
-        altText: chartConfig.value.title + '. ' + chartConfig.value.summary
+        x: 0.5 + (9 - imgW) / 2,
+        y: 0.8,
+        w: imgW,
+        h: imgH,
+        altText: [chartConfig.value.title, chartConfig.value.summary].filter(Boolean).join('. ')
       });
       
-      slide.addText(chartConfig.value.summary, {
+      slide.addText(chartConfig.value.summary || '', {
         x: 0.5,
-        y: 6.5,
+        y: 4.4,
         w: 9,
-        h: 0.8,
+        h: 0.5,
         fontSize: 12
       });
       
-      slide.addText('Key Insight: ' + chartConfig.value.keyInsight, {
+      slide.addText('Key Insight: ' + (chartConfig.value.keyInsight || ''), {
         x: 0.5,
-        y: 7.3,
+        y: 4.95,
         w: 9,
-        h: 0.8,
+        h: 0.5,
         fontSize: 12,
         bold: true
       });
@@ -4116,33 +4042,28 @@ const exportChart = async (format) => {
         x: 0.5,
         y: 1,
         w: 9,
-        colW: [2, 2, 2, 2, 1],
+        colW: headers.map(() => 9 / Math.max(headers.length, 1)),
         fontSize: 10
       });
       
-      await pptx.writeFile({ fileName: `chart-${chartConfig.value.title.replace(/[^a-z0-9]/gi, '-').toLowerCase() || 'chart'}-${Date.now()}.pptx` });
+      await pptx.writeFile({ fileName: `${exportFileBase()}-${Date.now()}.pptx` });
+      showNotice('PowerPoint file downloaded.', 'success');
     } catch (error) {
       console.error('PPT export error:', error);
-      alert('PPT export failed. Please try HTML or JSON export.');
+      showNotice(`PPT export failed: ${error.message}. Please try HTML or JSON export.`, 'error');
     }
   } else if (format === 'word') {
     // Word export with docx
     try {
-      const { Document, Packer, Paragraph, Table, TableRow, TableCell, WidthType, AlignmentType } = await import('docx');
-      const html2canvas = (await import('html2canvas')).default;
-      const chartElement = document.querySelector('figure[role="img"]');
-      if (!chartElement) {
-        alert('Chart element not found');
-        return;
-      }
+      const { Document, Packer, Paragraph, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel } = await import('docx');
+      const canvas = await captureChart();
       
-      const canvas = await html2canvas(chartElement, {
-        backgroundColor: isDarkMode.value ? '#0f172a' : '#ffffff',
-        scale: 2
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      const imgBuffer = Buffer.from(imgData.split(',')[1], 'base64');
+      // docx wants binary image data; Buffer does not exist in the browser.
+      const pngBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!pngBlob) throw new Error('Could not encode the chart image');
+      const imgBytes = new Uint8Array(await pngBlob.arrayBuffer());
+      const imgWidth = 600;
+      const imgHeight = Math.round((canvas.height / canvas.width) * imgWidth);
       
       // Create data table
       const tableData = generateDataTable();
@@ -4171,7 +4092,7 @@ const exportChart = async (format) => {
           children: [
             new Paragraph({
               text: chartConfig.value.title,
-              heading: 'Heading1',
+              heading: HeadingLevel.HEADING_1,
               alignment: AlignmentType.CENTER
             }),
             new Paragraph({
@@ -4180,13 +4101,15 @@ const exportChart = async (format) => {
             }),
             new Paragraph({
               children: [
-                {
-                  type: 'image',
-                  data: imgBuffer,
-                  width: 500,
-                  height: 300,
-                  altText: chartConfig.value.title + '. ' + chartConfig.value.summary
-                }
+                new ImageRun({
+                  data: imgBytes,
+                  transformation: { width: imgWidth, height: imgHeight },
+                  altText: {
+                    name: 'Chart',
+                    title: chartConfig.value.title || 'Chart',
+                    description: [chartConfig.value.title, chartConfig.value.summary].filter(Boolean).join('. ')
+                  }
+                })
               ],
               alignment: AlignmentType.CENTER
             }),
@@ -4196,7 +4119,7 @@ const exportChart = async (format) => {
             }),
             new Paragraph({
               text: 'Summary:',
-              heading: 'Heading2'
+              heading: HeadingLevel.HEADING_2
             }),
             new Paragraph({
               text: chartConfig.value.summary
@@ -4207,7 +4130,7 @@ const exportChart = async (format) => {
             }),
             new Paragraph({
               text: 'Key Insight:',
-              heading: 'Heading2'
+              heading: HeadingLevel.HEADING_2
             }),
             new Paragraph({
               text: chartConfig.value.keyInsight
@@ -4218,7 +4141,7 @@ const exportChart = async (format) => {
             }),
             new Paragraph({
               text: 'Data Table',
-              heading: 'Heading2'
+              heading: HeadingLevel.HEADING_2
             }),
             new Table({
               rows: tableRows,
@@ -4229,15 +4152,11 @@ const exportChart = async (format) => {
       });
       
       const blob = await Packer.toBlob(doc);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `chart-${chartConfig.value.title.replace(/[^a-z0-9]/gi, '-').toLowerCase() || 'chart'}-${Date.now()}.docx`;
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `${exportFileBase()}-${Date.now()}.docx`);
+      showNotice('Word document downloaded.', 'success');
     } catch (error) {
       console.error('Word export error:', error);
-      alert('Word export failed. Please try HTML or JSON export.');
+      showNotice(`Word export failed: ${error.message}. Please try HTML or JSON export.`, 'error');
     }
   }
 };
@@ -4246,30 +4165,11 @@ const exportChart = async (format) => {
 
 
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
 onMounted(() => {
   if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
     drawerOpen.value = true;
     sessionStorage.removeItem('openDrawerOnLoad');
   }
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
   
   // Load sample data on mount
   loadSampleData();
@@ -4277,14 +4177,19 @@ onMounted(() => {
   initializeCustomColors();
 });
 
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
+// Keep the heatmap value grid the same shape as its row/column labels, so
+// adding a row or column does not leave v-model pointing at a missing array.
+watch(
+  () => [heatmapData.value.rows.length, heatmapData.value.columns.length],
+  ([rowCount, columnCount]) => {
+    const values = heatmapData.value.values || [];
+    const resized = Array.from({ length: rowCount }, (_, r) =>
+      Array.from({ length: columnCount }, (_, c) => values[r]?.[c] ?? 0)
+    );
+    const same = values.length === rowCount && values.every((row) => row.length === columnCount);
+    if (!same) heatmapData.value.values = resized;
   }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
+);
 
 // Watch for chart type changes and load appropriate sample data
 watch(selectedChartType, () => {
@@ -4673,528 +4578,6 @@ const SankeySVG = {
   }
 };
 
-// Choropleth Map SVG Component - MOVED TO MapMaker.vue
-/*
-const ChoroplethMapSVG = {
-  props: ['data', 'colors', 'mapType', 'showAllRegions'],
-  setup(props) {
-    const containerRef = ref(null);
-    const width = ref(800);
-    const height = ref(500);
-    const loading = ref(true);
-    const error = ref(null);
-    const topoJsonData = ref(null);
-    const features = ref([]);
-    const projection = ref(null);
-    const pathGenerator = ref(null);
-    
-    // Update dimensions on resize
-    const updateDimensions = () => {
-      if (containerRef.value) {
-        const rect = containerRef.value.getBoundingClientRect();
-        width.value = rect.width || 800;
-        height.value = rect.height || 500;
-        
-        // Recreate projection with new dimensions
-        if (props.mapType) {
-          const mapTypeValue = props.mapType || 'us';
-          const proj = createProjection(mapTypeValue, width.value, height.value);
-          projection.value = proj;
-          pathGenerator.value = createPathGenerator(proj);
-        }
-      }
-    };
-    
-    // Calculate color scale
-    const colorScale = computed(() => {
-      if (!props.data || props.data.length === 0) return () => props.colors[0] || '#ccc';
-      
-      const values = props.data.map(r => r.value);
-      const min = Math.min(...values);
-      const max = Math.max(...values);
-      const range = max - min || 1;
-      
-      return (value) => {
-        const normalizedValue = (value - min) / range;
-        const colorIndex = Math.floor(normalizedValue * (props.colors.length - 1));
-        return props.colors[colorIndex] || props.colors[0] || '#ccc';
-      };
-    });
-    
-    // Map data regions to features
-    const dataFeatureMap = computed(() => {
-      if (!features.value.length || !props.data) return new Map();
-      return mapDataToFeatures(props.data, features.value);
-    });
-    
-    // Get default color for regions without data
-    const defaultColor = '#e5e7eb';
-    
-    // Load TopoJSON data
-    onMounted(async () => {
-      try {
-        loading.value = true;
-        error.value = null;
-        
-        const mapType = props.mapType || 'us';
-        const mapUrls = getDefaultMapUrls();
-        const url = mapType === 'us' ? mapUrls.us : mapUrls.world;
-        const objectName = mapType === 'us' ? 'states' : 'countries';
-        
-        // Load TopoJSON
-        const topoJson = await loadTopoJSON(url);
-        topoJsonData.value = topoJson;
-        
-        // Convert to GeoJSON features
-        const geoFeatures = getGeoJSONFeatures(topoJson, objectName);
-        features.value = geoFeatures;
-        
-        // Create projection
-        const mapTypeValue = props.mapType || 'us';
-        const proj = createProjection(mapTypeValue, width.value, height.value);
-        projection.value = proj;
-        
-        // Create path generator
-        pathGenerator.value = createPathGenerator(proj);
-        
-        // Set up resize observer after initial render
-        await nextTick();
-        if (containerRef.value) {
-          const resizeObserver = new ResizeObserver(() => {
-            updateDimensions();
-          });
-          resizeObserver.observe(containerRef.value);
-          
-          // Cleanup on unmount
-          onBeforeUnmount(() => {
-            resizeObserver.disconnect();
-          });
-        }
-        
-        loading.value = false;
-      } catch (err) {
-        console.error('Error loading map data:', err);
-        error.value = err.message || 'Failed to load map data';
-        loading.value = false;
-      }
-    });
-    
-    // Watch for mapType changes
-    watch(() => props.mapType, async (newMapType) => {
-      if (!newMapType) return;
-      
-      try {
-        loading.value = true;
-        error.value = null;
-        
-        const mapUrls = getDefaultMapUrls();
-        const url = newMapType === 'us' ? mapUrls.us : mapUrls.world;
-        const objectName = newMapType === 'us' ? 'states' : 'countries';
-        
-        const topoJson = await loadTopoJSON(url);
-        topoJsonData.value = topoJson;
-        
-        const geoFeatures = getGeoJSONFeatures(topoJson, objectName);
-        features.value = geoFeatures;
-        
-        const proj = createProjection(newMapType, width.value, height.value);
-        projection.value = proj;
-        pathGenerator.value = createPathGenerator(proj);
-        
-        loading.value = false;
-      } catch (err) {
-        console.error('Error loading map data:', err);
-        error.value = err.message || 'Failed to load map data';
-        loading.value = false;
-      }
-    });
-    
-    return () => {
-      if (loading.value) {
-        return h('div', {
-          class: 'flex items-center justify-center w-full h-full',
-          style: { minHeight: '300px' }
-        }, [
-          h('div', { class: 'text-gray-500' }, 'Loading map...')
-        ]);
-      }
-      
-      if (error.value) {
-        return h('div', {
-          class: 'flex items-center justify-center w-full h-full',
-          style: { minHeight: '300px' }
-        }, [
-          h('div', { class: 'text-red-500' }, `Error: ${error.value}`)
-        ]);
-      }
-      
-      if (!pathGenerator.value || !features.value.length) {
-        return h('div', {
-          class: 'flex items-center justify-center w-full h-full',
-          style: { minHeight: '300px' }
-        }, [
-          h('div', { class: 'text-gray-500' }, 'No map data available')
-        ]);
-      }
-      
-      // Determine which features to render
-      const featuresToRender = props.showAllRegions !== false 
-        ? features.value 
-        : features.value.filter(f => {
-            const featureName = f.properties?.name;
-            // Check if any data region matches this feature
-            return Array.from(dataFeatureMap.value.keys()).some(name => {
-              const mappedFeature = dataFeatureMap.value.get(name);
-              return mappedFeature && mappedFeature.properties?.name === featureName;
-            });
-          });
-      
-      return h('div', {
-        ref: containerRef,
-        class: 'w-full h-full'
-      }, [
-        h('svg', {
-          width: width.value,
-          height: height.value,
-          viewBox: `0 0 ${width.value} ${height.value}`,
-          class: 'w-full h-full',
-          role: 'img',
-          'aria-label': 'Choropleth map showing regional data values'
-        }, [
-        // Render all features
-        ...featuresToRender.map((feature, index) => {
-          const featureName = feature.properties?.name;
-          const hasData = dataFeatureMap.value.has(featureName);
-          const dataRegion = hasData ? props.data.find(r => r.name === featureName) : null;
-          
-          const color = dataRegion 
-            ? colorScale.value(dataRegion.value)
-            : defaultColor;
-          
-          const pathData = pathGenerator.value(feature);
-          if (!pathData) return null;
-          
-          // Calculate centroid for label
-          const centroid = getFeatureCentroid(feature);
-          const [centroidX, centroidY] = projection.value(centroid) || [0, 0];
-          
-          return h('g', { key: `region-${index}` }, [
-            h('path', {
-              d: pathData,
-              fill: color,
-              stroke: '#fff',
-              'stroke-width': 0.5,
-              'aria-label': dataRegion 
-                ? `${featureName}: ${dataRegion.value}` 
-                : featureName,
-              tabindex: 0,
-              role: 'button',
-              style: { cursor: 'pointer' }
-            }),
-            // Only show label if there's data for this region
-            dataRegion ? h('text', {
-              x: centroidX,
-              y: centroidY,
-              'text-anchor': 'middle',
-              'dominant-baseline': 'middle',
-              fill: '#000',
-              'font-size': 12,
-              'font-weight': 'bold',
-              style: { pointerEvents: 'none' }
-            }, featureName) : null
-          ]);
-        })
-      ])
-      ]);
-    };
-  }
-};
-*/
-
-// Flow Map SVG Component - MOVED TO MapMaker.vue
-/*
-const FlowMapSVG = {
-  props: ['data', 'colors', 'mapType'],
-  setup(props) {
-    const containerRef = ref(null);
-    const width = ref(800);
-    const height = ref(500);
-    const loading = ref(true);
-    const error = ref(null);
-    const topoJsonData = ref(null);
-    const features = ref([]);
-    const projection = ref(null);
-    const pathGenerator = ref(null);
-    
-    // Update dimensions on resize
-    const updateDimensions = () => {
-      if (containerRef.value) {
-        const rect = containerRef.value.getBoundingClientRect();
-        width.value = rect.width || 800;
-        height.value = rect.height || 500;
-        
-        // Recreate projection with new dimensions
-        if (props.mapType) {
-          const mapTypeValue = props.mapType || 'us';
-          const proj = createProjection(mapTypeValue, width.value, height.value);
-          projection.value = proj;
-          pathGenerator.value = createPathGenerator(proj);
-        }
-      }
-    };
-    
-    // Project nodes to screen coordinates
-    const nodes = computed(() => {
-      if (!projection.value || !props.data?.nodes) return [];
-      
-      return props.data.nodes.map((node, index) => {
-        let x, y;
-        
-        // Use lat/lng if available, otherwise fall back to x/y
-        if (node.lat !== undefined && node.lng !== undefined) {
-          const projected = projectCoordinates(projection.value, node.lng, node.lat);
-          if (projected) {
-            [x, y] = projected;
-          } else {
-            // Fallback to x/y if projection fails
-            x = node.x || 200;
-            y = node.y || 200;
-          }
-        } else if (node.x !== undefined && node.y !== undefined) {
-          x = node.x;
-          y = node.y;
-        } else {
-          // Default position
-          x = 200;
-          y = 200;
-        }
-        
-        return {
-          ...node,
-          x,
-          y,
-          color: props.colors[index % props.colors.length],
-          radius: 15
-        };
-      });
-    });
-    
-    const links = computed(() => {
-      if (!props.data?.links) return [];
-      
-      return props.data.links.map((link, index) => {
-        const sourceNode = nodes.value.find(n => n.id === link.source);
-        const targetNode = nodes.value.find(n => n.id === link.target);
-        if (!sourceNode || !targetNode) return null;
-        
-        const dx = targetNode.x - sourceNode.x;
-        const dy = targetNode.y - sourceNode.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const angle = Math.atan2(dy, dx);
-        
-        // Use a consistent color based on link index instead of random
-        const colorIndex = index % props.colors.length;
-        const color = props.colors[colorIndex] || '#888';
-        
-        return {
-          ...link,
-          sourceX: sourceNode.x,
-          sourceY: sourceNode.y,
-          targetX: targetNode.x,
-          targetY: targetNode.y,
-          distance,
-          angle,
-          strokeWidth: Math.max(2, link.value / 10),
-          color: color + '80' // Add transparency
-        };
-      }).filter(Boolean);
-    });
-    
-    // Load TopoJSON data
-    onMounted(async () => {
-      try {
-        loading.value = true;
-        error.value = null;
-        
-        const mapType = props.mapType || 'us';
-        const mapUrls = getDefaultMapUrls();
-        const url = mapType === 'us' ? mapUrls.us : mapUrls.world;
-        const objectName = mapType === 'us' ? 'states' : 'countries';
-        
-        // Load TopoJSON
-        const topoJson = await loadTopoJSON(url);
-        topoJsonData.value = topoJson;
-        
-        // Convert to GeoJSON features
-        const geoFeatures = getGeoJSONFeatures(topoJson, objectName);
-        features.value = geoFeatures;
-        
-        // Create projection
-        const mapTypeValue = props.mapType || 'us';
-        const proj = createProjection(mapTypeValue, width.value, height.value);
-        projection.value = proj;
-        
-        // Create path generator
-        pathGenerator.value = createPathGenerator(proj);
-        
-        // Set up resize observer after initial render
-        await nextTick();
-        if (containerRef.value) {
-          const resizeObserver = new ResizeObserver(() => {
-            updateDimensions();
-          });
-          resizeObserver.observe(containerRef.value);
-          
-          // Cleanup on unmount
-          onBeforeUnmount(() => {
-            resizeObserver.disconnect();
-          });
-        }
-        
-        loading.value = false;
-      } catch (err) {
-        console.error('Error loading map data:', err);
-        error.value = err.message || 'Failed to load map data';
-        loading.value = false;
-      }
-    });
-    
-    // Watch for mapType changes
-    watch(() => props.mapType, async (newMapType) => {
-      if (!newMapType) return;
-      
-      try {
-        loading.value = true;
-        error.value = null;
-        
-        const mapUrls = getDefaultMapUrls();
-        const url = newMapType === 'us' ? mapUrls.us : mapUrls.world;
-        const objectName = newMapType === 'us' ? 'states' : 'countries';
-        
-        const topoJson = await loadTopoJSON(url);
-        topoJsonData.value = topoJson;
-        
-        const geoFeatures = getGeoJSONFeatures(topoJson, objectName);
-        features.value = geoFeatures;
-        
-        const proj = createProjection(newMapType, width.value, height.value);
-        projection.value = proj;
-        pathGenerator.value = createPathGenerator(proj);
-        
-        loading.value = false;
-      } catch (err) {
-        console.error('Error loading map data:', err);
-        error.value = err.message || 'Failed to load map data';
-        loading.value = false;
-      }
-    });
-    
-    return () => {
-      if (loading.value) {
-        return h('div', {
-          class: 'flex items-center justify-center w-full h-full',
-          style: { minHeight: '300px' }
-        }, [
-          h('div', { class: 'text-gray-500' }, 'Loading map...')
-        ]);
-      }
-      
-      if (error.value) {
-        return h('div', {
-          class: 'flex items-center justify-center w-full h-full',
-          style: { minHeight: '300px' }
-        }, [
-          h('div', { class: 'text-red-500' }, `Error: ${error.value}`)
-        ]);
-      }
-      
-      if (!pathGenerator.value || !features.value.length) {
-        return h('div', {
-          class: 'flex items-center justify-center w-full h-full',
-          style: { minHeight: '300px' }
-        }, [
-          h('div', { class: 'text-gray-500' }, 'No map data available')
-        ]);
-      }
-      
-      return h('div', {
-        ref: containerRef,
-        class: 'w-full h-full'
-      }, [
-        h('svg', {
-          width: width.value,
-          height: height.value,
-          viewBox: `0 0 ${width.value} ${height.value}`,
-          class: 'w-full h-full',
-          role: 'img',
-          'aria-label': 'Flow map showing movement between locations'
-        }, [
-        // Map background - render all features
-        ...features.value.map((feature, index) => {
-          const pathData = pathGenerator.value(feature);
-          if (!pathData) return null;
-          
-          return h('path', {
-            key: `map-feature-${index}`,
-            d: pathData,
-            fill: '#f0f0f0',
-            stroke: '#ccc',
-            'stroke-width': 0.5,
-            opacity: 0.3
-          });
-        }),
-        // Links (curved paths) - render behind nodes
-        ...links.value.map((link, index) => {
-          const midX = (link.sourceX + link.targetX) / 2;
-          const midY = (link.sourceY + link.targetY) / 2;
-          const controlOffset = link.distance * 0.3;
-          const controlX = midX - Math.sin(link.angle) * controlOffset;
-          const controlY = midY + Math.cos(link.angle) * controlOffset;
-          const path = `M ${link.sourceX} ${link.sourceY} Q ${controlX} ${controlY} ${link.targetX} ${link.targetY}`;
-          
-          return h('path', {
-            key: `link-${index}`,
-            d: path,
-            stroke: link.color,
-            'stroke-width': link.strokeWidth,
-            fill: 'none',
-            opacity: 0.6,
-            'aria-label': `Flow from ${props.data.nodes.find(n => n.id === link.source)?.label || link.source} to ${props.data.nodes.find(n => n.id === link.target)?.label || link.target}: ${link.value}`
-          });
-        }),
-        // Nodes
-        ...nodes.value.map((node, index) => 
-          h('g', { key: `node-${index}` }, [
-            h('circle', {
-              cx: node.x,
-              cy: node.y,
-              r: node.radius,
-              fill: node.color,
-              stroke: '#fff',
-              'stroke-width': 2,
-              'aria-label': `Location: ${node.label}`,
-              tabindex: 0,
-              role: 'button',
-              style: { cursor: 'pointer' }
-            }),
-            h('text', {
-              x: node.x,
-              y: node.y + node.radius + 15,
-              'text-anchor': 'middle',
-              'dominant-baseline': 'middle',
-              fill: '#000',
-              'font-size': 12,
-              'font-weight': 'bold',
-              style: { pointerEvents: 'none' }
-            }, node.label)
-          ])
-        )
-        ])
-      ]);
-    };
-  }
-};
-*/
 
 // Bullet Graph SVG Component
 const BulletGraphSVG = {

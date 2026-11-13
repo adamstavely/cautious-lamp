@@ -80,11 +80,7 @@
                   : 'border-gray-300 bg-white text-gray-900'"
               >
                 <option value="">Choose a component...</option>
-                <option value="button">Button</option>
-                <option value="card">Card</option>
-                <option value="input">Input</option>
-                <option value="select">Select</option>
-                <option value="modal">Modal</option>
+                <option v-for="(component, key) in componentData" :key="key" :value="key">{{ component.name }}</option>
               </select>
             </div>
 
@@ -210,9 +206,10 @@
                 </div>
               </div>
               <div class="p-6">
+                <InlineNotice v-if="notice" class="mb-4" :notice="notice" @dismiss="clearNotice" />
                 <div class="rounded-lg overflow-hidden" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-50'">
                   <div class="p-4 overflow-x-auto max-h-[600px] overflow-y-auto">
-                    <pre class="text-sm font-mono whitespace-pre-wrap" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"><code>{{ generatedDocs }}</code></pre>
+                    <pre class="text-sm font-mono whitespace-pre-wrap" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"><code>{{ outputText }}</code></pre>
                   </div>
                 </div>
               </div>
@@ -220,7 +217,7 @@
 
             <!-- Documentation Preview -->
             <div 
-              v-if="generatedDocs && outputFormat === 'markdown'"
+              v-if="generatedDocs"
               class="rounded-lg shadow-sm border p-6"
               :class="isDarkMode 
                 ? 'bg-slate-900 border-gray-700' 
@@ -253,13 +250,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed } from 'vue';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import { useDrawer } from '../composables/useDrawer.js';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const selectedComponent = ref('');
 const uploadedCode = ref('');
@@ -352,9 +354,51 @@ export default {
   }
 };
 
+// Rendered + sanitised HTML. Uploaded files feed straight into the Markdown,
+// so marked's output must never reach v-html (or the HTML export) unsanitised.
 const renderedMarkdown = computed(() => {
-  if (!generatedDocs.value || outputFormat.value !== 'markdown') return '';
-  return marked(generatedDocs.value);
+  if (!generatedDocs.value) return '';
+  return DOMPurify.sanitize(marked.parse(generatedDocs.value, { async: false }));
+});
+
+const docTitle = computed(() => {
+  const heading = generatedDocs.value.match(/^#\s+(.+)$/m);
+  return heading ? heading[1].trim() : 'Component Documentation';
+});
+
+const escapeHtml = (value) => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+// What Copy and Download produce for the chosen format.
+const outputText = computed(() => {
+  if (!generatedDocs.value) return '';
+  if (outputFormat.value === 'html') {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>${escapeHtml(docTitle.value)}</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; }
+    code { background: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px; }
+    pre { background: #f5f5f5; padding: 1rem; border-radius: 5px; overflow-x: auto; }
+    table { border-collapse: collapse; } th, td { border: 1px solid #ddd; padding: 0.4em 0.6em; }
+  </style>
+</head>
+<body>
+${renderedMarkdown.value}
+</body>
+</html>`;
+  }
+  if (outputFormat.value === 'vuepress') {
+    const title = docTitle.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    return `---\ntitle: "${title}"\n---\n\n${generatedDocs.value}`;
+  }
+  return generatedDocs.value;
 });
 
 const loadComponent = () => {
@@ -369,17 +413,17 @@ const handleFileUpload = (event) => {
   const reader = new FileReader();
   reader.onload = (e) => {
     uploadedCode.value = e.target?.result || '';
-    parseComponentCode(uploadedCode.value);
+    // The upload replaces any bundled component selection.
+    selectedComponent.value = '';
+    generateDocumentation();
+    showNotice(`Generated documentation from ${file.name}.`, 'success');
+  };
+  reader.onerror = () => {
+    showNotice(`Could not read ${file.name}.`, 'error');
   };
   reader.readAsText(file);
-};
-
-const parseComponentCode = (code) => {
-  // Extract JSDoc comments
-  const jsdocMatch = code.match(/\/\*\*([\s\S]*?)\*\//);
-  if (jsdocMatch) {
-    generateDocumentation();
-  }
+  // Let the same file be chosen again later.
+  event.target.value = '';
 };
 
 const generateDocumentation = () => {
@@ -434,6 +478,54 @@ const generateDocumentation = () => {
   generatedDocs.value = docs;
 };
 
+// Text safe inside a Markdown table cell.
+const cell = (value) => String(value ?? '').replace(/\|/g, '\\|').replace(/\s*\n\s*/g, ' ').trim();
+
+// Index of the brace that closes the one at `open`, or -1.
+const matchBrace = (code, open) => {
+  let depth = 0;
+  for (let i = open; i < code.length; i++) {
+    if (code[i] === '{') depth++;
+    else if (code[i] === '}' && --depth === 0) return i;
+  }
+  return -1;
+};
+
+const extractPropsBody = (code) => {
+  const start = code.search(/(?:\bprops\s*:|defineProps\s*\(\s*)\{/);
+  if (start === -1) return null;
+  const open = code.indexOf('{', start);
+  const close = matchBrace(code, open);
+  return close === -1 ? null : code.slice(open + 1, close);
+};
+
+// Top-level entries of a props object, with the JSDoc comment above each.
+const parsePropEntries = (body) => {
+  const entries = [];
+  const entryRegex = /(?:\/\*\*([\s\S]*?)\*\/\s*)?(\w+)\s*:\s*/g;
+  let m;
+  while ((m = entryRegex.exec(body)) !== null) {
+    const name = m[2];
+    const description = (m[1] || '')
+      .split('\n')
+      .map((line) => line.replace(/^\s*\*\s?/, '').trim())
+      .filter((line) => line && !line.startsWith('@'))
+      .join(' ');
+    const valueStart = entryRegex.lastIndex;
+    if (body[valueStart] === '{') {
+      const close = matchBrace(body, valueStart);
+      if (close === -1) break;
+      entries.push({ name, description, definition: body.slice(valueStart + 1, close), shorthand: false });
+      entryRegex.lastIndex = close + 1;
+    } else {
+      const end = body.slice(valueStart).search(/,|\n|$/);
+      entries.push({ name, description, definition: body.slice(valueStart, valueStart + end), shorthand: true });
+      entryRegex.lastIndex = valueStart + Math.max(end, 1);
+    }
+  }
+  return entries;
+};
+
 const parseUploadedCode = (code) => {
   let docs = '# Component Documentation\n\n';
   
@@ -454,25 +546,19 @@ const parseUploadedCode = (code) => {
     }
   }
 
-  // Extract props
-  const propsMatch = code.match(/props:\s*\{([\s\S]*?)\}/);
-  if (propsMatch && options.value.includeProps) {
+  // Extract props: the balanced { ... } after `props:` (or defineProps({ ... })),
+  // then each top-level `name: { ... }` / `name: Type` entry in it.
+  const propsBody = extractPropsBody(code);
+  if (propsBody !== null && options.value.includeProps) {
     docs += `## Props\n\n`;
     docs += `| Name | Type | Default | Required | Description |\n`;
     docs += `|------|------|---------|----------|-------------|\n`;
-    
-    // Extract individual props
-    const propRegex = /(\w+):\s*\{([\s\S]*?)\}/g;
-    let propMatch;
-    while ((propMatch = propRegex.exec(propsMatch[1])) !== null) {
-      const propName = propMatch[1];
-      const propDef = propMatch[2];
-      const typeMatch = propDef.match(/type:\s*(\w+)/);
-      const defaultMatch = propDef.match(/default:\s*(.+)/);
-      const requiredMatch = propDef.match(/required:\s*(true|false)/);
-      const descMatch = propDef.match(/\/\*\*([\s\S]*?)\*\//);
-      
-      docs += `| \`${propName}\` | \`${typeMatch ? typeMatch[1] : 'any'}\` | ${defaultMatch ? `\`${defaultMatch[1]}\`` : '-'} | ${requiredMatch && requiredMatch[1] === 'true' ? 'Yes' : 'No'} | ${descMatch ? descMatch[1].trim() : ''} |\n`;
+    for (const prop of parsePropEntries(propsBody)) {
+      const def = prop.definition;
+      const typeMatch = def.match(/type:\s*(\[[^\]]*\]|[\w.|]+)/) || (prop.shorthand ? [null, def.trim()] : null);
+      const defaultMatch = def.match(/default:\s*([^,\n]+)/);
+      const requiredMatch = def.match(/required:\s*(true|false)/);
+      docs += `| \`${prop.name}\` | \`${cell(typeMatch ? typeMatch[1] : 'any')}\` | ${defaultMatch ? `\`${cell(defaultMatch[1].trim())}\`` : '-'} | ${requiredMatch && requiredMatch[1] === 'true' ? 'Yes' : 'No'} | ${cell(prop.description)} |\n`;
     }
     docs += `\n`;
   }
@@ -481,38 +567,23 @@ const parseUploadedCode = (code) => {
 };
 
 const copyDocs = async () => {
-  if (!generatedDocs.value) return;
+  if (!outputText.value) return;
   try {
-    await navigator.clipboard.writeText(generatedDocs.value);
+    await navigator.clipboard.writeText(outputText.value);
+    showNotice('Copied to clipboard.', 'success');
   } catch (err) {
     console.error('Failed to copy:', err);
+    showNotice('Could not copy to the clipboard.', 'error');
   }
 };
 
 const downloadDocs = () => {
-  if (!generatedDocs.value) return;
-  const extension = outputFormat.value === 'html' ? 'html' : outputFormat.value === 'vuepress' ? 'md' : 'md';
+  if (!outputText.value) return;
+  const extension = outputFormat.value === 'html' ? 'html' : 'md';
   const filename = `${selectedComponent.value || 'component'}.${extension}`;
+  const content = outputText.value;
   
-  let content = generatedDocs.value;
-  if (outputFormat.value === 'html') {
-    content = `<!DOCTYPE html>
-<html>
-<head>
-  <title>Component Documentation</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; }
-    code { background: #f5f5f5; padding: 0.2em 0.4em; border-radius: 3px; }
-    pre { background: #f5f5f5; padding: 1rem; border-radius: 5px; overflow-x: auto; }
-  </style>
-</head>
-<body>
-${renderedMarkdown.value}
-</body>
-</html>`;
-  }
-  
-  const blob = new Blob([content], { type: outputFormat.value === 'html' ? 'text/html' : 'text/markdown' });
+const blob = new Blob([content], { type: outputFormat.value === 'html' ? 'text/html' : 'text/markdown' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -527,35 +598,6 @@ ${renderedMarkdown.value}
 
 
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>

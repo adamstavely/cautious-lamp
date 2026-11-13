@@ -204,6 +204,7 @@
                     <span v-else>Submit Evaluation</span>
                   </button>
                 </div>
+                <InlineNotice :notice="notice" @dismiss="clearNotice" />
               </form>
             </div>
 
@@ -249,15 +250,32 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
+import apiClient from '../services/api.js';
 
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(false);
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
+
+// A user-facing reason the submission failed.
+const describeSubmitError = (error) => {
+  const status = error.response?.status;
+  const message = error.response?.data?.message;
+  const detail = Array.isArray(message) ? message.join(' ') : message;
+  if (status === 503) {
+    return `Storage is unavailable, so the evaluation was not saved. Please try again later.${detail ? ` (${detail})` : ''}`;
+  }
+  if (detail) return `The evaluation was not saved: ${detail}`;
+  if (status) return `The evaluation was not saved (HTTP ${status}). Please try again.`;
+  return 'Could not reach the server, so the evaluation was not saved. Check your connection and try again.';
+};
 const isSubmitting = ref(false);
 const results = ref(null);
 
@@ -344,16 +362,17 @@ const resetForm = () => {
   }));
   form.overallAssessment = '';
   results.value = null;
+  clearNotice();
 };
 
 const calculateResults = () => {
   const totalIssues = form.heuristics.filter(h => h.issues.trim().length > 0).length;
   const criticalIssues = form.heuristics.filter(h => h.severity === 4).length;
   
-  // Calculate overall score (10 - average severity, normalized to 0-10)
+  // Overall score 0-10: average severity (0-4) mapped so 0 -> 10 and 4 -> 0
   const severities = form.heuristics.map(h => h.severity);
   const avgSeverity = severities.reduce((a, b) => a + b, 0) / severities.length;
-  const overallScore = Math.max(0, Math.min(10, 10 - avgSeverity));
+  const overallScore = Math.max(0, Math.min(10, 10 - avgSeverity * 2.5));
   
   return {
     totalIssues,
@@ -362,64 +381,54 @@ const calculateResults = () => {
   };
 };
 
+const validate = () => {
+  if (!form.systemName) return 'Choose the system or application you evaluated.';
+  if (!form.evaluator.trim()) return 'Enter the evaluator name.';
+  const undescribed = form.heuristics
+    .map((h, index) => (h.severity > 0 && !h.issues.trim() ? heuristics[index].name : null))
+    .filter(Boolean);
+  if (undescribed.length > 0) {
+    return `Describe the issues for every heuristic rated above "No Issues" (${undescribed.join('; ')}).`;
+  }
+  return null;
+};
+
 const submitEvaluation = async () => {
+  const problem = validate();
+  if (problem) {
+    showNotice(problem, 'error');
+    return;
+  }
+
   isSubmitting.value = true;
+  clearNotice();
   
   try {
     const evaluationData = {
       systemName: form.systemName,
-      evaluator: form.evaluator,
+      evaluator: form.evaluator.trim(),
       heuristics: form.heuristics.map((h, index) => ({
         heuristic: heuristics[index].name,
-        issues: h.issues,
+        issues: h.issues.trim(),
         severity: h.severity
       })),
-      overallAssessment: form.overallAssessment,
+      overallAssessment: form.overallAssessment.trim(),
       timestamp: new Date().toISOString()
     };
     
-    // Calculate and display results
+    await apiClient.post('/api/v1/heuristic-evaluation', evaluationData);
+    
     results.value = calculateResults();
-    
-    // Submit to backend (similar to NASA-TLX)
-    const response = await axios.post(
-      `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/heuristic-evaluation`,
-      evaluationData,
-      {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || ''}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    
-    console.log('Evaluation submitted:', response.data);
-    
-    // Show success message (you could add a toast notification here)
-    alert('Evaluation submitted successfully!');
-    
+    showNotice('Evaluation submitted and saved.', 'success');
   } catch (error) {
     console.error('Failed to submit evaluation:', error);
-    // Still show results even if backend submission fails
+    // The summary below is still shown, but nothing was stored.
     results.value = calculateResults();
-    alert('Evaluation saved locally. Backend submission failed.');
+    showNotice(describeSubmitError(error), 'error');
   } finally {
     isSubmitting.value = false;
   }
 };
-
-onMounted(() => {
-  isDarkMode.value = document.documentElement.classList.contains('dark');
-  
-  const observer = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-});
 </script>
 
 <style scoped>

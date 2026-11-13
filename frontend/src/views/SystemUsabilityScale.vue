@@ -153,7 +153,7 @@
                 <div class="flex justify-end pt-4">
                   <button
                     type="submit"
-                    :disabled="isSubmitting || !hasAllAnswers"
+                    :disabled="isSubmitting"
                     class="px-6 py-3 rounded-lg transition-colors text-sm font-medium"
                     :class="(isSubmitting || !hasAllAnswers)
                       ? (isDarkMode 
@@ -173,22 +173,10 @@
                     </span>
                   </button>
                 </div>
+                <InlineNotice :notice="notice" @dismiss="clearNotice" />
               </form>
             </div>
 
-            <!-- Success Message -->
-            <div
-              v-if="showSuccess"
-              class="rounded-lg p-4 mb-6 border"
-              :class="isDarkMode 
-                ? 'bg-green-900/30 border-green-700 text-green-300' 
-                : 'bg-green-50 border-green-300 text-green-800'"
-            >
-              <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined">check_circle</span>
-                <span>Assessment submitted successfully! Your SUS score: {{ lastScore }}. Data has been saved to Elasticsearch for analysis.</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -197,18 +185,33 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
-import axios from 'axios';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
+import apiClient from '../services/api.js';
 
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 const isSubmitting = ref(false);
-const showSuccess = ref(false);
-const lastScore = ref(0);
+
+// A user-facing reason the submission failed.
+const describeSubmitError = (error) => {
+  const status = error.response?.status;
+  const message = error.response?.data?.message;
+  const detail = Array.isArray(message) ? message.join(' ') : message;
+  if (status === 503) {
+    return `Storage is unavailable, so the assessment was not saved. Please try again later.${detail ? ` (${detail})` : ''}`;
+  }
+  if (detail) return `The assessment was not saved: ${detail}`;
+  if (status) return `The assessment was not saved (HTTP ${status}). Please try again.`;
+  return 'Could not reach the server, so the assessment was not saved. Check your connection and try again.';
+};
 
 const form = ref({
   systemName: '',
@@ -245,10 +248,14 @@ const systemOptions = ref([
   { value: 'Other', label: 'Other' },
 ]);
 
+const isRating = (value) => Number.isInteger(value) && value >= 1 && value <= 5;
+
+const unansweredQuestions = computed(() =>
+  questions.map((_, i) => i + 1).filter((n) => !isRating(form.value[`q${n}`]))
+);
+
 const hasAllAnswers = computed(() => {
-  return form.value.systemName && 
-         form.value.q1 && form.value.q2 && form.value.q3 && form.value.q4 && form.value.q5 &&
-         form.value.q6 && form.value.q7 && form.value.q8 && form.value.q9 && form.value.q10;
+  return Boolean(form.value.systemName) && unansweredQuestions.value.length === 0;
 });
 
 const getRatingLabel = (rating) => {
@@ -288,32 +295,31 @@ const getScoreInterpretation = (score) => {
 
 
 const submitForm = async () => {
-  if (!hasAllAnswers.value) {
-    alert('Please answer all questions.');
+  if (!form.value.systemName) {
+    showNotice('Choose the system or application you are assessing.', 'error');
+    return;
+  }
+  if (unansweredQuestions.value.length > 0) {
+    showNotice(`Answer every statement before submitting (missing: ${unansweredQuestions.value.join(', ')}).`, 'error');
     return;
   }
 
   isSubmitting.value = true;
-  showSuccess.value = false;
+  clearNotice();
 
   try {
-    const apiKey = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
     const user = localStorage.getItem('currentDesigner') || 'Anonymous User';
+    const localScore = calculateScore();
     
     const payload = {
       ...form.value,
       user,
     };
 
-    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/sus`, payload, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await apiClient.post('/api/v1/sus', payload);
 
-    lastScore.value = response.data.score;
-    showSuccess.value = true;
+    const score = typeof response.data?.score === 'number' ? response.data.score : localScore;
+    showNotice(`Assessment submitted and saved. SUS score: ${score}.`, 'success');
     
     // Reset form
     form.value = {
@@ -329,30 +335,13 @@ const submitForm = async () => {
       q9: null,
       q10: null,
     };
-
-    // Hide success message after 5 seconds
-    setTimeout(() => {
-      showSuccess.value = false;
-    }, 5000);
   } catch (error) {
     console.error('Failed to submit SUS:', error);
-    alert('Failed to submit assessment. Please try again.');
+    showNotice(describeSubmitError(error), 'error');
   } finally {
     isSubmitting.value = false;
   }
 };
-
-onMounted(() => {
-  // Watch for dark mode changes
-  const observer = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-});
 </script>
 
 <style scoped>

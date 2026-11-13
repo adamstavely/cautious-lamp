@@ -408,14 +408,15 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
 import chroma from 'chroma-js';
+import { useDarkMode } from '../composables/useDarkMode.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const foregroundColor = ref('#7AC600');
 const backgroundColor = ref('#0E55A8');
@@ -438,11 +439,27 @@ const getLuminance = (rgb) => {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 };
 
+// Composite a colour with alpha over another (straight alpha, sRGB).
+const composite = (top, bottomRgb) => {
+  const a = top.alpha();
+  const rgb = top.rgb();
+  if (a >= 1) return rgb;
+  return rgb.map((v, i) => v * a + bottomRgb[i] * (1 - a));
+};
+
+// The colours as actually seen: a translucent background sits on white, and a
+// translucent foreground on that background. Supports the alpha formats the
+// page lists (#RRGGBBAA, rgba(), hsla()).
+const resolvePair = () => {
+  const bgRgb = composite(chroma(backgroundColor.value), [255, 255, 255]);
+  const fgRgb = composite(chroma(foregroundColor.value), bgRgb);
+  return { fgRgb, bgRgb };
+};
+
 // Calculate contrast ratio
 const contrastRatio = computed(() => {
   try {
-    const fgRgb = chroma(foregroundColor.value).rgb();
-    const bgRgb = chroma(backgroundColor.value).rgb();
+    const { fgRgb, bgRgb } = resolvePair();
     
     const fgLum = getLuminance(fgRgb);
     const bgLum = getLuminance(bgRgb);
@@ -462,14 +479,14 @@ const wcagCriteria = computed(() => {
   
   return [
     {
-      label: 'Regular text (24px / 19px bold and below)',
+      label: 'Normal text (under 24px, or under 18.66px / 14pt bold)',
       aaMinimum: '4.5',
       aaPass: ratio >= 4.5,
       aaaMinimum: '7',
       aaaPass: ratio >= 7
     },
     {
-      label: 'Large text (24px / 19px bold and above)',
+      label: 'Large text (24px / 18pt and up, or 18.66px / 14pt bold and up)',
       aaMinimum: '3',
       aaPass: ratio >= 3,
       aaaMinimum: '4.5',
@@ -569,8 +586,7 @@ const rgbToLab = (rgb) => {
 // Vision types with simulated colors
 const visionTypes = computed(() => {
   try {
-    const fgRgb = chroma(foregroundColor.value).rgb();
-    const bgRgb = chroma(backgroundColor.value).rgb();
+    const { fgRgb, bgRgb } = resolvePair();
     
     const types = [
       { name: 'Normal vision', type: null },
@@ -673,36 +689,8 @@ watch([foregroundColor, backgroundColor], () => {
   }
 });
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
 onMounted(() => {
   updateContrast();
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
 });
 </script>
 

@@ -93,7 +93,7 @@
                       </label>
                       <button
                         v-if="!autoUpdate"
-                        @click="updateOutput"
+                        @click="runPreview"
                         class="px-4 py-2 rounded-lg transition-colors text-sm font-medium"
                         :class="isDarkMode 
                           ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
@@ -190,6 +190,9 @@
                     </button>
                   </div>
                 </div>
+                <div v-if="notice" class="p-3">
+                  <InlineNotice :notice="notice" @dismiss="clearNotice" />
+                </div>
               </div>
 
               <!-- Right Column: Output -->
@@ -208,9 +211,11 @@
                 <div class="h-96 rounded-b-lg overflow-hidden">
                   <iframe
                     ref="outputFrame"
-                    :srcdoc="renderedHTML"
+                    :key="previewRun"
+                    :srcdoc="outputDoc"
+                    title="HTML preview"
                     class="w-full h-full border-0"
-                    sandbox="allow-scripts allow-same-origin"
+                    sandbox="allow-scripts"
                   ></iframe>
                 </div>
               </div>
@@ -327,13 +332,23 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
+// What the preview iframe shows. Only updated by updateOutput(), so turning
+// auto-update off really does hold the preview until RUN is pressed. The
+// iframe is sandboxed with allow-scripts only (opaque origin), so previewed
+// code cannot reach this page, its storage or its API key.
+const outputDoc = ref('');
+const previewRun = ref(0);
 const autoUpdate = ref(true);
 const activeTab = ref('html');
 const isFullscreen = ref(false);
@@ -383,17 +398,17 @@ const renderedHTML = computed(() => {
 
 
 
-const handleInput = () => {
-  if (autoUpdate.value) {
-    updateOutput();
-  }
+// The deep watcher on codeInputs below already re-renders on every edit.
+const handleInput = () => {};
+
+// RUN: always re-run, even when nothing changed since the last render.
+const runPreview = () => {
+  previewRun.value += 1;
+  updateOutput();
 };
 
 const updateOutput = () => {
-  // Force iframe reload
-  if (outputFrame.value) {
-    outputFrame.value.srcdoc = renderedHTML.value;
-  }
+  outputDoc.value = renderedHTML.value;
 };
 
 const formatCode = () => {
@@ -459,9 +474,10 @@ const copyCode = async () => {
   
   try {
     await navigator.clipboard.writeText(code);
-    // You could add a toast notification here
+    showNotice('Copied to clipboard.', 'success');
   } catch (error) {
     console.error('Copy failed:', error);
+    showNotice('Could not copy to the clipboard.', 'error');
   }
 };
 
@@ -509,22 +525,8 @@ watch(() => codeInputs.value, () => {
 }, { deep: true });
 
 onMounted(() => {
-  // Watch for dark mode changes
-  const observer = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
   // Initial render
   updateOutput();
-});
-
-onBeforeUnmount(() => {
-  // Cleanup if needed
 });
 </script>
 

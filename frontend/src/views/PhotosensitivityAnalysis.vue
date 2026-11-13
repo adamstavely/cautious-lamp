@@ -86,7 +86,8 @@
                 </label>
                 <div 
                   @click="triggerFileInput"
-                  @dragover.prevent
+                  @dragover.prevent="isDragging = true"
+                  @dragleave="isDragging = false"
                   @drop.prevent="handleDrop"
                   class="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors"
                   :class="isDragging
@@ -155,7 +156,7 @@
 
           <!-- Results Section -->
           <div 
-            v-if="analysisResult"
+            v-if="analysisResult && analysisResult.summary"
             class="rounded-lg shadow-sm border p-6"
             :class="isDarkMode 
               ? 'bg-slate-900 border-gray-700' 
@@ -289,16 +290,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { useDrawer } from '../composables/useDrawer.js';
-import axios from 'axios';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import apiClient from '../services/api.js';
 
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(false);
-let darkModeObserver = null;
-let darkModeInterval = null;
+const isDarkMode = useDarkMode();
 
 const selectedFile = ref(null);
 const fileInput = ref(null);
@@ -320,6 +320,8 @@ const triggerFileInput = () => {
 
 const handleFileSelect = (event) => {
   const file = event.target.files?.[0];
+  // Let the same file be picked again after clearing or an error.
+  event.target.value = '';
   if (file) {
     selectedFile.value = file;
     error.value = null;
@@ -356,48 +358,39 @@ const analyzeVideo = async () => {
       formData.append('applicationName', applicationName.value);
     }
 
-    const response = await axios.post('/api/v1/photosensitivity/analyze', formData, {
+    // apiClient adds the API key. The multipart Content-Type overrides its
+    // JSON default (which would make axios serialise the FormData as JSON);
+    // axios then lets the browser set the boundary.
+    const response = await apiClient.post('/api/v1/photosensitivity/analyze', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
       timeout: 300000, // 5 minute timeout
     });
 
+    if (!response.data?.summary) {
+      throw new Error('The server returned no analysis summary.');
+    }
     analysisResult.value = response.data;
   } catch (err) {
-    error.value = err.response?.data?.message || err.message || 'Failed to analyze video. Make sure IRIS is installed and accessible.';
+    const message = err.response?.data?.message;
+    if (Array.isArray(message)) {
+      error.value = message.join(' ');
+    } else if (message) {
+      error.value = message;
+    } else if (err.code === 'ECONNABORTED') {
+      error.value = 'The analysis timed out after 5 minutes. Try a shorter video.';
+    } else if (err.response) {
+      error.value = `Analysis failed (HTTP ${err.response.status}).`;
+    } else {
+      error.value = err.message || 'Failed to analyze video. Make sure IRIS is installed and accessible.';
+    }
     console.error('IRIS analysis error:', err);
   } finally {
     isAnalyzing.value = false;
   }
 };
 
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>

@@ -253,6 +253,7 @@
                     Copy
                   </button>
                 </div>
+                <InlineNotice v-if="notice" class="mb-4" :notice="notice" @dismiss="clearNotice" />
                 <textarea
                   v-model="output"
                   readonly
@@ -272,12 +273,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const tagTypes = ref(['meta', 'og', 'twitter', 'jsonld']);
 const formData = ref({
@@ -391,14 +396,25 @@ const generateJSONLD = () => {
     };
   }
   
-  return `<script type="application/ld+json">\n${JSON.stringify(jsonld, null, 2)}\n<\/script>`;
+  // Escape <, >, & and the JS line separators so a value such as
+  // a closing script tag cannot end the script element early.
+  const json = JSON.stringify(jsonld, null, 2)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+  return `<script type="application/ld+json">\n${json}\n<\/script>`;
 };
 
-const escapeHtml = (text) => {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-};
+// Escape for both text content and double- or single-quoted attribute values
+// (every tag here puts the value inside content="...").
+const escapeHtml = (text) => String(text ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
 
 const generate = () => {
   const sections = [];
@@ -434,41 +450,13 @@ const copyToClipboard = async () => {
   
   try {
     await navigator.clipboard.writeText(output.value);
-    // You could add a toast notification here
+    showNotice('Copied to clipboard.', 'success');
   } catch (error) {
     console.error('Failed to copy:', error);
+    showNotice('Could not copy to the clipboard.', 'error');
   }
 };
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>

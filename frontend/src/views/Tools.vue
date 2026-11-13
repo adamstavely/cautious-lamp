@@ -80,7 +80,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import MarkdownViewer from '../components/MarkdownViewer.vue';
@@ -115,12 +115,21 @@ onMounted(() => {
     drawerOpen.value = true;
     sessionStorage.removeItem('openDrawerOnLoad');
   }
-
-  // Handle route on mount - check if we're on a reference page
-  if (route.path.startsWith('/tools/references/')) {
-    currentDocLink.value = route.path;
-  }
 });
+
+// Keep the reference content in step with the route (on mount and when moving
+// between /tools/references/* pages, or back to /tools).
+watch(
+  () => route.path,
+  (path) => {
+    if (path.startsWith('/tools/references/')) {
+      currentDocLink.value = path;
+    } else if (path === '/tools' || path === '/tools/') {
+      currentDocLink.value = null;
+    }
+  },
+  { immediate: true },
+);
 
 const tools = [
   { title: 'Gradient generator', to: '/tools/gradient-generator', art: 'tools/gradient-generator', body: 'Create CSS gradients with custom stops.' },
