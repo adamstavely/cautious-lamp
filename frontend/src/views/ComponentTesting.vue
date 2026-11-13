@@ -90,6 +90,14 @@
                 <span class="material-symbols-outlined text-base animate-spin">refresh</span>
                 Loading component data...
               </div>
+              <p v-if="componentsError" class="mt-2 text-sm" :class="isDarkMode ? 'text-red-300' : 'text-red-600'">
+                {{ componentsError }}
+                <button type="button" class="underline ml-1" @click="loadComponents">Retry</button>
+              </p>
+              <p v-if="componentError" class="mt-2 text-sm" :class="isDarkMode ? 'text-red-300' : 'text-red-600'">
+                {{ componentError }}
+              </p>
+              <InlineNotice :notice="notice" class="mt-3" @dismiss="clearNotice" />
               <div v-if="componentData && componentData.props && componentData.props.length > 0" class="mt-3 p-3 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
                 <div class="text-xs font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                   <span class="material-symbols-outlined text-base text-indigo-600">tune</span>
@@ -446,7 +454,7 @@
               </div>
             </div>
 
-            <!-- Test Runner -->
+            <!-- Unit, integration and visual tests: run in the project, not in the browser -->
             <div 
               class="rounded-lg shadow-sm border p-6"
               :class="isDarkMode 
@@ -457,128 +465,29 @@
                 <span class="material-symbols-outlined text-indigo-600">play_arrow</span>
                 Test Runner
               </h3>
-              <div class="space-y-4">
-                <div class="flex items-center gap-4">
-                  <button
-                    @click="runTests"
-                    :disabled="!selectedComponent || isRunning"
-                    class="px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                    :class="selectedComponent && !isRunning
-                      ? (isDarkMode ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white')
-                      : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-                  >
-                    <span v-if="isRunning" class="material-symbols-outlined animate-spin">refresh</span>
-                    <span v-else class="material-symbols-outlined">play_arrow</span>
-                    {{ isRunning ? 'Running...' : 'Run Tests' }}
-                  </button>
-                  <button
-                    @click="stopTests"
-                    :disabled="!isRunning"
-                    class="px-6 py-2 rounded-lg font-medium transition-colors"
-                    :class="isRunning
-                      ? (isDarkMode ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white')
-                      : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-                  >
-                    Stop
-                  </button>
+              <div class="grid md:grid-cols-2 gap-3">
+                <div class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="material-symbols-outlined text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">block</span>
+                    <span class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Unit &amp; integration tests: not available here</span>
+                  </div>
+                  <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    The generated tests need the component source, a test runner ({{ testFramework }}) and its environment, which only exist in your project. Download the tests above and run them there, or in CI.
+                  </p>
                 </div>
-
-                <!-- Test Results Output -->
-                <div v-if="testResults" class="rounded-lg p-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-50'">
-                  <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-4">
-                      <div class="flex items-center gap-2">
-                        <span class="material-symbols-outlined text-green-500">check_circle</span>
-                        <span class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          Passed: {{ testResults.passed }}
-                        </span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span class="material-symbols-outlined text-red-500">cancel</span>
-                        <span class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          Failed: {{ testResults.failed }}
-                        </span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span class="material-symbols-outlined text-yellow-500">schedule</span>
-                        <span class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          Duration: {{ testResults.duration }}ms
-                        </span>
-                      </div>
-                    </div>
+                <div class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="material-symbols-outlined text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">image</span>
+                    <span class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Visual regression: not available here</span>
                   </div>
-                  <div class="space-y-2 max-h-64 overflow-y-auto">
-                    <div
-                      v-for="(result, index) in testResults.tests"
-                      :key="index"
-                      class="p-3 rounded-lg text-sm"
-                      :class="result.passed
-                        ? (isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-50 text-green-700')
-                        : (isDarkMode ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-700')"
-                    >
-                      <div class="flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">
-                          {{ result.passed ? 'check' : 'close' }}
-                        </span>
-                        <span class="font-medium">{{ result.name }}</span>
-                      </div>
-                      <div v-if="result.error" class="mt-2 text-xs font-mono opacity-75">
-                        {{ result.error }}
-                      </div>
-                    </div>
-                  </div>
+                  <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    Visual tests compare screenshots against approved baselines captured in a fixed browser. Run them with the visual regression integration for your application, not from this page.
+                  </p>
                 </div>
               </div>
             </div>
 
-            <!-- Visual Regression Tests -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">image</span>
-                  Visual Regression Tests
-                </h3>
-                <button
-                  @click="runVisualTests"
-                  :disabled="!selectedComponent"
-                  class="px-4 py-2 rounded-lg font-medium transition-colors text-sm"
-                  :class="selectedComponent
-                    ? (isDarkMode ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white')
-                    : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-                >
-                  Run Visual Tests
-                </button>
-              </div>
-              <div v-if="visualTestResults" class="space-y-3">
-                <div
-                  v-for="result in visualTestResults"
-                  :key="result.id"
-                  class="p-3 rounded-lg border"
-                  :class="result.passed
-                    ? (isDarkMode ? 'bg-green-900/20 border-green-700' : 'bg-green-50 border-green-200')
-                    : (isDarkMode ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200')"
-                >
-                  <div class="flex items-center gap-2 mb-2">
-                    <span class="material-symbols-outlined text-sm" :class="result.passed ? 'text-green-500' : 'text-red-500'">
-                      {{ result.passed ? 'check_circle' : 'error' }}
-                    </span>
-                    <span class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ result.name }}
-                    </span>
-                  </div>
-                  <div v-if="result.diff" class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Diff: {{ result.diff }}px
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Accessibility Tests -->
+            <!-- Accessibility Tests (axe-core, in this browser) -->
             <div 
               class="rounded-lg shadow-sm border p-6"
               :class="isDarkMode 
@@ -592,33 +501,115 @@
                 </h3>
                 <button
                   @click="runAccessibilityTests"
-                  :disabled="!selectedComponent"
-                  class="px-4 py-2 rounded-lg font-medium transition-colors text-sm"
-                  :class="selectedComponent
+                  :disabled="!selectedComponent || !canPreview || a11yRunning || loadingComponent"
+                  class="px-4 py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-2"
+                  :class="selectedComponent && canPreview && !a11yRunning && !loadingComponent
                     ? (isDarkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white')
                     : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
                 >
-                  Run A11y Tests
+                  <span v-if="a11yRunning" class="material-symbols-outlined text-sm animate-spin">refresh</span>
+                  {{ a11yRunning ? 'Checking...' : 'Run A11y Tests' }}
                 </button>
               </div>
-              <div v-if="a11yTestResults" class="space-y-2">
-                <div
-                  v-for="result in a11yTestResults"
-                  :key="result.id"
-                  class="p-3 rounded-lg text-sm"
-                  :class="result.passed
-                    ? (isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-50 text-green-700')
-                    : (isDarkMode ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-700')"
-                >
-                  <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-sm">{{ result.passed ? 'check' : 'close' }}</span>
-                    <span class="font-medium">{{ result.rule }}</span>
+
+              <div v-if="!selectedComponent" class="text-center py-6">
+                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
+                  Select a component to check its rendered preview with axe-core.
+                </p>
+              </div>
+              <div v-else-if="!canPreview" class="p-3 rounded-lg text-sm" :class="isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-50 text-gray-600'">
+                No live preview exists for this component on this page, so accessibility can't be checked here. Run axe against the component in your application instead.
+              </div>
+              <div v-else class="space-y-4">
+                <div>
+                  <p class="text-xs mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    Preview (default prop values). axe-core checks this rendered element against WCAG 2.1 A/AA and best-practice rules.
+                  </p>
+                  <div
+                    ref="previewRef"
+                    class="p-6 rounded-lg border flex items-center justify-center"
+                    :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'"
+                  >
+                    <ComponentPreview :component="selectedComponent" :props="previewProps" :is-dark-mode="isDarkMode" />
                   </div>
+                </div>
+
+                <div v-if="a11yError" class="p-3 rounded-lg text-sm" :class="isDarkMode ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-700'">
+                  {{ a11yError }}
+                </div>
+
+                <div v-if="a11yTestResults" class="space-y-3">
+                  <div class="flex flex-wrap items-center gap-4 text-sm">
+                    <span class="flex items-center gap-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      <span class="material-symbols-outlined text-red-500 text-base">cancel</span>
+                      Violations: {{ a11yTestResults.violations.length }}
+                    </span>
+                    <span class="flex items-center gap-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      <span class="material-symbols-outlined text-green-500 text-base">check_circle</span>
+                      Passed rules: {{ a11yTestResults.passes.length }}
+                    </span>
+                    <span class="flex items-center gap-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      <span class="material-symbols-outlined text-yellow-500 text-base">help</span>
+                      Needs review: {{ a11yTestResults.incomplete.length }}
+                    </span>
+                  </div>
+
+                  <div
+                    v-for="violation in a11yTestResults.violations"
+                    :key="violation.id"
+                    class="p-3 rounded-lg text-sm"
+                    :class="isDarkMode ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-700'"
+                  >
+                    <div class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-sm">close</span>
+                      <span class="font-medium">{{ violation.help }}</span>
+                      <span v-if="violation.impact" class="text-xs uppercase opacity-75">{{ violation.impact }}</span>
+                    </div>
+                    <div class="mt-1 text-xs opacity-75">
+                      Rule <code>{{ violation.id }}</code> ·
+                      <a :href="violation.helpUrl" target="_blank" rel="noopener noreferrer" class="underline">How to fix</a>
+                    </div>
+                    <ul class="mt-2 space-y-1">
+                      <li v-for="(node, index) in violation.nodes" :key="index" class="text-xs font-mono opacity-75 break-all">
+                        {{ node.target }}
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div
+                    v-for="item in a11yTestResults.incomplete"
+                    :key="`incomplete-${item.id}`"
+                    class="p-3 rounded-lg text-sm"
+                    :class="isDarkMode ? 'bg-yellow-900/20 text-yellow-300' : 'bg-yellow-50 text-yellow-800'"
+                  >
+                    <div class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-sm">help</span>
+                      <span class="font-medium">{{ item.help }}</span>
+                      <span class="text-xs opacity-75">(needs manual review)</span>
+                    </div>
+                  </div>
+
+                  <details v-if="a11yTestResults.passes.length" class="text-sm">
+                    <summary class="cursor-pointer" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                      Show {{ a11yTestResults.passes.length }} passed rules
+                    </summary>
+                    <div class="mt-2 space-y-1">
+                      <div
+                        v-for="pass in a11yTestResults.passes"
+                        :key="`pass-${pass.id}`"
+                        class="p-2 rounded-lg flex items-center gap-2"
+                        :class="isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-50 text-green-700'"
+                      >
+                        <span class="material-symbols-outlined text-sm">check</span>
+                        <span>{{ pass.help }}</span>
+                      </div>
+                    </div>
+                  </details>
                 </div>
               </div>
             </div>
 
-            <!-- Performance Tests -->
+            <!-- Performance: measured source size -->
             <div 
               class="rounded-lg shadow-sm border p-6"
               :class="isDarkMode 
@@ -632,30 +623,47 @@
                 </h3>
                 <button
                   @click="runPerformanceTests"
-                  :disabled="!selectedComponent"
+                  :disabled="!selectedComponent || performanceLoading"
                   class="px-4 py-2 rounded-lg font-medium transition-colors text-sm"
-                  :class="selectedComponent
+                  :class="selectedComponent && !performanceLoading
                     ? (isDarkMode ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-orange-600 hover:bg-orange-700 text-white')
                     : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
                 >
-                  Run Perf Tests
+                  {{ performanceLoading ? 'Measuring...' : 'Measure Size' }}
                 </button>
               </div>
-              <div v-if="performanceResults" class="space-y-3">
-                <div class="grid grid-cols-2 gap-3">
+              <div v-if="performanceError" class="p-3 rounded-lg text-sm" :class="isDarkMode ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-700'">
+                {{ performanceError }}
+              </div>
+              <div v-else-if="performanceResults" class="space-y-3">
+                <div class="grid grid-cols-3 gap-3">
                   <div class="p-3 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                    <div class="text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Render Time</div>
+                    <div class="text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Source (Vue + React)</div>
                     <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ performanceResults.renderTime }}ms
+                      {{ formatBytes(performanceResults.totalSize) }}
                     </div>
                   </div>
                   <div class="p-3 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                    <div class="text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Bundle Size</div>
+                    <div class="text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Gzip</div>
                     <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ performanceResults.bundleSize }}KB
+                      {{ formatBytes(performanceResults.gzippedSize) }}
+                    </div>
+                  </div>
+                  <div class="p-3 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                    <div class="text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Brotli</div>
+                    <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
+                      {{ performanceResults.brotliSize != null ? formatBytes(performanceResults.brotliSize) : 'n/a' }}
                     </div>
                   </div>
                 </div>
+                <p class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
+                  Measured on the server from the component's stored source (not a minified build). Render timing isn't measured here.
+                </p>
+              </div>
+              <div v-else-if="selectedComponent" class="text-center py-6">
+                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
+                  Measure the raw, gzip and brotli size of this component's source.
+                </p>
               </div>
             </div>
 
@@ -676,6 +684,7 @@
                   @click="loadTestCoverage"
                   class="text-xs px-2 py-1 rounded text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
                   title="Refresh coverage"
+                  aria-label="Refresh coverage"
                 >
                   <span class="material-symbols-outlined text-sm">refresh</span>
                 </button>
@@ -684,76 +693,59 @@
               <div v-if="loadingCoverage" class="flex items-center justify-center py-8">
                 <span class="material-symbols-outlined text-indigo-600 animate-spin text-xl">refresh</span>
               </div>
+
+              <div v-else-if="coverageError" class="p-3 rounded-lg text-sm" :class="isDarkMode ? 'bg-red-900/30 text-red-300' : 'bg-red-50 text-red-700'">
+                {{ coverageError }}
+              </div>
               
+              <div v-else-if="testCoverage && testCoverage.available" class="space-y-4">
+                <div v-for="metric in ['statements', 'branches', 'functions', 'lines']" :key="metric">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm capitalize" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ metric }}</span>
+                    <span class="text-sm font-semibold" :class="getCoverageColorClass(testCoverage[metric])">
+                      {{ testCoverage[metric] }}%
+                    </span>
+                  </div>
+                  <div class="w-full rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
+                    <div 
+                      class="h-2 rounded-full transition-all duration-300" 
+                      :class="getCoverageBarColor(testCoverage[metric])"
+                      :style="`width: ${testCoverage[metric]}%`"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
               <div v-else-if="testCoverage" class="space-y-4">
-                <div>
-                  <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Statements</span>
-                    <span class="text-sm font-semibold" :class="getCoverageColorClass(testCoverage.statements)">
-                      {{ testCoverage.statements }}%
-                    </span>
-                  </div>
-                  <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                    <div 
-                      class="h-2 rounded-full transition-all duration-300" 
-                      :class="getCoverageBarColor(testCoverage.statements)"
-                      :style="`width: ${testCoverage.statements}%`"
-                    ></div>
-                  </div>
+                <div class="p-3 rounded-lg text-sm" :class="isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-50 text-gray-600'">
+                  <strong>No coverage data.</strong> {{ testCoverage.reason }}
                 </div>
-                <div>
-                  <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Branches</span>
-                    <span class="text-sm font-semibold" :class="getCoverageColorClass(testCoverage.branches)">
-                      {{ testCoverage.branches }}%
-                    </span>
+                <div v-if="testCoverage.surface">
+                  <p class="text-xs mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Testable surface, from the component's prop definitions:</p>
+                  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="p-3 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                      <div class="text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Props</div>
+                      <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ testCoverage.surface.props }}</div>
+                    </div>
+                    <div class="p-3 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                      <div class="text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Enum options</div>
+                      <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ testCoverage.surface.enumOptions }}</div>
+                    </div>
+                    <div class="p-3 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                      <div class="text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Boolean props</div>
+                      <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ testCoverage.surface.booleanProps }}</div>
+                    </div>
+                    <div class="p-3 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                      <div class="text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Suggested cases</div>
+                      <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ testCoverage.surface.suggestedTestCases }}</div>
+                    </div>
                   </div>
-                  <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                    <div 
-                      class="h-2 rounded-full transition-all duration-300" 
-                      :class="getCoverageBarColor(testCoverage.branches)"
-                      :style="`width: ${testCoverage.branches}%`"
-                    ></div>
-                  </div>
-                </div>
-                <div>
-                  <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Functions</span>
-                    <span class="text-sm font-semibold" :class="getCoverageColorClass(testCoverage.functions)">
-                      {{ testCoverage.functions }}%
-                    </span>
-                  </div>
-                  <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                    <div 
-                      class="h-2 rounded-full transition-all duration-300" 
-                      :class="getCoverageBarColor(testCoverage.functions)"
-                      :style="`width: ${testCoverage.functions}%`"
-                    ></div>
-                  </div>
-                </div>
-                <div>
-                  <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Lines</span>
-                    <span class="text-sm font-semibold" :class="getCoverageColorClass(testCoverage.lines)">
-                      {{ testCoverage.lines }}%
-                    </span>
-                  </div>
-                  <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                    <div 
-                      class="h-2 rounded-full transition-all duration-300" 
-                      :class="getCoverageBarColor(testCoverage.lines)"
-                      :style="`width: ${testCoverage.lines}%`"
-                    ></div>
-                  </div>
-                </div>
-                <div v-if="testCoverage.lastUpdated" class="text-xs pt-2 border-t" :class="isDarkMode ? 'text-gray-500 border-gray-700' : 'text-gray-400 border-gray-200'">
-                  Last updated: {{ new Date(testCoverage.lastUpdated).toLocaleString() }}
                 </div>
               </div>
               
               <div v-else-if="selectedComponent" class="text-center py-8">
                 <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  No coverage data available. Generate tests to calculate coverage.
+                  No coverage data available.
                 </p>
               </div>
               
@@ -772,16 +764,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import axe from 'axe-core';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
+import ComponentPreview from '../components/ComponentPreview.vue';
+import InlineNotice from '../components/InlineNotice.vue';
 import { useDrawer } from '../composables/useDrawer.js';
-import axios from 'axios';
+import { useDarkMode } from '../composables/useDarkMode.js';
+import { useNotice } from '../composables/useNotice.js';
+import apiClient from '../services/api.js';
 
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-const API_KEY = localStorage.getItem('apiKey') || import.meta.env.VITE_API_KEY || '';
-
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const isDarkMode = useDarkMode();
+const { notice, showNotice, clearNotice } = useNotice();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const selectedComponent = ref('');
 const componentData = ref(null);
@@ -807,76 +802,101 @@ const cicd = ref({
 });
 const generatedTests = ref('');
 const cicdConfig = ref('');
-const isRunning = ref(false);
-const testResults = ref(null);
-const visualTestResults = ref(null);
 const a11yTestResults = ref(null);
+const a11yRunning = ref(false);
+const a11yError = ref('');
+const previewRef = ref(null);
 const performanceResults = ref(null);
+const performanceLoading = ref(false);
+const performanceError = ref('');
 const testCoverage = ref(null);
 const loadingCoverage = ref(false);
+const coverageError = ref('');
+const componentError = ref('');
+const componentsError = ref('');
+
+// Components ComponentPreview can actually render; axe runs against that render
+const PREVIEWABLE_COMPONENTS = ['button', 'card', 'input', 'select', 'checkbox', 'radio', 'textarea', 'badge', 'alert'];
+const canPreview = computed(() => PREVIEWABLE_COMPONENTS.includes(selectedComponent.value));
+
+// The preview renders with the component's own default prop values
+const previewProps = computed(() => {
+  const values = {};
+  for (const prop of componentData.value?.props || []) {
+    if (prop?.name && prop.default !== undefined) values[prop.name] = prop.default;
+  }
+  return values;
+});
+
+const apiErrorMessage = (error, fallback) => {
+  const message = error?.response?.data?.message;
+  if (Array.isArray(message)) return message.join('; ');
+  return message || fallback;
+};
 const generationSummary = ref(null);
 
 // Load available components
 const loadComponents = async () => {
+  componentsError.value = '';
   try {
-    const response = await axios.get(`${API_BASE_URL}/components`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
-    availableComponents.value = response.data.components || [];
+    const response = await apiClient.get('/api/v1/components');
+    availableComponents.value = Array.isArray(response.data?.components) ? response.data.components : [];
   } catch (error) {
-    console.error('Error loading components:', error);
-    // Fallback to hardcoded list
-    availableComponents.value = [
-      { id: 'button', name: 'Button' },
-      { id: 'card', name: 'Card' },
-      { id: 'input', name: 'Input' },
-      { id: 'select', name: 'Select' },
-      { id: 'modal', name: 'Modal' }
-    ];
+    availableComponents.value = [];
+    componentsError.value = apiErrorMessage(error, 'Could not load components from the design-system API.');
   }
 };
 
-// Load component data when selected
-watch(selectedComponent, async (newValue) => {
-  if (newValue) {
-    loadingComponent.value = true;
-    loadingCoverage.value = true;
-    try {
-      const [componentResponse, coverageResponse] = await Promise.all([
-        axios.get(`${API_BASE_URL}/components/${newValue}`, {
-          headers: { Authorization: `Bearer ${API_KEY}` }
-        }),
-        axios.get(`${API_BASE_URL}/components/${newValue}/test-coverage`, {
-          headers: { Authorization: `Bearer ${API_KEY}` }
-        }).catch(() => ({ data: null })) // Coverage is optional
-      ]);
-      
-      componentData.value = componentResponse.data;
-      testCoverage.value = coverageResponse.data;
-      console.log('Loaded component data:', componentData.value);
-      console.log('Loaded test coverage:', testCoverage.value);
-    } catch (error) {
-      console.error('Error loading component data:', error);
-      // Fallback: create mock data structure for testing
-      componentData.value = {
-        id: newValue,
-        name: newValue.charAt(0).toUpperCase() + newValue.slice(1),
-        props: []
-      };
+const loadTestCoverage = async () => {
+  const id = selectedComponent.value;
+  if (!id) return;
+  loadingCoverage.value = true;
+  coverageError.value = '';
+  try {
+    const response = await apiClient.get(`/api/v1/components/${encodeURIComponent(id)}/test-coverage`);
+    if (selectedComponent.value === id) testCoverage.value = response.data;
+  } catch (error) {
+    if (selectedComponent.value === id) {
       testCoverage.value = null;
-    } finally {
-      loadingComponent.value = false;
-      loadingCoverage.value = false;
+      coverageError.value = apiErrorMessage(error, 'Could not load test coverage.');
     }
-  } else {
-    componentData.value = null;
-    testCoverage.value = null;
+  } finally {
+    if (selectedComponent.value === id) loadingCoverage.value = false;
+  }
+};
+
+// Load component data when selected; responses for an earlier selection are ignored
+watch(selectedComponent, async (newValue) => {
+  componentData.value = null;
+  testCoverage.value = null;
+  coverageError.value = '';
+  componentError.value = '';
+  a11yTestResults.value = null;
+  a11yError.value = '';
+  performanceResults.value = null;
+  performanceError.value = '';
+  generatedTests.value = '';
+  cicdConfig.value = '';
+  generationSummary.value = null;
+  if (!newValue) return;
+
+  loadingComponent.value = true;
+  loadTestCoverage();
+  try {
+    const response = await apiClient.get(`/api/v1/components/${encodeURIComponent(newValue)}`);
+    if (selectedComponent.value === newValue) componentData.value = response.data;
+  } catch (error) {
+    if (selectedComponent.value === newValue) {
+      componentError.value = apiErrorMessage(error, 'Could not load this component.');
+    }
+  } finally {
+    if (selectedComponent.value === newValue) loadingComponent.value = false;
   }
 });
 
 const generateTests = () => {
   if (!selectedComponent.value) {
-    alert('Please select a component first');
+    showNotice('Please select a component first', 'warning');
     return;
   }
 
@@ -885,7 +905,7 @@ const generateTests = () => {
     .map(([type]) => type);
 
   if (activeTypes.length === 0) {
-    alert('Please select at least one test type');
+    showNotice('Please select at least one test type', 'warning');
     return;
   }
 
@@ -1509,85 +1529,71 @@ test.describe('${componentName} Component', () => {
   return code;
 };
 
-const runTests = async () => {
-  if (!selectedComponent.value) return;
-  
-  isRunning.value = true;
-  testResults.value = null;
-
-  // Simulate test execution
-  await new Promise(resolve => setTimeout(resolve, 2000));
-
-  testResults.value = {
-    passed: 8,
-    failed: 1,
-    duration: 1234,
-    tests: [
-      { name: 'should render correctly', passed: true },
-      { name: 'should accept props', passed: true },
-      { name: 'should handle user interactions', passed: true },
-      { name: 'should have proper ARIA attributes', passed: true },
-      { name: 'should be keyboard accessible', passed: true },
-      { name: 'should match visual snapshot', passed: true },
-      { name: 'should handle edge cases', passed: true },
-      { name: 'should have correct styling', passed: true },
-      { name: 'should handle error states', passed: false, error: 'Expected error state but got success state' }
-    ]
-  };
-
-  isRunning.value = false;
-};
-
-const stopTests = () => {
-  isRunning.value = false;
-  testResults.value = null;
-};
-
-const runVisualTests = async () => {
-  if (!selectedComponent.value) return;
-  
-  visualTestResults.value = [
-    { id: 1, name: 'Button Default State', passed: true, diff: 0 },
-    { id: 2, name: 'Button Hover State', passed: true, diff: 0 },
-    { id: 3, name: 'Button Disabled State', passed: false, diff: 2 }
-  ];
-};
-
+// Runs axe-core against the component as rendered by ComponentPreview, in this page
 const runAccessibilityTests = async () => {
-  if (!selectedComponent.value) return;
-  
-  a11yTestResults.value = [
-    { id: 1, rule: 'ARIA labels present', passed: true },
-    { id: 2, rule: 'Keyboard navigation', passed: true },
-    { id: 3, rule: 'Color contrast WCAG AA', passed: true },
-    { id: 4, rule: 'Focus indicators', passed: false }
-  ];
-};
-
-const runPerformanceTests = async () => {
-  if (!selectedComponent.value) return;
-  
-  performanceResults.value = {
-    renderTime: 12,
-    bundleSize: 45
-  };
-};
-
-const loadTestCoverage = async () => {
-  if (!selectedComponent.value) return;
-  
-  loadingCoverage.value = true;
-  try {
-    const response = await axios.get(`${API_BASE_URL}/components/${selectedComponent.value}/test-coverage`, {
-      headers: { Authorization: `Bearer ${API_KEY}` }
-    });
-    testCoverage.value = response.data;
-  } catch (error) {
-    console.error('Error loading test coverage:', error);
-    testCoverage.value = null;
-  } finally {
-    loadingCoverage.value = false;
+  if (!selectedComponent.value || a11yRunning.value) return;
+  a11yError.value = '';
+  a11yTestResults.value = null;
+  if (!canPreview.value) {
+    a11yError.value = 'This component has no live preview on this page, so there is nothing rendered to check.';
+    return;
   }
+  a11yRunning.value = true;
+  const id = selectedComponent.value;
+  try {
+    await nextTick();
+    const element = previewRef.value;
+    if (!element) throw new Error('The component preview is not rendered.');
+    const results = await axe.run(element, {
+      resultTypes: ['violations', 'passes', 'incomplete'],
+      runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] },
+    });
+    if (selectedComponent.value !== id) return;
+    a11yTestResults.value = {
+      ranAt: results.timestamp,
+      violations: results.violations.map(v => ({
+        id: v.id,
+        impact: v.impact,
+        help: v.help,
+        helpUrl: v.helpUrl,
+        nodes: v.nodes.map(n => ({ target: n.target.join(' '), summary: n.failureSummary })),
+      })),
+      passes: results.passes.map(p => ({ id: p.id, help: p.help, nodes: p.nodes.length })),
+      incomplete: results.incomplete.map(i => ({ id: i.id, help: i.help, helpUrl: i.helpUrl, nodes: i.nodes.length })),
+    };
+  } catch (error) {
+    if (selectedComponent.value === id) a11yError.value = `Accessibility check failed: ${error?.message || error}`;
+  } finally {
+    a11yRunning.value = false;
+  }
+};
+
+// Measured source sizes from the backend (raw, gzip, brotli via zlib)
+const runPerformanceTests = async () => {
+  const id = selectedComponent.value;
+  if (!id || performanceLoading.value) return;
+  performanceLoading.value = true;
+  performanceError.value = '';
+  try {
+    const response = await apiClient.post('/api/v1/performance/bundle-analysis/analyze', {
+      componentId: id,
+      includeDependencies: true,
+    });
+    if (selectedComponent.value === id) performanceResults.value = response.data;
+  } catch (error) {
+    if (selectedComponent.value === id) {
+      performanceResults.value = null;
+      performanceError.value = apiErrorMessage(error, 'Could not analyze the bundle size.');
+    }
+  } finally {
+    performanceLoading.value = false;
+  }
+};
+
+const formatBytes = (bytes) => {
+  if (!bytes) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  return `${(bytes / 1024).toFixed(2)} KB`;
 };
 
 const getCoverageColorClass = (percentage) => {
@@ -1713,8 +1719,9 @@ const copyTests = async () => {
   if (!generatedTests.value) return;
   try {
     await navigator.clipboard.writeText(generatedTests.value);
+    showNotice('Tests copied to clipboard.', 'success');
   } catch (err) {
-    console.error('Failed to copy:', err);
+    showNotice('Failed to copy to clipboard.', 'error');
   }
 };
 
@@ -1731,14 +1738,15 @@ const downloadTests = () => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
 const copyCicdConfig = async (config) => {
   try {
     await navigator.clipboard.writeText(config);
+    showNotice('Configuration copied to clipboard.', 'success');
   } catch (err) {
-    console.error('Failed to copy:', err);
+    showNotice('Failed to copy to clipboard.', 'error');
   }
 };
 
@@ -1751,44 +1759,14 @@ const downloadCicdConfig = (config) => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
 
 
 
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(async () => {
-  // Load available components
-  await loadComponents();
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
+onMounted(loadComponents);
 </script>
 
 <style scoped>

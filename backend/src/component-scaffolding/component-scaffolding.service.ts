@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { DesignSystemService } from '../design-system/design-system.service';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { Component, DesignSystemService } from '../design-system/design-system.service';
 
 export interface ComponentTemplate {
   id: string;
@@ -83,11 +83,30 @@ export interface ComponentScaffoldInput {
 
 export interface GeneratedComponent {
   componentCode: string;
+  styleCode: string;
   testCode: string;
   documentation: string;
   readme: string;
   stencilConfig?: string;
 }
+
+export interface GeneratedFile {
+  path: string;
+  content: string;
+}
+
+export interface CreatedComponentResult {
+  success: true;
+  componentId: string;
+  /** The component as registered in the design-system component list */
+  component: Component;
+  /** Generated source files; nothing is written on the server */
+  files: GeneratedFile[];
+}
+
+const COMPONENT_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9 _-]*$/;
+const IDENTIFIER_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+const DESIGN_SYSTEM_STATUSES = ['production', 'in-progress', 'planned', 'deprecated'] as const;
 
 @Injectable()
 export class ComponentScaffoldingService {
@@ -182,8 +201,10 @@ export class ComponentScaffoldingService {
     return this.templates.find(t => t.id === id) || null;
   }
 
-  async scaffoldComponent(input: ComponentScaffoldInput): Promise<GeneratedComponent> {
+  async scaffoldComponent(rawInput: ComponentScaffoldInput): Promise<GeneratedComponent> {
+    const input = this.normalizeInput(rawInput);
     const componentCode = this.generateStencilComponent(input);
+    const styleCode = this.generateStyleSheet(input);
     const testCode = this.generateTests(input);
     const documentation = this.generateDocumentation(input);
     const readme = this.generateReadme(input);
@@ -191,6 +212,7 @@ export class ComponentScaffoldingService {
 
     return {
       componentCode,
+      styleCode,
       testCode,
       documentation,
       readme,
@@ -583,7 +605,7 @@ export const config: Config = {
 
   private getTypeScriptType(type: string, options?: string[]): string {
     if (options && options.length > 0) {
-      return options.map(opt => `'${opt}'`).join(' | ');
+      return options.map(opt => this.quote(opt)).join(' | ');
     }
     
     const typeMap: Record<string, string> = {
@@ -600,9 +622,13 @@ export const config: Config = {
     return typeMap[type] || 'any';
   }
 
+  private quote(value: unknown): string {
+    return `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n')}'`;
+  }
+
   private formatDefaultValue(value: any, type: string): string {
-    if (type === 'string') {
-      return `'${value}'`;
+    if (type === 'string' || type === 'enum') {
+      return this.quote(value);
     }
     if (type === 'boolean') {
       return value ? 'true' : 'false';
@@ -647,21 +673,113 @@ export const config: Config = {
     return `'${value}'`;
   }
 
-  // Integration with lifecycle management
-  async createComponentFromScaffold(input: ComponentScaffoldInput): Promise<{ componentId: string; success: boolean }> {
-    const generated = await this.scaffoldComponent(input);
-    const componentId = this.toKebabCase(input.name);
-    
-    // In a real implementation, this would:
-    // 1. Save the generated files to the file system
-    // 2. Register the component in the design system
-    // 3. Create a component page in the lifecycle management system
-    // 4. Set the initial status
-    
+  /**
+   * Validate the input and fill in optional lists, so generation never sees
+   * undefined props/events and the generated code stays syntactically valid.
+   */
+  private normalizeInput(input: ComponentScaffoldInput): ComponentScaffoldInput {
+    if (!input || typeof input !== 'object') {
+      throw new BadRequestException('A component definition is required');
+    }
+    const name = typeof input.name === 'string' ? input.name.trim() : '';
+    if (!name || !COMPONENT_NAME_PATTERN.test(name)) {
+      throw new BadRequestException(
+        'Component name is required and may only contain letters, numbers, spaces, hyphens and underscores, starting with a letter',
+      );
+    }
+    const props = Array.isArray(input.props) ? input.props : [];
+    const events = Array.isArray(input.events) ? input.events : [];
+    const methods = Array.isArray(input.methods) ? input.methods : [];
+    for (const [kind, list] of [['prop', props], ['event', events], ['method', methods]] as const) {
+      for (const item of list as Array<{ name?: string }>) {
+        if (!item?.name || !IDENTIFIER_PATTERN.test(item.name)) {
+          throw new BadRequestException(`Invalid ${kind} name '${item?.name ?? ''}': use a JavaScript identifier`);
+        }
+      }
+    }
     return {
-      componentId,
-      success: true,
+      ...input,
+      name,
+      description: typeof input.description === 'string' ? input.description : '',
+      category: input.category || 'custom',
+      props,
+      events,
+      methods,
+      slots: Array.isArray(input.slots) ? input.slots : [],
     };
   }
-}
 
+  /** The stylesheet the generated component's styleUrl points at */
+  private generateStyleSheet(input: ComponentScaffoldInput): string {
+    const tagName = this.toKebabCase(input.name);
+    const hostStyles = this.generateStyles(input.styles);
+    return `${hostStyles ? hostStyles.trimStart() : ':host {\n  display: block;\n}'}\n\n.${tagName} {\n  box-sizing: border-box;\n}\n`;
+  }
+
+  /** The generated files, laid out as a Stencil project */
+  buildFiles(input: ComponentScaffoldInput, generated: GeneratedComponent): GeneratedFile[] {
+    const tagName = this.toKebabCase(input.name);
+    const dir = `src/components/${tagName}`;
+    const files: GeneratedFile[] = [
+      { path: `${dir}/${tagName}.tsx`, content: generated.componentCode },
+      { path: `${dir}/${tagName}.css`, content: generated.styleCode },
+      { path: `${dir}/${tagName}.spec.ts`, content: generated.testCode },
+      { path: `docs/${tagName}.md`, content: generated.documentation },
+      { path: 'README.md', content: generated.readme },
+    ];
+    if (generated.stencilConfig) {
+      files.push({ path: 'stencil.config.ts', content: generated.stencilConfig });
+    }
+    return files;
+  }
+
+  /**
+   * Generate the component and register it in the design-system component
+   * list (DesignSystemService.createComponent). Returns the generated files
+   * for the client to download; nothing is written to the server filesystem.
+   */
+  async createComponentFromScaffold(rawInput: ComponentScaffoldInput): Promise<CreatedComponentResult> {
+    const input = this.normalizeInput(rawInput);
+    const componentId = this.toKebabCase(input.name);
+    if (this.designSystemService.getComponentById(componentId)) {
+      throw new ConflictException(`A component with id '${componentId}' already exists`);
+    }
+
+    const generated = await this.scaffoldComponent(input);
+    const files = this.buildFiles(input, generated);
+
+    const status = (DESIGN_SYSTEM_STATUSES as readonly string[]).includes(input.status ?? '')
+      ? (input.status as (typeof DESIGN_SYSTEM_STATUSES)[number])
+      : 'in-progress';
+
+    const component = this.designSystemService.createComponent({
+      id: componentId,
+      name: input.name,
+      description: input.description,
+      status,
+      props: input.props.map(prop => ({
+        name: prop.name,
+        type: prop.type,
+        default: prop.defaultValue,
+        required: prop.required ?? false,
+        options: prop.options,
+        description: prop.description,
+      })),
+      // The scaffold is a Stencil web component; there is no Vue or React source
+      code: { vue: '', react: '' },
+      dependencies: [],
+      examples: [],
+      accessibility: input.accessibility?.role || input.accessibility?.ariaLabel
+        ? {
+            wcag: 'AA',
+            notes: [
+              input.accessibility?.role ? `role="${input.accessibility.role}"` : '',
+              input.accessibility?.ariaLabel ? `aria-label="${input.accessibility.ariaLabel}"` : '',
+            ].filter(Boolean).join(', '),
+          }
+        : undefined,
+    });
+
+    return { success: true, componentId, component, files };
+  }
+}
