@@ -28,8 +28,29 @@ Phase 1 covered the MCP server, CLI, SDK, ESLint plugin, every tool page, data v
   - **F6:** the documentation generator is sanitized; `MarkdownViewer` isn't.
   - **D3:** the route guard no longer hides pages when flags can't load, but flags are still forced on.
   - **F9, F10, F12:** fixed in the tool, data-viz and review pages only.
-- **Planned for Phase 2:** C1 (user accounts and sessions), C3 and D4 (governance scanner code and fake results), C5 (client-side admin role), H3 and H6 (role and audit routes), D7 and D13.
+- **Planned for Phase 2:** C1, C3, D4, C5, H3, H6, D7 and D13, all fixed (below).
 - **Not yet scheduled:** H5, H7, F5, F2, F3, F11, F13, F15, F16, D2, D6, D10–D12, D16, L1, L2, P8, P10, S1.
+
+## Status after Phase 2
+
+Phase 2 covered governance, accessibility reports and scanning, team workspaces, and user, application and role management. It shipped as adamstavely/cautious-lamp#14.
+
+- **Fixed:**
+  - **C1:** real sign-in. Users are stored in Elasticsearch with bcrypt passwords and JWTs. A global guard covers every route, with permission checks on the server; machine clients keep API keys (`docs/AUTH.md`).
+  - **C3, D4:** governance rules are stored data with versions. The `new Function` scanners are deleted, scans run real checks (axe for accessibility), and the fake fallback reports are gone (`docs/GOVERNANCE.md`).
+  - **C5:** `initUserRole` is removed. Routes are guarded by prefix from the signed-in user's permissions, and the guard denies when permissions can't be loaded.
+  - **H3, H6:** the role routes need `admin:rbac` and the audit routes `admin:audit`. `assignedBy` comes from the principal.
+  - **D7:** RBAC has one store, and write errors surface as `503`.
+  - **D13:** workspaces resolve members on the server and show real errors (`docs/WORKSPACES.md`).
+- **Also fixed in Phase 2:**
+  - A user with `admin:users` could reset the password of someone with more privileges and sign in as them.
+  - Application governance rules didn't match any real rule, and an application scan ignored them.
+  - The session replay snippet put the project key into a `<script>` unescaped, and project updates could overwrite any stored field.
+- **Partly fixed, M2:** strict validation now also covers the auth, users, RBAC, governance, workspace and application routes.
+- **Known gaps:**
+  - Component-usage analytics has no data source now that its fake history is gone, so the analytics pages are empty until usage tracking is wired up.
+  - `docs/RULES_ENGINE_GUIDE.md` and `docs/AUTOMATED_ACCESSIBILITY_REPORTS.md` describe the old scanners.
+  - Registering an application from the CLI or SDK needs an API key with the `admin:governance` scope.
 
 Findings are grouped by area below: Critical (C), Security (H, F, M, L), Data and correctness (D), Frontend quality (B, F), Packages (P) and Dependencies (S).
 
