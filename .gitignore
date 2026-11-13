@@ -29,3 +29,4 @@ yarn-error.log*
 
 # Uploaded files (photosensitivity videos, review assets)
 backend/uploads/
+backend/results/

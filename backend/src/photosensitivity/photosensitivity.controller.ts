@@ -1,10 +1,21 @@
-import { Controller, Post, Get, Body, Param, UploadedFile, UseInterceptors, Query } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, UploadedFile, UseInterceptors, UseGuards, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { PhotosensitivityService, IRISSummary } from './photosensitivity.service';
+import { PhotosensitivityService } from './photosensitivity.service';
+import { ApiKeyGuard } from '../common/security/api-key.guard';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { randomUUID } from 'crypto';
+
+/** Accepted video types and the extension each is stored with */
+const VIDEO_EXTENSIONS: Record<string, string> = {
+  'video/mp4': '.mp4',
+  'video/webm': '.webm',
+  'video/quicktime': '.mov',
+  'video/x-msvideo': '.avi',
+  'video/avi': '.avi',
+};
 
 @Controller('api/v1/photosensitivity')
+@UseGuards(ApiKeyGuard)
 export class PhotosensitivityController {
   constructor(private readonly photosensitivityService: PhotosensitivityService) {}
 
@@ -13,30 +24,30 @@ export class PhotosensitivityController {
     FileInterceptor('video', {
       storage: diskStorage({
         destination: './uploads/videos',
+        // The stored name never includes anything from the client
         filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, `${file.fieldname}-${uniqueSuffix}${extname(file.originalname)}`);
+          cb(null, `${randomUUID()}${VIDEO_EXTENSIONS[file.mimetype]}`);
         },
       }),
       limits: {
-        fileSize: 500 * 1024 * 1024, // 500MB limit
+        fileSize: 200 * 1024 * 1024, // 200MB limit
+        files: 1,
       },
       fileFilter: (req, file, cb) => {
-        const allowedMimes = ['video/mp4', 'video/avi', 'video/mov', 'video/webm', 'video/quicktime'];
-        if (allowedMimes.includes(file.mimetype)) {
+        if (VIDEO_EXTENSIONS[file.mimetype]) {
           cb(null, true);
         } else {
-          cb(new Error('Invalid file type. Only video files are allowed.'), false);
+          cb(new BadRequestException('Only MP4, WebM, MOV and AVI videos are accepted'), false);
         }
       },
     })
   )
   async analyzeVideo(
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: { enablePatternDetection?: string; outputJson?: string; applicationName?: string }
+    @Body() body: { enablePatternDetection?: string; outputJson?: string; applicationName?: string },
   ) {
     if (!file) {
-      throw new Error('No video file uploaded');
+      throw new BadRequestException('No video file uploaded');
     }
 
     const options = {
@@ -45,21 +56,27 @@ export class PhotosensitivityController {
     };
 
     const result = await this.photosensitivityService.analyzeVideo(file.path, options);
+    const applicationName = body.applicationName || 'Unknown Application';
 
-    // Convert to compliance checks
     const complianceChecks = this.photosensitivityService.convertToComplianceChecks(
       result.summary,
-      body.applicationName || 'Unknown Application',
+      applicationName,
       file.originalname
     );
 
+    const analysisId = await this.photosensitivityService.saveSummary({
+      videoName: file.originalname,
+      applicationName,
+      summary: result.summary,
+      resultsCount: result.results.length,
+    });
+
     return {
-      analysisId: `iris-${Date.now()}`,
+      analysisId,
       videoName: file.originalname,
       summary: result.summary,
       complianceChecks,
       resultsCount: result.results.length,
-      outputPath: result.outputPath,
     };
   }
 
@@ -76,12 +93,6 @@ export class PhotosensitivityController {
 
   @Get('summary/:analysisId')
   async getSummary(@Param('analysisId') analysisId: string) {
-    // In a real implementation, this would retrieve stored analysis results
-    // For now, return a placeholder
-    return {
-      analysisId,
-      message: 'Analysis summary retrieval not yet implemented',
-    };
+    return this.photosensitivityService.getSummary(analysisId);
   }
 }
-

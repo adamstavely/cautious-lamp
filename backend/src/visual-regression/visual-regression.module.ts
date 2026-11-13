@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { VisualRegressionController } from './visual-regression.controller';
+import { VisualRegressionController, ArgosWebhookController } from './visual-regression.controller';
 import { VisualRegressionService } from './visual-regression.service';
 import { VisualRegressionGateway } from './visual-regression.gateway';
 
 @Module({
-  controllers: [VisualRegressionController],
+  controllers: [VisualRegressionController, ArgosWebhookController],
   providers: [
     VisualRegressionService,
     VisualRegressionGateway,

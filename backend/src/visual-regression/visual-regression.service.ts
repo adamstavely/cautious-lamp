@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ArgosApiClient } from './argos-api.client';
 import * as crypto from 'crypto';
 import { 
@@ -116,10 +116,33 @@ export class VisualRegressionService {
     return encryptedToken; // Not encrypted, return as-is (backward compatibility)
   }
 
+  /**
+   * The Argos URL to call. Projects store the client's token, so the server only
+   * calls Argos hosts it is configured for (ARGOS_ALLOWED_BASE_URLS, comma-separated).
+   */
+  private resolveArgosBaseUrl(...candidates: Array<string | undefined>): string {
+    const normalize = (url: string) => url.trim().replace(/\/+$/, '');
+    const defaultUrl = normalize(process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com');
+    const allowed = new Set(
+      (process.env.ARGOS_ALLOWED_BASE_URLS || `${defaultUrl},https://api.argos-ci.com`)
+        .split(',')
+        .map(normalize)
+        .filter(Boolean),
+    );
+    allowed.add(defaultUrl);
+    const requested = normalize(candidates.find((url) => url && url.trim()) || defaultUrl);
+    if (!allowed.has(requested)) {
+      throw new BadRequestException(
+        `Argos base URL ${requested} is not allowed. Ask an administrator to add it to ARGOS_ALLOWED_BASE_URLS.`,
+      );
+    }
+    return requested;
+  }
+
   // Project Management
   async createProject(teamId: string, dto: CreateProjectDto): Promise<Project> {
     // Verify Argos connection before creating project
-    const argosBaseUrl = dto.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
+    const argosBaseUrl = this.resolveArgosBaseUrl(dto.argosBaseUrl);
     const argosClient = new ArgosApiClient(argosBaseUrl, dto.argosToken);
     
     try {
@@ -188,7 +211,7 @@ export class VisualRegressionService {
 
     // If updating Argos connection details, verify them
     if (dto.argosProjectId || dto.argosToken || dto.argosBaseUrl) {
-      const argosBaseUrl = dto.argosBaseUrl || project.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
+      const argosBaseUrl = this.resolveArgosBaseUrl(dto.argosBaseUrl, project.argosBaseUrl);
       // Decrypt stored token if using existing, or use new token from DTO
       const storedToken = project.argosToken;
       const decryptedToken = storedToken && this.encryptionService?.isEncrypted(storedToken)
@@ -251,7 +274,7 @@ export class VisualRegressionService {
       throw new BadRequestException('Argos token not configured for this project');
     }
 
-    const argosBaseUrl = project.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
+    const argosBaseUrl = this.resolveArgosBaseUrl(project.argosBaseUrl);
     const decryptedToken = this.decryptToken(project.argosToken);
     if (!decryptedToken) {
       throw new BadRequestException('Failed to decrypt Argos token');
@@ -445,7 +468,7 @@ export class VisualRegressionService {
   }
 
   private async syncRunsFromArgos(projectId: string, project: Project): Promise<void> {
-    const argosBaseUrl = project.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
+    const argosBaseUrl = this.resolveArgosBaseUrl(project.argosBaseUrl);
     const decryptedToken = this.decryptToken(project.argosToken);
     if (!decryptedToken) {
       throw new Error('Failed to decrypt Argos token for sync');
@@ -519,7 +542,7 @@ export class VisualRegressionService {
     // If we have Argos credentials and the run is completed, try to refresh from Argos
     if (project.argosToken && run.argosBuildId && run.status === 'completed') {
       try {
-        const argosBaseUrl = project.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
+        const argosBaseUrl = this.resolveArgosBaseUrl(project.argosBaseUrl);
         const decryptedToken = this.decryptToken(project.argosToken);
         if (!decryptedToken) {
           throw new Error('Failed to decrypt Argos token');
@@ -574,7 +597,7 @@ export class VisualRegressionService {
     const argosScreenshotId = parts[1];
 
     // Approve in Argos
-    const argosBaseUrl = project.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
+    const argosBaseUrl = this.resolveArgosBaseUrl(project.argosBaseUrl);
     const decryptedToken = this.decryptToken(project.argosToken);
     if (!decryptedToken) {
       throw new BadRequestException('Failed to decrypt Argos token');
@@ -619,7 +642,7 @@ export class VisualRegressionService {
     const argosScreenshotId = parts[1];
 
     // Reject in Argos
-    const argosBaseUrl = project.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
+    const argosBaseUrl = this.resolveArgosBaseUrl(project.argosBaseUrl);
     const decryptedToken = this.decryptToken(project.argosToken);
     if (!decryptedToken) {
       throw new BadRequestException('Failed to decrypt Argos token');
@@ -639,7 +662,12 @@ export class VisualRegressionService {
   }
 
   // Webhook Handling
-  async handleWebhook(payload: WebhookPayload, signature?: string, event?: string): Promise<{ message: string; processed: boolean }> {
+  async handleWebhook(
+    payload: WebhookPayload,
+    signature?: string,
+    event?: string,
+    rawBody?: Buffer,
+  ): Promise<{ message: string; processed: boolean }> {
     // Log webhook event
     const webhookLog = {
       event: event || 'unknown',
@@ -665,14 +693,15 @@ export class VisualRegressionService {
       return { message: 'Project not found', processed: false };
     }
 
-    // Verify signature if webhook secret is configured
+    // Every webhook must be signed with the project's secret. Without a secret
+    // anyone could post fake build results.
     const webhookSecret = this.webhookSecrets.get(project.id);
-    if (webhookSecret && signature) {
-      const isValid = this.verifyWebhookSignature(payload, signature, webhookSecret);
-      if (!isValid) {
-        console.warn(`Invalid webhook signature for project ${project.id}`, webhookLog);
-        throw new BadRequestException('Invalid webhook signature');
-      }
+    if (!webhookSecret) {
+      throw new UnauthorizedException('Webhooks are not configured for this project');
+    }
+    if (!signature || !this.verifyWebhookSignature(rawBody ?? payload, signature, webhookSecret)) {
+      console.warn(`Invalid or missing webhook signature for project ${project.id}`, webhookLog);
+      throw new UnauthorizedException('Invalid webhook signature');
     }
 
     // Store webhook event
@@ -694,23 +723,12 @@ export class VisualRegressionService {
     }
   }
 
-  private verifyWebhookSignature(payload: WebhookPayload, signature: string, secret: string): boolean {
-    try {
-      // Common webhook signature verification (HMAC SHA256)
-      const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
-      const hmac = crypto.createHmac('sha256', secret);
-      hmac.update(payloadString);
-      const expectedSignature = `sha256=${hmac.digest('hex')}`;
-      
-      // Compare signatures (constant-time comparison)
-      return crypto.timingSafeEqual(
-        Buffer.from(signature),
-        Buffer.from(expectedSignature)
-      );
-    } catch (error) {
-      console.error('Error verifying webhook signature:', error);
-      return false;
-    }
+  private verifyWebhookSignature(payload: Buffer | WebhookPayload, signature: string, secret: string): boolean {
+    // HMAC SHA256 over the exact bytes Argos sent; re-serialized JSON can differ
+    const body = Buffer.isBuffer(payload) ? payload : Buffer.from(JSON.stringify(payload));
+    const expected = Buffer.from(`sha256=${crypto.createHmac('sha256', secret).update(body).digest('hex')}`);
+    const actual = Buffer.from(signature);
+    return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
   }
 
   private async processWebhookEvent(projectId: string, event: string, payload: WebhookPayload): Promise<void> {
@@ -748,7 +766,7 @@ export class VisualRegressionService {
 
     if (existingRun) {
       // Update run status
-      const argosBaseUrl = project.argosBaseUrl || process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com';
+      const argosBaseUrl = this.resolveArgosBaseUrl(project.argosBaseUrl);
       const decryptedToken = this.decryptToken(project.argosToken);
       if (!decryptedToken) {
         console.error('Failed to decrypt Argos token for webhook update');

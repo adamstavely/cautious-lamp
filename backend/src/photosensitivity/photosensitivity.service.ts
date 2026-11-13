@@ -1,11 +1,15 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { exec } from 'child_process';
+import { Injectable, BadRequestException, NotFoundException, ServiceUnavailableException, Logger, Optional } from '@nestjs/common';
+import { ElasticsearchService } from '@nestjs/elasticsearch';
+import { execFile } from 'child_process';
+import { randomUUID } from 'crypto';
 import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { parse } from 'csv-parse/sync';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+const SUMMARY_INDEX = 'design-system-photosensitivity';
 
 export interface IRISAnalysisResult {
   frame: number;
@@ -41,11 +45,12 @@ export interface IRISSummary {
 
 @Injectable()
 export class PhotosensitivityService {
+  private readonly logger = new Logger(PhotosensitivityService.name);
   private readonly irisExecutablePath: string;
   private readonly uploadsDir: string;
   private readonly resultsDir: string;
 
-  constructor() {
+  constructor(@Optional() private readonly elasticsearchService?: ElasticsearchService) {
     // IRIS executable path - adjust based on installation
     this.irisExecutablePath = process.env.IRIS_EXECUTABLE_PATH || 'iris';
     this.uploadsDir = path.join(process.cwd(), 'uploads', 'videos');
@@ -60,12 +65,13 @@ export class PhotosensitivityService {
       await fs.mkdir(this.uploadsDir, { recursive: true });
       await fs.mkdir(this.resultsDir, { recursive: true });
     } catch (error) {
-      console.error('Failed to create directories:', error);
+      this.logger.error(`Failed to create upload directories: ${(error as Error).message}`);
     }
   }
 
   /**
-   * Analyze video using IRIS
+   * Analyze video using IRIS. The uploaded video and IRIS's raw output are
+   * deleted afterwards; only the summary is kept.
    */
   async analyzeVideo(
     videoPath: string,
@@ -76,50 +82,81 @@ export class PhotosensitivityService {
   ): Promise<{
     summary: IRISSummary;
     results: IRISAnalysisResult[];
-    outputPath: string;
   }> {
     if (!await this.fileExists(videoPath)) {
-      throw new BadRequestException(`Video file not found: ${videoPath}`);
+      throw new BadRequestException('Uploaded video could not be found');
     }
 
-    const outputFileName = path.basename(videoPath, path.extname(videoPath)) + 
-      (options.outputJson ? '.json' : '.csv');
-    const outputPath = path.join(this.resultsDir, outputFileName);
+    // The constructor starts creating these without waiting; make sure they exist
+    await this.ensureDirectories();
+    const outputPath = path.join(this.resultsDir, `${randomUUID()}${options.outputJson ? '.json' : '.csv'}`);
+    const args = [
+      '-v', videoPath,
+      '-p', options.enablePatternDetection !== false ? '1' : '0',
+      '-j', options.outputJson ? '1' : '0',
+      '-o', outputPath,
+    ];
 
     try {
-      // Build IRIS command
-      // Note: This assumes IRIS is available as a CLI tool
-      // Adjust command based on actual IRIS CLI interface
-      const patternFlag = options.enablePatternDetection !== false ? '1' : '0';
-      const jsonFlag = options.outputJson ? '1' : '0';
-      
-      // Example command structure (adjust based on actual IRIS CLI)
-      const command = `${this.irisExecutablePath} -v "${videoPath}" -p ${patternFlag} -j ${jsonFlag} -o "${outputPath}"`;
-      
-      // Execute IRIS analysis
-      const { stdout, stderr } = await execAsync(command, {
+      // execFile passes arguments directly, with no shell to interpret them
+      const { stderr } = await execFileAsync(this.irisExecutablePath, args, {
         timeout: 300000, // 5 minute timeout
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer
       });
 
       if (stderr && !stderr.includes('warning')) {
-        console.warn('IRIS stderr:', stderr);
+        this.logger.warn(`IRIS stderr: ${stderr}`);
       }
 
-      // Parse results
       const results = await this.parseResults(outputPath, options.outputJson);
-      const summary = this.generateSummary(results);
-
-      return {
-        summary,
-        results,
-        outputPath,
-      };
+      return { summary: this.generateSummary(results), results };
     } catch (error: any) {
-      throw new BadRequestException(
-        `Failed to analyze video with IRIS: ${error.message}. ` +
-        `Make sure IRIS is installed and accessible at: ${this.irisExecutablePath}`
+      if (error instanceof BadRequestException) throw error;
+      this.logger.error(`IRIS analysis failed: ${error.message}`);
+      throw new ServiceUnavailableException(
+        'Video analysis failed. Check that IRIS is installed and IRIS_EXECUTABLE_PATH is set.',
       );
+    } finally {
+      await Promise.all([fs.rm(videoPath, { force: true }), fs.rm(outputPath, { force: true })]);
+    }
+  }
+
+  /**
+   * Store an analysis summary so it can be fetched again later
+   */
+  async saveSummary(record: {
+    videoName: string;
+    applicationName: string;
+    summary: IRISSummary;
+    resultsCount: number;
+  }): Promise<string> {
+    const analysisId = randomUUID();
+    if (!this.elasticsearchService) return analysisId;
+    try {
+      await this.elasticsearchService.index({
+        index: SUMMARY_INDEX,
+        id: analysisId,
+        document: { ...record, analysisId, createdAt: new Date().toISOString() },
+      });
+    } catch (error: any) {
+      // The analysis itself succeeded, so return it; it just can't be looked up later
+      this.logger.warn(`Could not store photosensitivity summary: ${error.message}`);
+    }
+    return analysisId;
+  }
+
+  async getSummary(analysisId: string) {
+    if (!this.elasticsearchService) {
+      throw new ServiceUnavailableException('Analysis storage is not configured');
+    }
+    try {
+      const result = await this.elasticsearchService.get({ index: SUMMARY_INDEX, id: analysisId });
+      return result._source;
+    } catch (error: any) {
+      if (error?.meta?.statusCode === 404) {
+        throw new NotFoundException(`Analysis ${analysisId} not found`);
+      }
+      throw new ServiceUnavailableException('Analysis storage is unavailable, please try again later');
     }
   }
 
@@ -172,7 +209,8 @@ export class PhotosensitivityService {
         }));
       }
     } catch (error: any) {
-      throw new BadRequestException(`Failed to parse IRIS results: ${error.message}`);
+      this.logger.error(`Failed to parse IRIS results: ${error.message}`);
+      throw new BadRequestException('IRIS produced results that could not be read');
     }
   }
 
@@ -330,7 +368,7 @@ export class PhotosensitivityService {
    */
   async verifyInstallation(): Promise<boolean> {
     try {
-      await execAsync(`${this.irisExecutablePath} --version`, { timeout: 5000 });
+      await execFileAsync(this.irisExecutablePath, ['--version'], { timeout: 5000 });
       return true;
     } catch {
       return false;

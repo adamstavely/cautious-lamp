@@ -18,7 +18,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { CustomThrottlerGuard } from './common/rate-limiting/rate-limit.guard';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody keeps the exact request bytes for webhook signature checks
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   
   app.useGlobalPipes(new ValidationPipe());
   

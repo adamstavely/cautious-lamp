@@ -51,29 +51,23 @@ export class DesignExtractionController {
       throw new BadRequestException('URL cannot be empty');
     }
 
-    // Check if URL looks valid (basic check)
-    if (urlTrimmed.includes('Cannot POST') || urlTrimmed.includes('Error') || urlTrimmed.startsWith('http://localhost') || urlTrimmed.includes('/api/')) {
-      throw new BadRequestException(`Invalid URL format: ${urlTrimmed}. Please provide a valid website URL.`);
+    if (urlTrimmed.length > 2048) {
+      throw new BadRequestException('URL is too long');
     }
 
-    try {
-      const result = await this.extractionService.extractAndTransform(
-        urlTrimmed,
-        body.options || {},
-      );
+    // The service rejects non-public addresses and maps failures to 4xx/5xx
+    const result = await this.extractionService.extractAndTransform(
+      urlTrimmed,
+      body.options || {},
+    );
 
-      return {
-        success: true,
-        url: body.url,
-        extractedAt: result.raw.extractedAt,
-        raw: result.raw,
-        dtcg: result.dtcg,
-      };
-    } catch (error) {
-      throw new BadRequestException(
-        `Failed to extract design tokens: ${error.message}`,
-      );
-    }
+    return {
+      success: true,
+      url: result.raw.url,
+      extractedAt: result.raw.extractedAt,
+      raw: result.raw,
+      dtcg: result.dtcg,
+    };
   }
 }
 

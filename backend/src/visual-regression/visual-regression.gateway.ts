@@ -10,12 +10,15 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Injectable } from '@nestjs/common';
 import { VisualRegressionService } from './visual-regression.service';
+import { KeyManagementService } from '../common/security/key-management.service';
 
 @Injectable()
 @WebSocketGateway({
   namespace: '/visual-regression',
   cors: {
-    origin: '*',
+    origin: (process.env.CORS_ORIGINS ?? 'http://localhost:5174,http://localhost:5175')
+      .split(',')
+      .map((origin) => origin.trim()),
   },
 })
 export class VisualRegressionGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -24,9 +27,19 @@ export class VisualRegressionGateway implements OnGatewayConnection, OnGatewayDi
 
   private clientRooms: Map<string, Set<string>> = new Map(); // clientId -> Set<projectId/runId>
 
-  constructor(private readonly visualRegressionService: VisualRegressionService) {}
+  constructor(
+    private readonly visualRegressionService: VisualRegressionService,
+    private readonly keyManagementService: KeyManagementService,
+  ) {}
 
+  /** Clients send their API key as auth.token or an Authorization header */
   handleConnection(client: Socket) {
+    const token = client.handshake.auth?.token ?? client.handshake.headers?.authorization;
+    if (!this.keyManagementService.isValidApiKey(KeyManagementService.extractKey(token))) {
+      client.emit('error', { message: 'Invalid or missing API key' });
+      client.disconnect(true);
+      return;
+    }
     console.log(`Visual Regression WebSocket client connected: ${client.id}`);
   }
 
