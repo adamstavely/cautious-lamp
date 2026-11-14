@@ -11,7 +11,9 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "check:sfc": "node scripts/check-sfc.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:styles": "node scripts/check-styles.mjs",
+    "tc:sync": "node scripts/sync-trenchcoat.mjs"
   },
   "dependencies": {
     "@evilmartians/harmony": "^1.4.0",

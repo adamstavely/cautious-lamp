@@ -34,21 +34,21 @@ const icon = computed(() => ({
 
 <style scoped>
 .inline-notice {
-  @apply flex items-start gap-3 rounded-xl border border-solid px-4 py-3 text-sm;
+  @apply flex items-start gap-3 rounded-tile border border-solid px-4 py-3 text-sm;
 }
 .inline-notice-info {
-  @apply border-[#dce8fb] bg-[#f2f6fd] text-[#2f5ea8] dark:border-[#263a5c] dark:bg-[#263a5c]/40 dark:text-[#9dbcf0];
+  @apply border-info-border bg-info-bg text-info;
 }
 .inline-notice-success {
-  @apply border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300;
+  @apply border-success-border bg-success-bg text-success;
 }
 .inline-notice-warning {
-  @apply border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300;
+  @apply border-warning-border bg-warning-bg text-warning;
 }
 .inline-notice-error {
-  @apply border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300;
+  @apply border-danger-border bg-danger-bg text-danger;
 }
 .inline-notice-close {
-  @apply rounded-full p-0.5 opacity-70 hover:opacity-100;
+  @apply rounded-pill p-0.5 opacity-70 hover:opacity-100 focus-visible:outline focus-visible:outline-2 outline-focus;
 }
 </style>

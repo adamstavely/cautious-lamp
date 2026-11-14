@@ -1,0 +1,51 @@
+/*
+ * Design tokens. Trench Coat's dictionary (./trenchcoat/tokens.css, the clean
+ * look, selected by data-tc-look="clean" on <html>) with the app's accent:
+ * the ink blue of the Trench Coat spot illustrations instead of Trench Coat's
+ * cobalt, and blue primary buttons instead of ink ones.
+ *
+ * Pages never use these directly or any raw colour: they use the Tailwind
+ * names in tailwind.config.js (bg-surface, text-ink-secondary, border-line,
+ * text-accent …) or the components in src/components/ui. Every token switches
+ * with the app's .dark class, so pages need no dark: variants.
+ */
+@import './trenchcoat/tokens.css';
+
+/* The theme follows the app's toggle (.dark on <html>), never the operating system */
+:root:not(.dark) {
+  color-scheme: light;
+}
+:root.dark {
+  color-scheme: dark;
+}
+/* Vuetify's wrapper resets color-scheme to normal, which would resolve every
+   light-dark() token inside the app as light; let it inherit the app's theme. */
+:root .v-application {
+  color-scheme: inherit;
+}
+
+:root {
+  /* Accent: the illustrations' ink */
+  --tc-accent: light-dark(#2f5ea8, #9dbcf0);
+  --tc-accent-hover: light-dark(#264d8b, #b8cff5);
+  --tc-accent-text: light-dark(#2f5ea8, #9dbcf0);
+  --tc-accent-subtle: light-dark(#f2f6fd, rgba(38, 58, 92, 0.4));
+  --tc-accent-highlight: light-dark(#dce8fb, #263a5c);
+  --tc-fill-selected: var(--tc-accent-subtle);
+  --tc-border-selected: var(--tc-accent);
+  --tc-focus-ring: var(--tc-accent);
+  --tc-status-info-fg: var(--tc-accent-text);
+  --tc-status-info-bg: var(--tc-accent-subtle);
+  --tc-status-info-solid: var(--tc-accent);
+
+  /* App tokens Trench Coat doesn't have */
+  /* Text on an accent fill (primary buttons, step numbers) */
+  --app-text-on-accent: light-dark(#ffffff, #0b1220);
+  /* A card's border when hovered */
+  --app-accent-border: light-dark(#8fb0e8, #6f93d1);
+  /* The soft lift under a hovered card */
+  --app-shadow-card-hover: 0 8px 24px -12px light-dark(rgba(47, 94, 168, 0.25), rgba(0, 0, 0, 0.6));
+  /* Side nav widths: the docs drawer's rail and open panel */
+  --app-drawer-closed: 3rem;
+  --app-drawer-open: 16rem;
+}

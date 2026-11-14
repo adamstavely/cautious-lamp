@@ -1,0 +1,6 @@
+{
+  "files": [
+    "src/components/InlineNotice.vue",
+    "src/views/Tools.vue"
+  ]
+}
