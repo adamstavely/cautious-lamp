@@ -1,4 +1,4 @@
-import { geoAlbersUsa, geoMercator, geoEqualEarth, geoPath } from 'd3-geo';
+import { geoAlbersUsa, geoAzimuthalEqualArea, geoConicEqualArea, geoMercator, geoEqualEarth, geoPath } from 'd3-geo';
 
 /**
  * Inner extent [[x0, y0], [x1, y1]] for fitting, keeping padding on each side
@@ -173,4 +173,36 @@ export function createProjection(mapType, width, height, projectionType = 'equal
   }
   // 'us' and anything else
   return createUSProjection(width, height, fitObject);
+}
+
+const PROJECTIONS = {
+  albersUsa: geoAlbersUsa,
+  azimuthalEqualArea: geoAzimuthalEqualArea,
+  conicEqualArea: geoConicEqualArea,
+};
+
+/**
+ * Projection for a map area (see utils/mapAreas.js), fitted to `fitObject`
+ * (GeoJSON: the area's features, or points across its box). Regional
+ * projections are clipped to the map so countries outside the area, drawn
+ * for context, cannot spill across it; azimuthal ones also stop short of the
+ * far side of the globe, which they would otherwise blow up into a ring.
+ * @param {{ type: string, rotate?: number[], parallels?: number[] }} spec
+ * @param {number} width
+ * @param {number} height
+ * @param {Object} fitObject GeoJSON
+ * @param {number} padding px
+ * @returns {Object} D3 projection
+ */
+export function createAreaProjection(spec, width, height, fitObject, padding = 16) {
+  const type = PROJECTIONS[spec?.type] ? spec.type : 'azimuthalEqualArea';
+  const projection = PROJECTIONS[type]();
+  if (type !== 'albersUsa') {
+    if (spec?.rotate) projection.rotate(spec.rotate);
+    if (spec?.parallels && type === 'conicEqualArea') projection.parallels(spec.parallels);
+    if (type === 'azimuthalEqualArea') projection.clipAngle(150);
+  }
+  projection.fitExtent(fitExtent(width, height, padding), fitObject);
+  if (type !== 'albersUsa') projection.clipExtent([[0, 0], [width, height]]);
+  return projection;
 }

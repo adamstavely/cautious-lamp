@@ -58,3 +58,73 @@
   --app-workspace-height: 37.5rem;
   --app-embed-height: 50rem;
 }
+
+/*
+ * Map colour ramps (Map Maker; read at render by components/maps/useMapPalette.js).
+ * Seven steps each, generated in OKLCH and checked with the dataviz skill's
+ * validator against the map well (surface-sunken) in both themes: lightness
+ * strictly monotone, adjacent steps at least 0.06 apart, one hue per ramp.
+ *
+ * Sequential: low → high. The light theme runs light → dark; the dark theme
+ * runs from near the dark surface up to light, so small values recede in
+ * both. Blue is the default and holds the accent (illustration blue) at step 6.
+ * Diverging: low arm (1–3), neutral grey midpoint (4), high arm (5–7); each
+ * arm deepens away from the midpoint.
+ * Categorical: the first three slots of the dataviz reference palette, the
+ * most that stay apart for every pair under colour-vision deficiency; more
+ * categories share an "Other" slot (chart-neutral), and every slot also has
+ * its own marker shape.
+ */
+:root {
+  --app-seq-blue-1: light-dark(#e3eefe, #2c3645);
+  --app-seq-blue-2: light-dark(#bcd6fe, #394b68);
+  --app-seq-blue-3: light-dark(#93baf8, #466493);
+  --app-seq-blue-4: light-dark(#6b9ce9, #557dbd);
+  --app-seq-blue-5: light-dark(#497dd1, #6a99e2);
+  --app-seq-blue-6: light-dark(#2f5ea8, #9dbcf0);
+  --app-seq-blue-7: light-dark(#19407d, #c1d9fe);
+
+  --app-seq-green-1: light-dark(#ddf4e3, #293a2f);
+  --app-seq-green-2: light-dark(#b7e0c4, #31533d);
+  --app-seq-green-3: light-dark(#89cba0, #37714e);
+  --app-seq-green-4: light-dark(#59b17b, #409060);
+  --app-seq-green-5: light-dark(#2a955b, #53ae77);
+  --app-seq-green-6: light-dark(#037340, #7bd19b);
+  --app-seq-green-7: light-dark(#04502c, #a4ebbc);
+
+  --app-seq-orange-1: light-dark(#fee8db, #443025);
+  --app-seq-orange-2: light-dark(#fcc7aa, #66402a);
+  --app-seq-orange-3: light-dark(#f3a376, #8f512b);
+  --app-seq-orange-4: light-dark(#e17d40, #b76430);
+  --app-seq-orange-5: light-dark(#c55c04, #dc7b40);
+  --app-seq-orange-6: light-dark(#974502, #ffa069);
+  --app-seq-orange-7: light-dark(#6b2f01, #fecbaf);
+
+  --app-seq-purple-1: light-dark(#f2e8fe, #393143);
+  --app-seq-purple-2: light-dark(#decaf9, #524264);
+  --app-seq-purple-3: light-dark(#c8a8ef, #6f558d);
+  --app-seq-purple-4: light-dark(#af84de, #8e6ab5);
+  --app-seq-purple-5: light-dark(#9464c5, #ab82d8);
+  --app-seq-purple-6: light-dark(#73469f, #cda6fb);
+  --app-seq-purple-7: light-dark(#522d74, #e2ccfe);
+
+  --app-div-blue-red-1: light-dark(#1851a6, #97bffe);
+  --app-div-blue-red-2: light-dark(#5c86c9, #688dc7);
+  --app-div-blue-red-3: light-dark(#a7bfe5, #4a5e7f);
+  --app-div-blue-red-4: light-dark(#eae9e7, #363534);
+  --app-div-blue-red-5: light-dark(#e2b0a9, #7b514c);
+  --app-div-blue-red-6: light-dark(#c16a61, #c0746c);
+  --app-div-blue-red-7: light-dark(#972622, #ffa196);
+
+  --app-div-purple-orange-1: light-dark(#693996, #d1a9ff);
+  --app-div-purple-orange-2: light-dark(#9674bc, #9b7bbf);
+  --app-div-purple-orange-3: light-dark(#c6b5dd, #66557a);
+  --app-div-purple-orange-4: light-dark(#eae9e7, #363534);
+  --app-div-purple-orange-5: light-dark(#ddb499, #79543a);
+  --app-div-purple-orange-6: light-dark(#ba723e, #bd7a4a);
+  --app-div-purple-orange-7: light-dark(#824103, #ffa666);
+
+  --app-cat-1: light-dark(#2a78d6, #3987e5);
+  --app-cat-2: light-dark(#eb6834, #d95926);
+  --app-cat-3: light-dark(#1baf7a, #199e70);
+}
