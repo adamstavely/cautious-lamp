@@ -1,6 +1,9 @@
 export class CreateProjectDto {
   name: string;
-  teamId: string;
+  /** Free-form label; defaults to the workspace id */
+  teamId?: string;
+  /** Owning workspace (needs the editor role there). Without one, only the creator can use the project. */
+  workspaceId?: string | null;
   description?: string;
   argosProjectId: string;
   argosToken: string;

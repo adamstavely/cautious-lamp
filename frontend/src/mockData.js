@@ -21,30 +21,39 @@ export const isMockMode = () => import.meta.env.VITE_USE_MOCKS === 'true';
 /** Async wrapper kept for callers that expect a promise. */
 export const isMockModeAsync = async () => isMockMode();
 
+/** RBAC roles with review:admin by default (backend rbac.service.ts) */
+const REVIEW_ADMIN_ROLES = ['design_system_manager', 'review_manager'];
+
 /**
- * The review role the review UI uses, from the signed-in user's RBAC roles.
- * design_system_manager, review_manager and system_owner act as 'admin' for
- * reviews; otherwise the most senior of creative_director, art_director,
- * designer wins. Anyone else is treated as a designer (the server still
- * decides what they may do).
+ * The review role the review UI labels the user with, from their RBAC roles
+ * and permissions. It's for display and demo data only: what the user may do
+ * with a review comes from the server, as `allowedActions` on the review
+ * (docs/REVIEW_API.md). Review admins (review:admin) are 'admin'; otherwise
+ * the most senior of creative_director, art_director, designer, client wins.
  */
-export const reviewRoleFor = (roles = []) => {
-  if (roles.some((role) => ['design_system_manager', 'review_manager', 'system_owner'].includes(role))) return 'admin';
+export const reviewRoleFor = (roles = [], permissions = []) => {
+  // Explicit review:admin only: the demo user's '*' (services/auth.js) keeps them a designer
+  if (permissions.includes('review:admin')) return 'admin';
+  if (roles.some((role) => REVIEW_ADMIN_ROLES.includes(role))) return 'admin';
   if (roles.includes('creative_director')) return 'creative_director';
   if (roles.includes('art_director')) return 'art_director';
+  if (roles.includes('designer')) return 'designer';
+  if (roles.includes('client')) return 'client';
   return 'designer';
 };
 
-/** The signed-in user for the review UI: { id, name, email, roles, role, teamId }. */
+/** The signed-in user for the review UI: { id, name, email, roles, permissions, role, teamId }. */
 export const getCurrentUser = () => {
   const user = authState.user;
   const roles = user?.roles ?? [];
+  const permissions = user?.permissions ?? [];
   return {
     id: user?.id ?? null,
     name: user?.name || user?.email || '',
     email: user?.email || '',
     roles,
-    role: reviewRoleFor(roles),
+    permissions,
+    role: reviewRoleFor(roles, permissions),
     // Only the demo data scopes by team; real lists are scoped by the server
     teamId: 'team-1',
   };
@@ -355,9 +364,31 @@ const httpError = (status, message, extra = {}) => {
 
 const isExpired = (review) => review.expiresAt && new Date(review.expiresAt) < new Date();
 
+// The server's access rules (backend/src/reviews/review-access.ts), simplified for demo data:
+// no teams, and the demo user owns the reviews they created or, as a designer, any review.
+const STAGE_ROLES = { client_review: 'client', art_director_review: 'art_director', creative_director_review: 'creative_director' };
+
+const allowedActionsFor = (review) => {
+  if (isExpired(review)) return [];
+  const user = actingUser();
+  const admin = user.role === 'admin';
+  const owner = admin || user.role === 'designer' || (!!user.email && review.designerEmail === user.email);
+  const actions = [];
+  const stageRole = STAGE_ROLES[review.workflowState];
+  if (stageRole && (admin || user.roles.includes(stageRole) || user.role === stageRole)) actions.push('approve', 'reject');
+  if (owner) {
+    const state = review.workflowState;
+    if (state === 'draft' && !review.bypassClientReview) actions.push('move-to-client-review');
+    if (state === 'client_approved' || (state === 'draft' && review.bypassClientReview)) actions.push('move-to-art-director-review');
+    if (state === 'draft') actions.push('resubmit');
+    actions.push('upload-version', 'extend', 'complete', 'manage-sharing', 'manage-password');
+  }
+  return actions;
+};
+
 const toReview = (review) => {
   const { password, ...rest } = clone(review);
-  return { ...rest, hasPassword: !!password };
+  return { ...rest, hasPassword: !!password, allowedActions: allowedActionsFor(review) };
 };
 
 const toSummary = (review) => {

@@ -220,9 +220,11 @@ Content-Type: application/json
 {
   "name": "My API Key",
   "expiresInDays": 90,
-  "scopes": ["read", "write"]
+  "scopes": ["component:view", "token:view"]
 }
 ```
+
+Needs `admin:users`; scopes are RBAC permissions and must all be held by the caller (docs/AUTH.md, "API keys").
 
 #### List API Keys
 

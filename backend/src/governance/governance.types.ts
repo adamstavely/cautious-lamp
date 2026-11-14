@@ -86,7 +86,8 @@ export interface ComplianceCheck {
   impact?: CheckImpact;
 }
 
-export type RuleOutcome = 'pass' | 'fail' | 'skipped' | 'error';
+/** incomplete: no violations found, but part of the input was not checked (a size cap), so not a pass */
+export type RuleOutcome = 'pass' | 'fail' | 'skipped' | 'error' | 'incomplete';
 
 export interface RuleResult {
   ruleId: string;
@@ -94,7 +95,7 @@ export interface RuleResult {
   version: number;
   outcome: RuleOutcome;
   violations: number;
-  /** Why the rule was skipped or errored */
+  /** Why the rule was skipped, errored or is incomplete */
   reason?: string;
 }
 
@@ -169,4 +170,6 @@ export const LIMITS = {
   importRules: 200,
   storedChecks: 2000,
   matchesPerRule: 100,
+  /** selector-attribute: attribute values tested against the rule's pattern (presence is checked on every match) */
+  selectorPatternValues: 10000,
 } as const;

@@ -107,6 +107,8 @@ export interface Review {
   updatedAt: string;
   expiresAt: string;
   extended: boolean;
+  /** What the caller may do now; see REVIEW_ACTIONS */
+  allowedActions: ReviewAction[];
 }
 
 export type ReviewSummary = Omit<Review, 'comments' | 'workflowHistory'> & {
@@ -115,7 +117,7 @@ export type ReviewSummary = Omit<Review, 'comments' | 'workflowHistory'> & {
 };
 
 /** Review as stored in Elasticsearch. Internal fields never leave the service. */
-export interface ReviewDoc extends Omit<Review, 'hasPassword' | 'versions'> {
+export interface ReviewDoc extends Omit<Review, 'hasPassword' | 'versions' | 'allowedActions'> {
   passwordHash: string | null;
   versions: StoredVersion[];
   /** Pending one-time upload token (sha256 of the token), cleared once used */
@@ -137,11 +139,39 @@ export interface Team {
   updatedAt: string;
 }
 
-/** Who is acting: the signed-in user, or the person an API key says it acts for (see request-context.ts) */
+/**
+ * Who is acting (see request-context.ts). Only `email` is identity, and only a
+ * signed-in user has one: an API key's `x-user-email` / `x-user-name` are
+ * display labels and never satisfy an access check (docs/AUTH.md).
+ */
 export interface ActingUser {
+  /** The signed-in user's verified email, lowercased; null for API keys */
   email: string | null;
+  /** Display name recorded on comments and history */
   name: string | null;
+  /** RBAC roles (signed-in users only) */
+  roles?: readonly string[];
+  /** The principal's permissions; `review:admin` makes it a review admin */
+  permissions?: ReadonlySet<string>;
 }
+
+/**
+ * Actions the caller may take on a review right now (`allowedActions` on
+ * reviews and summaries). The server enforces the same rules on each route.
+ */
+export const REVIEW_ACTIONS = [
+  'approve',
+  'reject',
+  'move-to-client-review',
+  'move-to-art-director-review',
+  'resubmit',
+  'upload-version',
+  'extend',
+  'complete',
+  'manage-sharing',
+  'manage-password',
+] as const;
+export type ReviewAction = (typeof REVIEW_ACTIONS)[number];
 
 export function actorLabel(user: ActingUser, fallback = 'Unknown'): string {
   return user.name || user.email || fallback;

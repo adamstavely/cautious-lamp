@@ -1,33 +1,107 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import * as crypto from 'crypto';
-import { EncryptionService } from './encryption.service';
+import { DocumentStore, VersionConflictError } from '../../reviews/document-store';
+
+/** Elasticsearch index holding API keys created through the API (docs/AUTH.md) */
+export const API_KEYS_INDEX = 'design-system-api-keys';
+/** Injection token for the API key store */
+export const API_KEY_STORE = Symbol('API_KEY_STORE');
+
+/** Keys created through the API start with this, so other credentials never cost a lookup */
+export const MANAGED_KEY_PREFIX = 'dsk_';
+const MANAGED_KEY_PATTERN = /^dsk_[A-Za-z0-9_-]{43}$/;
+const KEY_ID_PATTERN = /^key_[0-9a-f]{32}$/;
+
+/** How long a key lookup is reused before reading storage again (other replicas see revocations within this) */
+export const API_KEY_CACHE_MS = 30_000;
+/** `lastUsed` is written at most this often per key */
+const LAST_USED_WRITE_MS = 60 * 60 * 1000;
+
+export type RotationReason = 'manual' | 'automatic' | 'expired' | 'compromised';
+
+/** A stored key: only the SHA-256 hash of the secret is kept */
+export interface ApiKeyDoc {
+  /** `key_` + the first 32 hex characters of the hash, so a key is found from its secret with one read */
+  id: string;
+  name: string;
+  keyHash: string;
+  createdAt: string;
+  createdBy?: string;
+  lastUsed?: string;
+  expiresAt?: string;
+  revoked: boolean;
+  revokedAt?: string;
+  scopes?: string[];
+  metadata?: Record<string, unknown>;
+  /** Set on a key made by rotating another */
+  rotatedFrom?: { keyId: string; at: string; by: string; reason: RotationReason };
+}
+
+export const API_KEY_PROPERTIES = {
+  id: { type: 'keyword' },
+  name: { type: 'keyword' },
+  keyHash: { type: 'keyword' },
+  createdAt: { type: 'date' },
+  expiresAt: { type: 'date' },
+  revoked: { type: 'boolean' },
+  scopes: { type: 'keyword' },
+};
 
 export interface ApiKeyMetadata {
   id: string;
   name: string;
   keyHash: string; // SHA-256 hash of the key (for validation)
-  encryptedKey?: string; // Encrypted key (if storing for rotation)
   createdAt: Date;
+  createdBy?: string;
   lastUsed?: Date;
   expiresAt?: Date;
   revoked: boolean;
   revokedAt?: Date;
   scopes?: string[];
   metadata?: Record<string, unknown>;
+  rotatedFrom?: { keyId: string; at: Date; by: string; reason: RotationReason };
+}
+
+/** Who a credential belongs to, as far as API keys go */
+export interface ResolvedApiKey {
+  id: string;
+  name: string;
+  scopes?: string[];
+}
+
+function toMetadata(doc: ApiKeyDoc): ApiKeyMetadata {
+  const date = (value?: string) => (value ? new Date(value) : undefined);
+  return {
+    id: doc.id,
+    name: doc.name,
+    keyHash: doc.keyHash,
+    createdAt: new Date(doc.createdAt),
+    createdBy: doc.createdBy,
+    lastUsed: date(doc.lastUsed),
+    expiresAt: date(doc.expiresAt),
+    revoked: doc.revoked,
+    revokedAt: date(doc.revokedAt),
+    scopes: doc.scopes,
+    metadata: doc.metadata,
+    rotatedFrom: doc.rotatedFrom ? { ...doc.rotatedFrom, at: new Date(doc.rotatedFrom.at) } : undefined,
+  };
 }
 
 /**
- * Service for managing API key lifecycle
+ * API key lifecycle (docs/AUTH.md). Keys from API_KEYS and ADMIN_API_KEY come
+ * from the environment; keys created at runtime are stored hashed in
+ * Elasticsearch, so they work on every replica and survive restarts.
  */
 @Injectable()
 export class KeyManagementService {
   private readonly logger = new Logger(KeyManagementService.name);
-  private readonly keys = new Map<string, ApiKeyMetadata>();
+  /** Lookups by key hash, including misses */
+  private readonly cache = new Map<string, { doc: ApiKeyDoc | null; expires: number }>();
 
   /** Keys configured through API_KEYS (comma-separated), by hash */
   private readonly configuredKeys = new Map<string, { id: string; name: string }>();
 
-  constructor(private readonly encryptionService: EncryptionService) {
+  constructor(@Inject(API_KEY_STORE) private readonly store: DocumentStore<ApiKeyDoc>) {
     (process.env.API_KEYS ?? '')
       .split(',')
       .map((key) => key.trim())
@@ -44,20 +118,20 @@ export class KeyManagementService {
   /**
    * Whether a key is one of the configured keys or a live managed key
    */
-  isValidApiKey(apiKey: string | undefined): boolean {
+  async isValidApiKey(apiKey: string | undefined): Promise<boolean> {
     if (!apiKey) return false;
-    return this.resolveApiKey(apiKey) !== null;
+    return (await this.resolveApiKey(apiKey)) !== null;
   }
 
   /**
    * Who a key belongs to: a configured key (no scopes) or a live managed key
    * with its scopes. Null for anything else, including the admin key.
    */
-  resolveApiKey(apiKey: string | undefined): { id: string; name: string; scopes?: string[] } | null {
+  async resolveApiKey(apiKey: string | undefined): Promise<ResolvedApiKey | null> {
     if (!apiKey) return null;
     const configured = this.configuredKeys.get(this.hashKey(apiKey));
     if (configured) return { ...configured };
-    const managed = this.validateKey(apiKey);
+    const managed = await this.validateKey(apiKey);
     return managed ? { id: managed.id, name: managed.name, scopes: managed.scopes } : null;
   }
 
@@ -77,8 +151,8 @@ export class KeyManagementService {
    * @deprecated Routes are authenticated by the global AuthGuard, which also
    * accepts user tokens (docs/AUTH.md); use `@RequirePermission` instead.
    */
-  assertValidApiKey(authHeader: string | undefined): void {
-    if (!this.isValidApiKey(KeyManagementService.extractKey(authHeader))) {
+  async assertValidApiKey(authHeader: string | undefined): Promise<void> {
+    if (!(await this.isValidApiKey(KeyManagementService.extractKey(authHeader)))) {
       throw new UnauthorizedException('Invalid or missing API key');
     }
   }
@@ -99,104 +173,100 @@ export class KeyManagementService {
   }
 
   /**
-   * Create a new API key
+   * Create a new API key. Only its hash is stored; the key itself is returned once.
+   * Which scopes a caller may grant is decided by the API key routes.
    */
-  createKey(
+  async createKey(
     name: string,
     options?: {
       expiresInDays?: number;
       scopes?: string[];
       metadata?: Record<string, unknown>;
-    }
-  ): { key: string; metadata: ApiKeyMetadata } {
-    // Generate a secure random key
+      createdBy?: string;
+      rotatedFrom?: ApiKeyDoc['rotatedFrom'];
+    },
+  ): Promise<{ key: string; metadata: ApiKeyMetadata }> {
     const key = this.generateSecureKey();
     const keyHash = this.hashKey(key);
-    const id = `key-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    const metadata: ApiKeyMetadata = {
-      id,
+    const doc: ApiKeyDoc = {
+      id: this.idForHash(keyHash),
       name,
       keyHash,
-      encryptedKey: this.encryptionService.encrypt(key), // Store encrypted for rotation
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
+      createdBy: options?.createdBy,
       expiresAt: options?.expiresInDays
-        ? new Date(Date.now() + options.expiresInDays * 24 * 60 * 60 * 1000)
+        ? new Date(Date.now() + options.expiresInDays * 24 * 60 * 60 * 1000).toISOString()
         : undefined,
       revoked: false,
       scopes: options?.scopes,
       metadata: options?.metadata,
+      rotatedFrom: options?.rotatedFrom,
     };
 
-    this.keys.set(id, metadata);
-    this.logger.log(`Created API key: ${id} (${name})`);
+    await this.store.create(doc);
+    this.cache.delete(keyHash);
+    this.logger.log(`Created API key: ${doc.id} (${name})`);
 
-    return { key, metadata };
+    return { key, metadata: toMetadata(doc) };
   }
 
   /**
-   * Validate an API key
+   * The live managed key with this secret, or null (unknown, revoked or expired)
    */
-  validateKey(apiKey: string): ApiKeyMetadata | null {
+  async validateKey(apiKey: string): Promise<ApiKeyMetadata | null> {
+    if (!MANAGED_KEY_PATTERN.test(apiKey)) return null;
     const keyHash = this.hashKey(apiKey);
-
-    for (const metadata of this.keys.values()) {
-      if (metadata.keyHash === keyHash && !metadata.revoked) {
-        // Check expiration
-        if (metadata.expiresAt && metadata.expiresAt < new Date()) {
-          this.logger.warn(`API key ${metadata.id} has expired`);
-          return null;
-        }
-
-        // Update last used
-        metadata.lastUsed = new Date();
-        this.keys.set(metadata.id, metadata);
-
-        return metadata;
-      }
+    const doc = await this.lookup(keyHash);
+    if (!doc || doc.revoked || doc.keyHash !== keyHash) {
+      return null;
     }
-
-    return null;
+    if (doc.expiresAt && new Date(doc.expiresAt) < new Date()) {
+      this.logger.warn(`API key ${doc.id} has expired`);
+      return null;
+    }
+    this.touch(doc);
+    return toMetadata(doc);
   }
 
   /**
-   * Revoke an API key
+   * Revoke an API key. False when there is no such key.
    */
-  revokeKey(keyId: string): boolean {
-    const metadata = this.keys.get(keyId);
-    if (!metadata) {
-      return false;
-    }
-
-    metadata.revoked = true;
-    metadata.revokedAt = new Date();
-    this.keys.set(keyId, metadata);
+  async revokeKey(keyId: string): Promise<boolean> {
+    const doc = await this.mutate(keyId, (current) => {
+      if (current.revoked) return false;
+      current.revoked = true;
+      current.revokedAt = new Date().toISOString();
+      return true;
+    });
+    if (!doc) return false;
     this.logger.log(`Revoked API key: ${keyId}`);
-
     return true;
   }
 
   /**
-   * Rotate an API key (create new, optionally revoke old)
+   * Rotate an API key (create new, optionally revoke old). Null when there is no such key.
    */
-  rotateKey(
+  async rotateKey(
     keyId: string,
-    revokeOld: boolean = true
-  ): { newKey: string; newMetadata: ApiKeyMetadata } | null {
-    const oldMetadata = this.keys.get(keyId);
-    if (!oldMetadata) {
+    revokeOld: boolean = true,
+    rotation: { by: string; reason: RotationReason } = { by: 'system', reason: 'manual' },
+  ): Promise<{ newKey: string; newMetadata: ApiKeyMetadata } | null> {
+    const old = KEY_ID_PATTERN.test(keyId) ? (await this.store.get(keyId))?.doc : undefined;
+    if (!old) {
       return null;
     }
 
     // Create new key with same scopes and metadata
-    const { key: newKey, metadata: newMetadata } = this.createKey(oldMetadata.name, {
-      scopes: oldMetadata.scopes,
-      metadata: oldMetadata.metadata,
+    const { key: newKey, metadata: newMetadata } = await this.createKey(old.name, {
+      scopes: old.scopes,
+      metadata: old.metadata,
+      createdBy: rotation.by,
+      rotatedFrom: { keyId, at: new Date().toISOString(), by: rotation.by, reason: rotation.reason },
     });
 
     // Revoke old key if requested
     if (revokeOld) {
-      this.revokeKey(keyId);
+      await this.revokeKey(keyId);
     }
 
     this.logger.log(`Rotated API key: ${keyId} -> ${newMetadata.id}`);
@@ -204,41 +274,31 @@ export class KeyManagementService {
   }
 
   /**
-   * Get all keys (metadata only, no actual keys)
+   * Every managed key (metadata only: the secret itself is never stored)
    */
-  getAllKeys(): ApiKeyMetadata[] {
-    return Array.from(this.keys.values()).map(meta => ({
-      ...meta,
-      encryptedKey: undefined, // Don't expose encrypted keys
-    }));
+  async getAllKeys(): Promise<ApiKeyMetadata[]> {
+    return (await this.store.list()).map(toMetadata);
   }
 
   /**
    * Get key metadata by ID
    */
-  getKeyMetadata(keyId: string): ApiKeyMetadata | undefined {
-    const metadata = this.keys.get(keyId);
-    if (!metadata) {
-      return undefined;
-    }
-
-    return {
-      ...metadata,
-      encryptedKey: undefined, // Don't expose encrypted keys
-    };
+  async getKeyMetadata(keyId: string): Promise<ApiKeyMetadata | undefined> {
+    if (!KEY_ID_PATTERN.test(keyId)) return undefined;
+    const doc = (await this.store.get(keyId))?.doc;
+    return doc ? toMetadata(doc) : undefined;
   }
 
   /**
-   * Clean up expired keys
+   * Revokes keys past their expiry date
    */
-  cleanupExpiredKeys(): number {
+  async cleanupExpiredKeys(): Promise<number> {
     let cleaned = 0;
     const now = new Date();
 
-    for (const [id, metadata] of this.keys.entries()) {
+    for (const metadata of await this.getAllKeys()) {
       if (metadata.expiresAt && metadata.expiresAt < now && !metadata.revoked) {
-        this.revokeKey(id);
-        cleaned++;
+        if (await this.revokeKey(metadata.id)) cleaned++;
       }
     }
 
@@ -249,18 +309,57 @@ export class KeyManagementService {
     return cleaned;
   }
 
+  /** The stored key for a hash (or null), cached for API_KEY_CACHE_MS */
+  private async lookup(keyHash: string): Promise<ApiKeyDoc | null> {
+    const cached = this.cache.get(keyHash);
+    if (cached && cached.expires > Date.now()) return cached.doc;
+    const doc = (await this.store.get(this.idForHash(keyHash)))?.doc ?? null;
+    this.cache.set(keyHash, { doc, expires: Date.now() + API_KEY_CACHE_MS });
+    return doc;
+  }
+
+  /** Records use at most hourly, in the background; a lost write only leaves lastUsed older */
+  private touch(doc: ApiKeyDoc): void {
+    const last = doc.lastUsed ? new Date(doc.lastUsed).getTime() : 0;
+    if (Date.now() - last < LAST_USED_WRITE_MS) return;
+    const lastUsed = new Date().toISOString();
+    doc.lastUsed = lastUsed;
+    void this.mutate(doc.id, (current) => {
+      current.lastUsed = lastUsed;
+      return true;
+    }, 1).catch(() => undefined);
+  }
+
   /**
-   * Generate a secure random API key
+   * Read-modify-write with optimistic concurrency. `change` returns false to
+   * skip the write. Returns the document (changed or not), or null if missing.
+   */
+  private async mutate(keyId: string, change: (doc: ApiKeyDoc) => boolean, attempts = 5): Promise<ApiKeyDoc | null> {
+    if (!KEY_ID_PATTERN.test(keyId)) return null;
+    for (let attempt = 1; ; attempt++) {
+      const stored = await this.store.get(keyId);
+      if (!stored) return null;
+      const doc = stored.doc;
+      if (!change(doc)) return doc;
+      try {
+        await this.store.replace(doc, stored.version);
+        this.cache.delete(doc.keyHash);
+        return doc;
+      } catch (error) {
+        if (!(error instanceof VersionConflictError) || attempt >= attempts) throw error;
+      }
+    }
+  }
+
+  private idForHash(keyHash: string): string {
+    return `key_${keyHash.slice(0, 32)}`;
+  }
+
+  /**
+   * Generate a secure random API key: the prefix and 32 random bytes, base64url
    */
   private generateSecureKey(): string {
-    // Generate 32 bytes (256 bits) of random data
-    const bytes = crypto.randomBytes(32);
-    // Return as base64url encoded string (URL-safe)
-    return bytes.toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '')
-      .substring(0, 43); // 43 chars = 32 bytes in base64
+    return MANAGED_KEY_PREFIX + crypto.randomBytes(32).toString('base64url');
   }
 
   /**
@@ -270,4 +369,3 @@ export class KeyManagementService {
     return crypto.createHash('sha256').update(key).digest('hex');
   }
 }
-

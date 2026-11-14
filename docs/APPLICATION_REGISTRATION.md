@@ -44,7 +44,7 @@ interface Application {
     governance: {
       enabled: boolean;
       rules?: string[]; // Specific rules to run (empty = all enabled rules)
-      scanSchedule?: 'manual' | 'daily' | 'weekly' | 'on-commit';
+      scanSchedule?: 'manual' | 'daily' | 'weekly';
       lastScan?: Date;
     };
     visualRegression: {
@@ -222,7 +222,7 @@ DELETE /api/v1/applications/:id
 - When `governance.enabled` is true:
   - Link application to compliance scanning
   - Apply selected rules (or all enabled rules if empty)
-  - Schedule scans based on `scanSchedule`
+  - `daily` and `weekly` scans of the application URL are run by `GovernanceScanScheduler` (docs/GOVERNANCE.md, "Scheduled scans"). There's no on-commit schedule: have CI call `POST /api/v1/governance/scans` after each push
 
 ## Implementation Plan
 

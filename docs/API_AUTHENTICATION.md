@@ -12,20 +12,21 @@ API keys are the primary authentication method for the API.
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/auth/api-keys \
+  -H "Authorization: Bearer YOUR_TOKEN_OR_ADMIN_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "My API Key",
     "expiresInDays": 90,
-    "scopes": ["read", "write"]
+    "scopes": ["component:view", "token:view"]
   }'
 ```
 
 Response:
 ```json
 {
-  "apiKey": "ds_abc123...",
+  "apiKey": "dsk_abc123...",
   "metadata": {
-    "id": "key-123",
+    "id": "key_0c0c6a90427b3e00060c7786ec269ac9",
     "name": "My API Key",
     "createdAt": "2024-01-01T00:00:00Z",
     "expiresAt": "2024-04-01T00:00:00Z"
@@ -33,7 +34,9 @@ Response:
 }
 ```
 
-**Important**: Save the API key immediately - it won't be shown again!
+**Important**: Save the API key immediately - it won't be shown again! Only a hash of it is stored.
+
+Managing keys needs the `admin:users` permission, and a key can only be given permissions its creator has (see [AUTH.md](AUTH.md#api-keys)). Scopes are RBAC permissions; without `scopes` the key gets the default service permissions.
 
 #### Using an API Key
 
@@ -44,11 +47,6 @@ curl http://localhost:3000/api/v1/workspaces \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
-Or as a query parameter (less secure):
-
-```bash
-curl "http://localhost:3000/api/v1/workspaces?apiKey=YOUR_API_KEY"
-```
 
 ## API Key Management
 
@@ -109,7 +107,7 @@ Limit API key permissions:
 
 ```json
 {
-  "scopes": ["read"]  // Read-only access
+  "scopes": ["component:view", "token:view"]
 }
 ```
 

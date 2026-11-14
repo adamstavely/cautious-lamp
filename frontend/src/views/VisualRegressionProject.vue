@@ -332,7 +332,7 @@ let unmounted = false;
 // or a readable fallback.
 const apiErrorMessage = (error, fallback) => {
   const status = error?.response?.status;
-  if (status === 401 || status === 403) return 'Your API key was rejected or is missing. Check your API key.';
+  if (status === 401) return 'You are not signed in, or your API key was rejected.';
   const message = error?.response?.data?.message;
   if (Array.isArray(message)) return message.join(' ');
   if (typeof message === 'string' && message) return message;

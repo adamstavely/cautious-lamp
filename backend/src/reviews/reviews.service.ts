@@ -23,6 +23,7 @@ import {
   VersionDto,
 } from './review.dto';
 import { ReviewFilesService, isSafeId, newId } from './review-files.service';
+import { ReviewAccess, allowedActions, canDecide, isExpired, reviewAccess, sharingAllows } from './review-access';
 import {
   ALLOWED_FILE_TYPES,
   ActingUser,
@@ -33,6 +34,7 @@ import {
   Reactions,
   Reply,
   Review,
+  ReviewAction,
   ReviewDoc,
   ReviewSummary,
   ReviewVersion,
@@ -59,17 +61,13 @@ function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
 
-function isExpired(doc: Pick<ReviewDoc, 'expiresAt'>, now = Date.now()): boolean {
-  return new Date(doc.expiresAt).getTime() <= now;
-}
-
 /** Public version fields only */
 function toVersion(version: StoredVersion): ReviewVersion {
   const { storageId: _storageId, ...rest } = version;
   return rest;
 }
 
-export function toReview(doc: ReviewDoc): Review {
+export function toReview(doc: ReviewDoc, actions: ReviewAction[] = []): Review {
   const { passwordHash, uploadToken: _token, versions, ...rest } = doc;
   return {
     ...rest,
@@ -77,11 +75,12 @@ export function toReview(doc: ReviewDoc): Review {
     versions: (versions ?? []).map(toVersion),
     comments: rest.comments ?? [],
     workflowHistory: rest.workflowHistory ?? [],
+    allowedActions: actions,
   };
 }
 
-export function toSummary(doc: ReviewDoc): ReviewSummary {
-  const { comments: _c, workflowHistory: history, ...summary } = toReview(doc);
+export function toSummary(doc: ReviewDoc, actions: ReviewAction[] = []): ReviewSummary {
+  const { comments: _c, workflowHistory: history, ...summary } = toReview(doc, actions);
   // Uploads and extensions don't change the workflow, so look past them
   const last = [...(history ?? [])]
     .reverse()
@@ -99,35 +98,49 @@ export class ReviewsService {
 
   // ---------------------------------------------------------------- reading
 
-  async list(query: { workflowState?: WorkflowState; q?: string; showExpired?: boolean }) {
-    let docs = await this.store.list({ excludes: ['comments'] });
-    if (!query.showExpired) docs = docs.filter((doc) => !isExpired(doc));
-    if (query.workflowState) docs = docs.filter((doc) => doc.workflowState === query.workflowState);
+  /**
+   * Reviews the caller could open: their own, their teams', and others' that
+   * sharing lets them see and that have no password. Expired reviews (with
+   * `showExpired`) only to those who could see them anyway (owner, team, admin).
+   */
+  async list(query: { workflowState?: WorkflowState; q?: string; showExpired?: boolean }, user: ActingUser) {
+    const [docs, teams] = await Promise.all([
+      this.store.list({
+        excludes: ['comments'],
+        ...(query.workflowState ? { where: { workflowState: query.workflowState } } : {}),
+        ...(query.showExpired ? {} : { after: { expiresAt: new Date().toISOString() } }),
+      }),
+      this.teams.list(),
+    ]);
+    const teamsById = new Map(teams.map((team) => [team.id, team]));
     const q = query.q?.trim().toLowerCase();
-    if (q) {
-      docs = docs.filter((doc) =>
-        [doc.filename, doc.designer, doc.designerEmail].some((field) => field?.toLowerCase().includes(q)),
-      );
+    const reviews: ReviewSummary[] = [];
+    for (const raw of docs) {
+      const doc = normalize(raw);
+      if (q && ![doc.filename, doc.designer, doc.designerEmail].some((field) => field?.toLowerCase().includes(q))) continue;
+      const access = reviewAccess(doc, user, (doc.teamId && teamsById.get(doc.teamId)) || null);
+      if (!access.privileged && (isExpired(doc) || !sharingAllows(doc, user) || doc.passwordHash)) continue;
+      reviews.push(toSummary(this.redact(doc, access), allowedActions(doc, access, user)));
     }
-    const reviews = docs.map(toSummary);
     return { reviews, total: reviews.length };
   }
 
   async adminList(showExpired: boolean): Promise<ReviewSummary[]> {
     const docs = await this.store.list({ excludes: ['comments'] });
-    return docs.filter((doc) => showExpired || !isExpired(doc)).map(toSummary);
+    return docs.filter((doc) => showExpired || !isExpired(doc)).map((doc) => toSummary(doc));
   }
 
   async getReview(id: string, user: ActingUser, password?: string): Promise<Review> {
     const doc = await this.load(id);
-    await this.assertCanView(doc, user, password);
-    return toReview(doc);
+    const access = await this.accessFor(doc, user);
+    await this.assertCanView(doc, user, access, password);
+    return this.present(doc, access, user);
   }
 
   /** `{ url }`: a signed file URL (upload versions) or the external link (url reviews) */
   async getVersionUrl(id: string, versionId: string, user: ActingUser, password: string | undefined, baseUrl: string) {
     const doc = await this.load(id);
-    await this.assertCanView(doc, user, password);
+    await this.assertCanView(doc, user, await this.accessFor(doc, user), password);
     const version = doc.versions.find((v) => v.id === versionId);
     if (!version) throw new NotFoundException('Version not found');
     if (version.url) return { url: version.url };
@@ -151,7 +164,7 @@ export class ReviewsService {
 
   async getComments(id: string, user: ActingUser, password: string | undefined, versionId?: string): Promise<Comment[]> {
     const doc = await this.load(id);
-    await this.assertCanView(doc, user, password);
+    await this.assertCanView(doc, user, await this.accessFor(doc, user), password);
     const comments = doc.comments ?? [];
     return versionId ? comments.filter((c) => c.version === versionId) : comments;
   }
@@ -231,7 +244,7 @@ export class ReviewsService {
       }),
     );
     await this.store.create(doc);
-    return { reviewId: doc.id, review: toReview(doc) };
+    return { reviewId: doc.id, review: await this.presentFor(doc, user) };
   }
 
   async addVersion(id: string, file: StagedFile | undefined, dto: VersionDto, user: ActingUser): Promise<ReviewVersion> {
@@ -240,6 +253,7 @@ export class ReviewsService {
     try {
       const doc = await this.load(id);
       this.assertActive(doc);
+      this.assertContributor(await this.accessFor(doc, user));
       ({ storageId } = await this.files.adopt(id, file.path, file.mimetype));
       const { result } = await this.mutate(id, (current) => {
         this.assertActive(current);
@@ -278,6 +292,7 @@ export class ReviewsService {
   // ------------------------------------------------------------ management
 
   async complete(id: string, user: ActingUser): Promise<Review> {
+    await this.authorize(id, user, (access) => this.assertContributor(access));
     const { doc } = await this.mutate(id, (current) => {
       this.assertActive(current);
       const now = new Date().toISOString();
@@ -290,23 +305,29 @@ export class ReviewsService {
         timestamp: now,
       });
     });
-    return toReview(doc);
+    return this.presentFor(doc, user);
   }
 
-  async updateSharing(id: string, dto: SharingDto): Promise<Review> {
+  /** Owner or review admin only */
+  async updateSharing(id: string, dto: SharingDto, user: ActingUser): Promise<Review> {
+    await this.authorize(id, user, (access) => this.assertManager(access));
     const { doc } = await this.mutate(id, (current) => {
       this.assertActive(current);
       current.sharingMode = dto.sharingMode;
       current.approvedEmails = dto.approvedEmails ?? [];
     });
-    return toReview(doc);
+    return this.presentFor(doc, user);
   }
 
-  /** Sets or (with an empty string) clears the password. `admin` skips the expiry check. */
+  /**
+   * Sets or (with an empty string) clears the password: owner or review admin
+   * only. `admin` (the admin route) skips the expiry and owner checks.
+   */
   async setPassword(id: string, password: string, user: ActingUser, admin = false): Promise<{ hasPassword: boolean }> {
     if (Buffer.byteLength(password ?? '', 'utf8') > 72) {
       throw new BadRequestException('Password must be at most 72 bytes');
     }
+    if (!admin) await this.authorize(id, user, (access) => this.assertManager(access));
     const hash = password ? await bcrypt.hash(password, BCRYPT_ROUNDS) : null;
     const { doc } = await this.mutate(id, (current) => {
       if (!admin) this.assertActive(current);
@@ -322,6 +343,7 @@ export class ReviewsService {
   }
 
   async extend(id: string, days: number, user: ActingUser, admin = false): Promise<Review> {
+    if (!admin) await this.authorize(id, user, (access) => this.assertContributor(access));
     const { doc } = await this.mutate(id, (current) => {
       if (!admin) this.assertActive(current);
       const from = Math.max(Date.now(), new Date(current.expiresAt).getTime());
@@ -335,7 +357,7 @@ export class ReviewsService {
         days,
       });
     });
-    return toReview(doc);
+    return admin ? toReview(doc) : this.presentFor(doc, user);
   }
 
   async reactivate(id: string): Promise<Review> {
@@ -372,17 +394,32 @@ export class ReviewsService {
 
   // -------------------------------------------------------------- workflow
 
-  async workflow(id: string, action: WorkflowAction, user: ActingUser): Promise<Review> {
+  /**
+   * Approve and reject need the current stage's role (see review-access.ts);
+   * moves and resubmits need a contributor. `stage` must still be the current
+   * state when the change is written, so a role checked against it stays valid.
+   */
+  async workflow(id: string, action: WorkflowAction, user: ActingUser, password?: string): Promise<Review> {
+    await this.authorize(id, user, (access, doc) => {
+      if (action.type === 'approve' || action.type === 'reject') {
+        if (!canDecide(access, user, action.stage, action.type)) {
+          throw new ForbiddenException(`You can't ${action.type} a review at ${action.stage}`);
+        }
+      } else {
+        this.assertContributor(access);
+      }
+    }, password);
     const { doc } = await this.mutate(id, (current) => {
       this.assertActive(current);
       applyWorkflowAction(current, action, actorLabel(user, 'Current User'));
     });
-    return toReview(doc);
+    return this.presentFor(doc, user);
   }
 
   // -------------------------------------------------------------- comments
 
-  async addComment(id: string, dto: CreateCommentDto, user: ActingUser): Promise<Comment> {
+  async addComment(id: string, dto: CreateCommentDto, user: ActingUser, password?: string): Promise<Comment> {
+    await this.authorize(id, user, () => undefined, password);
     const { result } = await this.mutate(id, (current) => {
       this.assertActive(current);
       const comment: Comment = {
@@ -405,10 +442,13 @@ export class ReviewsService {
     return result;
   }
 
-  async updateComment(id: string, commentId: string, dto: UpdateCommentDto): Promise<Comment> {
+  /** The comment's author, the owner, team members or a review admin */
+  async updateComment(id: string, commentId: string, dto: UpdateCommentDto, user: ActingUser, password?: string): Promise<Comment> {
+    const access = await this.authorize(id, user, () => undefined, password);
     const { result } = await this.mutate(id, (current) => {
       this.assertActive(current);
       const comment = findComment(current, commentId);
+      assertCommentEditor(comment, user, access);
       if (dto.text !== undefined) comment.text = dto.text;
       if (dto.resolved !== undefined) comment.resolved = dto.resolved;
       if (dto.annotationData !== undefined) comment.annotationData = dto.annotationData;
@@ -417,15 +457,17 @@ export class ReviewsService {
     return result;
   }
 
-  async deleteComment(id: string, commentId: string): Promise<void> {
+  async deleteComment(id: string, commentId: string, user: ActingUser, password?: string): Promise<void> {
+    const access = await this.authorize(id, user, () => undefined, password);
     await this.mutate(id, (current) => {
       this.assertActive(current);
-      findComment(current, commentId);
+      assertCommentEditor(findComment(current, commentId), user, access);
       current.comments = current.comments.filter((c) => c.id !== commentId);
     });
   }
 
-  async addReply(id: string, commentId: string, text: string, user: ActingUser): Promise<Reply> {
+  async addReply(id: string, commentId: string, text: string, user: ActingUser, password?: string): Promise<Reply> {
+    await this.authorize(id, user, () => undefined, password);
     const { result } = await this.mutate(id, (current) => {
       this.assertActive(current);
       const comment = findComment(current, commentId);
@@ -445,9 +487,17 @@ export class ReviewsService {
   }
 
   /** Toggles the acting user's emoji on a comment, or on one of its replies */
-  async toggleReaction(id: string, commentId: string, emoji: string, user: ActingUser, replyId?: string): Promise<Comment> {
+  async toggleReaction(
+    id: string,
+    commentId: string,
+    emoji: string,
+    user: ActingUser,
+    replyId?: string,
+    password?: string,
+  ): Promise<Comment> {
     const reactor = user.email ?? user.name;
-    if (!reactor) throw new BadRequestException('x-user-email header is required to react');
+    if (!reactor) throw new BadRequestException('Sign in, or send x-user-name with an API key, to react');
+    await this.authorize(id, user, () => undefined, password);
     const { result } = await this.mutate(id, (current) => {
       this.assertActive(current);
       const comment = findComment(current, commentId);
@@ -505,16 +555,58 @@ export class ReviewsService {
     );
   }
 
-  /** Expiry, then sharing, then password (so a restricted review can't be used to test passwords) */
-  private async assertCanView(doc: ReviewDoc, user: ActingUser, password?: string): Promise<void> {
+  /** The caller's access to `doc` (review-access.ts), loading its team if it has one */
+  private async accessFor(doc: ReviewDoc, user: ActingUser): Promise<ReviewAccess> {
+    const team = doc.teamId && isSafeId(doc.teamId) ? (await this.teams.get(doc.teamId))?.doc ?? null : null;
+    return reviewAccess(doc, user, team);
+  }
+
+  /**
+   * Before a change: the caller must be able to view the review (with its
+   * password, unless privileged), then pass `check`. Returns the access.
+   */
+  private async authorize(
+    id: string,
+    user: ActingUser,
+    check: (access: ReviewAccess, doc: ReviewDoc) => void,
+    password?: string,
+  ): Promise<ReviewAccess> {
+    const doc = await this.load(id);
+    const access = await this.accessFor(doc, user);
+    await this.assertCanView(doc, user, access, password);
+    check(access, doc);
+    return access;
+  }
+
+  private assertManager(access: ReviewAccess): void {
+    if (!access.canManage) throw new ForbiddenException('Only the designer or a review admin can change this');
+  }
+
+  private assertContributor(access: ReviewAccess): void {
+    if (!access.canContribute) throw new ForbiddenException("Only the designer's team or a review admin can do this");
+  }
+
+  /** The review as this caller may see it: approved emails only for those who manage sharing */
+  private redact(doc: ReviewDoc, access: ReviewAccess): ReviewDoc {
+    return access.canManage ? doc : { ...doc, approvedEmails: [] };
+  }
+
+  private present(doc: ReviewDoc, access: ReviewAccess, user: ActingUser): Review {
+    return toReview(this.redact(doc, access), allowedActions(doc, access, user));
+  }
+
+  private async presentFor(doc: ReviewDoc, user: ActingUser): Promise<Review> {
+    return this.present(doc, await this.accessFor(doc, user), user);
+  }
+
+  /**
+   * Expiry, then sharing, then password (so a restricted review can't be used
+   * to test passwords). The owner, team members and review admins skip sharing and password.
+   */
+  private async assertCanView(doc: ReviewDoc, user: ActingUser, access: ReviewAccess, password?: string): Promise<void> {
     this.assertActive(doc);
-    if (doc.sharingMode === 'approved_emails') {
-      const email = user.email?.toLowerCase();
-      const allowed =
-        !!email &&
-        (email === doc.designerEmail?.toLowerCase() || (doc.approvedEmails ?? []).some((e) => e.toLowerCase() === email));
-      if (!allowed) throw new ForbiddenException('You do not have access to this review');
-    }
+    if (access.privileged) return;
+    if (!sharingAllows(doc, user)) throw new ForbiddenException('You do not have access to this review');
     if (doc.passwordHash) {
       const ok = !!password && (await bcrypt.compare(password, doc.passwordHash));
       if (!ok) {
@@ -607,6 +699,11 @@ function normalize(doc: ReviewDoc): ReviewDoc {
   doc.workflowHistory = doc.workflowHistory ?? [];
   doc.approvedEmails = doc.approvedEmails ?? [];
   return doc;
+}
+
+function assertCommentEditor(comment: Comment, user: ActingUser, access: ReviewAccess): void {
+  const author = !!user.email && user.email === comment.authorEmail?.toLowerCase();
+  if (!author && !access.privileged) throw new ForbiddenException('Only the author or the review team can change this comment');
 }
 
 function findComment(doc: ReviewDoc, commentId: string): Comment {

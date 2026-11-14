@@ -1919,7 +1919,8 @@ const loadDrawerFlags = async () => {
       await Promise.all(
         Array.from(flagKeys).map(async (flagKey) => {
           try {
-            const enabled = await OpenFeature.getBooleanValue(flagKey, false, context);
+            // A flag that doesn't exist gates nothing, as in the route guard
+            const enabled = await OpenFeature.getBooleanValue(flagKey, true, context);
             flagCache[flagKey] = enabled;
           } catch (error) {
             console.warn(`Failed to load flag ${flagKey}:`, error);

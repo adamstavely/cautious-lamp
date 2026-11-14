@@ -18,6 +18,7 @@ import {
   SCAN_PROPERTIES,
   SCAN_STORE,
 } from './governance-stores';
+import { GovernanceScanScheduler } from './governance.scheduler';
 import { RulesService } from './rules.service';
 import { ScansService } from './scans.service';
 import {
@@ -36,7 +37,8 @@ const esStore = (index: string, properties: Record<string, unknown>) => ({
  * Compliance rules and scans (docs/GOVERNANCE.md). Applications come from
  * the registry (ApplicationsService) through APPLICATION_DIRECTORY; design
  * system components and tokens through DESIGN_SYSTEM_SOURCE, which adapts
- * DesignSystemService.
+ * DesignSystemService. GovernanceScanScheduler runs applications' daily and
+ * weekly scans.
  */
 @Module({
   imports: [DesignSystemModule, ApplicationsModule],
@@ -44,6 +46,7 @@ const esStore = (index: string, properties: Record<string, unknown>) => ({
   providers: [
     RulesService,
     ScansService,
+    GovernanceScanScheduler,
     { provide: RULE_STORE, ...esStore(RULES_INDEX, RULE_PROPERTIES) },
     { provide: SCAN_STORE, ...esStore(SCANS_INDEX, SCAN_PROPERTIES) },
     { provide: META_STORE, ...esStore(META_INDEX, META_PROPERTIES) },

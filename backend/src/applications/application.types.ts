@@ -3,7 +3,8 @@ import { Actor } from '../workspaces/workspace.types';
 export const APPLICATIONS_INDEX = 'design-system-applications';
 export const APPLICATION_STORE = Symbol('APPLICATION_STORE');
 
-export const SCAN_SCHEDULES = ['manual', 'daily', 'weekly', 'on-commit'] as const;
+/** daily and weekly are run by GovernanceScanScheduler (docs/GOVERNANCE.md). There's no on-commit: CI calls POST /governance/scans after a push. */
+export const SCAN_SCHEDULES = ['manual', 'daily', 'weekly'] as const;
 export type ScanSchedule = (typeof SCAN_SCHEDULES)[number];
 export const CAPABILITY_NAMES = ['governance', 'visualRegression', 'sessionReplay'] as const;
 export type CapabilityName = (typeof CAPABILITY_NAMES)[number];

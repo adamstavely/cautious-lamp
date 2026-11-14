@@ -12,6 +12,7 @@ import { Injectable } from '@nestjs/common';
 import { VisualRegressionService } from './visual-regression.service';
 import { KeyManagementService } from '../common/security/key-management.service';
 import { AuthService } from '../auth/auth.service';
+import { AuthPrincipal } from '../auth/principal';
 
 @Injectable()
 @WebSocketGateway({
@@ -35,7 +36,8 @@ export class VisualRegressionGateway implements OnGatewayConnection, OnGatewayDi
 
   /**
    * Clients send a user token or an API key as auth.token or an Authorization
-   * header. The global AuthGuard doesn't cover connections, so check here.
+   * header. The global AuthGuard doesn't cover connections, so check here and
+   * keep the principal for the subscription checks.
    */
   async handleConnection(client: Socket) {
     const token = client.handshake.auth?.token ?? client.handshake.headers?.authorization;
@@ -45,38 +47,43 @@ export class VisualRegressionGateway implements OnGatewayConnection, OnGatewayDi
       client.disconnect(true);
       return;
     }
-    console.log(`Visual Regression WebSocket client connected: ${client.id}`);
+    client.data.principal = principal;
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`Visual Regression WebSocket client disconnected: ${client.id}`);
     this.clientRooms.delete(client.id);
   }
 
-  @SubscribeMessage('subscribe:project')
-  handleSubscribeProject(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { projectId: string },
-  ) {
-    if (!this.clientRooms.has(client.id)) {
-      this.clientRooms.set(client.id, new Set());
+  private principalOf(client: Socket): AuthPrincipal | null {
+    return (client.data?.principal as AuthPrincipal | undefined) ?? null;
+  }
+
+  /** Joins a room once the caller is allowed to read the project or run */
+  private async join(client: Socket, room: string, check: (principal: AuthPrincipal) => Promise<unknown>, label: string) {
+    const principal = this.principalOf(client);
+    if (!principal) return { success: false, message: 'Not signed in' };
+    try {
+      await check(principal);
+    } catch {
+      // Same answer for "doesn't exist" and "not yours", so ids can't be probed
+      return { success: false, message: `${label} not found` };
     }
-    this.clientRooms.get(client.id)!.add(`project:${data.projectId}`);
-    client.join(`project:${data.projectId}`);
-    return { success: true, message: `Subscribed to project ${data.projectId}` };
+    if (!this.clientRooms.has(client.id)) this.clientRooms.set(client.id, new Set());
+    this.clientRooms.get(client.id)!.add(room);
+    client.join(room);
+    return { success: true, message: `Subscribed to ${label.toLowerCase()} ${room.split(':')[1]}` };
+  }
+
+  @SubscribeMessage('subscribe:project')
+  handleSubscribeProject(@ConnectedSocket() client: Socket, @MessageBody() data: { projectId: string }) {
+    const projectId = String(data?.projectId ?? '');
+    return this.join(client, `project:${projectId}`, (p) => this.visualRegressionService.authorizeProject(p, projectId, 'read'), 'Project');
   }
 
   @SubscribeMessage('subscribe:run')
-  handleSubscribeRun(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { runId: string },
-  ) {
-    if (!this.clientRooms.has(client.id)) {
-      this.clientRooms.set(client.id, new Set());
-    }
-    this.clientRooms.get(client.id)!.add(`run:${data.runId}`);
-    client.join(`run:${data.runId}`);
-    return { success: true, message: `Subscribed to run ${data.runId}` };
+  handleSubscribeRun(@ConnectedSocket() client: Socket, @MessageBody() data: { runId: string }) {
+    const runId = String(data?.runId ?? '');
+    return this.join(client, `run:${runId}`, (p) => this.visualRegressionService.authorizeRun(p, runId, 'read'), 'Run');
   }
 
   @SubscribeMessage('unsubscribe:project')

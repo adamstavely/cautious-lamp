@@ -1,8 +1,7 @@
 import { Controller, Get, INestApplication, ValidationPipe } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
-import { EncryptionService } from '../common/security/encryption.service';
-import { KeyManagementService } from '../common/security/key-management.service';
+import { API_KEY_STORE, ApiKeyDoc, KeyManagementService } from '../common/security/key-management.service';
 import { SecurityAuditService } from '../common/security/security-audit.service';
 import { RbacController } from '../rbac/rbac.controller';
 import { Permission, RbacService, Role } from '../rbac/rbac.service';
@@ -67,8 +66,8 @@ describe('Auth HTTP API', () => {
         TokenService,
         UsersService,
         RbacService,
-        EncryptionService,
         KeyManagementService,
+        { provide: API_KEY_STORE, useValue: new InMemoryStore<ApiKeyDoc>() },
         { provide: USER_STORE, useValue: new InMemoryStore<UserDoc>() },
         { provide: RBAC_STORE, useValue: new InMemoryRbacStore() },
         { provide: SecurityAuditService, useValue: createAuditStub() },

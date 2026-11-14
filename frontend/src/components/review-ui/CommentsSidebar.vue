@@ -401,7 +401,8 @@ const getRoleLabel = (role) => {
     'designer': 'Designer',
     'art_director': 'Art Director',
     'creative_director': 'Creative Director',
-    'client': 'Client'
+    'client': 'Client',
+    'admin': 'Review Admin'
   };
   return roleMap[role] || role;
 };

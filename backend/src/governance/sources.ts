@@ -10,6 +10,12 @@ export interface GovernanceApplication {
   applicationUrl?: string;
   /** Rule ids picked for the application's scans; empty or missing means every enabled rule */
   governanceRules?: string[];
+  /** Whether governance is turned on for the application */
+  governanceEnabled?: boolean;
+  /** daily and weekly are run by GovernanceScanScheduler; anything else is manual */
+  scanSchedule?: string;
+  /** Last governance scan (ISO date) */
+  lastScan?: string;
 }
 
 /**
@@ -35,12 +41,26 @@ export interface DesignSystemSource {
 
 export const DESIGN_SYSTEM_SOURCE = Symbol('DESIGN_SYSTEM_SOURCE');
 
-type RegistryApplication = { id: string; name: string; applicationUrl?: string; capabilities?: { governance?: { rules?: string[] } } };
+type RegistryApplication = {
+  id: string;
+  name: string;
+  applicationUrl?: string;
+  capabilities?: { governance?: { enabled?: boolean; rules?: string[]; scanSchedule?: string; lastScan?: string } };
+};
 
-const toApplication = (app: RegistryApplication | undefined): GovernanceApplication | null =>
-  app
-    ? { id: app.id, name: app.name, applicationUrl: app.applicationUrl || undefined, governanceRules: app.capabilities?.governance?.rules ?? [] }
-    : null;
+const toApplication = (app: RegistryApplication | undefined): GovernanceApplication | null => {
+  if (!app) return null;
+  const governance = app.capabilities?.governance;
+  return {
+    id: app.id,
+    name: app.name,
+    applicationUrl: app.applicationUrl || undefined,
+    governanceRules: governance?.rules ?? [],
+    governanceEnabled: !!governance?.enabled,
+    scanSchedule: governance?.scanSchedule ?? 'manual',
+    lastScan: governance?.lastScan,
+  };
+};
 
 /** Applications from the application registry (ApplicationsService) */
 export class RegistryApplicationDirectory implements ApplicationDirectory {

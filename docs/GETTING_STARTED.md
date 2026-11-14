@@ -75,8 +75,8 @@ The Design System Platform is a comprehensive solution for managing design syste
    # Elasticsearch (optional)
    ELASTICSEARCH_NODE=http://localhost:9200
 
-   # Encryption Key (required for production)
-   ENCRYPTION_KEY=your-32-byte-hex-key-here
+   # Encryption Key (required for production): openssl rand -hex 32
+   ENCRYPTION_KEY=your-64-character-hex-key-here
 
    # Argos Integration (optional)
    ARGOS_BASE_URL=https://app.argos-ci.com

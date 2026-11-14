@@ -1,24 +1,17 @@
-import { Controller, Get, Post, Put, Patch, Delete, Query, Param, Body, Headers, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Query, Param, Body, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { ComponentRequestsService } from './component-requests.service';
-import { KeyManagementService } from '../common/security/key-management.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestDto } from './dto/update-request.dto';
 import { TransitionStatusDto } from './dto/transition-status.dto';
 import { AddCommentDto } from './dto/add-comment.dto';
-import { AuthPrincipal, Principal } from '../auth/principal';
+import { AuthPrincipal, Principal, RequirePermission } from '../auth/principal';
+import { Permission } from '../rbac/rbac.service';
 
 @Controller('api/v1/component-requests')
 export class ComponentRequestsController {
   constructor(
     private readonly requestsService: ComponentRequestsService,
-    private readonly keyManagementService: KeyManagementService,
   ) {}
-
-  /**
-   * No-op: the global AuthGuard has already authenticated the caller (a user
-   * token or an API key, docs/AUTH.md). Kept so the call sites stay as they were.
-   */
-  private validateRequest(_authHeader?: string): void {}
 
   @Get('test')
   testRoute() {
@@ -32,9 +25,7 @@ export class ComponentRequestsController {
     @Query('priority') priority?: string,
     @Query('assignedTo') assignedTo?: string,
     @Query('requestedBy') requestedBy?: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.requestsService.getAllRequests({
       status,
       category,
@@ -45,8 +36,7 @@ export class ComponentRequestsController {
   }
 
   @Get('analytics')
-  getAnalytics(@Headers('authorization') authHeader?: string) {
-    this.validateRequest(authHeader);
+  getAnalytics() {
     return this.requestsService.getRequestAnalytics();
   }
 
@@ -54,9 +44,7 @@ export class ComponentRequestsController {
   checkDuplicates(
     @Query('title') title: string,
     @Query('description') description?: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     if (!title) {
       throw new BadRequestException('Title is required');
     }
@@ -66,9 +54,7 @@ export class ComponentRequestsController {
   @Get(':id')
   getRequest(
     @Param('id') id: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const request = this.requestsService.getRequest(id);
     if (!request) {
       throw new BadRequestException(`Request '${id}' not found`);
@@ -79,9 +65,7 @@ export class ComponentRequestsController {
   @Post()
   createRequest(
     @Body() createDto: CreateRequestDto,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     // Check for duplicates before creating
     const duplicates = this.requestsService.checkForDuplicates(
       createDto.title,
@@ -101,9 +85,7 @@ export class ComponentRequestsController {
   updateRequest(
     @Param('id') id: string,
     @Body() updateDto: UpdateRequestDto,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const request = this.requestsService.updateRequest(id, updateDto);
     if (!request) {
       throw new BadRequestException(`Request '${id}' not found`);
@@ -114,9 +96,7 @@ export class ComponentRequestsController {
   @Delete(':id')
   deleteRequest(
     @Param('id') id: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const deleted = this.requestsService.deleteRequest(id);
     if (!deleted) {
       throw new BadRequestException(`Request '${id}' not found`);
@@ -128,9 +108,7 @@ export class ComponentRequestsController {
   voteRequest(
     @Param('id') id: string,
     @Principal() principal: AuthPrincipal,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const request = this.requestsService.voteRequest(id, principal.id);
     if (!request) {
       throw new BadRequestException(`Request '${id}' not found`);
@@ -138,14 +116,14 @@ export class ComponentRequestsController {
     return request;
   }
 
+  // Triage is for approvers; the frontend shows these actions to roadmap:edit holders
+  @RequirePermission(Permission.ROADMAP_EDIT)
   @Patch(':id/status')
   transitionStatus(
     @Param('id') id: string,
     @Body() transitionDto: TransitionStatusDto,
     @Principal() principal: AuthPrincipal,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     try {
       const request = this.requestsService.transitionStatus(
         id,
@@ -162,13 +140,12 @@ export class ComponentRequestsController {
     }
   }
 
+  @RequirePermission(Permission.ROADMAP_EDIT)
   @Post(':id/assign')
   assignRequest(
     @Param('id') id: string,
     @Body() body: { userId: string },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const request = this.requestsService.assignRequest(id, body.userId);
     if (!request) {
       throw new BadRequestException(`Request '${id}' not found`);
@@ -180,9 +157,7 @@ export class ComponentRequestsController {
   addComment(
     @Param('id') id: string,
     @Body() commentDto: AddCommentDto,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const comment = this.requestsService.addComment(id, commentDto);
     return comment;
   }
@@ -190,20 +165,17 @@ export class ComponentRequestsController {
   @Get(':id/comments')
   getComments(
     @Param('id') id: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.requestsService.getComments(id);
   }
 
+  @RequirePermission(Permission.ROADMAP_EDIT)
   @Post(':id/approve')
   approveRequest(
     @Param('id') id: string,
     @Body() body: { stage?: 'design' | 'technical' | 'final' },
     @Principal() principal: AuthPrincipal,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const request = this.requestsService.approveRequest(id, principal.id, body.stage);
     if (!request) {
       throw new BadRequestException(`Request '${id}' not found`);
@@ -211,14 +183,13 @@ export class ComponentRequestsController {
     return request;
   }
 
+  @RequirePermission(Permission.ROADMAP_EDIT)
   @Post(':id/reject')
   rejectRequest(
     @Param('id') id: string,
     @Body() body: { reason: string },
     @Principal() principal: AuthPrincipal,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const request = this.requestsService.rejectRequest(id, principal.id, body.reason);
     if (!request) {
       throw new BadRequestException(`Request '${id}' not found`);
@@ -226,13 +197,12 @@ export class ComponentRequestsController {
     return request;
   }
 
+  @RequirePermission(Permission.ROADMAP_EDIT)
   @Post(':id/promote')
   promoteToSystem(
     @Param('id') id: string,
     @Body() body: { componentId: string },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const request = this.requestsService.promoteToSystem(id, body.componentId);
     if (!request) {
       throw new BadRequestException(`Request '${id}' not found`);
@@ -244,9 +214,7 @@ export class ComponentRequestsController {
   linkToComponent(
     @Param('id') id: string,
     @Body() body: { componentId: string },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const request = this.requestsService.linkToComponent(id, body.componentId);
     if (!request) {
       throw new BadRequestException(`Request '${id}' not found`);
@@ -257,9 +225,7 @@ export class ComponentRequestsController {
   @Post(':id/unlink-component')
   unlinkFromComponent(
     @Param('id') id: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const request = this.requestsService.unlinkFromComponent(id);
     if (!request) {
       throw new BadRequestException(`Request '${id}' not found`);
@@ -267,4 +233,3 @@ export class ComponentRequestsController {
     return request;
   }
 }
-

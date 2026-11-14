@@ -1,5 +1,5 @@
 import { BUILTIN_RULES } from './builtin-rules';
-import { GovernanceRule, RuleDefinition, ScanInput } from './governance.types';
+import { GovernanceRule, LIMITS, RuleDefinition, ScanInput } from './governance.types';
 import { RegexRunner } from './regex-safety';
 import { cssDeclarations, evaluateRule, runRules } from './rule-interpreter';
 import { normalizeRuleDefinition } from './rule-validation';
@@ -149,6 +149,39 @@ describe('rule interpreter', () => {
     ]);
     expect(result.checks.every((c) => c.application === 'App')).toBe(true);
   });
+
+  it('selector-attribute checks every match, not just the first 1,000 (1,001 elements)', async () => {
+    const ok = Array.from({ length: 1000 }, (_, i) => `<img src="${i}.png" alt="Photo ${i}">`).join('');
+    const missingAlt = await evaluateRule(rule({ type: 'selector-attribute', selector: 'img', attribute: 'alt' }), input({ html: `${ok}<img src="last.png">` }), ctx);
+    expect(missingAlt.outcome).toBe('fail');
+    expect(missingAlt.violations).toHaveLength(1);
+    expect(missingAlt.violations[0].element).toContain('last.png');
+
+    const badValue = await evaluateRule(
+      rule({ type: 'selector-attribute', selector: 'img', attribute: 'alt', pattern: '^Photo' }),
+      input({ html: `${ok}<img src="last.png" alt="image">` }),
+      ctx,
+    );
+    expect(badValue.outcome).toBe('fail');
+    expect(badValue.violations[0].element).toContain('last.png');
+
+    const allGood = await evaluateRule(rule({ type: 'selector-attribute', selector: 'img', attribute: 'alt', pattern: '^Photo' }), input({ html: ok }), ctx);
+    expect(allGood.outcome).toBe('pass');
+  });
+
+  it('selector-attribute is incomplete, never a pass, when more values match than it tests', async () => {
+    const count = LIMITS.selectorPatternValues + 1;
+    const html = Array.from({ length: count }, (_, i) => `<a href="/p${i}">x</a>`).join('');
+    const r = rule({ type: 'selector-attribute', selector: 'a', attribute: 'href', pattern: '^/' });
+    const evaluation = await evaluateRule(r, input({ html }), ctx);
+    expect(evaluation.outcome).toBe('incomplete');
+    expect(evaluation.reason).toMatch(new RegExp(`first ${LIMITS.selectorPatternValues} of ${count}`));
+
+    const result = await runRules([r], [input({ html })], ctx);
+    expect(result.ruleResults[0]).toMatchObject({ outcome: 'incomplete', violations: 0 });
+    expect(result.summary).toMatchObject({ passed: 0, warnings: 1 });
+    expect(result.checks[0]).toMatchObject({ id: 'r1:incomplete', status: 'warning' });
+  }, 30000);
 
   it('every built-in rule is valid', () => {
     for (const { id, ...definition } of BUILTIN_RULES) {

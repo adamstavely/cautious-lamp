@@ -173,6 +173,9 @@
                   {{ currentReport.highIssues }} high, {{ currentReport.moderateIssues }} moderate, {{ currentReport.lowIssues }} low
                   <span v-if="currentReport.needsReview"> · {{ currentReport.needsReview }} need manual review</span>
                 </div>
+                <div v-if="currentReport.sampling" class="text-xs mt-1" :class="mutedClass">
+                  Counts include every failing element; {{ currentReport.sampling.rules.length }} rule(s) list only the first {{ currentReport.sampling.examplesPerRule }} as examples.
+                </div>
               </div>
 
               <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
@@ -277,7 +280,9 @@
                     </div>
                   </div>
                   <div v-if="criterion.failingElements.length > 0" class="mt-3 pt-3 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <div class="text-xs font-medium mb-2" :class="labelClass">Failing elements ({{ criterion.failingElements.length }}):</div>
+                    <div class="text-xs font-medium mb-2" :class="labelClass">
+                      Failing elements ({{ criterion.issues > criterion.failingElements.length ? `showing ${criterion.failingElements.length} of ${criterion.issues}` : criterion.failingElements.length }}):
+                    </div>
                     <div class="space-y-2">
                       <div v-for="(element, idx) in criterion.failingElements" :key="`${element.id}-${idx}`" class="p-2 rounded text-xs" :class="getElementImpactClass(element.impact)">
                         <div class="font-medium mb-1" :class="headingClass">{{ element.message }}</div>

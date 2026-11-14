@@ -12,7 +12,8 @@ export const capabilitiesForm = (app = null) => {
     governance: {
       enabled: caps.governance?.enabled === true,
       rules: [...(caps.governance?.rules ?? [])],
-      scanSchedule: caps.governance?.scanSchedule ?? 'manual',
+      // 'on-commit' was never run and is no longer accepted; it behaves as manual
+      scanSchedule: ['daily', 'weekly'].includes(caps.governance?.scanSchedule) ? caps.governance.scanSchedule : 'manual',
     },
     visualRegression: {
       enabled: caps.visualRegression?.enabled === true,

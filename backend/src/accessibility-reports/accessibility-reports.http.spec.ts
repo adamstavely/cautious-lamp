@@ -1,3 +1,4 @@
+import { UnprocessableEntityException } from '@nestjs/common';
 import { createServer, Server } from 'http';
 import { AddressInfo } from 'net';
 import { ADMIN_KEY, FakeApplications, authProviders, startApp } from '../governance/testing/fakes';
@@ -140,6 +141,20 @@ describe('Accessibility reports HTTP API', () => {
     expect(scanUrl).toHaveBeenCalledWith('https://93.184.215.14/');
     expect((await admin('POST', '/accessibility-reports/generate/app-1', { url: 'https://example.com', html: FIXTURE })).status).toBe(400);
   }, 30000);
+
+  it('keeps the latest good report when the target answers with an HTTP error', async () => {
+    const latest = (await call('GET', '/accessibility-reports/reports?applicationId=app-2')).body[0];
+    expect(latest).toBeDefined();
+    const stored = reportStore.docs.size;
+    scanUrl.mockRejectedValueOnce(new UnprocessableEntityException('Target unavailable: 93.184.215.14 answered HTTP 404, so there is nothing to audit (no report was created)'));
+    const res = await admin('POST', '/accessibility-reports/generate/app-2', {});
+    expect(res.status).toBe(422);
+    expect(res.body.message).toMatch(/Target unavailable.*HTTP 404/);
+    expect(reportStore.docs.size).toBe(stored);
+    expect((await call('GET', '/accessibility-reports/reports?applicationId=app-2')).body[0].id).toBe(latest.id);
+    const summary = await call('GET', '/accessibility-reports/summary');
+    expect(summary.body.applications.find((a: { applicationId: string }) => a.applicationId === 'app-2').latestReportId).toBe(latest.id);
+  });
 
   it('rejects server-owned and unknown fields in bodies', async () => {
     const sla = { applicationId: 'app-1', targetScore: 90, targetLevel: 'AA', criticalIssuesThreshold: 0, highIssuesThreshold: 5 };

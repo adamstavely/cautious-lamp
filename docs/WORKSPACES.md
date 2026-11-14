@@ -64,7 +64,23 @@ An application belongs to at most one workspace (`workspaceId`).
 - **Visual regression:** enabling it creates a visual-regression project (`argosProjectId` is required; `argosBaseUrl` must be on `ARGOS_ALLOWED_BASE_URLS`; `argosBranch` defaults to `ARGOS_DEFAULT_BRANCH` or `main`). `argosToken` is passed to the project, where it is encrypted, and never stored on or returned with the application.
 - **Session replay:** enabling it creates a session-replay project (`openreplayProjectKey` is required). `openreplayApiKey` is handled like `argosToken`. `openreplayBaseUrl` must be a public http(s) address or listed in `OPENREPLAY_ALLOWED_BASE_URLS` (see below).
 - If creating a project fails, the request fails with that error and nothing is saved; a project created earlier in the same request is deleted again. Changing an enabled capability's settings updates its project. Disabling a capability keeps the project; deleting the application deletes both projects.
-- The projects belong to the application's `teamId`, or its workspace id when there is none.
+- Linked projects have fixed ids (`vrp_<applicationId>`, `srp_<applicationId>`), so two requests enabling a capability at once share one project, and a request that loses the write race reuses its project on retry. A request that finally fails deletes the project it made unless the stored application links it.
+- A linked project that no longer exists is recreated when the capability is enabled again (visual regression needs `argosToken` for that, since the token went with the project; without it the request is a `400` saying so) and unlinked when the capability is disabled.
+- The projects belong to the application's workspace (see below) and move with it; `teamId` (or the workspace id) is kept on them as a label.
+
+### Visual regression and session replay projects
+
+Projects and visual-regression runs are stored in Elasticsearch (`design-system-visual-regression-projects`, `design-system-visual-regression-runs`, `design-system-session-replay-projects`); Argos tokens, OpenReplay API keys and webhook secrets are encrypted at rest and never returned. Every project route (`/visual-regression/...`, `/session-replay/...`) and every WebSocket subscription (`subscribe:project`, `subscribe:run`) checks access to the project:
+
+| Project | Read (view, runs, results, sessions, analytics) | Run (trigger runs, approve/reject diffs, baselines) | Manage (change, delete, notifications) |
+|---|---|---|---|
+| In a workspace | viewer | editor | editor; admin when the project backs an application |
+| No workspace | its creator | its creator | its creator |
+
+- `admin:users` holders can do everything with every project; `admin:governance` holders with every application-linked project.
+- Callers who can't read a project get `404`; readers without the role get `403`. Lists only show readable projects.
+- `POST .../projects` takes an optional `workspaceId` (needs the editor role there). Without one, the project belongs to whoever created it (a user or an API key).
+- Not implemented, so they answer `501` instead of pretending: `GET /visual-regression/projects/:id/reports/pdf` (use `.../analytics`), `POST .../baselines/:baselineId/rollback`, and `POST .../share` (share a project by adding people to its workspace).
 
 ### Design system versions
 

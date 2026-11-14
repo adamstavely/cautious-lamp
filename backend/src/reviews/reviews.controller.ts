@@ -71,12 +71,11 @@ export class ReviewsController {
   constructor(private readonly reviews: ReviewsService) {}
 
   @Get('reviews')
-  list(@Query(StrictBody()) query: ListReviewsQueryDto) {
-    return this.reviews.list({
-      workflowState: query.workflowState,
-      q: query.q,
-      showExpired: query.showExpired === 'true',
-    });
+  list(@Query(StrictBody()) query: ListReviewsQueryDto, @CurrentUser() user: ActingUser) {
+    return this.reviews.list(
+      { workflowState: query.workflowState, q: query.q, showExpired: query.showExpired === 'true' },
+      user,
+    );
   }
 
   @Post('upload')
@@ -138,8 +137,8 @@ export class ReviewsController {
 
   @Post('review/:id/sharing')
   @HttpCode(200)
-  sharing(@Param('id') id: string, @Body(StrictBody()) dto: SharingDto) {
-    return this.reviews.updateSharing(id, dto);
+  sharing(@Param('id') id: string, @Body(StrictBody()) dto: SharingDto, @CurrentUser() user: ActingUser) {
+    return this.reviews.updateSharing(id, dto, user);
   }
 
   @Post('review/:id/password')
@@ -158,32 +157,48 @@ export class ReviewsController {
 
   @Post('review/:id/workflow/move-to-client-review')
   @HttpCode(200)
-  moveToClientReview(@Param('id') id: string, @CurrentUser() user: ActingUser) {
-    return this.reviews.workflow(id, { type: 'move-to-client-review' }, user);
+  moveToClientReview(@Param('id') id: string, @CurrentUser() user: ActingUser, @ReviewPassword() password?: string) {
+    return this.reviews.workflow(id, { type: 'move-to-client-review' }, user, password);
   }
 
   @Post('review/:id/workflow/move-to-art-director-review')
   @HttpCode(200)
-  moveToArtDirectorReview(@Param('id') id: string, @CurrentUser() user: ActingUser) {
-    return this.reviews.workflow(id, { type: 'move-to-art-director-review' }, user);
+  moveToArtDirectorReview(@Param('id') id: string, @CurrentUser() user: ActingUser, @ReviewPassword() password?: string) {
+    return this.reviews.workflow(id, { type: 'move-to-art-director-review' }, user, password);
   }
 
+  /** Approve and reject need the current stage's role; `allowedActions` on the review says whether the caller has it */
   @Post('review/:id/workflow/approve')
   @HttpCode(200)
-  approve(@Param('id') id: string, @Body(StrictBody()) dto: ApproveDto, @CurrentUser() user: ActingUser) {
-    return this.reviews.workflow(id, { type: 'approve', stage: dto.stage }, user);
+  approve(
+    @Param('id') id: string,
+    @Body(StrictBody()) dto: ApproveDto,
+    @CurrentUser() user: ActingUser,
+    @ReviewPassword() password?: string,
+  ) {
+    return this.reviews.workflow(id, { type: 'approve', stage: dto.stage }, user, password);
   }
 
   @Post('review/:id/workflow/reject')
   @HttpCode(200)
-  reject(@Param('id') id: string, @Body(StrictBody()) dto: RejectDto, @CurrentUser() user: ActingUser) {
-    return this.reviews.workflow(id, { type: 'reject', stage: dto.stage, reason: dto.reason ?? undefined }, user);
+  reject(
+    @Param('id') id: string,
+    @Body(StrictBody()) dto: RejectDto,
+    @CurrentUser() user: ActingUser,
+    @ReviewPassword() password?: string,
+  ) {
+    return this.reviews.workflow(id, { type: 'reject', stage: dto.stage, reason: dto.reason ?? undefined }, user, password);
   }
 
   @Post('review/:id/workflow/resubmit')
   @HttpCode(200)
-  resubmit(@Param('id') id: string, @Body(StrictBody()) dto: ResubmitDto, @CurrentUser() user: ActingUser) {
-    return this.reviews.workflow(id, { type: 'resubmit', targetStage: dto.targetStage }, user);
+  resubmit(
+    @Param('id') id: string,
+    @Body(StrictBody()) dto: ResubmitDto,
+    @CurrentUser() user: ActingUser,
+    @ReviewPassword() password?: string,
+  ) {
+    return this.reviews.workflow(id, { type: 'resubmit', targetStage: dto.targetStage }, user, password);
   }
 
   // ------------------------------------------------------------- comments
@@ -199,8 +214,13 @@ export class ReviewsController {
   }
 
   @Post('review/:id/comments')
-  addComment(@Param('id') id: string, @Body(StrictBody()) dto: CreateCommentDto, @CurrentUser() user: ActingUser) {
-    return this.reviews.addComment(id, dto, user);
+  addComment(
+    @Param('id') id: string,
+    @Body(StrictBody()) dto: CreateCommentDto,
+    @CurrentUser() user: ActingUser,
+    @ReviewPassword() password?: string,
+  ) {
+    return this.reviews.addComment(id, dto, user, password);
   }
 
   @Patch('review/:id/comments/:commentId')
@@ -208,14 +228,21 @@ export class ReviewsController {
     @Param('id') id: string,
     @Param('commentId') commentId: string,
     @Body(StrictBody()) dto: UpdateCommentDto,
+    @CurrentUser() user: ActingUser,
+    @ReviewPassword() password?: string,
   ) {
-    return this.reviews.updateComment(id, commentId, dto);
+    return this.reviews.updateComment(id, commentId, dto, user, password);
   }
 
   @Delete('review/:id/comments/:commentId')
   @HttpCode(204)
-  async deleteComment(@Param('id') id: string, @Param('commentId') commentId: string): Promise<void> {
-    await this.reviews.deleteComment(id, commentId);
+  async deleteComment(
+    @Param('id') id: string,
+    @Param('commentId') commentId: string,
+    @CurrentUser() user: ActingUser,
+    @ReviewPassword() password?: string,
+  ): Promise<void> {
+    await this.reviews.deleteComment(id, commentId, user, password);
   }
 
   @Post('review/:id/comments/:commentId/replies')
@@ -224,8 +251,9 @@ export class ReviewsController {
     @Param('commentId') commentId: string,
     @Body(StrictBody()) dto: ReplyDto,
     @CurrentUser() user: ActingUser,
+    @ReviewPassword() password?: string,
   ) {
-    return this.reviews.addReply(id, commentId, dto.text, user);
+    return this.reviews.addReply(id, commentId, dto.text, user, password);
   }
 
   @Post('review/:id/comments/:commentId/reactions')
@@ -235,8 +263,9 @@ export class ReviewsController {
     @Param('commentId') commentId: string,
     @Body(StrictBody()) dto: ReactionDto,
     @CurrentUser() user: ActingUser,
+    @ReviewPassword() password?: string,
   ) {
-    return this.reviews.toggleReaction(id, commentId, dto.emoji, user);
+    return this.reviews.toggleReaction(id, commentId, dto.emoji, user, undefined, password);
   }
 
   @Post('review/:id/comments/:commentId/replies/:replyId/reactions')
@@ -247,7 +276,8 @@ export class ReviewsController {
     @Param('replyId') replyId: string,
     @Body(StrictBody()) dto: ReactionDto,
     @CurrentUser() user: ActingUser,
+    @ReviewPassword() password?: string,
   ) {
-    return this.reviews.toggleReaction(id, commentId, dto.emoji, user, replyId);
+    return this.reviews.toggleReaction(id, commentId, dto.emoji, user, replyId, password);
   }
 }

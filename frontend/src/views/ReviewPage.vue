@@ -201,7 +201,7 @@
             </div>
             <div class="grid gap-2 grid-cols-4">
               <!-- Set or change the password (the API never returns it, only hasPassword) -->
-              <v-tooltip :text="metadata.hasPassword ? 'Change Password' : 'Set Password'">
+              <v-tooltip v-if="can('manage-password')" :text="metadata.hasPassword ? 'Change Password' : 'Set Password'">
                 <template #activator="{ props }">
                   <button
                     @click="handleChangePassword"
@@ -219,7 +219,7 @@
               </v-tooltip>
               
               <!-- Extend Expiration -->
-              <v-tooltip text="Extend Expiration">
+              <v-tooltip v-if="can('extend')" text="Extend Expiration">
                 <template #activator="{ props }">
                   <button
                     @click="handleExtendExpiration"
@@ -237,7 +237,7 @@
               </v-tooltip>
               
               <!-- Upload New Version -->
-              <v-tooltip text="Upload New Version">
+              <v-tooltip v-if="can('upload-version')" text="Upload New Version">
                 <template #activator="{ props }">
                   <button
                     @click="handleUploadNewVersion"
@@ -255,7 +255,7 @@
               </v-tooltip>
               
               <!-- Sharing Settings -->
-              <v-tooltip text="Sharing Settings">
+              <v-tooltip v-if="can('manage-sharing')" text="Sharing Settings">
                 <template #activator="{ props }">
                   <button
                     @click="handleSharingSettings"
@@ -277,7 +277,7 @@
         
         <WorkflowCard
           :workflow-state="metadata.workflowState"
-          :current-user-role="currentUserRole"
+          :allowed-actions="metadata.allowedActions || []"
           :designer="metadata.designer"
           :workflow-history="metadata.workflowHistory || []"
           :review-completed="reviewCompleted"
@@ -503,10 +503,11 @@ const { notice, showNotice, clearNotice } = useNotice();
 
 // The acting user, read once (identity is switched elsewhere and the page reloaded)
 const user = getCurrentUser();
-const currentUserRole = ref(user.role || 'designer'); // 'designer', 'client', 'art_director', 'creative_director'
+// For labels only ('designer', 'client', 'art_director', 'creative_director', 'admin'); permissions come from allowedActions
+const currentUserRole = ref(user.role || 'designer');
 
 const REVIEW_STAGES = ['client_review', 'art_director_review', 'creative_director_review'];
-const emptyReview = () => ({ filename: '', versions: [], workflowState: 'draft', workflowHistory: [], hasPassword: false });
+const emptyReview = () => ({ filename: '', versions: [], workflowState: 'draft', workflowHistory: [], hasPassword: false, allowedActions: [] });
 
 // 'loading' | 'ready' | 'password' | 'expired' | 'completed' | 'forbidden' | 'notfound' | 'error'
 const loadState = ref('loading');
@@ -559,9 +560,10 @@ const errorState = computed(() => {
   return errorStates[loadState.value] || null;
 });
 
-const isDesigner = computed(() => {
-  return currentUserRole.value === 'designer' || (!!metadata.value.designerEmail && metadata.value.designerEmail === user.email);
-});
+// What the caller may do with this review, as the server says (allowedActions, docs/REVIEW_API.md)
+const can = (action) => (metadata.value.allowedActions || []).includes(action);
+const DESIGNER_TOOL_ACTIONS = ['manage-password', 'extend', 'upload-version', 'manage-sharing'];
+const isDesigner = computed(() => DESIGNER_TOOL_ACTIONS.some(can));
 
 // After a rejection the review is back in draft; resubmit to the stage that rejected it
 const resubmitTarget = computed(() => {

@@ -9,7 +9,9 @@ import { AuthService, DEFAULT_SERVICE_PERMISSIONS } from '../../auth/auth.servic
 import { UsersService } from '../../auth/users.service';
 import { SecurityAuditService } from '../../common/security/security-audit.service';
 import { Permission } from '../../rbac/rbac.service';
-import { SessionReplayService } from '../../session-replay/session-replay.service';
+import { SR_PROJECT_STORE, SessionReplayService } from '../../session-replay/session-replay.service';
+import { EncryptionService } from '../../common/security/encryption.service';
+import { ProjectAccessService } from '../../visual-regression/project-access';
 import { VisualRegressionService } from '../../visual-regression/visual-regression.service';
 import { WORKSPACE_COMPONENT_SOURCE, WorkspaceComponent, WorkspaceComponentSource } from '../component-source';
 import { WorkspaceAccessService } from '../workspace-access.service';
@@ -121,6 +123,13 @@ export function createVisualRegressionFake() {
       if (!projects.delete(id)) throw new NotFoundException('nope');
       fake.deleted.push(id);
     },
+    async projectExists(id: string) {
+      return projects.has(id);
+    },
+    async setProjectWorkspace(id: string, workspaceId: string | null) {
+      if (!projects.has(id)) throw new NotFoundException('nope');
+      projects.set(id, { ...(projects.get(id) as object), workspaceId });
+    },
   };
   return fake;
 }
@@ -133,7 +142,6 @@ export async function createWorkspacesApp() {
   const components = createComponentSource();
   const vr = createVisualRegressionFake();
   // The real session-replay service, so OpenReplay URL checks run for real (no API key: no network calls)
-  const sessionReplay = new SessionReplayService();
 
   const moduleRef = await Test.createTestingModule({
     controllers: [WorkspacesController, ApplicationsController],
@@ -147,13 +155,17 @@ export async function createWorkspacesApp() {
       { provide: APPLICATION_STORE, useValue: applicationStore },
       { provide: WORKSPACE_COMPONENT_SOURCE, useValue: components.source },
       { provide: VisualRegressionService, useValue: vr },
-      { provide: SessionReplayService, useValue: sessionReplay },
+      SessionReplayService,
+      ProjectAccessService,
+      EncryptionService,
+      { provide: SR_PROJECT_STORE, useValue: new InMemoryQueryableStore() },
       { provide: UsersService, useValue: users },
       { provide: AuthService, useValue: auth },
       { provide: SecurityAuditService, useValue: { logPermissionDenied: async () => undefined } },
       { provide: APP_GUARD, useClass: AuthGuard },
     ],
   }).compile();
+  const sessionReplay = moduleRef.get(SessionReplayService);
   const app: INestApplication = moduleRef.createNestApplication({ logger: false });
   app.useGlobalPipes(new ValidationPipe());
   await app.listen(0, '127.0.0.1');

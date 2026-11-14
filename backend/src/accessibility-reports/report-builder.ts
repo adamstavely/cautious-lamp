@@ -7,7 +7,7 @@ import {
   ReportTrend,
   WcagCriterionResult,
 } from './accessibility-reports.types';
-import { AxeOutcome, AxeRuleResult } from './axe-engine';
+import { AxeOutcome, AxeRuleResult, MAX_NODES_PER_RULE } from './axe-engine';
 import { WcagLevel } from './sla';
 
 const IMPACT: Record<string, Impact> = { critical: 'CRITICAL', serious: 'HIGH', moderate: 'MODERATE', minor: 'LOW' };
@@ -155,14 +155,25 @@ export function buildReport(outcome: AxeOutcome, input: BuildReportInput, previo
   const counts: Record<Impact, number> = { CRITICAL: 0, HIGH: 0, MODERATE: 0, LOW: 0, INFO: 0 };
   const checks: ComplianceCheck[] = [];
   const fixes: PrioritizedFix[] = [];
+  const sampled: NonNullable<AccessibilityReport['sampling']>['rules'] = [];
+  let totalIssues = 0;
 
   for (const rule of outcome.violations) {
     const impact = IMPACT[rule.impact ?? ''] ?? 'MODERATE';
     const category = categoryFor(rule.id);
     const keys = criteriaFor(rule);
+    // Counts use every element axe found; only the first few are kept as examples
+    const total = Math.max(rule.nodeCount ?? 0, rule.nodes.length);
+    totalIssues += total;
+    counts[impact] += total;
+    issuesByCategory[category] += total;
+    if (total > rule.nodes.length) sampled.push({ ruleId: rule.id, shown: rule.nodes.length, total });
+    for (const key of keys) {
+      const c = ensure(key, rule);
+      c.status = 'fail';
+      c.issues += total;
+    }
     for (const node of rule.nodes) {
-      counts[impact]++;
-      issuesByCategory[category]++;
       const id = fingerprint(rule.id, node.target);
       checks.push({
         id,
@@ -174,10 +185,7 @@ export function buildReport(outcome: AxeOutcome, input: BuildReportInput, previo
         impact,
       });
       for (const key of keys) {
-        const c = ensure(key, rule);
-        c.status = 'fail';
-        c.issues++;
-        c.failingElements.push({ id, message: `${rule.help} (${rule.id})`, element: node.html, target: node.target, impact });
+        ensure(key, rule).failingElements.push({ id, message: `${rule.help} (${rule.id})`, element: node.html, target: node.target, impact });
       }
     }
     const effort = EFFORT[category];
@@ -188,8 +196,8 @@ export function buildReport(outcome: AxeOutcome, input: BuildReportInput, previo
       severity: impact,
       impact: IMPACT_TEXT[impact],
       effort,
-      priority: Math.round(((SEVERITY_WEIGHT[impact] * rule.nodes.length) / EFFORT_WEIGHT[effort]) * 10) / 10,
-      affectedElements: rule.nodes.length,
+      priority: Math.round(((SEVERITY_WEIGHT[impact] * total) / EFFORT_WEIGHT[effort]) * 10) / 10,
+      affectedElements: total,
       description: rule.description,
       recommendation: rule.help,
       helpUrl: rule.helpUrl || undefined,
@@ -204,7 +212,6 @@ export function buildReport(outcome: AxeOutcome, input: BuildReportInput, previo
   if (failing.some((c) => c.level === 'A')) wcagLevel = 'Non-Compliant';
   else if (failing.some((c) => c.level === 'AA')) wcagLevel = 'A';
 
-  const totalIssues = checks.length;
   const trend: ReportTrend = { scoreChange: 0, issuesChange: 0, newIssues: 0, fixedIssues: 0 };
   if (previous) {
     const before = new Set(previous.checks.map((c) => c.id));
@@ -234,6 +241,7 @@ export function buildReport(outcome: AxeOutcome, input: BuildReportInput, previo
     lowIssues: counts.LOW,
     infoIssues: counts.INFO,
     needsReview: outcome.incomplete.length,
+    ...(sampled.length ? { sampling: { examplesPerRule: MAX_NODES_PER_RULE, rules: sampled } } : {}),
     wcagCriteria: Object.fromEntries(Object.entries(criteria).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))),
     issuesByCategory,
     prioritizedFixes: fixes.sort((a, b) => b.priority - a.priority),

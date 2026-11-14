@@ -131,9 +131,10 @@ export class AnalyticsService {
   /**
    * Get component popularity rankings
    */
-  async getComponentPopularity(timeframe: '7d' | '30d' | '90d' | 'all' = 'all'): Promise<ComponentPopularity[]> {
+  async getComponentPopularity(timeframe: '7d' | '30d' | '90d' | 'all' = 'all', components?: Component[]): Promise<ComponentPopularity[]> {
     const cutoffDate = this.getCutoffDate(timeframe);
-    const allComponents = this.designSystemService.getAllComponents();
+    // The caller's visible components (ComponentAccessService); all of them for internal callers
+    const allComponents = components ?? this.designSystemService.getAllComponents();
     const allApplications = await this.applications.list();
     const totalApplications = allApplications.length;
 
@@ -197,9 +198,10 @@ export class AnalyticsService {
   /**
    * Get application adoption metrics
    */
-  async getApplicationAdoption(): Promise<ApplicationAdoption[]> {
+  async getApplicationAdoption(components?: Component[]): Promise<ApplicationAdoption[]> {
     const allApplications = await this.applications.list();
-    const allComponents = this.designSystemService.getAllComponents();
+    // The caller's visible components (ComponentAccessService); all of them for internal callers
+    const allComponents = components ?? this.designSystemService.getAllComponents();
     const productionComponents = allComponents.filter(c => c.status === 'production');
 
     return allApplications.map(app => {
@@ -290,13 +292,14 @@ export class AnalyticsService {
   /**
    * Get cross-application comparison
    */
-  async getCrossApplicationComparison(applicationIds?: string[]): Promise<CrossApplicationComparison[]> {
+  async getCrossApplicationComparison(applicationIds?: string[], components?: Component[]): Promise<CrossApplicationComparison[]> {
     const allApplications = await this.applications.list();
     const applicationsToCompare = applicationIds
       ? allApplications.filter(app => applicationIds.includes(app.id))
       : allApplications;
 
-    const allComponents = this.designSystemService.getAllComponents();
+    // The caller's visible components (ComponentAccessService); all of them for internal callers
+    const allComponents = components ?? this.designSystemService.getAllComponents();
     const productionComponents = allComponents.filter(c => c.status === 'production');
 
     return applicationsToCompare.map(app => {
@@ -342,8 +345,9 @@ export class AnalyticsService {
   /**
    * Get design debt metrics
    */
-  getDesignDebtMetrics(): DesignDebtMetrics {
-    const allComponents = this.designSystemService.getAllComponents();
+  getDesignDebtMetrics(components?: Component[]): DesignDebtMetrics {
+    // The caller's visible components (ComponentAccessService); all of them for internal callers
+    const allComponents = components ?? this.designSystemService.getAllComponents();
     const deprecatedComponents = allComponents.filter(c => c.status === 'deprecated');
     
     // Find deprecated components still in use

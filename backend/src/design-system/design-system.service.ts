@@ -1934,14 +1934,18 @@ export const Table = ({
   }
 
   // AI Assistant for Design System Questions
-  async chatWithAI(message: string, conversationHistory?: Array<{ role: string; content: string }>): Promise<{
+  /** `components` is what the caller may see (see ComponentAccessService); defaults to all */
+  async chatWithAI(
+    message: string,
+    conversationHistory?: Array<{ role: string; content: string }>,
+    components: Component[] = this.components,
+  ): Promise<{
     response: string;
     suggestions?: string[];
     relatedComponents?: string[];
     relatedTokens?: string[];
   }> {
     // Get design system context
-    const components = this.components;
     const tokens = this.tokens;
     const rules = BUILTIN_RULES;
     
@@ -2446,8 +2450,8 @@ export const Table = ({
     return this.storeSurveyResponse('heuristic-evaluations', document);
   }
 
-  // Component metadata for Loupe Tool
-  getComponentMetadata() {
+  // Component metadata for Loupe Tool; `components` is what the caller may see
+  getComponentMetadata(components: Component[] = this.components) {
     const metadata: Record<string, any> = {};
     
     // Icon mapping for components
@@ -2467,7 +2471,7 @@ export const Table = ({
       'drawer': 'left_panel_close',
     };
     
-    this.components.forEach((component) => {
+    components.forEach((component) => {
       metadata[component.id] = {
         name: component.name,
         path: `@design-system/components/${component.id}`,

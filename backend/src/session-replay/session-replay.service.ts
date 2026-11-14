@@ -1,9 +1,49 @@
-import { Injectable, NotFoundException, BadRequestException, Optional, Inject } from '@nestjs/common';
-import { OpenReplayApiClient } from './openreplay-api.client';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import * as crypto from 'crypto';
+import { AuthPrincipal } from '../auth/principal';
 import { EncryptionService } from '../common/security/encryption.service';
+import { DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
+import { ProjectAccessService, ProjectAction, ProjectCreator, ProjectOwnership } from '../visual-regression/project-access';
+import { QueryableStore } from '../workspaces/queryable-store';
+import { isSafeId } from '../workspaces/workspace-access.service';
+import { OpenReplayApiClient } from './openreplay-api.client';
 import { resolveOpenReplayBaseUrl } from './openreplay-url';
 
-export interface Project {
+export const SR_PROJECTS_INDEX = 'design-system-session-replay-projects';
+export const SR_PROJECT_STORE = Symbol('SR_PROJECT_STORE');
+
+const keyword = { type: 'keyword' };
+export const SR_PROJECT_PROPERTIES = {
+  id: keyword,
+  name: { type: 'keyword', fields: { text: { type: 'text' } } },
+  teamId: keyword,
+  workspaceId: keyword,
+  applicationId: keyword,
+  createdBy: { properties: { type: keyword, id: keyword } },
+  createdAt: { type: 'date' },
+  updatedAt: { type: 'date' },
+};
+
+const MAX_WRITE_ATTEMPTS = 5;
+
+/** Who owns a new project, and optionally a fixed id (for idempotent creation) */
+export interface CreateProjectOptions {
+  workspaceId: string | null;
+  applicationId?: string;
+  createdBy: ProjectCreator;
+  /** Use this id; throws ProjectExistsError if a project already has it */
+  id?: string;
+}
+
+/** Thrown by createProject when `options.id` is already taken */
+export class ProjectExistsError extends ConflictException {
+  constructor(readonly projectId: string) {
+    super(`Project ${projectId} already exists`);
+  }
+}
+
+/** As stored in design-system-session-replay-projects; `openreplayApiKey` is encrypted and never returned */
+export interface Project extends ProjectOwnership {
   id: string;
   teamId: string;
   name: string;
@@ -24,8 +64,8 @@ export interface Project {
     captureNetwork?: boolean;
     captureIFrames?: boolean;
   };
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Session {
@@ -58,123 +98,114 @@ const UPDATABLE_PROJECT_FIELDS = [
   'config',
 ] as const;
 
+function redact(project: Project): Project {
+  const { openreplayApiKey, ...rest } = project;
+  return rest as Project;
+}
+
+function stripUndefined<T extends object>(value: T): T {
+  return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as T;
+}
+
+/**
+ * Session-replay projects (backed by OpenReplay), stored in Elasticsearch.
+ * Access is per project (ProjectAccessService); the controller calls
+ * `authorizeProject` before anything else.
+ */
 @Injectable()
 export class SessionReplayService {
-  private projects: Map<string, Project> = new Map();
-
   constructor(
-    @Optional() @Inject(EncryptionService) private readonly encryptionService?: EncryptionService,
-  ) {
-    // Initialize with mock project for testing
-    this.initializeMockData();
+    @Inject(SR_PROJECT_STORE) private readonly projects: QueryableStore<Project>,
+    private readonly access: ProjectAccessService,
+    private readonly encryptionService: EncryptionService,
+  ) {}
+
+  private decryptToken(stored: string | undefined): string | undefined {
+    if (!stored) return undefined;
+    return this.encryptionService.isEncrypted(stored) ? this.encryptionService.decrypt(stored) : stored;
   }
 
-  /**
-   * Helper method to decrypt token if encrypted
-   */
-  private decryptToken(encryptedToken: string | undefined): string | undefined {
-    if (!encryptedToken) {
-      return undefined;
-    }
-    if (this.encryptionService?.isEncrypted(encryptedToken)) {
-      return this.encryptionService.decrypt(encryptedToken);
-    }
-    return encryptedToken; // Not encrypted, return as-is (backward compatibility)
+  // ---------- Access ----------
+
+  /** The project without its API key, if the principal may do `action` with it (404/403 otherwise) */
+  async authorizeProject(principal: AuthPrincipal, projectId: string, action: ProjectAction): Promise<Project> {
+    const project = await this.requireProject(projectId);
+    await this.access.assert(principal, project, action);
+    return redact(project);
   }
 
-  private initializeMockData() {
-    // Add a mock project for testing heatmaps
-    const mockProject: Project = {
-      id: 'sr-project-mock-001',
-      teamId: 'default-team',
-      name: 'Demo Application',
-      description: 'Mock project for testing heatmaps functionality',
-      applicationUrl: 'https://demo.example.com',
-      openreplayProjectKey: '1',
-      openreplayBaseUrl: 'https://demo.openreplay.com',
-      privacySettings: {},
-      config: {},
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.projects.set(mockProject.id, mockProject);
+  assertCanCreate(principal: AuthPrincipal, workspaceId: string | null | undefined): Promise<void> {
+    return this.access.assertCanCreate(principal, workspaceId);
   }
 
-  // Project Management
-  async createProject(teamId: string, dto: any): Promise<Project> {
+  // ---------- Projects ----------
+
+  async createProject(teamId: string, dto: any, options: CreateProjectOptions): Promise<Project> {
+    if (options.id && (await this.projects.get(options.id))) throw new ProjectExistsError(options.id);
     // SSRF guard: the base URL is fetched later, so it is checked before it is stored
     const openreplayBaseUrl = await resolveOpenReplayBaseUrl(dto.openreplayBaseUrl);
     // Verify OpenReplay connection if API key provided
     if (dto.openreplayApiKey) {
       const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, dto.openreplayApiKey);
-      
       try {
         const isValid = await openreplayClient.verifyConnection();
         if (!isValid) {
           throw new BadRequestException('Unable to connect to OpenReplay instance. Please check your base URL and API key.');
         }
       } catch (error: any) {
-        if (error instanceof BadRequestException) {
-          throw error;
-        }
+        if (error instanceof BadRequestException) throw error;
         throw new BadRequestException(`Failed to verify OpenReplay connection: ${error.message}`);
       }
     }
 
-    // Encrypt API key before storing
-    const encryptedApiKey = dto.openreplayApiKey ? this.encryptionService?.encrypt(dto.openreplayApiKey) : undefined;
-
-    const project: Project = {
-      id: `sr-project-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    const now = new Date().toISOString();
+    const project: Project = stripUndefined({
+      id: options.id ?? `sr-project-${crypto.randomBytes(9).toString('hex')}`,
       teamId,
+      workspaceId: options.workspaceId ?? null,
+      applicationId: options.applicationId,
+      createdBy: options.createdBy,
       name: dto.name,
       description: dto.description,
       applicationUrl: dto.applicationUrl,
       openreplayProjectKey: dto.openreplayProjectKey,
       openreplayBaseUrl,
-      openreplayApiKey: encryptedApiKey, // Encrypted API key stored at rest
+      // Encrypted at rest
+      openreplayApiKey: dto.openreplayApiKey ? this.encryptionService.encrypt(dto.openreplayApiKey) : undefined,
       privacySettings: dto.privacySettings || {},
       config: dto.config || {},
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    this.projects.set(project.id, project);
-    
-    // Return project without API key
-    const { openreplayApiKey, ...projectWithoutKey } = project;
-    return projectWithoutKey as Project;
-  }
-
-  async getProjects(teamId?: string): Promise<Project[]> {
-    const allProjects = Array.from(this.projects.values());
-    if (teamId) {
-      return allProjects.filter(p => p.teamId === teamId).map(p => {
-        const { openreplayApiKey, ...projectWithoutKey } = p;
-        return projectWithoutKey as Project;
-      });
-    }
-    return allProjects.map(p => {
-      const { openreplayApiKey, ...projectWithoutKey } = p;
-      return projectWithoutKey as Project;
+      createdAt: now,
+      updatedAt: now,
     });
+    try {
+      await this.projects.create(project);
+    } catch (error) {
+      if (error instanceof DuplicateDocumentError) throw new ProjectExistsError(project.id);
+      throw error;
+    }
+    return redact(project);
   }
 
+  /** The projects the principal can read, optionally filtered */
+  async listProjects(principal: AuthPrincipal, filters: { teamId?: string; workspaceId?: string } = {}): Promise<Project[]> {
+    const clause: Record<string, string> = {};
+    if (filters.teamId) clause.teamId = filters.teamId;
+    if (filters.workspaceId) clause.workspaceId = filters.workspaceId;
+    const all = Object.keys(clause).length ? await this.projects.findAny([clause]) : await this.projects.list();
+    return (await this.access.readable(principal, all)).map(redact);
+  }
+
+  /** The project without its API key. No access check: for other modules (applications). */
   async getProject(id: string): Promise<Project> {
-    const project = this.projects.get(id);
-    if (!project) {
-      throw new NotFoundException(`Project with ID ${id} not found`);
-    }
-    // Return project without API key
-    const { openreplayApiKey, ...projectWithoutKey } = project;
-    return projectWithoutKey as Project;
+    return redact(await this.requireProject(id));
+  }
+
+  async projectExists(id: string): Promise<boolean> {
+    return !!(await this.findProject(id));
   }
 
   async updateProject(id: string, dto: any): Promise<Project> {
-    const project = this.projects.get(id);
-    if (!project) {
-      throw new NotFoundException(`Project with ID ${id} not found`);
-    }
+    const project = await this.requireProject(id);
 
     // SSRF guard: check a new base URL before it is stored
     if (dto.openreplayBaseUrl !== undefined) {
@@ -184,13 +215,7 @@ export class SessionReplayService {
     // If updating OpenReplay connection details, verify them
     if (dto.openreplayProjectKey || dto.openreplayApiKey || dto.openreplayBaseUrl) {
       const openreplayBaseUrl = await resolveOpenReplayBaseUrl(dto.openreplayBaseUrl || project.openreplayBaseUrl);
-      // Decrypt stored API key if using existing, or use new API key from DTO
-      const storedApiKey = project.openreplayApiKey;
-      const decryptedApiKey = storedApiKey && this.encryptionService?.isEncrypted(storedApiKey)
-        ? this.decryptToken(storedApiKey)
-        : storedApiKey;
-      const openreplayApiKey = dto.openreplayApiKey || decryptedApiKey;
-
+      const openreplayApiKey = dto.openreplayApiKey || this.decryptToken(project.openreplayApiKey);
       if (openreplayApiKey) {
         const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, openreplayApiKey);
         try {
@@ -201,44 +226,64 @@ export class SessionReplayService {
       }
     }
 
-    // Encrypt new API key if provided
-    const encryptedApiKey = dto.openreplayApiKey 
-      ? this.encryptionService?.encrypt(dto.openreplayApiKey)
-      : project.openreplayApiKey; // Keep existing encrypted API key
-
-    // Only fields a client may change; id, timestamps and the like can't be overwritten
+    // Only fields a client may change; id, ownership, timestamps and the like can't be overwritten
     const changes: Partial<Project> = {};
     for (const key of UPDATABLE_PROJECT_FIELDS) {
       if (dto[key] !== undefined) (changes as Record<string, unknown>)[key] = dto[key];
     }
+    const updated = await this.mutate(id, (doc) => {
+      Object.assign(doc, changes);
+      if (dto.openreplayApiKey) doc.openreplayApiKey = this.encryptionService.encrypt(dto.openreplayApiKey);
+    });
+    return redact(updated);
+  }
 
-    const updated: Project = {
-      ...project,
-      ...changes,
-      openreplayApiKey: encryptedApiKey,
-      updatedAt: new Date(),
-    };
-
-    this.projects.set(id, updated);
-    
-    // Return project without API key
-    const { openreplayApiKey, ...projectWithoutKey } = updated;
-    return projectWithoutKey as Project;
+  /** Moves the project to another workspace (when its application moves) */
+  async setProjectWorkspace(id: string, workspaceId: string | null): Promise<void> {
+    await this.mutate(id, (doc) => {
+      doc.workspaceId = workspaceId;
+    });
   }
 
   async deleteProject(id: string): Promise<void> {
-    if (!this.projects.has(id)) {
+    if (!isSafeId(id) || !(await this.projects.delete(id))) {
       throw new NotFoundException(`Project with ID ${id} not found`);
     }
-    this.projects.delete(id);
+  }
+
+  private async findProject(id: string): Promise<Project | null> {
+    if (!isSafeId(id)) return null;
+    return (await this.projects.get(id))?.doc ?? null;
+  }
+
+  private async requireProject(id: string): Promise<Project> {
+    const project = await this.findProject(id);
+    if (!project) throw new NotFoundException(`Project with ID ${id} not found`);
+    return project;
+  }
+
+  private async mutate(id: string, fn: (doc: Project) => void): Promise<Project> {
+    if (!isSafeId(id)) throw new NotFoundException(`Project with ID ${id} not found`);
+    for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt++) {
+      const stored = await this.projects.get(id);
+      if (!stored) throw new NotFoundException(`Project with ID ${id} not found`);
+      const doc = stored.doc;
+      fn(doc);
+      doc.updatedAt = new Date().toISOString();
+      try {
+        const clean = stripUndefined(doc);
+        await this.projects.replace(clean, stored.version);
+        return clean;
+      } catch (error) {
+        if (!(error instanceof VersionConflictError)) throw error;
+      }
+    }
+    throw new ConflictException('The project was changed by someone else at the same time, please try again');
   }
 
   // Integration Code Generation
   async getIntegrationCode(projectId: string): Promise<string> {
-    const project = this.projects.get(projectId);
-    if (!project) {
-      throw new NotFoundException(`Project with ID ${projectId} not found`);
-    }
+    const project = await this.requireProject(projectId);
 
     const decryptedApiKey = this.decryptToken(project.openreplayApiKey) || '';
     // Only builds a snippet (no request); the base URL was checked when it was saved
@@ -268,10 +313,7 @@ export class SessionReplayService {
       offset?: number;
     }
   ): Promise<{ sessions: Session[]; total: number }> {
-    const project = this.projects.get(projectId);
-    if (!project) {
-      throw new NotFoundException(`Project with ID ${projectId} not found`);
-    }
+    const project = await this.requireProject(projectId);
 
     // If no API key is configured, return mock sessions for development/demo purposes
     const decryptedApiKey = this.decryptToken(project.openreplayApiKey);
@@ -414,10 +456,7 @@ export class SessionReplayService {
   }
 
   async getSession(projectId: string, sessionId: string): Promise<Session> {
-    const project = this.projects.get(projectId);
-    if (!project) {
-      throw new NotFoundException(`Project with ID ${projectId} not found`);
-    }
+    const project = await this.requireProject(projectId);
 
     // If no API key is configured, return mock session for development/demo purposes
     const decryptedApiKey = this.decryptToken(project.openreplayApiKey);
@@ -527,10 +566,7 @@ export class SessionReplayService {
    * Get heatmaps URL for a project
    */
   async getHeatmapsUrl(projectId: string, heatmapId?: string): Promise<string> {
-    const project = this.projects.get(projectId);
-    if (!project) {
-      throw new NotFoundException(`Project with ID ${projectId} not found`);
-    }
+    const project = await this.requireProject(projectId);
 
     // For development/testing: Return mock URL if no OpenReplay base URL is configured
     // or if explicitly using mock data

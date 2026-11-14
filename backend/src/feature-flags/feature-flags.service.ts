@@ -1,7 +1,19 @@
-import { Injectable, Optional, Inject } from '@nestjs/common';
-import { ElasticsearchService } from '@nestjs/elasticsearch';
+import { BadRequestException, ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
+import { DocumentStore, DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
+
+/** The index the flags have always been stored in */
+export const FEATURE_FLAGS_INDEX = 'design-system-feature-flags-flags';
+/** Injection token for the flag store */
+export const FEATURE_FLAG_STORE = Symbol('FEATURE_FLAG_STORE');
+
+export const FEATURE_FLAG_PROPERTIES = {
+  id: { type: 'keyword' },
+  key: { type: 'keyword' },
+  enabled: { type: 'boolean' },
+};
 
 export interface FeatureFlag {
+  /** Always equal to `key` */
   id: string;
   key: string;
   name: string;
@@ -17,1055 +29,884 @@ export interface FeatureFlag {
     category?: string;
     tags?: string[];
     createdBy?: string;
-    createdAt?: Date;
+    createdAt?: string;
     updatedBy?: string;
-    updatedAt?: Date;
+    updatedAt?: string;
   };
 }
 
+/** What a caller may set on a flag */
+export interface FeatureFlagInput {
+  key: string;
+  name: string;
+  description?: string;
+  enabled?: boolean;
+  defaultValue?: boolean;
+  targeting?: FeatureFlag['targeting'];
+  metadata?: { category?: string; tags?: string[] };
+}
+
+type DefaultFlag = FeatureFlag;
+
+const KEY_PATTERN = /^[a-z0-9][a-z0-9-]{0,99}$/;
+
+/**
+ * Built-in flags. They are defaults only: a flag that has been stored (toggled,
+ * edited) keeps its stored value, and these fill in flags that were never stored.
+ */
+const DEFAULT_FLAGS: DefaultFlag[] = [
+  // Components
+  {
+    id: 'component-playground',
+    key: 'component-playground',
+    name: 'Component Playground',
+    description: 'Enable the live component playground with code editor',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Components',
+      tags: ['components', 'developer-tools'],
+    },
+  },
+  {
+    id: 'component-versioning',
+    key: 'component-versioning',
+    name: 'Component Versioning',
+    description: 'Enable component version tracking and changelog',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Components',
+      tags: ['components', 'versioning'],
+    },
+  },
+  {
+    id: 'component-testing',
+    key: 'component-testing',
+    name: 'Component Testing',
+    description: 'Enable component testing framework and test generators',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Components',
+      tags: ['components', 'testing'],
+    },
+  },
+  {
+    id: 'component-documentation',
+    key: 'component-documentation',
+    name: 'Component Documentation Generator',
+    description: 'Enable auto-generation of component documentation from code comments',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Components',
+      tags: ['components', 'documentation'],
+    },
+  },
+  {
+    id: 'component-handoff',
+    key: 'component-handoff',
+    name: 'Design-Dev Handoff Tools',
+    description: 'Enable spec generation, asset export, and measurement tools',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Components',
+      tags: ['components', 'handoff'],
+    },
+  },
+  {
+    id: 'component-composition',
+    key: 'component-composition',
+    name: 'Component Composition Tool',
+    description: 'Enable building complex components from primitives',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Components',
+      tags: ['components', 'composition'],
+    },
+  },
+  {
+    id: 'component-dependencies',
+    key: 'component-dependencies',
+    name: 'Component Dependency Graph',
+    description: 'Enable visual map of component relationships',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Components',
+      tags: ['components', 'dependencies'],
+    },
+  },
+  {
+    id: 'component-snippets',
+    key: 'component-snippets',
+    name: 'Component Code Snippets',
+    description: 'Enable pre-built code snippets library for common use cases',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Components',
+      tags: ['components', 'snippets'],
+    },
+  },
+  {
+    id: 'component-loupe',
+    key: 'component-loupe',
+    name: 'Loupe Tool',
+    description: 'Enable component inspector tool for design system components',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Components',
+      tags: ['components', 'loupe', 'inspector'],
+    },
+  },
+  {
+    id: 'component-status',
+    key: 'component-status',
+    name: 'Component Status Tracking',
+    description: 'Enable component status tracking and management',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Components',
+      tags: ['components', 'status'],
+    },
+  },
+  // Tokens
+  {
+    id: 'token-studio',
+    key: 'token-studio',
+    name: 'Token Studio',
+    description: 'Enable Style Dictionary-based token studio for creating DTCG-compliant tokens',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tokens',
+      tags: ['tokens', 'studio', 'style-dictionary'],
+    },
+  },
+  {
+    id: 'token-playground',
+    key: 'token-playground',
+    name: 'Design Tokens Playground',
+    description: 'Enable the visual design tokens playground',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tokens',
+      tags: ['tokens', 'playground', 'developer-tools'],
+    },
+  },
+  {
+    id: 'token-library',
+    key: 'token-library',
+    name: 'Style Library',
+    description: 'Enable style dictionary library for viewing, editing, downloading, and retiring',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tokens',
+      tags: ['tokens', 'library'],
+    },
+  },
+  // Review
+  {
+    id: 'review-system',
+    key: 'review-system',
+    name: 'Review System',
+    description: 'Enable the design review and approval system',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Review',
+      tags: ['review', 'approval'],
+    },
+  },
+  {
+    id: 'review-kanban',
+    key: 'review-kanban',
+    name: 'Review Kanban Board',
+    description: 'Enable Kanban board view for managing review requests',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Review',
+      tags: ['review', 'kanban'],
+    },
+  },
+  {
+    id: 'review-admin',
+    key: 'review-admin',
+    name: 'Review Admin Dashboard',
+    description: 'Enable admin dashboard for review management',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Review',
+      tags: ['review', 'admin'],
+    },
+  },
+  // Admin
+  {
+    id: 'admin-system-health',
+    key: 'admin-system-health',
+    name: 'System Health Dashboard',
+    description: 'Enable system health monitoring and metrics dashboard',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Admin',
+      tags: ['admin', 'health', 'metrics'],
+    },
+  },
+  {
+    id: 'admin-governance',
+    key: 'admin-governance',
+    name: 'Design System Governance',
+    description: 'Enable rules engine, compliance checking, and policy enforcement',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Admin',
+      tags: ['admin', 'governance', 'compliance'],
+    },
+  },
+  {
+    id: 'admin-audit',
+    key: 'admin-audit',
+    name: 'Audit Logs',
+    description: 'Enable user action auditing and exportable audit trails',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Admin',
+      tags: ['admin', 'audit', 'logging'],
+    },
+  },
+  {
+    id: 'admin-rbac',
+    key: 'admin-rbac',
+    name: 'Role-Based Access Control',
+    description: 'Enable role and permission management system',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Admin',
+      tags: ['admin', 'rbac', 'roles', 'permissions'],
+    },
+  },
+  {
+    id: 'admin-feature-flags',
+    key: 'admin-feature-flags',
+    name: 'Feature Flags Management',
+    description: 'Enable feature flag management interface',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Admin',
+      tags: ['admin', 'feature-flags'],
+    },
+  },
+  {
+    id: 'admin-banners',
+    key: 'admin-banners',
+    name: 'Site Banners',
+    description: 'Enable site-wide info banner management',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Admin',
+      tags: ['admin', 'banners', 'notifications'],
+    },
+  },
+  // Tools
+  {
+    id: 'gradient-generator',
+    key: 'gradient-generator',
+    name: 'Gradient Generator',
+    description: 'Enable gradient generator tool',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tools',
+      tags: ['tools', 'gradient', 'color'],
+    },
+  },
+  {
+    id: 'lorem-ipsum',
+    key: 'lorem-ipsum',
+    name: 'Lorem Ipsum Generator',
+    description: 'Enable Lorem Ipsum text generator with HTML formatting options',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tools',
+      tags: ['tools', 'text', 'placeholder'],
+    },
+  },
+  {
+    id: 'seo-tagging',
+    key: 'seo-tagging',
+    name: 'SEO Tagging Generator',
+    description: 'Enable SEO meta tags generator',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tools',
+      tags: ['tools', 'seo', 'meta'],
+    },
+  },
+  {
+    id: 'color-scale',
+    key: 'color-scale',
+    name: 'Color Scale Generator',
+    description: 'Enable color scale generator with accessibility checks',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tools',
+      tags: ['tools', 'color', 'accessibility'],
+    },
+  },
+  {
+    id: 'color-converter',
+    key: 'color-converter',
+    name: 'Color Converter',
+    description: 'Enable color format conversion tool',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tools',
+      tags: ['tools', 'color', 'converter'],
+    },
+  },
+  {
+    id: 'color-contrast',
+    key: 'color-contrast',
+    name: 'Color Contrast Checker',
+    description: 'Enable WCAG color contrast checking tool',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tools',
+      tags: ['tools', 'color', 'accessibility', 'wcag'],
+    },
+  },
+  {
+    id: 'nasa-tlx',
+    key: 'nasa-tlx',
+    name: 'NASA-TLX',
+    description: 'Enable NASA Task Load Index assessment tool',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tools',
+      tags: ['tools', 'ux', 'assessment'],
+    },
+  },
+  {
+    id: 'sus',
+    key: 'sus',
+    name: 'System Usability Scale (SUS)',
+    description: 'Enable System Usability Scale questionnaire',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tools',
+      tags: ['tools', 'ux', 'usability'],
+    },
+  },
+  {
+    id: 'png-to-ico',
+    key: 'png-to-ico',
+    name: 'PNG to ICO Converter',
+    description: 'Enable PNG to ICO image format converter',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tools',
+      tags: ['tools', 'image', 'converter'],
+    },
+  },
+  {
+    id: 'heuristic-evaluation',
+    key: 'heuristic-evaluation',
+    name: 'Heuristic Evaluation Checklist',
+    description: 'Enable heuristic evaluation checklist tool',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tools',
+      tags: ['tools', 'ux', 'evaluation'],
+    },
+  },
+  {
+    id: 'visual-regression',
+    key: 'visual-regression',
+    name: 'Visual Regression',
+    description: 'Enable visual regression testing projects and runs',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tools',
+      tags: ['tools', 'testing', 'visual-regression'],
+    },
+  },
+  {
+    id: 'session-replay',
+    key: 'session-replay',
+    name: 'Session Replay',
+    description: 'Enable session replay projects',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Research',
+      tags: ['research', 'session-replay'],
+    },
+  },
+  {
+    id: 'palette-builder',
+    key: 'palette-builder',
+    name: 'Palette Builder',
+    description: 'Enable color palette builder tool',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tools',
+      tags: ['tools', 'color', 'palette'],
+    },
+  },
+  {
+    id: 'theme-builder',
+    key: 'theme-builder',
+    name: 'Theme Builder',
+    description: 'Enable visual theme customization tool',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tools',
+      tags: ['tools', 'theme', 'customization'],
+    },
+  },
+  {
+    id: 'migration-assistant',
+    key: 'migration-assistant',
+    name: 'Deprecation & Migration Assistant',
+    description: 'Enable component and token migration tools',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Tools',
+      tags: ['tools', 'migration', 'deprecation'],
+    },
+  },
+  // Fonts
+  {
+    id: 'font-library',
+    key: 'font-library',
+    name: 'Font Library',
+    description: 'Enable font library and management',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Fonts',
+      tags: ['fonts', 'typography'],
+    },
+  },
+  {
+    id: 'font-scale',
+    key: 'font-scale',
+    name: 'Font Scale',
+    description: 'Enable font scale management',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Fonts',
+      tags: ['fonts', 'typography', 'scale'],
+    },
+  },
+  {
+    id: 'font-stack',
+    key: 'font-stack',
+    name: 'Font Stack',
+    description: 'Enable font stack management',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Fonts',
+      tags: ['fonts', 'typography', 'stack'],
+    },
+  },
+  {
+    id: 'font-subsetting',
+    key: 'font-subsetting',
+    name: 'Font Subsetting',
+    description: 'Enable font subsetting tools',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Fonts',
+      tags: ['fonts', 'typography', 'subsetting'],
+    },
+  },
+  // Patterns
+  {
+    id: 'patterns-system',
+    key: 'patterns-system',
+    name: 'Patterns System',
+    description: 'Enable design patterns library and documentation',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Patterns',
+      tags: ['patterns', 'design'],
+    },
+  },
+  // Design Assets
+  {
+    id: 'icon-library',
+    key: 'icon-library',
+    name: 'Icon Library',
+    description: 'Enable icon library with Material, Lucide, and custom icons',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Design Assets',
+      tags: ['assets', 'icons'],
+    },
+  },
+  // Getting Started
+  {
+    id: 'getting-started-section',
+    key: 'getting-started-section',
+    name: 'Getting Started Section',
+    description: 'Enable getting started documentation and guides',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Documentation',
+      tags: ['documentation', 'getting-started'],
+    },
+  },
+  // Research
+  {
+    id: 'research-repo',
+    key: 'research-repo',
+    name: 'Research Repository',
+    description: 'Enable research repository for journey maps, personas, and HCD reports',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Research',
+      tags: ['research', 'hcd'],
+    },
+  },
+  {
+    id: 'user-persona-generator',
+    key: 'user-persona-generator',
+    name: 'User Persona Generator',
+    description: 'Enable user persona generation tool',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Research',
+      tags: ['research', 'personas'],
+    },
+  },
+  // Guidelines
+  {
+    id: 'guidelines-vitepress',
+    key: 'guidelines-vitepress',
+    name: 'Guidelines Documentation',
+    description: 'Enable VitePress-based guidelines documentation',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Documentation',
+      tags: ['documentation', 'guidelines'],
+    },
+  },
+  // AI
+  {
+    id: 'ai-assistant',
+    key: 'ai-assistant',
+    name: 'AI Assistant (Eero)',
+    description: 'Enable the AI-powered design system assistant',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'AI',
+      tags: ['ai', 'assistant'],
+    },
+  },
+  {
+    id: 'ai-suggestions',
+    key: 'ai-suggestions',
+    name: 'AI-Powered Suggestions',
+    description: 'Enable AI-powered component recommendations and accessibility fixes',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'AI',
+      tags: ['ai', 'suggestions'],
+    },
+  },
+  // API
+  {
+    id: 'design-system-api',
+    key: 'design-system-api',
+    name: 'Design System API',
+    description: 'Enable REST/GraphQL API for tokens and components with SDK and CLI',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'API',
+      tags: ['api', 'sdk', 'cli'],
+    },
+  },
+  // Feedback
+  {
+    id: 'feedback-roadmap',
+    key: 'feedback-roadmap',
+    name: 'Feedback & Roadmap',
+    description: 'Enable component feedback system and public roadmap',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Feedback',
+      tags: ['feedback', 'roadmap'],
+    },
+  },
+  // Notifications
+  {
+    id: 'change-notifications',
+    key: 'change-notifications',
+    name: 'Change Notifications',
+    description: 'Enable alerts for component and token changes',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Notifications',
+      tags: ['notifications', 'alerts'],
+    },
+  },
+  // Multi-brand
+  {
+    id: 'multi-brand-support',
+    key: 'multi-brand-support',
+    name: 'Multi-Brand Support',
+    description: 'Enable managing multiple brands and white-label systems',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Branding',
+      tags: ['brands', 'white-label'],
+    },
+  },
+  // Compliance
+  {
+    id: 'compliance-scanning',
+    key: 'compliance-scanning',
+    name: 'Compliance Scanning',
+    description: 'Enable application compliance scanning',
+    enabled: true,
+    defaultValue: true,
+    metadata: {
+      category: 'Governance',
+      tags: ['compliance', 'governance'],
+    },
+  },
+];
+const DEFAULTS_BY_ID = new Map(DEFAULT_FLAGS.map((flag) => [flag.id, flag]));
+
+/** Only the known targeting and metadata fields, so stored flags stay well-formed */
+function cleanTargeting(targeting: FeatureFlagInput['targeting']): FeatureFlag['targeting'] | undefined {
+  if (!targeting) return undefined;
+  const strings = (value: unknown) => (Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : undefined);
+  const percentage = typeof targeting.percentage === 'number' ? Math.min(100, Math.max(0, targeting.percentage)) : undefined;
+  return { users: strings(targeting.users), groups: strings(targeting.groups), percentage };
+}
+
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+}
+
+/**
+ * Whether a flag is on for a user: off when the flag is off. With targeting
+ * rules, on only for listed users, members of listed groups, or users inside
+ * the percentage rollout (frontend/src/services/featureFlagsService.js matches this).
+ */
+export function evaluateFlag(flag: FeatureFlag, userId?: string, userGroups?: string[]): boolean {
+  if (!flag.enabled) return false;
+  const { users, groups, percentage } = flag.targeting ?? {};
+  if (!users?.length && !groups?.length && percentage === undefined) return true;
+  if (userId && users?.includes(userId)) return true;
+  if (userGroups?.some((group) => groups?.includes(group))) return true;
+  // Stable per user; without a user, only a full rollout counts
+  if (percentage !== undefined) return userId ? (hashString(userId) % 100) + 1 <= percentage : percentage >= 100;
+  return false;
+}
+
+/**
+ * Feature flags (docs/AUTH.md for who may change them). Stored flags are the
+ * source of truth; built-in defaults only stand in for flags never stored.
+ * Reads fall back to the last values read (or the defaults) when storage is
+ * down; writes fail with 503.
+ */
 @Injectable()
 export class FeatureFlagsService {
-  private readonly indexPrefix = 'design-system-feature-flags';
-  private inMemoryFlags = new Map<string, FeatureFlag>();
+  private readonly logger = new Logger(FeatureFlagsService.name);
+  /** Last stored flags read, by id, for when storage is unavailable */
+  private lastKnown = new Map<string, FeatureFlag>();
 
-  constructor(
-    @Optional() @Inject(ElasticsearchService) private readonly elasticsearchService?: ElasticsearchService,
-  ) {
-    // Initialize with some default feature flags
-    this.initializeDefaultFlags().then(() => {
-      // Ensure all features are enabled after initialization
-      this.ensureAllFeaturesEnabled().catch(err => {
-        console.error('Failed to ensure all features are enabled:', err);
-      });
-    });
-  }
+  constructor(@Inject(FEATURE_FLAG_STORE) private readonly store: DocumentStore<FeatureFlag>) {}
 
-  private async initializeDefaultFlags() {
-    const defaultFlags: FeatureFlag[] = [
-      // Components
-      {
-        id: 'component-playground',
-        key: 'component-playground',
-        name: 'Component Playground',
-        description: 'Enable the live component playground with code editor',
-        enabled: true, // Force enabled
-        defaultValue: true,
-        metadata: {
-          category: 'Components',
-          tags: ['components', 'developer-tools'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'component-versioning',
-        key: 'component-versioning',
-        name: 'Component Versioning',
-        description: 'Enable component version tracking and changelog',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Components',
-          tags: ['components', 'versioning'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'component-testing',
-        key: 'component-testing',
-        name: 'Component Testing',
-        description: 'Enable component testing framework and test generators',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Components',
-          tags: ['components', 'testing'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'component-documentation',
-        key: 'component-documentation',
-        name: 'Component Documentation Generator',
-        description: 'Enable auto-generation of component documentation from code comments',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Components',
-          tags: ['components', 'documentation'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'component-handoff',
-        key: 'component-handoff',
-        name: 'Design-Dev Handoff Tools',
-        description: 'Enable spec generation, asset export, and measurement tools',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Components',
-          tags: ['components', 'handoff'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'component-composition',
-        key: 'component-composition',
-        name: 'Component Composition Tool',
-        description: 'Enable building complex components from primitives',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Components',
-          tags: ['components', 'composition'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'component-dependencies',
-        key: 'component-dependencies',
-        name: 'Component Dependency Graph',
-        description: 'Enable visual map of component relationships',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Components',
-          tags: ['components', 'dependencies'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'component-snippets',
-        key: 'component-snippets',
-        name: 'Component Code Snippets',
-        description: 'Enable pre-built code snippets library for common use cases',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Components',
-          tags: ['components', 'snippets'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'component-loupe',
-        key: 'component-loupe',
-        name: 'Loupe Tool',
-        description: 'Enable component inspector tool for design system components',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Components',
-          tags: ['components', 'loupe', 'inspector'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'component-status',
-        key: 'component-status',
-        name: 'Component Status Tracking',
-        description: 'Enable component status tracking and management',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Components',
-          tags: ['components', 'status'],
-          createdAt: new Date(),
-        },
-      },
-      // Tokens
-      {
-        id: 'token-studio',
-        key: 'token-studio',
-        name: 'Token Studio',
-        description: 'Enable Style Dictionary-based token studio for creating DTCG-compliant tokens',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tokens',
-          tags: ['tokens', 'studio', 'style-dictionary'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'token-playground',
-        key: 'token-playground',
-        name: 'Design Tokens Playground',
-        description: 'Enable the visual design tokens playground',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tokens',
-          tags: ['tokens', 'playground', 'developer-tools'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'token-library',
-        key: 'token-library',
-        name: 'Style Library',
-        description: 'Enable style dictionary library for viewing, editing, downloading, and retiring',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tokens',
-          tags: ['tokens', 'library'],
-          createdAt: new Date(),
-        },
-      },
-      // Review
-      {
-        id: 'review-system',
-        key: 'review-system',
-        name: 'Review System',
-        description: 'Enable the design review and approval system',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Review',
-          tags: ['review', 'approval'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'review-kanban',
-        key: 'review-kanban',
-        name: 'Review Kanban Board',
-        description: 'Enable Kanban board view for managing review requests',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Review',
-          tags: ['review', 'kanban'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'review-admin',
-        key: 'review-admin',
-        name: 'Review Admin Dashboard',
-        description: 'Enable admin dashboard for review management',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Review',
-          tags: ['review', 'admin'],
-          createdAt: new Date(),
-        },
-      },
-      // Admin
-      {
-        id: 'admin-system-health',
-        key: 'admin-system-health',
-        name: 'System Health Dashboard',
-        description: 'Enable system health monitoring and metrics dashboard',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Admin',
-          tags: ['admin', 'health', 'metrics'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'admin-governance',
-        key: 'admin-governance',
-        name: 'Design System Governance',
-        description: 'Enable rules engine, compliance checking, and policy enforcement',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Admin',
-          tags: ['admin', 'governance', 'compliance'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'admin-audit',
-        key: 'admin-audit',
-        name: 'Audit Logs',
-        description: 'Enable user action auditing and exportable audit trails',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Admin',
-          tags: ['admin', 'audit', 'logging'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'admin-rbac',
-        key: 'admin-rbac',
-        name: 'Role-Based Access Control',
-        description: 'Enable role and permission management system',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Admin',
-          tags: ['admin', 'rbac', 'roles', 'permissions'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'admin-feature-flags',
-        key: 'admin-feature-flags',
-        name: 'Feature Flags Management',
-        description: 'Enable feature flag management interface',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Admin',
-          tags: ['admin', 'feature-flags'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'admin-banners',
-        key: 'admin-banners',
-        name: 'Site Banners',
-        description: 'Enable site-wide info banner management',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Admin',
-          tags: ['admin', 'banners', 'notifications'],
-          createdAt: new Date(),
-        },
-      },
-      // Tools
-      {
-        id: 'gradient-generator',
-        key: 'gradient-generator',
-        name: 'Gradient Generator',
-        description: 'Enable gradient generator tool',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'gradient', 'color'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'lorem-ipsum',
-        key: 'lorem-ipsum',
-        name: 'Lorem Ipsum Generator',
-        description: 'Enable Lorem Ipsum text generator with HTML formatting options',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'text', 'placeholder'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'seo-tagging',
-        key: 'seo-tagging',
-        name: 'SEO Tagging Generator',
-        description: 'Enable SEO meta tags generator',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'seo', 'meta'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'color-scale',
-        key: 'color-scale',
-        name: 'Color Scale Generator',
-        description: 'Enable color scale generator with accessibility checks',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'color', 'accessibility'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'color-converter',
-        key: 'color-converter',
-        name: 'Color Converter',
-        description: 'Enable color format conversion tool',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'color', 'converter'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'color-contrast',
-        key: 'color-contrast',
-        name: 'Color Contrast Checker',
-        description: 'Enable WCAG color contrast checking tool',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'color', 'accessibility', 'wcag'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'nasa-tlx',
-        key: 'nasa-tlx',
-        name: 'NASA-TLX',
-        description: 'Enable NASA Task Load Index assessment tool',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'ux', 'assessment'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'sus',
-        key: 'sus',
-        name: 'System Usability Scale (SUS)',
-        description: 'Enable System Usability Scale questionnaire',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'ux', 'usability'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'png-to-ico',
-        key: 'png-to-ico',
-        name: 'PNG to ICO Converter',
-        description: 'Enable PNG to ICO image format converter',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'image', 'converter'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'heuristic-evaluation',
-        key: 'heuristic-evaluation',
-        name: 'Heuristic Evaluation Checklist',
-        description: 'Enable heuristic evaluation checklist tool',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'ux', 'evaluation'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'palette-builder',
-        key: 'palette-builder',
-        name: 'Palette Builder',
-        description: 'Enable color palette builder tool',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'color', 'palette'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'theme-builder',
-        key: 'theme-builder',
-        name: 'Theme Builder',
-        description: 'Enable visual theme customization tool',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'theme', 'customization'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'migration-assistant',
-        key: 'migration-assistant',
-        name: 'Deprecation & Migration Assistant',
-        description: 'Enable component and token migration tools',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Tools',
-          tags: ['tools', 'migration', 'deprecation'],
-          createdAt: new Date(),
-        },
-      },
-      // Fonts
-      {
-        id: 'font-library',
-        key: 'font-library',
-        name: 'Font Library',
-        description: 'Enable font library and management',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Fonts',
-          tags: ['fonts', 'typography'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'font-scale',
-        key: 'font-scale',
-        name: 'Font Scale',
-        description: 'Enable font scale management',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Fonts',
-          tags: ['fonts', 'typography', 'scale'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'font-stack',
-        key: 'font-stack',
-        name: 'Font Stack',
-        description: 'Enable font stack management',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Fonts',
-          tags: ['fonts', 'typography', 'stack'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'font-subsetting',
-        key: 'font-subsetting',
-        name: 'Font Subsetting',
-        description: 'Enable font subsetting tools',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Fonts',
-          tags: ['fonts', 'typography', 'subsetting'],
-          createdAt: new Date(),
-        },
-      },
-      // Patterns
-      {
-        id: 'patterns-system',
-        key: 'patterns-system',
-        name: 'Patterns System',
-        description: 'Enable design patterns library and documentation',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Patterns',
-          tags: ['patterns', 'design'],
-          createdAt: new Date(),
-        },
-      },
-      // Design Assets
-      {
-        id: 'icon-library',
-        key: 'icon-library',
-        name: 'Icon Library',
-        description: 'Enable icon library with Material, Lucide, and custom icons',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Design Assets',
-          tags: ['assets', 'icons'],
-          createdAt: new Date(),
-        },
-      },
-      // Getting Started
-      {
-        id: 'getting-started-section',
-        key: 'getting-started-section',
-        name: 'Getting Started Section',
-        description: 'Enable getting started documentation and guides',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Documentation',
-          tags: ['documentation', 'getting-started'],
-          createdAt: new Date(),
-        },
-      },
-      // Research
-      {
-        id: 'research-repo',
-        key: 'research-repo',
-        name: 'Research Repository',
-        description: 'Enable research repository for journey maps, personas, and HCD reports',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Research',
-          tags: ['research', 'hcd'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'user-persona-generator',
-        key: 'user-persona-generator',
-        name: 'User Persona Generator',
-        description: 'Enable user persona generation tool',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Research',
-          tags: ['research', 'personas'],
-          createdAt: new Date(),
-        },
-      },
-      // Guidelines
-      {
-        id: 'guidelines-vitepress',
-        key: 'guidelines-vitepress',
-        name: 'Guidelines Documentation',
-        description: 'Enable VitePress-based guidelines documentation',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Documentation',
-          tags: ['documentation', 'guidelines'],
-          createdAt: new Date(),
-        },
-      },
-      // AI
-      {
-        id: 'ai-assistant',
-        key: 'ai-assistant',
-        name: 'AI Assistant (Eero)',
-        description: 'Enable the AI-powered design system assistant',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'AI',
-          tags: ['ai', 'assistant'],
-          createdAt: new Date(),
-        },
-      },
-      {
-        id: 'ai-suggestions',
-        key: 'ai-suggestions',
-        name: 'AI-Powered Suggestions',
-        description: 'Enable AI-powered component recommendations and accessibility fixes',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'AI',
-          tags: ['ai', 'suggestions'],
-          createdAt: new Date(),
-        },
-      },
-      // API
-      {
-        id: 'design-system-api',
-        key: 'design-system-api',
-        name: 'Design System API',
-        description: 'Enable REST/GraphQL API for tokens and components with SDK and CLI',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'API',
-          tags: ['api', 'sdk', 'cli'],
-          createdAt: new Date(),
-        },
-      },
-      // Feedback
-      {
-        id: 'feedback-roadmap',
-        key: 'feedback-roadmap',
-        name: 'Feedback & Roadmap',
-        description: 'Enable component feedback system and public roadmap',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Feedback',
-          tags: ['feedback', 'roadmap'],
-          createdAt: new Date(),
-        },
-      },
-      // Notifications
-      {
-        id: 'change-notifications',
-        key: 'change-notifications',
-        name: 'Change Notifications',
-        description: 'Enable alerts for component and token changes',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Notifications',
-          tags: ['notifications', 'alerts'],
-          createdAt: new Date(),
-        },
-      },
-      // Multi-brand
-      {
-        id: 'multi-brand-support',
-        key: 'multi-brand-support',
-        name: 'Multi-Brand Support',
-        description: 'Enable managing multiple brands and white-label systems',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Branding',
-          tags: ['brands', 'white-label'],
-          createdAt: new Date(),
-        },
-      },
-      // Compliance
-      {
-        id: 'compliance-scanning',
-        key: 'compliance-scanning',
-        name: 'Compliance Scanning',
-        description: 'Enable application compliance scanning',
-        enabled: true,
-        defaultValue: true,
-        metadata: {
-          category: 'Governance',
-          tags: ['compliance', 'governance'],
-          createdAt: new Date(),
-        },
-      },
-    ];
-
-    for (const flag of defaultFlags) {
-      // Force enabled to true
-      const flagToStore = { ...flag, enabled: true };
-      this.inMemoryFlags.set(flag.id, flagToStore);
-      if (this.elasticsearchService) {
-        try {
-          await this.elasticsearchService.index({
-            index: `${this.indexPrefix}-flags`,
-            id: flag.id,
-            document: {
-              ...flagToStore,
-              enabled: true, // Force enabled in Elasticsearch too
-              metadata: {
-                ...flagToStore.metadata,
-                createdAt: flagToStore.metadata?.createdAt?.toISOString(),
-                updatedAt: flagToStore.metadata?.updatedAt?.toISOString(),
-              },
-            },
-          });
-        } catch (error) {
-          console.warn('Failed to index default feature flag to Elasticsearch:', error);
-        }
-      }
-    }
-  }
-
+  /** Stored flags, plus defaults for built-in flags that were never stored */
   async getAllFlags(): Promise<FeatureFlag[]> {
-    if (this.elasticsearchService) {
-      try {
-        const response = await this.elasticsearchService.search({
-          index: `${this.indexPrefix}-flags`,
-          body: {
-            query: { match_all: {} },
-            size: 1000,
-          },
-        });
-
-        const flags = response.hits.hits.map((hit: any) => ({
-          ...hit._source,
-          metadata: {
-            ...hit._source.metadata,
-            createdAt: hit._source.metadata?.createdAt ? new Date(hit._source.metadata.createdAt) : undefined,
-            updatedAt: hit._source.metadata?.updatedAt ? new Date(hit._source.metadata.updatedAt) : undefined,
-          },
-        }));
-
-        // Update in-memory cache
-        flags.forEach((flag: FeatureFlag) => {
-          this.inMemoryFlags.set(flag.id, flag);
-        });
-
-        // Ensure all flags are enabled
-        const flagsToEnable = flags.filter(flag => !flag.enabled);
-        if (flagsToEnable.length > 0) {
-          // Enable all disabled flags in background (don't await to avoid blocking)
-          // Pass skipAutoCheck=true to avoid recursion
-          this.ensureAllFeaturesEnabled(true).catch(err => {
-            console.warn('Failed to auto-enable flags:', err);
-          });
-        }
-
-        return flags;
-      } catch (error) {
-        console.warn('Failed to fetch feature flags from Elasticsearch, using in-memory:', error);
-      }
+    let stored: FeatureFlag[];
+    try {
+      stored = await this.store.list();
+      this.lastKnown = new Map(stored.map((flag) => [flag.id, flag]));
+    } catch (error) {
+      this.logger.warn(`Feature flags unavailable, using the last values read: ${(error as Error).message}`);
+      stored = [...this.lastKnown.values()];
     }
-
-    const inMemoryFlags = Array.from(this.inMemoryFlags.values());
-    
-    // Ensure all in-memory flags are enabled
-    const flagsToEnable = inMemoryFlags.filter(flag => !flag.enabled);
-    if (flagsToEnable.length > 0) {
-      flagsToEnable.forEach(flag => {
-        flag.enabled = true;
-        this.inMemoryFlags.set(flag.id, flag);
-      });
-    }
-
-    return inMemoryFlags;
+    const ids = new Set(stored.map((flag) => flag.id));
+    return [...stored, ...DEFAULT_FLAGS.filter((flag) => !ids.has(flag.id)).map((flag) => structuredClone(flag))];
   }
 
   async getFlag(id: string): Promise<FeatureFlag | null> {
-    if (this.elasticsearchService) {
-      try {
-        const response = await this.elasticsearchService.get({
-          index: `${this.indexPrefix}-flags`,
-          id,
-        });
-
-        const source = response._source as any;
-        const flag = {
-          ...source,
-          enabled: true, // Force enabled
-          metadata: {
-            ...source.metadata,
-            createdAt: source.metadata?.createdAt ? new Date(source.metadata.createdAt) : undefined,
-            updatedAt: source.metadata?.updatedAt ? new Date(source.metadata.updatedAt) : undefined,
-          },
-        };
-        
-        // Update in-memory cache with enabled flag
-        this.inMemoryFlags.set(id, flag);
-        
-        // If it was disabled, update it in Elasticsearch too
-        if (!source.enabled) {
-          this.updateFlag(id, { enabled: true }).catch(err => {
-            console.warn(`Failed to update flag ${id} to enabled:`, err);
-          });
-        }
-        
-        return flag;
-      } catch (error) {
-        // Not found in Elasticsearch, check in-memory
-      }
+    if (!KEY_PATTERN.test(id)) return null;
+    try {
+      const stored = (await this.store.get(id))?.doc ?? null;
+      if (stored) this.lastKnown.set(id, stored);
+      else this.lastKnown.delete(id);
+      if (stored) return stored;
+    } catch (error) {
+      this.logger.warn(`Feature flag ${id} unavailable, using the last value read: ${(error as Error).message}`);
+      const known = this.lastKnown.get(id);
+      if (known) return known;
     }
-
-    const inMemoryFlag = this.inMemoryFlags.get(id);
-    if (inMemoryFlag && !inMemoryFlag.enabled) {
-      // Force enable in-memory flag
-      inMemoryFlag.enabled = true;
-      this.inMemoryFlags.set(id, inMemoryFlag);
-    }
-    
-    return inMemoryFlag || null;
+    const fallback = DEFAULTS_BY_ID.get(id);
+    return fallback ? structuredClone(fallback) : null;
   }
 
-  async getFlagByKey(key: string): Promise<FeatureFlag | null> {
-    const allFlags = await this.getAllFlags();
-    const flag = allFlags.find(flag => flag.key === key);
-    
-    // Force enable if found
-    if (flag && !flag.enabled) {
-      await this.updateFlag(flag.id, { enabled: true });
-      flag.enabled = true;
-    }
-    
-    return flag || null;
+  /** Flags are stored under their key */
+  getFlagByKey(key: string): Promise<FeatureFlag | null> {
+    return this.getFlag(key);
   }
 
-  async createFlag(flag: Omit<FeatureFlag, 'id'>): Promise<FeatureFlag> {
-    const newFlag: FeatureFlag = {
-      ...flag,
-      id: flag.key,
-      metadata: {
-        ...flag.metadata,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
+  async createFlag(input: FeatureFlagInput, actorId: string): Promise<FeatureFlag> {
+    if (!KEY_PATTERN.test(input.key ?? '')) {
+      throw new BadRequestException('key must be lowercase letters, digits and dashes');
+    }
+    if (DEFAULTS_BY_ID.has(input.key)) {
+      throw new ConflictException(`Feature flag ${input.key} already exists`);
+    }
+    const now = new Date().toISOString();
+    const flag: FeatureFlag = {
+      id: input.key,
+      key: input.key,
+      name: input.name,
+      description: input.description,
+      enabled: input.enabled === true,
+      defaultValue: input.defaultValue,
+      targeting: cleanTargeting(input.targeting),
+      metadata: { category: input.metadata?.category, tags: input.metadata?.tags, createdBy: actorId, createdAt: now, updatedBy: actorId, updatedAt: now },
     };
-
-    this.inMemoryFlags.set(newFlag.id, newFlag);
-
-    if (this.elasticsearchService) {
-      try {
-        await this.elasticsearchService.index({
-          index: `${this.indexPrefix}-flags`,
-          id: newFlag.id,
-          document: {
-            ...newFlag,
-            metadata: {
-              ...newFlag.metadata,
-              createdAt: newFlag.metadata?.createdAt?.toISOString(),
-              updatedAt: newFlag.metadata?.updatedAt?.toISOString(),
-            },
-          },
-        });
-      } catch (error) {
-        console.warn('Failed to index feature flag to Elasticsearch:', error);
-      }
+    try {
+      await this.store.create(flag);
+    } catch (error) {
+      if (error instanceof DuplicateDocumentError) throw new ConflictException(`Feature flag ${input.key} already exists`);
+      throw error;
     }
-
-    return newFlag;
+    this.lastKnown.set(flag.id, flag);
+    return flag;
   }
 
-  async updateFlag(id: string, updates: Partial<FeatureFlag>): Promise<FeatureFlag | null> {
-    const existingFlag = await this.getFlag(id);
-    if (!existingFlag) {
-      return null;
+  /** Null when there is no such flag */
+  async updateFlag(id: string, updates: Partial<FeatureFlagInput>, actorId: string): Promise<FeatureFlag | null> {
+    if (updates.key !== undefined && updates.key !== id) {
+      throw new BadRequestException("A flag's key can't be changed");
     }
-
-    const updatedFlag: FeatureFlag = {
-      ...existingFlag,
-      ...updates,
-      metadata: {
-        ...existingFlag.metadata,
-        ...updates.metadata,
-        updatedAt: new Date(),
-      },
-    };
-
-    this.inMemoryFlags.set(id, updatedFlag);
-
-    if (this.elasticsearchService) {
-      try {
-        await this.elasticsearchService.index({
-          index: `${this.indexPrefix}-flags`,
-          id,
-          document: {
-            ...updatedFlag,
-            metadata: {
-              ...updatedFlag.metadata,
-              createdAt: updatedFlag.metadata?.createdAt?.toISOString(),
-              updatedAt: updatedFlag.metadata?.updatedAt?.toISOString(),
-            },
-          },
-        });
-      } catch (error) {
-        console.warn('Failed to update feature flag in Elasticsearch:', error);
+    return this.mutate(id, actorId, (flag) => {
+      if (updates.name !== undefined) flag.name = updates.name;
+      if (updates.description !== undefined) flag.description = updates.description;
+      if (updates.enabled !== undefined) flag.enabled = updates.enabled;
+      if (updates.defaultValue !== undefined) flag.defaultValue = updates.defaultValue;
+      if (updates.targeting !== undefined) flag.targeting = cleanTargeting(updates.targeting);
+      if (updates.metadata !== undefined) {
+        flag.metadata = { ...flag.metadata, category: updates.metadata.category, tags: updates.metadata.tags };
       }
-    }
-
-    return updatedFlag;
+    });
   }
 
+  async toggleFlag(id: string, actorId: string): Promise<FeatureFlag | null> {
+    return this.mutate(id, actorId, (flag) => {
+      flag.enabled = !flag.enabled;
+    });
+  }
+
+  /** Deleting a built-in flag resets it to its default. False when nothing was stored. */
   async deleteFlag(id: string): Promise<boolean> {
-    const flag = await this.getFlag(id);
-    if (!flag) {
-      return false;
-    }
-
-    this.inMemoryFlags.delete(id);
-
-    if (this.elasticsearchService) {
-      try {
-        await this.elasticsearchService.delete({
-          index: `${this.indexPrefix}-flags`,
-          id,
-        });
-      } catch (error) {
-        console.warn('Failed to delete feature flag from Elasticsearch:', error);
-      }
-    }
-
-    return true;
-  }
-
-  async toggleFlag(id: string): Promise<FeatureFlag | null> {
-    const flag = await this.getFlag(id);
-    if (!flag) {
-      return null;
-    }
-
-    return this.updateFlag(id, { enabled: !flag.enabled });
+    if (!KEY_PATTERN.test(id)) return false;
+    const deleted = await this.store.delete(id);
+    this.lastKnown.delete(id);
+    return deleted;
   }
 
   async isEnabled(key: string, userId?: string, userGroups?: string[]): Promise<boolean> {
     const flag = await this.getFlagByKey(key);
-    if (!flag) {
-      // If flag doesn't exist, return true (fail open) to allow access
-      return true;
-    }
+    // Unknown flags don't gate anything
+    if (!flag) return true;
+    return evaluateFlag(flag, userId, userGroups);
+  }
 
-    // Force enable - always return true
-    if (!flag.enabled) {
-      // Enable it in background
-      this.updateFlag(flag.id, { enabled: true }).catch(err => {
-        console.warn(`Failed to enable flag ${key}:`, err);
+  /** Turns every flag on (an administrator's reset) */
+  async enableAll(actorId: string): Promise<number> {
+    let enabled = 0;
+    for (const flag of await this.getAllFlags()) {
+      if (flag.enabled) continue;
+      await this.mutate(flag.id, actorId, (current) => {
+        current.enabled = true;
       });
-      return true; // Return true immediately
+      enabled++;
     }
-
-    // Check targeting rules
-    if (flag.targeting) {
-      // User targeting
-      if (flag.targeting.users && userId) {
-        if (flag.targeting.users.includes(userId)) {
-          return true;
-        }
-      }
-
-      // Group targeting
-      if (flag.targeting.groups && userGroups) {
-        if (flag.targeting.groups.some(group => userGroups.includes(group))) {
-          return true;
-        }
-      }
-
-      // Percentage rollout
-      if (flag.targeting.percentage !== undefined) {
-        if (userId) {
-          // Use userId hash for consistent percentage
-          const hash = this.hashString(userId);
-          const percentage = (hash % 100) + 1;
-          return percentage <= flag.targeting.percentage;
-        }
-        // If no userId, use random
-        return Math.random() * 100 <= flag.targeting.percentage;
-      }
-    }
-
-    return flag.enabled;
+    return enabled;
   }
 
   /**
-   * Ensure all features are enabled
+   * Read-modify-write with optimistic concurrency. A built-in flag that was
+   * never stored is stored on its first change.
    */
-  async ensureAllFeaturesEnabled(skipAutoCheck = false): Promise<void> {
-    try {
-      // Get flags directly from cache to avoid recursion
-      const allFlags = skipAutoCheck 
-        ? Array.from(this.inMemoryFlags.values())
-        : await this.getAllFlags();
-      let enabledCount = 0;
-      
-      for (const flag of allFlags) {
-        if (!flag.enabled) {
-          await this.updateFlag(flag.id, { enabled: true });
-          console.log(`Enabled feature flag: ${flag.key}`);
-          enabledCount++;
-        }
+  private async mutate(id: string, actorId: string, change: (flag: FeatureFlag) => void): Promise<FeatureFlag | null> {
+    if (!KEY_PATTERN.test(id)) return null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const stored = await this.store.get(id);
+      const base = stored?.doc ?? (DEFAULTS_BY_ID.has(id) ? structuredClone(DEFAULTS_BY_ID.get(id)!) : null);
+      if (!base) return null;
+      change(base);
+      const now = new Date().toISOString();
+      base.metadata = { ...base.metadata, createdAt: base.metadata?.createdAt ?? now, updatedBy: actorId, updatedAt: now };
+      try {
+        if (stored) await this.store.replace(base, stored.version);
+        else await this.store.create(base);
+        this.lastKnown.set(id, base);
+        return base;
+      } catch (error) {
+        if (!(error instanceof VersionConflictError) && !(error instanceof DuplicateDocumentError)) throw error;
       }
-      
-      if (enabledCount > 0) {
-        console.log(`Enabled ${enabledCount} feature flag(s)`);
-      }
-      console.log(`All ${allFlags.length} feature flags are enabled`);
-    } catch (error) {
-      console.error('Failed to ensure all features are enabled:', error);
     }
-  }
-
-  private hashString(str: string): number {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash);
+    throw new ConflictException('The flag was changed by someone else, please try again');
   }
 }
-

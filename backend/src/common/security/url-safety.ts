@@ -45,8 +45,13 @@ export function isBlockedAddress(address: string): boolean {
 /**
  * Parses a URL and checks it only points at the public internet: http(s), and
  * every address the hostname resolves to is public. Throws 400 otherwise.
+ *
+ * This is an early, friendly check only: the hostname is resolved again when
+ * connecting. Anything that connects must also check at connect time
+ * (resolvePublicAddress, the governance safe fetch, or the egress proxy for
+ * headless Chromium) or a DNS-rebinding host can answer differently then.
  */
-export async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
+export async function assertPublicHttpUrl(rawUrl: string, policy: DestinationPolicy = {}): Promise<URL> {
   let url: URL;
   try {
     url = new URL(rawUrl);
@@ -65,12 +70,52 @@ export async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
   try {
     addresses = isIP(hostname)
       ? [hostname]
-      : (await lookup(hostname, { all: true, verbatim: true })).map((entry) => entry.address);
+      : (await (policy.resolve ?? systemResolver)(hostname)).map((entry) => entry.address);
   } catch {
     throw new BadRequestException(`Could not resolve ${url.hostname}`);
   }
-  if (addresses.length === 0 || addresses.some(isBlockedAddress)) {
+  const allowed = policy.isAllowedAddress ?? ((address: string) => !isBlockedAddress(address));
+  if (addresses.length === 0 || addresses.some((address) => !allowed(address))) {
     throw new BadRequestException('URLs that point to private or internal addresses are not allowed');
   }
   return url;
+}
+
+/** Resolves a hostname to every address it has; swapped in tests */
+export type HostResolver = (hostname: string) => Promise<Array<{ address: string; family: number }>>;
+
+export interface DestinationPolicy {
+  /** Defaults to the system resolver */
+  resolve?: HostResolver;
+  /** Defaults to "not a private, loopback, link-local or reserved address" */
+  isAllowedAddress?: (address: string) => boolean;
+}
+
+/** Thrown when a destination resolves to an address the policy refuses */
+export class BlockedDestinationError extends Error {
+  constructor(readonly host: string) {
+    super(`${host} does not resolve to a public address`);
+  }
+}
+
+const systemResolver: HostResolver = (hostname) => lookup(hostname, { all: true, verbatim: true });
+
+/**
+ * Resolves a host once and checks every answer, returning the address to
+ * connect to. Callers connect to that address (not the hostname), so the
+ * check and the connection see the same DNS answer: a rebinding resolver
+ * that answers differently next time can't slip an internal address in.
+ */
+export async function resolvePublicAddress(host: string, policy: DestinationPolicy = {}): Promise<{ address: string; family: number }> {
+  const hostname = host.replace(/^\[|\]$/g, '');
+  const allowed = policy.isAllowedAddress ?? ((address: string) => !isBlockedAddress(address));
+  const family = isIP(hostname);
+  let addresses: Array<{ address: string; family: number }>;
+  try {
+    addresses = family ? [{ address: hostname, family }] : await (policy.resolve ?? systemResolver)(hostname);
+  } catch {
+    throw new BlockedDestinationError(hostname);
+  }
+  if (addresses.length === 0 || addresses.some((entry) => !allowed(entry.address))) throw new BlockedDestinationError(hostname);
+  return addresses[0];
 }

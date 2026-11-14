@@ -12,7 +12,17 @@ import { existsSync, readdirSync } from 'fs';
 import * as path from 'path';
 import { Readable } from 'stream';
 import { VersionConflictError } from './document-store';
-import { anonymous, createHarness, designer, reviewer, SAMPLE_FILES } from './testing/harness';
+import {
+  anonymous,
+  artDirector,
+  client,
+  createHarness,
+  creativeDirector,
+  designer,
+  reviewAdmin,
+  reviewer,
+  SAMPLE_FILES,
+} from './testing/harness';
 
 type Harness = ReturnType<typeof createHarness>;
 
@@ -97,7 +107,7 @@ describe('ReviewsService', () => {
       expect(json).not.toContain('hunter2');
       expect(json).not.toContain(stored.passwordHash!);
 
-      const listed = JSON.stringify(await h.service.list({}));
+      const listed = JSON.stringify(await h.service.list({}, designer));
       expect(listed).not.toContain('passwordHash');
       expect(JSON.stringify(await h.service.adminList(true))).not.toContain('passwordHash');
     });
@@ -105,23 +115,28 @@ describe('ReviewsService', () => {
     it('returns 401 with passwordRequired without the right password', async () => {
       const id = await createUrlReview(h, { password: 'hunter2' });
       for (const attempt of [undefined, 'wrong']) {
-        const error = await h.service.getReview(id, designer, attempt).catch((e) => e);
+        const error = await h.service.getReview(id, reviewer, attempt).catch((e) => e);
         expect(error).toBeInstanceOf(UnauthorizedException);
         expect(error.getResponse()).toMatchObject({ passwordRequired: true });
       }
-      await expect(h.service.getComments(id, designer, 'wrong')).rejects.toBeInstanceOf(UnauthorizedException);
-      await expect(h.service.getVersionUrl(id, 'v1', designer, undefined, '')).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(h.service.getComments(id, reviewer, 'wrong')).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(h.service.getVersionUrl(id, 'v1', reviewer, undefined, '')).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(h.service.addComment(id, { text: 'x' }, reviewer, 'wrong')).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(h.service.getReview(id, reviewer, 'hunter2')).resolves.toMatchObject({ id });
+      // The designer (and their team, and review admins) don't need it
+      await expect(h.service.getReview(id, designer)).resolves.toMatchObject({ id });
+      await expect(h.service.getReview(id, reviewAdmin)).resolves.toMatchObject({ id });
     });
 
     it('sets, changes and clears a password, returning only hasPassword', async () => {
       const id = await createUrlReview(h);
       expect(await h.service.setPassword(id, 'first', designer)).toEqual({ hasPassword: true });
-      await expect(h.service.getReview(id, designer)).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(h.service.getReview(id, reviewer)).rejects.toBeInstanceOf(UnauthorizedException);
       expect(await h.service.setPassword(id, 'second', designer, true)).toEqual({ hasPassword: true });
-      await expect(h.service.getReview(id, designer, 'first')).rejects.toBeInstanceOf(UnauthorizedException);
-      await expect(h.service.getReview(id, designer, 'second')).resolves.toMatchObject({ hasPassword: true });
+      await expect(h.service.getReview(id, reviewer, 'first')).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(h.service.getReview(id, reviewer, 'second')).resolves.toMatchObject({ hasPassword: true });
       expect(await h.service.setPassword(id, '', designer)).toEqual({ hasPassword: false });
-      await expect(h.service.getReview(id, designer)).resolves.toMatchObject({ hasPassword: false });
+      await expect(h.service.getReview(id, reviewer)).resolves.toMatchObject({ hasPassword: false });
       const actions = (await h.service.getReview(id, designer)).workflowHistory.map((e) => e.action);
       expect(actions).toEqual(['created_from_url', 'password_set', 'password_set', 'password_removed']);
     });
@@ -136,11 +151,11 @@ describe('ReviewsService', () => {
     it('runs the whole happy path and records the acting user', async () => {
       const id = await createUrlReview(h);
       await h.service.workflow(id, { type: 'move-to-client-review' }, designer);
-      await h.service.workflow(id, { type: 'approve', stage: 'client_review' }, reviewer);
+      await h.service.workflow(id, { type: 'approve', stage: 'client_review' }, client);
       await h.service.workflow(id, { type: 'move-to-art-director-review' }, designer);
-      const afterAd = await h.service.workflow(id, { type: 'approve', stage: 'art_director_review' }, { email: 'ad@x.com', name: 'AD' });
+      const afterAd = await h.service.workflow(id, { type: 'approve', stage: 'art_director_review' }, artDirector);
       expect(afterAd.workflowState).toBe('creative_director_review');
-      const done = await h.service.workflow(id, { type: 'approve', stage: 'creative_director_review' }, { email: 'cd@x.com', name: 'CD' });
+      const done = await h.service.workflow(id, { type: 'approve', stage: 'creative_director_review' }, creativeDirector);
       expect(done.workflowState).toBe('approved');
       expect(done.workflowHistory.map((e) => [e.stage, e.action, e.user])).toEqual([
         ['draft', 'created_from_url', 'Sarah Johnson'],
@@ -162,7 +177,7 @@ describe('ReviewsService', () => {
         { type: 'move-to-art-director-review' },
       ] as const;
       for (const action of invalid) {
-        await expect(h.service.workflow(id, action as any, designer)).rejects.toBeInstanceOf(ConflictException);
+        await expect(h.service.workflow(id, action as any, reviewAdmin)).rejects.toBeInstanceOf(ConflictException);
       }
       expect((await h.service.getReview(id, designer)).workflowHistory).toHaveLength(1);
     });
@@ -170,7 +185,7 @@ describe('ReviewsService', () => {
     it('rejects back to draft with a reason, then resubmits', async () => {
       const id = await createUrlReview(h);
       await h.service.workflow(id, { type: 'move-to-client-review' }, designer);
-      const rejected = await h.service.workflow(id, { type: 'reject', stage: 'client_review', reason: 'Too blue' }, reviewer);
+      const rejected = await h.service.workflow(id, { type: 'reject', stage: 'client_review', reason: 'Too blue' }, client);
       expect(rejected.workflowState).toBe('draft');
       expect(rejected.workflowHistory.at(-1)).toMatchObject({ stage: 'draft', action: 'rejected', user: 'Client', reason: 'Too blue' });
       const resubmitted = await h.service.workflow(id, { type: 'resubmit', targetStage: 'client_review' }, designer);
@@ -218,16 +233,16 @@ describe('ReviewsService', () => {
       await expect(h.service.toggleReaction(id, comment.id, '🎉', reviewer, 'rpl_nope')).rejects.toBeInstanceOf(NotFoundException);
       await expect(h.service.toggleReaction(id, comment.id, '🎉', anonymous)).rejects.toBeInstanceOf(BadRequestException);
 
-      const patched = await h.service.updateComment(id, comment.id, { resolved: true });
+      const patched = await h.service.updateComment(id, comment.id, { resolved: true }, designer);
       expect(patched.resolved).toBe(true);
 
       const all = await h.service.getComments(id, designer, undefined);
       expect(all).toHaveLength(1);
       expect(await h.service.getComments(id, designer, undefined, 'v2')).toEqual([]);
 
-      await h.service.deleteComment(id, comment.id);
+      await h.service.deleteComment(id, comment.id, designer);
       expect(await h.service.getComments(id, designer, undefined)).toEqual([]);
-      await expect(h.service.deleteComment(id, comment.id)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(h.service.deleteComment(id, comment.id, designer)).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('defaults the version to the latest one', async () => {
@@ -384,7 +399,7 @@ describe('ReviewsService', () => {
       await expect(h.service.getReview(id, { email: 'CLIENT@example.com', name: null })).resolves.toMatchObject({ id });
       await expect(h.service.getReview(id, designer)).resolves.toMatchObject({ id });
 
-      await h.service.updateSharing(id, { sharingMode: 'anyone', approvedEmails: [] });
+      await h.service.updateSharing(id, { sharingMode: 'anyone', approvedEmails: [] }, designer);
       await expect(h.service.getReview(id, anonymous)).resolves.toMatchObject({ sharingMode: 'anyone' });
     });
 
@@ -406,8 +421,8 @@ describe('ReviewsService', () => {
       await expect(h.service.workflow(id, { type: 'move-to-client-review' }, designer)).rejects.toBeInstanceOf(GoneException);
       await expect(h.service.extend(id, 7, designer)).rejects.toBeInstanceOf(GoneException);
 
-      expect((await h.service.list({})).reviews.map((r) => r.id)).toEqual([live]);
-      expect((await h.service.list({ showExpired: true })).total).toBe(2);
+      expect((await h.service.list({}, designer)).reviews.map((r) => r.id)).toEqual([live]);
+      expect((await h.service.list({ showExpired: true }, designer)).total).toBe(2);
       expect((await h.service.adminList(false)).map((r) => r.id)).toEqual([live]);
 
       // Admin routes still work and can bring it back
@@ -441,12 +456,12 @@ describe('ReviewsService', () => {
       const a = await createUrlReview(h, { filename: 'Checkout flow' });
       await createUrlReview(h, { filename: 'Landing page' });
       await h.service.workflow(a, { type: 'move-to-client-review' }, designer);
-      const byState = await h.service.list({ workflowState: 'client_review' });
+      const byState = await h.service.list({ workflowState: 'client_review' }, designer);
       expect(byState.reviews.map((r) => r.id)).toEqual([a]);
       expect(byState.reviews[0]).not.toHaveProperty('comments');
       expect(byState.reviews[0]).not.toHaveProperty('workflowHistory');
-      expect((await h.service.list({ q: 'landing' })).total).toBe(1);
-      expect((await h.service.list({ q: 'sarah' })).total).toBe(2);
+      expect((await h.service.list({ q: 'landing' }, designer)).total).toBe(1);
+      expect((await h.service.list({ q: 'sarah' }, designer)).total).toBe(2);
     });
   });
 

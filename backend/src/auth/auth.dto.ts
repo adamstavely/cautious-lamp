@@ -1,4 +1,4 @@
-import { ArrayMaxSize, IsArray, IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { ValidationPipe } from '@nestjs/common';
 import { MIN_PASSWORD_LENGTH, USER_STATUSES, UserStatus } from './user.types';
 
@@ -76,4 +76,35 @@ export class ListUsersQuery {
   @IsOptional()
   @IsIn(USER_STATUSES)
   status?: UserStatus;
+}
+
+export class CreateApiKeyDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  name: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(3650)
+  expiresInDays?: number;
+
+  /** Omit for the default service permissions (docs/AUTH.md) */
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @IsString({ each: true })
+  scopes?: string[];
+}
+
+export class RotateApiKeyDto {
+  @IsOptional()
+  @IsBoolean()
+  revokeOld?: boolean;
+
+  @IsOptional()
+  @IsIn(['manual', 'automatic', 'expired', 'compromised'])
+  reason?: 'manual' | 'automatic' | 'expired' | 'compromised';
 }

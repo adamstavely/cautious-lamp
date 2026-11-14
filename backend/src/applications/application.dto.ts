@@ -34,7 +34,9 @@ class GovernanceCapabilityDto {
   rules?: string[];
 
   @IsOptional()
-  @IsIn(SCAN_SCHEDULES as unknown as string[])
+  @IsIn(SCAN_SCHEDULES as unknown as string[], {
+    message: "scanSchedule must be manual, daily or weekly ('on-commit' isn't supported: have CI call POST /api/v1/governance/scans after each push)",
+  })
   scanSchedule?: (typeof SCAN_SCHEDULES)[number];
 }
 
