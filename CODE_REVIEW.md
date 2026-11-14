@@ -117,6 +117,25 @@ NestJS was then upgraded from 10 to 11 (Express 5), which cleared the `@nestjs/c
 
 Findings are grouped by area below: Critical (C), Security (H, F, M, L), Data and correctness (D), Frontend quality (B, F), Packages (P) and Dependencies (S).
 
+## Status after the staff-engineer review
+
+A staff-engineer production-readiness review of `main` at `11f8c8f` (14 November 2026) reported 15 findings, S01–S15. The ten in areas covered by Phases 1–3 and the integrations are fixed, with tests:
+
+| Finding | Fix |
+| --- | --- |
+| S02 Variant writes need only read access | `ComponentAccessService.getForWrite`: workspace components need the editor role in their source workspace; shared and global readers get 403 |
+| S03 Scans expose private components | Design-system scans cover only components the caller can read; stored scans and reports carry `access` metadata and are filtered on list and detail (older records fail closed) |
+| S05 Temporary passwords only enforced in the browser | `AuthGuard` restricts such sessions to `auth/me`, `change-password` and `logout` (403 `PASSWORD_CHANGE_REQUIRED`), WebSocket included |
+| S06 Unbounded video analysis | `AdmissionPool`: limits on running, queued and per-caller analyses, checked before the upload is stored (503/429 with `Retry-After`); frame, output and timeout caps with SIGKILL and cleanup |
+| S07 WebSocket subscriptions outlive revocation | Sockets close at credential expiry; credentials and project access are re-checked on subscribe and before each broadcast |
+| S08 Scheduled scans lost on a crash | Expiring leases, bounded retries with backoff, dead letters and fixed result ids, for governance and accessibility schedules |
+| S09 Accessibility reports suppress governance scans | Separate `governance.lastScan` and `lastAccessibilityReport` timestamps |
+| S10 Incomplete audits labelled AA | New `conformance` status; `wcagLevel` is the level actually verified (`Unverified` is new); SLA `needs-review`; HTML-only scans never reach AA |
+| S13 Analytics reveal other workspaces' applications | Analytics and `GET /applications` use `ApplicationsService.listFor` |
+| S14 Persona input rendered as HTML | Rendered as text; the Eero chatbot's markdown now escapes first |
+
+Not addressed, because they are outside the areas worked on: S01 and S12 (component request authorization and forged authors), S04 and S15 (the core component library and roadmap are in memory only; duplicate component ids), S11 (simulated contribution checks), and the review's production gates (readiness checks, graceful shutdown, backups, load testing).
+
 ## Fix first
 
 In this order. The first five block any deployment beyond a single developer's machine.
