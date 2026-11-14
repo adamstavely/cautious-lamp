@@ -1,20 +1,22 @@
-const escapeHtml = (value) =>
-  String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+/**
+ * A chat message as plain text for <tc-embed-widget>, which renders text only
+ * (never HTML), keeping line breaks. The assistant writes light markdown, so
+ * its bold, italic and code markers are dropped rather than shown.
+ */
+export function plainChatText(content) {
+  return String(content ?? '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/(^|[^*\w])\*([^*\n]+?)\*(?=[^*\w]|$)/g, '$1$2')
+    .replace(/`([^`\n]+?)`/g, '$1');
+}
 
 /**
- * A chat message (the user's own text, or the assistant's reply) as HTML for
- * v-html: escaped first, so the only markup is the bold, italic, code and
- * line breaks added here.
+ * Eero's reply as one message: the answer, then the components and tokens it
+ * relates to (the widget has no links, so they're named for the person to find).
  */
-export function formatChatMessage(content) {
-  return escapeHtml(content)
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`(.*?)`/g, '<code class="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-xs">$1</code>')
-    .replace(/\n/g, '<br>');
+export function eeroReplyText({ response, relatedComponents = [], relatedTokens = [] } = {}) {
+  const lines = [plainChatText(response)];
+  if (relatedComponents.length) lines.push(`Related components: ${relatedComponents.join(', ')}`);
+  if (relatedTokens.length) lines.push(`Related tokens: ${relatedTokens.join(', ')}`);
+  return lines.filter(Boolean).join('\n\n');
 }

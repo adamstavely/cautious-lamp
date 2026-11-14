@@ -8,6 +8,7 @@
     "src/components/ComponentPreview.vue",
     "src/components/DocumentationDrawer.vue",
     "src/components/Dropdown.vue",
+    "src/components/EeroChatbot.vue",
     "src/components/EnhancedDiffViewer.vue",
     "src/components/InlineNotice.vue",
     "src/components/PaletteHealthScore.vue",
