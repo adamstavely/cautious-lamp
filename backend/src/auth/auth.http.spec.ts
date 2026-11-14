@@ -27,6 +27,9 @@ class PingController {
   }
 }
 
+/** The bootstrap admin's password once they've replaced the temporary one */
+const ADMIN_NEW_PASSWORD = 'a brand new admin password';
+
 /** Sign-in through to admin routes over HTTP, with in-memory storage in place of Elasticsearch */
 describe('Auth HTTP API', () => {
   const saved = { ...process.env };
@@ -102,11 +105,25 @@ describe('Auth HTTP API', () => {
   });
 
   it('login → me → admin-only routes → logout', async () => {
-    const adminToken = await login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    // The bootstrap admin starts on a temporary password: only me, change-password and logout work
+    const temporary = await login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    const pending = await call('GET', '/auth/me', { token: temporary });
+    expect(pending.status).toBe(200);
+    expect(pending.body).toMatchObject({ type: 'user', email: ADMIN_EMAIL, roles: [Role.DESIGN_SYSTEM_MANAGER], mustChangePassword: true });
+    expect(pending.body.permissions).toContain(Permission.ADMIN_USERS);
+    for (const [method, route] of [['GET', '/users'], ['POST', '/users'], ['GET', '/rbac/roles'], ['GET', `/rbac/users/${pending.body.id}/roles`]]) {
+      const res = await call(method, route, { token: temporary, body: method === 'POST' ? { email: 'x@example.com', name: 'X', password: 'long enough pw' } : undefined });
+      expect(res.status).toBe(403);
+      expect(res.body).toMatchObject({ code: 'PASSWORD_CHANGE_REQUIRED' });
+    }
+    expect((await call('GET', '/health', { token: temporary })).status).toBe(200);
+    expect((await call('POST', '/auth/change-password', { token: temporary, body: { currentPassword: ADMIN_PASSWORD, newPassword: ADMIN_NEW_PASSWORD } })).status).toBe(204);
+    expect((await call('GET', '/users', { token: temporary })).status).toBe(401);
+
+    const adminToken = await login(ADMIN_EMAIL, ADMIN_NEW_PASSWORD);
     const me = await call('GET', '/auth/me', { token: adminToken });
     expect(me.status).toBe(200);
-    expect(me.body).toMatchObject({ type: 'user', email: ADMIN_EMAIL, roles: [Role.DESIGN_SYSTEM_MANAGER], mustChangePassword: true });
-    expect(me.body.permissions).toContain(Permission.ADMIN_USERS);
+    expect(me.body).toMatchObject({ id: pending.body.id, mustChangePassword: false });
 
     // The admin creates a designer
     const created = await call('POST', '/users', {
@@ -122,12 +139,10 @@ describe('Auth HTTP API', () => {
     expect(list.status).toBe(200);
     expect(list.body.total).toBe(1);
 
-    // The designer can't use admin routes, but can read their own roles
+    // On their temporary password the designer can't even read their own roles
     const designerToken = await login('dee@example.com', 'designer password');
     expect((await call('GET', '/users', { token: designerToken })).status).toBe(403);
-    expect((await call('GET', '/rbac/roles', { token: designerToken })).status).toBe(403);
-    expect((await call('GET', `/rbac/users/${created.body.id}/roles`, { token: designerToken })).status).toBe(200);
-    expect((await call('GET', `/rbac/users/${me.body.id}/roles`, { token: designerToken })).status).toBe(403);
+    expect((await call('GET', `/rbac/users/${created.body.id}/roles`, { token: designerToken })).body).toMatchObject({ code: 'PASSWORD_CHANGE_REQUIRED' });
 
     // RBAC routes for the admin
     const permissions = await call('GET', '/rbac/permissions', { token: adminToken });
@@ -162,7 +177,16 @@ describe('Auth HTTP API', () => {
     expect((await call('POST', '/auth/change-password', { token, body: { currentPassword: 'designer password', newPassword: 'a newer password' } })).status).toBe(204);
     expect((await call('GET', '/auth/me', { token })).status).toBe(401);
     const fresh = await login('dee@example.com', 'a newer password');
-    expect((await call('GET', '/auth/me', { token: fresh })).body.mustChangePassword).toBe(false);
+    const me = await call('GET', '/auth/me', { token: fresh });
+    expect(me.body.mustChangePassword).toBe(false);
+
+    // Now the designer can read their own roles, but still not admin routes or anyone else's roles
+    expect((await call('GET', `/rbac/users/${me.body.id}/roles`, { token: fresh })).status).toBe(200);
+    expect((await call('GET', '/users', { token: fresh })).body).not.toMatchObject({ code: 'PASSWORD_CHANGE_REQUIRED' });
+    expect((await call('GET', '/users', { token: fresh })).status).toBe(403);
+    expect((await call('GET', '/rbac/roles', { token: fresh })).status).toBe(403);
+    const admin = (await call('GET', '/auth/me', { token: await login(ADMIN_EMAIL, ADMIN_NEW_PASSWORD) })).body;
+    expect((await call('GET', `/rbac/users/${admin.id}/roles`, { token: fresh })).status).toBe(403);
   });
 
   it('accepts API keys: admin key for admin routes, plain keys for reads only', async () => {
@@ -175,7 +199,7 @@ describe('Auth HTTP API', () => {
   });
 
   it('disabling a user revokes their tokens', async () => {
-    const adminToken = await login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    const adminToken = await login(ADMIN_EMAIL, ADMIN_NEW_PASSWORD);
     const token = await login('dee@example.com', 'a newer password');
     const id = (await call('GET', '/auth/me', { token })).body.id;
     const patched = await call('PATCH', `/users/${id}`, { token: adminToken, body: { status: 'disabled' } });

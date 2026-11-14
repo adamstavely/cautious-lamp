@@ -145,6 +145,7 @@
 <script setup>
 import { ref, watch, nextTick, onMounted, computed, onBeforeUnmount } from 'vue';
 import apiClient from '../services/api.js';
+import { formatChatMessage } from '../utils/chatFormat.js';
 
 const props = defineProps({
   isOpen: {
@@ -181,14 +182,8 @@ const formatTime = (date) => {
   return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-const formatMessage = (content) => {
-  // Convert markdown-style formatting to HTML
-  return content
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`(.*?)`/g, '<code class="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded text-xs">$1</code>')
-    .replace(/\n/g, '<br>');
-};
+// Escaped, then markdown-style bold, italic and code (see utils/chatFormat.js)
+const formatMessage = formatChatMessage;
 
 const scrollToBottom = async () => {
   await nextTick();

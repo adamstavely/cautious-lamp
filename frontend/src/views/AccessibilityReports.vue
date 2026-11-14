@@ -68,10 +68,14 @@
               <span v-if="currentReport.scheduled"> · scheduled</span>
             </p>
 
+            <UiCallout v-if="currentReport.conformance" :tone="CONFORMANCE[currentReport.conformance.status].tone" :title="CONFORMANCE[currentReport.conformance.status].title">
+              {{ conformanceText(currentReport.conformance) }}
+            </UiCallout>
+
             <!-- WCAG compliance overview -->
             <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               <UiStat
-                label="Compliance score"
+                label="Automated score"
                 icon="check_circle"
                 :value="`${currentReport.complianceScore}%`"
                 :tone="scoreTone(currentReport.complianceScore)"
@@ -230,10 +234,11 @@
       <!-- Multi-application -->
       <template #multi-app>
         <div v-if="complianceSummary" class="space-y-6">
-          <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
             <UiStat label="Applications" :value="complianceSummary.totalApplications" :hint="`${complianceSummary.reportedApplications} with a report`" />
             <UiStat label="Meeting SLA" tone="success" :value="complianceSummary.compliantApplications" />
             <UiStat label="At risk" tone="warning" :value="complianceSummary.atRiskApplications" />
+            <UiStat label="Needs review" tone="info" :value="complianceSummary.needsReviewApplications ?? 0" hint="Level not verified automatically" />
             <UiStat
               label="Not meeting SLA"
               tone="danger"
@@ -304,9 +309,10 @@
                 <div class="text-xs mt-1 text-ink-muted">{{ schedule.url || 'Application URL' }}</div>
                 <div class="text-xs mt-1 text-ink-muted">
                   <span v-if="schedule.enabled">Next run: {{ formatDate(schedule.nextRun) }}</span>
-                  <span v-if="schedule.lastRun"> · Last run: {{ formatDate(schedule.lastRun) }} ({{ schedule.lastStatus === 'failed' ? 'failed' : 'ok' }})</span>
+                  <span v-if="schedule.lastRun"> · Last run: {{ formatDate(schedule.lastRun) }} ({{ RUN_STATUS[schedule.lastStatus] ?? 'ok' }})</span>
                 </div>
-                <div v-if="schedule.lastStatus === 'failed' && schedule.lastError" class="text-xs mt-1 text-danger">{{ schedule.lastError }}</div>
+                <div v-if="schedule.pending" class="text-xs mt-1 text-warning">{{ pendingText(schedule.pending) }}</div>
+                <div v-if="schedule.lastStatus !== 'success' && schedule.lastError" class="text-xs mt-1 text-danger">{{ schedule.lastError }}</div>
               </div>
               <div class="flex flex-wrap items-center gap-2">
                 <UiChip :tone="schedule.enabled ? 'success' : 'neutral'">{{ schedule.enabled ? 'Enabled' : 'Disabled' }}</UiChip>
@@ -326,7 +332,7 @@
       <template #slas>
         <UiPanel
           title="Compliance SLAs"
-          description="One SLA per application. Non-compliant: below the target score or level, or more critical issues than allowed. At risk: more high issues than allowed, at a limit, or within 5 points of the target score."
+          description="One SLA per application. Non-compliant: below the target score, failures at or below the target level, or more critical issues than allowed. At risk: more high issues than allowed, at a limit, or within 5 points of the target score. Needs review: nothing failed, but the automated checks couldn't verify the target level (criteria need a manual check, or the scan was HTML-only)."
         >
           <template v-if="canAdmin" #actions>
             <UiButton variant="primary" icon="add" @click="openSLAModal()">Create SLA</UiButton>
@@ -452,6 +458,7 @@ import {
   PageHero,
   PageShell,
   UiButton,
+  UiCallout,
   UiCheckbox,
   UiChip,
   UiDialog,
@@ -498,10 +505,18 @@ const SLA_LABELS = {
   compliant: 'Meets SLA',
   'at-risk': 'At risk',
   'non-compliant': 'Not meeting SLA',
+  'needs-review': 'Needs review',
   'no-sla': 'No SLA',
   'no-report': 'No report yet',
 };
 const CRITERION_STATUS = { pass: 'Pass', fail: 'Fail', review: 'Needs review' };
+/** conformance.status: what the automated checks could establish (never a conformance claim) */
+const CONFORMANCE = {
+  failing: { tone: 'danger', title: 'Automated checks found failures' },
+  'needs-review': { tone: 'warning', title: 'Needs manual review' },
+  'no-automated-failures': { tone: 'success', title: 'No automated failures' },
+};
+const RUN_STATUS = { success: 'ok', failed: 'failed', 'dead-letter': 'gave up after retries' };
 
 const { notice, showNotice, clearNotice } = useNotice();
 const { hasPermission } = useAuth();
@@ -554,7 +569,24 @@ const scoreTone = (score) => (score >= 95 ? 'success' : score >= 85 ? 'accent' :
 const TONE_TEXT = { success: 'text-success', accent: 'text-accent-text', warning: 'text-warning', danger: 'text-danger', info: 'text-info', neutral: 'text-ink-strong' };
 const toneText = (tone) => TONE_TEXT[tone] ?? TONE_TEXT.neutral;
 
-const levelLabel = (level) => (level === 'Non-Compliant' ? 'Fails WCAG A' : `No automated WCAG ${level} failures`);
+/** wcagLevel is the level the automated checks verified, not a conformance claim */
+const levelLabel = (level) =>
+  ({ 'Non-Compliant': 'Fails WCAG A', Unverified: 'Level A not verified: needs review' })[level] ?? `Automated WCAG ${level} checks pass`;
+
+const conformanceText = (conformance) => {
+  const parts = [];
+  if (conformance.status === 'failing') parts.push(conformance.noFailuresUpTo ? `Level ${conformance.noFailuresUpTo} has no automated failures; AA does.` : 'Level A criteria failed.');
+  if (conformance.reviewCriteria?.length) parts.push(`Needs a manual check: ${conformance.reviewCriteria.join(', ')}.`);
+  if (!conformance.rendered) parts.push('Checked as HTML without a browser, so contrast, focus visibility and target size were not tested and AA can\'t be verified.');
+  if (conformance.derived) parts.push('Older report: worked out from its stored summary.');
+  parts.push('Automated checks can\'t prove WCAG conformance.');
+  return parts.join(' ');
+};
+
+const pendingText = (pending) =>
+  pending.state === 'retry'
+    ? `Attempt ${pending.attempts} failed; retrying at ${formatDate(pending.retryAt)}`
+    : `Running (attempt ${pending.attempts})`;
 
 const formatCategoryName = (category) =>
   category
@@ -573,7 +605,7 @@ const toneCard = (tone) =>
     danger: 'border-danger-border bg-danger-bg',
     info: 'border-info-border bg-info-bg',
   })[tone] ?? 'border-line bg-surface-raised';
-const slaTone = (status) => ({ compliant: 'success', 'at-risk': 'warning', 'non-compliant': 'danger' })[status] ?? 'neutral';
+const slaTone = (status) => ({ compliant: 'success', 'at-risk': 'warning', 'needs-review': 'info', 'non-compliant': 'danger' })[status] ?? 'neutral';
 
 const formatDate = (value) => {
   const date = value ? new Date(value) : null;
@@ -935,13 +967,13 @@ const exportToPDF = () => {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
   doc.setFont(undefined, 'normal');
-  doc.text('Compliance Score', margin + 5, yPos + 7);
+  doc.text('Automated Score', margin + 5, yPos + 7);
   doc.setFontSize(18);
   doc.setFont(undefined, 'bold');
   doc.text(`${currentReport.value.complianceScore}%`, margin + 5, yPos + 16);
   doc.setFontSize(8);
   doc.setFont(undefined, 'normal');
-  const wcagDisplay = currentReport.value.wcagLevel === 'AA' ? 'WCAG 2.1 AA' : currentReport.value.wcagLevel === 'AAA' ? 'WCAG 2.1 AAA' : currentReport.value.wcagLevel === 'A' ? 'WCAG 2.1 A' : 'Non-Compliant';
+  const wcagDisplay = levelLabel(currentReport.value.wcagLevel);
   doc.text(wcagDisplay, margin + 5, yPos + 22);
 
   // Critical Issues Box

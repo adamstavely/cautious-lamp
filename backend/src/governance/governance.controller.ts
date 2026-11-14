@@ -13,6 +13,7 @@ import {
   strictBody,
 } from './governance.dto';
 import { RULE_CATEGORIES, RuleCategory, RuleDefinition } from './governance.types';
+import { GovernanceScanScheduler } from './governance.scheduler';
 import { RulesService } from './rules.service';
 import { ScanRequest, ScansService } from './scans.service';
 
@@ -46,6 +47,7 @@ export class GovernanceController {
   constructor(
     private readonly rules: RulesService,
     private readonly scans: ScansService,
+    private readonly scheduler: GovernanceScanScheduler,
   ) {}
 
   // ---------------------------------------------------------------- rules
@@ -113,14 +115,23 @@ export class GovernanceController {
     return this.scans.scan(this.toScanRequest(body, principal), principal);
   }
 
+  /** Only scans the caller may read: application scans of their workspaces' applications, design-system scans of components they can see */
   @Get('governance/scans')
-  listScans(@Query(strictBody()) query: ListScansQueryDto) {
-    return this.scans.list(query);
+  listScans(@Query(strictBody()) query: ListScansQueryDto, @Principal() principal: AuthPrincipal) {
+    return this.scans.list(query, principal);
   }
 
   @Get('governance/scans/:id')
-  getScan(@Param('id') id: string) {
-    return this.scans.get(id);
+  getScan(@Param('id') id: string, @Principal() principal: AuthPrincipal) {
+    return this.scans.get(id, principal);
+  }
+
+  /** Each scheduled application's latest occurrence: claimed, retry, completed or dead-letter */
+  @Get('governance/scheduled-scans')
+  @RequirePermission(Permission.ADMIN_GOVERNANCE)
+  async listScheduledScans() {
+    const occurrences = await this.scheduler.occurrences();
+    return { occurrences, total: occurrences.length };
   }
 
   /** Older path used by the CLI and MCP server; same body and result as POST governance/scans */

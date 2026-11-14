@@ -1,7 +1,15 @@
 import { evaluateSla } from './sla';
 
 const sla = { targetScore: 90, targetLevel: 'AA' as const, criticalIssuesThreshold: 0, highIssuesThreshold: 5 };
-const report = (patch: Partial<Parameters<typeof evaluateSla>[1]> = {}) => ({ complianceScore: 100, wcagLevel: 'AA' as const, criticalIssues: 0, highIssues: 0, ...patch });
+const verified = { noFailuresUpTo: 'AA' as const, verifiedUpTo: 'AA' as const };
+const report = (patch: Partial<NonNullable<Parameters<typeof evaluateSla>[1]>> = {}) => ({
+  complianceScore: 100,
+  wcagLevel: 'AA' as const,
+  criticalIssues: 0,
+  highIssues: 0,
+  conformance: verified,
+  ...patch,
+});
 
 describe('evaluateSla', () => {
   it('no SLA is "no-sla", not non-compliant; no report is "no-report"', () => {
@@ -15,8 +23,8 @@ describe('evaluateSla', () => {
 
   it('non-compliant below target score or level, or above the critical threshold', () => {
     expect(evaluateSla(sla, report({ complianceScore: 89 }))).toBe('non-compliant');
-    expect(evaluateSla(sla, report({ wcagLevel: 'A' }))).toBe('non-compliant');
-    expect(evaluateSla(sla, report({ wcagLevel: 'Non-Compliant' }))).toBe('non-compliant');
+    expect(evaluateSla(sla, report({ wcagLevel: 'A', conformance: { noFailuresUpTo: 'A', verifiedUpTo: 'A' } }))).toBe('non-compliant');
+    expect(evaluateSla(sla, report({ wcagLevel: 'Non-Compliant', conformance: { noFailuresUpTo: null, verifiedUpTo: null } }))).toBe('non-compliant');
     expect(evaluateSla(sla, report({ criticalIssues: 1 }))).toBe('non-compliant');
   });
 
@@ -36,5 +44,16 @@ describe('evaluateSla', () => {
 
   it('a higher level than required is fine', () => {
     expect(evaluateSla({ ...sla, targetLevel: 'A' }, report({ wcagLevel: 'AA' }))).toBe('compliant');
+  });
+
+  it('needs review, not compliant, when the target level was not verified', () => {
+    const unverified = { noFailuresUpTo: 'AA' as const, verifiedUpTo: 'A' as const };
+    expect(evaluateSla(sla, report({ wcagLevel: 'A', conformance: unverified }))).toBe('needs-review');
+    expect(evaluateSla({ ...sla, targetLevel: 'A' }, report({ wcagLevel: 'A', conformance: unverified }))).toBe('compliant');
+    // Known problems come first
+    expect(evaluateSla(sla, report({ highIssues: 6, conformance: unverified }))).toBe('at-risk');
+    expect(evaluateSla(sla, report({ complianceScore: 50, conformance: unverified }))).toBe('non-compliant');
+    // Without the breakdown nothing counts as verified
+    expect(evaluateSla(sla, report({ conformance: undefined }))).toBe('needs-review');
   });
 });

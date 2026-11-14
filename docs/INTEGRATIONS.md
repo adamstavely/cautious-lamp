@@ -38,6 +38,8 @@ Build IrisApp yourself (see the Dockerfile's `iris` stage for the steps, or IRIS
 | `IRIS_CONFIG_PATH` | IRIS's `config/appsettings.json`. Default: next to the executable. |
 | `IRIS_TIMEOUT_MS` | Per video. Default 10 minutes. |
 
+The limits on how many analyses run at once (`IRIS_MAX_CONCURRENT` and the rest) are in [IRIS_PHOTOSENSITIVITY_SERVICE.md](IRIS_PHOTOSENSITIVITY_SERVICE.md#limits).
+
 `GET /api/v1/photosensitivity/verify` and the analysis page say whether IRIS was found, without running it.
 
 ### How the backend runs it
@@ -46,9 +48,9 @@ IrisApp has no output-path option. It reads `appsettings.json` from its working 
 1. Creates a temporary working directory with IRIS's config.
 2. Moves the upload into it under a fixed name (`video.mp4`), so nothing from the client reaches the command line.
 3. Runs `IrisApp -v video.mp4 -p <0|1> -j 0`.
-4. Reads the CSV, then deletes the directory and the video.
+4. Reads the CSV, streamed and capped, then deletes the directory and the video.
 
-No CSV means a `422` with the reason from IRIS's log. No IRIS means a `503`.
+No CSV means a `422` with the reason from IRIS's log. No IRIS means a `503` (`IRIS_UNAVAILABLE`).
 
 Frame results follow IRIS: `0` pass, `1` pass with warning, `2` extended failure (2–3 flashes a second sustained over 5 seconds), `3` flash failure (more than 3 flashes in a second). Both `2` and `3` count as failures (`luminanceFailures`, `redFailures`). The extended ones are also counted separately (`luminanceExtendedFailures`, `redExtendedFailures`).
 

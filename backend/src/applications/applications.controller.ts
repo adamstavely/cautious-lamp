@@ -12,9 +12,11 @@ import { CAPABILITY_NAMES, CapabilityName } from './application.types';
 import { ApplicationsService } from './applications.service';
 
 /**
- * Registered applications (docs/WORKSPACES.md). Reads need any signed-in
- * principal; writes need admin:governance or the admin role in the
- * application's workspace (checked in the service).
+ * Registered applications (docs/WORKSPACES.md). Reads show applications
+ * without a workspace and those in the caller's workspaces (everything for
+ * admin:users and admin:governance); a hidden application is a 404. Writes
+ * need admin:governance or the admin role in the application's workspace
+ * (checked in the service).
  *
  * Literal `applications/...` routes are declared before `applications/:id` so
  * the parameter route doesn't swallow them.
@@ -30,6 +32,7 @@ export class ApplicationsController {
 
   @Get('applications')
   async list(
+    @Principal() principal: AuthPrincipal,
     @Query('teamId') teamId?: string,
     @Query('workspaceId') workspaceId?: string,
     @Query('capability') capability?: string,
@@ -37,7 +40,7 @@ export class ApplicationsController {
     if (capability !== undefined && !CAPABILITY_NAMES.includes(capability as CapabilityName)) {
       throw new BadRequestException(`capability must be one of ${CAPABILITY_NAMES.join(', ')}`);
     }
-    const applications = await this.applications.list({
+    const applications = await this.applications.listFor(principal, {
       teamId: teamId || undefined,
       workspaceId: workspaceId || undefined,
       capability: capability as CapabilityName | undefined,
@@ -51,24 +54,24 @@ export class ApplicationsController {
   }
 
   @Get('applications/version-tracking')
-  versionTracking() {
-    return this.applications.migrationPlanning();
+  versionTracking(@Principal() principal: AuthPrincipal) {
+    return this.applications.migrationPlanning(principal);
   }
 
   @Get('applications/needing-upgrade')
-  needingUpgrade(@Query('currentVersion') currentVersion?: string) {
-    return this.applications.needingUpgrade(currentVersion || undefined);
+  needingUpgrade(@Principal() principal: AuthPrincipal, @Query('currentVersion') currentVersion?: string) {
+    return this.applications.needingUpgrade(principal, currentVersion || undefined);
   }
 
   @Get('applications/affected-by-breaking-changes')
-  affectedByBreakingChanges(@Query('version') version?: string) {
+  affectedByBreakingChanges(@Principal() principal: AuthPrincipal, @Query('version') version?: string) {
     if (!version) throw new BadRequestException('version is required');
-    return this.applications.affectedByBreakingChanges(version);
+    return this.applications.affectedByBreakingChanges(principal, version);
   }
 
   @Get('applications/:id')
-  get(@Param('id') id: string) {
-    return this.applications.get(id);
+  get(@Principal() principal: AuthPrincipal, @Param('id') id: string) {
+    return this.applications.getFor(principal, id);
   }
 
   @Put('applications/:id')

@@ -9,7 +9,7 @@
 
 import axios from 'axios';
 import { isMockMode, mockAPI } from '../mockData.js';
-import { authHeaders, handleUnauthorized } from './auth.js';
+import { authHeaders, handlePasswordChangeRequired, handleUnauthorized } from './auth.js';
 
 export { authHeaders };
 
@@ -50,13 +50,18 @@ apiClient.interceptors.request.use(
  * A 401 means the token is missing, expired or revoked: sign out and go to
  * /login. Exceptions: a review that needs its password (401 passwordRequired),
  * and calls that opt out with `config.skipAuthRedirect`.
- * A 403 is left to the caller; apiErrorMessage() turns it into "You don't have access to this".
+ * A 403 PASSWORD_CHANGE_REQUIRED means the account is on a temporary password:
+ * go to /change-password. Any other 403 is left to the caller; apiErrorMessage()
+ * turns it into "You don't have access to this".
  */
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (errorStatus(error) === 401 && !isPasswordRequired(error) && !error?.config?.skipAuthRedirect) {
       handleUnauthorized();
+    }
+    if (errorStatus(error) === 403 && error?.response?.data?.code === 'PASSWORD_CHANGE_REQUIRED') {
+      handlePasswordChangeRequired();
     }
     console.error('API Error:', error.response?.data || error.message);
     return Promise.reject(error);

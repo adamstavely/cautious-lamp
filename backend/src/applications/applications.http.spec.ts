@@ -14,6 +14,7 @@ describe('Applications HTTP API', () => {
     ws = (await h.call('owner', 'POST', '/workspaces', { name: 'Apps team' })).body.id;
     await h.call('owner', 'POST', `/workspaces/${ws}/members`, { email: PEOPLE.admin.email, role: 'admin' });
     await h.call('owner', 'POST', `/workspaces/${ws}/members`, { email: PEOPLE.editor.email, role: 'editor' });
+    await h.call('owner', 'POST', `/workspaces/${ws}/members`, { email: PEOPLE.viewer.email, role: 'viewer' });
   });
 
   afterAll(async () => {
@@ -174,7 +175,8 @@ describe('Applications HTTP API', () => {
     const other = (await h.call('other', 'POST', '/workspaces', { name: 'Elsewhere' })).body.id;
     const app = (await register('admin', { name: 'Mover', workspaceId: ws })).body;
     expect((await h.call('admin', 'PATCH', `/applications/${app.id}/workspace`, { workspaceId: other })).status).toBe(403);
-    expect((await h.call('other', 'PATCH', `/applications/${app.id}/workspace`, { workspaceId: other })).status).toBe(403);
+    // other isn't a member of the application's workspace, so it can't even see the application
+    expect((await h.call('other', 'PATCH', `/applications/${app.id}/workspace`, { workspaceId: other })).status).toBe(404);
     await h.call('other', 'POST', `/workspaces/${other}/members`, { email: PEOPLE.admin.email, role: 'editor' });
     await h.call('other', 'PATCH', `/workspaces/${other}/members/${PEOPLE.admin.id}`, { role: 'admin' });
     const moved = await h.call('admin', 'PATCH', `/applications/${app.id}/workspace`, { workspaceId: other });
@@ -185,10 +187,45 @@ describe('Applications HTTP API', () => {
   });
 
   it('filters the list', async () => {
-    const res = await h.call({ credential: API_KEY }, 'GET', `/applications?workspaceId=${ws}&capability=governance`);
+    const res = await h.call('governance', 'GET', `/applications?workspaceId=${ws}&capability=governance`);
     expect(res.status).toBe(200);
     expect(res.body.count).toBe(res.body.applications.length);
     expect(res.body.applications.every((a: any) => a.workspaceId === ws && a.capabilities.governance.enabled)).toBe(true);
     expect((await h.call('viewer', 'GET', '/applications?capability=everything')).status).toBe(400);
+  });
+
+  it("shows only applications without a workspace and those in the caller's workspaces", async () => {
+    const mine = (await register('admin', { name: 'Members only', workspaceId: ws, designSystemVersion: '1.0.0' })).body;
+    const open = (await register('governance', { name: 'Everyone', designSystemVersion: '1.0.0' })).body;
+    const names = async (as: Parameters<typeof h.call>[0], route = '/applications') => {
+      const body = (await h.call(as, 'GET', route)).body;
+      return (body.applications ?? []).map((a: { name: string }) => a.name);
+    };
+
+    // Members of the workspace, and admin:users / admin:governance holders, see it
+    for (const as of ['viewer', 'editor', 'superuser', 'governance'] as const) expect(await names(as)).toEqual(expect.arrayContaining([mine.name, open.name]));
+    expect((await h.call('viewer', 'GET', `/applications/${mine.id}`)).status).toBe(200);
+
+    // Outsiders and API keys only see applications without a workspace
+    for (const as of ['outsider', { credential: API_KEY }] as const) {
+      const visible = await names(as);
+      expect(visible).toContain(open.name);
+      expect(visible).not.toContain(mine.name);
+      expect(await names(as, `/applications?workspaceId=${ws}`)).toEqual([]);
+      expect(await names(as, '/applications/needing-upgrade')).not.toContain(mine.name);
+      expect(await names(as, '/applications/affected-by-breaking-changes?version=3.0.0')).not.toContain(mine.name);
+      const tracking = (await h.call(as, 'GET', '/applications/version-tracking')).body;
+      expect(JSON.stringify(tracking)).not.toContain(mine.id);
+    }
+
+    // A hidden application answers exactly like a missing one, on reads and writes
+    const hidden = await h.call('outsider', 'GET', `/applications/${mine.id}`);
+    const missing = await h.call('outsider', 'GET', '/applications/app_000000000000000000000000');
+    expect([hidden.status, hidden.body.message]).toEqual([missing.status, missing.body.message]);
+    expect(hidden.status).toBe(404);
+    expect((await h.call('outsider', 'PUT', `/applications/${mine.id}`, { description: 'x' })).status).toBe(404);
+    expect((await h.call('outsider', 'DELETE', `/applications/${mine.id}`)).status).toBe(404);
+    // Readable but not writable is still a 403
+    expect((await h.call('viewer', 'PUT', `/applications/${mine.id}`, { description: 'x' })).status).toBe(403);
   });
 });

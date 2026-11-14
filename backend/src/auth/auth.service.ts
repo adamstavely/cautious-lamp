@@ -47,7 +47,7 @@ export function toMe(principal: AuthPrincipal): Me {
   };
 }
 
-function toUserPrincipal(state: AuthState): UserPrincipal {
+function toUserPrincipal(state: AuthState, expiresAt?: Date): UserPrincipal {
   return {
     type: 'user',
     id: state.user.id,
@@ -56,6 +56,7 @@ function toUserPrincipal(state: AuthState): UserPrincipal {
     roles: state.roles,
     permissions: new Set(state.permissions),
     mustChangePassword: state.user.mustChangePassword,
+    ...(expiresAt ? { expiresAt } : {}),
   };
 }
 
@@ -163,17 +164,17 @@ export class AuthService {
     const key = await this.keys.resolveApiKey(credential);
     if (key) {
       const scoped = (key.scopes ?? []).filter(isPermission);
-      return this.service(key.id, key.name, key.scopes?.length ? scoped : DEFAULT_SERVICE_PERMISSIONS);
+      return this.service(key.id, key.name, key.scopes?.length ? scoped : DEFAULT_SERVICE_PERMISSIONS, key.expiresAt);
     }
     const claims = await this.tokens.verify(credential);
     if (!claims) return null;
     const state = await this.users.getAuthState(claims.sub);
     if (!state || state.user.status !== 'active' || state.user.tokenVersion !== claims.tv) return null;
-    return toUserPrincipal(state);
+    return toUserPrincipal(state, claims.expiresAt);
   }
 
-  private service(id: string, name: string, permissions: readonly string[]): ServicePrincipal {
-    return { type: 'service', id, name, email: null, roles: [], permissions: new Set(permissions), mustChangePassword: false };
+  private service(id: string, name: string, permissions: readonly string[], expiresAt?: Date): ServicePrincipal {
+    return { type: 'service', id, name, email: null, roles: [], permissions: new Set(permissions), mustChangePassword: false, ...(expiresAt ? { expiresAt } : {}) };
   }
 
   private lockedError(until: Date): HttpException {

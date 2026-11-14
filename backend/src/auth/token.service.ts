@@ -47,13 +47,13 @@ export class TokenService {
     return { accessToken, expiresAt: new Date(exp * 1000).toISOString() };
   }
 
-  /** The claims of a valid, unexpired token, else null */
-  async verify(token: string): Promise<TokenClaims | null> {
+  /** The claims of a valid, unexpired token and when it expires, else null */
+  async verify(token: string): Promise<(TokenClaims & { expiresAt: Date }) | null> {
     if (!this.jwt) return null;
     try {
-      const payload = await this.jwt.verifyAsync<Partial<TokenClaims>>(token);
-      if (typeof payload.sub !== 'string' || typeof payload.tv !== 'number') return null;
-      return { sub: payload.sub, tv: payload.tv };
+      const payload = await this.jwt.verifyAsync<Partial<TokenClaims> & { exp?: number }>(token);
+      if (typeof payload.sub !== 'string' || typeof payload.tv !== 'number' || typeof payload.exp !== 'number') return null;
+      return { sub: payload.sub, tv: payload.tv, expiresAt: new Date(payload.exp * 1000) };
     } catch {
       return null;
     }

@@ -4,9 +4,10 @@ import { AnalyticsService } from './analytics.service';
 import { DesignSystemModule } from '../design-system/design-system.module';
 import { DesignSystemService } from '../design-system/design-system.service';
 import { ApplicationsModule } from '../applications/applications.module';
+import { WorkspaceCoreModule } from '../workspaces/workspace-core.module';
 
 @Module({
-  imports: [forwardRef(() => DesignSystemModule), ApplicationsModule],
+  imports: [forwardRef(() => DesignSystemModule), ApplicationsModule, WorkspaceCoreModule],
   controllers: [AnalyticsController],
   providers: [AnalyticsService],
   exports: [AnalyticsService],

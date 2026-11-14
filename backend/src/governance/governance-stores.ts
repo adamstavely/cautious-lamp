@@ -13,10 +13,23 @@ export interface MetaDoc {
   id: string;
   createdAt: string;
   value?: string;
-  /** Scheduled-scan claims: how the claimed run went */
+  /**
+   * Scheduled-scan occurrences (`scheduled-scan:<applicationId>`, value =
+   * the period): claimed (running until leaseUntil), retry (failed, next
+   * attempt at retryAt), completed, or dead-letter (failed every attempt).
+   * Markers written before states existed have only lastStatus.
+   */
+  state?: 'claimed' | 'retry' | 'completed' | 'dead-letter';
+  attempts?: number;
+  /** The claiming run; a run whose lease was taken over can't complete the occurrence */
+  token?: string;
+  leaseUntil?: string;
+  retryAt?: string;
   lastStatus?: 'running' | 'success' | 'failed';
   lastError?: string;
   lastScanId?: string;
+  /** Periods given up after the last attempt, newest first (at most 10) */
+  deadLetters?: Array<{ period: string; attempts: number; error: string; at: string }>;
   updatedAt?: string;
 }
 

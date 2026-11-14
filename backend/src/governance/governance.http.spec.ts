@@ -1,14 +1,17 @@
 import { readdirSync, readFileSync } from 'fs';
 import * as path from 'path';
+import { ServicePrincipal } from '../auth/principal';
+import { DesignSystemService } from '../design-system/design-system.service';
 import { InMemoryStore } from '../reviews/testing/in-memory-store';
 import { BUILTIN_RULES } from './builtin-rules';
 import { GovernanceController } from './governance.controller';
 import { META_STORE, MetaDoc, RULE_STORE, SCAN_STORE } from './governance-stores';
+import { GovernanceScanScheduler } from './governance.scheduler';
 import { GovernanceRule, ScanRecord } from './governance.types';
 import { RulesService } from './rules.service';
 import { ScansService } from './scans.service';
-import { APPLICATION_DIRECTORY, DESIGN_SYSTEM_SOURCE } from './sources';
-import { ADMIN_KEY, FakeApplications, FakeDesignSystem, authProviders, startApp } from './testing/fakes';
+import { APPLICATION_DIRECTORY, DESIGN_SYSTEM_SOURCE, DesignSystemServiceSource } from './sources';
+import { ADMIN_KEY, FakeApplications, FakeDesignSystem, authProviders, readScopeProviders, startApp, userKey, workspace } from './testing/fakes';
 
 const customRule = {
   name: 'No lorem ipsum',
@@ -48,10 +51,12 @@ describe('Governance HTTP API', () => {
       providers: [
         RulesService,
         ScansService,
+        GovernanceScanScheduler,
         { provide: RULE_STORE, useValue: ruleStore },
         { provide: SCAN_STORE, useValue: scanStore },
         { provide: META_STORE, useValue: metaStore },
         { provide: APPLICATION_DIRECTORY, useValue: applications },
+        ...readScopeProviders(),
         { provide: DESIGN_SYSTEM_SOURCE, useValue: designSystem },
         ...authProviders,
       ],
@@ -222,13 +227,17 @@ describe('Governance HTTP API', () => {
     expect(scan.rules.find((r: { id: string }) => r.id === 'ds-important')).toMatchObject({ version: expect.any(Number) });
     expect(scan.ruleResults.find((r: { ruleId: string }) => r.ruleId === 'ds-component-import')).toMatchObject({ outcome: 'skipped' });
     expect(scan.checks.find((c: { ruleId: string }) => c.ruleId === 'a11y-image-alt')).toMatchObject({ file: 'index.html', line: 1, status: 'error' });
-    expect(applications.scans.map((s) => s.id)).toContain('app-1');
+    expect(applications.scans).toContainEqual(expect.objectContaining({ id: 'app-1', kind: 'governance' }));
+    expect(scan.access).toEqual({ workspaceId: null });
 
-    const history = await call('GET', '/governance/scans?applicationId=app-1');
+    const history = await admin('GET', '/governance/scans?applicationId=app-1');
     expect(history.body.scans[0]).toMatchObject({ id: scan.id, summary: scan.summary });
-    const stored = await call('GET', `/governance/scans/${scan.id}`);
+    const stored = await admin('GET', `/governance/scans/${scan.id}`);
     expect(stored.body.checks).toHaveLength(scan.checks.length);
-    expect((await call('GET', '/governance/scans/scan-nope')).status).toBe(404);
+    expect((await admin('GET', '/governance/scans/scan-nope')).status).toBe(404);
+    // app-1 has no workspace: its evidence is for governance admins only
+    expect((await call('GET', '/governance/scans?applicationId=app-1')).body).toEqual({ scans: [], total: 0 });
+    expect((await call('GET', `/governance/scans/${scan.id}`)).status).toBe(404);
   }, 30000);
 
   it('scans the design system itself with read access (the MCP server path)', async () => {
@@ -248,4 +257,121 @@ describe('Governance HTTP API', () => {
     expect(res.body.rules.length).toBeGreaterThan(0);
     expect(JSON.stringify(res.body)).not.toMatch(/scannerCode/);
   });
+});
+
+/**
+ * Scans and scan history respect workspace boundaries (docs/GOVERNANCE.md),
+ * through the real guard, ScansService, DesignSystemService and
+ * ComponentAccessService. alice is a member of ws_alpha, bob of ws_beta.
+ */
+describe('Governance scan visibility', () => {
+  const scanStore = new InMemoryStore<ScanRecord>();
+  const applications = new FakeApplications([
+    { id: 'app-alpha', name: 'Alpha app', workspaceId: 'ws_alpha' },
+    { id: 'app-none', name: 'No workspace', workspaceId: null },
+  ]);
+  const naming = { scope: 'design-system', ruleIds: ['ds-component-naming'] };
+  let h: Awaited<ReturnType<typeof startApp>>;
+  const as = (name: string, method: string, route: string, body?: unknown) => h.call(method, route, body, userKey(name));
+  const visibleIds = async (name: string, query = '') => (await as(name, 'GET', `/governance/scans${query}`)).body.scans.map((scan: ScanRecord) => scan.id);
+
+  beforeAll(async () => {
+    h = await startApp({
+      controllers: [GovernanceController],
+      providers: [
+        RulesService,
+        ScansService,
+        GovernanceScanScheduler,
+        { provide: RULE_STORE, useValue: new InMemoryStore<GovernanceRule>() },
+        { provide: SCAN_STORE, useValue: scanStore },
+        { provide: META_STORE, useValue: new InMemoryStore<MetaDoc>() },
+        { provide: APPLICATION_DIRECTORY, useValue: applications },
+        ...readScopeProviders([workspace('ws_alpha', 'alice'), workspace('ws_beta', 'bob')]),
+        { provide: DESIGN_SYSTEM_SOURCE, inject: [DesignSystemService], useFactory: (ds: DesignSystemService) => new DesignSystemServiceSource(ds) },
+        ...authProviders,
+      ],
+    });
+    const designSystem = h.moduleRef.get(DesignSystemService);
+    // Not PascalCase, so the naming rule reports it by name
+    designSystem.createComponent({ id: 'alpha-secret', name: 'alphaSecret', description: 'Alpha only', workspaceId: 'ws_alpha' });
+  });
+
+  afterAll(async () => {
+    await h.app.close();
+  });
+
+  it("leaves a private component out of an outsider's design-system scan", async () => {
+    const bob = await as('bob', 'POST', '/governance/scans', naming);
+    expect(bob.status).toBe(201);
+    expect(JSON.stringify(bob.body)).not.toMatch(/alphaSecret/);
+    expect(bob.body.access).toEqual({ componentAudiences: [] });
+
+    const alice = await as('alice', 'POST', '/compliance/scan', naming);
+    expect(alice.status).toBe(200);
+    expect(alice.body.checks.map((c: { component?: string }) => c.component)).toContain('alphaSecret');
+    expect(alice.body.access).toEqual({ componentAudiences: [['ws_alpha']] });
+  }, 30000);
+
+  it('keeps stored design-system scans from readers who cannot see every component in them', async () => {
+    const alice = await as('alice', 'POST', '/governance/scans', naming);
+    expect((await as('bob', 'GET', `/governance/scans/${alice.body.id}`)).status).toBe(404);
+    expect(await visibleIds('bob')).not.toContain(alice.body.id);
+    // admin:governance doesn't open workspace components; admin:users does
+    expect((await as('gov', 'GET', `/governance/scans/${alice.body.id}`)).status).toBe(404);
+    expect((await as('super', 'GET', `/governance/scans/${alice.body.id}`)).status).toBe(200);
+    expect((await as('alice', 'GET', `/governance/scans/${alice.body.id}`)).body.checks.length).toBe(alice.body.checks.length);
+
+    const bob = await as('bob', 'POST', '/governance/scans', naming);
+    expect(await visibleIds('alice')).toEqual(expect.arrayContaining([alice.body.id, bob.body.id]));
+  }, 30000);
+
+  it("scopes application scan history to the application's workspace", async () => {
+    const scan = await as('gov', 'POST', '/governance/scans', { scope: 'application', applicationId: 'app-alpha', codebase: { html: '<img src="x.png">' }, ruleIds: ['a11y-image-alt'] });
+    expect(scan.status).toBe(201);
+    expect(scan.body.access).toEqual({ workspaceId: 'ws_alpha' });
+    const unowned = await as('gov', 'POST', '/governance/scans', { scope: 'application', applicationId: 'app-none', codebase: { html: '<img src="x.png">' }, ruleIds: ['a11y-image-alt'] });
+
+    expect(await visibleIds('alice', '?scope=application')).toEqual([scan.body.id]);
+    expect((await as('alice', 'GET', `/governance/scans/${scan.body.id}`)).status).toBe(200);
+    expect((await as('alice', 'GET', `/governance/scans/${unowned.body.id}`)).status).toBe(404);
+    expect(await visibleIds('bob', '?scope=application')).toEqual([]);
+    expect((await as('bob', 'GET', '/governance/scans?applicationId=app-alpha')).body.total).toBe(0);
+    expect((await as('bob', 'GET', `/governance/scans/${scan.body.id}`)).status).toBe(404);
+    expect(await visibleIds('gov', '?scope=application')).toEqual(expect.arrayContaining([scan.body.id, unowned.body.id]));
+  });
+
+  it('reads scans stored before access metadata existed as admin-only', async () => {
+    const legacy = (id: string, scope: 'application' | 'design-system'): ScanRecord => ({
+      id,
+      scope,
+      source: scope === 'application' ? 'codebase' : 'design-system',
+      ...(scope === 'application' ? { applicationId: 'app-alpha', applicationName: 'Alpha app' } : {}),
+      createdAt: '2026-01-01T00:00:00.000Z',
+      createdBy: { type: 'user', id: 'usr_old', name: 'old' },
+      rules: [],
+      ruleResults: [],
+      summary: { passed: 0, warnings: 0, errors: 0, info: 0, total: 0 },
+      checks: [],
+      truncated: false,
+    });
+    scanStore.forceWrite(legacy('scan-legacy-app', 'application'));
+    scanStore.forceWrite(legacy('scan-legacy-ds', 'design-system'));
+
+    expect((await as('alice', 'GET', '/governance/scans/scan-legacy-app')).status).toBe(404);
+    expect((await as('gov', 'GET', '/governance/scans/scan-legacy-app')).status).toBe(200);
+    expect((await as('alice', 'GET', '/governance/scans/scan-legacy-ds')).status).toBe(404);
+    expect((await as('gov', 'GET', '/governance/scans/scan-legacy-ds')).status).toBe(404);
+    expect((await as('super', 'GET', '/governance/scans/scan-legacy-ds')).status).toBe(200);
+  });
+
+  it('scans every component for the system, and stores who may read the result', async () => {
+    const system: ServicePrincipal = { type: 'service', id: 'governance-scheduler', name: 'Scheduler', email: null, roles: [], permissions: new Set(), mustChangePassword: false };
+    const scans = h.moduleRef.get(ScansService);
+    const scan = await scans.scan({ scope: 'design-system', ruleIds: ['ds-component-naming'] }, system, { system: true });
+    expect(scan.checks.map((c) => c.component)).toContain('alphaSecret');
+    // Without `system`, the same service principal reads no workspace components
+    expect(JSON.stringify(await scans.scan({ scope: 'design-system', ruleIds: ['ds-component-naming'] }, system))).not.toMatch(/alphaSecret/);
+    expect((await as('bob', 'GET', `/governance/scans/${scan.id}`)).status).toBe(404);
+    expect((await as('alice', 'GET', `/governance/scans/${scan.id}`)).status).toBe(200);
+  }, 30000);
 });

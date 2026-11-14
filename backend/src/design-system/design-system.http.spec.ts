@@ -19,8 +19,10 @@ const MEMBER_PERMISSIONS = [Permission.COMPONENT_VIEW, Permission.COMPONENT_CREA
 
 /** Who the tests sign in as: the token is `tok-<name>` */
 const PEOPLE: Record<string, string[]> = {
-  alice: MEMBER_PERMISSIONS, // member of ws_alpha
-  bob: MEMBER_PERMISSIONS, // member of ws_beta only
+  alice: MEMBER_PERMISSIONS, // owner of ws_alpha
+  bob: MEMBER_PERMISSIONS, // owner of ws_beta only
+  ed: MEMBER_PERMISSIONS, // editor in ws_alpha
+  vic: MEMBER_PERMISSIONS, // viewer in ws_alpha
   banners: [Permission.ADMIN_BANNERS],
   perf: [Permission.ADMIN_PERFORMANCE_ANALYSIS],
   roadmap: [Permission.ROADMAP_EDIT],
@@ -38,12 +40,13 @@ const authStub = {
   },
 };
 
-function workspace(id: string, memberId: string): WorkspaceDoc {
+function workspace(id: string, memberId: string, others: Array<[string, 'admin' | 'editor' | 'viewer']> = []): WorkspaceDoc {
+  const members: Array<[string, string]> = [[memberId, 'owner'], ...others];
   return {
     id,
     name: id,
-    members: [{ userId: memberId, email: `${memberId}@example.com`, name: memberId, role: 'owner' }],
-    memberIds: [memberId],
+    members: members.map(([userId, role]) => ({ userId, email: `${userId}@example.com`, name: userId, role })),
+    memberIds: members.map(([userId]) => userId),
   } as unknown as WorkspaceDoc;
 }
 
@@ -71,7 +74,7 @@ describe('Design system HTTP API', () => {
 
   beforeAll(async () => {
     const workspaces = new InMemoryQueryableStore<WorkspaceDoc>();
-    await workspaces.create(workspace('ws_alpha', 'usr_alice'));
+    await workspaces.create(workspace('ws_alpha', 'usr_alice', [['usr_ed', 'editor'], ['usr_vic', 'viewer']]));
     await workspaces.create(workspace('ws_beta', 'usr_bob'));
 
     const moduleRef = await Test.createTestingModule({
@@ -158,6 +161,47 @@ describe('Design system HTTP API', () => {
       expect(created.status).toBe(201);
       expect(created.body).toMatchObject({ workspaceId: 'ws_alpha', isGlobal: false });
       expect(await componentIds('bob')).not.toContain('alpha-made');
+    });
+  });
+
+  describe('changing components (variants)', () => {
+    const variant = (name: string) => ({ name, properties: { padding: '4' } });
+    const save = (as: string, id: string, name = 'compact') => call('POST', `/components/${id}/variants`, { as, body: variant(name) });
+    const remove = (as: string, id: string, name = 'compact') => call('DELETE', `/components/${id}/variants/${name}`, { as });
+
+    it("needs the editor role in the component's workspace, not just component:edit", async () => {
+      // A viewer can read the component but not change it
+      expect((await call('GET', '/components/alpha-secret/variants', { as: 'vic' })).status).toBe(200);
+      const denied = await save('vic', 'alpha-secret');
+      expect(denied.status).toBe(403);
+      expect(denied.body.message).toBe("Requires the editor role in the component's workspace");
+
+      expect((await save('ed', 'alpha-secret')).status).toBe(201);
+      expect((await save('alice', 'alpha-secret', 'roomy')).status).toBe(201);
+      expect((await remove('vic', 'alpha-secret')).status).toBe(403);
+      expect(designSystem.getComponentVariants('alpha-secret').map((v) => v.name)).toEqual(['compact', 'roomy']);
+      expect((await remove('ed', 'alpha-secret')).status).toBe(200);
+      expect(designSystem.getComponentVariants('alpha-secret').map((v) => v.name)).toEqual(['roomy']);
+    });
+
+    it('is refused through a workspace the component is shared with, and for global components', async () => {
+      expect((await save('alice', 'alpha-shared')).status).toBe(201);
+      expect((await save('alice', 'alpha-global')).status).toBe(201);
+      for (const id of ['alpha-shared', 'alpha-global']) {
+        expect((await call('GET', `/components/${id}/variants`, { as: 'bob' })).status).toBe(200);
+        expect((await save('bob', id, 'hijacked')).status).toBe(403);
+        expect((await remove('bob', id)).status).toBe(403);
+        expect(designSystem.getComponentVariants(id).map((v) => v.name)).toEqual(['compact']);
+      }
+      // admin:users holders act as owner in every workspace, but still need component:edit
+      expect((await save('superuser', 'alpha-shared')).status).toBe(403);
+    });
+
+    it('keeps library components (no workspace) open to component:edit holders', async () => {
+      const library = designSystem.getAllComponents().find((c) => !c.workspaceId)!.id;
+      expect((await save('bob', library)).status).toBe(201);
+      expect((await remove('vic', library)).status).toBe(200);
+      expect((await save('roadmap', library)).status).toBe(403); // no component:edit
     });
   });
 

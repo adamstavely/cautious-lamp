@@ -1,7 +1,9 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, OnModuleDestroy, PayloadTooLargeException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { AuthPrincipal } from '../auth/principal';
-import { DocumentStore } from '../reviews/document-store';
+import { ComponentReadScope, canReadComponent } from '../design-system/component-access.service';
+import { DocumentStore, DuplicateDocumentError } from '../reviews/document-store';
+import { READ_SCOPE, ReadScopeResolver, SYSTEM_SCOPE, canReadApplicationEvidence, canReadComponentEvidence, componentAudiences } from './evidence-access';
 import { SCAN_STORE } from './governance-stores';
 import { GovernanceRule, LIMITS, RuleDefinition, ScanActor, ScanInput, ScanRecord, ScanScope } from './governance.types';
 import { RegexRunner } from './regex-safety';
@@ -25,6 +27,21 @@ export interface ScanRequest {
   url?: string;
   ruleIds?: string[];
   categories?: string[];
+}
+
+export interface ScanOptions {
+  /**
+   * An internal caller (the scheduler) scanning on the system's behalf: a
+   * design-system scan covers every component, not just those the principal
+   * can read. Never set from a request.
+   */
+  system?: boolean;
+  /**
+   * A fixed id for the stored scan, so a retried scheduled occurrence stores
+   * one scan however many times it runs. If a scan with this id is already
+   * stored, it is returned and nothing runs.
+   */
+  id?: string;
 }
 
 /** A stored scan plus the flat counts older clients (CLI, MCP server) read */
@@ -53,7 +70,11 @@ function actor(principal: AuthPrincipal): ScanActor {
     : { type: 'service', id: principal.id, name: principal.name };
 }
 
-/** Runs scans, stores every result, and serves scan history */
+/**
+ * Runs scans, stores every result, and serves scan history. A design-system
+ * scan only covers the components the caller can read, and every stored scan
+ * records who may read it (evidence-access.ts), which history and detail reads enforce.
+ */
 @Injectable()
 export class ScansService implements OnModuleDestroy {
   readonly runner = new RegexRunner();
@@ -63,20 +84,25 @@ export class ScansService implements OnModuleDestroy {
     @Inject(SCAN_STORE) private readonly store: DocumentStore<ScanRecord>,
     @Inject(APPLICATION_DIRECTORY) private readonly applications: ApplicationDirectory,
     @Inject(DESIGN_SYSTEM_SOURCE) private readonly designSystem: DesignSystemSource,
+    @Inject(READ_SCOPE) private readonly readScope: ReadScopeResolver,
   ) {}
 
   async onModuleDestroy(): Promise<void> {
     await this.runner.close();
   }
 
-  async scan(request: ScanRequest, principal: AuthPrincipal): Promise<ScanResponse> {
+  async scan(request: ScanRequest, principal: AuthPrincipal, options: ScanOptions = {}): Promise<ScanResponse> {
+    if (options.id) {
+      const existing = await this.store.get(options.id);
+      if (existing) return this.toResponse(existing.doc);
+    }
     // An application scan without explicit rules runs the rules the application picked
     const application = request.scope === 'design-system' || !request.applicationId ? null : await this.applications.get(request.applicationId);
     const picked = !request.ruleIds?.length && application?.governanceRules?.length ? application.governanceRules : null;
     const rules = await this.selectRules(picked ?? request.ruleIds, request.categories, picked !== null);
     const tokens = await this.designSystem.tokens();
     const record: ScanRecord = {
-      id: `scan-${randomUUID()}`,
+      id: options.id ?? `scan-${randomUUID()}`,
       scope: request.scope,
       source: 'design-system',
       createdAt: new Date().toISOString(),
@@ -91,21 +117,33 @@ export class ScansService implements OnModuleDestroy {
     let inputs: ScanInput[];
     if (request.scope === 'design-system') {
       if (request.codebase || request.url) throw new BadRequestException('The design-system scope scans the design system itself; codebase and url are not used');
-      const components = await this.designSystem.components();
+      // Only what the caller could read anyway: private workspace components stay out of an outsider's results
+      const scope = options.system ? SYSTEM_SCOPE : await this.readScope.scopeFor(principal);
+      const components = (await this.designSystem.components()).filter((component) => canReadComponent(scope, component));
       if (components.length === 0) throw new BadRequestException('The design system has no components to scan');
+      record.access = { componentAudiences: componentAudiences(components) };
       inputs = components.map(componentToInput);
     } else {
       if (!request.applicationId) throw new BadRequestException('applicationId is required for an application scan');
       if (!application) throw new NotFoundException(`Application ${request.applicationId} not found`);
       record.applicationId = application.id;
       record.applicationName = application.name;
+      record.access = { workspaceId: application.workspaceId ?? null };
       inputs = [await this.applicationInput(request, record)];
     }
 
     const result = await runRules(rules, inputs, { runner: this.runner, tokens }, { application: record.applicationName });
     Object.assign(record, result);
-    await this.store.create(record);
-    if (record.applicationId) await this.applications.recordScan(record.applicationId, new Date(record.createdAt));
+    try {
+      await this.store.create(record);
+    } catch (error) {
+      // Another run of the same scheduled occurrence stored it first: keep that one
+      if (!(options.id && error instanceof DuplicateDocumentError)) throw error;
+      const stored = await this.store.get(options.id);
+      if (stored) return this.toResponse(stored.doc);
+      throw error;
+    }
+    if (record.applicationId) await this.applications.recordScan(record.applicationId, new Date(record.createdAt), 'governance');
     return this.toResponse(record);
   }
 
@@ -131,18 +169,26 @@ export class ScansService implements OnModuleDestroy {
     return { outcome: result.outcome, reason: result.reason, checks: run.checks, summary: run.summary };
   }
 
-  async list(filter: { applicationId?: string; scope?: ScanScope; limit?: number }) {
+  /** Scan history the principal may read (`total` counts only those) */
+  async list(filter: { applicationId?: string; scope?: ScanScope; limit?: number }, principal: AuthPrincipal) {
     let scans = await this.store.list({ excludes: ['checks', 'ruleResults'] });
+    const scope = await this.readScope.scopeFor(principal);
+    scans = scans.filter((scan) => this.canRead(scan, principal, scope));
     if (filter.applicationId) scans = scans.filter((scan) => scan.applicationId === filter.applicationId);
     if (filter.scope) scans = scans.filter((scan) => scan.scope === filter.scope);
     scans.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     return { scans: scans.slice(0, filter.limit ?? 50), total: scans.length };
   }
 
-  async get(id: string): Promise<ScanResponse> {
+  /** A scan the principal may not read is a 404, like a missing one, so ids can't be probed */
+  async get(id: string, principal: AuthPrincipal): Promise<ScanResponse> {
     const found = await this.store.get(id);
-    if (!found) throw new NotFoundException(`Scan ${id} not found`);
+    if (!found || !this.canRead(found.doc, principal, await this.readScope.scopeFor(principal))) throw new NotFoundException(`Scan ${id} not found`);
     return this.toResponse(found.doc);
+  }
+
+  private canRead(scan: ScanRecord, principal: AuthPrincipal, scope: ComponentReadScope): boolean {
+    return scan.scope === 'application' ? canReadApplicationEvidence(principal, scope, scan.access) : canReadComponentEvidence(scope, scan.access);
   }
 
   /** `fromApplication`: ids saved on an application, where rules deleted or disabled since are skipped rather than refused */

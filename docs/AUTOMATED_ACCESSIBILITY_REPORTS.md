@@ -1,5 +1,7 @@
 # Automated Accessibility Reports
 
+> This page describes the original feature and is partly out of date. The current behaviour (axe-core engine, score, `conformance`, levels, SLA statuses, schedules with leases, retries and dead letters, and who can read reports) is in [GOVERNANCE.md](GOVERNANCE.md#accessibility-reports).
+
 ## Overview
 
 The Automated Accessibility Reports feature provides comprehensive WCAG compliance monitoring, trend tracking, and prioritized fix recommendations for applications registered with the design system.
@@ -12,8 +14,9 @@ The Automated Accessibility Reports feature provides comprehensive WCAG complian
 - **Comprehensive scanning**: Integrates with existing governance rules engine to scan for accessibility issues
 
 ### 2. WCAG Compliance Metrics
-- **Compliance Score**: 0-100 score based on issue severity
-- **WCAG Level**: Automatically determines compliance level (A, AA, AAA, or Non-Compliant)
+- **Compliance Score**: 0-100 automated scan score: 100 minus a penalty per failing A/AA criterion. Criteria that need manual review don't lower it.
+- **WCAG Level**: The level the automated checks verified (`Non-Compliant`, `Unverified`, `A` or `AA`). Criteria that need review, or an HTML-only scan, keep it below AA; automated checks never certify conformance.
+- **Conformance status**: `failing`, `needs-review` or `no-automated-failures`, with the criteria that need a manual check
 - **Issue Breakdown**: Categorizes issues by:
   - Critical issues (blocking accessibility)
   - Serious issues (significant impact)
@@ -119,8 +122,9 @@ Tracks issues by category:
   generatedAt: Date;
   scheduled: boolean;
   scheduleId?: string;
-  wcagLevel: 'A' | 'AA' | 'AAA' | 'Non-Compliant';
-  complianceScore: number; // 0-100
+  wcagLevel: 'A' | 'AA' | 'Non-Compliant' | 'Unverified'; // verified level, never a conformance claim
+  conformance: { status: 'failing' | 'needs-review' | 'no-automated-failures'; noFailuresUpTo; verifiedUpTo; reviewCriteria: string[]; rendered: boolean };
+  complianceScore: number; // 0-100, automated failures only
   totalIssues: number;
   criticalIssues: number;
   seriousIssues: number;
@@ -168,7 +172,10 @@ Tracks issues by category:
   enabled: boolean;
   lastRun?: Date;
   nextRun: Date;
-  recipients: string[]; // Email addresses
+  lastStatus?: 'success' | 'failed' | 'dead-letter';
+  pending?: { occurrence; state: 'claimed' | 'retry'; attempts; leaseUntil?; retryAt? };
+  deadLetters?: { occurrence; attempts; error; at }[];
+  // recipients (email) is no longer supported
 }
 ```
 

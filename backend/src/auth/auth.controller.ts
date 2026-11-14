@@ -2,14 +2,17 @@ import { Body, Controller, Get, HttpCode, Post, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService, LoginResult, RequestInfo, toMe } from './auth.service';
 import { ChangePasswordDto, LoginDto, strictBody } from './auth.dto';
-import { AuthPrincipal, Principal, Public, requireUser } from './principal';
+import { AllowPasswordChangePending, AuthPrincipal, Principal, Public, requireUser } from './principal';
 import { Me } from './user.types';
 
 function requestInfo(req: Request): RequestInfo {
   return { ip: req.ip, userAgent: req.headers['user-agent'] };
 }
 
-/** Sign-in for people (docs/AUTH.md) */
+/**
+ * Sign-in for people (docs/AUTH.md). `me`, `logout` and `change-password` are
+ * the only routes a user on a temporary password can call.
+ */
 @Controller('api/v1/auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
@@ -21,17 +24,20 @@ export class AuthController {
     return this.auth.login(body.email, body.password, requestInfo(req));
   }
 
+  @AllowPasswordChangePending()
   @Post('logout')
   @HttpCode(204)
   async logout(@Principal() principal: AuthPrincipal, @Req() req: Request): Promise<void> {
     await this.auth.logout(requireUser(principal), requestInfo(req));
   }
 
+  @AllowPasswordChangePending()
   @Get('me')
   me(@Principal() principal: AuthPrincipal): Me {
     return toMe(principal);
   }
 
+  @AllowPasswordChangePending()
   @Post('change-password')
   @HttpCode(204)
   async changePassword(

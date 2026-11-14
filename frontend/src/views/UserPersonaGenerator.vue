@@ -233,7 +233,18 @@
               </div>
               
               <div class="prose max-w-none" :class="isDarkMode ? 'prose-invert' : ''">
-                <div class="persona-preview" v-html="generatedPersonaHTML"></div>
+                <!-- Text interpolation only: the fields are whatever the user pasted -->
+                <div class="persona-preview">
+                  <div class="persona-card">
+                    <div class="persona-header mb-6">
+                      <h2 class="text-3xl font-bold mb-2">{{ form.name || 'Persona Name' }}</h2>
+                    </div>
+                    <div v-for="section in personaSections" :key="section.key" class="mb-6">
+                      <h3 class="text-xl font-semibold mb-2">{{ section.title }}</h3>
+                      <p>{{ section.text }}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -262,56 +273,20 @@ const form = reactive({
   currentExperience: ''
 });
 
-const generatedPersonaHTML = computed(() => {
-  if (!personaGenerated.value) return '';
-  
-  return `
-    <div class="persona-card">
-      <div class="persona-header mb-6">
-        <h2 class="text-3xl font-bold mb-2">${form.name || 'Persona Name'}</h2>
-      </div>
-      
-      ${form.howTheySeeThemselves ? `
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold mb-2">How They See Themselves</h3>
-          <p>${form.howTheySeeThemselves}</p>
-        </div>
-      ` : ''}
-      
-      ${form.greatEnablers ? `
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold mb-2">Great Enablers</h3>
-          <p>${form.greatEnablers}</p>
-        </div>
-      ` : ''}
-      
-      ${form.greatestPainPoints ? `
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold mb-2">Greatest Pain Points</h3>
-          <p>${form.greatestPainPoints}</p>
-        </div>
-      ` : ''}
-      
-      ${form.howTheyDescribedNeeds ? `
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold mb-2">How They Described Their Needs</h3>
-          <p>${form.howTheyDescribedNeeds}</p>
-        </div>
-      ` : ''}
-      
-      ${form.currentExperience ? `
-        <div class="mb-6">
-          <h3 class="text-xl font-semibold mb-2">Current Experience</h3>
-          <p>${form.currentExperience}</p>
-        </div>
-      ` : ''}
-    </div>
-  `;
-});
+const PERSONA_SECTIONS = [
+  { key: 'howTheySeeThemselves', title: 'How They See Themselves' },
+  { key: 'greatEnablers', title: 'Great Enablers' },
+  { key: 'greatestPainPoints', title: 'Greatest Pain Points' },
+  { key: 'howTheyDescribedNeeds', title: 'How They Described Their Needs' },
+  { key: 'currentExperience', title: 'Current Experience' },
+];
 
-
-
-
+// The filled-in sections, shown as plain text in the preview
+const personaSections = computed(() =>
+  personaGenerated.value
+    ? PERSONA_SECTIONS.filter(({ key }) => form[key]).map(({ key, title }) => ({ key, title, text: form[key] }))
+    : [],
+);
 
 const resetForm = () => {
   Object.keys(form).forEach(key => {

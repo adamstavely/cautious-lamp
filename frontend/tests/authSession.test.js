@@ -128,6 +128,15 @@ describe('auth session expiry', () => {
   });
 });
 
+describe('password change required', () => {
+  it('sends a temporary-password session to /change-password', async () => {
+    await auth.login('a@b.c', 'pw');
+    auth.handlePasswordChangeRequired();
+    expect(auth.authState.user.mustChangePassword).toBe(true);
+    expect(replaced).toContainEqual({ path: '/change-password' });
+  });
+});
+
 describe('automatic development sign-in', () => {
   const loginCalls = () => calls.filter((url) => url.endsWith('/auth/login')).length;
 

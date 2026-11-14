@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { AuthPrincipal } from '../auth/principal';
 import { WorkspaceAccessService, isWorkspaceSuperuser } from '../workspaces/workspace-access.service';
 import { Component, DesignSystemService } from './design-system.service';
@@ -20,9 +20,10 @@ export function canReadComponent(scope: ComponentReadScope, component: Pick<Comp
 }
 
 /**
- * The one place component reads are authorized. Every route that returns
- * components (list, detail, status, variants, metadata, search, AI chat) goes
- * through here, so workspace components don't leak through global routes.
+ * The one place component reads and changes are authorized. Every route that
+ * returns components (list, detail, status, variants, metadata, search, AI
+ * chat) goes through here, so workspace components don't leak through global
+ * routes; every route that changes one uses `getForWrite`.
  */
 @Injectable()
 export class ComponentAccessService {
@@ -55,6 +56,22 @@ export class ComponentAccessService {
     const component = this.designSystem.getComponentById(id);
     if (!component || !canReadComponent(await this.scopeFor(principal), component)) {
       throw new BadRequestException(`Component '${id}' not found`);
+    }
+    return component;
+  }
+
+  /**
+   * The component, if the principal may change it (docs/AUTH.md, "Components
+   * and workspaces"). Reading is not enough: a workspace's component can only be
+   * changed by an editor of that workspace (or an `admin:users` holder), never
+   * through a workspace it is shared with or because it is global. Library
+   * components (no workspace) are left to the route's permission
+   * (`component:edit`). Hidden components get the same error as missing ones.
+   */
+  async getForWrite(principal: AuthPrincipal, id: string): Promise<Component> {
+    const component = await this.get(principal, id);
+    if (component.workspaceId && !(await this.workspaces.has(principal, component.workspaceId, 'editor'))) {
+      throw new ForbiddenException("Requires the editor role in the component's workspace");
     }
     return component;
   }

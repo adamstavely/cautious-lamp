@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import type { ApplicationsService } from '../applications/applications.service';
+import type { ApplicationsService, ScanKind } from '../applications/applications.service';
 import type { DesignSystemService } from '../design-system/design-system.service';
 import { DesignComponent, DesignToken } from './governance.types';
 
@@ -14,8 +14,12 @@ export interface GovernanceApplication {
   governanceEnabled?: boolean;
   /** daily and weekly are run by GovernanceScanScheduler; anything else is manual */
   scanSchedule?: string;
-  /** Last governance scan (ISO date) */
+  /** Last governance scan (ISO date). Accessibility reports don't set it. */
   lastScan?: string;
+  /** Last accessibility report (ISO date) */
+  lastAccessibilityReport?: string;
+  /** Owning workspace; null when it has none. Decides who reads its scans and reports (evidence-access.ts). */
+  workspaceId?: string | null;
 }
 
 /**
@@ -27,14 +31,19 @@ export interface GovernanceApplication {
 export interface ApplicationDirectory {
   get(id: string): Promise<GovernanceApplication | null>;
   list(): Promise<GovernanceApplication[]>;
-  /** Records a completed scan (sets the application's lastScanned) */
-  recordScan(id: string, at: Date): Promise<void>;
+  /**
+   * Records a completed scan of one kind: a governance scan sets the
+   * governance lastScan the scheduler reads, an accessibility report only its
+   * own timestamp. Both set lastScanned.
+   */
+  recordScan(id: string, at: Date, kind: ScanKind): Promise<void>;
 }
 
 export const APPLICATION_DIRECTORY = Symbol('APPLICATION_DIRECTORY');
 
 /** The design system's own components and tokens (the design-system scan scope) */
 export interface DesignSystemSource {
+  /** Every component, with its workspace fields; scans filter them by the caller's read scope */
   components(): Promise<DesignComponent[]>;
   tokens(): Promise<DesignToken[]>;
 }
@@ -45,6 +54,8 @@ type RegistryApplication = {
   id: string;
   name: string;
   applicationUrl?: string;
+  workspaceId?: string | null;
+  lastAccessibilityReport?: string;
   capabilities?: { governance?: { enabled?: boolean; rules?: string[]; scanSchedule?: string; lastScan?: string } };
 };
 
@@ -59,6 +70,8 @@ const toApplication = (app: RegistryApplication | undefined): GovernanceApplicat
     governanceEnabled: !!governance?.enabled,
     scanSchedule: governance?.scanSchedule ?? 'manual',
     lastScan: governance?.lastScan,
+    lastAccessibilityReport: app.lastAccessibilityReport,
+    workspaceId: app.workspaceId ?? null,
   };
 };
 
@@ -76,9 +89,9 @@ export class RegistryApplicationDirectory implements ApplicationDirectory {
     return (await this.registry.list()).map((app) => toApplication(app)!);
   }
 
-  async recordScan(id: string, at: Date): Promise<void> {
+  async recordScan(id: string, at: Date, kind: ScanKind): Promise<void> {
     try {
-      await this.registry.markScanned(id, at);
+      await this.registry.markScanned(id, at, kind);
     } catch (error) {
       this.logger.warn(`Could not record lastScanned for application ${id}: ${(error as Error).message}`);
     }

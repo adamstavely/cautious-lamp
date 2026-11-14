@@ -580,7 +580,8 @@ export class DesignSystemController {
     return this.designSystemService.getTokenImpactAnalysis(tokenName);
   }
 
-  // Component Variant Builder endpoints
+  // Component Variant Builder endpoints. Changing variants needs component:edit
+  // and write access to the component (ComponentAccessService.getForWrite).
   @Get('components/:id/variants')
   async getComponentVariants(
     @Param('id') componentId: string,
@@ -599,7 +600,7 @@ export class DesignSystemController {
     @Body() variant: any,
     @Principal() principal: AuthPrincipal,
   ) {
-    await this.componentAccess.get(principal, componentId);
+    await this.componentAccess.getForWrite(principal, componentId);
     return this.designSystemService.saveComponentVariant(componentId, variant);
   }
 
@@ -610,7 +611,7 @@ export class DesignSystemController {
     @Param('variantName') variantName: string,
     @Principal() principal: AuthPrincipal,
   ) {
-    await this.componentAccess.get(principal, componentId);
+    await this.componentAccess.getForWrite(principal, componentId);
     const deleted = this.designSystemService.deleteComponentVariant(componentId, variantName);
     if (!deleted) {
       throw new BadRequestException(`Variant '${variantName}' not found for component '${componentId}'`);

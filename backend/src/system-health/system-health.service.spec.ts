@@ -4,6 +4,8 @@ function build(options: {
   components?: Array<{ id: string; name: string; status: string }>;
   tokens?: Array<{ name: string; category: string }>;
   reported?: number[];
+  /** Verified WCAG level of each reported application, in the same order */
+  levels?: string[];
   usage?: Record<string, Array<{ applicationId: string; usageCount: number }>>;
 }) {
   const designSystem = {
@@ -14,7 +16,7 @@ function build(options: {
     getMultiApplicationComplianceSummary: () => {
       const reported = options.reported ?? [];
       return {
-        applications: reported.map((score, i) => ({ applicationId: `app_${i}`, complianceScore: score })),
+        applications: reported.map((score, i) => ({ applicationId: `app_${i}`, complianceScore: score, wcagLevel: options.levels?.[i] ?? null })),
         reportedApplications: reported.length,
         averageScore: reported.length ? reported.reduce((a, b) => a + b, 0) / reported.length : 0,
       };
@@ -100,5 +102,13 @@ describe('SystemHealthService (measured data only)', () => {
     const trends = service.getHealthScoreTrends(1);
     expect(trends).toHaveLength(1);
     expect(trends[0]).toMatchObject({ score: 100, factors: { componentCoverage: 100 } });
+  });
+
+  it("labels accessibility with the weakest level the reports verified, never a level derived from the score", () => {
+    // Perfect scores, but one application's AA criteria still need review
+    const report = build({ reported: [100, 100], levels: ['AA', 'A'] }).generateAuditReport();
+    expect(report.detailedMetrics.accessibility).toEqual({ score: 100, wcagLevel: 'A' });
+    expect(build({ reported: [100], levels: ['Unverified'] }).generateAuditReport().detailedMetrics.accessibility.wcagLevel).toBe('Unverified');
+    expect(build({}).generateAuditReport().detailedMetrics.accessibility.wcagLevel).toBeNull();
   });
 });

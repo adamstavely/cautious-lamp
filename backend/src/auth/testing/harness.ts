@@ -60,10 +60,19 @@ export async function createAuthHarness(options: { bootstrap?: boolean } = {}) {
     return principal;
   }
 
-  /** Creates an active user with the given roles and returns a signed-in token */
-  async function createUser(email: string, roles: Role[] = [], password = 'a long enough password') {
+  /**
+   * Creates an active user with the given roles and returns a signed-in token.
+   * The user has already replaced the temporary password an admin gave them,
+   * unless `temporaryPassword` is set (then the token is a restricted session).
+   */
+  async function createUser(email: string, roles: Role[] = [], password = 'a long enough password', options: { temporaryPassword?: boolean } = {}) {
     const admin = await principalFor(ADMIN_KEY);
     const user = await users.create({ email, name: email.split('@')[0], password, roles }, admin);
+    if (!options.temporaryPassword) {
+      await users.mutate(user.id, (doc) => {
+        doc.mustChangePassword = false;
+      });
+    }
     const { accessToken } = await auth.login(email, password);
     return { user, password, accessToken };
   }

@@ -4,16 +4,43 @@ import { Test } from '@nestjs/testing';
 import { AuthGuard } from '../../auth/auth.guard';
 import { AuthService, DEFAULT_SERVICE_PERMISSIONS } from '../../auth/auth.service';
 import { SecurityAuditService } from '../../common/security/security-audit.service';
-import { ALL_PERMISSIONS } from '../../rbac/rbac.service';
+import type { ScanKind } from '../../applications/applications.service';
+import { ComponentAccessService } from '../../design-system/component-access.service';
+import { DesignSystemService } from '../../design-system/design-system.service';
+import { ALL_PERMISSIONS, Permission } from '../../rbac/rbac.service';
+import { InMemoryQueryableStore } from '../../workspaces/testing/in-memory-queryable-store';
+import { WorkspaceAccessService } from '../../workspaces/workspace-access.service';
+import { WORKSPACE_STORE, WorkspaceDoc } from '../../workspaces/workspace.types';
+import { READ_SCOPE } from '../evidence-access';
 import { ApplicationDirectory, DesignSystemSource, GovernanceApplication } from '../sources';
 import { DesignComponent, DesignToken } from '../governance.types';
 
 export const API_KEY = 'test-key';
 export const ADMIN_KEY = 'admin-key';
 
-/** Stands in for AuthService: API_KEY gets the default API key permissions, ADMIN_KEY all of them */
+/**
+ * Signed-in people for workspace-scoped tests: the credential `user-<name>`
+ * is the user `usr_<name>` with component:view. `user-gov` also has
+ * admin:governance, `user-super` admin:users.
+ */
+export const userKey = (name: string) => `user-${name}`;
+
+/** Stands in for AuthService: API_KEY gets the default API key permissions, ADMIN_KEY all of them, user-<name> a person */
 export const fakeAuth = {
   async resolve(credential?: string) {
+    if (credential?.startsWith('user-')) {
+      const name = credential.slice(5);
+      const extra = name === 'gov' ? [Permission.ADMIN_GOVERNANCE] : name === 'super' ? [Permission.ADMIN_USERS] : [];
+      return {
+        type: 'user' as const,
+        id: `usr_${name}`,
+        email: `${name}@example.com`,
+        name,
+        roles: [],
+        permissions: new Set<string>([Permission.COMPONENT_VIEW, ...extra]),
+        mustChangePassword: false,
+      };
+    }
     const service = (id: string, permissions: readonly string[]) => ({
       type: 'service' as const,
       id,
@@ -37,7 +64,7 @@ export const authProviders = [
 
 export class FakeApplications implements ApplicationDirectory {
   readonly apps = new Map<string, GovernanceApplication>();
-  readonly scans: Array<{ id: string; at: Date }> = [];
+  readonly scans: Array<{ id: string; at: Date; kind: ScanKind }> = [];
 
   constructor(apps: GovernanceApplication[] = []) {
     apps.forEach((app) => this.apps.set(app.id, app));
@@ -51,8 +78,8 @@ export class FakeApplications implements ApplicationDirectory {
     return [...this.apps.values()];
   }
 
-  async recordScan(id: string, at: Date) {
-    this.scans.push({ id, at });
+  async recordScan(id: string, at: Date, kind: ScanKind) {
+    this.scans.push({ id, at, kind });
   }
 }
 
@@ -69,6 +96,28 @@ export class FakeDesignSystem implements DesignSystemSource {
   async tokens() {
     return this.tokenList;
   }
+}
+
+/** A workspace whose only member (its owner) is `usr_<member>` */
+export function workspace(id: string, member: string): WorkspaceDoc {
+  const userId = `usr_${member}`;
+  return { id, name: id, members: [{ userId, email: `${member}@example.com`, name: member, role: 'owner' }], memberIds: [userId] } as unknown as WorkspaceDoc;
+}
+
+/**
+ * The real read scope (ComponentAccessService over WorkspaceAccessService)
+ * bound to READ_SCOPE, with the given workspaces stored in memory.
+ */
+export function readScopeProviders(workspaces: WorkspaceDoc[] = []) {
+  const store = new InMemoryQueryableStore<WorkspaceDoc>();
+  workspaces.forEach((ws) => store.forceWrite(ws));
+  return [
+    DesignSystemService,
+    ComponentAccessService,
+    WorkspaceAccessService,
+    { provide: WORKSPACE_STORE, useValue: store },
+    { provide: READ_SCOPE, useExisting: ComponentAccessService },
+  ];
 }
 
 /** Starts a Nest app on a random port and returns a JSON caller for it */

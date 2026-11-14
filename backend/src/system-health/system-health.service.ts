@@ -368,7 +368,7 @@ export class SystemHealthService {
         adoption: adoptionMetrics,
         accessibility: {
           score: healthScore.factors.accessibility,
-          wcagLevel: this.getWCAGLevel(healthScore.factors.accessibility),
+          wcagLevel: this.lowestVerifiedLevel(),
         },
       },
       healthScoreFactors: healthScore.factors,
@@ -449,12 +449,23 @@ export class SystemHealthService {
     return 'F';
   }
 
-  private getWCAGLevel(score: number | null): string | null {
-    if (score === null) return null;
-    if (score >= 95) return 'AAA';
-    if (score >= 90) return 'AA';
-    if (score >= 80) return 'A';
-    return 'Below A';
+  /**
+   * The weakest level the applications' latest accessibility reports
+   * verified (Non-Compliant < Unverified < A < AA), or null without reports.
+   * Never derived from the score: automated scores can't certify a level.
+   */
+  private lowestVerifiedLevel(): string | null {
+    const order = ['Non-Compliant', 'Unverified', 'A', 'AA'];
+    try {
+      const levels = this.accessibilityReportsService
+        .getMultiApplicationComplianceSummary()
+        .applications.map((app) => app.wcagLevel)
+        .filter((level): level is NonNullable<typeof level> => !!level && order.includes(level));
+      if (!levels.length) return null;
+      return levels.reduce((lowest, level) => (order.indexOf(level) < order.indexOf(lowest) ? level : lowest));
+    } catch {
+      return null;
+    }
   }
 
   /**

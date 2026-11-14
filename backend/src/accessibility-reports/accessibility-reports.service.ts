@@ -12,17 +12,20 @@ import {
 import { randomUUID } from 'crypto';
 import { AuthPrincipal } from '../auth/principal';
 import { assertPublicHttpUrl } from '../common/security/url-safety';
+import { READ_SCOPE, ReadScopeResolver, canReadApplicationEvidence } from '../governance/evidence-access';
+import { MAX_DEAD_LETTERS, OccurrencePolicy, leaseUntil, occurrencePolicy, retryAt } from '../governance/occurrence-policy';
 import { APPLICATION_DIRECTORY, ApplicationDirectory, GovernanceApplication } from '../governance/sources';
-import { DocumentStore, DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
+import { DocVersion, DocumentStore, DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
 import {
   AccessibilityReport,
   ApplicationComplianceSummary,
   ComplianceSLA,
   MultiApplicationComplianceSummary,
+  PendingRun,
   ReportSchedule,
 } from './accessibility-reports.types';
 import { AxeOutcome, runAxeOnHtml, runAxeOnUrl } from './axe-engine';
-import { buildReport } from './report-builder';
+import { buildReport, withConformance } from './report-builder';
 import { ScheduleTiming, assertValidTiming, calculateNextRun } from './schedule';
 import { evaluateSla } from './sla';
 
@@ -59,6 +62,11 @@ const actorName = (actor: Actor) => (actor === 'scheduler' ? 'scheduler' : actor
 
 const slaId = (applicationId: string) => `sla-${encodeURIComponent(applicationId)}`;
 
+/** One stored report per scheduled occurrence, however many attempts or instances run it */
+export const scheduledReportId = (scheduleId: string, occurrence: string) => `report-${scheduleId}-${new Date(occurrence).getTime()}`;
+
+type Claim = { scheduleId: string; token: string; pending: PendingRun };
+
 /**
  * Accessibility reports (axe-core over a URL or supplied HTML), report
  * schedules and compliance SLAs, stored in Elasticsearch. See docs/GOVERNANCE.md.
@@ -74,12 +82,15 @@ export class AccessibilityReportsService implements OnModuleInit {
     slas: [],
   };
 
+  readonly policy: OccurrencePolicy = occurrencePolicy('A11Y_SCHEDULER');
+
   constructor(
     @Inject(REPORT_STORE) private readonly reports: DocumentStore<AccessibilityReport>,
     @Inject(SCHEDULE_STORE) private readonly schedules: DocumentStore<ReportSchedule>,
     @Inject(SLA_STORE) private readonly slas: DocumentStore<ComplianceSLA>,
     @Inject(APPLICATION_DIRECTORY) private readonly applications: ApplicationDirectory,
     @Inject(A11Y_SCANNER) private readonly scanner: A11yScanner,
+    @Inject(READ_SCOPE) private readonly readScope: ReadScopeResolver,
   ) {}
 
   onModuleInit(): void {
@@ -92,8 +103,13 @@ export class AccessibilityReportsService implements OnModuleInit {
     applicationId: string,
     request: { url?: string; html?: string },
     actor: Actor,
-    options: { scheduled?: boolean; scheduleId?: string } = {},
+    options: { scheduled?: boolean; scheduleId?: string; occurrence?: string; id?: string } = {},
   ): Promise<AccessibilityReport> {
+    // A scheduled occurrence that already stored its report (a run that was taken over) isn't scanned again
+    if (options.id) {
+      const existing = await this.reports.get(options.id);
+      if (existing) return withConformance(existing.doc);
+    }
     const application = await this.requireApplication(applicationId);
     const html = request.html?.trim() ? request.html : undefined;
     if (html && request.url) throw new BadRequestException('Send either url or html, not both');
@@ -110,12 +126,12 @@ export class AccessibilityReportsService implements OnModuleInit {
       throw new UnprocessableEntityException(`Could not scan the page: ${(error as Error).message.split('\n')[0]}`);
     }
 
-    const previousSummary = (await this.getReports(applicationId))[0];
+    const previousSummary = (await this.allReports(applicationId))[0];
     const previous = previousSummary ? (await this.reports.get(previousSummary.id))?.doc ?? null : null;
     const report = buildReport(
       outcome,
       {
-        id: `report-${randomUUID()}`,
+        id: options.id ?? `report-${randomUUID()}`,
         applicationId,
         applicationName: application.name,
         generatedAt: new Date(),
@@ -127,24 +143,48 @@ export class AccessibilityReportsService implements OnModuleInit {
       previous,
     );
     report.createdAt = report.generatedAt;
-    await this.reports.create(report);
-    await this.applications.recordScan(applicationId, new Date(report.generatedAt));
+    report.access = { workspaceId: application.workspaceId ?? null };
+    if (options.occurrence) report.occurrence = options.occurrence;
+    try {
+      await this.reports.create(report);
+    } catch (error) {
+      // Another run of the same occurrence stored it first: keep that one
+      if (!(options.id && error instanceof DuplicateDocumentError)) throw error;
+      const stored = await this.reports.get(options.id);
+      if (stored) return withConformance(stored.doc);
+      throw error;
+    }
+    // Only the accessibility timestamp: a report isn't this period's governance scan
+    await this.applications.recordScan(applicationId, new Date(report.generatedAt), 'accessibility');
     await this.refreshCache().catch(() => undefined);
     return report;
   }
 
-  async getReports(applicationId?: string): Promise<ReportSummary[]> {
+  /**
+   * Reports the principal may read (newest first): those of applications in
+   * their workspaces, or every one for governance admins (evidence-access.ts).
+   */
+  async getReports(principal: AuthPrincipal, applicationId?: string): Promise<ReportSummary[]> {
+    const scope = await this.readScope.scopeFor(principal);
+    return (await this.allReports(applicationId)).filter((report) => canReadApplicationEvidence(principal, scope, report.access));
+  }
+
+  /** A report the principal may not read is a 404, like a missing one */
+  async getReport(principal: AuthPrincipal, id: string): Promise<AccessibilityReport> {
+    const found = await this.reports.get(id);
+    if (!found || !canReadApplicationEvidence(principal, await this.readScope.scopeFor(principal), found.doc.access)) {
+      throw new NotFoundException(`Report ${id} not found`);
+    }
+    return withConformance(found.doc);
+  }
+
+  /** Every report, unfiltered (trends, the summary cache, the scheduler) */
+  private async allReports(applicationId?: string): Promise<ReportSummary[]> {
     const all = (await this.reports.list({ excludes: HEAVY_FIELDS })) as ReportSummary[];
     return all
       .filter((report) => !applicationId || report.applicationId === applicationId)
-      .map((report) => this.stripHeavy(report))
+      .map((report) => withConformance(this.stripHeavy(report)))
       .sort((a, b) => b.generatedAt.localeCompare(a.generatedAt));
-  }
-
-  async getReport(id: string): Promise<AccessibilityReport> {
-    const found = await this.reports.get(id);
-    if (!found) throw new NotFoundException(`Report ${id} not found`);
-    return found.doc;
   }
 
   async deleteReport(id: string): Promise<void> {
@@ -154,20 +194,29 @@ export class AccessibilityReportsService implements OnModuleInit {
 
   // ------------------------------------------------------------ summaries
 
-  /** Fresh multi-application summary (reloads applications, latest reports and SLAs) */
-  async getComplianceSummary(): Promise<MultiApplicationComplianceSummary> {
+  /**
+   * Fresh multi-application summary (reloads applications, latest reports
+   * and SLAs), limited to the applications whose reports the principal may
+   * read, by the application's current workspace.
+   */
+  async getComplianceSummary(principal: AuthPrincipal): Promise<MultiApplicationComplianceSummary> {
     await this.refreshCache();
-    return this.getMultiApplicationComplianceSummary();
+    const scope = await this.readScope.scopeFor(principal);
+    const visible = new Set(
+      this.cache.applications.filter((app) => canReadApplicationEvidence(principal, scope, { workspaceId: app.workspaceId ?? null })).map((app) => app.id),
+    );
+    return this.getMultiApplicationComplianceSummary(visible);
   }
 
   /**
    * Summary from the in-memory cache, for callers that can't await
    * (SystemHealthService). The cache is refreshed on start, after every
-   * report/SLA change and on every GET /summary.
+   * report/SLA change and on every GET /summary. `only` limits it to those applications.
    */
-  getMultiApplicationComplianceSummary(): MultiApplicationComplianceSummary {
+  getMultiApplicationComplianceSummary(only?: ReadonlySet<string>): MultiApplicationComplianceSummary {
     const slaByApp = new Map(this.cache.slas.map((sla) => [sla.applicationId, sla]));
-    const applications: ApplicationComplianceSummary[] = this.cache.applications.map((app) => {
+    const included = this.cache.applications.filter((app) => !only || only.has(app.id));
+    const applications: ApplicationComplianceSummary[] = included.map((app) => {
       const latest = this.cache.latest.get(app.id);
       return {
         applicationId: app.id,
@@ -175,6 +224,7 @@ export class AccessibilityReportsService implements OnModuleInit {
         latestReportId: latest?.id,
         complianceScore: latest ? latest.complianceScore : null,
         wcagLevel: latest ? latest.wcagLevel : null,
+        conformanceStatus: latest ? latest.conformance.status : null,
         totalIssues: latest?.totalIssues ?? 0,
         criticalIssues: latest?.criticalIssues ?? 0,
         highIssues: latest?.highIssues ?? 0,
@@ -185,13 +235,14 @@ export class AccessibilityReportsService implements OnModuleInit {
     });
     const reported = applications.filter((a) => a.complianceScore !== null);
     const count = (status: string) => applications.filter((a) => a.slaStatus === status).length;
-    const order: Record<string, number> = { 'non-compliant': 0, 'at-risk': 1, 'no-report': 2, 'no-sla': 3, compliant: 4 };
+    const order: Record<string, number> = { 'non-compliant': 0, 'at-risk': 1, 'needs-review': 2, 'no-report': 3, 'no-sla': 4, compliant: 5 };
     return {
       totalApplications: applications.length,
       reportedApplications: reported.length,
       compliantApplications: count('compliant'),
       atRiskApplications: count('at-risk'),
       nonCompliantApplications: count('non-compliant'),
+      needsReviewApplications: count('needs-review'),
       unassessedApplications: count('no-sla') + count('no-report'),
       averageScore: reported.length ? Math.round((reported.reduce((sum, a) => sum + a.complianceScore!, 0) / reported.length) * 100) / 100 : 0,
       applications: applications.sort(
@@ -275,6 +326,9 @@ export class AccessibilityReportsService implements OnModuleInit {
         ...(current.lastStatus ? { lastStatus: current.lastStatus } : {}),
         ...(current.lastError ? { lastError: current.lastError } : {}),
         ...(current.lastReportId ? { lastReportId: current.lastReportId } : {}),
+        // An occurrence in flight or waiting for a retry carries on under the new settings
+        ...(current.pending ? { pending: current.pending } : {}),
+        ...(current.deadLetters ? { deadLetters: current.deadLetters } : {}),
         createdAt: current.createdAt,
         updatedAt: now.toISOString(),
         createdBy: current.createdBy,
@@ -294,35 +348,127 @@ export class AccessibilityReportsService implements OnModuleInit {
   }
 
   /**
-   * Runs every enabled schedule whose nextRun has passed. Each one is claimed
-   * first by moving nextRun forward with a compare-and-swap write, so two
-   * backend instances never run the same occurrence.
+   * Runs every attempt that is due: schedules whose nextRun has passed,
+   * retries whose time has come, and claims whose lease expired (the
+   * instance running them died). Each attempt is claimed first with a
+   * compare-and-swap write that records a lease, so two instances never run
+   * the same attempt; nextRun only moves on once the occurrence completes or
+   * is dead-lettered after the last attempt (occurrence-policy.ts). The report
+   * has a fixed id per occurrence, so a takeover after it was stored
+   * completes the occurrence without a second report.
    */
   async runDueSchedules(now = new Date()): Promise<number> {
     let ran = 0;
     for (const schedule of await this.schedules.list()) {
-      if (!schedule.enabled || new Date(schedule.nextRun) > now) continue;
-      const found = await this.schedules.get(schedule.id);
-      if (!found || !found.doc.enabled || new Date(found.doc.nextRun) > now) continue;
-      const claimed: ReportSchedule = { ...found.doc, nextRun: calculateNextRun(found.doc, now).toISOString(), lastRun: now.toISOString() };
-      try {
-        await this.schedules.replace(claimed, found.version);
-      } catch (error) {
-        if (error instanceof VersionConflictError) continue;
-        throw error;
-      }
+      if (!schedule.enabled || !this.attemptDue(schedule, now)) continue;
+      const claim = await this.claimAttempt(schedule.id, now);
+      if (!claim) continue;
       ran++;
-      let result: Pick<ReportSchedule, 'lastStatus' | 'lastError' | 'lastReportId'>;
+      const { occurrence } = claim.pending;
       try {
-        const report = await this.generateReport(claimed.applicationId, { url: claimed.url }, 'scheduler', { scheduled: true, scheduleId: claimed.id });
-        result = { lastStatus: 'success', lastReportId: report.id };
+        const current = (await this.schedules.get(claim.scheduleId))?.doc;
+        if (!current) continue;
+        const report = await this.generateReport(current.applicationId, { url: current.url }, 'scheduler', {
+          scheduled: true,
+          scheduleId: current.id,
+          occurrence,
+          id: scheduledReportId(current.id, occurrence),
+        });
+        await this.finishAttempt(claim, { reportId: report.id }, now);
       } catch (error) {
-        this.logger.warn(`Scheduled report ${claimed.id} failed: ${(error as Error).message}`);
-        result = { lastStatus: 'failed', lastError: (error as Error).message.slice(0, 500) };
+        const message = (error as Error).message.slice(0, 500);
+        this.logger.warn(`Scheduled report ${claim.scheduleId} failed (attempt ${claim.pending.attempts} of ${this.policy.maxAttempts}): ${message}`);
+        await this.finishAttempt(claim, { error: message }, now).catch(() => undefined);
       }
-      await this.recordRun(claimed.id, result);
     }
     return ran;
+  }
+
+  private attemptDue(schedule: ReportSchedule, now: Date): boolean {
+    const pending = schedule.pending;
+    if (!pending) return new Date(schedule.nextRun) <= now;
+    if (pending.state === 'claimed') return new Date(pending.leaseUntil ?? 0) <= now;
+    return new Date(pending.retryAt ?? 0) <= now;
+  }
+
+  /** Claims the next attempt, or null if another instance got there first (or the last attempt died: dead-lettered) */
+  private async claimAttempt(id: string, now: Date): Promise<Claim | null> {
+    const found = await this.schedules.get(id);
+    if (!found || !found.doc.enabled || !this.attemptDue(found.doc, now)) return null;
+    const previous = found.doc.pending;
+    const attempts = (previous?.attempts ?? 0) + 1;
+    if (previous?.state === 'claimed' && attempts > this.policy.maxAttempts) {
+      await this.writeSchedule(this.deadLettered(found.doc, `The run was interrupted ${previous.attempts} time(s) (its lease expired)`, now), found).catch(() => false);
+      return null;
+    }
+    const pending: PendingRun = {
+      occurrence: previous?.occurrence ?? found.doc.nextRun,
+      state: 'claimed',
+      attempts,
+      token: randomUUID(),
+      leaseUntil: leaseUntil(this.policy, now).toISOString(),
+      ...(previous?.lastError ? { lastError: previous.lastError } : {}),
+    };
+    return (await this.writeSchedule({ ...found.doc, pending }, found)) ? { scheduleId: id, token: pending.token, pending } : null;
+  }
+
+  /**
+   * Completes an attempt. Only the run holding the claim can: one whose
+   * lease was taken over changes nothing. Success moves nextRun on; a failure
+   * schedules a retry, or dead-letters the occurrence after the last attempt.
+   */
+  private async finishAttempt(claim: Claim, result: { reportId: string } | { error: string }, now: Date): Promise<void> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const found = await this.schedules.get(claim.scheduleId);
+      if (!found || found.doc.pending?.token !== claim.token) return;
+      let next: ReportSchedule;
+      if (!('error' in result)) {
+        const { pending: _pending, lastError: _error, ...rest } = found.doc;
+        next = { ...rest, nextRun: this.advance(found.doc, now), lastRun: now.toISOString(), lastStatus: 'success', lastReportId: result.reportId };
+      } else if (claim.pending.attempts >= this.policy.maxAttempts) {
+        next = this.deadLettered(found.doc, result.error, now);
+      } else {
+        const { leaseUntil: _lease, ...pending } = found.doc.pending;
+        next = {
+          ...found.doc,
+          pending: { ...pending, state: 'retry', retryAt: retryAt(this.policy, claim.pending.attempts, now).toISOString(), lastError: result.error },
+          lastStatus: 'failed',
+          lastError: result.error,
+        };
+      }
+      if (await this.writeSchedule(next, found)) return;
+    }
+  }
+
+  /** Gives up on the pending occurrence: recorded in deadLetters, and nextRun moves on */
+  private deadLettered(schedule: ReportSchedule, error: string, now: Date): ReportSchedule {
+    const { pending, ...rest } = schedule;
+    const letter = { occurrence: pending?.occurrence ?? schedule.nextRun, attempts: pending?.attempts ?? 1, error, at: now.toISOString() };
+    this.logger.error(`Scheduled report ${schedule.id} (${letter.occurrence}) dead-lettered after ${letter.attempts} attempt(s): ${error}`);
+    return {
+      ...rest,
+      nextRun: this.advance(schedule, now),
+      lastRun: now.toISOString(),
+      lastStatus: 'dead-letter',
+      lastError: error,
+      deadLetters: [letter, ...(schedule.deadLetters ?? [])].slice(0, MAX_DEAD_LETTERS),
+    };
+  }
+
+  /** The next occurrence after now (an edited schedule may already have a future nextRun) */
+  private advance(schedule: ReportSchedule, now: Date): string {
+    return new Date(schedule.nextRun) > now ? schedule.nextRun : calculateNextRun(schedule, now).toISOString();
+  }
+
+  /** false when someone else wrote first */
+  private async writeSchedule(next: ReportSchedule, found: { version: DocVersion }): Promise<boolean> {
+    try {
+      await this.schedules.replace(next, found.version);
+      return true;
+    } catch (error) {
+      if (error instanceof VersionConflictError) return false;
+      throw error;
+    }
   }
 
   // ------------------------------------------------------------------ SLAs
@@ -419,21 +565,6 @@ export class AccessibilityReportsService implements OnModuleInit {
     return (await assertPublicHttpUrl(resolved)).toString();
   }
 
-  private async recordRun(id: string, result: Pick<ReportSchedule, 'lastStatus' | 'lastError' | 'lastReportId'>): Promise<void> {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const found = await this.schedules.get(id);
-      if (!found) return;
-      const next: ReportSchedule = { ...found.doc, ...result };
-      if (!result.lastError) delete next.lastError;
-      try {
-        await this.schedules.replace(next, found.version);
-        return;
-      } catch (error) {
-        if (!(error instanceof VersionConflictError)) throw error;
-      }
-    }
-  }
-
   private stripHeavy(report: ReportSummary): ReportSummary {
     const copy = { ...report } as Record<string, unknown>;
     for (const field of HEAVY_FIELDS) delete copy[field];
@@ -441,7 +572,7 @@ export class AccessibilityReportsService implements OnModuleInit {
   }
 
   private async refreshCache(): Promise<void> {
-    const [applications, reports, slas] = await Promise.all([this.applications.list(), this.getReports(), this.slas.list()]);
+    const [applications, reports, slas] = await Promise.all([this.applications.list(), this.allReports(), this.slas.list()]);
     const latest = new Map<string, ReportSummary>();
     for (const report of reports) if (!latest.has(report.applicationId)) latest.set(report.applicationId, report);
     this.cache = { applications, latest, slas };
