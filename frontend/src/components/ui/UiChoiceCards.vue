@@ -56,13 +56,15 @@ const emit = defineEmits(['update:modelValue']);
 const buttons = ref([]);
 
 const hasSelection = computed(() => props.options.some((o) => o.value === props.modelValue));
+// The column classes, one-column base included, stay out of the scoped style:
+// a scoped `grid-cols-1` outranks these responsive utilities and wins at every width.
 const columnsClass = computed(
   () =>
     ({
-      2: 'sm:grid-cols-2',
-      3: 'sm:grid-cols-2 lg:grid-cols-3',
-      4: 'sm:grid-cols-2 lg:grid-cols-4',
-      5: 'sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5',
+      2: 'grid-cols-1 sm:grid-cols-2',
+      3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+      4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+      5: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5',
     })[props.columns],
 );
 
@@ -81,7 +83,7 @@ const onKey = async (event, index) => {
 
 <style scoped>
 .ui-choice-cards {
-  @apply grid grid-cols-1 gap-3;
+  @apply grid gap-3;
 }
 .ui-choice-card {
   @apply flex flex-col items-start gap-1 p-4 text-left rounded-tile border border-line bg-surface-raised transition-colors;
