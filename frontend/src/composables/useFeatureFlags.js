@@ -69,6 +69,13 @@ watch(flagCache, (newCache) => {
   }
 }, { deep: true });
 
+// Flags read while signed out fell back to their defaults, and targeting
+// depends on who is signed in, so re-read every active flag when the user changes
+watch(
+  () => authState.user?.id ?? null,
+  () => activeFlagRefreshers.forEach((refresh) => refresh()),
+);
+
 // Single global listener for flag updates
 if (typeof window !== 'undefined') {
   window.addEventListener('feature-flags-updated', () => {

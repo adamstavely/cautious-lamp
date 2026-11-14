@@ -48,7 +48,8 @@ class DesignSystemFeatureFlagProvider {
       if (!flag) return defaultValue;
       return evaluateFlag(flag, context);
     } catch (error) {
-      console.error(`Error getting feature flag ${flagKey}:`, error);
+      // Signed out is expected (the sign-in page); flags are read again after sign-in
+      if (error?.code !== 'SIGNED_OUT') console.error(`Error getting feature flag ${flagKey}:`, error);
       return defaultValue;
     }
   }
