@@ -134,6 +134,9 @@ describe('password change required', () => {
     auth.handlePasswordChangeRequired();
     expect(auth.authState.user.mustChangePassword).toBe(true);
     expect(replaced).toContainEqual({ path: '/change-password' });
+  });
+});
+
 describe('automatic development sign-in', () => {
   const loginCalls = () => calls.filter((url) => url.endsWith('/auth/login')).length;
 
