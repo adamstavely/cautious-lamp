@@ -27,7 +27,7 @@ describe('UserPersonaGenerator', () => {
     page.state.generatePersona();
     await nextTick();
 
-    const preview = page.vm.$el.parentNode.querySelector('.persona-preview');
+    const preview = page.vm.$el.parentNode.querySelector('#persona-preview');
     expect(preview).not.toBeNull();
     expect(preview.querySelector('img')).toBeNull();
     expect(preview.querySelector('[onerror]')).toBeNull();

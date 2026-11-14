@@ -41,7 +41,7 @@
     </PageSection>
 
     <PageSection v-if="personaGenerated" ref="previewSection" title="Generated persona" description="A plain-text copy downloads with Export." divided>
-      <UiPanel :title="form.name">
+      <UiPanel id="persona-preview" :title="form.name">
         <template #actions>
           <UiButton variant="primary" size="sm" icon="download" @click="exportPersona">Export</UiButton>
         </template>
