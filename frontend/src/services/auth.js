@@ -9,6 +9,11 @@
  * With VITE_USE_MOCKS=true there is no backend: a local demo user with every
  * permission is signed in.
  *
+ * In development (`vite dev` only), VITE_DEV_SIGN_IN_EMAIL and
+ * VITE_DEV_SIGN_IN_PASSWORD sign that user in automatically, so the sign-in
+ * page is skipped. It comes back after an explicit sign-out (for this tab) or
+ * if the automatic sign-in fails. Production builds never read them.
+ *
  * This module deliberately uses plain axios (not apiClient) so the apiClient
  * interceptors can depend on it without a cycle.
  */
@@ -21,6 +26,7 @@ const AUTH_PATH = `${API_BASE_URL}/api/v1/auth`;
 const TOKEN_KEY = 'authToken';
 const EXPIRES_KEY = 'authTokenExpiresAt';
 const MOCK_SIGNED_OUT_KEY = 'mockSignedOut';
+const DEV_SIGNED_OUT_KEY = 'devSignedOut';
 
 /** Mirrors mockData.isMockMode() (not imported, to keep this module free of cycles). */
 export const isMockAuth = () => import.meta.env.VITE_USE_MOCKS === 'true';
@@ -76,6 +82,10 @@ export const authState = reactive({
 });
 
 let mePromise = null;
+let devSignInPromise = null;
+// Set when the automatic development sign-in fails, so it isn't retried on
+// every navigation; a reload tries again.
+let devSignInFailed = false;
 let router = null;
 let expiryTimer = null;
 // Set when a session ends because its token expired, so the sign-in page can
@@ -191,6 +201,8 @@ export async function login(email, password) {
     return authState.user;
   }
   const response = await axios.post(`${AUTH_PATH}/login`, { email, password });
+  storage.set(DEV_SIGNED_OUT_KEY, null);
+  devSignInFailed = false;
   storeSession(response.data);
   if (!authState.user) await refreshMe();
   return authState.user;
@@ -231,13 +243,43 @@ export async function refreshMe() {
 export function ensureSession() {
   dropExpiredSession();
   if (authState.user) return Promise.resolve(authState.user);
-  if (isMockAuth() || !getToken()) return Promise.resolve(null);
+  if (isMockAuth()) return Promise.resolve(null);
+  if (!getToken()) return devSignIn();
   if (!mePromise) {
     mePromise = refreshMe().finally(() => {
       mePromise = null;
     });
   }
   return mePromise;
+}
+
+/** The development sign-in credentials, or null outside `vite dev` or when unset. */
+const devCredentials = () => {
+  if (!import.meta.env.DEV) return null;
+  const email = import.meta.env.VITE_DEV_SIGN_IN_EMAIL;
+  const password = import.meta.env.VITE_DEV_SIGN_IN_PASSWORD;
+  return email && password ? { email, password } : null;
+};
+
+/**
+ * Sign in as the development user, if one is configured and this tab hasn't
+ * signed out. Resolves to the user, or null (then the sign-in page shows).
+ */
+function devSignIn() {
+  const credentials = devCredentials();
+  if (!credentials || devSignInFailed || storage.get(DEV_SIGNED_OUT_KEY) === 'true') return Promise.resolve(null);
+  if (!devSignInPromise) {
+    devSignInPromise = login(credentials.email, credentials.password)
+      .catch((error) => {
+        devSignInFailed = true;
+        console.warn('Automatic development sign-in failed; showing the sign-in page.', error);
+        return null;
+      })
+      .finally(() => {
+        devSignInPromise = null;
+      });
+  }
+  return devSignInPromise;
 }
 
 /**
@@ -253,6 +295,8 @@ export async function logout() {
   const token = getToken();
   clearSession();
   sessionExpired = false;
+  // Stay signed out in development rather than signing straight back in
+  if (devCredentials()) storage.set(DEV_SIGNED_OUT_KEY, 'true');
   if (!token) return;
   try {
     await axios.post(`${AUTH_PATH}/logout`, null, { headers: { Authorization: `Bearer ${token}` } });

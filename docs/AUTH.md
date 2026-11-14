@@ -182,3 +182,4 @@ Earlier versions derived a passphrase key with a random salt on each start, so v
   If permissions can't be loaded, the guard denies.
 - Feature flags hide a page (route guard and navigation) only when the flag is off for the user, using the same targeting rules as the server. A flag that doesn't exist, or flags that can't be loaded, hide nothing: that is deliberate, so a slow or failing flag request never locks people out of pages.
 - `VITE_USE_MOCKS=true` signs in a local demo user, with no backend.
+- In development (`vite dev` only), `VITE_DEV_SIGN_IN_EMAIL` and `VITE_DEV_SIGN_IN_PASSWORD` (in `frontend/.env.development.local`) sign that user in automatically, so the sign-in page is skipped. Signing out brings it back for that tab, as does a failed automatic sign-in. Production builds never read them, and the server is unchanged: it is an ordinary sign-in.
