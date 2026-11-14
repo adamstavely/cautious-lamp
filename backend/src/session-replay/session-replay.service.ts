@@ -1,7 +1,8 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { AuthPrincipal } from '../auth/principal';
 import { EncryptionService } from '../common/security/encryption.service';
+import { ProjectIntegrationSummary, checkEach } from '../integrations/integration.types';
 import { DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
 import { ProjectAccessService, ProjectAction, ProjectCreator, ProjectOwnership } from '../visual-regression/project-access';
 import { QueryableStore } from '../workspaces/queryable-store';
@@ -98,9 +99,10 @@ const UPDATABLE_PROJECT_FIELDS = [
   'config',
 ] as const;
 
-function redact(project: Project): Project {
+/** The project without its API key; `hasApiKey` says whether one is set */
+function redact(project: Project): Project & { hasApiKey: boolean } {
   const { openreplayApiKey, ...rest } = project;
-  return rest as Project;
+  return { ...(rest as Project), hasApiKey: !!openreplayApiKey };
 }
 
 function stripUndefined<T extends object>(value: T): T {
@@ -112,6 +114,20 @@ function stripUndefined<T extends object>(value: T): T {
  * Access is per project (ProjectAccessService); the controller calls
  * `authorizeProject` before anything else.
  */
+const DEFAULT_OPENREPLAY_URL = 'https://api.openreplay.com';
+
+/**
+ * OpenReplay's API addresses projects by their numeric id. A key that isn't
+ * one used to fall back to project 1, which could show another project's sessions.
+ */
+function numericOpenReplayId(projectKey: string | undefined): number {
+  const id = Number(projectKey);
+  if (!projectKey || !Number.isInteger(id) || id <= 0) {
+    throw new BadRequestException("The OpenReplay project id must be the numeric id from OpenReplay's project settings");
+  }
+  return id;
+}
+
 @Injectable()
 export class SessionReplayService {
   constructor(
@@ -300,6 +316,40 @@ export class SessionReplayService {
     );
   }
 
+  /**
+   * The OpenReplay client for a project's API calls. Without an API key there
+   * is nothing to show: a 503 with code OPENREPLAY_NOT_CONFIGURED, which the
+   * UI explains, rather than made-up sessions.
+   */
+  private async openReplayFor(project: Project): Promise<{ client: OpenReplayApiClient; numericProjectId: number }> {
+    const apiKey = this.decryptToken(project.openreplayApiKey)?.trim();
+    if (!apiKey) {
+      throw new ServiceUnavailableException({
+        statusCode: 503,
+        code: 'OPENREPLAY_NOT_CONFIGURED',
+        message: "This project has no OpenReplay API key, so there are no sessions to show. Add the key in the project's settings.",
+      });
+    }
+    // SSRF guard: re-checked before every request, since DNS can change after the URL was saved
+    const baseUrl = await resolveOpenReplayBaseUrl(project.openreplayBaseUrl);
+    return { client: new OpenReplayApiClient(baseUrl, apiKey), numericProjectId: numericOpenReplayId(project.openreplayProjectKey) };
+  }
+
+  /** For GET /integrations/status: projects with an OpenReplay API key, and with `check`, which can't reach OpenReplay */
+  async integrationSummary(check: boolean): Promise<ProjectIntegrationSummary> {
+    const projects = await this.projects.list();
+    const withKey = projects.filter((p) => p.openreplayApiKey);
+    const summary: ProjectIntegrationSummary = { projects: projects.length, withCredentials: withKey.length };
+    if (check) {
+      const failures = await checkEach(withKey, async (project) => {
+        const { client } = await this.openReplayFor(project);
+        if (!(await client.verifyConnection())) throw new Error('OpenReplay did not answer');
+      });
+      summary.unreachable = failures.map(({ item, error }) => ({ projectId: item.id, name: item.name, error }));
+    }
+    return summary;
+  }
+
   // Session Management
   async searchSessions(
     projectId: string,
@@ -315,111 +365,9 @@ export class SessionReplayService {
   ): Promise<{ sessions: Session[]; total: number }> {
     const project = await this.requireProject(projectId);
 
-    // If no API key is configured, return mock sessions for development/demo purposes
-    const decryptedApiKey = this.decryptToken(project.openreplayApiKey);
-    if (!decryptedApiKey || (typeof decryptedApiKey === 'string' && decryptedApiKey.trim() === '')) {
-      const mockSessions: Session[] = [
-        {
-          sessionId: 'mock-session-001',
-          projectId,
-          userId: 'user-123',
-          userEmail: 'user@example.com',
-          userDisplayName: 'Demo User',
-          startTime: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-          duration: 1250,
-          pagesCount: 5,
-          eventsCount: 342,
-          errorsCount: 0,
-          issueScore: 0,
-          issueTypes: [],
-          favorite: false,
-          viewed: false,
-          live: false,
-          replayUrl: `${project.openreplayBaseUrl || 'https://demo.openreplay.com'}/project/${project.openreplayProjectKey || '1'}/session/mock-session-001`,
-          metadata: {},
-        },
-        {
-          sessionId: 'mock-session-002',
-          projectId,
-          userId: 'user-456',
-          userEmail: 'another@example.com',
-          userDisplayName: 'Another User',
-          startTime: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-          duration: 890,
-          pagesCount: 3,
-          eventsCount: 198,
-          errorsCount: 2,
-          issueScore: 45,
-          issueTypes: ['js_error', 'network_error'],
-          favorite: true,
-          viewed: true,
-          live: false,
-          replayUrl: `${project.openreplayBaseUrl || 'https://demo.openreplay.com'}/project/${project.openreplayProjectKey || '1'}/session/mock-session-002`,
-          metadata: {},
-        },
-        {
-          sessionId: 'mock-session-003',
-          projectId,
-          userId: 'user-789',
-          userEmail: 'test@example.com',
-          userDisplayName: 'Test User',
-          startTime: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-          duration: 2100,
-          pagesCount: 8,
-          eventsCount: 567,
-          errorsCount: 1,
-          issueScore: 12,
-          issueTypes: ['js_error'],
-          favorite: false,
-          viewed: false,
-          live: false,
-          replayUrl: `${project.openreplayBaseUrl || 'https://demo.openreplay.com'}/project/${project.openreplayProjectKey || '1'}/session/mock-session-003`,
-          metadata: {},
-        },
-      ];
-
-      // Apply filters if provided
-      let filteredSessions = mockSessions;
-      if (params.userEmail) {
-        filteredSessions = filteredSessions.filter(s => 
-          s.userEmail?.toLowerCase().includes(params.userEmail!.toLowerCase())
-        );
-      }
-      if (params.userId) {
-        filteredSessions = filteredSessions.filter(s => 
-          s.userId?.toLowerCase().includes(params.userId!.toLowerCase())
-        );
-      }
-      if (params.issueType) {
-        filteredSessions = filteredSessions.filter(s => 
-          s.issueTypes?.includes(params.issueType!)
-        );
-      }
-
-      // Apply pagination
-      const limit = params.limit || 50;
-      const offset = params.offset || 0;
-      const paginatedSessions = filteredSessions.slice(offset, offset + limit);
-
-      return {
-        sessions: paginatedSessions,
-        total: filteredSessions.length,
-      };
-    }
-
-    // SSRF guard: re-checked before every request, since DNS can change after the URL was saved
-    const openreplayBaseUrl = await resolveOpenReplayBaseUrl(project.openreplayBaseUrl);
-    const apiKey = this.decryptToken(project.openreplayApiKey);
-    if (!apiKey) {
-      throw new BadRequestException('OpenReplay API key not configured or failed to decrypt');
-    }
-    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, apiKey);
+    const { client: openreplayClient, numericProjectId } = await this.openReplayFor(project);
 
     try {
-      // Parse project key to get numeric project ID (OpenReplay uses numeric IDs)
-      // In a real implementation, you'd need to map project keys to numeric IDs
-      const numericProjectId = parseInt(project.openreplayProjectKey) || 1;
-
       const result = await openreplayClient.searchSessions({
         projectId: numericProjectId,
         ...params,
@@ -458,84 +406,9 @@ export class SessionReplayService {
   async getSession(projectId: string, sessionId: string): Promise<Session> {
     const project = await this.requireProject(projectId);
 
-    // If no API key is configured, return mock session for development/demo purposes
-    const decryptedApiKey = this.decryptToken(project.openreplayApiKey);
-    if (!decryptedApiKey || (typeof decryptedApiKey === 'string' && decryptedApiKey.trim() === '')) {
-      // Find the mock session by ID or return a default one
-      const mockSessions = [
-        {
-          sessionId: 'mock-session-001',
-          projectId,
-          userId: 'user-123',
-          userEmail: 'user@example.com',
-          userDisplayName: 'Demo User',
-          startTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          duration: 1250,
-          pagesCount: 5,
-          eventsCount: 342,
-          errorsCount: 0,
-          issueScore: 0,
-          issueTypes: [],
-          favorite: false,
-          viewed: false,
-          live: false,
-          replayUrl: `${project.openreplayBaseUrl || 'https://demo.openreplay.com'}/project/${project.openreplayProjectKey || '1'}/session/mock-session-001`,
-          metadata: {},
-        },
-        {
-          sessionId: 'mock-session-002',
-          projectId,
-          userId: 'user-456',
-          userEmail: 'another@example.com',
-          userDisplayName: 'Another User',
-          startTime: new Date(Date.now() - 5 * 60 * 60 * 1000),
-          duration: 890,
-          pagesCount: 3,
-          eventsCount: 198,
-          errorsCount: 2,
-          issueScore: 45,
-          issueTypes: ['js_error', 'network_error'],
-          favorite: true,
-          viewed: true,
-          live: false,
-          replayUrl: `${project.openreplayBaseUrl || 'https://demo.openreplay.com'}/project/${project.openreplayProjectKey || '1'}/session/mock-session-002`,
-          metadata: {},
-        },
-        {
-          sessionId: 'mock-session-003',
-          projectId,
-          userId: 'user-789',
-          userEmail: 'test@example.com',
-          userDisplayName: 'Test User',
-          startTime: new Date(Date.now() - 24 * 60 * 60 * 1000),
-          duration: 2100,
-          pagesCount: 8,
-          eventsCount: 567,
-          errorsCount: 1,
-          issueScore: 12,
-          issueTypes: ['js_error'],
-          favorite: false,
-          viewed: false,
-          live: false,
-          replayUrl: `${project.openreplayBaseUrl || 'https://demo.openreplay.com'}/project/${project.openreplayProjectKey || '1'}/session/mock-session-003`,
-          metadata: {},
-        },
-      ];
-
-      const mockSession = mockSessions.find(s => s.sessionId === sessionId) || mockSessions[0];
-      return mockSession;
-    }
-
-    // SSRF guard: re-checked before every request, since DNS can change after the URL was saved
-    const openreplayBaseUrl = await resolveOpenReplayBaseUrl(project.openreplayBaseUrl);
-    const apiKey = this.decryptToken(project.openreplayApiKey);
-    if (!apiKey) {
-      throw new BadRequestException('OpenReplay API key not configured or failed to decrypt');
-    }
-    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, apiKey);
+    const { client: openreplayClient, numericProjectId } = await this.openReplayFor(project);
 
     try {
-      const numericProjectId = parseInt(project.openreplayProjectKey) || 1;
       const s = await openreplayClient.getSession(numericProjectId, sessionId);
 
       return {
@@ -568,28 +441,9 @@ export class SessionReplayService {
   async getHeatmapsUrl(projectId: string, heatmapId?: string): Promise<string> {
     const project = await this.requireProject(projectId);
 
-    // For development/testing: Return mock URL if no OpenReplay base URL is configured
-    // or if explicitly using mock data
-    const useMockData = process.env.USE_MOCK_OPENREPLAY_DATA === 'true' || 
-                       !project.openreplayBaseUrl || 
-                       project.openreplayBaseUrl === 'https://api.openreplay.com';
-
-    if (useMockData) {
-      // Return a mock heatmap URL pointing to our local demo page
-      // In production, this would be the actual OpenReplay URL
-      const mockUrl = process.env.MOCK_HEATMAP_URL || 'http://localhost:5174/mock-heatmap.html';
-      
-      if (heatmapId) {
-        return `${mockUrl}?heatmapId=${heatmapId}`;
-      }
-      return mockUrl;
-    }
-
     // Only builds a URL for the browser (no request); the base URL was checked when it was saved
-    const openreplayBaseUrl = project.openreplayBaseUrl || process.env.OPENREPLAY_BASE_URL || 'https://api.openreplay.com';
-    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, '');
-    
-    const numericProjectId = parseInt(project.openreplayProjectKey) || 1;
+    const openreplayClient = new OpenReplayApiClient(project.openreplayBaseUrl || DEFAULT_OPENREPLAY_URL, '');
+    const numericProjectId = numericOpenReplayId(project.openreplayProjectKey);
     return openreplayClient.getHeatmapUrl(numericProjectId, heatmapId);
   }
 }

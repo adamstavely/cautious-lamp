@@ -108,7 +108,7 @@ NestJS was then upgraded from 10 to 11 (Express 5), which cleared the `@nestjs/c
 
 **Known gaps:**
 - **Design and token sync connections:** still kept in memory, so they're lost on restart.
-- **Session replay:** still shows mock sessions when no OpenReplay key is set.
+- **Session replay (fixed after Phase 3):** it showed mock sessions when no OpenReplay key was set. It now says OpenReplay isn't connected, and project settings can set the key. IRIS ships in the backend Docker image, and `GET /integrations/status` reports every integration (docs/INTEGRATIONS.md).
 - **Argos webhooks (fixed after Phase 3):** nothing could set a project's webhook secret, so every webhook was refused. Projects now have `POST`/`DELETE …/webhook-secret` (manage role) and a settings card to generate, replace or remove it.
 - **Migration:**
   - Clusters seeded partially by the old code keep a v1 seed marker, which a deliberate deletion can't be told apart from.

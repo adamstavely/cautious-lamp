@@ -7,6 +7,7 @@ import { FeatureFlagsModule } from './feature-flags/feature-flags.module';
 import { VisualRegressionModule } from './visual-regression/visual-regression.module';
 import { SessionReplayModule } from './session-replay/session-replay.module';
 import { PhotosensitivityModule } from './photosensitivity/photosensitivity.module';
+import { IntegrationsModule } from './integrations/integrations.module';
 import { AccessibilityReportsModule } from './accessibility-reports/accessibility-reports.module';
 import { GovernanceModule } from './governance/governance.module';
 import { SystemHealthModule } from './system-health/system-health.module';
@@ -48,6 +49,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
     VisualRegressionModule,
     SessionReplayModule,
     PhotosensitivityModule,
+    IntegrationsModule,
     AccessibilityReportsModule,
     GovernanceModule,
     SystemHealthModule,

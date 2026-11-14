@@ -123,6 +123,13 @@
             </div>
           </div>
         </div>
+        <div v-else-if="loadProblem" class="max-w-3xl mx-auto py-12 text-center">
+          <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">{{ loadProblem.notConfigured ? 'link_off' : 'error' }}</span>
+          <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+            {{ loadProblem.notConfigured ? 'OpenReplay isn\'t connected' : 'This session could not be loaded' }}
+          </p>
+          <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ loadProblem.message }}</p>
+        </div>
       </div>
     </div>
   </div>
@@ -141,6 +148,7 @@ const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const session = ref(null);
 const loading = ref(false);
+const loadProblem = ref(null);
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
 
@@ -155,9 +163,13 @@ const loadSession = async () => {
       `${API_BASE_URL}/session-replay/projects/${route.params.id}/sessions/${route.params.sessionId}`
     );
     session.value = response.data;
+    loadProblem.value = null;
   } catch (error) {
-    console.error('Failed to load session:', error);
-    window.showToast?.('Failed to load session', 'error');
+    const data = error.response?.data;
+    loadProblem.value = {
+      notConfigured: data?.code === 'OPENREPLAY_NOT_CONFIGURED',
+      message: data?.message || 'Try again later.',
+    };
   } finally {
     loading.value = false;
   }

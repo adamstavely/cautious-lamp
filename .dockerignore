@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.github
+backend/uploads
+backend/results
+frontend/RESTYLE_GUIDE.md
+# Sync duplicates ("name 2.ts") that can appear in this checkout
+**/* 2
+**/* 2.*

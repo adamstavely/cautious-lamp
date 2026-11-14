@@ -11,6 +11,7 @@ import {
 import * as crypto from 'crypto';
 import { AuthPrincipal } from '../auth/principal';
 import { ErrorHandler } from '../common/errors/error-handler';
+import { ProjectIntegrationSummary, checkEach } from '../integrations/integration.types';
 import { PaginatedResponse, PaginationParams, createPaginatedResponse } from '../common/pagination/pagination.types';
 import { EncryptionService } from '../common/security/encryption.service';
 import { BuildPayload, CreateProjectDto, NotificationConfig, ScreenshotPayload, WebhookPayload } from '../common/types/common.types';
@@ -193,6 +194,25 @@ export class VisualRegressionService {
     const token = this.decryptToken(project.argosToken);
     if (!token) throw new BadRequestException('Failed to decrypt Argos token');
     return new ArgosApiClient(this.resolveArgosBaseUrl(project.argosBaseUrl), token);
+  }
+
+  /** For GET /integrations/status: projects with an Argos token, and with `check`, which can't reach Argos */
+  async integrationSummary(check: boolean): Promise<ProjectIntegrationSummary> {
+    const projects = await this.projects.list();
+    const withToken = projects.filter((p) => p.argosToken);
+    const summary: ProjectIntegrationSummary = { projects: projects.length, withCredentials: withToken.length };
+    if (check) {
+      const failures = await checkEach(withToken, async (project) => {
+        if (!(await this.clientFor(project).verifyConnection())) throw new Error('Argos did not answer');
+      });
+      summary.unreachable = failures.map(({ item, error }) => ({ projectId: item.id, name: item.name, error }));
+    }
+    return summary;
+  }
+
+  /** Projects that accept Argos webhooks (have a webhook secret) */
+  async webhookReadyCount(): Promise<number> {
+    return (await this.projects.list()).filter((p) => p.webhookSecret).length;
   }
 
   async createProject(teamId: string, dto: CreateProjectDto, options: CreateProjectOptions): Promise<Project> {
