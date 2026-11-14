@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Inject, Injectable, NotFoundExc
 import * as crypto from 'crypto';
 import { AuthPrincipal } from '../auth/principal';
 import { EncryptionService } from '../common/security/encryption.service';
+import { ProjectIntegrationSummary, checkEach } from '../integrations/integration.types';
 import { DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
 import { ProjectAccessService, ProjectAction, ProjectCreator, ProjectOwnership } from '../visual-regression/project-access';
 import { QueryableStore } from '../workspaces/queryable-store';
@@ -332,6 +333,21 @@ export class SessionReplayService {
     // SSRF guard: re-checked before every request, since DNS can change after the URL was saved
     const baseUrl = await resolveOpenReplayBaseUrl(project.openreplayBaseUrl);
     return { client: new OpenReplayApiClient(baseUrl, apiKey), numericProjectId: numericOpenReplayId(project.openreplayProjectKey) };
+  }
+
+  /** For GET /integrations/status: projects with an OpenReplay API key, and with `check`, which can't reach OpenReplay */
+  async integrationSummary(check: boolean): Promise<ProjectIntegrationSummary> {
+    const projects = await this.projects.list();
+    const withKey = projects.filter((p) => p.openreplayApiKey);
+    const summary: ProjectIntegrationSummary = { projects: projects.length, withCredentials: withKey.length };
+    if (check) {
+      const failures = await checkEach(withKey, async (project) => {
+        const { client } = await this.openReplayFor(project);
+        if (!(await client.verifyConnection())) throw new Error('OpenReplay did not answer');
+      });
+      summary.unreachable = failures.map(({ item, error }) => ({ projectId: item.id, name: item.name, error }));
+    }
+    return summary;
   }
 
   // Session Management

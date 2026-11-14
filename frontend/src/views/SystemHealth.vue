@@ -167,6 +167,11 @@
           </div>
         </div>
 
+        <!-- External tools and services (GET /integrations/status) -->
+        <div class="max-w-7xl mx-auto mb-8">
+          <IntegrationsPanel :is-dark-mode="isDarkMode" />
+        </div>
+
         <!-- Detailed Metrics -->
         <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-6 mb-8">
           <!-- Component Status Breakdown -->
@@ -1022,6 +1027,7 @@ import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import { useDrawer } from '../composables/useDrawer.js';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import Dropdown from '../components/Dropdown.vue';
+import IntegrationsPanel from '../components/admin/IntegrationsPanel.vue';
 
 const router = useRouter();
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
