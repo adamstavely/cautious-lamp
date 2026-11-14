@@ -85,8 +85,11 @@ function newRunId(): string {
 /** The project without its Argos token, webhook secret, baselines and notification settings */
 function toProject(doc: ProjectDoc): Project {
   const { argosToken, webhookSecret, baselines, notifications, ...project } = doc;
-  return project;
+  return { ...project, hasWebhookSecret: !!webhookSecret };
 }
+
+/** Printable ASCII, long enough to resist guessing */
+const WEBHOOK_SECRET_PATTERN = /^[\x21-\x7e]{16,256}$/;
 
 function toRun(doc: TestRunDoc): TestRun {
   const { results, resultIds, createdAt, ...run } = doc;
@@ -681,10 +684,27 @@ export class VisualRegressionService {
     });
   }
 
-  /** Sets the secret Argos signs webhooks with (stored encrypted) */
-  async setWebhookSecret(projectId: string, secret: string): Promise<void> {
+  /**
+   * Sets the secret Argos signs this project's webhooks with (stored
+   * encrypted). Without `secret` a random one is generated. The secret is
+   * returned only here, so it can be pasted into Argos.
+   */
+  async setWebhookSecret(projectId: string, secret?: string): Promise<{ secret: string }> {
+    if (secret !== undefined && (typeof secret !== 'string' || !WEBHOOK_SECRET_PATTERN.test(secret))) {
+      throw new BadRequestException('secret must be 16 to 256 printable characters without spaces');
+    }
+    const value = secret ?? `whsec_${crypto.randomBytes(32).toString('hex')}`;
+    const encrypted = this.encryptionService.encrypt(value);
     await this.mutateProject(projectId, (doc) => {
-      doc.webhookSecret = this.encryptionService.encrypt(secret);
+      doc.webhookSecret = encrypted;
+    });
+    return { secret: value };
+  }
+
+  /** Removes the webhook secret; webhooks for the project are refused again */
+  async clearWebhookSecret(projectId: string): Promise<void> {
+    await this.mutateProject(projectId, (doc) => {
+      delete doc.webhookSecret;
     });
   }
 

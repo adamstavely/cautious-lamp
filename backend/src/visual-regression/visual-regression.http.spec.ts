@@ -1,3 +1,4 @@
+import { createHmac } from 'crypto';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
@@ -106,7 +107,8 @@ describe('Project access over HTTP (visual regression and session replay)', () =
         { provide: APP_GUARD, useClass: AuthGuard },
       ],
     }).compile();
-    app = moduleRef.createNestApplication({ logger: false });
+    // rawBody as in main.ts, so webhook signatures are checked over the exact bytes
+    app = moduleRef.createNestApplication({ logger: false, rawBody: true });
     app.useGlobalPipes(new ValidationPipe());
     await app.listen(0, '127.0.0.1');
     base = (await app.getUrl()).replace('[::1]', '127.0.0.1');
@@ -177,6 +179,49 @@ describe('Project access over HTTP (visual regression and session replay)', () =
       expect((await call('viewer', 'DELETE', `/visual-regression/projects/${id}`)).status).toBe(403);
       expect((await call('viewer', 'POST', `/visual-regression/projects/${id}/runs`, {})).status).toBe(403);
       expect((await call('editor', 'PUT', `/visual-regression/projects/${id}`, { name: 'Web 2' })).body.name).toBe('Web 2');
+    });
+
+    it('sets a webhook secret for managers only, never returns it again, and accepts signed Argos webhooks', async () => {
+      const created = await call('editor', 'POST', '/visual-regression/projects', vrBody({ workspaceId: WS, argosProjectId: 'argos-hooks' }));
+      const id = created.body.id;
+      expect(created.body.hasWebhookSecret).toBe(false);
+      const route = `/visual-regression/projects/${id}/webhook-secret`;
+      expect((await call('outsider', 'POST', route, {})).status).toBe(404);
+      expect((await call('viewer', 'POST', route, {})).status).toBe(403);
+      expect((await call('editor', 'POST', route, { secret: 'too short' })).status).toBe(400);
+
+      const set = await call('editor', 'POST', route, {});
+      expect(set.status).toBe(201);
+      const secret: string = set.body.secret;
+      expect(secret).toMatch(/^whsec_[0-9a-f]{64}$/);
+      const read = await call('viewer', 'GET', `/visual-regression/projects/${id}`);
+      expect(read.body.hasWebhookSecret).toBe(true);
+      expect(JSON.stringify(read.body)).not.toContain(secret);
+      expect(JSON.stringify((await call('editor', 'GET', '/visual-regression/projects')).body)).not.toContain(secret);
+
+      // Signed over the exact bytes sent, which JSON.stringify of the parsed body wouldn't reproduce
+      const raw = '{ "projectId": "argos-hooks",  "buildId": "b-unknown" }';
+      const post = (signature: string) =>
+        fetch(`${base}/api/v1/visual-regression/webhooks/argos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-argos-signature': signature, 'x-argos-event': 'build.updated' },
+          body: raw,
+        });
+      const sign = (key: string, body: string) => `sha256=${createHmac('sha256', key).update(body).digest('hex')}`;
+      const accepted = await post(sign(secret, raw));
+      expect(accepted.status).toBe(200);
+      expect(await accepted.json()).toMatchObject({ processed: true });
+      expect((await post(sign(secret, raw.replace('b-unknown', 'b-other')))).status).toBe(401);
+      expect((await post(sign('whsec_wrong_secret_value_000', raw))).status).toBe(401);
+
+      // A chosen secret works too; clearing it refuses webhooks again
+      expect((await call('editor', 'POST', route, { secret: 'my-chosen-secret-1234' })).status).toBe(201);
+      expect((await post(sign('my-chosen-secret-1234', raw))).status).toBe(200);
+      expect((await post(sign(secret, raw))).status).toBe(401);
+      expect((await call('viewer', 'DELETE', route)).status).toBe(403);
+      expect((await call('editor', 'DELETE', route)).status).toBe(204);
+      expect((await post(sign('my-chosen-secret-1234', raw))).status).toBe(401);
+      expect((await call('editor', 'GET', `/visual-regression/projects/${id}`)).body.hasWebhookSecret).toBe(false);
     });
 
     it('checks the run and result behind run and result routes', async () => {

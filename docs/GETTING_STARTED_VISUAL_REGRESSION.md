@@ -94,12 +94,13 @@ curl http://localhost:3000/api/v1/visual-regression/projects/PROJECT_ID/runs \
 
 ## Webhook Configuration
 
-Set up webhooks to receive test results automatically:
+Set up webhooks to receive test results automatically. Webhooks are refused until the project has a secret.
 
-1. Get webhook URL from your project settings
+1. In the project's **Settings** tab, under **Argos webhooks**, choose **Generate secret** and copy it. It's shown only once; **Replace secret** issues a new one, and **Remove secret** turns webhooks off.
 2. Configure in Argos CI:
    - Go to project settings
-   - Add webhook URL
+   - Add the webhook URL shown there (`/api/v1/visual-regression/webhooks/argos` on the API's public origin)
+   - Use the secret to sign requests: `x-argos-signature: sha256=<HMAC-SHA256 of the raw body>`, with the event name in `x-argos-event`
    - Select events (build.completed, screenshot.approved, etc.)
 
 ## Test Configuration

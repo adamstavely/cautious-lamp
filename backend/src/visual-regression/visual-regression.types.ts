@@ -49,6 +49,8 @@ export interface Project extends ProjectOwnership {
   config: ProjectConfig;
   createdAt: string;
   updatedAt: string;
+  /** Whether Argos webhooks can be accepted (the secret itself is never returned) */
+  hasWebhookSecret?: boolean;
 }
 
 /** As stored in design-system-visual-regression-projects */

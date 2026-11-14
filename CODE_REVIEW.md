@@ -109,7 +109,7 @@ NestJS was then upgraded from 10 to 11 (Express 5), which cleared the `@nestjs/c
 **Known gaps:**
 - **Design and token sync connections:** still kept in memory, so they're lost on restart.
 - **Session replay:** still shows mock sessions when no OpenReplay key is set.
-- **Argos webhooks:** nothing sets a project's webhook secret (`setWebhookSecret` has no route or UI), and the receiver refuses webhooks without one, so Argos build results never arrive by webhook.
+- **Argos webhooks (fixed after Phase 3):** nothing could set a project's webhook secret, so every webhook was refused. Projects now have `POST`/`DELETE …/webhook-secret` (manage role) and a settings card to generate, replace or remove it.
 - **Migration:**
   - Clusters seeded partially by the old code keep a v1 seed marker, which a deliberate deletion can't be told apart from.
   - Values encrypted under a passphrase key before R15 must be re-entered.
