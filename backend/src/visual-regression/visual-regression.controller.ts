@@ -163,6 +163,25 @@ export class VisualRegressionController {
     return this.visualRegressionService.rollbackBaseline(projectId, baselineId);
   }
 
+  // Argos webhooks
+  /**
+   * Sets the secret Argos signs webhooks with (body `{ secret? }`; generated
+   * when left out). The response is the only time the secret is shown.
+   */
+  @Post('projects/:id/webhook-secret')
+  async setWebhookSecret(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @Body() dto: { secret?: string } = {}) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'manage');
+    const { secret } = await this.visualRegressionService.setWebhookSecret(projectId, dto?.secret);
+    return { secret, hasWebhookSecret: true, webhookUrl: '/api/v1/visual-regression/webhooks/argos', signatureHeader: 'x-argos-signature' };
+  }
+
+  @Delete('projects/:id/webhook-secret')
+  @HttpCode(204)
+  async clearWebhookSecret(@Principal() principal: AuthPrincipal, @Param('id') projectId: string) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'manage');
+    await this.visualRegressionService.clearWebhookSecret(projectId);
+  }
+
   // Notifications
   @Post('projects/:id/notifications')
   async configureNotifications(

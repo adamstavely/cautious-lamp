@@ -126,6 +126,13 @@ All errors are logged and user-friendly messages are returned.
 
 A webhook endpoint is available at `/api/v1/visual-regression/webhooks/argos` for Argos to notify the system when builds complete. This reduces the need for polling.
 
+Each project needs a webhook secret first; until then its webhooks are refused with `401`.
+- `POST /api/v1/visual-regression/projects/:id/webhook-secret` sets one. It takes an optional body `{ secret }` (16–256 printable characters) and generates `whsec_…` when that's left out. The response is the only time the secret is returned.
+- `DELETE …/webhook-secret` removes the secret.
+- Both need the project's manage role. Projects report `hasWebhookSecret`.
+
+Requests must carry `x-argos-signature: sha256=<hex HMAC-SHA256 of the raw request body>` and the event in `x-argos-event`.
+
 **Note**: Webhook payload structure depends on your Argos instance. Update the handler based on your Argos webhook format.
 
 ## Security Considerations

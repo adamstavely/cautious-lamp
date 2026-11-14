@@ -282,6 +282,76 @@
               </div>
             </form>
           </div>
+
+          <div v-if="activeTab === 'settings'" class="mt-6 rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
+            <h3 class="text-lg font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Argos webhooks</h3>
+            <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+              Argos sends build results here. Webhooks are accepted only when they are signed with this project's secret.
+            </p>
+            <dl class="grid gap-3 sm:grid-cols-2 mb-4 text-sm">
+              <div>
+                <dt class="font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Status</dt>
+                <dd :class="isDarkMode ? 'text-gray-200' : 'text-gray-800'">{{ project.hasWebhookSecret ? 'Secret set: webhooks are accepted' : 'No secret: webhooks are refused' }}</dd>
+              </div>
+              <div>
+                <dt class="font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Webhook URL</dt>
+                <dd class="font-mono break-all" :class="isDarkMode ? 'text-gray-200' : 'text-gray-800'">{{ webhookUrl }}</dd>
+              </div>
+              <div class="sm:col-span-2">
+                <dt class="font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Signature</dt>
+                <dd :class="isDarkMode ? 'text-gray-200' : 'text-gray-800'">
+                  <code>x-argos-signature: sha256=&lt;HMAC-SHA256 of the request body&gt;</code>, with the event name in <code>x-argos-event</code>
+                </dd>
+              </div>
+            </dl>
+
+            <div v-if="revealedSecret" class="mb-4 rounded-lg border p-4" :class="isDarkMode ? 'border-amber-700 bg-amber-950/40' : 'border-amber-300 bg-amber-50'">
+              <label for="webhook-secret" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-amber-200' : 'text-amber-900'">
+                Copy this secret into Argos now. It won't be shown again.
+              </label>
+              <div class="flex gap-2">
+                <input
+                  id="webhook-secret"
+                  :value="revealedSecret"
+                  readonly
+                  class="flex-1 min-w-0 px-3 py-2 border rounded-lg font-mono text-sm"
+                  :class="isDarkMode ? 'bg-slate-900 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                  @focus="$event.target.select()"
+                />
+                <button
+                  type="button"
+                  class="px-3 py-2 rounded-lg border border-solid text-sm"
+                  :class="isDarkMode ? 'border-gray-600 text-gray-200 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-100'"
+                  @click="copySecret"
+                >
+                  {{ secretCopied ? 'Copied' : 'Copy' }}
+                </button>
+              </div>
+            </div>
+
+            <InlineNotice :notice="webhookNotice" class="mb-4" @dismiss="clearWebhookNotice" />
+
+            <div class="flex flex-wrap gap-3">
+              <button
+                type="button"
+                :disabled="webhookBusy"
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                @click="generateWebhookSecret"
+              >
+                {{ project.hasWebhookSecret ? 'Replace secret' : 'Generate secret' }}
+              </button>
+              <button
+                v-if="project.hasWebhookSecret"
+                type="button"
+                :disabled="webhookBusy"
+                class="px-4 py-2 rounded-lg border border-solid transition-colors disabled:opacity-50"
+                :class="isDarkMode ? 'border-red-800 text-red-300 hover:bg-red-950/40' : 'border-red-300 text-red-700 hover:bg-red-50'"
+                @click="removeWebhookSecret"
+              >
+                Remove secret
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -313,6 +383,11 @@ const testRuns = ref([]);
 const totalRunCount = ref(0);
 const testRunning = ref(false);
 const saving = ref(false);
+
+const { notice: webhookNotice, showNotice: showWebhookNotice, clearNotice: clearWebhookNotice } = useNotice();
+const webhookBusy = ref(false);
+const revealedSecret = ref('');
+const secretCopied = ref(false);
 
 const projectForm = ref({
   name: '',
@@ -417,6 +492,61 @@ const triggerTest = async () => {
     console.error('Failed to trigger test:', error);
     showNotice(apiErrorMessage(error, 'Failed to trigger test.'), 'error');
     testRunning.value = false;
+  }
+};
+
+// Where Argos should send webhooks: the API's own origin
+const webhookUrl = computed(() => {
+  const base = (import.meta.env.VITE_API_BASE_URL || window.location.origin).replace(/\/+$/, '');
+  return `${base}${API_PATH}/webhooks/argos`;
+});
+
+const generateWebhookSecret = async () => {
+  if (!project.value) return;
+  if (project.value.hasWebhookSecret && !window.confirm('Replace the webhook secret? Argos must be updated with the new one, or its webhooks will be refused.')) return;
+  webhookBusy.value = true;
+  clearWebhookNotice();
+  secretCopied.value = false;
+  try {
+    const { data } = await apiClient.post(`${projectPath()}/webhook-secret`, {});
+    revealedSecret.value = data.secret;
+    project.value = { ...project.value, hasWebhookSecret: true };
+  } catch (error) {
+    showWebhookNotice(apiErrorMessage(error, 'The webhook secret could not be set.'), 'error');
+  } finally {
+    webhookBusy.value = false;
+  }
+};
+
+const removeWebhookSecret = async () => {
+  if (!project.value || !window.confirm('Remove the webhook secret? Argos webhooks for this project will be refused.')) return;
+  webhookBusy.value = true;
+  clearWebhookNotice();
+  try {
+    await apiClient.delete(`${projectPath()}/webhook-secret`);
+    revealedSecret.value = '';
+    project.value = { ...project.value, hasWebhookSecret: false };
+    showWebhookNotice('Webhook secret removed.', 'success');
+  } catch (error) {
+    showWebhookNotice(apiErrorMessage(error, 'The webhook secret could not be removed.'), 'error');
+  } finally {
+    webhookBusy.value = false;
+  }
+};
+
+// A shown secret belongs to one project
+watch(() => route.params.id, () => {
+  revealedSecret.value = '';
+  secretCopied.value = false;
+  clearWebhookNotice();
+});
+
+const copySecret = async () => {
+  try {
+    await navigator.clipboard.writeText(revealedSecret.value);
+    secretCopied.value = true;
+  } catch {
+    showWebhookNotice('Copy failed. Select the secret and copy it yourself.', 'error');
   }
 };
 

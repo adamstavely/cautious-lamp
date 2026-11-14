@@ -72,7 +72,7 @@ An application belongs to at most one workspace (`workspaceId`).
 
 Projects and visual-regression runs are stored in Elasticsearch (`design-system-visual-regression-projects`, `design-system-visual-regression-runs`, `design-system-session-replay-projects`); Argos tokens, OpenReplay API keys and webhook secrets are encrypted at rest and never returned. Every project route (`/visual-regression/...`, `/session-replay/...`) and every WebSocket subscription (`subscribe:project`, `subscribe:run`) checks access to the project:
 
-| Project | Read (view, runs, results, sessions, analytics) | Run (trigger runs, approve/reject diffs, baselines) | Manage (change, delete, notifications) |
+| Project | Read (view, runs, results, sessions, analytics) | Run (trigger runs, approve/reject diffs, baselines) | Manage (change, delete, notifications, webhook secret) |
 |---|---|---|---|
 | In a workspace | viewer | editor | editor; admin when the project backs an application |
 | No workspace | its creator | its creator | its creator |
