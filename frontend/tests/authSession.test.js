@@ -134,5 +134,63 @@ describe('password change required', () => {
     auth.handlePasswordChangeRequired();
     expect(auth.authState.user.mustChangePassword).toBe(true);
     expect(replaced).toContainEqual({ path: '/change-password' });
+describe('automatic development sign-in', () => {
+  const loginCalls = () => calls.filter((url) => url.endsWith('/auth/login')).length;
+
+  beforeEach(async () => {
+    vi.stubEnv('VITE_DEV_SIGN_IN_EMAIL', 'dev@localhost.test');
+    vi.stubEnv('VITE_DEV_SIGN_IN_PASSWORD', 'dev-password');
+    vi.resetModules();
+    auth = await import('../src/services/auth.js');
+    auth.setAuthRouter(fakeRouter());
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('signs the development user in when there is no session', async () => {
+    await expect(auth.ensureSession()).resolves.toMatchObject({ id: 'u1' });
+    expect(auth.authState.token).toBe('token-1');
+    expect(loginCalls()).toBe(1);
+  });
+
+  it('signs in once for concurrent callers', async () => {
+    await Promise.all([auth.ensureSession(), auth.ensureSession()]);
+    expect(loginCalls()).toBe(1);
+  });
+
+  it('stays signed out after an explicit sign-out, until the next sign-in', async () => {
+    await auth.ensureSession();
+    await auth.logout();
+    await expect(auth.ensureSession()).resolves.toBeNull();
+    expect(loginCalls()).toBe(1);
+
+    await auth.login('dev@localhost.test', 'dev-password');
+    await auth.logout();
+    sessionStorage.removeItem('devSignedOut');
+    await expect(auth.ensureSession()).resolves.toMatchObject({ id: 'u1' });
+  });
+
+  it('falls back to the sign-in page when it fails, without retrying', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    axios.defaults.adapter = async (config) => {
+      calls.push(config.url);
+      const error = new Error('Unauthorized');
+      error.response = { status: 401 };
+      throw error;
+    };
+    await expect(auth.ensureSession()).resolves.toBeNull();
+    await expect(auth.ensureSession()).resolves.toBeNull();
+    expect(loginCalls()).toBe(1);
+    expect(warn).toHaveBeenCalledOnce();
+  });
+
+  it('is off when the credentials are not set', async () => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+    auth = await import('../src/services/auth.js');
+    await expect(auth.ensureSession()).resolves.toBeNull();
+    expect(loginCalls()).toBe(0);
   });
 });
