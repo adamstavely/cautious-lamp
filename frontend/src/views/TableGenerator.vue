@@ -709,6 +709,8 @@ import InlineNotice from '../components/InlineNotice.vue';
 import { useDarkMode } from '../composables/useDarkMode.js';
 import { useNotice } from '../composables/useNotice.js';
 import axe from 'axe-core';
+import { AXE_SCAN_OPTIONS } from '../utils/axeScan.js';
+import { scriptSafeJson } from '../utils/scriptSafeJson.js';
 
 const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -832,28 +834,7 @@ const runAxeCoreScan = async () => {
       return;
     }
     
-    const results = await axe.run(scanTarget, {
-      runOnly: {
-        type: 'tag',
-        values: ['wcag2a', 'wcag2aa', 'wcag21aa', 'best-practice']
-      },
-      rules: {
-        'color-contrast': { enabled: true },
-        'aria-required-attr': { enabled: true },
-        'aria-valid-attr-value': { enabled: true },
-        'aria-label': { enabled: true },
-        'aria-labelledby': { enabled: true },
-        'button-name': { enabled: true },
-        'keyboard': { enabled: true },
-        'focus-order-semantics': { enabled: true },
-        'focusable-content': { enabled: true },
-        'document-title': { enabled: false },
-        'html-has-lang': { enabled: false },
-        'html-lang-valid': { enabled: false },
-        'page-has-heading-one': { enabled: false },
-        'landmark-one-main': { enabled: false }
-      }
-    });
+    const results = await axe.run(scanTarget, AXE_SCAN_OPTIONS);
     
     axeScanResults.value = results;
   } catch (error) {
@@ -1086,7 +1067,7 @@ const generatedCode = computed(() => {
   const rowsData = rows.value;
   
   if (selectedExportFormat.value === 'react') {
-    return `import React, { useState, useMemo } from 'react';
+    return `import React, { useState, useMemo, useEffect } from 'react';
 
 export interface Column {
   name: string;
@@ -1105,33 +1086,61 @@ export interface TableConfig {
   hoverEffects?: boolean;
 }
 
+export type RowId = string | number;
+
 export interface DataTableProps {
-  columns: Column[];
-  rows: Record<string, any>[];
+  columns?: Column[];
+  rows?: Record<string, any>[];
   config?: TableConfig;
+  /** Stable id for a row; defaults to row.id, else its index in rows. */
+  getRowId?: (row: Record<string, any>, index: number) => RowId;
 }
 
+// Module-level defaults keep the same identity on every render.
+const DEFAULT_COLUMNS: Column[] = ${scriptSafeJson(columnsData, 2)};
+const DEFAULT_ROWS: Record<string, any>[] = ${scriptSafeJson(rowsData, 2)};
+const DEFAULT_CONFIG: TableConfig = ${scriptSafeJson(config.value, 2)};
+const defaultGetRowId = (row: Record<string, any>, index: number): RowId => row.id ?? index;
+
 export const DataTable: React.FC<DataTableProps> = ({
-  columns = ${JSON.stringify(columnsData, null, 2)},
-  rows = ${JSON.stringify(rowsData, null, 2)},
-  config = ${JSON.stringify(config.value, null, 2)}
+  columns = DEFAULT_COLUMNS,
+  rows = DEFAULT_ROWS,
+  config = DEFAULT_CONFIG,
+  getRowId = defaultGetRowId
 }) => {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedRows, setSelectedRows] = useState<Set<Record<string, any>>>(new Set());
+  // Selection is kept by row id, so it survives rerenders, sorting and paging.
+  const [selectedIds, setSelectedIds] = useState<Set<RowId>>(() => new Set());
+
+  const rowsPerPage = Math.max(1, Number(config.rowsPerPage) || 10);
+
+  const keyedRows = useMemo(
+    () => rows.map((row, index) => ({ id: getRowId(row, index), row })),
+    [rows, getRowId]
+  );
+
+  // Drop selections whose rows are gone.
+  useEffect(() => {
+    setSelectedIds(previous => {
+      const ids = new Set(keyedRows.map(entry => entry.id));
+      const next = new Set([...previous].filter(id => ids.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [keyedRows]);
 
   const filteredRows = useMemo(() => {
-    let result = [...rows];
-    
+    let result = [...keyedRows];
+
     // Apply filters
     if (config.enableFiltering) {
       Object.keys(filters).forEach(columnName => {
         const filterValue = filters[columnName]?.toLowerCase() || '';
         if (filterValue) {
-          result = result.filter(row => {
-            const cellValue = String(row[columnName] || '').toLowerCase();
+          result = result.filter(({ row }) => {
+            const cellValue = String(row[columnName] ?? '').toLowerCase();
             return cellValue.includes(filterValue);
           });
         }
@@ -1142,9 +1151,9 @@ export const DataTable: React.FC<DataTableProps> = ({
     if (config.enableSorting && sortColumn) {
       const column = columns.find(c => c.name === sortColumn);
       if (column && column.sortable) {
-        result = [...result].sort((a, b) => {
-          const aVal = a[sortColumn] || '';
-          const bVal = b[sortColumn] || '';
+        result = [...result].sort(({ row: a }, { row: b }) => {
+          const aVal = a[sortColumn] ?? '';
+          const bVal = b[sortColumn] ?? '';
           
           if (column.type === 'number') {
             const aNum = Number(aVal) || 0;
@@ -1166,15 +1175,41 @@ export const DataTable: React.FC<DataTableProps> = ({
     }
     
     return result;
-  }, [rows, filters, sortColumn, sortDirection, columns, config]);
+  }, [keyedRows, filters, sortColumn, sortDirection, columns, config]);
 
-  const totalPages = Math.ceil(filteredRows.length / (config.rowsPerPage || 10));
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
+  // Clamp while rendering so a shrinking result (filters, new rows, a larger
+  // page size) never shows an empty page, then store the clamped page.
+  const page = Math.min(currentPage, totalPages);
+  useEffect(() => {
+    if (currentPage !== page) setCurrentPage(page);
+  }, [currentPage, page]);
+
   const paginatedRows = config.enablePagination
-    ? filteredRows.slice(
-        (currentPage - 1) * (config.rowsPerPage || 10),
-        currentPage * (config.rowsPerPage || 10)
-      )
+    ? filteredRows.slice((page - 1) * rowsPerPage, page * rowsPerPage)
     : filteredRows;
+
+  const setFilter = (columnName: string, value: string) => {
+    setFilters(previous => ({ ...previous, [columnName]: value }));
+    setCurrentPage(1);
+  };
+
+  const toggleRow = (id: RowId) => {
+    setSelectedIds(previous => {
+      const next = new Set(config.selectionMode === 'single' ? [] : previous);
+      if (previous.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (checked: boolean) => {
+    setSelectedIds(previous => {
+      const next = new Set(previous);
+      paginatedRows.forEach(({ id }) => (checked ? next.add(id) : next.delete(id)));
+      return next;
+    });
+  };
 
   const handleSort = (columnName: string) => {
     if (sortColumn === columnName) {
@@ -1203,7 +1238,7 @@ export const DataTable: React.FC<DataTableProps> = ({
               type="text"
               placeholder={\`Filter \${column.name}...\`}
               value={filters[column.name] || ''}
-              onChange={(e) => setFilters({ ...filters, [column.name]: e.target.value })}
+              onChange={(e) => setFilter(column.name, e.target.value)}
               className="px-3 py-2 rounded-lg border text-sm"
             />
           ))}
@@ -1220,18 +1255,8 @@ export const DataTable: React.FC<DataTableProps> = ({
                   {config.selectionMode === 'multiple' && (
                     <input
                       type="checkbox"
-                      checked={paginatedRows.length > 0 && paginatedRows.every(row => selectedRows.has(row))}
-                      onChange={(e) => {
-                        const newSelected = new Set(selectedRows);
-                        paginatedRows.forEach(row => {
-                          if (e.target.checked) {
-                            newSelected.add(row);
-                          } else {
-                            newSelected.delete(row);
-                          }
-                        });
-                        setSelectedRows(newSelected);
-                      }}
+                      checked={paginatedRows.length > 0 && paginatedRows.every(({ id }) => selectedIds.has(id))}
+                      onChange={(e) => toggleSelectAll(e.target.checked)}
                     />
                   )}
                 </th>
@@ -1257,36 +1282,23 @@ export const DataTable: React.FC<DataTableProps> = ({
             </tr>
           </thead>
           <tbody>
-            {paginatedRows.map((row, rowIndex) => {
+            {paginatedRows.map(({ id, row }, rowIndex) => {
+              const selected = selectedIds.has(id);
               return (
                 <tr
-                  key={rowIndex}
+                  key={id}
                   className={\`
                     \${config.stripedRows && rowIndex % 2 === 0 ? 'bg-gray-50' : ''}
                     \${config.hoverEffects ? 'hover:bg-indigo-50' : ''}
-                    \${selectedRows.has(row) ? 'bg-indigo-100' : ''}
+                    \${selected ? 'bg-indigo-100' : ''}
                   \`}
                 >
                   {config.selectionMode !== 'none' && (
                     <td className="p-3 border">
                       <input
                         type="checkbox"
-                        checked={selectedRows.has(row)}
-                        onChange={() => {
-                          const newSelected = new Set(selectedRows);
-                          if (config.selectionMode === 'single') {
-                            const wasSelected = newSelected.has(row);
-                            newSelected.clear();
-                            if (!wasSelected) newSelected.add(row);
-                          } else {
-                            if (newSelected.has(row)) {
-                              newSelected.delete(row);
-                            } else {
-                              newSelected.add(row);
-                            }
-                          }
-                          setSelectedRows(newSelected);
-                        }}
+                        checked={selected}
+                        onChange={() => toggleRow(id)}
                       />
                     </td>
                   )}
@@ -1303,24 +1315,24 @@ export const DataTable: React.FC<DataTableProps> = ({
       </div>
 
       {/* Pagination */}
-      {config.enablePagination && filteredRows.length > (config.rowsPerPage || 10) && (
+      {config.enablePagination && filteredRows.length > rowsPerPage && (
         <div className="mt-4 flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            Showing {(currentPage - 1) * (config.rowsPerPage || 10) + 1} to{' '}
-            {Math.min(currentPage * (config.rowsPerPage || 10), filteredRows.length)} of{' '}
+            Showing {(page - 1) * rowsPerPage + 1} to{' '}
+            {Math.min(page * rowsPerPage, filteredRows.length)} of{' '}
             {filteredRows.length} entries
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(Math.max(1, page - 1))}
+              disabled={page === 1}
               className="px-3 py-2 rounded-lg border text-sm disabled:opacity-50"
             >
               Previous
             </button>
             <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(Math.min(totalPages, page + 1))}
+              disabled={page === totalPages}
               className="px-3 py-2 rounded-lg border text-sm disabled:opacity-50"
             >
               Next
@@ -1439,15 +1451,15 @@ import { ref, computed, watch } from 'vue';
 const props = defineProps({
   columns: {
     type: Array,
-    default: () => ${JSON.stringify(columnsData, null, 4)}
+    default: () => ${scriptSafeJson(columnsData, 4)}
   },
   rows: {
     type: Array,
-    default: () => ${JSON.stringify(rowsData, null, 4)}
+    default: () => ${scriptSafeJson(rowsData, 4)}
   },
   config: {
     type: Object,
-    default: () => ${JSON.stringify(config.value, null, 4)}
+    default: () => (${scriptSafeJson(config.value, 4)})
   }
 });
 

@@ -651,6 +651,8 @@ import InlineNotice from '../components/InlineNotice.vue';
 import { useDarkMode } from '../composables/useDarkMode.js';
 import { useNotice } from '../composables/useNotice.js';
 import axe from 'axe-core';
+import { AXE_SCAN_OPTIONS } from '../utils/axeScan.js';
+import { scriptSafeJson } from '../utils/scriptSafeJson.js';
 
 const isDarkMode = useDarkMode();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -794,28 +796,7 @@ const runAxeCoreScan = async () => {
       return;
     }
     
-    const results = await axe.run(scanTarget, {
-      runOnly: {
-        type: 'tag',
-        values: ['wcag2a', 'wcag2aa', 'wcag21aa', 'best-practice']
-      },
-      rules: {
-        'color-contrast': { enabled: true },
-        'aria-required-attr': { enabled: true },
-        'aria-valid-attr-value': { enabled: true },
-        'aria-label': { enabled: true },
-        'aria-labelledby': { enabled: true },
-        'button-name': { enabled: true },
-        'keyboard': { enabled: true },
-        'focus-order-semantics': { enabled: true },
-        'focusable-content': { enabled: true },
-        'document-title': { enabled: false },
-        'html-has-lang': { enabled: false },
-        'html-lang-valid': { enabled: false },
-        'page-has-heading-one': { enabled: false },
-        'landmark-one-main': { enabled: false }
-      }
-    });
+    const results = await axe.run(scanTarget, AXE_SCAN_OPTIONS);
     
     axeScanResults.value = results;
   } catch (error) {
@@ -935,9 +916,9 @@ const generatedCode = computed(() => {
     color: e.color || config.value.timelineColor,
     position: e.position === 'right' ? 'right' : 'left'
   }));
-  const style = JSON.stringify(config.value.style);
-  const timelineColor = JSON.stringify(config.value.timelineColor);
-  const dateFormat = JSON.stringify(config.value.dateFormat);
+  const style = scriptSafeJson(config.value.style);
+  const timelineColor = scriptSafeJson(config.value.timelineColor);
+  const dateFormat = scriptSafeJson(config.value.dateFormat);
   const spacing = spacingPx();
   
   if (selectedExportFormat.value === 'react') {
@@ -983,7 +964,7 @@ const parseDate = (dateString: string) => {
 };
 
 export const Timeline: React.FC<TimelineProps> = ({
-  events = ${JSON.stringify(eventsData, null, 2)},
+  events = ${scriptSafeJson(eventsData, 2)},
   style = ${style},
   timelineColor = ${timelineColor},
   dateFormat = ${dateFormat},
@@ -1184,7 +1165,7 @@ import { computed } from 'vue';
 const props = defineProps({
   events: {
     type: Array,
-    default: () => ${JSON.stringify(eventsData, null, 4)}
+    default: () => ${scriptSafeJson(eventsData, 4)}
   },
   style: {
     type: String,

@@ -77,6 +77,10 @@ export const authState = reactive({
 
 let mePromise = null;
 let router = null;
+let expiryTimer = null;
+// Set when a session ends because its token expired, so the sign-in page can
+// say so. Cleared by consumeSessionExpired(), sign-in and sign-out.
+let sessionExpired = false;
 
 /** main.js registers the router so a 401 anywhere can send the user to /login. */
 export const setAuthRouter = (instance) => {
@@ -85,10 +89,56 @@ export const setAuthRouter = (instance) => {
 
 const tokenExpired = () => !!authState.expiresAt && new Date(authState.expiresAt).getTime() <= Date.now();
 
-/** The current access token, or null. */
+/** Leave the current (non-public) page for /login, coming back to it afterwards. */
+const redirectToLogin = () => {
+  if (!router) return;
+  const current = router.currentRoute.value;
+  if (current?.meta?.public) return;
+  router.replace({ path: '/login', query: { redirect: safeRedirect(current?.fullPath), expired: '1' } });
+};
+
+/** Clear an expired session. Returns true when there was one to clear. */
+const dropExpiredSession = () => {
+  if (isMockAuth() || !authState.token || !tokenExpired()) return false;
+  clearSession();
+  sessionExpired = true;
+  return true;
+};
+
+/**
+ * Whether the last session ended by expiring (then forgets it). The router
+ * guard uses this to send `expired=1` to the sign-in page.
+ */
+export const consumeSessionExpired = () => {
+  const expired = sessionExpired;
+  sessionExpired = false;
+  return expired;
+};
+
+// setTimeout can't wait longer than 2^31-1 ms; longer sessions re-arm.
+const MAX_TIMER_MS = 2 ** 31 - 1;
+
+/** Sign out and go to /login when the token expires, even if the page is idle. */
+const scheduleExpiry = () => {
+  if (expiryTimer) clearTimeout(expiryTimer);
+  expiryTimer = null;
+  if (isMockAuth() || !authState.token || !authState.expiresAt) return;
+  const remaining = new Date(authState.expiresAt).getTime() - Date.now();
+  if (!Number.isFinite(remaining)) return;
+  expiryTimer = setTimeout(() => {
+    expiryTimer = null;
+    if (dropExpiredSession()) redirectToLogin();
+    else scheduleExpiry();
+  }, Math.min(Math.max(remaining, 0), MAX_TIMER_MS));
+};
+
+// A token restored from sessionStorage expires on schedule too.
+scheduleExpiry();
+
+/** The current access token, or null. An expired token signs the user out. */
 export const getToken = () => {
   if (isMockAuth()) return null;
-  if (authState.token && tokenExpired()) clearSession();
+  if (dropExpiredSession()) redirectToLogin();
   return authState.token;
 };
 
@@ -110,6 +160,8 @@ export const hasPermission = (permission) => {
 
 /** Forget the token and user (no server call). */
 export function clearSession() {
+  if (expiryTimer) clearTimeout(expiryTimer);
+  expiryTimer = null;
   authState.token = null;
   authState.expiresAt = null;
   authState.user = null;
@@ -124,6 +176,8 @@ const storeSession = ({ accessToken, expiresAt, user }) => {
   authState.user = user || null;
   storage.set(TOKEN_KEY, accessToken);
   storage.set(EXPIRES_KEY, expiresAt || null);
+  sessionExpired = false;
+  scheduleExpiry();
 };
 
 /**
@@ -169,8 +223,13 @@ export async function refreshMe() {
   }
 }
 
-/** The signed-in user, loading /auth/me once if needed. Used by the router guard. */
+/**
+ * The signed-in user, loading /auth/me once if needed. Used by the router
+ * guard. An expired token is dropped first, so a cached user is never
+ * returned for a session that has ended (the guard then sends them to /login).
+ */
 export function ensureSession() {
+  dropExpiredSession();
   if (authState.user) return Promise.resolve(authState.user);
   if (isMockAuth() || !getToken()) return Promise.resolve(null);
   if (!mePromise) {
@@ -193,6 +252,7 @@ export async function logout() {
   }
   const token = getToken();
   clearSession();
+  sessionExpired = false;
   if (!token) return;
   try {
     await axios.post(`${AUTH_PATH}/logout`, null, { headers: { Authorization: `Bearer ${token}` } });
@@ -238,8 +298,5 @@ export const safeRedirect = (raw) => {
 export function handleUnauthorized() {
   const hadSession = !!authState.token || !!authState.user;
   clearSession();
-  if (!router || !hadSession) return;
-  const current = router.currentRoute.value;
-  if (current?.meta?.public) return;
-  router.replace({ path: '/login', query: { redirect: safeRedirect(current?.fullPath), expired: '1' } });
+  if (hadSession) redirectToLogin();
 }

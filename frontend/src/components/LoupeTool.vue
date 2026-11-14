@@ -375,8 +375,8 @@ const getHighlightStyle = (element) => {
   const rect = element.getBoundingClientRect();
   return {
     position: 'fixed',
-    left: `${rect.left + window.scrollX}px`,
-    top: `${rect.top + window.scrollY}px`,
+    left: `${rect.left}px`,
+    top: `${rect.top}px`,
     width: `${rect.width}px`,
     height: `${rect.height}px`,
     zIndex: 9998,
@@ -558,6 +558,20 @@ const updateViewport = () => {
   if (viewportHeight.value !== newHeight) {
     viewportHeight.value = newHeight;
   }
+};
+
+// Overlays are position: fixed at viewport coordinates, so they're redrawn on scroll (once per frame)
+let scrollFrame = null;
+const handleScroll = () => {
+  if (scrollFrame !== null) return;
+  scrollFrame = requestAnimationFrame(() => {
+    scrollFrame = null;
+    if (!isActive.value) return;
+    scanForComponents();
+    if (showLayoutInspector.value && detectedLayouts.value.length > 0) {
+      updateLayoutOverlayStyles();
+    }
+  });
 };
 
 const handleResize = () => {
@@ -810,8 +824,8 @@ const updateLayoutOverlayStyles = () => {
         const rect = layout.element.getBoundingClientRect();
         newStyles.set(id, {
           position: 'fixed',
-          left: `${rect.left + window.scrollX}px`,
-          top: `${rect.top + window.scrollY}px`,
+          left: `${rect.left}px`,
+          top: `${rect.top}px`,
           width: `${rect.width}px`,
           height: `${rect.height}px`,
           zIndex: 9997,
@@ -828,8 +842,8 @@ const getLayoutOverlayStyle = (layout, index) => {
   const id = getLayoutId(layout, index);
   return layoutOverlayStyles.value.get(id) || {
     position: 'fixed',
-    left: `${layout.rect.left + window.scrollX}px`,
-    top: `${layout.rect.top + window.scrollY}px`,
+    left: `${layout.rect.left}px`,
+    top: `${layout.rect.top}px`,
     width: `${layout.rect.width}px`,
     height: `${layout.rect.height}px`,
     zIndex: 9997,
@@ -862,6 +876,7 @@ onMounted(async () => {
   updateViewport();
   window.addEventListener('keydown', handleKeyDown, true);
   window.addEventListener('resize', handleResize);
+  window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
   
   console.log('Developer Tools mounted and listening for keyboard shortcuts');
   
@@ -877,6 +892,8 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeyDown, true);
   window.removeEventListener('resize', handleResize);
+  window.removeEventListener('scroll', handleScroll, { capture: true });
+  if (scrollFrame !== null) cancelAnimationFrame(scrollFrame);
   if (resizeTimeout) {
     clearTimeout(resizeTimeout);
   }

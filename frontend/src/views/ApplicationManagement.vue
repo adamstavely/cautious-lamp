@@ -72,6 +72,18 @@
               :is-dark-mode="isDarkMode"
               label="Filter by capability"
             />
+
+            <!-- Workspace admins without admin:governance can only change their workspaces' applications -->
+            <Dropdown
+              v-if="!isGovernance"
+              v-model="scope"
+              :options="[
+                { value: 'mine', label: 'Workspaces I administer' },
+                { value: 'all', label: 'All applications' },
+              ]"
+              :is-dark-mode="isDarkMode"
+              label="Show applications from"
+            />
           </div>
         </div>
 
@@ -90,7 +102,7 @@
             </div>
 
             <div v-else-if="filteredApplications.length === 0" class="p-8 text-center" :class="c.muted">
-              No applications found.
+              {{ scope === 'mine' && !isGovernance ? 'No applications in the workspaces you administer.' : 'No applications found.' }}
               <router-link v-if="canRegister" to="/admin/applications/register" class="text-indigo-600 hover:text-indigo-700 underline">Register your first application</router-link>
             </div>
 
@@ -388,7 +400,9 @@ import { compareVersions, parseVersion } from '../utils/semver.js';
 /**
  * Registered applications and migration planning (docs/WORKSPACES.md).
  * Anyone signed in can read; editing needs admin:governance or the admin role
- * in the application's workspace, which the server enforces.
+ * in the application's workspace, which the server enforces. The route lets in
+ * workspace admins (router/rbacGuards.js), who see their workspaces'
+ * applications first and can switch to all of them read-only.
  */
 const router = useRouter();
 const isDarkMode = useDarkMode();
@@ -403,6 +417,8 @@ const loadError = ref(null);
 const applications = ref([]);
 const workspaces = ref([]);
 const filterCapability = ref('');
+// Without admin:governance, start with the applications this user can change
+const scope = ref('mine');
 const migrationData = ref(null);
 const migrationError = ref(null);
 const currentVersion = ref(null);
@@ -419,7 +435,11 @@ const canWriteId = (id) => {
 };
 
 const filteredApplications = computed(() =>
-  filterCapability.value ? applications.value.filter((app) => app.capabilities?.[filterCapability.value]?.enabled === true) : applications.value,
+  applications.value.filter(
+    (app) =>
+      (!filterCapability.value || app.capabilities?.[filterCapability.value]?.enabled === true) &&
+      (isGovernance.value || scope.value === 'all' || canWrite(app)),
+  ),
 );
 
 const workspaceName = (id) => workspaces.value.find((ws) => ws.id === id)?.name ?? 'Another workspace';

@@ -1643,6 +1643,8 @@ import { useDarkMode } from '../composables/useDarkMode.js';
 import { useNotice } from '../composables/useNotice.js';
 import { calculateContrast } from '../composables/useContrast.js';
 import axe from 'axe-core';
+import { AXE_SCAN_OPTIONS } from '../utils/axeScan.js';
+import { scriptSafeJson } from '../utils/scriptSafeJson.js';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -2515,29 +2517,7 @@ const runAxeCoreScan = async () => {
     
     // Run axe-core scan on the entire preview section
     // This will catch issues with the chart, data table, and surrounding elements
-    const results = await axe.run(scanTarget, {
-      runOnly: {
-        type: 'tag',
-        values: ['wcag2a', 'wcag2aa', 'wcag21aa', 'best-practice']
-      },
-      rules: {
-        'color-contrast': { enabled: true },
-        'aria-required-attr': { enabled: true },
-        'aria-valid-attr-value': { enabled: true },
-        'image-alt': { enabled: true },
-        'aria-label': { enabled: true },
-        'aria-labelledby': { enabled: true },
-        'button-name': { enabled: true },
-        'keyboard': { enabled: true },
-        'focus-order-semantics': { enabled: true },
-        'focusable-content': { enabled: true },
-        'document-title': { enabled: false }, // Disable document-level checks
-        'html-has-lang': { enabled: false },
-        'html-lang-valid': { enabled: false },
-        'page-has-heading-one': { enabled: false },
-        'landmark-one-main': { enabled: false }
-      }
-    });
+    const results = await axe.run(scanTarget, AXE_SCAN_OPTIONS);
     
     console.log('axe-core scan results:', results);
     axeScanResults.value = results;
@@ -3525,15 +3505,6 @@ const escapeHtml = (value) => String(value ?? '')
   .replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
-
-// JSON that is safe to inline in a <script> element: a closing script tag,
-// "<!--", "&" entities or U+2028/2029 inside a string cannot break out of it.
-const scriptSafeJson = (value, space = 2) => JSON.stringify(value, null, space)
-  .replace(/</g, '\\u003c')
-  .replace(/>/g, '\\u003e')
-  .replace(/&/g, '\\u0026')
-  .replace(/\u2028/g, '\\u2028')
-  .replace(/\u2029/g, '\\u2029');
 
 const exportFileBase = () =>
   `chart-${(chartConfig.value.title || '').replace(/[^a-z0-9]/gi, '-').toLowerCase() || 'chart'}`;

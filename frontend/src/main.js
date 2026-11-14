@@ -20,7 +20,7 @@ import * as directives from 'vuetify/directives';
 import '@mdi/font/css/materialdesignicons.css';
 import { checkFeatureFlagGuard } from './router/featureFlagGuards';
 import { checkRbacGuard } from './router/rbacGuards';
-import { ensureSession, safeRedirect, setAuthRouter } from './services/auth.js';
+import { consumeSessionExpired, ensureSession, safeRedirect, setAuthRouter } from './services/auth.js';
 
 // Initialize dark mode before creating Vuetify
 const initDarkMode = () => {
@@ -876,6 +876,8 @@ router.beforeEach(async (to) => {
     console.error('Could not load the signed-in user:', error);
     unreachable = true;
   }
+  // True when the session just ended because its token expired
+  const expired = consumeSessionExpired();
 
   if (to.meta.public) {
     // Already signed in: skip the sign-in page
@@ -887,6 +889,7 @@ router.beforeEach(async (to) => {
   if (!user) {
     const query = { redirect: safeRedirect(to.fullPath) };
     if (unreachable) query.unreachable = '1';
+    else if (expired) query.expired = '1';
     return { path: '/login', query };
   }
 
