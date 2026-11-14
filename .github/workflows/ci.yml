@@ -62,3 +62,20 @@ jobs:
         working-directory: breakpoint-overlay-standalone
       - run: npm test
         working-directory: vscode-design-system-extension
+  backend-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      # The image builds IRIS from source; the layer cache keeps that to the first run
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          tags: cautious-lamp-backend:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      # IRIS analyses real videos through the backend's runner, and Chromium starts
+      - run: backend/docker/smoke-test.sh cautious-lamp-backend:ci

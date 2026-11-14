@@ -50,12 +50,10 @@ export class PhotosensitivityController {
       throw new BadRequestException('No video file uploaded');
     }
 
-    const options = {
+    // outputJson is accepted for older clients and ignored: the response is the same either way
+    const result = await this.photosensitivityService.analyzeVideo(file.path, {
       enablePatternDetection: body.enablePatternDetection !== 'false',
-      outputJson: body.outputJson === 'true',
-    };
-
-    const result = await this.photosensitivityService.analyzeVideo(file.path, options);
+    });
     const applicationName = body.applicationName || 'Unknown Application';
 
     const complianceChecks = this.photosensitivityService.convertToComplianceChecks(
@@ -80,14 +78,15 @@ export class PhotosensitivityController {
     };
   }
 
+  /** Whether IRIS is installed here (nothing is run) */
   @Get('verify')
   async verifyInstallation() {
-    const isInstalled = await this.photosensitivityService.verifyInstallation();
+    const { executable, config, problem } = await this.photosensitivityService.status();
     return {
-      installed: isInstalled,
-      message: isInstalled
-        ? 'IRIS is installed and accessible'
-        : 'IRIS is not installed or not accessible. Please install IRIS and set IRIS_EXECUTABLE_PATH environment variable.',
+      installed: !problem,
+      executable,
+      config,
+      message: problem ?? 'IRIS is installed and ready',
     };
   }
 
