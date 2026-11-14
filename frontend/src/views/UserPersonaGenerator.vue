@@ -106,7 +106,7 @@ const generatePersona = async () => {
   nameError.value = '';
   personaGenerated.value = true;
   await nextTick();
-  previewSection.value?.$el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  previewSection.value?.$el?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
 };
 
 const exportPersona = () => {
