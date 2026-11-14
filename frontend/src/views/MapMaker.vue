@@ -3,119 +3,95 @@
     <PageHero
       :back="{ to: '/data-viz', label: 'Data visualization' }"
       title="Map maker"
-      lead="Create interactive choropleth and flow maps with accurate geographic boundaries using TopoJSON data and D3-geo projections."
+      lead="Make choropleth, proportional symbol, dot and flow maps from your own data, for the world, a continent, any country's regions or US counties."
       spot="tools/map-maker"
       size="tool"
     />
 
-    <PageSection title="Map type" description="Colour regions by value, or show movement between places.">
-      <UiChoiceCards v-model="selectedMapType" :options="mapTypes" :columns="2" aria-label="Map type" />
+    <PageSection title="Map type" description="Colour regions by value, size symbols by value, mark places, or show movement between places.">
+      <UiChoiceCards v-model="mapType" :options="mapTypes" :columns="4" aria-label="Map type" />
     </PageSection>
 
-    <PageSection title="Build" description="Set up the map, enter your data and export it." divided>
+    <PageSection title="Build" description="Choose an area, bring in your data, then style and export the map." divided>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-1 flex flex-col gap-6">
-          <UiPanel title="Map configuration">
+          <UiPanel title="Area">
             <div class="flex flex-col gap-4">
-              <UiSelect v-model="mapConfig.mapType" label="Geographic area" :options="areaOptions" @update:model-value="handleMapTypeChange" />
-              <UiSelect v-if="mapConfig.mapType === 'world'" v-model="mapConfig.mapProjection" label="Projection" :options="projectionOptions" />
-              <UiCheckbox v-if="selectedMapType === 'choropleth'" v-model="mapConfig.showAllRegions" label="Show all regions" />
-              <UiSelect v-model="mapConfig.colorScheme" label="Color scheme" :options="colorSchemeOptions" />
+              <UiSelect :model-value="area" label="Geographic area" :options="areaSelectOptions" @update:model-value="setArea" />
+              <UiSelect v-if="area === 'world' && !country" v-model="worldProjection" label="Projection" :options="projectionOptions" />
+              <UiSelect
+                v-if="countryOptions.length > 1"
+                :model-value="country || ''"
+                label="Country regions"
+                hint="Show a country's states, provinces or other first-level regions."
+                :options="countryOptions"
+                @update:model-value="openCountry"
+              />
+              <UiCheckbox v-if="geo?.hasRemote" v-model="includeRemote" label="Fit remote regions" hint="Zoom out to include overseas regions." />
+              <UiCheckbox v-if="mapType === 'choropleth'" v-model="showAllRegions" label="Show regions without data" />
             </div>
           </UiPanel>
 
-          <UiPanel title="Data">
-            <!-- Choropleth data -->
-            <fieldset v-if="selectedMapType === 'choropleth'" class="flex flex-col gap-2">
-              <legend class="mb-2 text-sm font-medium text-ink">Regions</legend>
-              <div v-for="(region, index) in choroplethData" :key="index" class="flex items-center gap-2">
-                <div class="flex-1 min-w-0">
-                  <UiInput v-model="region.name" placeholder="Region name" :aria-label="`Region ${index + 1} name`" />
+          <UiPanel v-if="mapType === 'choropleth'" title="Colour">
+            <div class="flex flex-col gap-4">
+              <UiSegmented v-model="paletteKind" label="Scheme" :options="schemeOptions" :hint="schemeHint" />
+              <UiSelect v-if="paletteKind === 'sequential'" v-model="sequentialHue" label="Colours" :options="SEQUENTIAL" />
+              <template v-else>
+                <UiSelect v-model="divergingRamp" label="Colours" :options="DIVERGING" />
+                <UiInput v-model="midpointInput" type="number" step="any" label="Midpoint" hint="Shown in the neutral colour, e.g. 0 or the average." :error="midpointError" />
+              </template>
+              <UiSegmented v-model="method" label="Classes" :options="methodOptions" :hint="methodHint" />
+              <UiSegmented v-if="method !== 'custom'" v-model="classCount" label="Number of classes" :options="classOptions" />
+              <UiInput v-else v-model="breaksText" label="Class breaks" hint="2 to 6 values, separated by a comma and a space, e.g. 10, 25, 50" :error="breaksError" />
+            </div>
+          </UiPanel>
+
+          <UiPanel title="Data" :description="dataDescription">
+            <UiTabs v-model="dataTab" :tabs="dataTabs" label="Data entry">
+              <template #import>
+                <div class="flex flex-col gap-4">
+                  <UiSegmented v-if="mapType === 'flowMap'" v-model="flowTable" label="Table" :options="flowTableOptions" />
+                  <MapDataImport
+                    :label="importLabel"
+                    :hint="importHint"
+                    :placeholder="importPlaceholder"
+                    :model-text="importTexts[activeTable]"
+                    @import="onImport"
+                    @sample="loadSample"
+                  />
                 </div>
-                <div class="w-32">
-                  <UiInput v-model.number="region.value" type="number" placeholder="Value" :aria-label="`Region ${index + 1} value`" />
+              </template>
+              <template #edit>
+                <MapRowEditor v-if="mapType === 'choropleth'" v-model="regionRows" :columns="editorColumns.choropleth" legend="Regions" item-label="Region" @update:model-value="touch" />
+                <MapRowEditor v-else-if="mapType === 'bubble' || mapType === 'dot'" v-model="pointRows" :columns="editorColumns.points" legend="Places" item-label="Place" @update:model-value="touch" />
+                <div v-else class="flex flex-col gap-6">
+                  <MapRowEditor v-model="placeRows" :columns="editorColumns.places" legend="Places" item-label="Place" @update:model-value="touch" />
+                  <MapRowEditor v-model="flowRows" :columns="editorColumns.flows" legend="Flows" item-label="Flow" @update:model-value="touch" />
                 </div>
-                <UiButton
-                  icon-only
-                  icon="delete"
-                  variant="ghost"
-                  size="sm"
-                  :label="`Remove region ${index + 1}`"
-                  :disabled="choroplethData.length <= 1"
-                  @click="choroplethData.splice(index, 1)"
-                />
+              </template>
+            </UiTabs>
+            <template #footer>
+              <div class="flex flex-wrap gap-2">
+                <UiButton v-for="table in tablesForType" :key="table" size="sm" icon="download" @click="downloadCSV(table)">
+                  {{ tablesForType.length > 1 ? `${TABLE_NAMES[table]} CSV` : 'Download CSV' }}
+                </UiButton>
               </div>
-              <UiButton icon="add" size="sm" class="self-start" @click="choroplethData.push({ name: `Region ${choroplethData.length + 1}`, value: 0 })">Add region</UiButton>
-            </fieldset>
-
-            <!-- Flow map data -->
-            <div v-else-if="selectedMapType === 'flowMap'" class="flex flex-col gap-6">
-              <fieldset class="flex flex-col gap-3">
-                <legend class="mb-2 text-sm font-medium text-ink">Locations</legend>
-                <div v-for="(node, index) in flowMapData.nodes" :key="index" class="grid grid-cols-2 gap-2 p-3 rounded-tile border border-line bg-surface-sunken">
-                  <UiInput v-model="node.id" placeholder="ID" :aria-label="`Location ${index + 1} ID`" />
-                  <UiInput v-model="node.label" placeholder="Location name" :aria-label="`Location ${index + 1} name`" />
-                  <UiInput v-model.number="node.lat" type="number" step="0.0001" placeholder="Latitude" :aria-label="`Location ${index + 1} latitude`" />
-                  <UiInput v-model.number="node.lng" type="number" step="0.0001" placeholder="Longitude" :aria-label="`Location ${index + 1} longitude`" />
-                  <UiButton
-                    icon="delete"
-                    variant="ghost"
-                    size="sm"
-                    class="col-span-2 justify-self-end"
-                    :disabled="flowMapData.nodes.length <= 2"
-                    @click="flowMapData.nodes.splice(index, 1)"
-                  >
-                    Remove location
-                  </UiButton>
-                </div>
-                <UiButton
-                  icon="add"
-                  size="sm"
-                  class="self-start"
-                  @click="flowMapData.nodes.push({ id: `Loc${flowMapData.nodes.length + 1}`, label: `Location ${flowMapData.nodes.length + 1}`, lat: 0, lng: 0 })"
-                >
-                  Add location
-                </UiButton>
-              </fieldset>
-
-              <fieldset class="flex flex-col gap-3">
-                <legend class="mb-2 text-sm font-medium text-ink">Flows</legend>
-                <div v-for="(link, index) in flowMapData.links" :key="index" class="flex flex-col gap-2 p-3 rounded-tile border border-line bg-surface-sunken">
-                  <div class="flex items-center gap-2">
-                    <div class="flex-1 min-w-0"><UiSelect v-model="link.source" :options="nodeOptions" :aria-label="`Flow ${index + 1} from`" /></div>
-                    <span class="material-symbols-outlined text-base text-ink-muted" aria-hidden="true">arrow_forward</span>
-                    <div class="flex-1 min-w-0"><UiSelect v-model="link.target" :options="nodeOptions" :aria-label="`Flow ${index + 1} to`" /></div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <div class="flex-1 min-w-0"><UiInput v-model.number="link.value" type="number" placeholder="Value" :aria-label="`Flow ${index + 1} value`" /></div>
-                    <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove flow ${index + 1}`" @click="flowMapData.links.splice(index, 1)" />
-                  </div>
-                </div>
-                <UiButton
-                  icon="add"
-                  size="sm"
-                  class="self-start"
-                  @click="flowMapData.links.push({ source: flowMapData.nodes[0]?.id || '', target: flowMapData.nodes[1]?.id || '', value: 10 })"
-                >
-                  Add flow
-                </UiButton>
-              </fieldset>
-            </div>
+            </template>
           </UiPanel>
+
+          <MapMatchReport v-if="report" :report="report" @use-suggestion="applySuggestion" />
         </div>
 
         <div class="lg:col-span-2">
           <UiPanel title="Preview">
             <template #actions>
-              <UiButton v-if="mapConfig.mapType === 'world' && drillDownState.level === 'country'" icon="arrow_back" size="sm" @click="handleDrillUp">
-                Back to world
-              </UiButton>
+              <UiButton v-if="country" icon="arrow_back" size="sm" @click="closeCountry">Back to {{ areaLabel }}</UiButton>
               <UiButton
                 v-for="format in ['png', 'svg']"
                 :key="format"
                 icon="download"
                 size="sm"
-                :disabled="format === 'png' && exporting"
+                :disabled="(format === 'png' && exporting) || !geo"
                 :aria-label="`Export map as ${format.toUpperCase()}`"
                 @click="format === 'png' ? exportPNG() : exportSVG()"
               >
@@ -125,38 +101,22 @@
 
             <InlineNotice :notice="notice" class="mb-3" @dismiss="clearNotice" />
 
-            <nav v-if="mapConfig.mapType === 'world' && drillDownState.breadcrumbs.length > 0" aria-label="Map level" class="mb-2 flex items-center gap-2 text-sm text-ink-secondary">
-              <span>World</span>
+            <nav v-if="country" aria-label="Map level" class="mb-2 flex items-center gap-2 text-sm text-ink-secondary">
+              <span>{{ areaLabel }}</span>
               <span class="material-symbols-outlined text-xs" aria-hidden="true">chevron_right</span>
-              <span aria-current="location">{{ drillDownState.selectedCountry }}</span>
+              <span aria-current="location">{{ geo?.countryName || 'Loading…' }}</span>
             </nav>
 
-            <UiCallout v-if="mapConfig.mapType === 'world' && drillDownState.level === 'world' && selectedMapType === 'choropleth'" class="mb-3">
-              Click on a country to view its regions (e.g., United States)
+            <UiCallout v-if="geo?.drillable && countryOptions.length > 1" class="mb-3">
+              Select a country on the map, or under Country regions, to show its regions.
             </UiCallout>
 
-            <div ref="mapWellRef" class="map-well">
-              <ChoroplethMapSVG
-                v-if="selectedMapType === 'choropleth'"
-                ref="mapViewRef"
-                :data="choroplethData"
-                :colors="colorSchemes[mapConfig.colorScheme] || colorSchemes.default"
-                :mapType="mapConfig.mapType || 'us'"
-                :projectionType="mapConfig.mapProjection"
-                :showAllRegions="mapConfig.showAllRegions !== false"
-                :drillDownState="drillDownState"
-                :onDrillDown="handleDrillDown"
-                :onDrillUp="handleDrillUp"
-              />
-              <FlowMapSVG
-                v-else-if="selectedMapType === 'flowMap'"
-                ref="mapViewRef"
-                :data="flowMapData"
-                :colors="colorSchemes[mapConfig.colorScheme] || colorSchemes.default"
-                :mapType="mapConfig.mapType || 'us'"
-                :projectionType="mapConfig.mapProjection"
-              />
-            </div>
+            <UiTabs v-model="previewTab" :tabs="previewTabs" label="Preview as">
+              <div v-show="previewTab === 'map'" ref="mapWellRef" class="map-well">
+                <component :is="mapComponent" ref="mapViewRef" v-bind="mapProps" />
+              </div>
+              <MapDataTable v-if="previewTab === 'table'" :caption="tableCaption" :columns="tableView.columns" :rows="tableView.rows" />
+            </UiTabs>
           </UiPanel>
         </div>
       </div>
@@ -165,571 +125,480 @@
 </template>
 
 <script setup>
-import { ref, shallowRef, computed, watch, onBeforeUnmount, h } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useNotice } from '../composables/useNotice.js';
 import InlineNotice from '../components/InlineNotice.vue';
-import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiInput, UiPanel, UiSelect } from '../components/ui';
-import UiChoiceCards from '../components/ui/UiChoiceCards.vue';
-import { loadTopoJSON, getGeoJSONFeatures, mapDataByFeatureName, getFeatureCentroid, getDefaultMapUrls, getCountryMapUrl, getCountryObjectName } from '../utils/mapData.js';
-import { createProjection, createPathGenerator, projectCoordinates, fitProjectionToFeatures } from '../utils/mapProjections.js';
+import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiChoiceCards, UiInput, UiPanel, UiSegmented, UiSelect, UiTabs } from '../components/ui';
+import ChoroplethMap from '../components/maps/ChoroplethMap.js';
+import BubbleMap from '../components/maps/BubbleMap.js';
+import DotMap from '../components/maps/DotMap.js';
+import FlowMap from '../components/maps/FlowMap.js';
+import MapDataImport from '../components/maps/MapDataImport.vue';
+import MapDataTable from '../components/maps/MapDataTable.vue';
+import MapMatchReport from '../components/maps/MapMatchReport.vue';
+import MapRowEditor from '../components/maps/MapRowEditor.vue';
+import { useGeography } from '../components/maps/useGeography.js';
+import { useMapPalette, SEQUENTIAL, DIVERGING, CATEGORY_SLOTS } from '../components/maps/useMapPalette.js';
+import { formatCompact, formatValue, shapeFor } from '../components/maps/mapLegend.js';
+import { project, onMap } from '../components/maps/mapMarks.js';
+import { AREAS, areaOptions } from '../utils/mapAreas.js';
+import { getFeatureCentroid } from '../utils/mapData.js';
+import { createAreaProjection, createProjection } from '../utils/mapProjections.js';
+import { importTable } from '../utils/mapImport.js';
+import { resolveChoropleth, resolveFlows, resolvePoints } from '../utils/mapModel.js';
+import { assignCategories, buildColorScale, parseBreaks, MIN_CLASSES, MAX_CLASSES } from '../utils/mapScales.js';
+import { choroplethSample, flowSample, pointsSample } from '../utils/mapSamples.js';
+import { parseNumber, toCSV } from '../utils/csv.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
 
 const mapTypes = [
-  { value: 'choropleth', label: 'Choropleth map', icon: 'map', description: 'Geographic regions colored by data values' },
-  { value: 'flowMap', label: 'Flow map', icon: 'route', description: 'Shows movement/flow between locations' }
+  { value: 'choropleth', label: 'Choropleth map', icon: 'map', description: 'Regions coloured by value' },
+  { value: 'bubble', label: 'Proportional symbols', icon: 'bubble_chart', description: 'Circles sized by value, at places or region centres' },
+  { value: 'dot', label: 'Dot map', icon: 'scatter_plot', description: 'Places marked by location, with optional categories' },
+  { value: 'flowMap', label: 'Flow map', icon: 'route', description: 'Movement between places, sized by volume' },
 ];
-
-const areaOptions = [
-  { value: 'us', label: 'United States' },
-  { value: 'world', label: 'World' }
-];
+const TYPE_NAMES = { choropleth: 'Choropleth map', bubble: 'Proportional symbol map', dot: 'Dot map', flowMap: 'Flow map' };
 
 const projectionOptions = [
   { value: 'equalEarth', label: 'Equal Earth' },
-  { value: 'mercator', label: 'Mercator' }
+  { value: 'mercator', label: 'Mercator' },
 ];
+const schemeOptions = [
+  { value: 'sequential', label: 'Sequential' },
+  { value: 'diverging', label: 'Diverging' },
+];
+const methodOptions = [
+  { value: 'equal', label: 'Equal interval' },
+  { value: 'quantile', label: 'Quantile' },
+  { value: 'custom', label: 'Custom' },
+];
+const classOptions = Array.from({ length: MAX_CLASSES - MIN_CLASSES + 1 }, (_, i) => MIN_CLASSES + i);
+const areaSelectOptions = areaOptions();
 
-const selectedMapType = ref('choropleth');
+// ---- Area -----------------------------------------------------------------
 
-const mapConfig = ref({
-  mapType: 'us', // 'us' | 'world'
-  mapProjection: 'equalEarth', // 'mercator' | 'equalEarth' (for world maps)
-  showAllRegions: true, // Show all regions or only data regions
-  colorScheme: 'default'
-});
+const mapType = ref('choropleth');
+const area = ref('us-states');
+const country = ref(null);
+const includeRemote = ref(false);
+const worldProjection = ref('equalEarth');
+const showAllRegions = ref(true);
 
-// Drill-down state
-const drillDownState = ref({
-  level: 'world', // 'world' | 'country'
-  selectedCountry: null, // Country name when drilled down
-  breadcrumbs: [] // Navigation breadcrumbs
-});
+const areaLabel = computed(() => AREAS[area.value]?.label || 'World');
 
-const colorSchemes = {
-  default: ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'],
-  indigo: ['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff', '#eef2ff'],
-  blue: ['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe', '#eff6ff'],
-  green: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5', '#ecfdf5'],
-  red: ['#ef4444', '#f87171', '#fca5a5', '#fecaca', '#fee2e2', '#fef2f2'],
-  purple: ['#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe', '#f5f3ff'],
-  orange: ['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7', '#fffbeb']
+const setArea = (value) => {
+  area.value = value;
+  country.value = null;
+  includeRemote.value = false;
 };
 
-const colorSchemeOptions = [
-  { value: 'default', label: 'Default' },
-  { value: 'indigo', label: 'Indigo' },
-  { value: 'blue', label: 'Blue' },
-  { value: 'green', label: 'Green' },
-  { value: 'red', label: 'Red' },
-  { value: 'purple', label: 'Purple' },
-  { value: 'orange', label: 'Orange' }
+const openCountry = (id) => {
+  country.value = id || null;
+  includeRemote.value = false;
+};
+
+const closeCountry = () => openCountry(null);
+
+const { geo, loading, error } = useGeography(() => ({ area: area.value, country: country.value, includeRemote: includeRemote.value }));
+const palette = useMapPalette();
+
+// Countries on the world or continent map that have regions to show; kept
+// while a country is open, so the select can switch between them
+const countryList = ref([]);
+watch(geo, (g) => {
+  if (!g || country.value) return;
+  countryList.value = g.drillable
+    ? g.features
+      .map((f, i) => ({ value: g.drillable(f), label: g.index.labels[i] }))
+      .filter((o) => o.value)
+      .sort((a, b) => a.label.localeCompare(b.label))
+    : [];
+});
+watch(area, () => {
+  countryList.value = [];
+});
+const countryOptions = computed(() => (countryList.value.length ? [{ value: '', label: `None (all of ${areaLabel.value})` }, ...countryList.value] : []));
+
+// ---- Data -----------------------------------------------------------------
+
+const regionRows = ref([]);
+const pointRows = ref([]);
+const placeRows = ref([]);
+const flowRows = ref([]);
+const valueTitles = ref({ choropleth: '', points: '', flows: '' });
+// Tables the user has imported, edited or loaded; empty untouched tables get the sample
+const touched = ref(new Set());
+const imports = ref({});
+const importTexts = ref({ choropleth: '', points: '', places: '', flows: '' });
+
+const TABLE_NAMES = { choropleth: 'Regions', points: 'Places', places: 'Places', flows: 'Flows' };
+const TABLE_HEADERS = {
+  choropleth: ['region', 'value'],
+  points: ['name', 'lat', 'lng', 'value', 'category'],
+  places: ['id', 'name', 'lat', 'lng'],
+  flows: ['from', 'to', 'value'],
+};
+const tableRows = { choropleth: regionRows, points: pointRows, places: placeRows, flows: flowRows };
+
+const flowTable = ref('flows');
+const flowTableOptions = [
+  { value: 'flows', label: 'Flows' },
+  { value: 'places', label: 'Places' },
+];
+const activeTable = computed(() => {
+  if (mapType.value === 'choropleth') return 'choropleth';
+  if (mapType.value === 'flowMap') return flowTable.value;
+  return 'points';
+});
+const tablesForType = computed(() => (mapType.value === 'flowMap' ? ['flows', 'places'] : [activeTable.value]));
+
+const dataTab = ref('import');
+const dataTabs = [
+  { value: 'import', label: 'Import' },
+  { value: 'edit', label: 'Edit rows' },
 ];
 
-// Choropleth map data
-const choroplethData = ref([
-  { name: 'California', value: 39538223, coordinates: null },
-  { name: 'Texas', value: 29145505, coordinates: null },
-  { name: 'Florida', value: 21538187, coordinates: null },
-  { name: 'New York', value: 20201249, coordinates: null },
-  { name: 'Pennsylvania', value: 13002700, coordinates: null }
-]);
+const IMPORT_HELP = {
+  choropleth: {
+    label: 'Paste a table of regions and values',
+    hint: 'Columns: region, value. A region can be a name, a postal or ISO code, or a FIPS code (counties: "Cook, IL" or 17031).',
+    placeholder: 'region,value\nCalifornia,39538223\nTexas,29145505',
+  },
+  points: {
+    label: 'Paste a table of places',
+    hint: 'Columns: name, lat, lng, value, category. Without lat and lng, the name is matched to a region and placed at its centre.',
+    placeholder: 'name,lat,lng,value,category\nChicago,41.88,-87.63,2746000,Central',
+  },
+  places: {
+    label: 'Paste a table of places',
+    hint: 'Columns: id, name, lat, lng. Flows refer to places by id.',
+    placeholder: 'id,name,lat,lng\nNYC,New York,40.71,-74.01',
+  },
+  flows: {
+    label: 'Paste a table of flows',
+    hint: 'Columns: from, to, value, using the ids in the places table.',
+    placeholder: 'from,to,value\nNYC,LA,500',
+  },
+};
+const importLabel = computed(() => IMPORT_HELP[activeTable.value].label);
+const importHint = computed(() => `${IMPORT_HELP[activeTable.value].hint} Headers in any case; commas, tabs or semicolons.`);
+const importPlaceholder = computed(() => IMPORT_HELP[activeTable.value].placeholder);
+const dataDescription = computed(() => (mapType.value === 'flowMap' ? 'Flows between places, and the places with their coordinates.' : 'Import a CSV or TSV, or edit rows by hand.'));
 
-// Flow map data
-const flowMapData = ref({
-  nodes: [
-    { id: 'NYC', label: 'New York', lat: 40.7128, lng: -74.0060 },
-    { id: 'LA', label: 'Los Angeles', lat: 34.0522, lng: -118.2437 },
-    { id: 'CHI', label: 'Chicago', lat: 41.8781, lng: -87.6298 },
-    { id: 'HOU', label: 'Houston', lat: 29.7604, lng: -95.3698 }
+const editorColumns = {
+  choropleth: [
+    { key: 'region', label: 'Region', type: 'text' },
+    { key: 'value', label: 'Value', type: 'number' },
   ],
-  links: [
-    { source: 'NYC', target: 'LA', value: 500 },
-    { source: 'NYC', target: 'CHI', value: 300 },
-    { source: 'LA', target: 'HOU', value: 200 },
-    { source: 'CHI', target: 'HOU', value: 150 }
-  ]
+  points: [
+    { key: 'name', label: 'Name', type: 'text' },
+    { key: 'lat', label: 'Lat', type: 'number' },
+    { key: 'lng', label: 'Lng', type: 'number' },
+    { key: 'value', label: 'Value', type: 'number' },
+    { key: 'category', label: 'Category', type: 'text' },
+  ],
+  places: [
+    { key: 'id', label: 'ID', type: 'text' },
+    { key: 'name', label: 'Name', type: 'text' },
+    { key: 'lat', label: 'Lat', type: 'number' },
+    { key: 'lng', label: 'Lng', type: 'number' },
+  ],
+  flows: [
+    { key: 'from', label: 'From', type: 'text' },
+    { key: 'to', label: 'To', type: 'text' },
+    { key: 'value', label: 'Value', type: 'number' },
+  ],
+};
+
+const touch = () => {
+  touched.value = new Set([...touched.value, ...tablesForType.value]);
+};
+
+const titleCase = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
+
+const onImport = (text) => {
+  const table = activeTable.value;
+  const result = importTable(text, table);
+  importTexts.value = { ...importTexts.value, [table]: text };
+  imports.value = { ...imports.value, [table]: { imported: result.rows.length, skipped: result.skipped, missing: result.missing } };
+  if (result.missing.length) return;
+  tableRows[table].value = result.rows;
+  if (table !== 'places') valueTitles.value = { ...valueTitles.value, [table]: titleCase(result.columns.value || '') };
+  touch();
+  const skipped = result.skipped.length ? `, skipped ${result.skipped.length}` : '';
+  showNotice(`Imported ${result.rows.length.toLocaleString()} ${result.rows.length === 1 ? 'row' : 'rows'}${skipped}.`, skipped ? 'warning' : 'success');
+};
+
+// `auto`: loaded for the map on screen, so it follows the area until the user takes over the data
+const loadSample = (auto = false) => {
+  const g = geo.value;
+  if (!g) return;
+  if (mapType.value === 'choropleth') {
+    const { rows, title } = choroplethSample(g);
+    regionRows.value = rows;
+    valueTitles.value = { ...valueTitles.value, choropleth: title };
+  } else if (mapType.value === 'flowMap') {
+    const { places, flows, title } = flowSample(g, getFeatureCentroid);
+    placeRows.value = places;
+    flowRows.value = flows;
+    valueTitles.value = { ...valueTitles.value, flows: title };
+  } else {
+    const { rows, title } = pointsSample(g);
+    pointRows.value = rows;
+    valueTitles.value = { ...valueTitles.value, points: title };
+  }
+  // Show the sample as CSV in the import box, so the format is plain to see
+  const texts = { ...importTexts.value };
+  const nextImports = { ...imports.value };
+  for (const table of tablesForType.value) {
+    texts[table] = toCSV(TABLE_HEADERS[table], tableRows[table].value);
+    delete nextImports[table];
+  }
+  importTexts.value = texts;
+  imports.value = nextImports;
+  if (auto !== true) touch();
+};
+
+// Until the user imports, edits or picks the sample, show the sample for the map on screen
+watch([geo, mapType], () => {
+  if (!geo.value) return;
+  if (tablesForType.value.every((t) => !touched.value.has(t))) loadSample(true);
+}, { immediate: true });
+
+const downloadCSV = (table) => {
+  const csv = toCSV(TABLE_HEADERS[table], tableRows[table].value);
+  downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `map-${table}.csv`);
+};
+
+const applySuggestion = (item, suggestion) => {
+  const rowsRef = mapType.value === 'choropleth' ? regionRows : pointRows;
+  const key = mapType.value === 'choropleth' ? 'region' : 'name';
+  const next = [...rowsRef.value];
+  item.rowIndexes.forEach((i) => {
+    next[i] = { ...next[i], [key]: suggestion };
+  });
+  rowsRef.value = next;
+  touch();
+};
+
+// ---- Colour ---------------------------------------------------------------
+
+const paletteKind = ref('sequential');
+const sequentialHue = ref('blue');
+const divergingRamp = ref('blue-red');
+const midpointInput = ref(0);
+const method = ref('quantile');
+const classCount = ref(5);
+const breaksText = ref('');
+
+const schemeHint = computed(() => (paletteKind.value === 'diverging'
+  ? 'Two colours either side of a midpoint, for values above and below it.'
+  : 'One colour, light to dark, for amounts.'));
+
+const methodHint = computed(() => ({
+  equal: 'Classes of equal width between the lowest and highest values.',
+  quantile: 'About the same number of regions in each class.',
+  custom: 'Your own class boundaries.',
+})[method.value]);
+
+const parsedBreaks = computed(() => parseBreaks(breaksText.value));
+const breaksError = computed(() => {
+  if (method.value !== 'custom') return '';
+  const { breaks, invalid } = parsedBreaks.value;
+  if (invalid.length) return `Not a number: ${invalid.join(', ')}`;
+  if (breaks.length < MIN_CLASSES - 1 || breaks.length > MAX_CLASSES - 1) return `Enter ${MIN_CLASSES - 1} to ${MAX_CLASSES - 1} breaks (${MIN_CLASSES} to ${MAX_CLASSES} classes).`;
+  return '';
 });
 
-const nodeOptions = computed(() => flowMapData.value.nodes.map((node) => ({ value: node.id, label: node.label })));
+const midpoint = computed(() => {
+  const n = parseNumber(typeof midpointInput.value === 'number' ? midpointInput.value : String(midpointInput.value ?? ''));
+  return Number.isFinite(n) ? n : null;
+});
+const midpointError = computed(() => (midpoint.value === null ? 'Enter a number.' : ''));
 
-/**
- * Parse a user-entered value as a number. Inputs bound with v-model.number
- * give '' when empty, and pasted values may carry thousands separators.
- * Returns NaN for anything that is not a finite number.
- */
-const toNumber = (value) => {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : NaN;
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value.replace(/[,\s]/g, ''));
-    return Number.isFinite(parsed) ? parsed : NaN;
+// The sequential ramp's step 6 is the accent (illustration blue)
+const accent = computed(() => palette.value?.sequential.blue[5] || 'currentColor');
+
+// ---- Models: what each map draws, and what it leaves out ------------------
+
+const choroplethModel = computed(() => (geo.value ? resolveChoropleth(regionRows.value, geo.value.index) : null));
+
+const colorScale = computed(() => {
+  const model = choroplethModel.value;
+  if (!model || !palette.value) return null;
+  const values = [...model.matched.values()].map((m) => m.row.value);
+  const diverging = paletteKind.value === 'diverging';
+  const ramp = diverging ? palette.value.diverging[divergingRamp.value] : palette.value.sequential[sequentialHue.value];
+  // Custom breaks that don't parse fall back to equal intervals until they're fixed
+  const useMethod = method.value === 'custom' && (breaksError.value || !parsedBreaks.value.breaks.length) ? 'equal' : method.value;
+  return buildColorScale(values, {
+    method: useMethod,
+    classes: classCount.value,
+    breaks: parsedBreaks.value.breaks,
+    diverging,
+    midpoint: midpoint.value ?? 0,
+    ramp,
+  });
+});
+
+const pointsModel = computed(() => (geo.value
+  ? resolvePoints(pointRows.value, geo.value.index, geo.value.features, getFeatureCentroid, { needsValue: mapType.value === 'bubble' })
+  : null));
+
+const flowModel = computed(() => resolveFlows(placeRows.value, flowRows.value));
+
+// A projection at a reference size, to tell which places fall outside the map
+const REF_W = 960;
+const REF_H = 600;
+const referenceProjection = computed(() => {
+  const g = geo.value;
+  if (!g) return null;
+  return g.projection.type === 'world' ? createProjection('world', REF_W, REF_H, worldProjection.value) : createAreaProjection(g.projection, REF_W, REF_H, g.fit);
+});
+const isOnMap = (p) => onMap(project(referenceProjection.value, p.lng, p.lat), REF_W, REF_H);
+
+const categories = computed(() => assignCategories((pointsModel.value?.points || []).map((p) => p.category), CATEGORY_SLOTS));
+const categoryColor = (slot) => (slot >= 0 ? palette.value?.categorical[slot] : palette.value?.neutral) || 'currentColor';
+const hasCategories = computed(() => categories.value.categories.length > 0);
+
+const drawnPoints = computed(() => (pointsModel.value?.points || []).filter(isOnMap).map((p) => {
+  const slot = categories.value.slotOf(p.category);
+  return {
+    ...p,
+    color: hasCategories.value ? categoryColor(slot) : accent.value,
+    shape: hasCategories.value ? shapeFor(slot) : 'circle',
+  };
+}));
+
+const categoryLegend = computed(() => {
+  if (!hasCategories.value) return [];
+  const items = categories.value.categories.map((c) => ({ name: c.name, color: categoryColor(c.slot), shape: shapeFor(c.slot) }));
+  const blank = (pointsModel.value?.points || []).some((p) => !p.category);
+  const other = categories.value.other;
+  if (other || blank) {
+    const name = other ? `Other (${other.names.length} ${other.names.length === 1 ? 'category' : 'categories'})` : 'No category';
+    items.push({ name, color: categoryColor(-1), shape: shapeFor(-1) });
   }
-  return NaN;
-};
+  return items;
+});
 
-const formatValue = (value) => (Number.isFinite(value) ? value.toLocaleString() : String(value));
+const drawnFlows = computed(() => {
+  const { places, flows } = flowModel.value;
+  const shown = places.filter(isOnMap);
+  const ids = new Set(shown.map((p) => p.id));
+  return { places: shown, flows: flows.filter((f) => ids.has(f.from) && ids.has(f.to)) };
+});
 
-const formatCompact = (value) => {
-  try {
-    return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(value);
-  } catch {
-    return formatValue(value);
+// ---- Match report ---------------------------------------------------------
+
+const report = computed(() => {
+  const g = geo.value;
+  if (!g) return null;
+  const imported = tablesForType.value.map((t) => imports.value[t]).filter(Boolean);
+  const base = {
+    areaName: g.countryName || g.name,
+    imported: imported.reduce((n, i) => n + i.imported, 0),
+    skipped: imported.flatMap((i) => i.skipped),
+    missing: imported.flatMap((i) => i.missing),
+    expected: TABLE_HEADERS[activeTable.value].join(','),
+    remote: g.remote,
+  };
+  if (mapType.value === 'choropleth') {
+    const m = choroplethModel.value;
+    return { ...base, total: regionRows.value.length, unmatched: m.unmatched, duplicates: m.duplicates, invalid: m.invalid.length };
   }
-};
+  if (mapType.value === 'flowMap') {
+    const m = flowModel.value;
+    const outside = m.places.filter((p) => !isOnMap(p)).map((p) => p.label);
+    return { ...base, total: flowRows.value.length, unknown: m.unknown, invalid: m.invalid.length, outside };
+  }
+  const m = pointsModel.value;
+  const outside = m.points.filter((p) => !isOnMap(p)).map((p) => p.label);
+  return { ...base, total: pointRows.value.length, unmatched: m.unmatched, noValue: m.noValue, outside };
+});
 
-/** Text that stays readable on any fill: strong text with a halo in the surface colour. */
-const labelAttrs = {
-  class: 'fill-ink-strong stroke-surface-raised pointer-events-none',
-  'stroke-width': 3,
-  'stroke-linejoin': 'round',
-  'paint-order': 'stroke',
-  'font-size': 12,
-  'font-weight': 'bold'
-};
+// ---- The map and its table ------------------------------------------------
 
-const centeredMessage = (text, isError = false) =>
-  h('div', { class: 'absolute inset-0 flex items-center justify-center' }, [
-    h('div', { class: isError ? 'text-sm text-danger' : 'text-sm text-ink-muted', role: isError ? 'alert' : 'status' }, text)
-  ]);
-
-/**
- * Shared plumbing for both map components: measures the container (which is
- * always rendered, so the ResizeObserver can attach on mount), loads TopoJSON
- * with a request id so a stale load can never overwrite a newer one, and
- * rebuilds the projection from the current fit whenever the size changes.
- *
- * `getSource` returns { kind, url, objectName } or { error }; kind is 'us',
- * 'world' or 'country' (a drill-down, fitted to the country's features).
- */
-function useMapSurface(props, getSource) {
-  const containerRef = ref(null);
-  const svgRef = ref(null);
-  const width = ref(800);
-  const height = ref(500);
-  const loading = ref(true);
-  const error = ref(null);
-  const features = shallowRef([]);
-  const fit = shallowRef(null);
-  let requestId = 0;
-  let resizeObserver = null;
-
-  const measure = () => {
-    const el = containerRef.value;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      width.value = Math.round(rect.width);
-      height.value = Math.round(rect.height);
-    }
-  };
-
-  watch(containerRef, (el) => {
-    resizeObserver?.disconnect();
-    resizeObserver = null;
-    if (!el) return;
-    measure();
-    if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(measure);
-      resizeObserver.observe(el);
-    }
-  }, { flush: 'post' });
-
-  onBeforeUnmount(() => {
-    requestId++; // drop any load still in flight
-    resizeObserver?.disconnect();
-    resizeObserver = null;
-  });
-
-  // Rebuilt on resize or projection change, keeping the current fit (US
-  // states, world sphere or the drilled-down country).
-  const projection = computed(() => {
-    const current = fit.value;
-    if (!current) return null;
-    const w = width.value;
-    const hgt = height.value;
-    if (current.kind === 'country') {
-      return fitProjectionToFeatures(createProjection('us', w, hgt), current.features, w, hgt, 20);
-    }
-    if (current.kind === 'world') {
-      return createProjection('world', w, hgt, props.projectionType || 'equalEarth');
-    }
-    return createProjection('us', w, hgt, undefined, { type: 'FeatureCollection', features: current.features });
-  });
-
-  const pathGenerator = computed(() => (projection.value ? createPathGenerator(projection.value) : null));
-
-  // Path strings are the expensive part; compute them once per projection.
-  const paths = computed(() => {
-    const gen = pathGenerator.value;
-    if (!gen) return [];
-    return features.value.map((feature) => gen(feature));
-  });
-
-  const load = async (sourceKey) => {
-    const id = ++requestId;
-    const source = JSON.parse(sourceKey);
-    loading.value = true;
-    error.value = null;
-    try {
-      if (source.error) throw new Error(source.error);
-      const topoJson = await loadTopoJSON(source.url);
-      if (id !== requestId) return;
-      const geoFeatures = getGeoJSONFeatures(topoJson, source.objectName);
-      features.value = geoFeatures;
-      fit.value = { kind: source.kind, features: geoFeatures };
-    } catch (err) {
-      if (id !== requestId) return;
-      console.error('Error loading map data:', err);
-      error.value = err.message || 'Failed to load map data';
-      features.value = [];
-      fit.value = null;
-    } finally {
-      if (id === requestId) loading.value = false;
-    }
-  };
-
-  // One watcher over everything that decides which file to load, keyed by a
-  // string so a new-but-equal drill-down object does not trigger a reload.
-  watch(() => JSON.stringify(getSource()), load, { immediate: true });
-
-  /** Wrap content in the always-present, measured container. */
-  const renderSurface = (content) => {
-    let inner;
-    if (loading.value) inner = centeredMessage('Loading map...');
-    else if (error.value) inner = centeredMessage(`Error: ${error.value}`, true);
-    else if (!projection.value || !features.value.length) inner = centeredMessage('No map data available');
-    else inner = content();
-    return h('div', { ref: containerRef, class: 'w-full h-full min-h-72 relative' }, [inner]);
-  };
-
-  return { containerRef, svgRef, width, height, loading, error, features, projection, paths, renderSurface };
-}
-
-const baseMapSource = (mapType) => {
-  const urls = getDefaultMapUrls();
-  return mapType === 'world'
-    ? { kind: 'world', url: urls.world, objectName: 'countries' }
-    : { kind: 'us', url: urls.us, objectName: 'states' };
-};
-
-// Choropleth Map SVG Component
-const ChoroplethMapSVG = {
-  props: ['data', 'colors', 'mapType', 'projectionType', 'showAllRegions', 'drillDownState', 'onDrillDown', 'onDrillUp'],
-  setup(props, { expose }) {
-    const surface = useMapSurface(props, () => {
-      const state = props.drillDownState;
-      if (props.mapType === 'world' && state?.level === 'country' && state.selectedCountry) {
-        const url = getCountryMapUrl(state.selectedCountry);
-        if (!url) return { error: `Detailed map data not available for ${state.selectedCountry}` };
-        return { kind: 'country', url, objectName: getCountryObjectName(state.selectedCountry) };
-      }
-      return baseMapSource(props.mapType);
-    });
-    const { svgRef, width, height, features, projection, paths, renderSurface } = surface;
-    const hovered = ref(null);
-
-    expose({ getSvgElement: () => svgRef.value });
-
-    // Rows with a usable name and a numeric value
-    const validData = computed(() => (props.data || [])
-      .map((row) => ({ ...row, name: typeof row?.name === 'string' ? row.name.trim() : row?.name, value: toNumber(row?.value) }))
-      .filter((row) => row.name && Number.isFinite(row.value)));
-
-    // Keyed by the feature's own name, so "CA" and "California" both colour California
-    const regionByFeature = computed(() => {
-      if (!features.value.length) return new Map();
-      return mapDataByFeatureName(validData.value, features.value);
-    });
-
-    // Sequential schemes run dark → light; higher values get the darker colours.
-    const ramp = computed(() => {
-      const colors = props.colors?.length ? props.colors : ['#6366f1'];
-      return [...colors].reverse();
-    });
-
-    // Bin the values on the map into equal-width classes, one per colour.
-    const scale = computed(() => {
-      const values = Array.from(regionByFeature.value.values(), (r) => r.value);
-      if (!values.length) return null;
-      const min = Math.min(...values);
-      const max = Math.max(...values);
-      const n = ramp.value.length;
-      const span = max - min;
-      const binOf = (value) => (span === 0 ? n - 1 : Math.min(n - 1, Math.max(0, Math.floor(((value - min) / span) * n))));
-      const bins = span === 0
-        ? [{ color: ramp.value[n - 1], from: min, to: max }]
-        : ramp.value.map((color, i) => ({ color, from: min + (span * i) / n, to: min + (span * (i + 1)) / n }));
-      return { min, max, color: (value) => ramp.value[binOf(value)], bins };
-    });
-
-    // Regions without data use the chart's neutral token, not a data colour
-
-    const isClickable = () => props.mapType === 'world' && props.drillDownState?.level === 'world';
-
-    const handleFeatureClick = (feature) => {
-      if (!isClickable()) return;
-      const countryName = feature.properties?.name;
-      if (countryName && props.onDrillDown) {
-        props.onDrillDown(countryName);
-      }
+const tableView = computed(() => {
+  const g = geo.value;
+  if (!g) return { columns: [], rows: [] };
+  if (mapType.value === 'choropleth') {
+    const scale = colorScale.value;
+    const classOf = (value) => {
+      if (!scale) return '';
+      const c = scale.classes.find((k) => k.color === scale.colorFor(value));
+      return c ? `${formatCompact(c.from)} – ${formatCompact(c.to)}` : '';
     };
+    const rows = [...choroplethModel.value.matched]
+      .map(([index, { row }]) => ({ region: g.index.labels[index], value: row.value, class: classOf(row.value) }))
+      .sort((a, b) => b.value - a.value);
+    return { columns: [{ key: 'region', label: 'Region' }, { key: 'value', label: valueTitles.value.choropleth || 'Value', numeric: true }, { key: 'class', label: 'Class' }], rows };
+  }
+  if (mapType.value === 'flowMap') {
+    const label = new Map(drawnFlows.value.places.map((p) => [p.id, p.label]));
+    const rows = drawnFlows.value.flows.map((f) => ({ from: label.get(f.from), to: label.get(f.to), value: f.value })).sort((a, b) => b.value - a.value);
+    return { columns: [{ key: 'from', label: 'From' }, { key: 'to', label: 'To' }, { key: 'value', label: valueTitles.value.flows || 'Value', numeric: true }], rows };
+  }
+  const rows = drawnPoints.value.map((p) => ({ name: p.label, value: p.value, category: p.category, lat: Math.round(p.lat * 1e4) / 1e4, lng: Math.round(p.lng * 1e4) / 1e4 }));
+  if (mapType.value === 'bubble') rows.sort((a, b) => b.value - a.value);
+  const columns = [{ key: 'name', label: 'Place' }, { key: 'value', label: valueTitles.value.points || 'Value', numeric: true }];
+  if (hasCategories.value) columns.push({ key: 'category', label: 'Category' });
+  columns.push({ key: 'lat', label: 'Latitude', numeric: true }, { key: 'lng', label: 'Longitude', numeric: true });
+  return { columns, rows };
+});
 
-    const renderLegend = () => {
-      const s = scale.value;
-      if (!s) return null;
-      const sw = 18;
-      const sh = 12;
-      const rowH = 18;
-      const boxW = 150;
-      const boxH = s.bins.length * rowH + 12;
-      const x = 12;
-      const y = Math.max(12, height.value - boxH - 12);
-      return h('g', { transform: `translate(${x}, ${y})`, 'aria-hidden': 'true' }, [
-        h('rect', { width: boxW, height: boxH, rx: 6, class: 'fill-surface-overlay stroke-line', 'fill-opacity': 0.9 }),
-        ...[...s.bins].reverse().map((bin, i) => h('g', { transform: `translate(8, ${6 + i * rowH})` }, [
-          h('rect', { width: sw, height: sh, fill: bin.color, class: 'stroke-line', 'stroke-width': 0.5 }),
-          h('text', { x: sw + 6, y: sh / 2, 'dominant-baseline': 'middle', 'font-size': 11, class: 'fill-ink-secondary' },
-            bin.from === bin.to ? formatCompact(bin.from) : `${formatCompact(bin.from)} – ${formatCompact(bin.to)}`)
-        ]))
-      ]);
+const mapName = computed(() => `${TYPE_NAMES[mapType.value]} of ${geo.value?.countryName || geo.value?.name || areaLabel.value}`);
+const tableCaption = computed(() => `${mapName.value}: data`);
+
+// The svg's accessible name: what it is and the first few values; the Table view has them all
+const SUMMARY_ITEMS = 12;
+const mapLabel = computed(() => {
+  const rows = tableView.value.rows;
+  let items;
+  if (mapType.value === 'choropleth') items = rows.map((r) => `${r.region}: ${formatValue(r.value)}`);
+  else if (mapType.value === 'flowMap') items = rows.map((r) => `${r.from} to ${r.to}: ${formatValue(r.value)}`);
+  else items = rows.map((r) => [r.name, Number.isFinite(r.value) ? formatValue(r.value) : null, r.category].filter(Boolean).join(': '));
+  if (!items.length) return mapName.value;
+  const shown = items.slice(0, SUMMARY_ITEMS).join('; ');
+  const more = items.length > SUMMARY_ITEMS ? `; and ${items.length - SUMMARY_ITEMS} more, listed in the Table view` : '';
+  return `${mapName.value}. ${shown}${more}`;
+});
+
+const mapComponent = computed(() => ({ choropleth: ChoroplethMap, bubble: BubbleMap, dot: DotMap, flowMap: FlowMap })[mapType.value]);
+
+const mapProps = computed(() => {
+  const common = {
+    geo: geo.value,
+    loading: loading.value,
+    error: error.value,
+    projectionType: worldProjection.value,
+    onOpen: openCountry,
+    label: mapLabel.value,
+  };
+  if (mapType.value === 'choropleth') {
+    return {
+      ...common,
+      matched: choroplethModel.value?.matched || new Map(),
+      scale: colorScale.value,
+      showAllRegions: showAllRegions.value,
+      legendTitle: valueTitles.value.choropleth,
     };
-
-    return () => renderSurface(() => {
-      const proj = projection.value;
-      const clickable = isClickable();
-      const regions = regionByFeature.value;
-      const colorFor = scale.value?.color;
-      const items = [];
-      let hoveredPath = null;
-
-      features.value.forEach((feature, index) => {
-        const featureName = feature.properties?.name ?? `Region ${index + 1}`;
-        const dataRegion = regions.get(featureName) || null;
-        if (props.showAllRegions === false && !dataRegion) return;
-        const pathData = paths.value[index];
-        if (!pathData) return;
-
-        const color = dataRegion && colorFor ? colorFor(dataRegion.value) : null;
-        const valueText = dataRegion ? `: ${formatValue(dataRegion.value)}` : '';
-        const label = clickable ? `${featureName}${valueText}. Activate to view its regions.` : `${featureName}${valueText}`;
-        const isHovered = clickable && hovered.value === index;
-        if (isHovered) hoveredPath = pathData;
-
-        items.push(h('g', { key: `region-${index}` }, [
-          h('path', {
-            d: pathData,
-            fill: color || undefined,
-            class: [
-              'stroke-surface-raised outline-none',
-              clickable ? 'cursor-pointer' : 'cursor-default',
-              color ? '' : (isHovered ? 'fill-ink-muted' : 'fill-chart-neutral')
-            ],
-            'stroke-width': 0.5,
-            'aria-label': label,
-            tabindex: clickable ? 0 : undefined,
-            role: clickable ? 'button' : undefined,
-            onClick: clickable ? () => handleFeatureClick(feature) : undefined,
-            onKeydown: clickable ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
-                e.preventDefault();
-                handleFeatureClick(feature);
-              }
-            } : undefined,
-            onMouseenter: clickable ? () => { hovered.value = index; } : undefined,
-            onMouseleave: clickable ? () => { if (hovered.value === index) hovered.value = null; } : undefined,
-            onFocus: clickable ? () => { hovered.value = index; } : undefined,
-            onBlur: clickable ? () => { if (hovered.value === index) hovered.value = null; } : undefined
-          }, [h('title', clickable ? `${featureName}${valueText} — click to view its regions` : `${featureName}${valueText}`)])
-        ]));
-      });
-
-      // Labels for regions with data, drawn above all shapes
-      const labels = [];
-      features.value.forEach((feature, index) => {
-        const featureName = feature.properties?.name;
-        if (!featureName || !regions.has(featureName) || !paths.value[index]) return;
-        const point = proj(getFeatureCentroid(feature));
-        if (!point || !Number.isFinite(point[0]) || !Number.isFinite(point[1])) return;
-        labels.push(h('text', { key: `label-${index}`, x: point[0], y: point[1], 'text-anchor': 'middle', 'dominant-baseline': 'middle', ...labelAttrs }, featureName));
-      });
-
-      const summary = Array.from(regions.entries(), ([name, row]) => `${name}: ${formatValue(row.value)}`).join('; ');
-      const area = props.drillDownState?.level === 'country' && props.mapType === 'world'
-        ? props.drillDownState.selectedCountry
-        : (props.mapType === 'world' ? 'the world' : 'the United States');
-
-      return h('svg', {
-        ref: svgRef,
-        xmlns: 'http://www.w3.org/2000/svg',
-        width: width.value,
-        height: height.value,
-        viewBox: `0 0 ${width.value} ${height.value}`,
-        class: 'w-full h-full block',
-        role: clickable ? 'group' : 'img',
-        'aria-label': `Choropleth map of ${area}${summary ? `. ${summary}` : ''}`
-      }, [
-        ...items,
-        hoveredPath ? h('path', { d: hoveredPath, fill: 'none', class: 'stroke-accent pointer-events-none', 'stroke-width': 2 }) : null,
-        ...labels,
-        renderLegend()
-      ]);
-    });
   }
-};
-
-// Flow Map SVG Component
-const FlowMapSVG = {
-  props: ['data', 'colors', 'mapType', 'projectionType'],
-  setup(props, { expose }) {
-    const { svgRef, width, height, features, projection, paths, renderSurface } =
-      useMapSurface(props, () => baseMapSource(props.mapType));
-
-    expose({ getSvgElement: () => svgRef.value });
-
-    // Project nodes to screen coordinates; nodes without valid coordinates, or
-    // outside the projection (e.g. London on the US map), are left out.
-    const nodes = computed(() => {
-      const proj = projection.value;
-      if (!proj || !props.data?.nodes) return [];
-      const colors = props.colors?.length ? props.colors : ['#6366f1'];
-      return props.data.nodes.flatMap((node, index) => {
-        const lat = toNumber(node.lat);
-        const lng = toNumber(node.lng);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return [];
-        const projected = projectCoordinates(proj, lng, lat);
-        if (!projected || !Number.isFinite(projected[0]) || !Number.isFinite(projected[1])) return [];
-        return [{ ...node, x: projected[0], y: projected[1], color: colors[index % colors.length], radius: 10 }];
-      });
-    });
-
-    const links = computed(() => {
-      if (!props.data?.links) return [];
-      const colors = props.colors?.length ? props.colors : ['#888888'];
-      const values = props.data.links.map((l) => Math.abs(toNumber(l.value))).filter(Number.isFinite);
-      const maxValue = Math.max(0, ...values);
-
-      return props.data.links.map((link, index) => {
-        const sourceNode = nodes.value.find((n) => n.id === link.source);
-        const targetNode = nodes.value.find((n) => n.id === link.target);
-        if (!sourceNode || !targetNode || sourceNode === targetNode) return null;
-        const value = toNumber(link.value);
-
-        const dx = targetNode.x - sourceNode.x;
-        const dy = targetNode.y - sourceNode.y;
-
-        return {
-          ...link,
-          value,
-          sourceLabel: sourceNode.label || sourceNode.id,
-          targetLabel: targetNode.label || targetNode.id,
-          sourceX: sourceNode.x,
-          sourceY: sourceNode.y,
-          targetX: targetNode.x,
-          targetY: targetNode.y,
-          distance: Math.sqrt(dx * dx + dy * dy),
-          angle: Math.atan2(dy, dx),
-          // 2px for the smallest flows up to 12px for the largest
-          strokeWidth: maxValue > 0 && Number.isFinite(value) ? 2 + (Math.abs(value) / maxValue) * 10 : 2,
-          color: colors[index % colors.length] || '#888888'
-        };
-      }).filter(Boolean);
-    });
-
-    return () => renderSurface(() => {
-      const summary = links.value.map((l) => `${l.sourceLabel} to ${l.targetLabel}: ${formatValue(l.value)}`).join('; ');
-      return h('svg', {
-        ref: svgRef,
-        xmlns: 'http://www.w3.org/2000/svg',
-        width: width.value,
-        height: height.value,
-        viewBox: `0 0 ${width.value} ${height.value}`,
-        class: 'w-full h-full block',
-        role: 'img',
-        'aria-label': `Flow map of ${props.mapType === 'world' ? 'the world' : 'the United States'}${summary ? `. ${summary}` : ''}`
-      }, [
-        // Map background
-        ...features.value.map((feature, index) => {
-          const pathData = paths.value[index];
-          if (!pathData) return null;
-          return h('path', {
-            key: `map-feature-${index}`,
-            d: pathData,
-            class: 'fill-chart-neutral stroke-line',
-            'stroke-width': 0.5,
-            opacity: 0.5
-          });
-        }),
-        // Links (curved paths) - render behind nodes
-        ...links.value.map((link, index) => {
-          const midX = (link.sourceX + link.targetX) / 2;
-          const midY = (link.sourceY + link.targetY) / 2;
-          const controlOffset = link.distance * 0.3;
-          const controlX = midX - Math.sin(link.angle) * controlOffset;
-          const controlY = midY + Math.cos(link.angle) * controlOffset;
-          const path = `M ${link.sourceX} ${link.sourceY} Q ${controlX} ${controlY} ${link.targetX} ${link.targetY}`;
-
-          return h('path', {
-            key: `link-${index}`,
-            d: path,
-            stroke: link.color,
-            'stroke-width': link.strokeWidth,
-            'stroke-linecap': 'round',
-            fill: 'none',
-            opacity: 0.6
-          }, [h('title', `${link.sourceLabel} → ${link.targetLabel}: ${formatValue(link.value)}`)]);
-        }),
-        // Nodes
-        ...nodes.value.map((node, index) =>
-          h('g', { key: `node-${index}` }, [
-            h('circle', {
-              cx: node.x,
-              cy: node.y,
-              r: node.radius,
-              fill: node.color,
-              class: 'stroke-surface-raised',
-              'stroke-width': 2
-            }, [h('title', node.label || node.id)]),
-            h('text', {
-              x: node.x,
-              y: node.y + node.radius + 12,
-              'text-anchor': 'middle',
-              'dominant-baseline': 'middle',
-              ...labelAttrs
-            }, node.label)
-          ])
-        )
-      ]);
-    });
+  if (mapType.value === 'flowMap') {
+    return { ...common, places: drawnFlows.value.places, flows: drawnFlows.value.flows, color: accent.value, legendTitle: valueTitles.value.flows };
   }
-};
+  if (mapType.value === 'bubble') return { ...common, points: drawnPoints.value, categories: categoryLegend.value, legendTitle: valueTitles.value.points };
+  return { ...common, points: drawnPoints.value, categories: categoryLegend.value };
+});
 
-// Drill-down handlers
-const handleDrillDown = (countryName) => {
-  drillDownState.value = {
-    level: 'country',
-    selectedCountry: countryName,
-    breadcrumbs: [...drillDownState.value.breadcrumbs, countryName]
-  };
-};
+const previewTab = ref('map');
+const previewTabs = [
+  { value: 'map', label: 'Map' },
+  { value: 'table', label: 'Table' },
+];
 
-const handleDrillUp = () => {
-  drillDownState.value = {
-    level: 'world',
-    selectedCountry: null,
-    breadcrumbs: []
-  };
-};
-
-// Reset drill-down when map type changes
-const handleMapTypeChange = () => {
-  drillDownState.value = {
-    level: 'world',
-    selectedCountry: null,
-    breadcrumbs: []
-  };
-};
-
-// ---- Export -------------------------------------------------------------
+// ---- Export ---------------------------------------------------------------
 
 const mapViewRef = ref(null);
 const mapWellRef = ref(null);
@@ -739,16 +608,14 @@ const exporting = ref(false);
 // looks the same outside the page (no Tailwind, no app fonts).
 const EXPORT_STYLE_PROPS = [
   'fill', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-opacity', 'stroke-linecap',
-  'stroke-linejoin', 'opacity', 'paint-order', 'font-family', 'font-size', 'font-weight',
+  'stroke-linejoin', 'stroke-dasharray', 'opacity', 'paint-order', 'font-family', 'font-size', 'font-weight',
   'text-anchor', 'dominant-baseline'
 ];
 
 const exportFileName = (ext) => {
-  const kind = selectedMapType.value === 'flowMap' ? 'flow-map' : 'choropleth-map';
-  const area = mapConfig.value.mapType === 'world' && drillDownState.value.level === 'country' && drillDownState.value.selectedCountry
-    ? drillDownState.value.selectedCountry
-    : mapConfig.value.mapType;
-  const slug = String(area).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const kind = { choropleth: 'choropleth-map', bubble: 'proportional-symbol-map', dot: 'dot-map', flowMap: 'flow-map' }[mapType.value];
+  const place = geo.value?.countryName || areaLabel.value;
+  const slug = String(place).normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   return `${kind}-${slug || 'map'}.${ext}`;
 };
 
@@ -784,7 +651,8 @@ const serializeMapSvg = () => {
   background.setAttribute('width', '100%');
   background.setAttribute('height', '100%');
   background.setAttribute('fill', mapWellRef.value ? window.getComputedStyle(mapWellRef.value).backgroundColor : 'none');
-  clone.insertBefore(background, clone.firstChild);
+  const defs = clone.querySelector('defs');
+  clone.insertBefore(background, defs ? defs.nextSibling : clone.firstChild);
 
   const markup = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(clone)}`;
   return { markup, width, height };
