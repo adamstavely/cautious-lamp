@@ -355,6 +355,24 @@ describe('Project access over HTTP (visual regression and session replay)', () =
       });
     });
 
+    it('shows no made-up sessions: without an API key it says OpenReplay is not configured', async () => {
+      const id = project.id;
+      for (const route of [`/session-replay/projects/${id}/sessions`, `/session-replay/projects/${id}/sessions/s-1`]) {
+        const res = await call('viewer', 'GET', route);
+        expect(res.status).toBe(503);
+        expect(res.body).toMatchObject({ code: 'OPENREPLAY_NOT_CONFIGURED' });
+      }
+      // The heatmap link is OpenReplay's own page, never a local mock
+      const heatmaps = await call('viewer', 'GET', `/session-replay/projects/${id}/heatmaps-url`);
+      expect(heatmaps.status).toBe(200);
+      expect(JSON.stringify(heatmaps.body)).toContain('https://api.openreplay.com/project/7/heatmaps');
+      expect(JSON.stringify(heatmaps.body)).not.toContain('mock');
+
+      // A project id that isn't OpenReplay's numeric one is refused, not read as project 1
+      const named = await call('editor', 'POST', '/session-replay/projects', { name: 'Named', openreplayProjectKey: 'abc-key', workspaceId: WS });
+      expect((await call('editor', 'GET', `/session-replay/projects/${named.body.id}/heatmaps-url`)).status).toBe(400);
+    });
+
     it('persists projects across a restart', async () => {
       const again = new SessionReplayService(services.srProjects, services.access, services.encryption);
       expect((await again.getProject(project.id)).name).toBe('Replay 2');

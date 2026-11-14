@@ -31,8 +31,11 @@ RUN git init iris \
 
 COPY backend/docker/iris/FindFFMPEG.cmake /src/cmake-modules/FindFFMPEG.cmake
 
+# VideoAnalyser.cpp uses std::thread without including <thread>; MSVC and
+# vcpkg's toolchain pull it in indirectly, Debian's GCC doesn't
 RUN cmake -S iris -B build -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_CXX_FLAGS="-include thread" \
       -DCMAKE_MODULE_PATH=/src/cmake-modules \
       -DBUILD_EXAMPLE_APP=ON \
       -DEXPORT_IRIS=OFF \

@@ -192,6 +192,22 @@
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading sessions...</p>
             </div>
 
+            <div v-else-if="sessionsProblem" class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
+              <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">{{ sessionsProblem.notConfigured ? 'link_off' : 'error' }}</span>
+              <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+                {{ sessionsProblem.notConfigured ? 'OpenReplay isn\'t connected' : 'Sessions could not be loaded' }}
+              </p>
+              <p class="text-sm max-w-lg mx-auto" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ sessionsProblem.message }}</p>
+              <button
+                v-if="sessionsProblem.notConfigured"
+                type="button"
+                class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                @click="activeTab = 'settings'"
+              >
+                Open settings
+              </button>
+            </div>
+
             <div v-else-if="filteredSessions.length === 0" class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
               <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">videocam_off</span>
               <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">No sessions found</p>
@@ -397,6 +413,33 @@
                 />
               </div>
 
+              <div>
+                <label for="openreplay-project-id" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">OpenReplay project ID</label>
+                <input
+                  id="openreplay-project-id"
+                  v-model="projectForm.openreplayProjectKey"
+                  type="text"
+                  inputmode="numeric"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                />
+                <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">The numeric ID from the project's settings in OpenReplay.</p>
+              </div>
+
+              <div>
+                <label for="openreplay-api-key" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">OpenReplay API key</label>
+                <input
+                  id="openreplay-api-key"
+                  v-model="projectForm.openreplayApiKey"
+                  type="password"
+                  autocomplete="off"
+                  :placeholder="project?.hasApiKey ? 'Saved. Leave blank to keep it' : 'Not set: sessions can\'t be shown'"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+                />
+                <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Used to list sessions. It's checked against OpenReplay when you save, stored encrypted, and never shown again.</p>
+              </div>
+
               <div class="flex justify-end gap-3 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
                 <button
                   type="button"
@@ -440,6 +483,8 @@ const loading = ref(false);
 const activeTab = ref('overview');
 const sessions = ref([]);
 const sessionsLoading = ref(false);
+/** Why sessions can't be shown: OpenReplay not connected (503 OPENREPLAY_NOT_CONFIGURED) or another error */
+const sessionsProblem = ref(null);
 const searchQuery = ref('');
 const saving = ref(false);
 const integrationCode = ref('');
@@ -450,6 +495,9 @@ const projectForm = ref({
   name: '',
   description: '',
   applicationUrl: '',
+  openreplayProjectKey: '',
+  // Write-only: blank keeps the saved key
+  openreplayApiKey: '',
 });
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
@@ -467,6 +515,8 @@ const loadProject = async () => {
       name: project.value.name,
       description: project.value.description || '',
       applicationUrl: project.value.applicationUrl || '',
+      openreplayProjectKey: project.value.openreplayProjectKey || '',
+      openreplayApiKey: '',
     };
     await loadIntegrationCode();
     if (activeTab.value === 'sessions') {
@@ -503,11 +553,15 @@ const copyIntegrationCode = async () => {
 const loadSessions = async () => {
   sessionsLoading.value = true;
   try {
+    sessionsProblem.value = null;
     const response = await apiClient.get(`${API_BASE_URL}/session-replay/projects/${route.params.id}/sessions`);
     sessions.value = response.data.sessions || [];
   } catch (error) {
-    console.error('Failed to load sessions:', error);
-    window.showToast?.('Failed to load sessions. Make sure API key is configured.', 'error');
+    const data = error.response?.data;
+    sessionsProblem.value = {
+      notConfigured: data?.code === 'OPENREPLAY_NOT_CONFIGURED',
+      message: data?.message || 'The sessions could not be loaded. Try again later.',
+    };
     sessions.value = [];
   } finally {
     sessionsLoading.value = false;
@@ -517,7 +571,11 @@ const loadSessions = async () => {
 const updateProject = async () => {
   saving.value = true;
   try {
-    await apiClient.put(`${API_BASE_URL}/session-replay/projects/${route.params.id}`, projectForm.value);
+    // The server re-checks the OpenReplay connection when these are sent, so only send changes
+    const { openreplayApiKey, openreplayProjectKey, ...payload } = projectForm.value;
+    if (openreplayProjectKey.trim() !== (project.value.openreplayProjectKey || '')) payload.openreplayProjectKey = openreplayProjectKey.trim();
+    if (openreplayApiKey.trim()) payload.openreplayApiKey = openreplayApiKey.trim();
+    await apiClient.put(`${API_BASE_URL}/session-replay/projects/${route.params.id}`, payload);
     window.showToast?.('Project updated successfully', 'success');
     await loadProject();
   } catch (error) {
@@ -535,6 +593,8 @@ const resetForm = () => {
       name: project.value.name,
       description: project.value.description || '',
       applicationUrl: project.value.applicationUrl || '',
+      openreplayProjectKey: project.value.openreplayProjectKey || '',
+      openreplayApiKey: '',
     };
   }
 };

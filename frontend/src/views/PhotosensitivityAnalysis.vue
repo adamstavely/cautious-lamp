@@ -127,23 +127,23 @@
                     Enable Pattern Detection
                   </span>
                 </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input
-                    v-model="outputJson"
-                    type="checkbox"
-                    class="accent-indigo-600"
-                  />
-                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Output JSON (instead of CSV)
-                  </span>
-                </label>
+              </div>
+
+              <div
+                v-if="irisStatus && !irisStatus.installed"
+                role="status"
+                class="rounded-lg border p-4 text-sm"
+                :class="isDarkMode ? 'border-amber-700 bg-amber-950/40 text-amber-200' : 'border-amber-300 bg-amber-50 text-amber-900'"
+              >
+                <p class="font-medium mb-1">IRIS isn't available on this server</p>
+                <p>{{ irisStatus.message }}</p>
               </div>
 
               <button
                 @click="analyzeVideo"
-                :disabled="!selectedFile || isAnalyzing"
+                :disabled="!selectedFile || isAnalyzing || irisUnavailable"
                 class="w-full px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                :class="!selectedFile || isAnalyzing
+                :class="!selectedFile || isAnalyzing || irisUnavailable
                   ? (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed')
                   : (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')"
               >
@@ -290,7 +290,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
 import { useDrawer } from '../composables/useDrawer.js';
@@ -308,7 +308,17 @@ const analysisResult = ref(null);
 const error = ref(null);
 const applicationName = ref('');
 const enablePatternDetection = ref(true);
-const outputJson = ref(false);
+// From GET /photosensitivity/verify: whether IRIS is installed (nothing is run)
+const irisStatus = ref(null);
+const irisUnavailable = computed(() => irisStatus.value?.installed === false);
+
+onMounted(async () => {
+  try {
+    irisStatus.value = (await apiClient.get('/api/v1/photosensitivity/verify')).data;
+  } catch {
+    // Unknown: let the analysis itself report any problem
+  }
+});
 
 
 
@@ -353,7 +363,6 @@ const analyzeVideo = async () => {
     const formData = new FormData();
     formData.append('video', selectedFile.value);
     formData.append('enablePatternDetection', enablePatternDetection.value ? 'true' : 'false');
-    formData.append('outputJson', outputJson.value ? 'true' : 'false');
     if (applicationName.value) {
       formData.append('applicationName', applicationName.value);
     }
@@ -365,7 +374,8 @@ const analyzeVideo = async () => {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      timeout: 300000, // 5 minute timeout
+      // The server gives IRIS up to 10 minutes (IRIS_TIMEOUT_MS), plus the upload
+      timeout: 11 * 60 * 1000,
     });
 
     if (!response.data?.summary) {
@@ -379,7 +389,7 @@ const analyzeVideo = async () => {
     } else if (message) {
       error.value = message;
     } else if (err.code === 'ECONNABORTED') {
-      error.value = 'The analysis timed out after 5 minutes. Try a shorter video.';
+      error.value = 'The analysis timed out. Try a shorter video.';
     } else if (err.response) {
       error.value = `Analysis failed (HTTP ${err.response.status}).`;
     } else {
