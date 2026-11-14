@@ -43,14 +43,16 @@ RUN cmake -S iris -B build -G Ninja \
  && cmake --build build --target IrisApp
 
 # IrisApp, its config and license, and every shared library it loads except
-# glibc's (which the runtime image has), found through an rpath of $ORIGIN/lib
+# glibc's (which the runtime image has). RUNPATH only covers an object's own
+# dependencies, so IrisApp looks in $ORIGIN/lib and each library in $ORIGIN.
 RUN mkdir -p /opt/iris/lib \
  && cp build/example/IrisApp iris/config/appsettings.json iris/LICENSE.txt iris/NOTICE.txt /opt/iris/ \
  && ldd /opt/iris/IrisApp \
     | awk '/=> \// { print $3 }' \
     | grep -vE '/(libc|libm|libdl|libpthread|librt|ld-linux[^/]*)\.so' \
     | xargs -I{} cp -L {} /opt/iris/lib/ \
- && patchelf --set-rpath '$ORIGIN/lib' /opt/iris/IrisApp
+ && patchelf --set-rpath '$ORIGIN/lib' /opt/iris/IrisApp \
+ && for lib in /opt/iris/lib/*.so*; do patchelf --set-rpath '$ORIGIN' "$lib"; done
 
 # ---------------------------------------------------------------------------
 # Backend build

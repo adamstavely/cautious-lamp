@@ -6,6 +6,8 @@ Integrate EA's IRIS (photosensitivity analysis tool) as a service capability for
 
 **Repository**: [https://github.com/electronicarts/IRIS](https://github.com/electronicarts/IRIS)
 
+> **Status:** built. IRIS ships in the backend Docker image, and the backend runs it as described in [INTEGRATIONS.md](INTEGRATIONS.md#iris). The plan below is the original outline.
+
 ## What IRIS Detects
 
 1. **Luminance Flashes**: More than 3 flashes per second in any given second
