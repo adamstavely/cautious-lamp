@@ -1,29 +1,18 @@
 <template>
-  <v-dialog :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)" persistent max-width="400">
-    <v-card>
-      <v-card-title>{{ title }}</v-card-title>
-      <v-card-text>
-        <v-text-field
-          v-model="selectedDate"
-          type="date"
-          :label="label"
-          :min="minDate"
-          variant="outlined"
-          autofocus
-          @keyup.enter="submit"
-        />
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn color="grey" variant="text" @click="cancel">Cancel</v-btn>
-        <v-btn color="primary" @click="submit" :disabled="required && !selectedDate">OK</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <UiDialog :open="modelValue" :title="title" size="sm" @update:open="onOpen">
+    <form :id="formId" @submit.prevent="submit">
+      <UiInput v-model="selectedDate" type="date" :label="label" :min="minDate" :required="required" autofocus />
+    </form>
+    <template #footer>
+      <UiButton variant="ghost" @click="cancel">Cancel</UiButton>
+      <UiButton variant="primary" type="submit" :form="formId" :disabled="required && !selectedDate">OK</UiButton>
+    </template>
+  </UiDialog>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, useId, watch } from 'vue';
+import { UiButton, UiDialog, UiInput } from '../ui';
 
 const props = defineProps({
   modelValue: Boolean,
@@ -45,17 +34,18 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'submit', 'cancel']);
 
-const selectedDate = ref(props.defaultValue || null);
+const formId = `date-picker-${useId()}`;
+const selectedDate = ref(props.defaultValue || '');
 
 watch(() => props.modelValue, (newVal) => {
   if (newVal) {
-    selectedDate.value = props.defaultValue || null;
+    selectedDate.value = props.defaultValue || '';
   }
 });
 
 const submit = () => {
   if (props.required && !selectedDate.value) return;
-  emit('submit', selectedDate.value);
+  emit('submit', selectedDate.value || null);
   emit('update:modelValue', false);
 };
 
@@ -63,5 +53,8 @@ const cancel = () => {
   emit('cancel');
   emit('update:modelValue', false);
 };
-</script>
 
+const onOpen = (open) => {
+  if (!open && props.modelValue) cancel();
+};
+</script>

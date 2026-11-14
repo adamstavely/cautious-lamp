@@ -1,37 +1,21 @@
 <template>
-  <section
-    class="rounded-lg shadow-sm border"
-    :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'"
-    aria-labelledby="integrations-heading"
-  >
-    <div class="p-6 border-b flex flex-wrap items-center justify-between gap-3" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-      <div>
-        <h3 id="integrations-heading" class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-          <span class="material-symbols-outlined text-indigo-600">hub</span>
-          Integrations
-        </h3>
-        <p class="text-sm mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-          The external tools and services features rely on, and what each still needs.
-          <span v-if="report">
-            {{ report.connectionsChecked ? 'Argos and OpenReplay were contacted' : 'Setup only; Argos and OpenReplay were not contacted' }}
-            ({{ checkedAtLabel }}).
-          </span>
-        </p>
-      </div>
-      <button
-        type="button"
-        :disabled="loading"
-        class="px-4 py-2 rounded-lg border border-solid text-sm transition-colors disabled:opacity-50"
-        :class="isDarkMode ? 'border-gray-600 text-gray-200 hover:bg-slate-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
-        @click="load(true)"
-      >
+  <UiPanel title="Integrations" description="The external tools and services features rely on, and what each still needs." flush>
+    <template #actions>
+      <UiButton size="sm" icon="sync" :loading="loading" @click="load(true)">
         {{ loading ? 'Checking…' : 'Check connections' }}
-      </button>
+      </UiButton>
+    </template>
+
+    <p v-if="report" class="px-6 pt-4 text-sm text-ink-secondary">
+      {{ report.connectionsChecked ? 'Argos and OpenReplay were contacted' : 'Setup only; Argos and OpenReplay were not contacted' }}
+      ({{ checkedAtLabel }}).
+    </p>
+
+    <div v-if="error" class="p-6">
+      <UiCallout tone="danger" role="alert">{{ error }}</UiCallout>
     </div>
 
-    <p v-if="error" class="p-6 text-sm" :class="isDarkMode ? 'text-red-300' : 'text-red-700'">{{ error }}</p>
-
-    <ul v-else-if="report" class="divide-y" :class="isDarkMode ? 'divide-gray-800' : 'divide-gray-100'">
+    <ul v-else-if="report" class="divide-y divide-line-faint">
       <li v-for="item in items" :key="item.key" class="p-6 flex gap-4">
         <span
           class="material-symbols-outlined shrink-0"
@@ -41,29 +25,26 @@
         >{{ stateStyle(item.status.state).symbol }}</span>
         <div class="min-w-0">
           <div class="flex flex-wrap items-baseline gap-x-3">
-            <span class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ item.label }}</span>
-            <span class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">{{ item.feature }}</span>
+            <span class="font-medium text-ink-strong">{{ item.label }}</span>
+            <span class="text-xs text-ink-muted">{{ item.feature }}</span>
           </div>
-          <p class="text-sm mt-1" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ item.status.summary }}</p>
-          <p v-if="item.status.action" class="text-sm mt-1" :class="isDarkMode ? 'text-amber-300' : 'text-amber-800'">{{ item.status.action }}</p>
-          <ul v-if="item.status.details?.unreachable?.length" class="text-sm mt-2 list-disc pl-5" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+          <p class="text-sm mt-1 text-ink">{{ item.status.summary }}</p>
+          <p v-if="item.status.action" class="text-sm mt-1 text-warning">{{ item.status.action }}</p>
+          <ul v-if="item.status.details?.unreachable?.length" class="text-sm mt-2 list-disc pl-5 text-ink-secondary">
             <li v-for="p in item.status.details.unreachable" :key="p.projectId">{{ p.name }}: {{ p.error }}</li>
           </ul>
         </div>
       </li>
     </ul>
 
-    <p v-else class="p-6 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading…</p>
-  </section>
+    <div v-else class="p-6"><UiSpinner /></div>
+  </UiPanel>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import apiClient from '../../services/api.js';
-
-defineProps({
-  isDarkMode: { type: Boolean, default: false },
-});
+import { UiButton, UiCallout, UiPanel, UiSpinner } from '../ui';
 
 const LABELS = [
   { key: 'elasticsearch', label: 'Elasticsearch', feature: 'Storage for everything' },
@@ -85,10 +66,10 @@ const checkedAtLabel = computed(() => (report.value ? new Date(report.value.chec
 
 const stateStyle = (state) =>
   ({
-    ok: { symbol: 'check_circle', icon: 'text-green-600', label: 'Working' },
-    not_configured: { symbol: 'settings', icon: 'text-amber-500', label: 'Not set up' },
-    unreachable: { symbol: 'error', icon: 'text-red-500', label: 'Not answering' },
-  })[state] ?? { symbol: 'help', icon: 'text-gray-400', label: 'Unknown' };
+    ok: { symbol: 'check_circle', icon: 'text-success', label: 'Working' },
+    not_configured: { symbol: 'settings', icon: 'text-warning', label: 'Not set up' },
+    unreachable: { symbol: 'error', icon: 'text-danger', label: 'Not answering' },
+  })[state] ?? { symbol: 'help', icon: 'text-ink-muted', label: 'Unknown' };
 
 const load = async (check = false) => {
   loading.value = true;

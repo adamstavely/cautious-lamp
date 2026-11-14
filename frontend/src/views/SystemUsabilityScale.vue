@@ -1,203 +1,56 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      System Usability Scale
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    A quick and reliable tool for measuring the usability of a system. Answer 10 questions to get a usability score from 0-100.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">psychology</span>
-                      Usability Tool
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="susGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized scale/rating icon -->
-                      <rect x="40" y="60" width="120" height="8" rx="4" fill="url(#susGradient)" opacity="0.4"/>
-                      <rect x="40" y="80" width="120" height="8" rx="4" fill="url(#susGradient)" opacity="0.5"/>
-                      <rect x="40" y="100" width="120" height="8" rx="4" fill="url(#susGradient)" opacity="0.6"/>
-                      <rect x="40" y="120" width="120" height="8" rx="4" fill="url(#susGradient)" opacity="0.5"/>
-                      <rect x="40" y="140" width="120" height="8" rx="4" fill="url(#susGradient)" opacity="0.4"/>
-                      <!-- Scale markers -->
-                      <circle cx="50" cy="64" r="4" fill="white" opacity="0.8"/>
-                      <circle cx="100" cy="104" r="4" fill="white" opacity="0.8"/>
-                      <circle cx="150" cy="144" r="4" fill="white" opacity="0.8"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="System Usability Scale"
+      lead="A quick and reliable tool for measuring the usability of a system. Answer 10 questions to get a usability score from 0-100."
+      spot="research/system-usability-scale"
+      size="tool"
+    />
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <div 
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <form @submit.prevent="submitForm" class="space-y-6">
-                <!-- System/Application Dropdown -->
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    System / Application
-                  </label>
-                  <Dropdown
-                    v-model="form.systemName"
-                    :options="systemOptions"
-                    placeholder="Select a system or application"
-                    class="w-full"
-                  />
-                </div>
+    <PageSection>
+      <form class="space-y-6" @submit.prevent="submitForm">
+        <UiPanel title="The system" description="What you assessed.">
+          <UiSelect v-model="form.systemName" label="System / application" :options="systemOptions" placeholder="Select a system or application" required />
+        </UiPanel>
 
-                <!-- SUS Questions -->
-                <div class="space-y-6">
-                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    Please rate your agreement with each statement (1 = Strongly Disagree, 5 = Strongly Agree)
-                  </h3>
+        <UiPanel title="Rate your agreement with each statement" description="1 = strongly disagree, 5 = strongly agree.">
+          <ol class="divide-y divide-line-faint">
+            <li v-for="(question, index) in questions" :key="index" class="py-4 first:pt-0 last:pb-0">
+              <UiSegmented
+                v-model="form[`q${index + 1}`]"
+                :label="`${index + 1}. ${question}`"
+                :options="ratingOptions"
+                :hint="getRatingLabel(form[`q${index + 1}`]) || '1 = strongly disagree, 5 = strongly agree'"
+              />
+            </li>
+          </ol>
+        </UiPanel>
 
-                  <div
-                    v-for="(question, index) in questions"
-                    :key="index"
-                    class="border-b pb-4"
-                    :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-                  >
-                    <label class="block text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      {{ index + 1 }}. {{ question }}
-                    </label>
-                    <div class="flex items-center gap-4">
-                      <label
-                        v-for="rating in [1, 2, 3, 4, 5]"
-                        :key="rating"
-                        class="flex items-center gap-2 cursor-pointer"
-                      >
-                        <input
-                          :name="`q${index + 1}`"
-                          type="radio"
-                          :value="rating"
-                          v-model="form[`q${index + 1}`]"
-                          class="w-4 h-4"
-                          :class="isDarkMode ? 'accent-indigo-500' : 'accent-indigo-600'"
-                        />
-                        <span class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                          {{ rating }}
-                        </span>
-                      </label>
-                      <span class="text-xs ml-auto" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
-                        {{ getRatingLabel(form[`q${index + 1}`]) }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+        <UiCallout v-if="hasAllAnswers" tone="info" role="status" icon="analytics" :title="`Estimated SUS score: ${calculateScore()}`">
+          {{ getScoreInterpretation(calculateScore()) }}
+        </UiCallout>
 
-                <!-- Score Preview -->
-                <div
-                  v-if="hasAllAnswers"
-                  class="rounded-lg p-4 border"
-                  :class="isDarkMode 
-                    ? 'bg-indigo-900/20 border-indigo-700' 
-                    : 'bg-indigo-50 border-indigo-200'"
-                >
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium" :class="isDarkMode ? 'text-indigo-300' : 'text-indigo-900'">
-                      Estimated SUS Score:
-                    </span>
-                    <span class="text-2xl font-bold" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                      {{ calculateScore() }}
-                    </span>
-                  </div>
-                  <p class="text-xs mt-2" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-700'">
-                    {{ getScoreInterpretation(calculateScore()) }}
-                  </p>
-                </div>
+        <InlineNotice :notice="notice" @dismiss="clearNotice" />
 
-                <!-- Submit Button -->
-                <div class="flex justify-end pt-4">
-                  <button
-                    type="submit"
-                    :disabled="isSubmitting"
-                    class="px-6 py-3 rounded-lg transition-colors text-sm font-medium"
-                    :class="(isSubmitting || !hasAllAnswers)
-                      ? (isDarkMode 
-                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed')
-                      : (isDarkMode 
-                        ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
-                        : 'bg-indigo-600 text-white hover:bg-indigo-700')"
-                  >
-                    <span v-if="isSubmitting" class="flex items-center gap-2">
-                      <span class="material-symbols-outlined animate-spin">refresh</span>
-                      Submitting...
-                    </span>
-                    <span v-else class="flex items-center gap-2">
-                      <span class="material-symbols-outlined">save</span>
-                      Submit Assessment
-                    </span>
-                  </button>
-                </div>
-                <InlineNotice :notice="notice" @dismiss="clearNotice" />
-              </form>
-            </div>
-
-          </div>
+        <div class="flex justify-end">
+          <UiButton type="submit" variant="primary" icon="save" :loading="isSubmitting">
+            {{ isSubmitting ? 'Submitting...' : 'Submit assessment' }}
+          </UiButton>
         </div>
-      </div>
-    </div>
-  </div>
+      </form>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import Dropdown from '../components/Dropdown.vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiPanel, UiSegmented, UiSelect } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 import apiClient from '../services/api.js';
 import { authState } from '../services/auth.js';
 
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = useDarkMode();
 const { notice, showNotice, clearNotice } = useNotice();
 const isSubmitting = ref(false);
 
@@ -249,6 +102,8 @@ const systemOptions = ref([
   { value: 'Other', label: 'Other' },
 ]);
 
+const ratingOptions = [1, 2, 3, 4, 5].map((value) => ({ value, label: String(value) }));
+
 const isRating = (value) => Number.isInteger(value) && value >= 1 && value <= 5;
 
 const unansweredQuestions = computed(() =>
@@ -290,10 +145,6 @@ const getScoreInterpretation = (score) => {
   if (score >= 51) return 'OK - The system has acceptable usability but could be improved.';
   return 'Poor - The system has poor usability and needs significant improvement.';
 };
-
-
-
-
 
 const submitForm = async () => {
   if (!form.value.systemName) {
@@ -344,10 +195,3 @@ const submitForm = async () => {
   }
 };
 </script>
-
-<style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-</style>
-

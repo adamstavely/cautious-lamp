@@ -48,4 +48,7 @@
   /* Side nav widths: the docs drawer's rail and open panel */
   --app-drawer-closed: 3rem;
   --app-drawer-open: 16rem;
+  /* Heights: a tool's working area, and an embedded page */
+  --app-workspace-height: 37.5rem;
+  --app-embed-height: 50rem;
 }

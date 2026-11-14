@@ -1,80 +1,70 @@
 <template>
   <div class="auth-page">
-    <div class="w-full max-w-5xl mx-auto px-6 md:px-10 py-12 md:py-20 grid md:grid-cols-[minmax(0,26rem)_1fr] items-center gap-12">
-      <section aria-labelledby="login-title">
-        <p class="text-sm font-medium tracking-wide text-[#2f5ea8] dark:text-[#9dbcf0] mb-4">The Agency's design system</p>
-        <h1 id="login-title" class="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05] mb-4">Sign in</h1>
-        <p class="text-slate-600 dark:text-slate-400 leading-relaxed mb-8">
+    <div class="w-full max-w-5xl mx-auto px-6 md:px-10 py-12 md:py-20 grid md:grid-cols-content-aside items-center gap-12">
+      <section aria-labelledby="login-title" class="max-w-md">
+        <p class="mb-4 text-sm font-medium tracking-wide text-accent-text">The Agency's design system</p>
+        <h1 id="login-title" class="mb-4 text-4xl md:text-5xl font-semibold tracking-tight leading-tight text-ink-strong">Sign in</h1>
+        <p class="mb-8 leading-relaxed text-ink-secondary">
           Use the email and password your administrator gave you.
         </p>
 
         <InlineNotice v-if="notice" :notice="notice" class="mb-6" @dismiss="clearNotice" />
 
-        <p v-if="demoMode" class="callout mb-6">
+        <UiCallout v-if="demoMode" class="mb-6">
           Demo mode: there is no backend, so any email and password signs you in as the demo user.
-        </p>
+        </UiCallout>
 
         <form novalidate class="space-y-5" @submit.prevent="submit">
-          <div>
-            <label for="login-email" class="field-label">Email</label>
-            <input
-              id="login-email"
-              ref="emailInput"
-              v-model.trim="email"
-              type="email"
-              name="email"
-              autocomplete="username"
-              inputmode="email"
-              spellcheck="false"
-              required
-              class="field"
-              :class="{ 'field-invalid': errors.email }"
-              :aria-invalid="errors.email ? 'true' : 'false'"
-              :aria-describedby="errors.email ? 'login-email-error' : undefined"
-            />
-            <p v-if="errors.email" id="login-email-error" class="field-error">{{ errors.email }}</p>
-          </div>
+          <UiInput
+            id="login-email"
+            v-model.trim="email"
+            type="email"
+            label="Email"
+            name="email"
+            autocomplete="username"
+            inputmode="email"
+            spellcheck="false"
+            required
+            :error="errors.email"
+          />
 
-          <div>
-            <label for="login-password" class="field-label">Password</label>
+          <UiField id="login-password" label="Password" :error="errors.password" required v-slot="{ id, describedBy, invalid }">
             <div class="relative">
               <input
-                id="login-password"
-                ref="passwordInput"
+                :id="id"
                 v-model="password"
                 :type="showPassword ? 'text' : 'password'"
                 name="password"
                 autocomplete="current-password"
                 required
-                class="field pr-12"
-                :class="{ 'field-invalid': errors.password }"
-                :aria-invalid="errors.password ? 'true' : 'false'"
-                :aria-describedby="errors.password ? 'login-password-error' : undefined"
+                class="password-input"
+                :aria-invalid="invalid ? 'true' : 'false'"
+                :aria-describedby="describedBy"
               />
-              <button
-                type="button"
+              <UiButton
+                variant="ghost"
+                size="sm"
+                :icon="showPassword ? 'visibility_off' : 'visibility'"
+                icon-only
+                label="Show password"
                 class="reveal"
                 :aria-pressed="showPassword ? 'true' : 'false'"
-                aria-label="Show password"
                 @click="showPassword = !showPassword"
-              >
-                <span class="material-symbols-outlined text-xl" aria-hidden="true">{{ showPassword ? 'visibility_off' : 'visibility' }}</span>
-              </button>
+              />
             </div>
-            <p v-if="errors.password" id="login-password-error" class="field-error">{{ errors.password }}</p>
-          </div>
+          </UiField>
 
-          <button type="submit" class="btn btn-primary w-full justify-center" :disabled="submitting" :aria-busy="submitting ? 'true' : 'false'">
+          <UiButton type="submit" variant="primary" class="w-full" :loading="submitting">
             {{ submitting ? 'Signing in…' : 'Sign in' }}
-          </button>
+          </UiButton>
         </form>
 
-        <p class="mt-8 text-sm text-slate-500 dark:text-slate-400">
+        <p class="mt-8 text-sm text-ink-muted">
           Forgotten your password, or need an account? Ask a design system administrator.
         </p>
       </section>
 
-      <div class="spot hidden md:block w-72 h-72 lg:w-80 lg:h-80 justify-self-center" aria-hidden="true" v-html="spot('site/compass-rose')"></div>
+      <SpotArt name="site/compass-rose" size="hero" class="hidden md:block justify-self-center" />
     </div>
   </div>
 </template>
@@ -86,7 +76,7 @@ import InlineNotice from '../components/InlineNotice.vue';
 import { useNotice } from '../composables/useNotice.js';
 import { useAuth } from '../composables/useAuth.js';
 import { safeRedirect } from '../services/auth.js';
-import { spot } from '../utils/spotIllustrations.js';
+import { SpotArt, UiButton, UiCallout, UiField, UiInput } from '../components/ui';
 
 const route = useRoute();
 const router = useRouter();
@@ -98,8 +88,8 @@ const password = ref('');
 const showPassword = ref(false);
 const submitting = ref(false);
 const errors = reactive({ email: '', password: '' });
-const emailInput = ref(null);
-const passwordInput = ref(null);
+// The kit's controls render their own <input>, so focus goes by id
+const focusField = (id) => document.getElementById(id)?.focus();
 
 /** The message for a failed sign-in (docs/AUTH.md: 401 bad credentials, 423 locked). */
 const loginErrorMessage = (error) => {
@@ -127,7 +117,7 @@ const submit = async () => {
   if (submitting.value) return;
   clearNotice();
   if (!validate()) {
-    (errors.email ? emailInput : passwordInput).value?.focus();
+    focusField(errors.email ? 'login-email' : 'login-password');
     return;
   }
   submitting.value = true;
@@ -139,7 +129,7 @@ const submit = async () => {
     password.value = '';
     showNotice(loginErrorMessage(error), 'error');
     await nextTick();
-    passwordInput.value?.focus();
+    focusField('login-password');
   } finally {
     submitting.value = false;
   }
@@ -150,43 +140,23 @@ onMounted(() => {
   else if (route.query.signedOut) showNotice('You have signed out.', 'info');
   else if (route.query.expired) showNotice('Your session has ended. Sign in again to continue.', 'warning');
   else if (route.query.unreachable) showNotice('We could not check your sign-in because the server could not be reached. Try again shortly.', 'error');
-  emailInput.value?.focus();
+  focusField('login-email');
 });
 </script>
 
 <style scoped>
 .auth-page {
-  @apply min-h-screen flex items-center bg-[#fff] dark:bg-slate-950 text-slate-900 dark:text-slate-100;
+  @apply min-h-screen flex items-center bg-surface text-ink;
 }
-.spot :deep(svg) {
-  width: 100%;
-  height: 100%;
-  display: block;
+/* The kit's input look, with room for the show-password button */
+.password-input {
+  @apply w-full h-11 pl-3.5 pr-12 rounded-field border border-solid border-line-control bg-surface-control text-sm text-ink;
+  @apply hover:border-line-control-hover focus:outline focus:outline-2 focus:outline-offset-0 outline-focus focus:border-transparent;
 }
-.field-label {
-  @apply block text-sm font-medium text-slate-800 dark:text-slate-200 mb-1.5;
-}
-.field {
-  @apply w-full h-11 px-4 rounded-full border border-solid border-slate-300 bg-[#fff] text-slate-900 placeholder-slate-400
-    focus:outline-none focus:border-[#2f5ea8] focus:ring-2 focus:ring-[#2f5ea8]/30
-    dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-[#9dbcf0] dark:focus:ring-[#9dbcf0]/30;
-}
-.field-invalid {
-  @apply border-red-500 dark:border-red-400;
-}
-.field-error {
-  @apply mt-1.5 text-sm text-red-700 dark:text-red-300;
+.password-input[aria-invalid='true'] {
+  @apply border-danger-solid;
 }
 .reveal {
-  @apply absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800;
-}
-.btn {
-  @apply inline-flex items-center gap-2 h-11 px-5 rounded-full text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed;
-}
-.btn-primary {
-  @apply bg-[#2f5ea8] text-white hover:bg-[#264d8b] dark:bg-[#9dbcf0] dark:text-slate-950 dark:hover:bg-[#b8cff5];
-}
-.callout {
-  @apply rounded-xl border border-solid border-[#dce8fb] bg-[#f2f6fd] px-4 py-3 text-sm text-[#2f5ea8] dark:border-[#263a5c] dark:bg-[#263a5c]/40 dark:text-[#9dbcf0];
+  @apply absolute right-1.5 top-1/2 -translate-y-1/2;
 }
 </style>

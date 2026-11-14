@@ -1,594 +1,202 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Design-Dev Handoff
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Streamline collaboration between design and development. Generate comprehensive specs, match design tokens, and export everything developers need.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                    <defs>
-                      <linearGradient id="handoffGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Design side (left) -->
-                    <rect x="30" y="60" width="60" height="80" rx="4" fill="url(#handoffGradient)" opacity="0.3"/>
-                    <circle cx="50" cy="80" r="8" fill="url(#handoffGradient)" opacity="0.5"/>
-                    <rect x="45" y="100" width="30" height="20" rx="2" fill="url(#handoffGradient)" opacity="0.4"/>
-                    <!-- Arrow/transfer -->
-                    <path d="M 100 100 L 120 100" stroke="url(#handoffGradient)" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
-                    <path d="M 115 95 L 120 100 L 115 105" stroke="url(#handoffGradient)" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
-                    <!-- Development side (right) -->
-                    <rect x="110" y="60" width="60" height="80" rx="4" fill="url(#handoffGradient)" opacity="0.3"/>
-                    <line x1="120" y1="75" x2="160" y2="75" stroke="white" stroke-width="2" opacity="0.5"/>
-                    <line x1="120" y1="90" x2="150" y2="90" stroke="white" stroke-width="2" opacity="0.5"/>
-                    <line x1="120" y1="105" x2="155" y2="105" stroke="white" stroke-width="2" opacity="0.5"/>
-                    <line x1="120" y1="120" x2="145" y2="120" stroke="white" stroke-width="2" opacity="0.5"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/review', label: 'Review' }"
+      title="Design-dev handoff"
+      lead="Streamline collaboration between design and development. Generate specs, match design tokens, and export everything developers need."
+      spot="site/handoff-tools"
+      size="tool"
+    />
 
-        <!-- Role Tabs -->
-        <div class="max-w-7xl mx-auto mb-6">
-          <div class="flex gap-2 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-            <button
-              @click="activeTab = 'designer'"
-              class="px-6 py-3 text-sm font-medium transition-colors border-b-2"
-              :class="activeTab === 'designer'
-                ? (isDarkMode 
-                  ? 'border-indigo-500 text-indigo-400' 
-                  : 'border-indigo-600 text-indigo-600')
-                : (isDarkMode 
-                  ? 'border-transparent text-gray-400 hover:text-gray-300' 
-                  : 'border-transparent text-gray-600 hover:text-gray-900')"
-            >
-              <span class="material-symbols-outlined align-middle mr-2">palette</span>
-              For Designers
-            </button>
-            <button
-              @click="activeTab = 'developer'"
-              class="px-6 py-3 text-sm font-medium transition-colors border-b-2"
-              :class="activeTab === 'developer'
-                ? (isDarkMode 
-                  ? 'border-indigo-500 text-indigo-400' 
-                  : 'border-indigo-600 text-indigo-600')
-                : (isDarkMode 
-                  ? 'border-transparent text-gray-400 hover:text-gray-300' 
-                  : 'border-transparent text-gray-600 hover:text-gray-900')"
-            >
-              <span class="material-symbols-outlined align-middle mr-2">code</span>
-              For Developers
-            </button>
-          </div>
-        </div>
+    <PageSection>
+      <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
 
-        <!-- Workflow Content -->
-        <div class="max-w-7xl mx-auto">
-          <!-- Designer Workflow -->
-          <div v-if="activeTab === 'designer'" class="space-y-6">
-          <!-- Step 1: Upload Design -->
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
-                <span class="text-indigo-600 dark:text-indigo-400 font-semibold">1</span>
-              </div>
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">upload</span>
-                Upload Your Design
-              </h3>
-            </div>
-            <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-              Upload a screenshot or design file to extract specs automatically. We'll identify colors, spacing, typography, and measurements.
-            </p>
-            <div 
-              @click="triggerFileUpload"
-              @dragover.prevent
-              @drop.prevent="handleFileDrop"
-              class="border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors"
-              :class="isDarkMode 
-                ? 'border-gray-600 bg-slate-800 hover:border-indigo-500' 
-                : 'border-gray-300 bg-gray-50 hover:border-indigo-500'"
-            >
-              <input
-                ref="fileInput"
-                type="file"
+      <UiTabs v-model="activeTab" :tabs="tabs" label="Handoff role">
+        <!-- Designer workflow -->
+        <template #designer>
+          <div class="flex flex-col gap-6">
+            <UiPanel title="1. Upload your design" description="Upload a screenshot or design file to extract specs automatically. We'll identify colors, spacing, typography, and measurements.">
+              <UiFileDropZone
+                label="Design file"
+                :file="uploadedFile"
                 accept="image/*,.fig,.sketch"
-                @change="handleFileUpload"
-                class="hidden"
+                prompt="Drop your design file here, or choose one."
+                hint="Supports PNG, JPG, SVG, Figma files, and Sketch files"
+                @select="selectDesignFile"
+                @remove="uploadedFile = null"
               />
-              <span class="material-symbols-outlined text-5xl mb-4 block" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">cloud_upload</span>
-              <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Drop your design file here or click to browse
-              </p>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Supports PNG, JPG, SVG, Figma files, and Sketch files
-              </p>
-            </div>
-            <div v-if="uploadedFile" class="mt-4 p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-100'">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <span class="material-symbols-outlined text-indigo-600">image</span>
-                  <span class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ uploadedFile.name }}</span>
-                </div>
-                <button
-                  @click="uploadedFile = null"
-                  class="text-sm text-red-500 hover:text-red-600"
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          </div>
+            </UiPanel>
 
-          <!-- Step 2: Design Specs -->
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
-                <span class="text-indigo-600 dark:text-indigo-400 font-semibold">2</span>
-              </div>
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">straighten</span>
-                Design Specifications
-              </h3>
-            </div>
-            <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-              Enter or adjust the design specifications. These will be used to generate developer-ready code and match design tokens.
-            </p>
-            
-            <div class="grid md:grid-cols-2 gap-6">
-              <!-- Colors -->
-              <div>
-                <label class="block text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Colors Used
-                </label>
-                <div class="space-y-2">
-                  <div v-for="(color, index) in designSpecs.colors" :key="index" class="flex items-center gap-3">
-                    <button
-                      @click="openColorPicker(index, $event)"
-                      class="w-12 h-10 rounded border-2 cursor-pointer transition-colors flex-shrink-0"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 hover:border-indigo-400' 
-                        : 'border-gray-300 hover:border-indigo-500'"
-                      :style="{ backgroundColor: color.value }"
-                      :title="`Pick color ${index + 1}`"
-                    ></button>
-                    <input
-                      v-model="color.value"
-                      type="text"
-                      class="flex-1 px-3 py-2 border rounded-lg font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
-                    <button
-                      @click="designSpecs.colors.splice(index, 1)"
-                      class="text-red-500 hover:text-red-600"
-                    >
-                      <span class="material-symbols-outlined text-lg">close</span>
-                    </button>
-                  </div>
-                  <button
-                    @click="designSpecs.colors.push({ value: '#000000', name: '' })"
-                    class="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-                  >
-                    <span class="material-symbols-outlined text-base">add</span>
-                    Add Color
-                  </button>
-                </div>
-              </div>
-
-              <!-- Typography -->
-              <div>
-                <label class="block text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Typography
-                </label>
-                <div class="space-y-3">
+            <UiPanel title="2. Design specifications" description="Enter or adjust the design specifications. These will be used to generate developer-ready code and match design tokens.">
+              <div class="grid md:grid-cols-2 gap-8">
+                <!-- Colors -->
+                <fieldset class="spec-group">
+                  <legend class="spec-legend">Colors used</legend>
+                  <ul class="flex flex-col gap-2">
+                    <li v-for="(color, index) in designSpecs.colors" :key="index" class="flex items-center gap-2">
+                      <button
+                        type="button"
+                        class="swatch-button"
+                        :aria-label="`Pick color ${index + 1}`"
+                        :title="`Pick color ${index + 1}`"
+                        @click="openColorPicker(index, $event)"
+                      >
+                        <UiSwatch :color="color.value" size="fill" :label="color.value" />
+                      </button>
+                      <div class="flex-1">
+                        <UiInput v-model="color.value" mono :aria-label="`Color ${index + 1} value`" />
+                      </div>
+                      <UiButton icon-only icon="close" variant="ghost" size="sm" :label="`Remove color ${index + 1}`" @click="designSpecs.colors.splice(index, 1)" />
+                    </li>
+                  </ul>
                   <div>
-                    <label class="block text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Font Family</label>
-                    <input
-                      v-model="designSpecs.typography.fontFamily"
-                      type="text"
-                      placeholder="Inter, Roboto, etc."
-                      class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
+                    <UiButton size="sm" variant="ghost" icon="add" @click="addColor">Add color</UiButton>
                   </div>
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="block text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Size (px)</label>
-                      <input
-                        v-model.number="designSpecs.typography.fontSize"
-                        type="number"
-                        class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Weight</label>
-                      <input
-                        v-model.number="designSpecs.typography.fontWeight"
-                        type="number"
-                        class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+                </fieldset>
 
-              <!-- Spacing -->
-              <div>
-                <label class="block text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Spacing
-                </label>
-                <div class="space-y-3">
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="block text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Padding</label>
-                      <input
-                        v-model.number="designSpecs.spacing.padding"
-                        type="number"
-                        class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Margin</label>
-                      <input
-                        v-model.number="designSpecs.spacing.margin"
-                        type="number"
-                        class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                    </div>
+                <!-- Typography -->
+                <fieldset class="spec-group">
+                  <legend class="spec-legend">Typography</legend>
+                  <UiInput v-model="designSpecs.typography.fontFamily" label="Font family" placeholder="Inter, Roboto, etc." />
+                  <div class="grid grid-cols-2 gap-3">
+                    <UiInput v-model="designSpecs.typography.fontSize" type="number" label="Size" suffix="px" />
+                    <UiInput v-model="designSpecs.typography.fontWeight" type="number" label="Weight" />
                   </div>
-                  <div>
-                    <label class="block text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Border Radius</label>
-                    <input
-                      v-model.number="designSpecs.spacing.borderRadius"
-                      type="number"
-                      class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
-                  </div>
-                </div>
-              </div>
+                </fieldset>
 
-              <!-- Dimensions -->
-              <div>
-                <label class="block text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Dimensions
-                </label>
-                <div class="space-y-3">
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="block text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Width (px)</label>
-                      <input
-                        v-model.number="designSpecs.dimensions.width"
-                        type="number"
-                        class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Height (px)</label>
-                      <input
-                        v-model.number="designSpecs.dimensions.height"
-                        type="number"
-                        class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                    </div>
+                <!-- Spacing -->
+                <fieldset class="spec-group">
+                  <legend class="spec-legend">Spacing</legend>
+                  <div class="grid grid-cols-2 gap-3">
+                    <UiInput v-model="designSpecs.spacing.padding" type="number" label="Padding" suffix="px" />
+                    <UiInput v-model="designSpecs.spacing.margin" type="number" label="Margin" suffix="px" />
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                  <UiInput v-model="designSpecs.spacing.borderRadius" type="number" label="Border radius" suffix="px" />
+                </fieldset>
 
-          <!-- Step 3: Generate Handoff -->
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
-                <span class="text-indigo-600 dark:text-indigo-400 font-semibold">3</span>
+                <!-- Dimensions -->
+                <fieldset class="spec-group">
+                  <legend class="spec-legend">Dimensions</legend>
+                  <div class="grid grid-cols-2 gap-3">
+                    <UiInput v-model="designSpecs.dimensions.width" type="number" label="Width" suffix="px" />
+                    <UiInput v-model="designSpecs.dimensions.height" type="number" label="Height" suffix="px" />
+                  </div>
+                </fieldset>
               </div>
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">description</span>
-                Generate Handoff Documentation
-              </h3>
-            </div>
-            <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-              Generate comprehensive handoff documentation with matched design tokens and ready-to-use code.
-            </p>
-            <div class="flex items-center gap-3 mb-4">
-              <select
-                v-model="handoffFormat"
-                class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                :class="isDarkMode 
-                  ? 'border-gray-600 bg-slate-700 text-white' 
-                  : 'border-gray-300 bg-white text-gray-900'"
-              >
-                <option value="markdown">Markdown Document</option>
-                <option value="html">HTML Page</option>
-                <option value="pdf">PDF Document</option>
-                <option value="json">JSON Spec</option>
-              </select>
-              <button
-                @click="generateHandoff"
-                class="px-6 py-2 rounded-lg font-medium transition-colors bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                Generate Handoff
-              </button>
-            </div>
-            <div v-if="generatedHandoff" class="mt-4 rounded-lg overflow-hidden" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-50'">
-              <div class="p-4 overflow-x-auto max-h-96 overflow-y-auto">
-                <pre class="text-sm font-mono whitespace-pre-wrap" :class="isDarkMode ? 'text-green-400' : 'text-gray-700'"><code>{{ generatedHandoff }}</code></pre>
-              </div>
-              <div class="p-3 border-t flex items-center justify-end gap-2" :class="isDarkMode ? 'border-gray-800' : 'border-gray-200'">
-                <button
-                  @click="copyHandoff"
-                  class="px-3 py-1 rounded text-sm font-medium transition-colors"
-                  :class="isDarkMode 
-                    ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                >
-                  Copy
-                </button>
-                <button
-                  @click="downloadHandoff"
-                  class="px-3 py-1 rounded text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-700 text-white"
-                >
-                  Download
-                </button>
-              </div>
-            </div>
-          </div>
-          </div>
+            </UiPanel>
 
-          <!-- Developer Workflow -->
-          <div v-if="activeTab === 'developer'" class="space-y-6">
-          <!-- View Specs -->
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              <span class="material-symbols-outlined text-indigo-600">description</span>
-              Design Specifications
-            </h3>
-            <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-              View the design specifications provided by the design team. All measurements, colors, and typography are clearly documented.
-            </p>
-            <div v-if="!designSpecsLoaded" class="text-center py-12">
-              <span class="material-symbols-outlined text-5xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">description</span>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                No design specs available. Ask your designer to generate a handoff document.
-              </p>
-            </div>
-            <div v-else class="space-y-4">
-              <!-- Specs Display -->
-              <div class="grid md:grid-cols-2 gap-4">
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Colors</div>
-                  <div class="flex flex-wrap gap-2">
-                    <div v-for="(color, index) in designSpecs.colors" :key="index" class="flex items-center gap-2">
-                      <div class="w-6 h-6 rounded border" :style="{ backgroundColor: color.value }" :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"></div>
-                      <span class="text-xs font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ color.value }}</span>
-                    </div>
-                  </div>
+            <UiPanel title="3. Generate handoff documentation" description="Generate handoff documentation with matched design tokens and ready-to-use code.">
+              <div class="flex flex-wrap items-end gap-3">
+                <div class="w-64">
+                  <UiSelect v-model="handoffFormat" label="Format" :options="handoffFormats" />
                 </div>
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Typography</div>
-                  <div class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    {{ designSpecs.typography.fontFamily || 'Not specified' }}, 
-                    {{ designSpecs.typography.fontSize || 'N/A' }}px, 
-                    Weight {{ designSpecs.typography.fontWeight || 'N/A' }}
-                  </div>
-                </div>
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Spacing</div>
-                  <div class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Padding: {{ designSpecs.spacing.padding || 0 }}px<br>
-                    Margin: {{ designSpecs.spacing.margin || 0 }}px<br>
-                    Border Radius: {{ designSpecs.spacing.borderRadius || 0 }}px
-                  </div>
-                </div>
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Dimensions</div>
-                  <div class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    {{ designSpecs.dimensions.width || 0 }}px × {{ designSpecs.dimensions.height || 0 }}px
-                  </div>
-                </div>
+                <UiButton variant="primary" icon="description" @click="generateHandoff">Generate handoff</UiButton>
               </div>
-            </div>
-          </div>
-
-          <!-- Token Matching -->
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              <span class="material-symbols-outlined text-indigo-600">auto_awesome</span>
-              Matched Design Tokens
-            </h3>
-            <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-              We've automatically matched your design specs to existing design tokens. Use these tokens instead of hardcoded values for consistency.
-            </p>
-            <div class="space-y-3">
-              <div v-for="(match, index) in matchedTokens" :key="index" class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
-                <div class="flex items-start justify-between">
-                  <div class="flex-1">
-                    <div class="font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ match.type }}</div>
-                    <div class="text-sm mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      Design value: <span class="font-mono">{{ match.designValue }}</span>
-                    </div>
-                    <div class="text-sm" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                      → Use token: <span class="font-mono font-semibold">{{ match.token }}</span>
-                    </div>
-                  </div>
-                  <button
-                    @click="copyToken(match.token)"
-                    class="px-3 py-1 rounded text-xs font-medium transition-colors bg-indigo-600 hover:bg-indigo-700 text-white"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-              <div v-if="matchedTokens.length === 0" class="text-center py-8 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                No token matches found. Check the design system token library for available tokens.
-              </div>
-            </div>
-          </div>
-
-          <!-- Code Generation -->
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              <span class="material-symbols-outlined text-indigo-600">code</span>
-              Generate Code
-            </h3>
-            <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-              Generate ready-to-use code with design tokens. Choose your framework and copy the code directly.
-            </p>
-            <div class="flex items-center gap-3 mb-4">
-              <CodeFormatDropdown
-                v-model="codeFormat"
-                :options="[
-                  { value: 'css', label: 'CSS' },
-                  { value: 'scss', label: 'SCSS' },
-                  { value: 'vue', label: 'Vue Component' },
-                  { value: 'react', label: 'React Component' },
-                  { value: 'tailwind', label: 'Tailwind CSS' }
-                ]"
-              />
-              <button
-                @click="generateCode"
-                class="px-6 py-2 rounded-lg font-medium transition-colors bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                Generate Code
-              </button>
-            </div>
-            <div v-if="generatedCode" class="mt-4 rounded-lg overflow-hidden" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-50'">
-              <div class="p-4 overflow-x-auto max-h-96 overflow-y-auto">
-                <pre class="text-sm font-mono whitespace-pre-wrap" :class="isDarkMode ? 'text-green-400' : 'text-gray-700'"><code>{{ generatedCode }}</code></pre>
-              </div>
-              <div class="p-3 border-t flex items-center justify-end gap-2" :class="isDarkMode ? 'border-gray-800' : 'border-gray-200'">
-                <button
-                  @click="copyCode"
-                  class="px-3 py-1 rounded text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-700 text-white"
-                >
-                  Copy Code
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Component Matching -->
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              <span class="material-symbols-outlined text-indigo-600">widgets</span>
-              Similar Components
-            </h3>
-            <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-              Check if there's already a component in the design system that matches this design. Reuse existing components when possible.
-            </p>
-            <div class="space-y-3">
-              <div v-for="(component, index) in similarComponents" :key="index" class="p-4 rounded-lg border flex items-center justify-between" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
+              <template v-if="generatedHandoff">
+                <UiCodeBlock :code="generatedHandoff" label="Handoff document" @copy-failed="showNotice('Could not copy to the clipboard.', 'error')" />
                 <div>
-                  <div class="font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ component.name }}</div>
-                  <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ component.description }}</div>
+                  <UiButton icon="download" @click="downloadHandoff">Download</UiButton>
                 </div>
-                <a
-                  :href="component.link"
-                  class="px-4 py-2 rounded text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-700 text-white"
-                >
-                  View Component
-                </a>
-              </div>
-              <div v-if="similarComponents.length === 0" class="text-center py-8 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                No similar components found. You may need to build a new component.
-              </div>
-            </div>
+              </template>
+            </UiPanel>
           </div>
-        </div>
-        </div>
-      </div>
-    </div>
-    </div>
-    
-    <!-- Color Picker -->
+        </template>
+
+        <!-- Developer workflow -->
+        <template #developer>
+          <div class="flex flex-col gap-6">
+            <UiPanel title="Design specifications" description="The design specifications provided by the design team: measurements, colors and typography.">
+              <UiEmptyState
+                v-if="!designSpecsLoaded"
+                title="No design specs yet"
+                body="No design specs available. Ask your designer to generate a handoff document."
+                spot="tools/documentation-generator"
+                :bordered="false"
+              />
+              <div v-else class="grid md:grid-cols-2 gap-4">
+                <div class="spec-tile">
+                  <p class="spec-tile-label">Colors</p>
+                  <div class="flex flex-wrap gap-3">
+                    <span v-for="(color, index) in designSpecs.colors" :key="index" class="flex items-center gap-2">
+                      <UiSwatch :color="color.value" size="sm" />
+                      <UiCode>{{ color.value }}</UiCode>
+                    </span>
+                  </div>
+                </div>
+                <div class="spec-tile">
+                  <p class="spec-tile-label">Typography</p>
+                  <p class="text-sm text-ink">
+                    {{ designSpecs.typography.fontFamily || 'Not specified' }},
+                    {{ designSpecs.typography.fontSize || 'N/A' }}px,
+                    Weight {{ designSpecs.typography.fontWeight || 'N/A' }}
+                  </p>
+                </div>
+                <div class="spec-tile">
+                  <p class="spec-tile-label">Spacing</p>
+                  <p class="text-sm text-ink">
+                    Padding: {{ designSpecs.spacing.padding || 0 }}px<br />
+                    Margin: {{ designSpecs.spacing.margin || 0 }}px<br />
+                    Border Radius: {{ designSpecs.spacing.borderRadius || 0 }}px
+                  </p>
+                </div>
+                <div class="spec-tile">
+                  <p class="spec-tile-label">Dimensions</p>
+                  <p class="text-sm text-ink">{{ designSpecs.dimensions.width || 0 }}px × {{ designSpecs.dimensions.height || 0 }}px</p>
+                </div>
+              </div>
+            </UiPanel>
+
+            <UiPanel title="Matched design tokens" description="Your design specs matched to existing design tokens. Use these tokens instead of hardcoded values for consistency.">
+              <ul v-if="matchedTokens.length" class="flex flex-col gap-3">
+                <li v-for="(match, index) in matchedTokens" :key="index" class="spec-row">
+                  <div class="min-w-0 flex-1">
+                    <p class="font-medium text-ink-strong">{{ match.type }}</p>
+                    <p class="text-sm text-ink-secondary">Design value: <UiCode>{{ match.designValue }}</UiCode></p>
+                    <p class="text-sm text-accent-text">Use token: <UiCode>{{ match.token }}</UiCode></p>
+                  </div>
+                  <UiButton size="sm" icon="content_copy" @click="copyToken(match.token)">Copy<span class="sr-only"> {{ match.token }}</span></UiButton>
+                </li>
+              </ul>
+              <p v-else class="py-6 text-center text-sm text-ink-muted">
+                No token matches found. Check the design system token library for available tokens.
+              </p>
+            </UiPanel>
+
+            <UiPanel title="Generate code" description="Generate ready-to-use code with design tokens. Choose your framework and copy the code directly.">
+              <div class="flex flex-wrap items-end gap-3">
+                <div class="w-64">
+                  <UiSelect v-model="codeFormat" label="Format" :options="codeFormats" />
+                </div>
+                <UiButton variant="primary" icon="code" @click="generateCode">Generate code</UiButton>
+              </div>
+              <UiCodeBlock
+                v-if="generatedCode"
+                :code="generatedCode"
+                :label="codeFormats.find((format) => format.value === codeFormat)?.label || 'Code'"
+                @copy-failed="showNotice('Could not copy to the clipboard.', 'error')"
+              />
+            </UiPanel>
+
+            <UiPanel title="Similar components" description="Check if there's already a component in the design system that matches this design. Reuse existing components when possible.">
+              <ul v-if="similarComponents.length" class="flex flex-col gap-3">
+                <li v-for="(component, index) in similarComponents" :key="index" class="spec-row">
+                  <div class="min-w-0 flex-1">
+                    <p class="font-medium text-ink-strong">{{ component.name }}</p>
+                    <p class="text-sm text-ink-secondary">{{ component.description }}</p>
+                  </div>
+                  <UiButton size="sm" :href="component.link" trailing-icon="arrow_forward">View component</UiButton>
+                </li>
+              </ul>
+              <p v-else class="py-6 text-center text-sm text-ink-muted">
+                No similar components found. You may need to build a new component.
+              </p>
+            </UiPanel>
+          </div>
+        </template>
+      </UiTabs>
+    </PageSection>
+
+    <!-- Color picker (positions itself next to the swatch from `position`) -->
     <ColorPicker
       :show="showColorPicker"
       :initial-color="pickerColor"
@@ -597,22 +205,49 @@
       @apply="handleColorPickerApply"
       @cancel="showColorPicker = false"
     />
-  </div>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import { useDarkMode } from '../composables/useDarkMode.js';
-import CodeFormatDropdown from '../components/CodeFormatDropdown.vue';
 import ColorPicker from '../components/ColorPicker.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useNotice } from '../composables/useNotice.js';
+import {
+  PageHero,
+  PageSection,
+  PageShell,
+  UiButton,
+  UiCode,
+  UiCodeBlock,
+  UiEmptyState,
+  UiInput,
+  UiPanel,
+  UiSelect,
+  UiSwatch,
+  UiTabs,
+} from '../components/ui';
+import UiFileDropZone from '../components/ui/UiFileDropZone.vue';
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
 const activeTab = ref('designer');
-const fileInput = ref(null);
+const tabs = [
+  { value: 'designer', label: 'For designers', icon: 'palette' },
+  { value: 'developer', label: 'For developers', icon: 'code' },
+];
+const handoffFormats = [
+  { value: 'markdown', label: 'Markdown document' },
+  { value: 'html', label: 'HTML page' },
+  { value: 'pdf', label: 'PDF document' },
+  { value: 'json', label: 'JSON spec' },
+];
+const codeFormats = [
+  { value: 'css', label: 'CSS' },
+  { value: 'scss', label: 'SCSS' },
+  { value: 'vue', label: 'Vue Component' },
+  { value: 'react', label: 'React Component' },
+  { value: 'tailwind', label: 'Tailwind CSS' },
+];
 const uploadedFile = ref(null);
 const handoffFormat = ref('markdown');
 const codeFormat = ref('css');
@@ -658,25 +293,13 @@ const currentColorIndex = ref(null);
 const pickerColor = ref('#000000');
 const pickerPosition = ref({ left: 0, top: 0 });
 
-const triggerFileUpload = () => {
-  fileInput.value?.click();
-};
+// New colours start black, like the colour picker
+const addColor = () => designSpecs.value.colors.push({ value: '#000000', name: '' });
 
-const handleFileUpload = (event) => {
-  const file = event.target.files?.[0];
-  if (file) {
-    uploadedFile.value = file;
-    // In a real implementation, this would extract specs from the file
-    designSpecsLoaded.value = true;
-  }
-};
-
-const handleFileDrop = (event) => {
-  const file = event.dataTransfer.files?.[0];
-  if (file) {
-    uploadedFile.value = file;
-    designSpecsLoaded.value = true;
-  }
+// In a real implementation, this would extract specs from the file
+const selectDesignFile = (file) => {
+  uploadedFile.value = file;
+  designSpecsLoaded.value = true;
 };
 
 const openColorPicker = (index, event) => {
@@ -686,7 +309,7 @@ const openColorPicker = (index, event) => {
   pickerColor.value = color ? color.value : '#000000';
   
   // Calculate position - ColorPicker uses fixed positioning, so coordinates are relative to viewport
-  const rect = event.target.getBoundingClientRect();
+  const rect = event.currentTarget.getBoundingClientRect();
   const pickerWidth = 280;
   const pickerHeight = 400;
   const padding = 16;
@@ -779,15 +402,6 @@ ${matchedTokens.value.map(t => `- \`${t.token}\` (matches ${t.designValue})`).jo
   }
 };
 
-const copyHandoff = async () => {
-  if (!generatedHandoff.value) return;
-  try {
-    await navigator.clipboard.writeText(generatedHandoff.value);
-  } catch (err) {
-    console.error('Failed to copy:', err);
-  }
-};
-
 const downloadHandoff = () => {
   if (!generatedHandoff.value) return;
   const extension = handoffFormat.value === 'json' ? 'json' : handoffFormat.value === 'pdf' ? 'pdf' : handoffFormat.value === 'html' ? 'html' : 'md';
@@ -820,6 +434,7 @@ const generateCode = () => {
   font-weight: ${specs.typography.fontWeight};
 }`;
   } else if (codeFormat.value === 'tailwind') {
+    // style-check: allow generated Tailwind output (content the tool produces, not this page's styling)
     generatedCode.value = `<div class="w-[${specs.dimensions.width}px] h-[${specs.dimensions.height}px] p-[${specs.spacing.padding}px] m-[${specs.spacing.margin}px] rounded-[${specs.spacing.borderRadius}px]" style="background-color: ${specs.colors[0]?.value || '#000'}; font-family: ${specs.typography.fontFamily}; font-size: ${specs.typography.fontSize}px; font-weight: ${specs.typography.fontWeight};">
   Content
 </div>`;
@@ -870,26 +485,35 @@ export default Component;`;
   }
 };
 
-const copyCode = async () => {
-  if (!generatedCode.value) return;
-  try {
-    await navigator.clipboard.writeText(generatedCode.value);
-  } catch (err) {
-    console.error('Failed to copy:', err);
-  }
-};
-
 const copyToken = async (token) => {
   try {
     await navigator.clipboard.writeText(token);
+    showNotice(`Copied ${token}.`, 'success');
   } catch (err) {
     console.error('Failed to copy:', err);
+    showNotice('Could not copy to the clipboard.', 'error');
   }
 };
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.spec-group {
+  @apply flex flex-col gap-3;
+}
+.spec-legend {
+  @apply mb-3 text-sm font-semibold text-ink-strong;
+}
+.swatch-button {
+  @apply h-11 w-12 shrink-0 rounded-field p-1 border border-line-control hover:border-accent-border;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
+}
+.spec-tile {
+  @apply rounded-tile bg-surface-sunken p-4;
+}
+.spec-tile-label {
+  @apply mb-2 text-xs font-medium text-ink-muted;
+}
+.spec-row {
+  @apply flex flex-wrap items-center gap-3 rounded-tile border border-line bg-surface-sunken p-4;
 }
 </style>

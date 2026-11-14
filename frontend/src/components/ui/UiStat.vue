@@ -6,11 +6,12 @@
     </p>
     <p class="ui-stat-value" :class="`ui-stat-${tone}`"><slot>{{ value }}</slot></p>
     <p v-if="hint" class="ui-stat-hint">{{ hint }}</p>
+    <div v-if="$slots.footer" class="ui-stat-footer"><slot name="footer" /></div>
   </div>
 </template>
 
 <script setup>
-/** A single figure with its label, e.g. "Total runs: 42". Show "Not collected" rather than a made-up number. */
+/** A single figure with its label, e.g. "Total runs: 42"; `#footer` for a trend, a meter or a link. Show "Not collected" rather than a made-up number. */
 defineProps({
   label: { type: String, required: true },
   value: { type: [String, Number], default: '' },
@@ -44,6 +45,9 @@ defineProps({
 }
 .ui-stat-danger {
   @apply text-danger;
+}
+.ui-stat-footer {
+  @apply mt-2 flex flex-wrap items-center gap-2 text-sm text-ink-secondary;
 }
 .ui-stat-hint {
   @apply text-sm text-ink-muted;

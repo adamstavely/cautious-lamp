@@ -1,1651 +1,246 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      PX Unit Converter
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Convert pixel values to REM, EM, percentage, and Tailwind units. Supports bidirectional conversion with customizable base sizes.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">straighten</span>
-                      Unit Converter
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="converterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized converter icon -->
-                      <rect x="30" y="80" width="140" height="40" rx="4" fill="url(#converterGradient)" opacity="0.3"/>
-                      <circle cx="50" cy="100" r="15" fill="url(#converterGradient)" opacity="0.5"/>
-                      <path d="M 80 100 L 120 100" stroke="rgba(255,255,255,0.6)" stroke-width="4" stroke-linecap="round"/>
-                      <circle cx="150" cy="100" r="15" fill="url(#converterGradient)" opacity="0.7"/>
-                      <!-- Additional conversion indicators -->
-                      <text x="100" y="50" text-anchor="middle" fill="url(#converterGradient)" opacity="0.6" font-size="14" font-weight="bold">PX</text>
-                      <text x="100" y="170" text-anchor="middle" fill="url(#converterGradient)" opacity="0.6" font-size="14" font-weight="bold">REM/EM/%</text>
-                    </svg>
-                  </div>
-                </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="PX unit converter"
+      lead="Convert pixel values to REM, EM, percentage, physical, viewport and Tailwind units. Converts both ways, with customizable base sizes."
+      spot="tools/px-converter"
+      size="tool"
+    />
+
+    <PageSection title="Conversion mode">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <UiSegmented v-for="group in modeGroups" :key="group.label" v-model="selectedMode" :options="group.modes" :label="group.label" />
+      </div>
+    </PageSection>
+
+    <PageSection title="Converter" divided>
+      <div class="space-y-6">
+        <UiPanel title="Settings">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <UiInput v-model.number="rootFontSize" type="number" min="1" step="0.1" mono label="Root font size" suffix="px" />
+            <UiInput v-model.number="parentFontSize" type="number" min="1" step="0.1" mono label="Parent font size" suffix="px" />
+            <UiInput v-if="needsViewportWidth" v-model.number="viewportWidth" type="number" min="1" step="1" mono label="Viewport width" suffix="px" />
+            <UiInput v-if="needsViewportHeight" v-model.number="viewportHeight" type="number" min="1" step="1" mono label="Viewport height" suffix="px" />
+            <UiSelect
+              v-if="selectedMode === 'px-to-percent' || selectedMode === 'percent-to-vw'"
+              v-model="percentageContext"
+              :options="contextOptions"
+              label="Context"
+            />
+          </div>
+        </UiPanel>
+
+        <InlineNotice :notice="notice" @dismiss="clearNotice" />
+
+        <UiPanel title="Convert">
+          <!-- Two-way converters -->
+          <div v-if="currentPair" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div v-for="item in currentPair" :key="item.label" class="grid grid-cols-content-aside items-end gap-2">
+              <UiInput
+                :model-value="item.model.value"
+                type="number"
+                :step="item.step"
+                :placeholder="item.placeholder"
+                :label="item.label"
+                :suffix="item.unit"
+                mono
+                @update:model-value="setField(item, $event)"
+              />
+              <UiButton variant="ghost" icon="content_copy" icon-only :label="`Copy ${item.label} value`" @click="copyToClipboard(item.model.value + item.unit)" />
+            </div>
+          </div>
+
+          <!-- Base unit to PX -->
+          <div v-else-if="selectedMode === 'base-to-px'" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-content-aside items-end gap-2">
+              <UiInput :model-value="baseUnitValue" placeholder="1rem, 1em, or 100%" label="Base unit" mono @update:model-value="onBaseUnit" />
+              <UiButton variant="ghost" icon="content_copy" icon-only label="Copy base unit" @click="copyToClipboard(baseUnitValue)" />
+            </div>
+            <div class="grid grid-cols-content-aside items-end gap-2">
+              <UiInput :model-value="baseToPxResult" type="number" readonly label="Pixels" suffix="px" mono />
+              <UiButton variant="ghost" icon="content_copy" icon-only label="Copy pixels" @click="copyToClipboard(baseToPxResult + 'px')" />
+            </div>
+          </div>
+
+          <!-- PX to Tailwind -->
+          <div v-else-if="selectedMode === 'px-to-tailwind'" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="grid grid-cols-content-aside items-end gap-2">
+                <UiInput :model-value="pxValue" type="number" step="0.1" placeholder="16" label="Pixels" suffix="px" mono @update:model-value="onPxForTailwind" />
+                <UiButton variant="ghost" icon="content_copy" icon-only label="Copy pixels" @click="copyToClipboard(pxValue + 'px')" />
+              </div>
+              <div class="grid grid-cols-content-aside items-end gap-2">
+                <UiInput :model-value="tailwindValue" readonly label="Tailwind value" mono />
+                <UiButton variant="ghost" icon="content_copy" icon-only label="Copy Tailwind value" @click="copyToClipboard(tailwindValue)" />
+              </div>
+            </div>
+            <div v-if="tailwindClass" class="p-4 rounded-tile bg-surface-sunken">
+              <p class="text-sm mb-2 text-ink-secondary">Tailwind class examples:</p>
+              <div class="flex flex-wrap gap-2">
+                <UiCode>{{ tailwindClass }}</UiCode>
+                <UiCode>m-{{ tailwindValue }}</UiCode>
+                <UiCode>gap-{{ tailwindValue }}</UiCode>
               </div>
             </div>
           </div>
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <!-- Conversion Mode Selector -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h2 class="text-lg font-semibold mb-6 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">swap_horiz</span>
-                Conversion Mode
-              </h2>
-              
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Typography Units Card -->
-                <div 
-                  class="rounded-lg border p-4"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 border-gray-700' 
-                    : 'bg-gray-50 border-gray-200'"
-                >
-                  <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-200' : 'text-gray-800'">Typography Units</h3>
-                  <div class="flex flex-wrap gap-2">
-                    <button
-                      v-for="mode in typographyModes"
-                      :key="mode.value"
-                      @click="selectedMode = mode.value"
-                      class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                      :class="selectedMode === mode.value
-                        ? (isDarkMode 
-                          ? 'bg-indigo-600 text-white' 
-                          : 'bg-indigo-600 text-white')
-                        : (isDarkMode
-                          ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200')"
-                    >
-                      {{ mode.label }}
-                    </button>
-                  </div>
-                </div>
+          <template v-if="calculationNote" #footer>
+            <p class="text-sm text-ink-muted">{{ calculationNote }}</p>
+          </template>
+        </UiPanel>
+      </div>
+    </PageSection>
 
-                <!-- Physical Units Card -->
-                <div 
-                  class="rounded-lg border p-4"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 border-gray-700' 
-                    : 'bg-gray-50 border-gray-200'"
-                >
-                  <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-200' : 'text-gray-800'">Physical Units</h3>
-                  <div class="flex flex-wrap gap-2">
-                    <button
-                      v-for="mode in physicalModes"
-                      :key="mode.value"
-                      @click="selectedMode = mode.value"
-                      class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                      :class="selectedMode === mode.value
-                        ? (isDarkMode 
-                          ? 'bg-indigo-600 text-white' 
-                          : 'bg-indigo-600 text-white')
-                        : (isDarkMode
-                          ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200')"
-                    >
-                      {{ mode.label }}
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Viewport Units Card -->
-                <div 
-                  class="rounded-lg border p-4"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 border-gray-700' 
-                    : 'bg-gray-50 border-gray-200'"
-                >
-                  <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-200' : 'text-gray-800'">Viewport Units</h3>
-                  <div class="flex flex-wrap gap-2">
-                    <button
-                      v-for="mode in viewportModes"
-                      :key="mode.value"
-                      @click="selectedMode = mode.value"
-                      class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                      :class="selectedMode === mode.value
-                        ? (isDarkMode 
-                          ? 'bg-indigo-600 text-white' 
-                          : 'bg-indigo-600 text-white')
-                        : (isDarkMode
-                          ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200')"
-                    >
-                      {{ mode.label }}
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Frameworks Card -->
-                <div 
-                  class="rounded-lg border p-4"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 border-gray-700' 
-                    : 'bg-gray-50 border-gray-200'"
-                >
-                  <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-200' : 'text-gray-800'">Frameworks</h3>
-                  <div class="flex flex-wrap gap-2">
-                    <button
-                      v-for="mode in frameworkModes"
-                      :key="mode.value"
-                      @click="selectedMode = mode.value"
-                      class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                      :class="selectedMode === mode.value
-                        ? (isDarkMode 
-                          ? 'bg-indigo-600 text-white' 
-                          : 'bg-indigo-600 text-white')
-                        : (isDarkMode
-                          ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200')"
-                    >
-                      {{ mode.label }}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Converter Section -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">calculate</span>
-                Converter
-              </h2>
-
-              <!-- Configuration Panel -->
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div>
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Root Font Size (px)
-                    </label>
-                    <input
-                      v-model.number="rootFontSize"
-                      type="number"
-                      min="1"
-                      step="0.1"
-                      class="w-full px-3 py-2 border rounded-lg text-sm font-mono"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
-                  </div>
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Parent Font Size (px)
-                  </label>
-                  <input
-                    v-model.number="parentFontSize"
-                    type="number"
-                    min="1"
-                    step="0.1"
-                    class="w-full px-3 py-2 border rounded-lg text-sm font-mono"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-                <div v-if="needsViewportWidth">
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Viewport Width (px)
-                  </label>
-                  <input
-                    v-model.number="viewportWidth"
-                    type="number"
-                    min="1"
-                    step="1"
-                    class="w-full px-3 py-2 border rounded-lg text-sm font-mono"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-                <div v-if="needsViewportHeight">
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Viewport Height (px)
-                  </label>
-                  <input
-                    v-model.number="viewportHeight"
-                    type="number"
-                    min="1"
-                    step="1"
-                    class="w-full px-3 py-2 border rounded-lg text-sm font-mono"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-                <div v-if="selectedMode === 'px-to-percent' || selectedMode === 'percent-to-vw'">
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Context
-                  </label>
-                  <select
-                    v-model="percentageContext"
-                    class="w-full px-3 py-2 border rounded-lg text-sm"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  >
-                    <option value="font-size">Font Size</option>
-                    <option value="dimension">Width/Height</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Conversion Input/Output Fields -->
-              <div class="space-y-4">
-                <!-- PX to REM -->
-                <div v-if="selectedMode === 'px-to-rem'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="pxValue"
-                        type="number"
-                        step="0.1"
-                        @input="convertPxToRem"
-                        placeholder="16"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">px</span>
-                      <button
-                        @click="copyToClipboard(pxValue + 'px')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">REM</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="remValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertRemToPx"
-                        placeholder="1"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">rem</span>
-                      <button
-                        @click="copyToClipboard(remValue + 'rem')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- PX to EM -->
-                <div v-if="selectedMode === 'px-to-em'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="pxValue"
-                        type="number"
-                        step="0.1"
-                        @input="convertPxToEm"
-                        placeholder="16"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">px</span>
-                      <button
-                        @click="copyToClipboard(pxValue + 'px')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">EM</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="emValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertEmToPx"
-                        placeholder="1"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">em</span>
-                      <button
-                        @click="copyToClipboard(emValue + 'em')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- PX to Percentage -->
-                <div v-if="selectedMode === 'px-to-percent'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="pxValue"
-                        type="number"
-                        step="0.1"
-                        @input="convertPxToPercent"
-                        placeholder="16"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">px</span>
-                      <button
-                        @click="copyToClipboard(pxValue + 'px')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Percentage</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="percentValue"
-                        type="number"
-                        step="0.01"
-                        @input="convertPercentToPx"
-                        placeholder="100"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">%</span>
-                      <button
-                        @click="copyToClipboard(percentValue + '%')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Base Unit to PX -->
-                <div v-if="selectedMode === 'base-to-px'" class="space-y-4">
-                  <div class="flex items-center gap-4">
-                    <div class="flex-1">
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Base Unit</label>
-                      <div class="relative">
-                        <input
-                          v-model="baseUnitValue"
-                          type="text"
-                          @input="convertBaseToPx"
-                          placeholder="1rem, 1em, or 100%"
-                          class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                          :class="isDarkMode 
-                            ? 'border-gray-600 bg-slate-700 text-white' 
-                            : 'border-gray-300 bg-white text-gray-900'"
-                        />
-                        <button
-                          @click="copyToClipboard(baseUnitValue)"
-                          class="absolute left-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                          title="Copy"
-                        >
-                          <span class="material-symbols-outlined text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                        </button>
-                      </div>
-                    </div>
-                    <div class="text-2xl text-gray-400">→</div>
-                    <div class="flex-1">
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</label>
-                      <div class="relative">
-                        <input
-                          :value="baseToPxResult"
-                          type="number"
-                          readonly
-                          class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                          :class="isDarkMode 
-                            ? 'border-gray-600 bg-slate-700 text-white' 
-                            : 'border-gray-300 bg-white text-gray-900'"
-                        />
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">px</span>
-                        <button
-                          @click="copyToClipboard(baseToPxResult + 'px')"
-                          class="absolute left-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                          title="Copy"
-                        >
-                          <span class="material-symbols-outlined text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- PX to Tailwind -->
-                <div v-if="selectedMode === 'px-to-tailwind'" class="space-y-4">
-                  <div class="flex items-center gap-4">
-                    <div class="flex-1">
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</label>
-                      <div class="relative">
-                        <input
-                          v-model.number="pxValue"
-                          type="number"
-                          step="0.1"
-                          @input="convertPxToTailwind"
-                          placeholder="16"
-                          class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                          :class="isDarkMode 
-                            ? 'border-gray-600 bg-slate-700 text-white' 
-                            : 'border-gray-300 bg-white text-gray-900'"
-                        />
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">px</span>
-                        <button
-                          @click="copyToClipboard(pxValue + 'px')"
-                          class="absolute left-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                          title="Copy"
-                        >
-                          <span class="material-symbols-outlined text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                        </button>
-                      </div>
-                    </div>
-                    <div class="text-2xl text-gray-400">→</div>
-                    <div class="flex-1">
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Tailwind Value</label>
-                      <div class="relative">
-                        <input
-                          :value="tailwindValue"
-                          type="text"
-                          readonly
-                          class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                          :class="isDarkMode 
-                            ? 'border-gray-600 bg-slate-700 text-white' 
-                            : 'border-gray-300 bg-white text-gray-900'"
-                        />
-                        <button
-                          @click="copyToClipboard(tailwindValue)"
-                          class="absolute left-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                          title="Copy"
-                        >
-                          <span class="material-symbols-outlined text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div v-if="tailwindClass" class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                    <p class="text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Tailwind Class Examples:</p>
-                    <div class="flex flex-wrap gap-2">
-                      <code class="px-3 py-1 rounded text-sm font-mono" :class="isDarkMode ? 'bg-slate-700 text-indigo-400' : 'bg-white text-indigo-600 border border-gray-300'">{{ tailwindClass }}</code>
-                      <code class="px-3 py-1 rounded text-sm font-mono" :class="isDarkMode ? 'bg-slate-700 text-indigo-400' : 'bg-white text-indigo-600 border border-gray-300'">m-{{ tailwindValue }}</code>
-                      <code class="px-3 py-1 rounded text-sm font-mono" :class="isDarkMode ? 'bg-slate-700 text-indigo-400' : 'bg-white text-indigo-600 border border-gray-300'">gap-{{ tailwindValue }}</code>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- PX to VH -->
-                <div v-if="selectedMode === 'px-to-vh'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="pxValue"
-                        type="number"
-                        step="0.1"
-                        @input="convertPxToVh"
-                        placeholder="108"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">px</span>
-                      <button
-                        @click="copyToClipboard(pxValue + 'px')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">VH</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="vhValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertVhToPx"
-                        placeholder="10"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">vh</span>
-                      <button
-                        @click="copyToClipboard(vhValue + 'vh')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- PX to PT -->
-                <div v-if="selectedMode === 'px-to-pt'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="pxValue"
-                        type="number"
-                        step="0.1"
-                        @input="convertPxToPt"
-                        placeholder="16"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">px</span>
-                      <button
-                        @click="copyToClipboard(pxValue + 'px')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">PT</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="ptValue"
-                        type="number"
-                        step="0.01"
-                        @input="convertPtToPx"
-                        placeholder="12"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">pt</span>
-                      <button
-                        @click="copyToClipboard(ptValue + 'pt')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- PX to IN -->
-                <div v-if="selectedMode === 'px-to-in'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="pxValue"
-                        type="number"
-                        step="0.1"
-                        @input="convertPxToIn"
-                        placeholder="96"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">px</span>
-                      <button
-                        @click="copyToClipboard(pxValue + 'px')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">IN</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="inValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertInToPx"
-                        placeholder="1"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">in</span>
-                      <button
-                        @click="copyToClipboard(inValue + 'in')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- PX to PC -->
-                <div v-if="selectedMode === 'px-to-pc'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="pxValue"
-                        type="number"
-                        step="0.1"
-                        @input="convertPxToPc"
-                        placeholder="16"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">px</span>
-                      <button
-                        @click="copyToClipboard(pxValue + 'px')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">PC</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="pcValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertPcToPx"
-                        placeholder="1"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">pc</span>
-                      <button
-                        @click="copyToClipboard(pcValue + 'pc')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- PX to CM -->
-                <div v-if="selectedMode === 'px-to-cm'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="pxValue"
-                        type="number"
-                        step="0.1"
-                        @input="convertPxToCm"
-                        placeholder="37.795"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">px</span>
-                      <button
-                        @click="copyToClipboard(pxValue + 'px')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">CM</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="cmValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertCmToPx"
-                        placeholder="1"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">cm</span>
-                      <button
-                        @click="copyToClipboard(cmValue + 'cm')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- PX to MM -->
-                <div v-if="selectedMode === 'px-to-mm'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Pixels</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="pxValue"
-                        type="number"
-                        step="0.1"
-                        @input="convertPxToMm"
-                        placeholder="3.7795"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">px</span>
-                      <button
-                        @click="copyToClipboard(pxValue + 'px')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">MM</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="mmValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertMmToPx"
-                        placeholder="1"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">mm</span>
-                      <button
-                        @click="copyToClipboard(mmValue + 'mm')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- REM to VW -->
-                <div v-if="selectedMode === 'rem-to-vw'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">REM</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="remValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertRemToVw"
-                        placeholder="1"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">rem</span>
-                      <button
-                        @click="copyToClipboard(remValue + 'rem')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">VW</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="vwValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertVwToRem"
-                        placeholder="0.833"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">vw</span>
-                      <button
-                        @click="copyToClipboard(vwValue + 'vw')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- EM to VW -->
-                <div v-if="selectedMode === 'em-to-vw'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">EM</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="emValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertEmToVw"
-                        placeholder="1"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">em</span>
-                      <button
-                        @click="copyToClipboard(emValue + 'em')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">VW</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="vwValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertVwToEm"
-                        placeholder="0.833"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">vw</span>
-                      <button
-                        @click="copyToClipboard(vwValue + 'vw')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- VH to VW -->
-                <div v-if="selectedMode === 'vh-to-vw'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">VH</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="vhValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertVhToVw"
-                        placeholder="10"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">vh</span>
-                      <button
-                        @click="copyToClipboard(vhValue + 'vh')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">VW</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="vwValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertVwToVh"
-                        placeholder="17.778"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">vw</span>
-                      <button
-                        @click="copyToClipboard(vwValue + 'vw')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- PT to VW -->
-                <div v-if="selectedMode === 'pt-to-vw'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">PT</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="ptValue"
-                        type="number"
-                        step="0.01"
-                        @input="convertPtToVw"
-                        placeholder="12"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">pt</span>
-                      <button
-                        @click="copyToClipboard(ptValue + 'pt')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">VW</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="vwValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertVwToPt"
-                        placeholder="0.625"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">vw</span>
-                      <button
-                        @click="copyToClipboard(vwValue + 'vw')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- IN to VW -->
-                <div v-if="selectedMode === 'in-to-vw'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">IN</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="inValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertInToVw"
-                        placeholder="1"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">in</span>
-                      <button
-                        @click="copyToClipboard(inValue + 'in')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">VW</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="vwValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertVwToIn"
-                        placeholder="5.208"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">vw</span>
-                      <button
-                        @click="copyToClipboard(vwValue + 'vw')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- PC to VW -->
-                <div v-if="selectedMode === 'pc-to-vw'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">PC</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="pcValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertPcToVw"
-                        placeholder="1"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">pc</span>
-                      <button
-                        @click="copyToClipboard(pcValue + 'pc')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">VW</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="vwValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertVwToPc"
-                        placeholder="0.833"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">vw</span>
-                      <button
-                        @click="copyToClipboard(vwValue + 'vw')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- CM to VW -->
-                <div v-if="selectedMode === 'cm-to-vw'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">CM</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="cmValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertCmToVw"
-                        placeholder="1"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">cm</span>
-                      <button
-                        @click="copyToClipboard(cmValue + 'cm')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">VW</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="vwValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertVwToCm"
-                        placeholder="1.97"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">vw</span>
-                      <button
-                        @click="copyToClipboard(vwValue + 'vw')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- MM to VW -->
-                <div v-if="selectedMode === 'mm-to-vw'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">MM</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="mmValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertMmToVw"
-                        placeholder="10"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">mm</span>
-                      <button
-                        @click="copyToClipboard(mmValue + 'mm')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">VW</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="vwValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertVwToMm"
-                        placeholder="0.197"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">vw</span>
-                      <button
-                        @click="copyToClipboard(vwValue + 'vw')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Percentage to VW -->
-                <div v-if="selectedMode === 'percent-to-vw'" class="flex items-center gap-4">
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Percentage</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="percentValue"
-                        type="number"
-                        step="0.01"
-                        @input="convertPercentToVw"
-                        placeholder="100"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">%</span>
-                      <button
-                        @click="copyToClipboard(percentValue + '%')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-2xl text-gray-400">⇄</div>
-                  <div class="flex-1">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">VW</label>
-                    <div class="relative">
-                      <input
-                        v-model.number="vwValue"
-                        type="number"
-                        step="0.0001"
-                        @input="convertVwToPercent"
-                        placeholder="52.083"
-                        class="w-full pl-10 pr-20 py-3 border rounded-lg text-2xl font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-indigo-600 font-semibold">vw</span>
-                      <button
-                        @click="copyToClipboard(vwValue + 'vw')"
-                        class="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                        title="Copy"
-                      >
-                        <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Calculation Basis Note -->
-                <div class="mt-4 text-sm text-center" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  <span v-if="selectedMode === 'px-to-rem'">Calculation based on a root font-size of {{ rootFontSize }} pixel.</span>
-                  <span v-else-if="selectedMode === 'px-to-em'">Calculation based on a parent font-size of {{ parentFontSize }} pixel.</span>
-                  <span v-else-if="selectedMode === 'px-to-vh'">Calculation based on a viewport height of {{ viewportHeight }} pixel.</span>
-                  <span v-else-if="selectedMode === 'px-to-percent'">Calculation based on a parent size of {{ percentageContext === 'font-size' ? parentFontSize : 100 }} pixel.</span>
-                  <span v-else-if="selectedMode.includes('vw')">Calculation based on a viewport width of {{ viewportWidth }} pixel.</span>
-                  <span v-else-if="selectedMode === 'px-to-tailwind'">Tailwind uses 0.25rem increments ({{ rootFontSize * 0.25 }}px at {{ rootFontSize }}px root).</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Viewport Breakpoints -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">monitor</span>
-                Breakpoints
-              </h2>
-              
-              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Common screen breakpoints showing PX to VW conversion for {{ pxValue || 192 }}px at each breakpoint.
-              </p>
-
-              <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
-                <div 
-                  v-for="(bp, index) in breakpointsTable" 
-                  :key="index"
-                  class="p-4 rounded-lg border"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 border-gray-700 hover:bg-slate-700' 
-                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'"
-                >
-                  <div class="flex items-center justify-between mb-2">
-                    <p class="text-sm font-mono font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ bp.px }}px</p>
-                    <button
-                      @click="copyToClipboard(bp.px + 'px')"
-                      class="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                      title="Copy"
-                    >
-                      <span class="material-symbols-outlined text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                    </button>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <p class="text-sm font-mono text-indigo-600 font-semibold">{{ bp.vw }}vw</p>
-                    <button
-                      @click="copyToClipboard(bp.vw + 'vw')"
-                      class="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                      title="Copy"
-                    >
-                      <span class="material-symbols-outlined text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- CSS Style Properties -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">code</span>
-                CSS Style Properties
-              </h2>
-              
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-                <!-- EM -->
-                <div class="p-4 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                  <div class="text-xs font-semibold mb-2 text-blue-800 dark:text-blue-300">EM</div>
-                  <code class="text-sm font-mono text-gray-800 dark:text-gray-200 block whitespace-pre-wrap">h1 { font-size: 2em; }</code>
-                </div>
-                
-                <!-- Pixel -->
-                <div class="p-4 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                  <div class="text-xs font-semibold mb-2 text-purple-800 dark:text-purple-300">Pixel</div>
-                  <code class="text-sm font-mono text-gray-800 dark:text-gray-200 block whitespace-pre-wrap">h1 { font-size: 32px; }</code>
-                </div>
-                
-                <!-- REM -->
-                <div class="p-4 rounded-lg bg-green-100 dark:bg-green-900/30">
-                  <div class="text-xs font-semibold mb-2 text-green-800 dark:text-green-300">REM</div>
-                  <code class="text-sm font-mono text-gray-800 dark:text-gray-200 block whitespace-pre-wrap">h1 { font-size: 2rem; }</code>
-                </div>
-                
-                <!-- Percent -->
-                <div class="p-4 rounded-lg bg-red-100 dark:bg-red-900/30">
-                  <div class="text-xs font-semibold mb-2 text-red-800 dark:text-red-300">Percent</div>
-                  <code class="text-sm font-mono text-gray-800 dark:text-gray-200 block whitespace-pre-wrap">h1 { font-size: 200%; }</code>
-                </div>
-                
-                <!-- Point -->
-                <div class="p-4 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                  <div class="text-xs font-semibold mb-2 text-blue-800 dark:text-blue-300">Point</div>
-                  <code class="text-sm font-mono text-gray-800 dark:text-gray-200 block whitespace-pre-wrap">h1 { font-size: 24pt; }</code>
-                </div>
-              </div>
-            </div>
-
-            <!-- Conversion Tables -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">table_chart</span>
-                Unit Conversion Table for PX to REM
-              </h2>
-
-              <!-- Unified Conversion Table -->
-              <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                  <thead>
-                    <tr class="bg-gray-200 dark:bg-gray-700">
-                      <th class="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">EM</th>
-                      <th class="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 bg-gray-300 dark:bg-gray-600">Pixel</th>
-                      <th class="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 bg-gray-300 dark:bg-gray-600">REM</th>
-                      <th class="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Percent</th>
-                      <th class="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Point</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr 
-                      v-for="(row, index) in unifiedConversionTable" 
-                      :key="index"
-                      :class="index % 2 === 0 
-                        ? 'bg-gray-50 dark:bg-gray-800/50' 
-                        : 'bg-white dark:bg-gray-900'"
-                    >
-                      <td class="py-2 px-4 font-mono text-gray-700 dark:text-gray-300">{{ row.em }}em</td>
-                      <td class="py-2 px-4 font-mono text-gray-700 dark:text-gray-300">{{ row.px }}px</td>
-                      <td class="py-2 px-4 font-mono text-gray-700 dark:text-gray-300">{{ row.rem }}rem</td>
-                      <td class="py-2 px-4 font-mono text-gray-700 dark:text-gray-300">{{ row.percent }}%</td>
-                      <td class="py-2 px-4 font-mono text-gray-700 dark:text-gray-300">{{ row.point }}pt</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Educational Content -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">school</span>
-                Understanding CSS Units
-              </h2>
-
-              <div class="space-y-6">
-                <!-- REM Explanation -->
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">REM (Root EM)</h3>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    The CSS <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">rem</code> unit allows defining a size relative to the <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">font-size</code> of the HTML root tag. Inside a single document, the length of a REM unit is everywhere the same, it can just differ between documents.
-                  </p>
-                  <p class="text-sm leading-relaxed" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <strong>Example:</strong> If the default size is used, 1px represents 0.0625rem. In the other direction, 1rem represents 16px.
-                  </p>
-                </div>
-
-                <!-- EM Explanation -->
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">EM</h3>
-                  <p class="text-sm leading-relaxed" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    EM on the other side can differ between every element, because it is relative to the element's own <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">font-size</code> (exception is the <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">font-size</code> itself, in it EM is relative to the parent).
-                  </p>
-                </div>
-
-                <!-- EM vs REM -->
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">EM vs. REM: The differences</h3>
-                  <ul class="list-disc list-inside space-y-1 text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <li><strong>REM:</strong> Inside a single document, the length of a REM unit is everywhere the same, it can just differ between documents.</li>
-                    <li><strong>EM:</strong> EM on the other side can differ between every element, because it is relative to the element's own font-size (exception is the font-size itself, in it EM is relative to the parent).</li>
-                    <li><strong>REM is the newer unit,</strong> older browsers don't support it.</li>
-                  </ul>
-                </div>
-
-                <!-- Percentage Explanation -->
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Percentage (%)</h3>
-                  <p class="text-sm leading-relaxed" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Percentage units are relative to the parent element's value. For <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">font-size</code>, percentages are relative to the parent's font-size. For dimensions like <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">width</code> and <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">height</code>, percentages are relative to the parent container's size.
-                  </p>
-                </div>
-
-                <!-- Tailwind Explanation -->
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Tailwind CSS Spacing Scale</h3>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Tailwind CSS uses a spacing scale based on 0.25rem increments. Each unit in the Tailwind scale equals 0.25rem (4px at the default 16px root font size). This creates a consistent spacing system that works across padding, margin, gap, and other spacing utilities.
-                  </p>
-                  <p class="text-sm leading-relaxed" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <strong>Examples:</strong> <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">p-4</code> = 1rem = 16px, <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">m-8</code> = 2rem = 32px, <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">gap-2</code> = 0.5rem = 8px
-                  </p>
-                </div>
-
-                <!-- PX to VW Explanation -->
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">How to convert PX to VW?</h3>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    To convert px to vw, you should know total viewport width for example 1920px
-                  </p>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Then, just apply formula: <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">px / viewport total width * 100</code>
-                  </p>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    For example, with a viewport of 1920px, 192px will be converted to: <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">192 / 1920 * 100 = 10vw</code>
-                  </p>
-                </div>
-
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">What is the PX to VW formula?</h3>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">px / viewport total width * 100</code>
-                  </p>
-                </div>
-
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">What is vw unit? (Viewport Width)</h3>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Used in responsive design, Viewport Width (VW) is a unit relative to web page display area called viewport.
-                  </p>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    1vw corresponds to 1% of display. So, to make an element full width, you should use 100vw.
-                  </p>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    You can also use decimal values. Please note that, depending on browsers, decimal precision can change.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">What is px unit? (Pixels)</h3>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Pixel unit is the theorical smallest dot displayed on a computer screen.
-                  </p>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Nowadays, pixel unit can differ between physical resolution and logical resolution.
-                  </p>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    This difference is called device pixel ratio or DPR:
-                  </p>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">Logical resolution = physical resolution / device pixel ratio.</code>
-                  </p>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    So, a screen with 1024x768 physical resolution with a DPR of 2 will have a 512x384 logical resolution.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">What are common breakpoints for media queries?</h3>
-                  <ul class="list-disc list-inside space-y-1 text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <li><strong>Mobile devices</strong> – 320px — 480px.</li>
-                    <li><strong>iPads, Tablets</strong> – 481px — 768px.</li>
-                    <li><strong>Small screens, laptops</strong> – 769px — 1024px.</li>
-                    <li><strong>Desktops, large screens</strong> – 1025px — 1920px.</li>
-                    <li><strong>Extra large screens, TV</strong> – 2560px, and more.</li>
-                  </ul>
-                </div>
-
-                <!-- Browser Support -->
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Browser Support</h3>
-                  <p class="text-sm leading-relaxed" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    REM units are supported in all modern browsers (Chrome 4+, Firefox 3.6+, Safari 5+, IE 9+). EM and percentage units have been supported since the early days of CSS. Viewport units (vw, vh) are supported in all modern browsers (Chrome 20+, Firefox 19+, Safari 6+, IE 9+). For older browser support, consider providing pixel fallbacks or using a CSS preprocessor.
-                  </p>
-                </div>
-              </div>
-            </div>
+    <PageSection title="Breakpoints" :description="`Common screen breakpoints showing PX to VW conversion for ${pxValue || 192}px at each breakpoint.`" divided>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div v-for="bp in breakpointsTable" :key="bp.px" class="p-3 rounded-tile border border-line-faint bg-surface-raised space-y-1">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-sm font-code font-semibold text-ink">{{ bp.px }}px</p>
+            <UiButton size="sm" variant="ghost" icon="content_copy" icon-only :label="`Copy ${bp.px}px`" @click="copyToClipboard(bp.px + 'px')" />
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-sm font-code font-semibold text-accent-text">{{ bp.vw }}vw</p>
+            <UiButton size="sm" variant="ghost" icon="content_copy" icon-only :label="`Copy ${bp.vw}vw`" @click="copyToClipboard(bp.vw + 'vw')" />
           </div>
         </div>
       </div>
-    </div>
-  </div>
+    </PageSection>
+
+    <PageSection title="CSS style properties" divided>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div v-for="example in cssExamples" :key="example.label" class="p-4 rounded-tile border border-line-faint bg-surface-sunken">
+          <p class="text-xs font-semibold mb-2 text-ink-secondary">{{ example.label }}</p>
+          <code class="text-sm font-code text-ink block whitespace-pre-wrap">{{ example.code }}</code>
+        </div>
+      </div>
+    </PageSection>
+
+    <PageSection title="Unit conversion table for PX to REM" divided>
+      <UiPanel flush>
+        <UiTable caption="Unit conversion table: EM, pixel, REM, percent and point" compact>
+          <thead>
+            <tr>
+              <th scope="col">EM</th>
+              <th scope="col">Pixel</th>
+              <th scope="col">REM</th>
+              <th scope="col">Percent</th>
+              <th scope="col">Point</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in unifiedConversionTable" :key="row.px" class="font-code">
+              <td>{{ row.em }}em</td>
+              <td>{{ row.px }}px</td>
+              <td>{{ row.rem }}rem</td>
+              <td>{{ row.percent }}%</td>
+              <td>{{ row.point }}pt</td>
+            </tr>
+          </tbody>
+        </UiTable>
+      </UiPanel>
+    </PageSection>
+
+    <PageSection title="Understanding CSS units" divided>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 text-sm leading-relaxed text-ink-secondary">
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">REM (Root EM)</h3>
+          <p>
+            The CSS <UiCode>rem</UiCode> unit allows defining a size relative to the <UiCode>font-size</UiCode> of the HTML root tag. Inside a single document, the length of a REM unit is everywhere the same, it can just differ between documents.
+          </p>
+          <p><strong class="text-ink">Example:</strong> If the default size is used, 1px represents 0.0625rem. In the other direction, 1rem represents 16px.</p>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">EM</h3>
+          <p>
+            EM on the other side can differ between every element, because it is relative to the element's own <UiCode>font-size</UiCode> (exception is the <UiCode>font-size</UiCode> itself, in it EM is relative to the parent).
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">EM vs. REM: The differences</h3>
+          <ul class="list-disc list-inside space-y-1">
+            <li><strong class="text-ink">REM:</strong> Inside a single document, the length of a REM unit is everywhere the same, it can just differ between documents.</li>
+            <li><strong class="text-ink">EM:</strong> EM on the other side can differ between every element, because it is relative to the element's own font-size (exception is the font-size itself, in it EM is relative to the parent).</li>
+            <li><strong class="text-ink">REM is the newer unit,</strong> older browsers don't support it.</li>
+          </ul>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">Percentage (%)</h3>
+          <p>
+            Percentage units are relative to the parent element's value. For <UiCode>font-size</UiCode>, percentages are relative to the parent's font-size. For dimensions like <UiCode>width</UiCode> and <UiCode>height</UiCode>, percentages are relative to the parent container's size.
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">Tailwind CSS spacing scale</h3>
+          <p>
+            Tailwind CSS uses a spacing scale based on 0.25rem increments. Each unit in the Tailwind scale equals 0.25rem (4px at the default 16px root font size). This creates a consistent spacing system that works across padding, margin, gap, and other spacing utilities.
+          </p>
+          <p>
+            <strong class="text-ink">Examples:</strong> <UiCode>p-4</UiCode> = 1rem = 16px, <UiCode>m-8</UiCode> = 2rem = 32px, <UiCode>gap-2</UiCode> = 0.5rem = 8px
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">How to convert PX to VW?</h3>
+          <p>To convert px to vw, you should know total viewport width for example 1920px</p>
+          <p>Then, just apply formula: <UiCode>px / viewport total width * 100</UiCode></p>
+          <p>For example, with a viewport of 1920px, 192px will be converted to: <UiCode>192 / 1920 * 100 = 10vw</UiCode></p>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">What is the PX to VW formula?</h3>
+          <p><UiCode>px / viewport total width * 100</UiCode></p>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">What is vw unit? (Viewport Width)</h3>
+          <p>Used in responsive design, Viewport Width (VW) is a unit relative to web page display area called viewport.</p>
+          <p>1vw corresponds to 1% of display. So, to make an element full width, you should use 100vw.</p>
+          <p>You can also use decimal values. Please note that, depending on browsers, decimal precision can change.</p>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">What is px unit? (Pixels)</h3>
+          <p>Pixel unit is the theorical smallest dot displayed on a computer screen.</p>
+          <p>Nowadays, pixel unit can differ between physical resolution and logical resolution.</p>
+          <p>This difference is called device pixel ratio or DPR:</p>
+          <p><UiCode>Logical resolution = physical resolution / device pixel ratio.</UiCode></p>
+          <p>So, a screen with 1024x768 physical resolution with a DPR of 2 will have a 512x384 logical resolution.</p>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">What are common breakpoints for media queries?</h3>
+          <ul class="list-disc list-inside space-y-1">
+            <li><strong class="text-ink">Mobile devices</strong> – 320px — 480px.</li>
+            <li><strong class="text-ink">iPads, Tablets</strong> – 481px — 768px.</li>
+            <li><strong class="text-ink">Small screens, laptops</strong> – 769px — 1024px.</li>
+            <li><strong class="text-ink">Desktops, large screens</strong> – 1025px — 1920px.</li>
+            <li><strong class="text-ink">Extra large screens, TV</strong> – 2560px, and more.</li>
+          </ul>
+        </div>
+
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">Browser support</h3>
+          <p>
+            REM units are supported in all modern browsers (Chrome 4+, Firefox 3.6+, Safari 5+, IE 9+). EM and percentage units have been supported since the early days of CSS. Viewport units (vw, vh) are supported in all modern browsers (Chrome 20+, Firefox 19+, Safari 6+, IE 9+). For older browser support, consider providing pixel fallbacks or using a CSS preprocessor.
+          </p>
+        </div>
+      </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useNotice } from '../composables/useNotice.js';
+import { PageHero, PageSection, PageShell, UiButton, UiCode, UiInput, UiPanel, UiSegmented, UiSelect, UiTable } from '../components/ui';
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
 
 // Conversion modes grouped by category
 const typographyModes = [
@@ -2158,11 +753,85 @@ const unifiedConversionTable = computed(() => {
 const copyToClipboard = async (text) => {
   try {
     await navigator.clipboard.writeText(text);
-    // Could add a toast notification here
+    showNotice(`Copied ${text}.`, 'success');
   } catch (error) {
     console.error('Failed to copy:', error);
+    showNotice('Could not copy to the clipboard.', 'error');
   }
 };
+
+// ---------------------------------------------------------------------------
+// The two-way converters: each mode shows two fields that convert into each
+// other as you type.
+// ---------------------------------------------------------------------------
+const field = (label, model, unit, step, placeholder, convert) => ({ label, model, unit, step, placeholder, convert });
+const pxField = (placeholder, convert) => field('Pixels', pxValue, 'px', '0.1', placeholder, convert);
+
+const converterPairs = {
+  'px-to-rem': [pxField('16', convertPxToRem), field('REM', remValue, 'rem', '0.0001', '1', convertRemToPx)],
+  'px-to-em': [pxField('16', convertPxToEm), field('EM', emValue, 'em', '0.0001', '1', convertEmToPx)],
+  'px-to-percent': [pxField('16', convertPxToPercent), field('Percentage', percentValue, '%', '0.01', '100', convertPercentToPx)],
+  'px-to-vh': [pxField('108', convertPxToVh), field('VH', vhValue, 'vh', '0.0001', '10', convertVhToPx)],
+  'px-to-pt': [pxField('16', convertPxToPt), field('PT', ptValue, 'pt', '0.01', '12', convertPtToPx)],
+  'px-to-in': [pxField('96', convertPxToIn), field('IN', inValue, 'in', '0.0001', '1', convertInToPx)],
+  'px-to-pc': [pxField('16', convertPxToPc), field('PC', pcValue, 'pc', '0.0001', '1', convertPcToPx)],
+  'px-to-cm': [pxField('37.795', convertPxToCm), field('CM', cmValue, 'cm', '0.0001', '1', convertCmToPx)],
+  'px-to-mm': [pxField('3.7795', convertPxToMm), field('MM', mmValue, 'mm', '0.0001', '1', convertMmToPx)],
+  'rem-to-vw': [field('REM', remValue, 'rem', '0.0001', '1', convertRemToVw), field('VW', vwValue, 'vw', '0.0001', '0.833', convertVwToRem)],
+  'em-to-vw': [field('EM', emValue, 'em', '0.0001', '1', convertEmToVw), field('VW', vwValue, 'vw', '0.0001', '0.833', convertVwToEm)],
+  'vh-to-vw': [field('VH', vhValue, 'vh', '0.0001', '10', convertVhToVw), field('VW', vwValue, 'vw', '0.0001', '17.778', convertVwToVh)],
+  'pt-to-vw': [field('PT', ptValue, 'pt', '0.01', '12', convertPtToVw), field('VW', vwValue, 'vw', '0.0001', '0.625', convertVwToPt)],
+  'in-to-vw': [field('IN', inValue, 'in', '0.0001', '1', convertInToVw), field('VW', vwValue, 'vw', '0.0001', '5.208', convertVwToIn)],
+  'pc-to-vw': [field('PC', pcValue, 'pc', '0.0001', '1', convertPcToVw), field('VW', vwValue, 'vw', '0.0001', '0.833', convertVwToPc)],
+  'cm-to-vw': [field('CM', cmValue, 'cm', '0.0001', '1', convertCmToVw), field('VW', vwValue, 'vw', '0.0001', '1.97', convertVwToCm)],
+  'mm-to-vw': [field('MM', mmValue, 'mm', '0.0001', '10', convertMmToVw), field('VW', vwValue, 'vw', '0.0001', '0.197', convertVwToMm)],
+  'percent-to-vw': [field('Percentage', percentValue, '%', '0.01', '100', convertPercentToVw), field('VW', vwValue, 'vw', '0.0001', '52.083', convertVwToPercent)],
+};
+const currentPair = computed(() => converterPairs[selectedMode.value] ?? null);
+
+const setField = (item, value) => {
+  item.model.value = value;
+  item.convert();
+};
+const onPxForTailwind = (value) => {
+  pxValue.value = value;
+  convertPxToTailwind();
+};
+const onBaseUnit = (value) => {
+  baseUnitValue.value = value;
+  convertBaseToPx();
+};
+
+const modeGroups = [
+  { label: 'Typography units', modes: typographyModes },
+  { label: 'Physical units', modes: physicalModes },
+  { label: 'Viewport units', modes: viewportModes },
+  { label: 'Frameworks', modes: frameworkModes },
+];
+
+const contextOptions = [
+  { value: 'font-size', label: 'Font Size' },
+  { value: 'dimension', label: 'Width/Height' },
+];
+
+const calculationNote = computed(() => {
+  const mode = selectedMode.value;
+  if (mode === 'px-to-rem') return `Calculation based on a root font-size of ${rootFontSize.value} pixel.`;
+  if (mode === 'px-to-em') return `Calculation based on a parent font-size of ${parentFontSize.value} pixel.`;
+  if (mode === 'px-to-vh') return `Calculation based on a viewport height of ${viewportHeight.value} pixel.`;
+  if (mode === 'px-to-percent') return `Calculation based on a parent size of ${percentageContext.value === 'font-size' ? parentFontSize.value : 100} pixel.`;
+  if (mode.includes('vw')) return `Calculation based on a viewport width of ${viewportWidth.value} pixel.`;
+  if (mode === 'px-to-tailwind') return `Tailwind uses 0.25rem increments (${rootFontSize.value * 0.25}px at ${rootFontSize.value}px root).`;
+  return '';
+});
+
+const cssExamples = [
+  { label: 'EM', code: 'h1 { font-size: 2em; }' },
+  { label: 'Pixel', code: 'h1 { font-size: 32px; }' },
+  { label: 'REM', code: 'h1 { font-size: 2rem; }' },
+  { label: 'Percent', code: 'h1 { font-size: 200%; }' },
+  { label: 'Point', code: 'h1 { font-size: 24pt; }' },
+];
 
 // Watch for mode changes to reset values
 watch(selectedMode, () => {
@@ -2232,12 +901,4 @@ const runCurrentConversion = () => {
 watch([rootFontSize, parentFontSize, percentageContext, viewportWidth, viewportHeight], runCurrentConversion);
 
 onMounted(runCurrentConversion);
-
 </script>
-
-<style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-</style>
-

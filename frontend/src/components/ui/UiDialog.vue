@@ -21,7 +21,7 @@ import UiButton from './UiButton.vue';
 const props = defineProps({
   open: { type: Boolean, default: false },
   title: { type: String, required: true },
-  size: { type: String, default: 'md', validator: (v) => ['sm', 'md', 'lg'].includes(v) },
+  size: { type: String, default: 'md', validator: (v) => ['sm', 'md', 'lg', 'full'].includes(v) },
 });
 
 const emit = defineEmits(['update:open']);
@@ -55,6 +55,12 @@ onMounted(() => sync(props.open));
 }
 .ui-dialog-lg {
   @apply max-w-3xl;
+}
+.ui-dialog-full {
+  @apply max-w-none w-screen h-screen max-h-screen m-0 rounded-none flex flex-col;
+}
+.ui-dialog-full .ui-dialog-body {
+  @apply flex-1 min-h-0;
 }
 .ui-dialog-head {
   @apply flex items-center justify-between gap-3 px-6 pt-5 pb-3;

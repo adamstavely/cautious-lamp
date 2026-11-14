@@ -1,305 +1,156 @@
 <template>
   <div>
-    <div class="flex gap-6 mb-8">
-    <!-- Main Content Area -->
-    <div class="flex-1">
-      <div class="mb-6">
-        <p class="text-gray-600">
-          Review color relationships, harmony patterns, and palette metrics.
-        </p>
-      </div>
+    <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
 
-      <!-- Your Brand Colors -->
-      <div class="mb-8">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Brand Colors</h3>
-        <div class="flex flex-wrap gap-6">
-          <div
-            v-for="(color, index) in palette.colors"
-            :key="index"
-            class="flex flex-col items-center"
-          >
-            <div
-              class="w-16 h-16 rounded-full shadow-md border-2 border-white mb-2"
-              :style="{ backgroundColor: color.hex }"
-            ></div>
-            <div class="font-mono text-xs text-gray-700 mb-1">{{ color.hex }}</div>
-            <div class="flex items-center gap-1">
-              <button
-                @click="copyToClipboard(color.hex)"
-                class="p-1 hover:bg-gray-100 rounded transition-colors"
-                title="Copy hex code"
-              >
-                <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              </button>
-              <button
-                @click="removeColor(index)"
-                class="p-1 hover:bg-red-50 rounded transition-colors text-red-600"
-                title="Delete color"
-              >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="flex flex-col lg:flex-row gap-6 mb-8">
+      <!-- Main Content Area -->
+      <div class="flex-1 min-w-0">
+        <p class="text-ink-secondary mb-6">Review color relationships, harmony patterns, and palette metrics.</p>
 
-    <!-- Insights Sidebar -->
-    <div class="w-96 bg-gray-50 rounded-lg p-6 border border-gray-200">
-      <!-- Harmony Check Section -->
-      <div class="mb-8">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-xl text-indigo-600">palette</span>
-            <h4 class="text-sm font-semibold text-gray-900">Harmony Check</h4>
-          </div>
-          <button
-            @click="toggleHarmonyCheckCollapse"
-            class="text-xs text-gray-600 hover:text-gray-900"
-          >
-            {{ harmonyCheckCollapsed ? 'Expand' : 'Collapse' }}
-          </button>
-        </div>
-        <p class="text-xs text-gray-600 mb-4">
-          Scan for colors that don't fit your palette's harmony
-        </p>
-
-        <div v-if="!harmonyCheckCollapsed">
-          <div v-if="loading" class="text-center py-8">
-            <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-            <p class="mt-2 text-xs text-gray-600">Analyzing...</p>
-          </div>
-
-          <div v-else-if="analysis && analysis.problematicColors && analysis.problematicColors.length > 0">
-            <!-- Alert -->
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-              <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center gap-2">
-                  <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <span class="text-sm font-medium text-yellow-900">
-                    {{ analysis.problematicColors.length }} color{{ analysis.problematicColors.length > 1 ? 's' : '' }} could be balanced
-                  </span>
-                </div>
-                <button
-                  @click="applyAllFixes"
-                  class="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
-                >
-                  Apply All Fixes
-                </button>
+        <!-- Your Brand Colors -->
+        <section aria-labelledby="brand-colors-heading">
+          <h3 id="brand-colors-heading" class="text-lg font-semibold text-ink-strong mb-4">Your brand colors</h3>
+          <ul class="flex flex-wrap gap-6">
+            <li v-for="(color, index) in palette.colors" :key="index" class="flex flex-col items-center">
+              <UiColorSample class="w-16 h-16 rounded-pill border-2 shadow-control mb-2" :color="color.hex" />
+              <span class="font-code text-xs text-ink mb-1">{{ color.hex }}</span>
+              <div class="flex items-center gap-1">
+                <UiButton variant="ghost" size="sm" icon="content_copy" icon-only :label="`Copy hex code ${color.hex}`" @click="copyToClipboard(color.hex)" />
+                <UiButton variant="ghost" size="sm" icon="delete" icon-only :label="`Delete color ${color.hex}`" @click="removeColor(index)" />
               </div>
-            </div>
+            </li>
+          </ul>
+        </section>
+      </div>
 
-            <!-- Color Comparisons -->
-            <div class="space-y-4">
-              <div
-                v-for="(item, index) in analysis.problematicColors"
-                :key="index"
-                class="bg-white rounded-lg p-4 border border-gray-200"
-              >
-                <div class="flex items-center gap-4 mb-3">
-                  <div class="flex-1">
-                    <div class="text-xs text-gray-600 mb-2">Current</div>
-                    <div
-                      class="w-full h-12 rounded-lg shadow-sm mb-1"
-                      :style="{ backgroundColor: item.color }"
-                    ></div>
-                    <div class="font-mono text-xs text-gray-700">{{ item.color }}</div>
-                  </div>
-                  <div class="flex-1">
-                    <div class="text-xs text-gray-600 mb-2">Suggested</div>
-                    <div
-                      class="w-full h-12 rounded-lg shadow-sm mb-1"
-                      :style="{ backgroundColor: item.fixes[0] || item.color }"
-                    ></div>
-                    <div class="font-mono text-xs text-gray-700">{{ item.fixes[0] || item.color }}</div>
-                  </div>
-                </div>
+      <!-- Insights Sidebar -->
+      <aside class="w-full lg:w-96 shrink-0 rounded-card border border-line-faint bg-surface-sunken p-6 space-y-8" aria-label="Insights">
+        <!-- Harmony Check Section -->
+        <section>
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="flex items-center gap-2 text-sm font-semibold text-ink-strong">
+              <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">palette</span>
+              Harmony check
+            </h4>
+            <UiButton variant="ghost" size="sm" :aria-expanded="!harmonyCheckCollapsed" @click="toggleHarmonyCheckCollapse">
+              {{ harmonyCheckCollapsed ? 'Expand' : 'Collapse' }}
+            </UiButton>
+          </div>
+          <p class="text-xs text-ink-secondary mb-4">Scan for colors that don't fit your palette's harmony</p>
 
-                <div class="mb-3">
-                  <div class="text-sm font-medium text-gray-900 mb-1">
-                    {{ getIssueDescription(item) }}
-                  </div>
-                  <div class="text-xs text-gray-600">
-                    {{ getActionSuggestion(item) }}
-                  </div>
-                </div>
+          <div v-if="!harmonyCheckCollapsed">
+            <UiSpinner v-if="loading" label="Analyzing…" />
 
-                <div class="flex items-center gap-2 mb-3">
-                  <div class="flex items-center gap-1 text-xs text-green-700">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                    </svg>
+            <div v-else-if="analysis && analysis.problematicColors && analysis.problematicColors.length > 0">
+              <UiCallout tone="warning" class="mb-4" role="status">
+                {{ analysis.problematicColors.length }} color{{ analysis.problematicColors.length > 1 ? 's' : '' }} could be balanced
+                <template #actions>
+                  <UiButton variant="primary" size="sm" @click="applyAllFixes">Apply all fixes</UiButton>
+                </template>
+              </UiCallout>
+
+              <ul class="space-y-4">
+                <li v-for="(item, index) in analysis.problematicColors" :key="index" class="rounded-tile border border-line-faint bg-surface-raised p-4">
+                  <div class="flex items-center gap-4 mb-3">
+                    <div class="flex-1">
+                      <p class="text-xs text-ink-secondary mb-2">Current</p>
+                      <UiColorSample class="w-full h-12 rounded-control shadow-control mb-1" :color="item.color" />
+                      <p class="font-code text-xs text-ink">{{ item.color }}</p>
+                    </div>
+                    <div class="flex-1">
+                      <p class="text-xs text-ink-secondary mb-2">Suggested</p>
+                      <UiColorSample class="w-full h-12 rounded-control shadow-control mb-1" :color="item.fixes[0] || item.color" />
+                      <p class="font-code text-xs text-ink">{{ item.fixes[0] || item.color }}</p>
+                    </div>
+                  </div>
+
+                  <p class="text-sm font-medium text-ink-strong mb-1">{{ getIssueDescription(item) }}</p>
+                  <p class="text-xs text-ink-secondary mb-3">{{ getActionSuggestion(item) }}</p>
+
+                  <p class="flex items-center gap-1 text-xs text-success mb-3">
+                    <span class="material-symbols-outlined text-base" aria-hidden="true">check_circle</span>
                     Contrast-safe
+                  </p>
+
+                  <div class="flex gap-2">
+                    <UiButton size="sm" icon="close" class="flex-1 justify-center" @click="dismissIssue(index)">Dismiss</UiButton>
+                    <UiButton variant="primary" size="sm" class="flex-1 justify-center" @click="applyFix(item.color, item.fixes[0])">Apply</UiButton>
                   </div>
-                </div>
+                </li>
+              </ul>
 
-                <div class="flex gap-2">
-                  <button
-                    @click="dismissIssue(index)"
-                    class="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    X Dismiss
-                  </button>
-                  <button
-                    @click="applyFix(item.color, item.fixes[0])"
-                    class="flex-1 px-3 py-2 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                  >
-                    Apply
-                  </button>
-                </div>
+              <UiButton size="sm" icon="refresh" :loading="loading" class="w-full justify-center mt-4" @click.stop="analyzePalette">
+                {{ loading ? 'Running check...' : 'Run check again' }}
+              </UiButton>
+            </div>
+
+            <div v-else-if="analysis && (!analysis.problematicColors || analysis.problematicColors.length === 0)">
+              <UiCallout tone="success" role="status">All colors are balanced!</UiCallout>
+              <UiButton size="sm" icon="refresh" :loading="loading" class="w-full justify-center mt-3" @click.stop="analyzePalette">
+                {{ loading ? 'Running check...' : 'Run check again' }}
+              </UiButton>
+            </div>
+          </div>
+        </section>
+
+        <!-- Harmony Diagram Section -->
+        <section>
+          <h4 class="flex items-center gap-2 text-sm font-semibold text-ink-strong mb-4">
+            <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">hub</span>
+            Harmony diagram
+          </h4>
+          <div class="relative w-full aspect-square">
+            <canvas
+              ref="harmonyCanvas"
+              class="w-full h-full rounded-tile border border-line-faint"
+              role="img"
+              aria-label="Diagram of the palette's colors, joined where they are analogous, complementary or triadic"
+            ></canvas>
+          </div>
+          <p class="text-xs text-ink-muted mt-2">Visual representation of color relationships in your palette.</p>
+        </section>
+
+        <!-- Palette Metrics Section -->
+        <section>
+          <h4 class="flex items-center gap-2 text-sm font-semibold text-ink-strong mb-4">
+            <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">bar_chart</span>
+            Palette metrics
+          </h4>
+          <div class="space-y-4 mb-4">
+            <div v-for="bar in metricBars" :key="bar.key" role="meter" :aria-label="`${bar.low} to ${bar.high}`" :aria-valuenow="bar.value" aria-valuemin="0" aria-valuemax="100">
+              <div class="flex justify-between mb-2 text-xs text-ink-secondary" aria-hidden="true">
+                <span>{{ bar.low }}</span>
+                <span>{{ bar.high }}</span>
               </div>
-            </div>
-
-            <button
-              @click.stop="analyzePalette"
-              :disabled="loading"
-              class="w-full mt-4 px-3 py-2 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg v-if="loading" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              {{ loading ? 'Running Check...' : 'Run Check Again' }}
-            </button>
-          </div>
-
-          <div v-else-if="analysis && (!analysis.problematicColors || analysis.problematicColors.length === 0)" class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-            <div class="flex items-center justify-center gap-2 text-green-700 mb-2">
-              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-              </svg>
-              <span class="text-sm font-medium">All colors are balanced!</span>
-            </div>
-            <button
-              @click.stop="analyzePalette"
-              :disabled="loading"
-              class="w-full mt-3 px-3 py-2 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg v-if="loading" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              {{ loading ? 'Running Check...' : 'Run Check Again' }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Harmony Diagram Section -->
-      <div class="mb-8">
-        <div class="flex items-center gap-2 mb-4">
-          <span class="material-symbols-outlined text-xl text-indigo-600">hub</span>
-          <h4 class="text-sm font-semibold text-gray-900">Harmony Diagram</h4>
-        </div>
-        <div class="relative w-full" style="aspect-ratio: 1">
-          <canvas ref="harmonyCanvas" class="w-full h-full rounded-lg border border-gray-200"></canvas>
-        </div>
-        <p class="text-xs text-gray-500 mt-2">
-          Visual representation of color relationships in your palette.
-        </p>
-      </div>
-
-      <!-- Palette Metrics Section -->
-      <div class="mb-8">
-        <div class="flex items-center gap-2 mb-4">
-          <span class="material-symbols-outlined text-xl text-indigo-600">bar_chart</span>
-          <h4 class="text-sm font-semibold text-gray-900">Palette Metrics</h4>
-        </div>
-        <div class="space-y-4 mb-4">
-          <!-- Cool-Warm -->
-          <div>
-            <div class="flex justify-between mb-2">
-              <span class="text-xs text-gray-600">Cool</span>
-              <span class="text-xs text-gray-600">Warm</span>
-            </div>
-            <div class="relative h-2 bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 rounded-full">
-              <div
-                class="absolute top-0 h-2 rounded-full bg-white border-2 border-gray-800"
-                :style="{ left: `${metrics.coolWarm}%`, width: '4px', transform: 'translateX(-50%)' }"
-              ></div>
+              <UiColorSample class="relative h-2 rounded-pill" :color="bar.gradient">
+                <span class="metric-marker" :class="`metric-marker-${bar.key}`"></span>
+              </UiColorSample>
             </div>
           </div>
-
-          <!-- Muted-Vibrant -->
-          <div>
-            <div class="flex justify-between mb-2">
-              <span class="text-xs text-gray-600">Muted</span>
-              <span class="text-xs text-gray-600">Vibrant</span>
-            </div>
-            <div class="relative h-2 bg-gradient-to-r from-purple-300 via-pink-400 to-pink-600 rounded-full">
-              <div
-                class="absolute top-0 h-2 rounded-full bg-white border-2 border-gray-800"
-                :style="{ left: `${metrics.mutedVibrant}%`, width: '4px', transform: 'translateX(-50%)' }"
-              ></div>
-            </div>
-          </div>
-
-          <!-- Dark-Light -->
-          <div>
-            <div class="flex justify-between mb-2">
-              <span class="text-xs text-gray-600">Dark</span>
-              <span class="text-xs text-gray-600">Light</span>
-            </div>
-            <div class="relative h-2 bg-gradient-to-r from-gray-800 via-gray-400 to-gray-200 rounded-full">
-              <div
-                class="absolute top-0 h-2 rounded-full bg-white border-2 border-gray-800"
-                :style="{ left: `${metrics.darkLight}%`, width: '4px', transform: 'translateX(-50%)' }"
-              ></div>
-            </div>
-          </div>
-
-          <!-- Mono-Diverse -->
-          <div>
-            <div class="flex justify-between mb-2">
-              <span class="text-xs text-gray-600">Mono</span>
-              <span class="text-xs text-gray-600">Diverse</span>
-            </div>
-            <div class="relative h-2 bg-gradient-to-r from-blue-300 via-blue-500 to-blue-800 rounded-full">
-              <div
-                class="absolute top-0 h-2 rounded-full bg-white border-2 border-gray-800"
-                :style="{ left: `${metrics.monoDiverse}%`, width: '4px', transform: 'translateX(-50%)' }"
-              ></div>
-            </div>
-          </div>
-        </div>
-        <p class="text-xs text-gray-500">
-          These metrics show your palette's overall character and can guide you toward colors that balance or enhance certain qualities. Neutral colors are excluded from this analysis.
-        </p>
-      </div>
-    </div>
+          <p class="text-xs text-ink-muted">
+            These metrics show your palette's overall character and can guide you toward colors that balance or enhance certain qualities. Neutral colors are excluded from this analysis.
+          </p>
+        </section>
+      </aside>
     </div>
 
     <!-- Navigation -->
-    <div class="flex justify-between pt-8 border-t border-gray-200">
-      <button
-        @click="$emit('back')"
-        class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-      >
-        ← Back
-      </button>
-      <button
-        @click="$emit('next')"
-        class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-      >
-        Next: Contrast Testing →
-      </button>
+    <div class="flex justify-between pt-8 border-t border-line-faint">
+      <UiButton icon="arrow_back" @click="$emit('back')">Back</UiButton>
+      <UiButton variant="primary" trailing-icon="arrow_forward" @click="$emit('next')">Next: Contrast testing</UiButton>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, computed } from 'vue';
+import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue';
 import apiClient from '../services/api.js';
+import InlineNotice from './InlineNotice.vue';
+import { UiButton, UiCallout, UiSpinner } from './ui';
+import UiColorSample from './ui/UiColorSample.vue';
+import { useNotice } from '../composables/useNotice.js';
+
+const { notice, showNotice, clearNotice } = useNotice();
 
 const props = defineProps({
   palette: {
@@ -485,7 +336,7 @@ const analyzePalette = async () => {
     dismissedIssues.value = [];
   } catch (error) {
     console.error('Error analyzing palette:', error);
-    alert('Error analyzing palette. Please try again.');
+    showNotice('Error analyzing palette. Please try again.', 'error');
   } finally {
     loading.value = false;
   }
@@ -564,8 +415,10 @@ const toggleHarmonyCheckCollapse = () => {
 const copyToClipboard = async (text) => {
   try {
     await navigator.clipboard.writeText(text);
+    showNotice(`Copied ${text}`, 'success');
   } catch (error) {
     console.error('Failed to copy:', error);
+    showNotice('Could not copy to the clipboard.', 'error');
   }
 };
 
@@ -805,19 +658,39 @@ const drawHarmonyDiagram = () => {
   });
 };
 
+const redrawOnResize = () => {
+  setTimeout(() => {
+    drawHarmonyDiagram();
+  }, 100);
+};
+
 onMounted(() => {
   analyzePalette();
   setTimeout(() => {
     drawHarmonyDiagram();
   }, 100);
-  
+
   // Redraw on window resize
-  window.addEventListener('resize', () => {
-    setTimeout(() => {
-      drawHarmonyDiagram();
-    }, 100);
-  });
+  window.addEventListener('resize', redrawOnResize);
 });
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', redrawOnResize);
+});
+
+// The four metric scales: each bar shows the colour dimension it measures
+const metricBars = computed(() => [
+  { key: 'coolWarm', low: 'Cool', high: 'Warm', value: metrics.value.coolWarm, gradient: 'linear-gradient(to right, hsl(213 94% 68%), hsl(270 95% 75%), hsl(27 96% 61%))' },
+  { key: 'mutedVibrant', low: 'Muted', high: 'Vibrant', value: metrics.value.mutedVibrant, gradient: 'linear-gradient(to right, hsl(269 97% 85%), hsl(329 86% 70%), hsl(333 71% 51%))' },
+  { key: 'darkLight', low: 'Dark', high: 'Light', value: metrics.value.darkLight, gradient: 'linear-gradient(to right, hsl(215 28% 17%), hsl(218 11% 65%), hsl(220 13% 91%))' },
+  { key: 'monoDiverse', low: 'Mono', high: 'Diverse', value: metrics.value.monoDiverse, gradient: 'linear-gradient(to right, hsl(212 96% 78%), hsl(217 91% 60%), hsl(226 71% 40%))' },
+]);
+const markerLeft = computed(() => ({
+  coolWarm: `${metrics.value.coolWarm}%`,
+  mutedVibrant: `${metrics.value.mutedVibrant}%`,
+  darkLight: `${metrics.value.darkLight}%`,
+  monoDiverse: `${metrics.value.monoDiverse}%`,
+}));
 
 // Debounce the watcher to prevent rapid re-analysis
 let analyzeTimeout = null;
@@ -832,3 +705,21 @@ watch(() => props.palette.colors, () => {
   }, 500);
 }, { deep: true });
 </script>
+
+<style scoped>
+.metric-marker {
+  @apply absolute top-0 h-2 w-1 -translate-x-1/2 rounded-pill bg-surface border-2 border-ink-strong;
+}
+.metric-marker-coolWarm {
+  left: v-bind('markerLeft.coolWarm');
+}
+.metric-marker-mutedVibrant {
+  left: v-bind('markerLeft.mutedVibrant');
+}
+.metric-marker-darkLight {
+  left: v-bind('markerLeft.darkLight');
+}
+.metric-marker-monoDiverse {
+  left: v-bind('markerLeft.monoDiverse');
+}
+</style>

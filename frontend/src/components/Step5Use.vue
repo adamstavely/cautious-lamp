@@ -1,278 +1,135 @@
 <template>
   <div>
+    <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
+
     <!-- Palette Info - Remove title since it's in header -->
-    <div v-if="palette.updatedAt" class="mb-6 pb-6 border-b border-gray-200">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm text-gray-500">
-            Last updated: {{ formatDate(palette.updatedAt) }}
-          </p>
-        </div>
-      </div>
-    </div>
+    <p v-if="palette.updatedAt" class="mb-6 pb-6 border-b border-line-faint text-sm text-ink-muted">
+      Last updated: {{ formatDate(palette.updatedAt) }}
+    </p>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <!-- Left Column: Color Swatches & Usage Examples -->
       <div class="lg:col-span-2 space-y-8">
         <!-- Color Swatches -->
-        <div>
-          <h3 class="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-            <span class="material-symbols-outlined text-xl text-indigo-600">palette</span>
-            Color Swatches
+        <section>
+          <h3 class="text-xl font-semibold text-ink-strong mb-6 flex items-center gap-2">
+            <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">palette</span>
+            Color swatches
           </h3>
-          <div class="grid grid-cols-4 gap-4">
-            <div
-              v-for="(color, index) in palette.colors"
-              :key="index"
-              class="flex flex-col"
-            >
-              <div
-                class="w-full h-24 rounded-lg shadow-md mb-2 flex items-center justify-center"
-                :style="{ backgroundColor: color.hex }"
-              >
-                <div class="font-mono text-xs font-semibold" :style="getTextColor(color.hex)">
-                  {{ color.hex }}
-                </div>
-              </div>
-              <div class="text-xs text-gray-600 text-center capitalize">
-                {{ getRoleLabel(color.role) }}
-              </div>
-            </div>
-          </div>
-        </div>
+          <ul class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <li v-for="(color, index) in palette.colors" :key="index" class="flex flex-col">
+              <UiColorSample class="w-full h-24 rounded-tile shadow-control mb-2 flex items-center justify-center" :color="color.hex" :text-color="getTextColor(color.hex)">
+                <span class="font-code text-xs font-semibold">{{ color.hex }}</span>
+              </UiColorSample>
+              <span class="text-xs text-ink-secondary text-center capitalize">{{ getRoleLabel(color.role) }}</span>
+            </li>
+          </ul>
+        </section>
 
         <!-- Usage Examples -->
-        <div>
-          <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <span class="material-symbols-outlined text-xl text-indigo-600">preview</span>
-            Usage Examples
+        <section>
+          <h3 class="text-lg font-semibold text-ink-strong mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">preview</span>
+            Usage examples
           </h3>
-          <p class="text-sm text-gray-600 mb-4">
+          <p class="text-sm text-ink-secondary mb-4">
             See how your palette looks in real UI components. Preview buttons, cards, and headers using your colors.
           </p>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Button Examples -->
             <div>
-              <h4 class="text-sm font-medium text-gray-700 mb-3">Buttons</h4>
+              <h4 class="text-sm font-medium text-ink mb-3">Buttons</h4>
               <div class="space-y-2">
-                <button
+                <UiColorSample
                   v-for="(color, index) in (palette?.colors || []).slice(0, 3)"
                   :key="`btn-${color.hex}-${index}`"
-                  class="w-full px-4 py-2 rounded-lg text-white font-medium text-sm transition-all hover:opacity-90"
-                  :style="{ backgroundColor: color.hex }"
+                  tag="button"
+                  class="w-full px-4 py-2 rounded-control font-medium text-sm transition-opacity hover:opacity-90"
+                  :color="color.hex"
+                  :text-color="DEMO_TEXT"
                 >
                   {{ color.name || 'Button' }}
-                </button>
+                </UiColorSample>
               </div>
             </div>
-            
+
             <!-- Card Examples -->
             <div>
-              <h4 class="text-sm font-medium text-gray-700 mb-3">Cards</h4>
+              <h4 class="text-sm font-medium text-ink mb-3">Cards</h4>
               <div class="space-y-2">
                 <div
                   v-for="(color, index) in (palette?.colors || []).slice(0, 2)"
                   :key="`card-${color.hex}-${index}`"
-                  class="p-4 rounded-lg border border-gray-200"
-                  :style="{ borderTopColor: color.hex, borderTopWidth: '4px' }"
+                  class="rounded-tile border border-line-faint bg-surface-raised overflow-hidden"
                 >
-                  <div class="font-semibold text-gray-900 mb-1">Card Title</div>
-                  <div class="text-sm text-gray-600">Card content using {{ color.name || color.hex }}</div>
+                  <UiColorSample class="h-1" :color="color.hex" />
+                  <div class="p-4">
+                    <div class="font-semibold text-ink-strong mb-1">Card Title</div>
+                    <div class="text-sm text-ink-secondary">Card content using {{ color.name || color.hex }}</div>
+                  </div>
                 </div>
               </div>
             </div>
-            
+
             <!-- Header Examples -->
             <div>
-              <h4 class="text-sm font-medium text-gray-700 mb-3">Headers</h4>
+              <h4 class="text-sm font-medium text-ink mb-3">Headers</h4>
               <div class="space-y-2">
-                <div
+                <UiColorSample
                   v-for="(color, index) in (palette?.colors || []).slice(0, 2)"
                   :key="`header-${color.hex}-${index}`"
-                  class="p-4 rounded-lg text-white"
-                  :style="{ backgroundColor: color.hex }"
+                  class="p-4 rounded-tile"
+                  :color="color.hex"
+                  :text-color="DEMO_TEXT"
                 >
                   <div class="font-bold text-lg mb-1">Header</div>
                   <div class="text-sm opacity-90">Using {{ color.name || color.hex }}</div>
-                </div>
+                </UiColorSample>
               </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
 
       <!-- Right Column: Export Options Sidebar -->
       <div class="lg:col-span-1">
-        <div class="sticky top-8">
-          <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <span class="material-symbols-outlined text-xl text-indigo-600">download</span>
-            Export Options
-          </h2>
-          <div class="space-y-3">
-          <!-- PDF Report -->
-          <button
-            @click="exportPDF"
-            class="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-indigo-300 transition-all group"
-          >
-            <div class="flex-1 text-left">
-              <div class="font-semibold text-gray-900 mb-1">PDF Report</div>
-              <div class="text-sm text-gray-600">Complete palette report with swatches, roles, and pairings</div>
-            </div>
-            <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          </button>
-
-          <!-- Brand Guidelines PDF -->
-          <button
-            @click="exportBrandGuidelines"
-            class="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-indigo-300 transition-all group"
-          >
-            <div class="flex-1 text-left">
-              <div class="font-semibold text-gray-900 mb-1">Brand Guidelines PDF</div>
-              <div class="text-sm text-gray-600">Complete brand guidelines with usage rules, logo placement, and typography</div>
-            </div>
-            <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          </button>
-          <button
-            @click="exportSVG"
-            class="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-indigo-300 transition-all group"
-          >
-            <div class="flex-1 text-left">
-              <div class="font-semibold text-gray-900 mb-1">SVG Export</div>
-              <div class="text-sm text-gray-600">Scalable vector graphic with palette details</div>
-            </div>
-            <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          </button>
-
-          <!-- PNG Preview -->
-          <button
-            @click="exportPNG"
-            class="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-indigo-300 transition-all group"
-          >
-            <div class="flex-1 text-left">
-              <div class="font-semibold text-gray-900 mb-1">PNG Preview</div>
-              <div class="text-sm text-gray-600">Visual palette preview image</div>
-            </div>
-            <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          </button>
-
-          <!-- Copy Colors -->
-          <button
-            @click="copyColors"
-            class="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-indigo-300 transition-all group"
-          >
-            <div class="flex-1 text-left">
-              <div class="font-semibold text-gray-900 mb-1">Copy Colors</div>
-              <div class="text-sm text-gray-600">All hex codes in a list</div>
-            </div>
-            <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-          </button>
-
-          <!-- JSON Export -->
-          <button
-            @click="exportJSON"
-            class="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-indigo-300 transition-all group"
-          >
-            <div class="flex-1 text-left">
-              <div class="font-semibold text-gray-900 mb-1">JSON Export</div>
-              <div class="text-sm text-gray-600">Complete palette data in JSON format</div>
-            </div>
-            <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          </button>
-
-          <!-- CSS Variables -->
-          <button
-            @click="exportCSS"
-            class="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-indigo-300 transition-all group"
-          >
-            <div class="flex-1 text-left">
-              <div class="font-semibold text-gray-900 mb-1">CSS Variables</div>
-              <div class="text-sm text-gray-600">CSS custom properties for web projects</div>
-            </div>
-            <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          </button>
-
-          <!-- SCSS Variables -->
-          <button
-            @click="exportSCSS"
-            class="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-indigo-300 transition-all group"
-          >
-            <div class="flex-1 text-left">
-              <div class="font-semibold text-gray-900 mb-1">SCSS Variables</div>
-              <div class="text-sm text-gray-600">SCSS variables for Sass/SCSS projects</div>
-            </div>
-            <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          </button>
-
-          <!-- Style Dictionary -->
-          <button
-            @click="exportStyleDictionary"
-            class="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-indigo-300 transition-all group"
-          >
-            <div class="flex-1 text-left">
-              <div class="font-semibold text-gray-900 mb-1">Style Dictionary</div>
-              <div class="text-sm text-gray-600">Design tokens for Style Dictionary</div>
-            </div>
-            <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          </button>
-
-          <!-- Adobe ASE -->
-          <button
-            @click="exportAdobeASE"
-            class="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-indigo-300 transition-all group"
-          >
-            <div class="flex-1 text-left">
-              <div class="font-semibold text-gray-900 mb-1">Adobe ASE</div>
-              <div class="text-sm text-gray-600">Adobe Swatch Exchange for Creative Suite</div>
-            </div>
-            <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          </button>
-        </div>
-        </div>
+        <section class="sticky top-8">
+          <h3 class="text-2xl font-bold text-ink-strong mb-6 flex items-center gap-2">
+            <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">download</span>
+            Export options
+          </h3>
+          <ul class="space-y-3">
+            <li v-for="option in exportOptions" :key="option.title">
+              <button type="button" class="export-option group" @click="option.run">
+                <span class="flex-1 text-left">
+                  <span class="block font-semibold text-ink-strong mb-1">{{ option.title }}</span>
+                  <span class="block text-sm text-ink-secondary">{{ option.body }}</span>
+                </span>
+                <span class="material-symbols-outlined text-xl text-ink-muted group-hover:text-accent-text transition-colors" aria-hidden="true">{{ option.icon }}</span>
+              </button>
+            </li>
+          </ul>
+        </section>
       </div>
     </div>
 
     <!-- Navigation -->
-    <div class="flex justify-between pt-8 border-t border-gray-200">
-      <button
-        @click="$emit('back')"
-        class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-      >
-        ← Back
-      </button>
-      <button
-        @click="complete"
-        class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-      >
-        Save & Complete
-      </button>
+    <div class="flex justify-between mt-8 pt-8 border-t border-line-faint">
+      <UiButton icon="arrow_back" @click="$emit('back')">Back</UiButton>
+      <UiButton variant="primary" icon="check" @click="complete">Save and complete</UiButton>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
 import apiClient from '../services/api.js';
 import jsPDF from 'jspdf';
+import InlineNotice from './InlineNotice.vue';
+import { UiButton } from './ui';
+import UiColorSample from './ui/UiColorSample.vue';
+import { useNotice } from '../composables/useNotice.js';
+
+const { notice, showNotice, clearNotice } = useNotice();
 
 const props = defineProps({
   palette: {
@@ -295,13 +152,10 @@ const emit = defineEmits(['back', 'export', 'update-palette']);
 // Helper function to determine text color based on background
 const getTextColor = (hex) => {
   const rgb = hexToRgb(hex);
-  if (!rgb) return { color: '#000000' };
-  
+  if (!rgb) return '#000000';
+
   const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
-  return {
-    color: luminance > 0.5 ? '#000000' : '#FFFFFF',
-    textShadow: luminance > 0.5 ? 'none' : '0 1px 2px rgba(0,0,0,0.2)',
-  };
+  return luminance > 0.5 ? '#000000' : '#FFFFFF';
 };
 
 const hexToRgb = (hex) => {
@@ -1336,10 +1190,10 @@ const copyColors = async () => {
   const colorsList = props.palette.colors.map((c) => c.hex).join('\n');
   try {
     await navigator.clipboard.writeText(colorsList);
-    alert('Colors copied to clipboard!');
+    showNotice('Colors copied to clipboard!', 'success');
   } catch (error) {
     console.error('Failed to copy:', error);
-    alert('Failed to copy colors. Please try again.');
+    showNotice('Failed to copy colors. Please try again.', 'error');
   }
 };
 
@@ -1473,7 +1327,7 @@ const exportAdobeASE = () => {
   const colors = props.palette.colors;
   
   if (colors.length === 0) {
-    alert('No colors to export');
+    showNotice('No colors to export', 'warning');
     return;
   }
 
@@ -1616,7 +1470,7 @@ const complete = async () => {
     emit('export', props.palette);
   } catch (error) {
     console.error('Error in complete function:', error);
-    alert('Error completing palette. Please try again.');
+    showNotice('Error completing palette. Please try again.', 'error');
   }
 };
 
@@ -1625,7 +1479,7 @@ const savePalette = async () => {
     console.log('Saving palette:', props.palette);
     
     if (!props.palette.colors || props.palette.colors.length === 0) {
-      alert('Please add colors to your palette before saving.');
+      showNotice('Please add colors to your palette before saving.', 'error');
       throw new Error('No colors in palette');
     }
     
@@ -1664,14 +1518,35 @@ const savePalette = async () => {
     
     console.log('Updated palette:', updatedPalette);
     emit('update-palette', updatedPalette);
-    alert('Palette saved successfully!');
+    // The palette builder confirms the save when it receives `export`
     
     return updatedPalette;
   } catch (error) {
     console.error('Error saving palette:', error);
-    alert(`Error saving palette: ${error.message || 'Please try again.'}`);
+    showNotice(`Error saving palette: ${error.message || 'Please try again.'}`, 'error');
     throw error;
   }
 };
+
+// Text on the demo buttons and headers (the palette's colours are the fills)
+const DEMO_TEXT = '#FFFFFF';
+
+const exportOptions = [
+  { title: 'PDF Report', body: 'Complete palette report with swatches, roles, and pairings', icon: 'download', run: () => exportPDF() },
+  { title: 'Brand Guidelines PDF', body: 'Complete brand guidelines with usage rules, logo placement, and typography', icon: 'download', run: () => exportBrandGuidelines() },
+  { title: 'SVG Export', body: 'Scalable vector graphic with palette details', icon: 'download', run: () => exportSVG() },
+  { title: 'PNG Preview', body: 'Visual palette preview image', icon: 'download', run: () => exportPNG() },
+  { title: 'Copy Colors', body: 'All hex codes in a list', icon: 'content_copy', run: () => copyColors() },
+  { title: 'JSON Export', body: 'Complete palette data in JSON format', icon: 'download', run: () => exportJSON() },
+  { title: 'CSS Variables', body: 'CSS custom properties for web projects', icon: 'download', run: () => exportCSS() },
+  { title: 'SCSS Variables', body: 'SCSS variables for Sass/SCSS projects', icon: 'download', run: () => exportSCSS() },
+  { title: 'Style Dictionary', body: 'Design tokens for Style Dictionary', icon: 'download', run: () => exportStyleDictionary() },
+  { title: 'Adobe ASE', body: 'Adobe Swatch Exchange for Creative Suite', icon: 'download', run: () => exportAdobeASE() },
+];
 </script>
 
+<style scoped>
+.export-option {
+  @apply w-full flex items-center justify-between gap-3 p-4 rounded-tile border border-line-faint bg-surface-raised transition-colors hover:bg-fill-hover hover:border-accent-border focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+</style>

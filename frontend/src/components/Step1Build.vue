@@ -1,50 +1,15 @@
 <template>
   <div>
+    <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
+
     <!-- Actions Bar -->
-    <div class="flex items-center justify-end gap-3 mb-6">
-      <div class="flex items-center gap-2 mr-auto">
-        <label 
-          class="text-sm transition-colors duration-300"
-          :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-        >
-          Palette Name:
-        </label>
-        <input
-          v-model="paletteName"
-          @input="updatePaletteName"
-          type="text"
-          placeholder="My Palette"
-          class="px-3 py-1.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-300"
-          :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'"
-        />
+    <div class="flex flex-wrap items-end justify-end gap-3 mb-6">
+      <div class="mr-auto w-64">
+        <UiInput :model-value="paletteName" label="Palette name" placeholder="My Palette" @update:model-value="setPaletteName" />
       </div>
-      <button
-        @click="triggerFileInput"
-        class="flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors duration-300"
-        :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-gray-300 hover:bg-slate-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-        </svg>
-        Import Palette
-      </button>
-      <button
-        @click="clearPalette"
-        class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors duration-300"
-        :class="isDarkMode ? 'text-red-400 hover:bg-red-900/20' : 'text-red-600 hover:bg-red-50'"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
-        Clear Palette
-      </button>
-      <input
-        ref="fileInput"
-        type="file"
-        accept=".json"
-        class="hidden"
-        @change="handleFileImport"
-      />
+      <UiButton icon="upload" @click="triggerFileInput">Import palette</UiButton>
+      <UiButton variant="danger" icon="delete" @click="clearPalette">Clear palette</UiButton>
+      <input ref="fileInput" type="file" accept=".json" class="hidden" aria-label="Palette file" @change="handleFileImport" />
     </div>
 
     <!-- Color Cards Grid -->
@@ -54,143 +19,76 @@
         v-for="(color, index) in palette.colors"
         :key="`color-${index}`"
         :ref="el => { if (el) cardRefs[index] = el }"
+        class="color-card"
+        :class="{ 'opacity-50': draggedIndex === index, 'border-accent': dragOverIndex === index }"
         @dragover.prevent="handleDragOver(index, $event)"
         @drop="handleDrop(index, $event)"
-        class="rounded-lg shadow-md overflow-hidden border hover:shadow-lg transition-all duration-300 relative"
-        :class="[
-          isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200',
-          { 'opacity-50': draggedIndex === index, 'border-indigo-400': dragOverIndex === index }
-        ]"
       >
         <!-- Drag Handle -->
         <div
           draggable="true"
+          class="absolute top-2 right-2 z-10 cursor-move p-1 rounded-control bg-surface-overlay text-ink-secondary shadow-control"
+          title="Drag to reorder"
           @dragstart="handleDragStart(index, $event)"
           @dragend="handleDragEnd"
-          class="absolute top-2 right-2 cursor-move p-1 rounded hover:bg-opacity-100 z-10 transition-colors duration-300"
-          :class="isDarkMode ? 'bg-slate-700 bg-opacity-80' : 'bg-white bg-opacity-80'"
-          title="Drag to reorder"
         >
-          <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
-          </svg>
+          <span class="material-symbols-outlined text-base" aria-hidden="true">drag_handle</span>
         </div>
-        
+
         <!-- Color Swatch -->
-        <div
-          class="w-full h-32 cursor-pointer"
-          :style="{ backgroundColor: color.hex }"
+        <UiColorSample
+          tag="button"
+          class="block w-full h-32 cursor-pointer"
+          :color="color.hex"
+          :aria-label="`Edit color ${color.hex}`"
           @click="openColorPicker(index, $event)"
-        >
-        </div>
-        
+        />
+
         <!-- Color Info -->
-        <div class="p-4">
-          <!-- Color Name -->
-          <input
-            :value="color.name || ''"
-            @input="updateColorName(index, $event.target.value)"
-            @click.stop
-            type="text"
+        <div class="p-4 space-y-2">
+          <UiInput
+            :model-value="color.name || ''"
             placeholder="Color name..."
-            class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-2 transition-colors duration-300"
-            :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'"
+            :aria-label="`Name for ${color.hex}`"
+            @update:model-value="updateColorName(index, $event)"
+            @click.stop
           />
-          
-          <!-- Hex Code -->
-          <div class="flex items-center justify-between mb-3">
-            <div 
-              class="font-mono text-sm font-semibold transition-colors duration-300"
-              :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-            >
-              {{ color.hex }}
-            </div>
-            <div class="flex items-center gap-2">
-              <!-- Copy Icon -->
-              <button
-                @click.stop="copyToClipboard(color.hex)"
-                class="p-1 rounded transition-colors duration-300"
-                :class="isDarkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'"
-                title="Copy hex code"
-              >
-                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              </button>
-              
-              <!-- Delete Icon -->
-              <button
-                @click.stop="removeColor(index)"
-                class="p-1 rounded transition-colors duration-300"
-                :class="isDarkMode ? 'hover:bg-red-900/20 text-red-400' : 'hover:bg-red-50 text-red-600'"
-                title="Delete color"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
+
+          <div class="flex items-center justify-between">
+            <span class="font-code text-sm font-semibold text-ink-strong">{{ color.hex }}</span>
+            <div class="flex items-center gap-1">
+              <UiButton variant="ghost" size="sm" icon="content_copy" icon-only :label="`Copy hex code ${color.hex}`" @click.stop="copyToClipboard(color.hex)" />
+              <UiButton variant="ghost" size="sm" icon="delete" icon-only :label="`Delete color ${color.hex}`" @click.stop="removeColor(index)" />
             </div>
           </div>
-          
-          <!-- Role Dropdown -->
-          <select
-            :value="color.role || ''"
-            @change="updateRole(index, $event.target.value)"
-            class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
-            :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
+
+          <UiSelect
+            :model-value="color.role || ''"
+            :options="roleOptions"
+            :aria-label="`Role for ${color.hex}`"
+            @update:model-value="updateRole(index, $event)"
             @click.stop
-          >
-            <option value="">Select role...</option>
-            <option value="hero">Hero</option>
-            <option value="accent">Accent</option>
-            <option value="neutral">Neutral</option>
-          </select>
+          />
         </div>
       </div>
 
       <!-- Add New Color Card -->
-      <div
-        ref="addCardRef"
-        class="rounded-lg shadow-md border-2 border-dashed hover:border-indigo-400 transition-all duration-300 cursor-pointer overflow-hidden"
-        :class="isDarkMode ? 'bg-slate-800/50 border-gray-600 hover:bg-slate-800' : 'bg-gray-50 border-gray-300 hover:bg-gray-100'"
-        @click="openColorPicker(null, $event)"
-      >
-        <!-- Color Picker Placeholder -->
-        <div class="w-full h-32 flex items-center justify-center relative">
-          <div class="absolute inset-0 bg-checkered opacity-20"></div>
-          <div class="relative z-10 text-center">
-            <svg 
-              class="w-12 h-12 mx-auto mb-2 transition-colors duration-300" 
-              :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-            </svg>
-            <p 
-              class="text-sm font-medium transition-colors duration-300"
-              :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'"
-            >
-              Click to Pick Color
-            </p>
-            <p 
-              class="text-xs mt-1 transition-colors duration-300"
-              :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
-            >
-              Colors auto-add when selected
-            </p>
-          </div>
-        </div>
-        
-        <!-- Hex Input -->
+      <div ref="addCardRef" class="add-card">
+        <button type="button" class="add-card-pick" @click="openColorPicker(null, $event)">
+          <span class="absolute inset-0 bg-checkered opacity-20" aria-hidden="true"></span>
+          <span class="relative z-10 text-center">
+            <span class="material-symbols-outlined text-4xl text-ink-muted mb-2" aria-hidden="true">format_color_fill</span>
+            <span class="block text-sm font-medium text-ink">Click to Pick Color</span>
+            <span class="block text-xs mt-1 text-ink-secondary">Colors auto-add when selected</span>
+          </span>
+        </button>
+
         <div class="p-4">
-          <input
+          <UiInput
             v-model="colorInput"
-            type="text"
-            placeholder="#ffffff"
-            class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono transition-colors duration-300"
-            :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'"
+            mono
+            :placeholder="placeholders.add"
+            aria-label="Add a hex color, then press Enter"
             @keyup.enter="addColor"
             @click.stop
           />
@@ -199,108 +97,42 @@
     </div>
 
     <!-- Smart Suggestions -->
-    <div v-if="suggestions.length > 0" class="mb-8">
+    <section v-if="suggestions.length > 0" class="mb-8" aria-labelledby="smart-suggestions-heading">
       <div class="flex items-center justify-between mb-4">
-        <h3 
-          class="text-lg font-semibold transition-colors duration-300"
-          :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-        >
-          ✨ Smart Suggestions
-        </h3>
-        <button
-          @click="regenerateSuggestions"
-          class="px-3 py-1.5 text-sm rounded-lg transition-colors duration-300 flex items-center gap-2"
-          :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300 hover:bg-indigo-900/50' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Regenerate
-        </button>
-      </div>
-      
-      <!-- Non-Neutral Suggestions -->
-      <div v-if="colorSuggestions.length > 0" class="mb-6">
-        <h4 
-          class="text-sm font-medium mb-3 transition-colors duration-300"
-          :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-        >
-          Color Harmony
-        </h4>
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <div
-            v-for="(suggestion, index) in colorSuggestions"
-            :key="`${suggestion.type}-${index}`"
-            class="cursor-pointer group relative"
-          >
-            <div
-              class="w-full h-24 rounded-lg shadow-md transition-transform hover:scale-105 mb-2"
-              :style="{ backgroundColor: suggestion.hex }"
-              @click="addSuggestion(suggestion)"
-            ></div>
-            <div class="flex items-center justify-between mb-1">
-              <div class="text-xs text-gray-600 capitalize flex-1">{{ suggestion.type.replace('-', ' ') }}</div>
-              <button
-                @click.stop="regenerateSuggestion(suggestion.type)"
-                class="p-1 hover:bg-gray-100 rounded transition-colors opacity-0 group-hover:opacity-100"
-                title="Regenerate this color"
-              >
-                <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
-            </div>
-            <div 
-              class="text-xs transition-colors duration-300"
-              :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'"
-            >
-              {{ suggestion.reason }}
-            </div>
-          </div>
-        </div>
+        <h3 id="smart-suggestions-heading" class="text-lg font-semibold text-ink-strong">✨ Smart suggestions</h3>
+        <UiButton variant="ghost" size="sm" icon="refresh" @click="regenerateSuggestions">Regenerate</UiButton>
       </div>
 
-      <!-- Neutral Suggestions -->
-      <div v-if="neutralSuggestions.length > 0">
-        <h4 
-          class="text-sm font-medium mb-3 transition-colors duration-300"
-          :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-        >
-          Neutrals
-        </h4>
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <div
-            v-for="(suggestion, index) in neutralSuggestions"
-            :key="`${suggestion.type}-${index}`"
-            class="cursor-pointer group relative"
-          >
-            <div
-              class="w-full h-24 rounded-lg shadow-md transition-transform hover:scale-105 mb-2"
-              :style="{ backgroundColor: suggestion.hex }"
-              @click="addSuggestion(suggestion)"
-            ></div>
-            <div class="flex items-center justify-between mb-1">
-              <div class="text-xs text-gray-600 capitalize flex-1">{{ suggestion.type.replace('-', ' ') }}</div>
-              <button
-                @click.stop="regenerateSuggestion(suggestion.type)"
-                class="p-1 hover:bg-gray-100 rounded transition-colors opacity-0 group-hover:opacity-100"
-                title="Regenerate this color"
-              >
-                <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
-            </div>
-            <div 
-              class="text-xs transition-colors duration-300"
-              :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'"
-            >
-              {{ suggestion.reason }}
-            </div>
-          </div>
-        </div>
+      <div v-for="group in suggestionGroups" :key="group.title" class="mb-6">
+        <template v-if="group.items.length > 0">
+          <h4 class="text-sm font-medium text-ink mb-3">{{ group.title }}</h4>
+          <ul class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <li v-for="(suggestion, index) in group.items" :key="`${suggestion.type}-${index}`" class="group relative">
+              <UiColorSample
+                tag="button"
+                class="block w-full h-24 rounded-tile shadow-control transition-transform hover:scale-105 mb-2"
+                :color="suggestion.hex"
+                :aria-label="`Add ${suggestion.type.replace('-', ' ')} suggestion ${suggestion.hex}`"
+                @click="addSuggestion(suggestion)"
+              />
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs text-ink-secondary capitalize flex-1">{{ suggestion.type.replace('-', ' ') }}</span>
+                <UiButton
+                  variant="ghost"
+                  size="sm"
+                  icon="refresh"
+                  icon-only
+                  :label="`Regenerate the ${suggestion.type.replace('-', ' ')} color`"
+                  class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                  @click.stop="regenerateSuggestion(suggestion.type)"
+                />
+              </div>
+              <p class="text-xs text-ink-muted">{{ suggestion.reason }}</p>
+            </li>
+          </ul>
+        </template>
       </div>
-    </div>
+    </section>
 
     <!-- Advanced Palette Tools -->
     <AdvancedPaletteTools
@@ -310,249 +142,120 @@
     />
 
     <!-- Instructions -->
-    <div 
-      class="mt-8 pt-6 border-t transition-colors duration-300"
-      :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-    >
-      <p 
-        class="text-sm transition-colors duration-300"
-        :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-      >
-        Click any color or the + box to open the native color spectrum. Use hex codes or the eyedropper tool. Drag colors to reorder them.
-      </p>
-    </div>
+    <p class="mt-8 pt-6 border-t border-line-faint text-sm text-ink-secondary">
+      Click any color or the + box to open the native color spectrum. Use hex codes or the eyedropper tool. Drag colors to reorder them.
+    </p>
 
     <!-- Floating Color Picker -->
-    <div
-      v-if="showColorPicker"
-      ref="colorPickerContainerRef"
-      class="fixed z-50 rounded-lg shadow-xl border p-4 transition-colors duration-300"
-      :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-      :style="colorPickerStyle"
-    >
-      <div class="w-64">
+    <div v-if="showColorPicker" ref="colorPickerContainerRef" class="color-picker" role="dialog" aria-label="Color picker">
+      <div class="w-64 space-y-4">
         <!-- Gradient/Hue Selector -->
-        <div class="relative mb-4">
+        <div class="relative">
           <canvas
             ref="gradientCanvas"
             width="256"
             height="200"
-            class="w-full h-48 rounded-lg cursor-crosshair border border-gray-300"
+            class="w-full h-48 rounded-tile cursor-crosshair border border-line"
+            aria-label="Saturation and lightness"
             @mousedown="startGradientDrag"
             @click="handleGradientClick"
           ></canvas>
-          <!-- Selector indicator -->
-          <div
-            class="absolute w-4 h-4 border-2 border-white rounded-full shadow-lg pointer-events-none"
-            :style="selectorStyle"
-          ></div>
+          <div class="picker-selector" aria-hidden="true"></div>
         </div>
-        
+
         <!-- Hue Slider -->
-        <div class="mb-4">
-          <label class="block text-xs font-medium text-gray-700 mb-1">Hue</label>
+        <div>
+          <p class="block text-xs font-medium text-ink mb-1">Hue</p>
           <div class="relative h-8">
             <canvas
               ref="hueCanvas"
               width="256"
               height="32"
-              class="w-full h-8 rounded cursor-pointer border border-gray-300"
+              class="w-full h-8 rounded-control cursor-pointer border border-line"
+              aria-label="Hue"
               @click="handleHueClick"
             ></canvas>
-            <div
-              class="absolute top-0 h-8 w-1 border border-gray-800 pointer-events-none"
-              :style="{ left: `${huePosition}%` }"
-            ></div>
+            <div class="picker-hue-marker" aria-hidden="true"></div>
           </div>
         </div>
-        
+
         <!-- RGB Inputs -->
-        <div class="grid grid-cols-3 gap-2 mb-4">
-          <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">R</label>
-            <input
-              v-model.number="rgbValues.r"
-              @input="updateFromRGB"
-              type="number"
-              min="0"
-              max="255"
-              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">G</label>
-            <input
-              v-model.number="rgbValues.g"
-              @input="updateFromRGB"
-              type="number"
-              min="0"
-              max="255"
-              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">B</label>
-            <input
-              v-model.number="rgbValues.b"
-              @input="updateFromRGB"
-              type="number"
-              min="0"
-              max="255"
-              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-            />
-          </div>
-        </div>
-        
-        <!-- Hex Input -->
-        <div class="mb-4">
-          <label class="block text-xs font-medium text-gray-700 mb-1">Hex</label>
-          <input
-            v-model="hexInput"
-            @input="updateFromHex"
-            type="text"
-            class="w-full px-2 py-1 text-sm border rounded font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
-            :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'"
-            placeholder="#000000"
+        <div class="grid grid-cols-3 gap-2">
+          <UiInput
+            v-for="field in rgbFields"
+            :key="field.key"
+            type="number"
+            :label="field.label"
+            :model-value="rgbValues[field.key]"
+            min="0"
+            max="255"
+            @update:model-value="setRgb(field.key, $event)"
           />
         </div>
-        
+
+        <!-- Hex Input -->
+        <UiInput :model-value="hexInput" label="Hex" mono :placeholder="placeholders.hex" @update:model-value="setHex" />
+
         <!-- CMYK Inputs -->
-        <div class="grid grid-cols-4 gap-2 mb-4">
-          <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">C</label>
-            <input
-              v-model.number="cmykValues.c"
-              @input="updateFromCMYK"
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">M</label>
-            <input
-              v-model.number="cmykValues.m"
-              @input="updateFromCMYK"
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">Y</label>
-            <input
-              v-model.number="cmykValues.y"
-              @input="updateFromCMYK"
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">K</label>
-            <input
-              v-model.number="cmykValues.k"
-              @input="updateFromCMYK"
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              class="w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-300"
-              :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-            />
-          </div>
+        <div class="grid grid-cols-4 gap-2">
+          <UiInput
+            v-for="field in cmykFields"
+            :key="field.key"
+            type="number"
+            :label="field.label"
+            :model-value="cmykValues[field.key]"
+            min="0"
+            max="100"
+            step="0.1"
+            @update:model-value="setCmyk(field.key, $event)"
+          />
         </div>
-        
+
         <!-- Color Preview -->
-        <div class="mb-4 flex items-center gap-3">
-          <div
-            class="w-16 h-16 rounded-lg border-2 border-gray-300"
-            :style="{ backgroundColor: currentHex }"
-          ></div>
+        <div class="flex items-center gap-3">
+          <UiSwatch :color="currentHex" size="lg" :label="`Selected color ${currentHex}`" />
           <div class="flex-1">
-            <div 
-              class="text-sm font-mono font-semibold transition-colors duration-300"
-              :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-            >
-              {{ currentHex }}
-            </div>
-            <div 
-              class="text-xs transition-colors duration-300"
-              :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
-            >
-              RGB({{ rgbValues.r }}, {{ rgbValues.g }}, {{ rgbValues.b }})
-            </div>
-            <div 
-              class="text-xs transition-colors duration-300"
-              :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
-            >
+            <div class="text-sm font-code font-semibold text-ink-strong">{{ currentHex }}</div>
+            <div class="text-xs text-ink-secondary">RGB({{ rgbValues.r }}, {{ rgbValues.g }}, {{ rgbValues.b }})</div>
+            <div class="text-xs text-ink-secondary">
               CMYK({{ Math.round(cmykValues.c) }}, {{ Math.round(cmykValues.m) }}, {{ Math.round(cmykValues.y) }}, {{ Math.round(cmykValues.k) }})
             </div>
           </div>
         </div>
-        
+
         <!-- Eyedropper Button -->
-        <div class="mb-4">
-          <button
-            @click="toggleEyedropper"
-            class="w-full px-4 py-2 text-sm border rounded-lg transition-colors duration-300 flex items-center justify-center gap-2"
-            :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-gray-300 hover:bg-slate-600' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-          >
-            <span class="material-symbols-outlined eyedropper-icon">colorize</span>
-            Use Eyedropper
-          </button>
-        </div>
-        
+        <UiButton class="w-full justify-center" icon="colorize" @click="toggleEyedropper">Use eyedropper</UiButton>
+
         <!-- Buttons -->
         <div class="flex gap-2">
-          <button
-            @click="applyColor"
-            class="flex-1 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            Apply
-          </button>
-          <button
-            @click="closeColorPicker"
-            class="flex-1 px-4 py-2 text-sm rounded-lg transition-colors duration-300"
-            :class="isDarkMode ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-          >
-            Cancel
-          </button>
+          <UiButton variant="primary" class="flex-1 justify-center" @click="applyColor">Apply</UiButton>
+          <UiButton class="flex-1 justify-center" @click="closeColorPicker">Cancel</UiButton>
         </div>
       </div>
     </div>
 
     <!-- Navigation -->
     <div class="flex justify-end mt-8">
-      <button
-        @click="$emit('next')"
-        :disabled="palette.colors.length === 0"
-        class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-      >
-        Next: Harmony Check →
-      </button>
+      <UiButton variant="primary" trailing-icon="arrow_forward" :disabled="palette.colors.length === 0" @click="$emit('next')">
+        Next: Harmony check
+      </UiButton>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue';
 import apiClient from '../services/api.js';
 import AdvancedPaletteTools from './AdvancedPaletteTools.vue';
+import InlineNotice from './InlineNotice.vue';
+import { UiButton, UiInput, UiSelect, UiSwatch } from './ui';
+import UiColorSample from './ui/UiColorSample.vue';
+import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const { notice, showNotice, clearNotice } = useNotice();
+
+// Example values shown in the empty hex fields
+const placeholders = { add: '#ffffff', hex: '#000000' };
 
 const props = defineProps({
   palette: {
@@ -607,6 +310,51 @@ const updatePalette = (newPalette) => {
   emit('update-palette', newPalette);
 };
 
+const setPaletteName = (value) => {
+  paletteName.value = value;
+  updatePaletteName();
+};
+
+// The picker's number and hex fields update the colour as they change
+const setRgb = (channel, value) => {
+  rgbValues.value = { ...rgbValues.value, [channel]: value };
+  updateFromRGB();
+};
+const setCmyk = (channel, value) => {
+  cmykValues.value = { ...cmykValues.value, [channel]: value };
+  updateFromCMYK();
+};
+const setHex = (value) => {
+  hexInput.value = value;
+  updateFromHex();
+};
+
+const rgbFields = [
+  { key: 'r', label: 'R' },
+  { key: 'g', label: 'G' },
+  { key: 'b', label: 'B' },
+];
+const cmykFields = [
+  { key: 'c', label: 'C' },
+  { key: 'm', label: 'M' },
+  { key: 'y', label: 'Y' },
+  { key: 'k', label: 'K' },
+];
+const roleOptions = [
+  { value: '', label: 'Select role...' },
+  { value: 'hero', label: 'Hero' },
+  { value: 'accent', label: 'Accent' },
+  { value: 'neutral', label: 'Neutral' },
+];
+
+// Picker placement and markers, computed from pointer positions (reach CSS via v-bind)
+const pickerLeft = computed(() => colorPickerStyle.value.left || '0px');
+const pickerTop = computed(() => colorPickerStyle.value.top || '0px');
+const pickerWidth = computed(() => colorPickerStyle.value.width || '280px');
+const selectorLeft = computed(() => selectorStyle.value.left);
+const selectorTop = computed(() => selectorStyle.value.top);
+const hueLeft = computed(() => `${huePosition.value}%`);
+
 // Separate suggestions into neutrals and colors
 const neutralSuggestions = computed(() => {
   return suggestions.value.filter(s => s.type === 'light-neutral' || s.type === 'dark-neutral');
@@ -645,7 +393,7 @@ const addColor = () => {
     colorInput.value = '';
     fetchSuggestions();
   } else {
-    alert('Please enter a valid hex color (e.g., #FF5733 or FF5733)');
+    showNotice('Please enter a valid hex color (e.g., #FF5733 or FF5733)', 'error');
   }
 };
 
@@ -802,10 +550,10 @@ const handleFileImport = (event) => {
           emit('update-palette', newPalette);
           fetchSuggestions();
         } else {
-          alert('Invalid palette file format');
+          showNotice('Invalid palette file format', 'error');
         }
     } catch (error) {
-      alert('Error reading palette file');
+      showNotice('Error reading palette file', 'error');
       console.error(error);
     }
   };
@@ -1223,20 +971,21 @@ const toggleEyedropper = () => {
         console.error('Eyedropper error:', error);
         // Don't show alert if user cancelled
         if (error.name !== 'AbortError') {
-          alert('Eyedropper feature is not available in your browser');
+          showNotice('Eyedropper feature is not available in your browser', 'error');
         }
       });
   } else {
-    alert('Eyedropper API is not supported in your browser. Please use Chrome or Edge.');
+    showNotice('Eyedropper API is not supported in your browser. Please use Chrome or Edge.', 'warning');
   }
 };
 
 const copyToClipboard = async (text) => {
   try {
     await navigator.clipboard.writeText(text);
-    // You could add a toast notification here
+    showNotice(`Copied ${text}`, 'success');
   } catch (error) {
     console.error('Failed to copy:', error);
+    showNotice('Could not copy to the clipboard.', 'error');
   }
 };
 
@@ -1258,61 +1007,54 @@ const handleClickOutside = (event) => {
   }
 };
 
+const suggestionGroups = computed(() => [
+  { title: 'Color harmony', items: colorSuggestions.value },
+  { title: 'Neutrals', items: neutralSuggestions.value },
+]);
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
-  
-  // Dark mode detection
-  const updateDarkMode = () => {
-    const wasDark = isDarkMode.value;
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-    if (wasDark !== isDarkMode.value) {
-      nextTick(() => {});
-    }
-  };
-  
-  const darkModeObserver = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-        updateDarkMode();
-      }
-    });
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-    attributeOldValue: true
-  });
-  
-  updateDarkMode();
-  
-  const darkModeInterval = setInterval(updateDarkMode, 50);
-  
-  const cleanup = () => {
-    darkModeObserver.disconnect();
-    clearInterval(darkModeInterval);
+});
+
+onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside);
   document.removeEventListener('mousemove', handleGradientDrag);
   document.removeEventListener('mouseup', endGradientDrag);
-  };
-  
-  onBeforeUnmount(cleanup);
 });
 </script>
 
 <style scoped>
+.color-card {
+  @apply relative overflow-hidden rounded-tile border border-line-faint bg-surface-raised shadow-control transition-all hover:shadow-card-hover;
+}
+.add-card {
+  @apply overflow-hidden rounded-tile border-2 border-dashed border-line-control bg-surface-sunken transition-colors hover:border-accent-border;
+}
+.add-card-pick {
+  @apply relative flex w-full h-32 items-center justify-center cursor-pointer hover:bg-fill-hover focus-visible:outline focus-visible:outline-2 outline-focus;
+}
 .bg-checkered {
-  background-image: 
-    linear-gradient(45deg, #ccc 25%, transparent 25%),
-    linear-gradient(-45deg, #ccc 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #ccc 75%),
-    linear-gradient(-45deg, transparent 75%, #ccc 75%);
+  background-image:
+    linear-gradient(45deg, var(--tc-border-strong) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--tc-border-strong) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--tc-border-strong) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--tc-border-strong) 75%);
   background-size: 12px 12px;
   background-position: 0 0, 0 6px, 6px -6px, -6px 0px;
 }
-
-.eyedropper-icon {
-  font-size: 1rem;
-  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+.color-picker {
+  @apply fixed z-50 rounded-tile border border-line-faint bg-surface-overlay shadow-overlay p-4;
+  left: v-bind(pickerLeft);
+  top: v-bind(pickerTop);
+  width: v-bind(pickerWidth);
+}
+.picker-selector {
+  @apply absolute w-4 h-4 -ml-2 -mt-2 rounded-pill border-2 border-surface shadow-overlay pointer-events-none;
+  left: v-bind(selectorLeft);
+  top: v-bind(selectorTop);
+}
+.picker-hue-marker {
+  @apply absolute top-0 h-8 w-1 border border-ink-strong pointer-events-none;
+  left: v-bind(hueLeft);
 }
 </style>

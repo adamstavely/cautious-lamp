@@ -1,5 +1,7 @@
 <template>
-  <UiField :label="label" :hint="hint" :error="error" :required="required" :id="id" v-slot="{ id: controlId, describedBy, invalid }">
+  <UiField :label="label" :hint="hint" :error="error" :required="required" :id="id" :hide-label="hideLabel">
+    <template v-if="$slots['label-aside']" #label-aside><slot name="label-aside" /></template>
+    <template #default="{ id: controlId, describedBy, invalid }">
     <textarea
       :id="controlId"
       v-bind="$attrs"
@@ -12,13 +14,14 @@
       :class="{ 'font-code': mono }"
       @input="$emit('update:modelValue', $event.target.value)"
     ></textarea>
+    </template>
   </UiField>
 </template>
 
 <script setup>
 import UiField from './UiField.vue';
 
-/** A multi-line text field with its label; `mono` for code and markup */
+/** A multi-line text field with its label; `mono` for code and markup; `#label-aside` puts a control (a Copy button) beside the label */
 defineOptions({ inheritAttrs: false });
 
 defineProps({
@@ -30,6 +33,7 @@ defineProps({
   id: { type: String, default: '' },
   rows: { type: [Number, String], default: 4 },
   mono: { type: Boolean, default: false },
+  hideLabel: { type: Boolean, default: false },
 });
 
 defineEmits(['update:modelValue']);

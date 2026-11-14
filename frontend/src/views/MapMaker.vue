@@ -1,509 +1,193 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Map Maker
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Create interactive choropleth and flow maps with accurate geographic boundaries using TopoJSON data and D3-geo projections.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">map</span>
-                      Data Visualization
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="mapGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Map representation -->
-                      <path d="M 30 50 L 30 150 L 80 140 L 120 150 L 170 140 L 170 50 Z" fill="url(#mapGradient)" opacity="0.3" stroke="#fff" stroke-width="2"/>
-                      <circle cx="60" cy="100" r="8" fill="url(#mapGradient)" opacity="0.8"/>
-                      <circle cx="130" cy="90" r="8" fill="url(#mapGradient)" opacity="0.8"/>
-                      <path d="M 60 100 Q 95 95 130 90" stroke="url(#mapGradient)" stroke-width="3" fill="none" opacity="0.6"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+  <PageShell width="full">
+    <PageHero
+      :back="{ to: '/data-viz', label: 'Data visualization' }"
+      title="Map maker"
+      lead="Create interactive choropleth and flow maps with accurate geographic boundaries using TopoJSON data and D3-geo projections."
+      spot="tools/map-maker"
+      size="tool"
+    />
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <!-- Map Type Selector -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h2 
-                class="text-lg font-semibold mb-6 flex items-center gap-2" 
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
+    <PageSection title="Map type" description="Colour regions by value, or show movement between places.">
+      <UiChoiceCards v-model="selectedMapType" :options="mapTypes" :columns="2" aria-label="Map type" />
+    </PageSection>
+
+    <PageSection title="Build" description="Set up the map, enter your data and export it." divided>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 flex flex-col gap-6">
+          <UiPanel title="Map configuration">
+            <div class="flex flex-col gap-4">
+              <UiSelect v-model="mapConfig.mapType" label="Geographic area" :options="areaOptions" @update:model-value="handleMapTypeChange" />
+              <UiSelect v-if="mapConfig.mapType === 'world'" v-model="mapConfig.mapProjection" label="Projection" :options="projectionOptions" />
+              <UiCheckbox v-if="selectedMapType === 'choropleth'" v-model="mapConfig.showAllRegions" label="Show all regions" />
+              <UiSelect v-model="mapConfig.colorScheme" label="Color scheme" :options="colorSchemeOptions" />
+            </div>
+          </UiPanel>
+
+          <UiPanel title="Data">
+            <!-- Choropleth data -->
+            <fieldset v-if="selectedMapType === 'choropleth'" class="flex flex-col gap-2">
+              <legend class="mb-2 text-sm font-medium text-ink">Regions</legend>
+              <div v-for="(region, index) in choroplethData" :key="index" class="flex items-center gap-2">
+                <div class="flex-1 min-w-0">
+                  <UiInput v-model="region.name" placeholder="Region name" :aria-label="`Region ${index + 1} name`" />
+                </div>
+                <div class="w-32">
+                  <UiInput v-model.number="region.value" type="number" placeholder="Value" :aria-label="`Region ${index + 1} value`" />
+                </div>
+                <UiButton
+                  icon-only
+                  icon="delete"
+                  variant="ghost"
+                  size="sm"
+                  :label="`Remove region ${index + 1}`"
+                  :disabled="choroplethData.length <= 1"
+                  @click="choroplethData.splice(index, 1)"
+                />
+              </div>
+              <UiButton icon="add" size="sm" class="self-start" @click="choroplethData.push({ name: `Region ${choroplethData.length + 1}`, value: 0 })">Add region</UiButton>
+            </fieldset>
+
+            <!-- Flow map data -->
+            <div v-else-if="selectedMapType === 'flowMap'" class="flex flex-col gap-6">
+              <fieldset class="flex flex-col gap-3">
+                <legend class="mb-2 text-sm font-medium text-ink">Locations</legend>
+                <div v-for="(node, index) in flowMapData.nodes" :key="index" class="grid grid-cols-2 gap-2 p-3 rounded-tile border border-line bg-surface-sunken">
+                  <UiInput v-model="node.id" placeholder="ID" :aria-label="`Location ${index + 1} ID`" />
+                  <UiInput v-model="node.label" placeholder="Location name" :aria-label="`Location ${index + 1} name`" />
+                  <UiInput v-model.number="node.lat" type="number" step="0.0001" placeholder="Latitude" :aria-label="`Location ${index + 1} latitude`" />
+                  <UiInput v-model.number="node.lng" type="number" step="0.0001" placeholder="Longitude" :aria-label="`Location ${index + 1} longitude`" />
+                  <UiButton
+                    icon="delete"
+                    variant="ghost"
+                    size="sm"
+                    class="col-span-2 justify-self-end"
+                    :disabled="flowMapData.nodes.length <= 2"
+                    @click="flowMapData.nodes.splice(index, 1)"
+                  >
+                    Remove location
+                  </UiButton>
+                </div>
+                <UiButton
+                  icon="add"
+                  size="sm"
+                  class="self-start"
+                  @click="flowMapData.nodes.push({ id: `Loc${flowMapData.nodes.length + 1}`, label: `Location ${flowMapData.nodes.length + 1}`, lat: 0, lng: 0 })"
+                >
+                  Add location
+                </UiButton>
+              </fieldset>
+
+              <fieldset class="flex flex-col gap-3">
+                <legend class="mb-2 text-sm font-medium text-ink">Flows</legend>
+                <div v-for="(link, index) in flowMapData.links" :key="index" class="flex flex-col gap-2 p-3 rounded-tile border border-line bg-surface-sunken">
+                  <div class="flex items-center gap-2">
+                    <div class="flex-1 min-w-0"><UiSelect v-model="link.source" :options="nodeOptions" :aria-label="`Flow ${index + 1} from`" /></div>
+                    <span class="material-symbols-outlined text-base text-ink-muted" aria-hidden="true">arrow_forward</span>
+                    <div class="flex-1 min-w-0"><UiSelect v-model="link.target" :options="nodeOptions" :aria-label="`Flow ${index + 1} to`" /></div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <div class="flex-1 min-w-0"><UiInput v-model.number="link.value" type="number" placeholder="Value" :aria-label="`Flow ${index + 1} value`" /></div>
+                    <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove flow ${index + 1}`" @click="flowMapData.links.splice(index, 1)" />
+                  </div>
+                </div>
+                <UiButton
+                  icon="add"
+                  size="sm"
+                  class="self-start"
+                  @click="flowMapData.links.push({ source: flowMapData.nodes[0]?.id || '', target: flowMapData.nodes[1]?.id || '', value: 10 })"
+                >
+                  Add flow
+                </UiButton>
+              </fieldset>
+            </div>
+          </UiPanel>
+        </div>
+
+        <div class="lg:col-span-2">
+          <UiPanel title="Preview">
+            <template #actions>
+              <UiButton v-if="mapConfig.mapType === 'world' && drillDownState.level === 'country'" icon="arrow_back" size="sm" @click="handleDrillUp">
+                Back to world
+              </UiButton>
+              <UiButton
+                v-for="format in ['png', 'svg']"
+                :key="format"
+                icon="download"
+                size="sm"
+                :disabled="format === 'png' && exporting"
+                :aria-label="`Export map as ${format.toUpperCase()}`"
+                @click="format === 'png' ? exportPNG() : exportSVG()"
               >
-                <span class="material-symbols-outlined text-indigo-600">map</span>
-                Map Type
-              </h2>
-              
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button
-                  v-for="type in mapTypes"
-                  :key="type.value"
-                  @click="selectedMapType = type.value"
-                  class="p-4 rounded-lg border-2 transition-all text-left"
-                  :class="selectedMapType === type.value
-                    ? (isDarkMode 
-                      ? 'border-indigo-400 bg-indigo-900/20' 
-                      : 'border-indigo-500 bg-indigo-50')
-                    : (isDarkMode
-                      ? 'border-gray-700 bg-slate-800 hover:border-gray-600' 
-                      : 'border-gray-300 bg-white hover:border-gray-400')"
-                >
-                  <div class="flex items-center gap-3">
-                    <span class="material-symbols-outlined text-3xl" :class="selectedMapType === type.value ? 'text-indigo-400' : (isDarkMode ? 'text-gray-400' : 'text-gray-600')">
-                      {{ type.icon }}
-                    </span>
-                    <div>
-                      <h3 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ type.label }}</h3>
-                      <p class="text-sm mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ type.description }}</p>
-                    </div>
-                  </div>
-                </button>
-              </div>
+                {{ format.toUpperCase() }}
+              </UiButton>
+            </template>
+
+            <InlineNotice :notice="notice" class="mb-3" @dismiss="clearNotice" />
+
+            <nav v-if="mapConfig.mapType === 'world' && drillDownState.breadcrumbs.length > 0" aria-label="Map level" class="mb-2 flex items-center gap-2 text-sm text-ink-secondary">
+              <span>World</span>
+              <span class="material-symbols-outlined text-xs" aria-hidden="true">chevron_right</span>
+              <span aria-current="location">{{ drillDownState.selectedCountry }}</span>
+            </nav>
+
+            <UiCallout v-if="mapConfig.mapType === 'world' && drillDownState.level === 'world' && selectedMapType === 'choropleth'" class="mb-3">
+              Click on a country to view its regions (e.g., United States)
+            </UiCallout>
+
+            <div ref="mapWellRef" class="map-well">
+              <ChoroplethMapSVG
+                v-if="selectedMapType === 'choropleth'"
+                ref="mapViewRef"
+                :data="choroplethData"
+                :colors="colorSchemes[mapConfig.colorScheme] || colorSchemes.default"
+                :mapType="mapConfig.mapType || 'us'"
+                :projectionType="mapConfig.mapProjection"
+                :showAllRegions="mapConfig.showAllRegions !== false"
+                :drillDownState="drillDownState"
+                :onDrillDown="handleDrillDown"
+                :onDrillUp="handleDrillUp"
+              />
+              <FlowMapSVG
+                v-else-if="selectedMapType === 'flowMap'"
+                ref="mapViewRef"
+                :data="flowMapData"
+                :colors="colorSchemes[mapConfig.colorScheme] || colorSchemes.default"
+                :mapType="mapConfig.mapType || 'us'"
+                :projectionType="mapConfig.mapProjection"
+              />
             </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <!-- Configuration Panel -->
-              <div class="lg:col-span-1 space-y-6">
-                <!-- Map Configuration -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">settings</span>
-                    Map Configuration
-                  </h3>
-                  
-                  <div class="space-y-4">
-                    <!-- Map Type (US/World) -->
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Geographic Area
-                      </label>
-                      <select
-                        v-model="mapConfig.mapType"
-                        @change="handleMapTypeChange"
-                        class="w-full px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 border-gray-600 text-white' 
-                          : 'bg-white border-gray-300 text-gray-900'"
-                      >
-                        <option value="us">United States</option>
-                        <option value="world">World</option>
-                      </select>
-                    </div>
-
-                    <!-- Projection Type (for world maps) -->
-                    <div v-if="mapConfig.mapType === 'world'">
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Projection
-                      </label>
-                      <select
-                        v-model="mapConfig.mapProjection"
-                        class="w-full px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 border-gray-600 text-white' 
-                          : 'bg-white border-gray-300 text-gray-900'"
-                      >
-                        <option value="equalEarth">Equal Earth</option>
-                        <option value="mercator">Mercator</option>
-                      </select>
-                    </div>
-
-                    <!-- Show All Regions (for choropleth) -->
-                    <div v-if="selectedMapType === 'choropleth'">
-                      <label class="flex items-center gap-2 cursor-pointer">
-                        <input
-                          v-model="mapConfig.showAllRegions"
-                          type="checkbox"
-                          class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                        />
-                        <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                          Show all regions
-                        </span>
-                      </label>
-                    </div>
-
-                    <!-- Color Scheme -->
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Color Scheme
-                      </label>
-                      <select
-                        v-model="mapConfig.colorScheme"
-                        class="w-full px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 border-gray-600 text-white' 
-                          : 'bg-white border-gray-300 text-gray-900'"
-                      >
-                        <option v-for="scheme in colorSchemeOptions" :key="scheme.value" :value="scheme.value">
-                          {{ scheme.label }}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Data Input Section -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">database</span>
-                    Data
-                  </h3>
-                  
-                  <!-- Choropleth Data Input -->
-                  <div v-if="selectedMapType === 'choropleth'">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Regions
-                    </label>
-                    <div class="space-y-2">
-                      <div 
-                        v-for="(region, index) in choroplethData"
-                        :key="index"
-                        class="flex gap-2"
-                      >
-                        <input
-                          v-model="region.name"
-                          type="text"
-                          placeholder="Region name"
-                          class="flex-1 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                        <input
-                          v-model.number="region.value"
-                          type="number"
-                          placeholder="Value"
-                          class="w-32 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                        <button
-                          type="button"
-                          aria-label="Remove region"
-                          @click="choroplethData.splice(index, 1)"
-                          class="px-2 py-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          :disabled="choroplethData.length <= 1"
-                        >
-                          <span class="material-symbols-outlined text-lg">delete</span>
-                        </button>
-                      </div>
-                      <button
-                        @click="choroplethData.push({ name: `Region ${choroplethData.length + 1}`, value: 0 })"
-                        class="w-full px-4 py-2 rounded-lg border border-dashed text-sm font-medium transition-colors"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
-                          : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
-                      >
-                        <span class="material-symbols-outlined text-base align-middle mr-1">add</span>
-                        Add Region
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Flow Map Data Input -->
-                  <div v-else-if="selectedMapType === 'flowMap'">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Flow Map Data
-                    </label>
-                    <div class="space-y-3">
-                      <div>
-                        <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Locations:</label>
-                        <div class="space-y-2">
-                          <div 
-                            v-for="(node, index) in flowMapData.nodes"
-                            :key="index"
-                            class="flex gap-2 flex-wrap"
-                          >
-                            <input
-                              v-model="node.id"
-                              type="text"
-                              placeholder="ID"
-                              class="w-20 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                            />
-                            <input
-                              v-model="node.label"
-                              type="text"
-                              placeholder="Location name"
-                              class="flex-1 min-w-[120px] px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                            />
-                            <input
-                              v-model.number="node.lat"
-                              type="number"
-                              step="0.0001"
-                              placeholder="Latitude"
-                              class="w-24 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                            />
-                            <input
-                              v-model.number="node.lng"
-                              type="number"
-                              step="0.0001"
-                              placeholder="Longitude"
-                              class="w-24 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                            />
-                            <button
-                              type="button"
-                              aria-label="Remove location"
-                              @click="flowMapData.nodes.splice(index, 1)"
-                              class="px-2 py-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                              :disabled="flowMapData.nodes.length <= 2"
-                            >
-                              <span class="material-symbols-outlined text-base">delete</span>
-                            </button>
-                          </div>
-                          <button
-                            @click="flowMapData.nodes.push({ id: `Loc${flowMapData.nodes.length + 1}`, label: `Location ${flowMapData.nodes.length + 1}`, lat: 0, lng: 0 })"
-                            class="w-full px-3 py-2 rounded-lg border border-dashed text-xs font-medium transition-colors"
-                            :class="isDarkMode 
-                              ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
-                              : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
-                          >
-                            <span class="material-symbols-outlined text-sm align-middle mr-1">add</span>
-                            Add Location
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Flows:</label>
-                        <div class="space-y-2">
-                          <div 
-                            v-for="(link, index) in flowMapData.links"
-                            :key="index"
-                            class="flex gap-2"
-                          >
-                            <select
-                              v-model="link.source"
-                              class="flex-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'"
-                            >
-                              <option v-for="node in flowMapData.nodes" :key="node.id" :value="node.id">{{ node.label }}</option>
-                            </select>
-                            <span class="self-center text-gray-500">→</span>
-                            <select
-                              v-model="link.target"
-                              class="flex-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'"
-                            >
-                              <option v-for="node in flowMapData.nodes" :key="node.id" :value="node.id">{{ node.label }}</option>
-                            </select>
-                            <input
-                              v-model.number="link.value"
-                              type="number"
-                              placeholder="Value"
-                              class="w-20 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                            />
-                            <button
-                              type="button"
-                              aria-label="Remove flow"
-                              @click="flowMapData.links.splice(index, 1)"
-                              class="px-2 py-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                            >
-                              <span class="material-symbols-outlined text-base">delete</span>
-                            </button>
-                          </div>
-                          <button
-                            @click="flowMapData.links.push({ source: flowMapData.nodes[0]?.id || '', target: flowMapData.nodes[1]?.id || '', value: 10 })"
-                            class="w-full px-3 py-2 rounded-lg border border-dashed text-xs font-medium transition-colors"
-                            :class="isDarkMode 
-                              ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
-                              : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
-                          >
-                            <span class="material-symbols-outlined text-sm align-middle mr-1">add</span>
-                            Add Flow
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Map Preview -->
-              <div class="lg:col-span-2">
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <span class="material-symbols-outlined text-indigo-600">preview</span>
-                      Preview
-                    </h3>
-                    <div class="flex items-center gap-2 flex-wrap justify-end">
-                      <!-- Back button for drill-down -->
-                      <button
-                        v-if="mapConfig.mapType === 'world' && drillDownState.level === 'country'"
-                        type="button"
-                        @click="handleDrillUp"
-                        class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 text-white hover:bg-slate-700 border border-gray-700' 
-                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'"
-                      >
-                        <span class="material-symbols-outlined text-base" aria-hidden="true">arrow_back</span>
-                        Back to World
-                      </button>
-                      <!-- Export -->
-                      <button
-                        v-for="format in ['png', 'svg']"
-                        :key="format"
-                        type="button"
-                        @click="format === 'png' ? exportPNG() : exportSVG()"
-                        :disabled="format === 'png' && exporting"
-                        :aria-label="`Export map as ${format.toUpperCase()}`"
-                        class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 text-white hover:bg-slate-700 border border-gray-700' 
-                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'"
-                      >
-                        <span class="material-symbols-outlined text-base" aria-hidden="true">download</span>
-                        {{ format.toUpperCase() }}
-                      </button>
-                    </div>
-                  </div>
-
-                  <InlineNotice :notice="notice" class="mb-3" @dismiss="clearNotice" />
-                  
-                  <!-- Breadcrumb navigation -->
-                  <div v-if="mapConfig.mapType === 'world' && drillDownState.breadcrumbs.length > 0" class="mb-2 flex items-center gap-2 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    <span>World</span>
-                    <span class="material-symbols-outlined text-xs">chevron_right</span>
-                    <span>{{ drillDownState.selectedCountry }}</span>
-                  </div>
-                  
-                  <!-- Drill-down instruction -->
-                  <div v-if="mapConfig.mapType === 'world' && drillDownState.level === 'world' && selectedMapType === 'choropleth'" class="mb-2 p-2 rounded-lg text-sm flex items-center gap-2" :class="isDarkMode ? 'bg-indigo-900/20 text-indigo-300 border border-indigo-800' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'">
-                    <span class="material-symbols-outlined text-base">info</span>
-                    <span>Click on a country to view its regions (e.g., United States)</span>
-                  </div>
-                  
-                  <div class="w-full h-[600px] border rounded-lg overflow-hidden relative" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                    <!-- Choropleth Map -->
-                    <ChoroplethMapSVG 
-                      v-if="selectedMapType === 'choropleth'"
-                      ref="mapViewRef"
-                      :data="choroplethData" 
-                      :colors="colorSchemes[mapConfig.colorScheme] || colorSchemes.default"
-                      :mapType="mapConfig.mapType || 'us'"
-                      :projectionType="mapConfig.mapProjection"
-                      :showAllRegions="mapConfig.showAllRegions !== false"
-                      :drillDownState="drillDownState"
-                      :onDrillDown="handleDrillDown"
-                      :onDrillUp="handleDrillUp"
-                    />
-                    
-                    <!-- Flow Map -->
-                    <FlowMapSVG 
-                      v-else-if="selectedMapType === 'flowMap'"
-                      ref="mapViewRef"
-                      :data="flowMapData" 
-                      :colors="colorSchemes[mapConfig.colorScheme] || colorSchemes.default"
-                      :mapType="mapConfig.mapType || 'us'"
-                      :projectionType="mapConfig.mapProjection"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          </UiPanel>
         </div>
       </div>
-    </div>
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, shallowRef, computed, watch, onBeforeUnmount, h } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import { useDarkMode } from '../composables/useDarkMode.js';
 import { useNotice } from '../composables/useNotice.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import InlineNotice from '../components/InlineNotice.vue';
+import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiInput, UiPanel, UiSelect } from '../components/ui';
+import UiChoiceCards from '../components/ui/UiChoiceCards.vue';
 import { loadTopoJSON, getGeoJSONFeatures, mapDataByFeatureName, getFeatureCentroid, getDefaultMapUrls, getCountryMapUrl, getCountryObjectName } from '../utils/mapData.js';
 import { createProjection, createPathGenerator, projectCoordinates, fitProjectionToFeatures } from '../utils/mapProjections.js';
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const { notice, showNotice, clearNotice } = useNotice();
 
 const mapTypes = [
-  { value: 'choropleth', label: 'Choropleth Map', icon: 'map', description: 'Geographic regions colored by data values' },
-  { value: 'flowMap', label: 'Flow Map', icon: 'route', description: 'Shows movement/flow between locations' }
+  { value: 'choropleth', label: 'Choropleth map', icon: 'map', description: 'Geographic regions colored by data values' },
+  { value: 'flowMap', label: 'Flow map', icon: 'route', description: 'Shows movement/flow between locations' }
+];
+
+const areaOptions = [
+  { value: 'us', label: 'United States' },
+  { value: 'world', label: 'World' }
+];
+
+const projectionOptions = [
+  { value: 'equalEarth', label: 'Equal Earth' },
+  { value: 'mercator', label: 'Mercator' }
 ];
 
 const selectedMapType = ref('choropleth');
@@ -567,6 +251,8 @@ const flowMapData = ref({
   ]
 });
 
+const nodeOptions = computed(() => flowMapData.value.nodes.map((node) => ({ value: node.id, label: node.label })));
+
 /**
  * Parse a user-entered value as a number. Inputs bound with v-model.number
  * give '' when empty, and pasted values may carry thousands separators.
@@ -591,21 +277,19 @@ const formatCompact = (value) => {
   }
 };
 
-/** Text that stays readable on any fill: dark text with a white halo. */
+/** Text that stays readable on any fill: strong text with a halo in the surface colour. */
 const labelAttrs = {
-  fill: '#111827',
-  stroke: '#ffffff',
+  class: 'fill-ink-strong stroke-surface-raised pointer-events-none',
   'stroke-width': 3,
   'stroke-linejoin': 'round',
   'paint-order': 'stroke',
   'font-size': 12,
-  'font-weight': 'bold',
-  style: { pointerEvents: 'none' }
+  'font-weight': 'bold'
 };
 
-const centeredMessage = (text, className = 'text-gray-500') =>
+const centeredMessage = (text, isError = false) =>
   h('div', { class: 'absolute inset-0 flex items-center justify-center' }, [
-    h('div', { class: className, role: className.includes('red') ? 'alert' : 'status' }, text)
+    h('div', { class: isError ? 'text-sm text-danger' : 'text-sm text-ink-muted', role: isError ? 'alert' : 'status' }, text)
   ]);
 
 /**
@@ -712,10 +396,10 @@ function useMapSurface(props, getSource) {
   const renderSurface = (content) => {
     let inner;
     if (loading.value) inner = centeredMessage('Loading map...');
-    else if (error.value) inner = centeredMessage(`Error: ${error.value}`, 'text-red-500');
+    else if (error.value) inner = centeredMessage(`Error: ${error.value}`, true);
     else if (!projection.value || !features.value.length) inner = centeredMessage('No map data available');
     else inner = content();
-    return h('div', { ref: containerRef, class: 'w-full h-full relative', style: { minHeight: '300px' } }, [inner]);
+    return h('div', { ref: containerRef, class: 'w-full h-full min-h-72 relative' }, [inner]);
   };
 
   return { containerRef, svgRef, width, height, loading, error, features, projection, paths, renderSurface };
@@ -778,7 +462,7 @@ const ChoroplethMapSVG = {
       return { min, max, color: (value) => ramp.value[binOf(value)], bins };
     });
 
-    const defaultColor = '#e5e7eb';
+    // Regions without data use the chart's neutral token, not a data colour
 
     const isClickable = () => props.mapType === 'world' && props.drillDownState?.level === 'world';
 
@@ -801,10 +485,10 @@ const ChoroplethMapSVG = {
       const x = 12;
       const y = Math.max(12, height.value - boxH - 12);
       return h('g', { transform: `translate(${x}, ${y})`, 'aria-hidden': 'true' }, [
-        h('rect', { width: boxW, height: boxH, rx: 6, fill: '#ffffff', 'fill-opacity': 0.85, stroke: '#d1d5db' }),
+        h('rect', { width: boxW, height: boxH, rx: 6, class: 'fill-surface-overlay stroke-line', 'fill-opacity': 0.9 }),
         ...[...s.bins].reverse().map((bin, i) => h('g', { transform: `translate(8, ${6 + i * rowH})` }, [
-          h('rect', { width: sw, height: sh, fill: bin.color, stroke: '#9ca3af', 'stroke-width': 0.5 }),
-          h('text', { x: sw + 6, y: sh / 2, 'dominant-baseline': 'middle', 'font-size': 11, fill: '#374151' },
+          h('rect', { width: sw, height: sh, fill: bin.color, class: 'stroke-line', 'stroke-width': 0.5 }),
+          h('text', { x: sw + 6, y: sh / 2, 'dominant-baseline': 'middle', 'font-size': 11, class: 'fill-ink-secondary' },
             bin.from === bin.to ? formatCompact(bin.from) : `${formatCompact(bin.from)} – ${formatCompact(bin.to)}`)
         ]))
       ]);
@@ -825,7 +509,7 @@ const ChoroplethMapSVG = {
         const pathData = paths.value[index];
         if (!pathData) return;
 
-        const color = dataRegion && colorFor ? colorFor(dataRegion.value) : defaultColor;
+        const color = dataRegion && colorFor ? colorFor(dataRegion.value) : null;
         const valueText = dataRegion ? `: ${formatValue(dataRegion.value)}` : '';
         const label = clickable ? `${featureName}${valueText}. Activate to view its regions.` : `${featureName}${valueText}`;
         const isHovered = clickable && hovered.value === index;
@@ -834,13 +518,16 @@ const ChoroplethMapSVG = {
         items.push(h('g', { key: `region-${index}` }, [
           h('path', {
             d: pathData,
-            fill: isHovered && color === defaultColor ? '#9ca3af' : color,
-            stroke: '#fff',
+            fill: color || undefined,
+            class: [
+              'stroke-surface-raised outline-none',
+              clickable ? 'cursor-pointer' : 'cursor-default',
+              color ? '' : (isHovered ? 'fill-ink-muted' : 'fill-chart-neutral')
+            ],
             'stroke-width': 0.5,
             'aria-label': label,
             tabindex: clickable ? 0 : undefined,
             role: clickable ? 'button' : undefined,
-            style: { cursor: clickable ? 'pointer' : 'default', outline: 'none' },
             onClick: clickable ? () => handleFeatureClick(feature) : undefined,
             onKeydown: clickable ? (e) => {
               if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
@@ -882,7 +569,7 @@ const ChoroplethMapSVG = {
         'aria-label': `Choropleth map of ${area}${summary ? `. ${summary}` : ''}`
       }, [
         ...items,
-        hoveredPath ? h('path', { d: hoveredPath, fill: 'none', stroke: '#6366f1', 'stroke-width': 2, style: { pointerEvents: 'none' } }) : null,
+        hoveredPath ? h('path', { d: hoveredPath, fill: 'none', class: 'stroke-accent pointer-events-none', 'stroke-width': 2 }) : null,
         ...labels,
         renderLegend()
       ]);
@@ -967,10 +654,9 @@ const FlowMapSVG = {
           return h('path', {
             key: `map-feature-${index}`,
             d: pathData,
-            fill: '#f0f0f0',
-            stroke: '#ccc',
+            class: 'fill-chart-neutral stroke-line',
             'stroke-width': 0.5,
-            opacity: 0.3
+            opacity: 0.5
           });
         }),
         // Links (curved paths) - render behind nodes
@@ -1000,7 +686,7 @@ const FlowMapSVG = {
               cy: node.y,
               r: node.radius,
               fill: node.color,
-              stroke: '#fff',
+              class: 'stroke-surface-raised',
               'stroke-width': 2
             }, [h('title', node.label || node.id)]),
             h('text', {
@@ -1046,6 +732,7 @@ const handleMapTypeChange = () => {
 // ---- Export -------------------------------------------------------------
 
 const mapViewRef = ref(null);
+const mapWellRef = ref(null);
 const exporting = ref(false);
 
 // Presentation properties copied from the live SVG onto the export, so it
@@ -1092,11 +779,11 @@ const serializeMapSvg = () => {
   clone.setAttribute('width', String(width));
   clone.setAttribute('height', String(height));
 
-  // Same background as the preview panel
+  // Same background as the preview well, in the current theme
   const background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
   background.setAttribute('width', '100%');
   background.setAttribute('height', '100%');
-  background.setAttribute('fill', isDarkMode.value ? '#1e293b' : '#f9fafb');
+  background.setAttribute('fill', mapWellRef.value ? window.getComputedStyle(mapWellRef.value).backgroundColor : 'none');
   clone.insertBefore(background, clone.firstChild);
 
   const markup = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(clone)}`;
@@ -1163,8 +850,8 @@ const exportPNG = async () => {
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+/* The map needs a fixed working height (the workspace token); the SVG measures it */
+.map-well {
+  @apply relative w-full h-workspace overflow-hidden rounded-tile border border-line bg-surface-sunken;
 }
 </style>
-

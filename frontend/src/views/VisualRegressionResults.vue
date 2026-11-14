@@ -1,333 +1,185 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Loading State -->
-        <div v-if="loading && !testRun" class="max-w-7xl mx-auto py-12 text-center">
-          <div class="flex justify-center mb-4">
-            <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-          <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading results...</p>
-        </div>
+  <PageShell width="wide">
+    <UiSpinner v-if="loading && !testRun" label="Loading results…" class="py-12" />
 
-        <!-- Error State -->
-        <div v-else-if="error" class="max-w-7xl mx-auto py-12">
-          <div class="rounded-lg border p-6 text-center" :class="isDarkMode ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200'">
-            <span class="material-symbols-outlined text-6xl mb-4 block text-red-600">error</span>
-            <h2 class="text-xl font-semibold mb-2" :class="isDarkMode ? 'text-red-400' : 'text-red-900'">Error Loading Results</h2>
-            <p class="text-sm mb-4" :class="isDarkMode ? 'text-red-300' : 'text-red-700'">{{ error }}</p>
-            <button
-              @click="loadResults"
-              class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
+    <template v-else-if="error">
+      <PageHero :back="backLink" title="Test run results" size="tool" />
+      <UiEmptyState title="Error loading results" :body="error" spot="patterns/error-handling">
+        <template #actions>
+          <UiButton variant="primary" icon="refresh" @click="loadResults">Retry</UiButton>
+        </template>
+      </UiEmptyState>
+    </template>
 
-        <!-- Results Content -->
-        <div v-else-if="testRun" class="max-w-7xl mx-auto">
-          <!-- Header -->
-          <div class="mb-8">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h1 class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Test Run Results</h1>
-                <div class="flex items-center gap-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  <span>Status: <span :class="getStatusClass(testRun.status)">{{ testRun.status }}</span></span>
-                  <span v-if="testRun.commitSha">Commit: {{ testRun.commitSha.substring(0, 7) }}</span>
-                  <span v-if="testRun.branch">Branch: {{ testRun.branch }}</span>
-                  <span v-if="testRun.startedAt">{{ formatDate(testRun.startedAt) }}</span>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <button
-                  @click="exportResults"
-                  class="px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
-                  :class="isDarkMode 
-                    ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'"
-                >
-                  <span class="material-symbols-outlined text-base">download</span>
-                  Export
-                </button>
-                <button
-                  v-if="testRun.status === 'running' || testRun.status === 'pending'"
-                  @click="toggleAutoRefresh"
-                  class="px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
-                  :class="autoRefresh
-                    ? 'bg-indigo-600 text-white'
-                    : (isDarkMode 
-                      ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200')"
-                >
-                  <span class="material-symbols-outlined text-base">{{ autoRefresh ? 'sync' : 'sync_disabled' }}</span>
-                  {{ autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}
-                </button>
-              </div>
-            </div>
+    <template v-else-if="testRun">
+      <PageHero :back="backLink" title="Test run results" spot="admin/visual-regression" size="tool">
+        <template #lead>
+          <span class="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span>Status: <UiChip :tone="runTone(testRun.status)">{{ testRun.status }}</UiChip></span>
+            <span v-if="testRun.commitSha">Commit: <span class="font-code">{{ testRun.commitSha.substring(0, 7) }}</span></span>
+            <span v-if="testRun.branch">Branch: {{ testRun.branch }}</span>
+            <span v-if="testRun.startedAt">{{ formatDate(testRun.startedAt) }}</span>
+          </span>
+        </template>
+        <template #actions>
+          <UiButton icon="download" @click="exportResults">Export</UiButton>
+          <UiButton
+            v-if="testRun.status === 'running' || testRun.status === 'pending'"
+            :variant="autoRefresh ? 'primary' : 'secondary'"
+            :icon="autoRefresh ? 'sync' : 'sync_disabled'"
+            :aria-pressed="autoRefresh"
+            @click="toggleAutoRefresh"
+          >
+            {{ autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off' }}
+          </UiButton>
+        </template>
+      </PageHero>
 
-            <!-- Summary -->
-            <div v-if="testRun.resultsSummary" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-              <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Total</div>
-                <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ testRun.resultsSummary.total }}</div>
-              </div>
-              <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="text-sm font-medium mb-1 text-green-600">Passed</div>
-                <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ testRun.resultsSummary.passed }}</div>
-              </div>
-              <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="text-sm font-medium mb-1 text-red-600">Failed</div>
-                <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ testRun.resultsSummary.failed }}</div>
-              </div>
-              <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="text-sm font-medium mb-1 text-orange-600">New</div>
-                <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ testRun.resultsSummary.new }}</div>
-              </div>
-              <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="text-sm font-medium mb-1 text-gray-600">Removed</div>
-                <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ testRun.resultsSummary.removed }}</div>
-              </div>
-            </div>
-          </div>
-
-          <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
-
-          <!-- Search and Filters -->
-          <div class="mb-6 space-y-4">
-            <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-              <!-- Search -->
-              <div class="flex-1 relative">
-                <input
-                  v-model="searchQuery"
-                  type="text"
-                  placeholder="Search test names..."
-                  class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  :class="isDarkMode 
-                    ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-400' 
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-                />
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
-              </div>
-              
-              <!-- Status Filters -->
-              <div class="flex items-center gap-2 flex-wrap">
-                <button
-                  v-for="filter in filters"
-                  :key="filter"
-                  @click="activeFilter = filter"
-                  class="px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                  :class="activeFilter === filter
-                    ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
-                    : (isDarkMode ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200')"
-                >
-                  {{ filter }}
-                </button>
-              </div>
-            </div>
-
-            <!-- Advanced Filters -->
-            <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center flex-wrap">
-              <!-- Date Range -->
-              <div class="flex items-center gap-2">
-                <label class="text-sm whitespace-nowrap" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">From:</label>
-                <DatePicker
-                  v-model="dateRange.from"
-                  placeholder="Start date"
-                  :max="dateRange.to || undefined"
-                  :is-dark-mode="isDarkMode"
-                />
-              </div>
-              <div class="flex items-center gap-2">
-                <label class="text-sm whitespace-nowrap" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">To:</label>
-                <DatePicker
-                  v-model="dateRange.to"
-                  placeholder="End date"
-                  :min="dateRange.from || undefined"
-                  :is-dark-mode="isDarkMode"
-                />
-              </div>
-
-              <!-- Sort By -->
-              <div class="flex items-center gap-2">
-                <label class="text-sm whitespace-nowrap" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Sort:</label>
-                <div class="flex items-center gap-2">
-                  <Dropdown
-                    v-model="sortBy"
-                    :options="sortOptions"
-                    :is-dark-mode="isDarkMode"
-                  />
-                  <button
-                    @click="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'"
-                    class="p-1.5 rounded-lg transition-colors"
-                    :class="isDarkMode ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                    :title="sortOrder === 'asc' ? 'Ascending' : 'Descending'"
-                  >
-                    <span class="material-symbols-outlined text-base">
-                      {{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Bulk Operations -->
-              <div v-if="selectedResults.length > 0" class="flex items-center gap-2">
-                <span class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  {{ selectedResults.length }} selected
-                </span>
-                <button
-                  @click="bulkApprove"
-                  :disabled="processing"
-                  class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                >
-                  <span class="material-symbols-outlined text-base">check</span>
-                  Approve All
-                </button>
-                <button
-                  @click="bulkReject"
-                  :disabled="processing"
-                  class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                >
-                  <span class="material-symbols-outlined text-base">close</span>
-                  Reject All
-                </button>
-                <button
-                  @click="selectedResults = []"
-                  class="px-3 py-1.5 rounded-lg text-sm transition-colors"
-                  :class="isDarkMode ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Keyboard Shortcuts Hint -->
-          <div v-if="filteredResults.length > 0" class="mb-4 text-xs flex items-center gap-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-            <span><kbd class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700">J</kbd> / <kbd class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700">K</kbd> Navigate</span>
-            <span><kbd class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700">A</kbd> Approve</span>
-            <span><kbd class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700">R</kbd> Reject</span>
-            <span><kbd class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700">/</kbd> Focus Search</span>
-          </div>
-
-          <!-- Results List -->
-          <div v-if="filteredResults.length === 0" class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">search_off</span>
-            <p class="text-lg font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">No results found</p>
-            <p class="text-sm mt-2" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Try adjusting your search or filters</p>
-          </div>
-
-          <div v-else class="space-y-6">
-            <div
-              v-for="(result, index) in filteredResults"
-              :key="result.id"
-              :ref="el => { if (el) resultRefs[index] = el }"
-              class="rounded-lg border p-6 transition-all"
-              :class="[
-                isDarkMode 
-                  ? 'bg-slate-800 border-gray-700' 
-                  : 'bg-white border-gray-200',
-                selectedIndex === index 
-                  ? (isDarkMode ? 'ring-2 ring-indigo-400 border-indigo-400' : 'ring-2 ring-indigo-500 border-indigo-500')
-                  : '',
-                selectedResults.includes(result.id)
-                  ? (isDarkMode ? 'ring-2 ring-green-400 border-green-400' : 'ring-2 ring-green-500 border-green-500')
-                  : ''
-              ]"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                  <!-- Selection Checkbox -->
-                  <input
-                    type="checkbox"
-                    :checked="selectedResults.includes(result.id)"
-                    @change="toggleResultSelection(result.id)"
-                    class="w-4 h-4 rounded accent-indigo-600"
-                  />
-                  <span 
-                    class="px-3 py-1 text-sm rounded-full font-medium"
-                    :class="getResultStatusClass(result.status)"
-                  >
-                    {{ result.status }}
-                  </span>
-                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ result.testName }}</h3>
-                  <span v-if="selectedIndex === index" class="text-xs px-2 py-1 rounded bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
-                    Selected
-                  </span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <button
-                    v-if="result.status === 'failed' || result.status === 'new'"
-                    @click="approveDiff(result.id)"
-                    :disabled="result.approved || processing"
-                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-2"
-                  >
-                    <span class="material-symbols-outlined text-base">check</span>
-                    {{ result.approved ? 'Approved' : 'Approve' }}
-                  </button>
-                  <button
-                    v-if="result.status === 'failed'"
-                    @click="rejectDiff(result.id)"
-                    :disabled="processing"
-                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-2"
-                  >
-                    <span class="material-symbols-outlined text-base">close</span>
-                    Reject
-                  </button>
-                </div>
-              </div>
-
-
-              <!-- Enhanced Image Comparison -->
-              <EnhancedDiffViewer
-                v-if="result.baselineImageUrl || result.currentImageUrl"
-                :baseline-image="result.baselineImageUrl"
-                :current-image="result.currentImageUrl"
-                :diff-image="result.diffImageUrl"
-                :alt-text="result.testName"
-                :height="500"
-              />
-
-              <div v-if="result.diffPercentage !== undefined" class="mt-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Diff Percentage: <span class="font-semibold">{{ result.diffPercentage }}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        </div>
+      <div v-if="testRun.resultsSummary" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <UiStat label="Total" :value="testRun.resultsSummary.total" />
+        <UiStat label="Passed" tone="success" :value="testRun.resultsSummary.passed" />
+        <UiStat label="Failed" tone="danger" :value="testRun.resultsSummary.failed" />
+        <UiStat label="New" tone="warning" :value="testRun.resultsSummary.new" />
+        <UiStat label="Removed" :value="testRun.resultsSummary.removed" />
       </div>
-    </div>
-  </div>
+
+      <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
+
+      <UiPanel class="mb-6">
+        <div class="grid gap-4 md:grid-cols-2">
+          <UiInput ref="searchInput" v-model="searchQuery" type="search" label="Search" icon="search" placeholder="Search test names…" />
+          <UiSegmented v-model="activeFilter" :options="filters" label="Status" />
+        </div>
+        <div class="grid gap-4 mt-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
+          <UiInput v-model="dateRange.from" type="date" label="From" :max="dateRange.to || undefined" />
+          <UiInput v-model="dateRange.to" type="date" label="To" :min="dateRange.from || undefined" />
+          <UiSelect v-model="sortBy" :options="sortOptions" label="Sort by" />
+          <div>
+            <UiButton
+              :icon="sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'"
+              @click="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'"
+            >
+              {{ sortOrder === 'asc' ? 'Ascending' : 'Descending' }}
+            </UiButton>
+          </div>
+        </div>
+        <template v-if="selectedResults.length > 0" #footer>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm text-ink-secondary" role="status">{{ selectedResults.length }} selected</span>
+            <UiButton size="sm" variant="primary" icon="check" :disabled="processing" @click="bulkApprove">Approve all</UiButton>
+            <UiButton size="sm" variant="danger" icon="close" :disabled="processing" @click="bulkReject">Reject all</UiButton>
+            <UiButton size="sm" variant="ghost" @click="selectedResults = []">Clear</UiButton>
+          </div>
+        </template>
+      </UiPanel>
+
+      <p v-if="filteredResults.length > 0" class="mb-4 flex flex-wrap items-center gap-4 text-xs text-ink-muted">
+        <span><kbd class="result-kbd">J</kbd> / <kbd class="result-kbd">K</kbd> Navigate</span>
+        <span><kbd class="result-kbd">A</kbd> Approve</span>
+        <span><kbd class="result-kbd">R</kbd> Reject</span>
+        <span><kbd class="result-kbd">/</kbd> Focus search</span>
+      </p>
+
+      <UiEmptyState
+        v-if="filteredResults.length === 0"
+        title="No results found"
+        body="Try adjusting your search or filters"
+        spot="patterns/empty-loading-states"
+      />
+
+      <div v-else class="space-y-6">
+        <article
+          v-for="(result, index) in filteredResults"
+          :key="result.id"
+          :ref="el => { if (el) resultRefs[index] = el }"
+          class="result-card"
+          :class="{
+            'result-card-current': selectedIndex === index,
+            'result-card-picked': selectedResults.includes(result.id),
+          }"
+          :aria-label="result.testName"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div class="flex flex-wrap items-center gap-3">
+              <UiCheckbox
+                :model-value="selectedResults.includes(result.id)"
+                @update:model-value="toggleResultSelection(result.id)"
+              >
+                <span class="sr-only">Select {{ result.testName }}</span>
+              </UiCheckbox>
+              <UiChip :tone="resultTone(result.status)">{{ result.status }}</UiChip>
+              <h3 class="text-lg font-semibold text-ink-strong">{{ result.testName }}</h3>
+              <UiChip v-if="selectedIndex === index" tone="accent">Selected</UiChip>
+            </div>
+            <div class="flex items-center gap-2">
+              <UiButton
+                v-if="result.status === 'failed' || result.status === 'new'"
+                size="sm"
+                variant="primary"
+                icon="check"
+                :disabled="result.approved || processing"
+                @click="approveDiff(result.id)"
+              >
+                {{ result.approved ? 'Approved' : 'Approve' }}
+              </UiButton>
+              <UiButton
+                v-if="result.status === 'failed'"
+                size="sm"
+                variant="danger"
+                icon="close"
+                :disabled="processing"
+                @click="rejectDiff(result.id)"
+              >
+                Reject
+              </UiButton>
+            </div>
+          </div>
+
+          <EnhancedDiffViewer
+            v-if="result.baselineImageUrl || result.currentImageUrl"
+            :baseline-image="result.baselineImageUrl"
+            :current-image="result.currentImageUrl"
+            :diff-image="result.diffImageUrl"
+            :alt-text="result.testName"
+            :height="500"
+          />
+
+          <p v-if="result.diffPercentage !== undefined" class="mt-4 text-sm text-ink-secondary">
+            Diff percentage: <span class="font-semibold text-ink">{{ result.diffPercentage }}%</span>
+          </p>
+        </article>
+      </div>
+    </template>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import { useDarkMode } from '../composables/useDarkMode.js';
-import { useNotice } from '../composables/useNotice.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import ImageComparisonSlider from '../components/ImageComparisonSlider.vue';
 import EnhancedDiffViewer from '../components/EnhancedDiffViewer.vue';
-import DatePicker from '../components/DatePicker.vue';
-import Dropdown from '../components/Dropdown.vue';
+import {
+  PageHero,
+  PageShell,
+  UiButton,
+  UiCheckbox,
+  UiChip,
+  UiEmptyState,
+  UiInput,
+  UiPanel,
+  UiSegmented,
+  UiSelect,
+  UiSpinner,
+  UiStat,
+} from '../components/ui';
+import { useNotice } from '../composables/useNotice.js';
 import apiClient from '../services/api.js';
 
 const route = useRoute();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = useDarkMode();
+const backLink = computed(() => ({ to: `/tools/visual-regression/${route.params.id}`, label: 'Project' }));
 const { notice, showNotice, clearNotice } = useNotice();
+// The search field, focused by the "/" shortcut
+const searchInput = ref(null);
 const testRun = ref(null);
 const results = ref([]);
 const loading = ref(false);
@@ -338,7 +190,6 @@ const selectedIndex = ref(-1);
 const resultRefs = ref([]);
 const processing = ref(false);
 const autoRefresh = ref(false);
-const viewModes = ref({}); // Per-result view modes
 const dateRange = ref({ from: '', to: '' });
 const sortBy = ref('name');
 const sortOrder = ref('asc');
@@ -579,25 +430,11 @@ const bulkReject = async () => {
   await runBulk((r) => r.status === 'failed', requestReject, 'rejected');
 };
 
-const getStatusClass = (status) => {
-  const classes = {
-    pending: 'text-yellow-600',
-    running: 'text-blue-600',
-    completed: 'text-green-600',
-    failed: 'text-red-600',
-  };
-  return classes[status] || classes.pending;
-};
+const runTone = (status) =>
+  ({ pending: 'warning', running: 'info', completed: 'success', failed: 'danger' })[status] ?? 'warning';
 
-const getResultStatusClass = (status) => {
-  const classes = {
-    passed: isDarkMode.value ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700',
-    failed: isDarkMode.value ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700',
-    new: isDarkMode.value ? 'bg-orange-900/30 text-orange-400' : 'bg-orange-100 text-orange-700',
-    removed: isDarkMode.value ? 'bg-gray-900/30 text-gray-400' : 'bg-gray-100 text-gray-700',
-  };
-  return classes[status] || classes.passed;
-};
+const resultTone = (status) =>
+  ({ passed: 'success', failed: 'danger', new: 'warning', removed: 'neutral' })[status] ?? 'success';
 
 const formatDate = (dateString) => {
   if (!dateString) return 'Never';
@@ -708,8 +545,7 @@ const handleKeydown = (e) => {
       break;
     case '/': {
       e.preventDefault();
-      const searchInput = document.querySelector('input[placeholder*="Search"]');
-      if (searchInput) searchInput.focus();
+      searchInput.value?.focus();
       break;
     }
   }
@@ -764,3 +600,18 @@ onBeforeUnmount(() => {
   stopAutoRefresh();
 });
 </script>
+
+<style scoped>
+.result-card {
+  @apply rounded-card border border-line bg-surface-raised p-6 transition-all;
+}
+.result-card-picked {
+  @apply border-success-border;
+}
+.result-card-current {
+  @apply border-accent-highlight outline outline-2 outline-focus;
+}
+.result-kbd {
+  @apply rounded-control bg-fill px-2 py-1 font-code text-ink;
+}
+</style>

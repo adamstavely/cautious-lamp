@@ -1,597 +1,283 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :class="drawerOpen ? 'ml-64' : 'ml-12'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Token Relationship Mapping
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Visualize how design tokens connect, reference each other, and understand the impact of changes.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-                    <defs>
-                      <linearGradient id="tokenRelGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Central node -->
-                    <circle cx="100" cy="100" r="20" fill="url(#tokenRelGradient)" opacity="0.9" />
-                    <!-- Connected nodes -->
-                    <circle cx="50" cy="60" r="12" fill="url(#tokenRelGradient)" opacity="0.6" />
-                    <circle cx="150" cy="60" r="12" fill="url(#tokenRelGradient)" opacity="0.6" />
-                    <circle cx="50" cy="140" r="12" fill="url(#tokenRelGradient)" opacity="0.6" />
-                    <circle cx="150" cy="140" r="12" fill="url(#tokenRelGradient)" opacity="0.6" />
-                    <circle cx="100" cy="40" r="12" fill="url(#tokenRelGradient)" opacity="0.6" />
-                    <circle cx="100" cy="160" r="12" fill="url(#tokenRelGradient)" opacity="0.6" />
-                    <!-- Connection lines -->
-                    <line x1="100" y1="100" x2="50" y2="60" stroke="url(#tokenRelGradient)" stroke-width="2" opacity="0.4" />
-                    <line x1="100" y1="100" x2="150" y2="60" stroke="url(#tokenRelGradient)" stroke-width="2" opacity="0.4" />
-                    <line x1="100" y1="100" x2="50" y2="140" stroke="url(#tokenRelGradient)" stroke-width="2" opacity="0.4" />
-                    <line x1="100" y1="100" x2="150" y2="140" stroke="url(#tokenRelGradient)" stroke-width="2" opacity="0.4" />
-                    <line x1="100" y1="100" x2="100" y2="40" stroke="url(#tokenRelGradient)" stroke-width="2" opacity="0.4" />
-                    <line x1="100" y1="100" x2="100" y2="160" stroke="url(#tokenRelGradient)" stroke-width="2" opacity="0.4" />
-                    <!-- Secondary connections -->
-                    <line x1="50" y1="60" x2="100" y2="40" stroke="url(#tokenRelGradient)" stroke-width="1.5" opacity="0.3" />
-                    <line x1="150" y1="60" x2="100" y2="40" stroke="url(#tokenRelGradient)" stroke-width="1.5" opacity="0.3" />
-                    <line x1="50" y1="140" x2="100" y2="160" stroke="url(#tokenRelGradient)" stroke-width="1.5" opacity="0.3" />
-                    <line x1="150" y1="140" x2="100" y2="160" stroke="url(#tokenRelGradient)" stroke-width="1.5" opacity="0.3" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+  <PageShell width="wide">
+    <PageHero
+      :back="{ to: '/tokens', label: 'Tokens' }"
+      title="Token relationship mapping"
+      lead="Visualize how design tokens connect, reference each other, and understand the impact of changes."
+      spot="foundations/token-relationships"
+      size="tool"
+    />
 
-        <!-- Controls -->
-        <div class="max-w-7xl mx-auto mb-6">
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="flex flex-wrap items-center gap-4">
-              <!-- Search -->
-              <div class="flex-1 min-w-[200px]">
-                <input
-                  v-model="searchQuery"
-                  type="text"
-                  placeholder="Search tokens..."
-                  class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-800 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
+    <UiPanel class="mb-6">
+      <div class="flex flex-wrap items-end gap-4">
+        <div class="flex-1 min-w-48">
+          <UiInput v-model="searchQuery" type="search" icon="search" label="Search tokens" placeholder="Search tokens..." />
+        </div>
+        <UiSegmented v-model="viewMode" :options="viewOptions" label="View" />
+        <UiButton icon="restart_alt" @click="resetView">Reset view</UiButton>
+      </div>
+    </UiPanel>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 min-w-0">
+        <!-- Tree View -->
+        <UiPanel v-if="viewMode === 'tree'" title="Reference chains">
+          <UiSpinner v-if="loading" label="Loading relationships…" />
+          <ul v-else class="space-y-3">
+            <li v-for="chain in referenceChains" :key="chain.root" class="rounded-tile border border-line-faint bg-surface-sunken p-4">
+              <div class="flex items-start gap-3">
+                <UiButton
+                  variant="ghost"
+                  size="sm"
+                  icon-only
+                  :icon="expandedChains.has(chain.root) ? 'expand_more' : 'chevron_right'"
+                  :label="`${expandedChains.has(chain.root) ? 'Collapse' : 'Expand'} ${chain.root}`"
+                  :aria-expanded="expandedChains.has(chain.root)"
+                  @click="toggleChain(chain.root)"
                 />
+                <div class="flex-1 min-w-0">
+                  <div class="flex flex-wrap items-center gap-2 mb-2">
+                    <span class="font-code text-sm font-semibold text-ink-strong">{{ chain.root }}</span>
+                    <UiChip v-if="getTokenData(chain.root)?.isBase" tone="success">Base</UiChip>
+                    <span class="text-xs font-code text-ink-secondary">{{ getTokenData(chain.root)?.value }}</span>
+                  </div>
+                  <div v-if="expandedChains.has(chain.root)" class="ml-6 space-y-2 mt-2">
+                    <div v-for="(ref, index) in chain.references" :key="ref" class="flex items-center gap-2">
+                      <span class="text-xs text-ink-muted" aria-hidden="true">{{ '─'.repeat(index + 1) }}→</span>
+                      <button type="button" class="token-link" @click="selectToken(ref)">{{ ref }}</button>
+                      <span class="text-xs font-code text-ink-muted">{{ getTokenData(ref)?.value }}</span>
+                    </div>
+                    <p v-if="chain.references.length === 0" class="text-xs italic text-ink-muted">No references</p>
+                  </div>
+                </div>
               </div>
+            </li>
+          </ul>
+        </UiPanel>
 
-              <!-- View Toggle -->
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">View:</span>
-                <button
-                  @click="viewMode = 'tree'"
-                  class="px-3 py-1.5 rounded text-sm font-medium transition-colors"
-                  :class="viewMode === 'tree'
-                    ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
-                    : (isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')"
-                >
-                  Tree
-                </button>
-                <button
-                  @click="viewMode = 'table'"
-                  class="px-3 py-1.5 rounded text-sm font-medium transition-colors"
-                  :class="viewMode === 'table'
-                    ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
-                    : (isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')"
-                >
-                  Table
-                </button>
-                <button
-                  @click="viewMode = 'graph'"
-                  class="px-3 py-1.5 rounded text-sm font-medium transition-colors"
-                  :class="viewMode === 'graph'
-                    ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
-                    : (isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')"
-                >
-                  Network
-                </button>
-              </div>
-
-              <!-- Reset View -->
-              <button
-                @click="resetView"
-                class="px-4 py-2 rounded-lg font-medium transition-colors"
-                :class="isDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'"
+        <!-- Table View -->
+        <UiPanel v-if="viewMode === 'table'" title="Token relationships" flush>
+          <UiSpinner v-if="loading" label="Loading relationships…" class="p-6" />
+          <UiTable v-else caption="Tokens with the tokens they reference and are referenced by">
+            <thead>
+              <tr>
+                <th scope="col">Token</th>
+                <th scope="col">Value</th>
+                <th scope="col">References</th>
+                <th scope="col">Referenced by</th>
+                <th scope="col">Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="node in filteredNodes"
+                :key="node.id"
+                class="cursor-pointer"
+                :class="{ 'bg-accent-subtle': selectedToken === node.id }"
+                @click="selectToken(node.id)"
               >
-                Reset View
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Main Content Grid -->
-        <div class="max-w-7xl mx-auto grid lg:grid-cols-3 gap-6">
-          <!-- Main Visualization Area -->
-          <div class="lg:col-span-2">
-            <!-- Tree View -->
-            <div 
-              v-if="viewMode === 'tree'"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">account_tree</span>
-                  Reference Chains
-                </h3>
-              </div>
-
-              <div v-if="loading" class="text-center py-12">
-                <span class="material-symbols-outlined text-5xl mb-4 animate-spin" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-                  refresh
-                </span>
-                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading relationships...</p>
-              </div>
-
-              <div v-else class="space-y-4">
-                <div
-                  v-for="chain in referenceChains"
-                  :key="chain.root"
-                  class="border rounded-lg p-4"
-                  :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'"
-                >
-                  <div class="flex items-start gap-3">
+                <td>
+                  <div class="flex items-center gap-2">
+                    <button type="button" class="token-link font-medium" :aria-pressed="selectedToken === node.id" @click.stop="selectToken(node.id)">{{ node.name }}</button>
+                    <UiChip v-if="node.isBase" tone="success">Base</UiChip>
+                    <UiChip v-if="node.isAlias" tone="info">Alias</UiChip>
+                  </div>
+                </td>
+                <td><span class="font-code text-xs">{{ node.value }}</span></td>
+                <td>
+                  <div class="flex flex-wrap gap-1">
                     <button
-                      @click="toggleChain(chain.root)"
-                      class="mt-1"
+                      v-for="ref in (relationships?.references[node.id] || []).slice(0, 3)"
+                      :key="ref"
+                      type="button"
+                      class="token-pill"
+                      :title="ref"
+                      @click.stop="selectToken(ref)"
                     >
-                      <span class="material-symbols-outlined text-base transition-transform" :class="expandedChains.has(chain.root) ? 'rotate-90' : '', isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        chevron_right
-                      </span>
+                      {{ ref.split('.').pop() }}
                     </button>
-                    <div class="flex-1">
-                      <div class="flex items-center gap-2 mb-2">
-                        <span class="font-mono text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          {{ chain.root }}
-                        </span>
-                        <span 
-                          v-if="getTokenData(chain.root)?.isBase"
-                          class="px-2 py-0.5 rounded text-xs font-medium"
-                          :class="isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700'"
-                        >
-                          Base
-                        </span>
-                        <span class="text-xs font-mono" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                          {{ getTokenData(chain.root)?.value }}
-                        </span>
-                      </div>
-                      <div v-if="expandedChains.has(chain.root)" class="ml-6 space-y-2 mt-2">
-                        <div
-                          v-for="(ref, index) in chain.references"
-                          :key="ref"
-                          class="flex items-center gap-2"
-                        >
-                          <span class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
-                            {{ '─'.repeat(index + 1) }}→
-                          </span>
-                          <button
-                            @click="selectToken(ref)"
-                            class="font-mono text-sm hover:text-indigo-600 transition-colors text-left"
-                            :class="isDarkMode ? 'text-gray-300 hover:text-indigo-400' : 'text-gray-700'"
-                          >
-                            {{ ref }}
-                          </button>
-                          <span class="text-xs font-mono" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                            {{ getTokenData(ref)?.value }}
-                          </span>
-                        </div>
-                        <div v-if="chain.references.length === 0" class="text-xs italic" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                          No references
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Table View -->
-            <div 
-              v-if="viewMode === 'table'"
-              class="rounded-lg shadow-sm border overflow-hidden"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">table_chart</span>
-                  Token Relationships
-                </h3>
-              </div>
-
-              <div v-if="loading" class="text-center py-12">
-                <span class="material-symbols-outlined text-5xl mb-4 animate-spin" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-                  refresh
-                </span>
-                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading relationships...</p>
-              </div>
-
-              <div v-else class="overflow-x-auto">
-                <table class="w-full">
-                  <thead :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                    <tr>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Token</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Value</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">References</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Referenced By</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Type</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y" :class="isDarkMode ? 'divide-gray-700' : 'divide-gray-200'">
-                    <tr
-                      v-for="node in filteredNodes"
-                      :key="node.id"
-                      class="hover:bg-opacity-50 transition-colors cursor-pointer"
-                      :class="selectedToken === node.id
-                        ? (isDarkMode ? 'bg-indigo-900/20' : 'bg-indigo-50')
-                        : (isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50')"
-                      @click="selectToken(node.id)"
-                    >
-                      <td class="px-6 py-4">
-                        <div class="flex items-center gap-2">
-                          <span class="font-mono text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                            {{ node.name }}
-                          </span>
-                          <span 
-                            v-if="node.isBase"
-                            class="px-2 py-0.5 rounded text-xs font-medium"
-                            :class="isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700'"
-                          >
-                            Base
-                          </span>
-                          <span 
-                            v-if="node.isAlias"
-                            class="px-2 py-0.5 rounded text-xs font-medium"
-                            :class="isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'"
-                          >
-                            Alias
-                          </span>
-                        </div>
-                      </td>
-                      <td class="px-6 py-4">
-                        <span class="font-mono text-xs" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                          {{ node.value }}
-                        </span>
-                      </td>
-                      <td class="px-6 py-4">
-                        <div class="flex flex-wrap gap-1">
-                          <button
-                            v-for="ref in (relationships?.references[node.id] || []).slice(0, 3)"
-                            :key="ref"
-                            @click.stop="selectToken(ref)"
-                            class="px-2 py-0.5 rounded text-xs font-mono hover:bg-indigo-100 dark:hover:bg-indigo-900/20 transition-colors"
-                            :class="isDarkMode ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'"
-                          >
-                            {{ ref.split('.').pop() }}
-                          </button>
-                          <span 
-                            v-if="(relationships?.references[node.id] || []).length > 3"
-                            class="text-xs"
-                            :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
-                          >
-                            +{{ (relationships?.references[node.id] || []).length - 3 }} more
-                          </span>
-                        </div>
-                      </td>
-                      <td class="px-6 py-4">
-                        <div class="flex flex-wrap gap-1">
-                          <button
-                            v-for="ref in (relationships?.referencedBy[node.id] || []).slice(0, 3)"
-                            :key="ref"
-                            @click.stop="selectToken(ref)"
-                            class="px-2 py-0.5 rounded text-xs font-mono hover:bg-indigo-100 dark:hover:bg-indigo-900/20 transition-colors"
-                            :class="isDarkMode ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'"
-                          >
-                            {{ ref.split('.').pop() }}
-                          </button>
-                          <span 
-                            v-if="(relationships?.referencedBy[node.id] || []).length > 3"
-                            class="text-xs"
-                            :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
-                          >
-                            +{{ (relationships?.referencedBy[node.id] || []).length - 3 }} more
-                          </span>
-                        </div>
-                      </td>
-                      <td class="px-6 py-4">
-                        <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'">
-                          {{ node.category }}
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Graph/Network View -->
-            <div 
-              v-if="viewMode === 'graph'"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">account_tree</span>
-                  Network View
-                </h3>
-                <div class="flex items-center gap-4 text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  <span class="flex items-center gap-1">
-                    <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                    Reference
-                  </span>
-                  <span class="flex items-center gap-1">
-                    <span class="w-3 h-3 rounded-full bg-green-500"></span>
-                    Semantic
-                  </span>
-                  <span class="flex items-center gap-1">
-                    <span class="w-3 h-3 rounded-full bg-purple-500"></span>
-                    Scale
-                  </span>
-                </div>
-              </div>
-
-              <!-- Graph Container -->
-              <div 
-                ref="graphContainer"
-                class="w-full h-[600px] border rounded-lg overflow-auto relative"
-                :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'"
-              >
-                <svg
-                  ref="graphSvg"
-                  :width="graphWidth"
-                  :height="graphHeight"
-                  class="absolute"
-                >
-                  <!-- Edges -->
-                  <g v-for="edge in filteredEdges" :key="`${edge.from}-${edge.to}`">
-                    <line
-                      :x1="getNodeX(edge.from)"
-                      :y1="getNodeY(edge.from)"
-                      :x2="getNodeX(edge.to)"
-                      :y2="getNodeY(edge.to)"
-                      :stroke="getEdgeColor(edge.type)"
-                      :stroke-width="edge.strength * 2"
-                      :opacity="0.4"
-                      :class="selectedToken && (edge.from === selectedToken || edge.to === selectedToken) ? 'opacity-100' : ''"
-                    />
-                  </g>
-
-                  <!-- Nodes -->
-                  <g v-for="node in filteredNodes" :key="node.id">
-                    <circle
-                      :cx="getNodeX(node.id)"
-                      :cy="getNodeY(node.id)"
-                      :r="getNodeRadius(node)"
-                      :fill="getNodeColor(node)"
-                      :stroke="selectedToken === node.id ? '#6366f1' : 'transparent'"
-                      :stroke-width="selectedToken === node.id ? 3 : 0"
-                      class="cursor-pointer transition-all hover:opacity-80"
-                      @click="selectToken(node.id)"
-                    />
-                    <text
-                      :x="getNodeX(node.id)"
-                      :y="getNodeY(node.id) + getNodeRadius(node) + 15"
-                      :fill="isDarkMode ? '#e5e7eb' : '#374151'"
-                      font-size="10"
-                      text-anchor="middle"
-                      class="pointer-events-none"
-                    >
-                      {{ node.name.split('.').pop() }}
-                    </text>
-                  </g>
-                </svg>
-
-                <!-- Empty State -->
-                <div v-if="loading" class="absolute inset-0 flex items-center justify-center">
-                  <div class="text-center">
-                    <span class="material-symbols-outlined text-5xl mb-4 animate-spin" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-                      refresh
+                    <span v-if="(relationships?.references[node.id] || []).length > 3" class="text-xs text-ink-muted">
+                      +{{ (relationships?.references[node.id] || []).length - 3 }} more
                     </span>
-                    <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading relationships...</p>
                   </div>
-                </div>
-              </div>
+                </td>
+                <td>
+                  <div class="flex flex-wrap gap-1">
+                    <button
+                      v-for="ref in (relationships?.referencedBy[node.id] || []).slice(0, 3)"
+                      :key="ref"
+                      type="button"
+                      class="token-pill"
+                      :title="ref"
+                      @click.stop="selectToken(ref)"
+                    >
+                      {{ ref.split('.').pop() }}
+                    </button>
+                    <span v-if="(relationships?.referencedBy[node.id] || []).length > 3" class="text-xs text-ink-muted">
+                      +{{ (relationships?.referencedBy[node.id] || []).length - 3 }} more
+                    </span>
+                  </div>
+                </td>
+                <td><UiChip>{{ node.category }}</UiChip></td>
+              </tr>
+            </tbody>
+          </UiTable>
+        </UiPanel>
+
+        <!-- Graph/Network View -->
+        <UiPanel v-if="viewMode === 'graph'" title="Network view">
+          <template #actions>
+            <ul class="flex items-center gap-4 text-xs text-ink-secondary" aria-label="Edge types">
+              <li v-for="item in edgeLegend" :key="item.label" class="flex items-center gap-1">
+                <span class="w-3 h-3 rounded-pill" :class="item.swatch" aria-hidden="true"></span>
+                {{ item.label }}
+              </li>
+            </ul>
+          </template>
+
+          <div ref="graphContainer" class="graph-box">
+            <svg ref="graphSvg" :width="graphWidth" :height="graphHeight" class="absolute" role="group" aria-label="Token relationship network">
+              <!-- Edges -->
+              <g v-for="edge in filteredEdges" :key="`${edge.from}-${edge.to}`">
+                <line
+                  :x1="getNodeX(edge.from)"
+                  :y1="getNodeY(edge.from)"
+                  :x2="getNodeX(edge.to)"
+                  :y2="getNodeY(edge.to)"
+                  :class="[getEdgeColor(edge.type), selectedToken && (edge.from === selectedToken || edge.to === selectedToken) ? 'opacity-100' : 'opacity-40']"
+                  :stroke-width="edge.strength * 2"
+                />
+              </g>
+
+              <!-- Nodes -->
+              <g v-for="node in filteredNodes" :key="node.id">
+                <circle
+                  :cx="getNodeX(node.id)"
+                  :cy="getNodeY(node.id)"
+                  :r="getNodeRadius(node)"
+                  :class="[getNodeColor(node), selectedToken === node.id ? 'stroke-accent' : 'stroke-transparent']"
+                  :stroke-width="selectedToken === node.id ? 3 : 0"
+                  class="cursor-pointer transition-all hover:opacity-80"
+                  role="button"
+                  tabindex="0"
+                  :aria-label="node.name"
+                  :aria-pressed="selectedToken === node.id"
+                  @click="selectToken(node.id)"
+                  @keydown.enter.prevent="selectToken(node.id)"
+                  @keydown.space.prevent="selectToken(node.id)"
+                />
+                <text
+                  :x="getNodeX(node.id)"
+                  :y="getNodeY(node.id) + getNodeRadius(node) + 15"
+                  class="fill-ink-secondary pointer-events-none"
+                  font-size="10"
+                  text-anchor="middle"
+                  aria-hidden="true"
+                >
+                  {{ node.name.split('.').pop() }}
+                </text>
+              </g>
+            </svg>
+
+            <div v-if="loading" class="absolute inset-0 flex items-center justify-center">
+              <UiSpinner label="Loading relationships…" />
             </div>
           </div>
+        </UiPanel>
+      </div>
 
-          <!-- Sidebar: Token Details & Impact Analysis -->
-          <div class="space-y-6">
-            <!-- Selected Token Info -->
-            <div 
-              v-if="selectedToken"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">info</span>
-                Token Details
-              </h3>
-              <div v-if="selectedTokenData" class="space-y-3">
-                <div>
-                  <div class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Name</div>
-                  <div class="text-sm font-mono" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ selectedTokenData.name }}</div>
-                </div>
-                <div>
-                  <div class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Value</div>
-                  <div class="text-sm font-mono" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ selectedTokenData.value }}</div>
-                </div>
-                <div>
-                  <div class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Category</div>
-                  <div class="text-sm" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ selectedTokenData.category }}</div>
-                </div>
-                <div>
-                  <div class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Type</div>
-                  <div class="text-sm" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ selectedTokenData.type }}</div>
-                </div>
-                <div class="flex items-center gap-2 pt-2 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                  <span 
-                    v-if="selectedTokenData.isBase"
-                    class="px-2 py-1 rounded text-xs font-medium"
-                    :class="isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700'"
-                  >
-                    Base Token
-                  </span>
-                  <span 
-                    v-if="selectedTokenData.isAlias"
-                    class="px-2 py-1 rounded text-xs font-medium"
-                    :class="isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'"
-                  >
-                    Alias
-                  </span>
-                </div>
-              </div>
+      <!-- Sidebar: Token Details & Impact Analysis -->
+      <div class="space-y-6">
+        <UiPanel v-if="selectedToken" title="Token details" heading-tag="h3">
+          <dl v-if="selectedTokenData" class="space-y-3 text-sm">
+            <div>
+              <dt class="text-xs font-medium text-ink-secondary mb-1">Name</dt>
+              <dd class="font-code text-ink-strong">{{ selectedTokenData.name }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-medium text-ink-secondary mb-1">Value</dt>
+              <dd class="font-code text-ink-strong">{{ selectedTokenData.value }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-medium text-ink-secondary mb-1">Category</dt>
+              <dd class="text-ink-strong">{{ selectedTokenData.category }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-medium text-ink-secondary mb-1">Type</dt>
+              <dd class="text-ink-strong">{{ selectedTokenData.type }}</dd>
+            </div>
+            <div v-if="selectedTokenData.isBase || selectedTokenData.isAlias" class="flex items-center gap-2 pt-3 border-t border-line-faint">
+              <UiChip v-if="selectedTokenData.isBase" tone="success">Base token</UiChip>
+              <UiChip v-if="selectedTokenData.isAlias" tone="info">Alias</UiChip>
+            </div>
+          </dl>
+        </UiPanel>
+
+        <UiPanel v-if="selectedToken && impactAnalysis" title="Impact analysis" heading-tag="h3">
+          <div class="space-y-4">
+            <UiStat label="Total impact" :value="impactAnalysis.totalImpact" />
+
+            <div v-if="impactAnalysis.directlyAffected.length > 0">
+              <h4 class="text-xs font-medium text-ink-secondary mb-2">Directly affected tokens</h4>
+              <ul class="space-y-1">
+                <li v-for="token in impactAnalysis.directlyAffected" :key="token">
+                  <button type="button" class="token-row" @click="selectToken(token)">{{ token }}</button>
+                </li>
+              </ul>
             </div>
 
-            <!-- Impact Analysis -->
-            <div 
-              v-if="selectedToken && impactAnalysis"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">warning</span>
-                Impact Analysis
-              </h3>
-              <div class="space-y-4">
-                <div class="p-3 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Total Impact</div>
-                  <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ impactAnalysis.totalImpact }}
-                  </div>
-                </div>
-
-                <div v-if="impactAnalysis.directlyAffected.length > 0">
-                  <div class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Directly Affected Tokens</div>
-                  <div class="space-y-1">
-                    <div
-                      v-for="token in impactAnalysis.directlyAffected"
-                      :key="token"
-                      class="text-xs px-2 py-1 rounded font-mono cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
-                      :class="isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'"
-                      @click="selectToken(token)"
-                    >
-                      {{ token }}
-                    </div>
-                  </div>
-                </div>
-
-                <div v-if="impactAnalysis.affectedComponents.length > 0">
-                  <div class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Affected Components</div>
-                  <div class="space-y-1">
-                    <div
-                      v-for="component in impactAnalysis.affectedComponents"
-                      :key="component"
-                      class="text-xs px-2 py-1 rounded"
-                      :class="isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'"
-                    >
-                      {{ component }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Relationship Types -->
-            <div 
-              v-if="selectedToken && relationships"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">share</span>
-                Relationships
-              </h3>
-              <div class="space-y-3">
-                <div v-if="relationships.references[selectedToken]?.length > 0">
-                  <div class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">References</div>
-                  <div class="space-y-1">
-                    <div
-                      v-for="token in relationships.references[selectedToken]"
-                      :key="token"
-                      class="text-xs px-2 py-1 rounded font-mono cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
-                      :class="isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'"
-                      @click="selectToken(token)"
-                    >
-                      {{ token }}
-                    </div>
-                  </div>
-                </div>
-                <div v-if="relationships.referencedBy[selectedToken]?.length > 0">
-                  <div class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Referenced By</div>
-                  <div class="space-y-1">
-                    <div
-                      v-for="token in relationships.referencedBy[selectedToken]"
-                      :key="token"
-                      class="text-xs px-2 py-1 rounded font-mono cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
-                      :class="isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'"
-                      @click="selectToken(token)"
-                    >
-                      {{ token }}
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div v-if="impactAnalysis.affectedComponents.length > 0">
+              <h4 class="text-xs font-medium text-ink-secondary mb-2">Affected components</h4>
+              <ul class="space-y-1">
+                <li v-for="component in impactAnalysis.affectedComponents" :key="component" class="text-xs px-2 py-1 rounded-control bg-fill-subtle text-ink">
+                  {{ component }}
+                </li>
+              </ul>
             </div>
           </div>
-        </div>
-        </div>
+        </UiPanel>
+
+        <UiPanel v-if="selectedToken && relationships" title="Relationships" heading-tag="h3">
+          <div class="space-y-3">
+            <div v-if="relationships.references[selectedToken]?.length > 0">
+              <h4 class="text-xs font-medium text-ink-secondary mb-2">References</h4>
+              <ul class="space-y-1">
+                <li v-for="token in relationships.references[selectedToken]" :key="token">
+                  <button type="button" class="token-row" @click="selectToken(token)">{{ token }}</button>
+                </li>
+              </ul>
+            </div>
+            <div v-if="relationships.referencedBy[selectedToken]?.length > 0">
+              <h4 class="text-xs font-medium text-ink-secondary mb-2">Referenced by</h4>
+              <ul class="space-y-1">
+                <li v-for="token in relationships.referencedBy[selectedToken]" :key="token">
+                  <button type="button" class="token-row" @click="selectToken(token)">{{ token }}</button>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </UiPanel>
       </div>
     </div>
-  </div>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import apiClient from '../services/api.js';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDrawer } from '../composables/useDrawer.js';
+import {
+  PageHero,
+  PageShell,
+  UiButton,
+  UiChip,
+  UiInput,
+  UiPanel,
+  UiSegmented,
+  UiSpinner,
+  UiStat,
+  UiTable,
+} from '../components/ui';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const graphContainer = ref(null);
 const graphSvg = ref(null);
 const graphWidth = ref(1200);
@@ -728,26 +414,42 @@ const getNodeRadius = (node) => {
   return 8;
 };
 
+// Series classes (chart tokens) for each token category and edge type
 const getNodeColor = (node) => {
-  const categoryColors = {
-    'colors': '#6366f1',
-    'spacing': '#10b981',
-    'typography': '#f59e0b',
-    'shadows': '#8b5cf6',
-    'borders': '#ec4899',
+  const categoryClasses = {
+    colors: 'fill-chart-1',
+    spacing: 'fill-chart-2',
+    typography: 'fill-chart-3',
+    shadows: 'fill-chart-4',
+    borders: 'fill-chart-5',
   };
-  return categoryColors[node.category] || '#6b7280';
+  return categoryClasses[node.category] || 'fill-chart-neutral';
 };
 
 const getEdgeColor = (type) => {
-  const colors = {
-    'reference': '#3b82f6',
-    'semantic': '#10b981',
-    'scale': '#8b5cf6',
-    'category': '#6b7280',
+  const classes = {
+    reference: 'stroke-chart-1',
+    semantic: 'stroke-chart-2',
+    scale: 'stroke-chart-4',
+    category: 'stroke-chart-neutral',
   };
-  return colors[type] || '#6b7280';
+  return classes[type] || 'stroke-chart-neutral';
 };
+
+const edgeLegend = [
+  { label: 'Reference', swatch: 'bg-chart-1' },
+  { label: 'Semantic', swatch: 'bg-chart-2' },
+  { label: 'Scale', swatch: 'bg-chart-4' },
+];
+
+const viewOptions = [
+  { value: 'tree', label: 'Tree' },
+  { value: 'table', label: 'Table' },
+  { value: 'graph', label: 'Network' },
+];
+
+// The graph box is as tall as the drawing area
+const graphBoxHeight = computed(() => `${graphHeight.value}px`);
 
 // Methods
 const loadRelationships = async (tokenName = null) => {
@@ -873,48 +575,21 @@ watch([filteredNodes, filteredEdges], () => {
   });
 });
 
-// Dark mode observer
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(async () => {
-  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-    drawerOpen.value = true;
-    sessionStorage.removeItem('openDrawerOnLoad');
-  }
-
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-
-  await loadRelationships();
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
+onMounted(loadRelationships);
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.graph-box {
+  @apply relative w-full overflow-auto rounded-tile border border-line-faint bg-surface-sunken;
+  height: v-bind(graphBoxHeight);
+}
+.token-link {
+  @apply font-code text-sm text-left text-ink rounded-control hover:text-accent-text focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.token-pill {
+  @apply px-2 py-0.5 rounded-control text-xs font-code bg-fill-subtle text-ink hover:bg-fill-hover focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.token-row {
+  @apply block w-full text-left text-xs px-2 py-1 rounded-control font-code bg-fill-subtle text-ink hover:bg-fill-hover focus-visible:outline focus-visible:outline-2 outline-focus;
 }
 </style>
-

@@ -1,347 +1,157 @@
 <template>
-  <div class="space-y-6">
-    <!-- Color Variants Generator -->
-    <div 
-      class="rounded-lg shadow-sm border p-6 transition-colors duration-300"
-      :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-    >
-      <h3 
-        class="text-lg font-semibold mb-4 flex items-center gap-2 transition-colors duration-300"
-        :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-      >
-        <span 
-          class="material-symbols-outlined text-xl transition-colors duration-300"
-          :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
-        >
-          auto_fix_high
-        </span>
-        Color Variants
-      </h3>
-      <p 
-        class="text-sm mb-4 transition-colors duration-300"
-        :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-      >
-        Generate tints, shades, and dark variants for each color
-      </p>
-      <button
-        v-if="variants.length === 0"
-        @click.prevent="generateVariants"
-        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
-      >
-        Generate Variants
-      </button>
-      
-      <div v-if="variants.length > 0" class="mt-4">
-        <p 
-          class="text-sm mb-2 transition-colors duration-300"
-          :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-        >
-          {{ variants.length }} variants generated
-        </p>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div
-            v-for="(variant, index) in variants"
-            :key="`variant-${variant.hex}-${index}-${variant.type}`"
-            class="cursor-pointer group"
-            @click="addVariant(variant)"
-          >
-            <div
-              class="w-full h-20 rounded-lg shadow-md mb-2 border transition-colors duration-300"
-              :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-              :style="{ backgroundColor: variant.hex }"
-            ></div>
-            <div 
-              class="text-xs text-center transition-colors duration-300"
-              :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-            >
-              {{ variant.type }}
-          </div>
-            <div 
-              class="text-xs text-center font-mono transition-colors duration-300"
-              :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'"
-            >
-              {{ variant.hex }}
-        </div>
-      </div>
-        </div>
-      </div>
-      <div 
-        v-else-if="variants.length === 0 && palette && palette.colors && palette.colors.length > 0" 
-        class="mt-4 text-sm transition-colors duration-300"
-        :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'"
-      >
-        Click "Generate Variants" to create tints and shades
-      </div>
-    </div>
+  <div class="flex flex-col gap-6">
+    <InlineNotice :notice="notice" @dismiss="clearNotice" />
 
-    <!-- Semantic Color Validation -->
-    <div 
-      class="rounded-lg shadow-sm border p-6 transition-colors duration-300"
-      :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-    >
-      <h3 
-        class="text-lg font-semibold mb-4 flex items-center gap-2 transition-colors duration-300"
-        :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-      >
-        <span 
-          class="material-symbols-outlined text-xl transition-colors duration-300"
-          :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
-        >
-          label
-        </span>
-        Semantic Color Validation
-      </h3>
-      <div class="grid grid-cols-4 gap-4">
-        <div
-          v-for="semantic in semanticTypes"
-          :key="semantic.type"
-          class="border rounded-lg p-4 transition-colors duration-300"
-          :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-        >
-          <div class="flex items-center gap-2 mb-2">
-            <span class="material-symbols-outlined text-lg" :style="{ color: semantic.color }">
-              {{ semantic.icon }}
-            </span>
-            <span 
-              class="font-semibold transition-colors duration-300"
-              :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-            >
-              {{ semantic.label }}
-            </span>
-          </div>
-          <div v-if="semanticMatches[semantic.type]" class="text-sm text-green-600 flex items-center gap-1 mb-2">
-            <span class="material-symbols-outlined text-sm">check</span>
+    <!-- Color variants -->
+    <UiPanel title="Color variants" description="Generate tints, shades, and dark variants for each color" heading-tag="h3">
+      <div v-if="variants.length === 0" class="flex flex-col items-start gap-3">
+        <UiButton variant="primary" icon="auto_fix_high" label="Generate variants" @click.prevent="generateVariants" />
+        <p v-if="palette && palette.colors && palette.colors.length > 0" class="text-sm text-ink-muted">
+          Click "Generate variants" to create tints and shades
+        </p>
+      </div>
+
+      <div v-else>
+        <p class="text-sm mb-3 text-ink-secondary">{{ variants.length }} variants generated</p>
+        <ul class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <li v-for="(variant, index) in variants" :key="`variant-${variant.hex}-${index}-${variant.type}`">
+            <UiColorSample
+              tag="button"
+              :color="variant.hex"
+              class="block w-full h-20 rounded-tile border shadow-control mb-2 transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 outline-focus"
+              :aria-label="`Add ${variant.type} ${variant.hex} to the palette`"
+              @click="addVariant(variant)"
+            />
+            <p class="text-xs text-center text-ink-secondary">{{ variant.type }}</p>
+            <p class="text-xs text-center font-code text-ink-muted">{{ variant.hex }}</p>
+          </li>
+        </ul>
+      </div>
+    </UiPanel>
+
+    <!-- Semantic color validation -->
+    <UiPanel title="Semantic color validation" description="Check that the palette has success, error, warning and info colors." heading-tag="h3">
+      <ul class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <li v-for="semantic in semanticTypes" :key="semantic.type" class="semantic-card">
+          <p class="flex items-center gap-2 mb-2">
+            <span class="material-symbols-outlined text-lg" :class="semanticIconClass[semantic.type]" aria-hidden="true">{{ semantic.icon }}</span>
+            <span class="font-semibold text-ink-strong">{{ semantic.label }}</span>
+          </p>
+
+          <p v-if="semanticMatches[semantic.type]" class="text-sm text-success flex items-center gap-1 mb-2">
+            <span class="material-symbols-outlined text-sm" aria-hidden="true">check</span>
             {{ semanticMatches[semantic.type].name || semanticMatches[semantic.type].hex }}
+          </p>
+          <div v-else class="mb-2 flex flex-col items-start gap-2">
+            <p class="text-sm text-ink-muted">No suitable color found</p>
+            <UiButton size="sm" label="Suggest color" @click="generateSemanticSuggestion(semantic.type)" />
           </div>
-          <div v-else class="mb-2">
-            <div 
-              class="text-sm mb-2 transition-colors duration-300"
-              :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
-            >
-              No suitable color found
-            </div>
-            <button
-              @click="generateSemanticSuggestion(semantic.type)"
-              class="text-xs px-2 py-1 rounded hover:bg-indigo-100 transition-colors duration-300"
-              :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300 hover:bg-indigo-900/50' : 'bg-indigo-50 text-indigo-700'"
-            >
-              Suggest Color
-            </button>
-          </div>
-          
-          <!-- Show suggestion if available -->
-          <div 
-            v-if="semanticSuggestions[semantic.type]" 
-            class="mt-2 p-2 rounded border transition-colors duration-300"
-            :class="isDarkMode ? 'bg-slate-700 border-gray-600' : 'bg-gray-50 border-gray-200'"
-          >
+
+          <!-- Suggestion -->
+          <div v-if="semanticSuggestions[semantic.type]" class="semantic-suggestion">
             <div class="flex items-center gap-2 mb-2">
-              <div
-                class="w-12 h-12 rounded border transition-colors duration-300"
-                :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                :style="{ backgroundColor: semanticSuggestions[semantic.type].hex }"
-              ></div>
-              <div class="flex-1">
-                <div 
-                  class="text-xs font-mono transition-colors duration-300"
-                  :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                >
-                  {{ semanticSuggestions[semantic.type].hex }}
-                </div>
-                <div 
-                  class="text-xs transition-colors duration-300"
-                  :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-                >
-                  {{ semanticSuggestions[semantic.type].name }}
-                </div>
+              <UiSwatch :color="semanticSuggestions[semantic.type].hex" size="lg" :label="`Suggested ${semantic.label.toLowerCase()} color ${semanticSuggestions[semantic.type].hex}`" />
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-code text-ink-strong">{{ semanticSuggestions[semantic.type].hex }}</p>
+                <p class="text-xs text-ink-secondary">{{ semanticSuggestions[semantic.type].name }}</p>
               </div>
-              <button
-                @click="addSemanticSuggestion(semantic.type)"
-                class="text-xs px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
-              >
-                Add
-              </button>
+              <UiButton variant="primary" size="sm" label="Add" @click="addSemanticSuggestion(semantic.type)" />
             </div>
-            <button
-              @click="generateSemanticSuggestion(semantic.type)"
-              class="text-xs transition-colors duration-300"
-              :class="isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-800'"
-            >
-              Generate Another
-            </button>
+            <UiButton variant="ghost" size="sm" icon="refresh" label="Generate another" @click="generateSemanticSuggestion(semantic.type)" />
           </div>
-        </div>
-      </div>
-    </div>
+        </li>
+      </ul>
+    </UiPanel>
 
-    <!-- Color Scale Generator -->
-    <div 
-      class="rounded-lg shadow-sm border p-6 transition-colors duration-300"
-      :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
+    <!-- Color scale generator -->
+    <UiPanel
+      title="Color scale generator"
+      description="Generate complete color scales (50-900) for all colors in your palette, similar to Tailwind CSS"
+      heading-tag="h3"
     >
-      <h3 
-        class="text-lg font-semibold mb-4 flex items-center gap-2 transition-colors duration-300"
-        :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-      >
-        <span 
-          class="material-symbols-outlined text-xl transition-colors duration-300"
-          :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
-        >
-          format_color_fill
-        </span>
-        Color Scale Generator
-      </h3>
-      <p 
-        class="text-sm mb-4 transition-colors duration-300"
-        :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-      >
-        Generate complete color scales (50-900) for all colors in your palette, similar to Tailwind CSS
-      </p>
-      <button
-        v-if="colorScales.length === 0"
-        @click.prevent="generateColorScale"
-        :disabled="!palette?.colors || palette.colors.length === 0"
-        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
-      >
-        Generate Color Scales
-      </button>
-      
-      <div v-if="colorScales.length > 0" class="mt-4 relative">
-        <p 
-          class="text-sm mb-2 transition-colors duration-300"
-          :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-        >
-          {{ colorScales.length }} color scale(s) generated
-        </p>
-        <!-- Transparent blue background for the 500 column - spans full height -->
-        <div 
-          v-if="colorScales.length > 0 && colorScales[0].shades.some(s => s.weight === 500)"
-          class="absolute pointer-events-none"
-          :style="{
-            left: getColumn500Position() + '%',
-            width: (100 / (colorScales[0]?.shades.length || 1)) + '%',
-            top: '2rem',
-            bottom: '0',
-            backgroundColor: 'rgba(79, 70, 229, 0.1)',
-            borderRadius: '0.5rem'
-          }"
-        ></div>
-        <div
-          v-for="(scale, scaleIndex) in colorScales"
-          :key="scaleIndex"
-          class="mb-6 relative"
-        >
-          <div class="mb-2">
-            <div 
-              class="text-sm font-semibold transition-colors duration-300"
-              :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-            >
-              {{ scale.baseColor.name || scale.baseColor.hex }}
-            </div>
-          </div>
+      <div v-if="colorScales.length === 0">
+        <UiButton
+          variant="primary"
+          icon="format_color_fill"
+          label="Generate color scales"
+          :disabled="!palette?.colors || palette.colors.length === 0"
+          @click.prevent="generateColorScale"
+        />
+      </div>
+
+      <div v-else class="relative">
+        <p class="text-sm mb-2 text-ink-secondary">{{ colorScales.length }} color scale(s) generated</p>
+        <!-- Highlight behind the 500 column, the base color that is in the palette -->
+        <div v-if="hasColumn500" class="scale-column-500" aria-hidden="true"></div>
+        <div v-for="(scale, scaleIndex) in colorScales" :key="scaleIndex" class="mb-6 relative">
+          <p class="mb-2 text-sm font-semibold text-ink-strong">{{ scale.baseColor.name || scale.baseColor.hex }}</p>
           <div class="relative mb-8">
-            <!-- Title above the 500 column - only show on first scale -->
-            <div v-if="scaleIndex === 0 && scale.shades.some(s => s.weight === 500)" class="absolute left-0 right-0 flex z-10" style="bottom: calc(100% - 1px);">
-              <div
-                v-for="(shade, shadeIndex) in scale.shades"
-                :key="shadeIndex"
-                class="flex-1 relative"
-              >
-                <div v-if="shade.weight === 500" class="w-full">
-                  <div class="bg-indigo-600 text-white text-xs font-semibold py-1 rounded-b-none rounded-t text-center w-full">
-                    This color is in your palette
-                  </div>
-                </div>
+            <!-- Label above the 500 column, on the first scale only -->
+            <div v-if="scaleIndex === 0 && scale.shades.some((s) => s.weight === 500)" class="absolute left-0 right-0 bottom-full z-10 flex" aria-hidden="true">
+              <div v-for="(shade, shadeIndex) in scale.shades" :key="shadeIndex" class="flex-1">
+                <p v-if="shade.weight === 500" class="scale-500-label">This color is in your palette</p>
               </div>
             </div>
-            <div 
-              class="flex rounded-lg border overflow-hidden transition-colors duration-300"
-              :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-            >
-              <div
-                v-for="(shade, shadeIndex) in scale.shades"
-                :key="shadeIndex"
-                class="flex-1 h-16 flex flex-col items-center justify-center cursor-pointer hover:opacity-90 transition-opacity relative"
-                :style="{ 
-                  backgroundColor: shade.hex,
-                  boxShadow: isShadeInPalette(shade.hex) ? 'inset 0 0 0 3px #4f46e5' : 'none'
-                }"
-                @click="addSingleShade(shade)"
-                :title="`${shade.weight}: ${shade.hex}`"
-              >
-                <div class="text-xs font-semibold" :style="getTextColor(shade.hex)">{{ shade.weight }}</div>
-                <div class="text-xs font-mono mt-1" :style="getTextColor(shade.hex)">{{ shade.hex }}</div>
-                <div v-if="isShadeInPalette(shade.hex)" class="absolute top-1 right-1 w-3 h-3 bg-indigo-600 rounded-full border-2 border-white shadow-md"></div>
-              </div>
-            </div>
+            <ul class="flex rounded-field border border-line overflow-hidden" :aria-label="`${scale.baseColor.name || scale.baseColor.hex} scale`">
+              <li v-for="(shade, shadeIndex) in scale.shades" :key="shadeIndex" class="flex-1">
+                <UiColorSample
+                  tag="button"
+                  :color="shade.hex"
+                  :text-color="getTextColor(shade.hex)"
+                  class="shade-cell"
+                  :class="{ 'shade-in-palette': isShadeInPalette(shade.hex) }"
+                  :title="`${shade.weight}: ${shade.hex}`"
+                  :aria-pressed="isShadeInPalette(shade.hex)"
+                  :aria-label="`${shade.weight} ${shade.hex}: ${isShadeInPalette(shade.hex) ? 'in the palette, select to remove' : 'select to add to the palette'}`"
+                  @click="addSingleShade(shade)"
+                >
+                  <span class="text-xs font-semibold">{{ shade.weight }}</span>
+                  <span class="text-xs font-code mt-1">{{ shade.hex }}</span>
+                  <span v-if="isShadeInPalette(shade.hex)" class="shade-dot" aria-hidden="true"></span>
+                </UiColorSample>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
-    </div>
+    </UiPanel>
 
-    <!-- Dark Mode Generator -->
-    <div 
-      class="rounded-lg shadow-sm border p-6 transition-colors duration-300"
-      :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-    >
-      <h3 
-        class="text-lg font-semibold mb-4 flex items-center gap-2 transition-colors duration-300"
-        :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-      >
-        <span 
-          class="material-symbols-outlined text-xl transition-colors duration-300"
-          :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
-        >
-          dark_mode
-        </span>
-        Dark Mode Palette Generator
-      </h3>
-      <p 
-        class="text-sm mb-4 transition-colors duration-300"
-        :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-      >
-        Generate dark mode variants optimized for dark backgrounds
-      </p>
-      <button
-        v-if="darkModeColors.length === 0"
-        @click.prevent="generateDarkModePalette"
-        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
-      >
-        Generate Dark Mode Variants
-      </button>
-      
-      <div v-if="darkModeColors.length > 0" class="mt-4">
-        <div class="bg-gray-900 p-6 rounded-lg">
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div
-              v-for="(color, index) in darkModeColors"
-              :key="`dark-${color.hex}-${index}`"
-            >
-              <div
-                class="w-full h-16 rounded-lg shadow-md mb-2 border border-gray-700"
-                :style="{ backgroundColor: color.hex }"
-              ></div>
-              <div class="text-xs text-gray-400 font-mono text-center">{{ color.hex }}</div>
-              <div v-if="color.name" class="text-xs text-gray-500 text-center">{{ color.name }}</div>
-            </div>
-          </div>
-        </div>
-        <button
-          @click="addDarkModeColors"
-          class="mt-4 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
-        >
-          Add Dark Mode Colors to Palette
-        </button>
+    <!-- Dark mode generator -->
+    <UiPanel title="Dark mode palette generator" description="Generate dark mode variants optimized for dark backgrounds" heading-tag="h3">
+      <div v-if="darkModeColors.length === 0">
+        <UiButton variant="primary" icon="dark_mode" label="Generate dark mode variants" @click.prevent="generateDarkModePalette" />
       </div>
-    </div>
 
+      <div v-else class="flex flex-col items-start gap-4">
+        <!-- A dark stage, whatever the page theme, to judge the colors on -->
+        <div class="dark-stage" data-theme="dark">
+          <ul class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <li v-for="(color, index) in darkModeColors" :key="`dark-${color.hex}-${index}`">
+              <UiColorSample :color="color.hex" class="w-full h-16 rounded-tile border shadow-control mb-2" role="img" :aria-label="`${color.name || 'Color'} ${color.hex}`" />
+              <p class="text-xs font-code text-center text-ink-secondary">{{ color.hex }}</p>
+              <p v-if="color.name" class="text-xs text-center text-ink-muted">{{ color.name }}</p>
+            </li>
+          </ul>
+        </div>
+        <UiButton icon="add" label="Add dark mode colors to palette" @click="addDarkModeColors" />
+      </div>
+    </UiPanel>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import InlineNotice from './InlineNotice.vue';
+import UiColorSample from './ui/UiColorSample.vue';
+import { UiButton, UiPanel, UiSwatch } from './ui';
+import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+/**
+ * Extra palette tools for the palette builder: variants, semantic colour
+ * checks and suggestions, 50–900 scales and dark-mode variants. Emits
+ * `update-palette` with the new palette and `update-generated-data` for export.
+ */
+const { notice, showNotice, clearNotice } = useNotice();
 
 const props = defineProps({
   palette: {
@@ -368,6 +178,7 @@ const paletteDebug = computed(() => {
 const variants = ref([]);
 const semanticMatches = ref({});
 const semanticSuggestions = ref({});
+const semanticIconClass = { success: 'text-success', error: 'text-danger', warning: 'text-warning', info: 'text-info' };
 const semanticTypes = [
   { type: 'success', label: 'Success', color: '#10b981', icon: 'check_circle', targetHue: 140 },
   { type: 'error', label: 'Error', color: '#ef4444', icon: 'error', targetHue: 0 },
@@ -388,13 +199,13 @@ const generateVariants = () => {
     
     if (!props.palette) {
       console.error('No palette prop');
-      alert('Palette data not available');
+      showNotice('Palette data not available', 'error');
       return;
     }
     
     if (!props.palette.colors || props.palette.colors.length === 0) {
       console.warn('No colors in palette');
-      alert('Please add colors to your palette first');
+      showNotice('Please add colors to your palette first', 'warning');
       return;
     }
     
@@ -453,7 +264,7 @@ const generateVariants = () => {
     console.log('variants ref:', variants);
   } catch (error) {
     console.error('Error generating variants:', error);
-    alert('Error generating variants: ' + error.message);
+    showNotice('Error generating variants: ' + error.message, 'error');
   }
 };
 
@@ -530,7 +341,7 @@ const validateSemanticColors = () => {
 // Generate semantic color suggestions in harmony with palette
 const generateSemanticSuggestion = (type) => {
   if (!props.palette || !props.palette.colors || props.palette.colors.length === 0) {
-    alert('Please add colors to your palette first');
+    showNotice('Please add colors to your palette first', 'warning');
     return;
   }
   
@@ -764,7 +575,7 @@ const generateDarkModePalette = () => {
     console.log('props.palette:', props.palette);
     
     if (!props.palette || !props.palette.colors || props.palette.colors.length === 0) {
-      alert('Please add colors to your palette first');
+      showNotice('Please add colors to your palette first', 'warning');
       return;
     }
     
@@ -812,14 +623,14 @@ const generateDarkModePalette = () => {
     console.log('After assignment, darkModeColors.value:', darkModeColors.value.length);
   } catch (error) {
     console.error('Error generating dark mode palette:', error);
-    alert('Error generating dark mode palette: ' + error.message);
+    showNotice('Error generating dark mode palette: ' + error.message, 'error');
   }
 };
 
 // Color scale generator (50-900 shades) - generates for all colors
 const generateColorScale = () => {
   if (!props.palette?.colors || props.palette.colors.length === 0) {
-    alert('Please add colors to your palette first');
+    showNotice('Please add colors to your palette first', 'warning');
     return;
   }
   
@@ -948,7 +759,7 @@ const addSingleShade = (shade) => {
 
 const getTextColor = (hex) => {
   const rgb = hexToRgb(hex);
-  if (!rgb) return { color: '#000000' };
+  if (!rgb) return '#000000';
   
   // Calculate relative luminance
   const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((val) => {
@@ -957,7 +768,7 @@ const getTextColor = (hex) => {
   });
   const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
   
-  return { color: luminance > 0.5 ? '#000000' : '#FFFFFF' };
+  return luminance > 0.5 ? '#000000' : '#FFFFFF';
 };
 
 const isShadeInPalette = (shadeHex) => {
@@ -973,6 +784,11 @@ const getColumn500Position = () => {
   const totalColumns = firstScale.shades.length;
   return (column500Index / totalColumns) * 100;
 };
+
+// Where the 500 column sits, for its highlight (through v-bind() in <style>)
+const hasColumn500 = computed(() => colorScales.value.length > 0 && colorScales.value[0].shades.some((s) => s.weight === 500));
+const column500Left = computed(() => `${getColumn500Position()}%`);
+const columnWidth = computed(() => `${100 / (colorScales.value[0]?.shades.length || 1)}%`);
 
 const addDarkModeColors = () => {
   const newPalette = {
@@ -1094,38 +910,35 @@ watch(() => props.palette?.colors, () => {
 
 onMounted(() => {
   validateSemanticColors();
-  
-  // Dark mode detection
-  const updateDarkMode = () => {
-    const wasDark = isDarkMode.value;
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-    if (wasDark !== isDarkMode.value) {
-      nextTick(() => {});
-    }
-  };
-  
-  const darkModeObserver = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-        updateDarkMode();
-      }
-    });
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-    attributeOldValue: true
-  });
-  
-  updateDarkMode();
-  
-  const darkModeInterval = setInterval(updateDarkMode, 50);
-  
-  onBeforeUnmount(() => {
-    darkModeObserver.disconnect();
-    clearInterval(darkModeInterval);
-  });
 });
 </script>
 
+<style scoped>
+.semantic-card {
+  @apply flex flex-col rounded-tile border border-line p-4;
+}
+.semantic-suggestion {
+  @apply mt-2 p-3 rounded-tile border border-line-faint bg-surface-sunken;
+}
+.scale-column-500 {
+  @apply absolute top-8 bottom-0 rounded-field bg-accent-subtle pointer-events-none;
+  left: v-bind(column500Left);
+  width: v-bind(columnWidth);
+}
+.scale-500-label {
+  @apply w-full py-1 rounded-t-control bg-accent text-center text-xs font-semibold text-ink-on-accent;
+}
+.shade-cell {
+  @apply relative flex flex-col items-center justify-center w-full h-16 cursor-pointer transition-opacity hover:opacity-90;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 outline-focus;
+}
+.shade-in-palette {
+  box-shadow: inset 0 0 0 3px var(--tc-accent);
+}
+.shade-dot {
+  @apply absolute top-1 right-1 w-3 h-3 rounded-pill bg-accent border-2 border-solid border-surface-raised shadow-control;
+}
+.dark-stage {
+  @apply w-full p-6 rounded-tile bg-surface;
+}
+</style>

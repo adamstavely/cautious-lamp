@@ -1,6 +1,5 @@
 <template>
-  <div>
-    <label :for="inputId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ label }}</label>
+  <UiField :label="label" :id="inputId">
     <input
       :id="inputId"
       v-model="query"
@@ -13,21 +12,15 @@
       aria-autocomplete="list"
       :placeholder="placeholder"
       :disabled="disabled"
-      class="w-full rounded-lg border border-solid border-gray-300 px-3 py-2 text-sm bg-[#fff] text-gray-900 disabled:opacity-60 dark:border-gray-600 dark:bg-slate-700 dark:text-white"
+      class="user-picker-input"
       @keydown.down.prevent="move(1)"
       @keydown.up.prevent="move(-1)"
       @keydown.enter.prevent="active >= 0 && choose(results[active])"
       @keydown.esc="clearIfOpen"
     />
     <p class="sr-only" role="status" aria-live="polite">{{ status }}</p>
-    <p v-if="status && !results.length" class="mt-2 text-sm text-gray-500 dark:text-gray-400" aria-hidden="true">{{ status }}</p>
-    <ul
-      v-show="results.length"
-      :id="listId"
-      role="listbox"
-      :aria-label="`${label} results`"
-      class="mt-2 max-h-64 overflow-y-auto rounded-lg border border-solid border-gray-200 dark:border-gray-700"
-    >
+    <p v-if="status && !results.length" class="text-sm text-ink-muted" aria-hidden="true">{{ status }}</p>
+    <ul v-show="results.length" :id="listId" role="listbox" :aria-label="`${label} results`" class="user-picker-list">
       <li
         v-for="(user, index) in results"
         :id="`${listId}-${index}`"
@@ -35,30 +28,26 @@
         role="option"
         :aria-selected="index === active ? 'true' : 'false'"
         :aria-disabled="isExcluded(user) ? 'true' : 'false'"
-        class="flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-sm"
-        :class="[
-          index === active ? 'bg-indigo-50 dark:bg-slate-700' : 'hover:bg-gray-50 dark:hover:bg-slate-700/60',
-          isExcluded(user) ? 'cursor-not-allowed opacity-60' : '',
-        ]"
+        class="user-picker-option"
+        :class="{ 'user-picker-option-active': index === active, 'user-picker-option-excluded': isExcluded(user) }"
         @mousedown.prevent
         @click="choose(user)"
       >
         <span class="min-w-0">
-          <span class="block truncate font-medium text-gray-900 dark:text-white">{{ user.name }}</span>
-          <span class="block truncate text-xs text-gray-500 dark:text-gray-400">{{ user.email }}</span>
+          <span class="block truncate font-medium text-ink-strong">{{ user.name }}</span>
+          <span class="block truncate text-xs text-ink-muted">{{ user.email }}</span>
         </span>
-        <span v-if="isExcluded(user)" class="shrink-0 text-xs text-gray-500 dark:text-gray-400">{{ excludedText }}</span>
-        <span
-          v-else-if="user.status === 'disabled'"
-          class="shrink-0 rounded px-2 py-0.5 text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-        >Disabled</span>
+        <span v-if="isExcluded(user)" class="shrink-0 text-xs text-ink-muted">{{ excludedText }}</span>
+        <UiChip v-else-if="user.status === 'disabled'" class="shrink-0">Disabled</UiChip>
       </li>
     </ul>
-  </div>
+  </UiField>
 </template>
 
 <script setup>
 import { onBeforeUnmount, ref, watch } from 'vue';
+import UiChip from '../ui/UiChip.vue';
+import UiField from '../ui/UiField.vue';
 import { adminErrorMessage, usersApi } from '../../composables/useAccessAdmin.js';
 
 /**
@@ -133,6 +122,8 @@ const choose = (user) => {
 const clearIfOpen = (event) => {
   // Escape clears the list first; a second Escape reaches the dialog
   if (results.value.length || query.value) {
+    // preventDefault too: a native <dialog> closes on Escape's default action
+    event.preventDefault();
     event.stopPropagation();
     query.value = '';
   }
@@ -140,3 +131,23 @@ const clearIfOpen = (event) => {
 
 onBeforeUnmount(() => clearTimeout(timer));
 </script>
+
+<style scoped>
+.user-picker-input {
+  @apply w-full h-11 px-3.5 rounded-field border border-solid border-line-control bg-surface-control text-sm text-ink placeholder:text-ink-muted;
+  @apply hover:border-line-control-hover focus:outline focus:outline-2 focus:outline-offset-0 outline-focus focus:border-transparent;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.user-picker-list {
+  @apply max-h-64 overflow-y-auto rounded-tile border border-solid border-line bg-surface-overlay;
+}
+.user-picker-option {
+  @apply flex cursor-pointer items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-fill-hover;
+}
+.user-picker-option-active {
+  @apply bg-accent-subtle;
+}
+.user-picker-option-excluded {
+  @apply cursor-not-allowed opacity-60;
+}
+</style>

@@ -1,661 +1,223 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Interactive Timeline Generator
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Create beautiful, customizable timelines with events, dates, and icons. Generate React or Vue components with interactive timeline displays.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">timeline</span>
-                      Data Visualization
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="timelineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Timeline representation -->
-                      <line x1="30" y1="100" x2="170" y2="100" stroke="url(#timelineGradient)" stroke-width="4" opacity="0.6"/>
-                      <circle cx="50" cy="100" r="8" fill="url(#timelineGradient)" opacity="0.8"/>
-                      <circle cx="100" cy="100" r="8" fill="url(#timelineGradient)" opacity="0.8"/>
-                      <circle cx="150" cy="100" r="8" fill="url(#timelineGradient)" opacity="0.8"/>
-                      <rect x="45" y="70" width="10" height="20" rx="2" fill="url(#timelineGradient)" opacity="0.5"/>
-                      <rect x="95" y="70" width="10" height="20" rx="2" fill="url(#timelineGradient)" opacity="0.5"/>
-                      <rect x="145" y="70" width="10" height="20" rx="2" fill="url(#timelineGradient)" opacity="0.5"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+  <PageShell width="full">
+    <PageHero
+      :back="{ to: '/data-viz', label: 'Data visualization' }"
+      title="Timeline generator"
+      lead="Create customizable timelines with events, dates, and icons. Generate React or Vue components with interactive timeline displays."
+      spot="tools/timeline-generator"
+      size="tool"
+    />
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <!-- Style Selector -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h2 class="text-lg font-semibold mb-6 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">tune</span>
-                Timeline Style
-              </h2>
-              
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button
-                  v-for="style in timelineStyles"
-                  :key="style.value"
-                  @click="config.style = style.value"
-                  class="rounded-lg border p-4 transition-all text-left"
-                  :class="config.style === style.value
-                    ? (isDarkMode 
-                      ? 'bg-indigo-600 border-indigo-500 text-white' 
-                      : 'bg-indigo-600 border-indigo-500 text-white')
-                    : (isDarkMode
-                      ? 'bg-slate-800 border-gray-700 text-gray-300 hover:border-indigo-400' 
-                      : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-500')"
-                >
-                  <div class="flex items-center gap-3 mb-2">
-                    <span class="material-symbols-outlined text-2xl">{{ style.icon }}</span>
-                    <span class="font-semibold">{{ style.label }}</span>
-                  </div>
-                  <p class="text-xs opacity-80">{{ style.description }}</p>
-                </button>
+    <PageSection title="Timeline style" description="How the events are laid out.">
+      <UiChoiceCards v-model="config.style" :options="timelineStyles" :columns="3" aria-label="Timeline style" />
+    </PageSection>
+
+    <PageSection title="Build" description="Describe the timeline, add events, check it and export the code." divided>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1">
+          <UiPanel title="Configuration">
+            <div class="flex flex-col gap-4">
+              <UiInput
+                v-model="config.title"
+                label="Timeline title"
+                placeholder="Enter timeline title"
+                required
+                :error="config.title ? '' : 'Timeline title is required for accessibility compliance.'"
+              />
+              <UiTextarea
+                v-model="config.summary"
+                label="Timeline summary"
+                hint="1-2 sentences"
+                :rows="2"
+                placeholder="Enter a brief summary describing what this timeline shows"
+                required
+                :error="config.summary ? '' : 'Timeline summary is required for accessibility compliance.'"
+              />
+              <UiTextarea
+                v-model="config.keyInsight"
+                label="Key insight"
+                hint="Primary takeaway"
+                :rows="2"
+                placeholder="Enter the primary insight or takeaway from this timeline"
+                required
+                :error="config.keyInsight ? '' : 'Key insight is required for accessibility compliance.'"
+              />
+
+              <div class="grid grid-cols-aside-content items-end gap-2">
+                <div class="w-16">
+                  <UiInput v-model="config.timelineColor" type="color" label="Timeline color" />
+                </div>
+                <!-- style-check: allow the placeholder shows an example hex value the user types -->
+                <UiInput v-model="config.timelineColor" placeholder="#6366f1" mono aria-label="Timeline color value" />
               </div>
+
+              <UiSelect v-model="config.dateFormat" label="Date format" :options="dateFormatOptions" />
+              <UiRange v-model="config.spacing" label="Event spacing" :min="40" :max="200" :step="10" unit="px" />
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <!-- Configuration Panel -->
-              <div class="lg:col-span-1">
-                <div 
-                  class="rounded-lg shadow-sm border p-6 mb-6 sticky top-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">settings</span>
-                    Configuration
-                  </h2>
+            <div class="mt-6 pt-6 border-t border-line">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold text-ink-strong">Events ({{ events.length }})</h3>
+                <UiButton variant="primary" size="sm" icon="add" @click="addEvent">Add event</UiButton>
+              </div>
 
-                  <!-- Timeline Title (Required) -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Timeline Title <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                      v-model="config.title"
-                      type="text"
-                      placeholder="Enter timeline title"
-                      required
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                      :class="isDarkMode 
-                        ? (config.title ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' : 'bg-slate-800 border-red-500 text-white placeholder-gray-500')
-                        : (config.title ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-white border-red-500 text-gray-900 placeholder-gray-400')"
-                    />
-                    <p v-if="!config.title" class="mt-1 text-xs text-red-500">Timeline title is required for accessibility compliance.</p>
+              <div class="flex flex-col gap-3 max-h-96 overflow-y-auto">
+                <fieldset v-for="(event, index) in events" :key="event.id" class="flex flex-col gap-2 p-3 rounded-tile border border-line bg-surface-sunken">
+                  <legend class="sr-only">Event {{ index + 1 }}</legend>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-ink-muted" aria-hidden="true">Event {{ index + 1 }}</span>
+                    <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove event ${index + 1}`" :disabled="events.length <= 1" @click="removeEvent(index)" />
                   </div>
-
-                  <!-- Timeline Summary (Required) -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Timeline Summary <span class="text-red-500">*</span>
-                      <span class="text-xs font-normal text-gray-500 ml-1">(1-2 sentences)</span>
-                    </label>
-                    <textarea
-                      v-model="config.summary"
-                      rows="2"
-                      placeholder="Enter a brief summary describing what this timeline shows"
-                      required
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors resize-none"
-                      :class="isDarkMode 
-                        ? (config.summary ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' : 'bg-slate-800 border-red-500 text-white placeholder-gray-500')
-                        : (config.summary ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-white border-red-500 text-gray-900 placeholder-gray-400')"
-                    ></textarea>
-                    <p v-if="!config.summary" class="mt-1 text-xs text-red-500">Timeline summary is required for accessibility compliance.</p>
-                  </div>
-
-                  <!-- Key Insight (Required) -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Key Insight <span class="text-red-500">*</span>
-                      <span class="text-xs font-normal text-gray-500 ml-1">(Primary takeaway)</span>
-                    </label>
-                    <textarea
-                      v-model="config.keyInsight"
-                      rows="2"
-                      placeholder="Enter the primary insight or takeaway from this timeline"
-                      required
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors resize-none"
-                      :class="isDarkMode 
-                        ? (config.keyInsight ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' : 'bg-slate-800 border-red-500 text-white placeholder-gray-500')
-                        : (config.keyInsight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-white border-red-500 text-gray-900 placeholder-gray-400')"
-                    ></textarea>
-                    <p v-if="!config.keyInsight" class="mt-1 text-xs text-red-500">Key insight is required for accessibility compliance.</p>
-                  </div>
-
-                  <!-- Timeline Color -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Timeline Color
-                    </label>
-                    <div class="flex gap-2">
-                      <input
-                        v-model="config.timelineColor"
-                        type="color"
-                        class="w-16 h-10 rounded border cursor-pointer"
-                        :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                      />
-                      <input
-                        v-model="config.timelineColor"
-                        type="text"
-                        placeholder="#6366f1"
-                        class="flex-1 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors font-mono text-sm"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                      />
+                  <UiInput v-model="event.date" type="date" :aria-label="`Event ${index + 1} date`" />
+                  <UiInput v-model="event.title" placeholder="Event title" :aria-label="`Event ${index + 1} title`" />
+                  <UiTextarea v-model="event.description" :rows="2" placeholder="Event description" :aria-label="`Event ${index + 1} description`" />
+                  <div class="grid grid-cols-content-aside items-end gap-2">
+                    <UiSelect v-model="event.icon" :options="iconOptions" :aria-label="`Event ${index + 1} icon`" />
+                    <div class="w-12">
+                      <UiInput v-model="event.color" type="color" :aria-label="`Event ${index + 1} color`" />
                     </div>
                   </div>
+                  <UiSegmented v-if="config.style === 'zigzag'" v-model="event.position" :options="positionOptions" :aria-label="`Event ${index + 1} side`" />
+                </fieldset>
+              </div>
+            </div>
+          </UiPanel>
+        </div>
 
-                  <!-- Date Format -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Date Format
-                    </label>
-                    <select
-                      v-model="config.dateFormat"
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                      :class="isDarkMode 
-                        ? 'bg-slate-800 border-gray-600 text-white' 
-                        : 'bg-white border-gray-300 text-gray-900'"
-                    >
-                      <option value="short">Short (1/1/2024)</option>
-                      <option value="medium">Medium (Jan 1, 2024)</option>
-                      <option value="long">Long (January 1, 2024)</option>
-                      <option value="full">Full (Monday, January 1, 2024)</option>
-                    </select>
-                  </div>
-
-                  <!-- Spacing -->
-                  <div class="mb-6">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Event Spacing: {{ config.spacing }}px
-                    </label>
-                    <input
-                      v-model.number="config.spacing"
-                      type="range"
-                      min="40"
-                      max="200"
-                      step="10"
-                      class="w-full h-2 rounded-lg appearance-none cursor-pointer"
-                      :class="isDarkMode ? 'bg-slate-700 accent-indigo-500' : 'bg-gray-200 accent-indigo-600'"
-                    />
-                  </div>
-
-                  <!-- Events Section -->
-                  <div class="mb-4">
-                    <div class="flex items-center justify-between mb-3">
-                      <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Events ({{ events.length }})
-                      </label>
-                      <button
-                        @click="addEvent"
-                        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                        :class="isDarkMode 
-                          ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
-                          : 'bg-indigo-600 text-white hover:bg-indigo-700'"
-                      >
-                        <span class="material-symbols-outlined text-sm mr-1 align-middle">add</span>
-                        Add Event
-                      </button>
+        <div class="lg:col-span-2 flex flex-col gap-6">
+          <UiPanel title="Preview">
+            <div class="timeline-stage">
+              <figure
+                ref="timelinePreview"
+                class="timeline-container"
+                role="img"
+                :aria-label="config.title || 'Timeline'"
+                aria-describedby="timeline-summary"
+                tabindex="0"
+              >
+                <div v-if="config.style === 'vertical'" class="timeline-vertical">
+                  <div v-for="(event, index) in sortedEvents" :key="event.id" class="timeline-event-vertical">
+                    <div class="timeline-marker timeline-marker-vertical">
+                      <svg class="timeline-marker-dot" viewBox="0 0 2 2" aria-hidden="true"><circle cx="1" cy="1" r="1" :fill="event.color || config.timelineColor" /></svg>
+                      <span v-if="event.icon" class="material-symbols-outlined timeline-marker-icon text-sm">{{ getIconName(event.icon) }}</span>
                     </div>
+                    <div class="timeline-content-vertical">
+                      <div class="timeline-date-vertical text-ink-secondary">{{ formatDate(event.date) }}</div>
+                      <div class="timeline-title-vertical font-semibold text-ink-strong">{{ event.title || 'Event ' + (index + 1) }}</div>
+                      <div v-if="event.description" class="timeline-description-vertical text-ink">{{ event.description }}</div>
+                    </div>
+                  </div>
+                </div>
 
-                    <div class="space-y-3 max-h-96 overflow-y-auto">
-                      <div
-                        v-for="(event, index) in events"
-                        :key="event.id"
-                        class="border rounded-lg p-3"
-                        :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'"
-                      >
-                        <div class="flex items-center justify-between mb-2">
-                          <span class="text-xs font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                            Event {{ index + 1 }}
-                          </span>
-                          <button
-                            @click="removeEvent(index)"
-                            class="p-1 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                            :disabled="events.length <= 1"
-                          >
-                            <span class="material-symbols-outlined text-sm">delete</span>
-                          </button>
-                        </div>
-
-                        <div class="space-y-2">
-                          <input
-                            v-model="event.date"
-                            type="date"
-                            class="w-full px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                            :class="isDarkMode 
-                              ? 'bg-slate-700 border-gray-600 text-white' 
-                              : 'bg-white border-gray-300 text-gray-900'"
-                          />
-                          <input
-                            v-model="event.title"
-                            type="text"
-                            placeholder="Event title"
-                            class="w-full px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                            :class="isDarkMode 
-                              ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
-                              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                          />
-                          <textarea
-                            v-model="event.description"
-                            placeholder="Event description"
-                            rows="2"
-                            class="w-full px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors resize-none"
-                            :class="isDarkMode 
-                              ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
-                              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                          ></textarea>
-                          <div class="flex gap-2">
-                            <select
-                              v-model="event.icon"
-                              class="flex-1 px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-700 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'"
-                            >
-                              <option value="">No Icon</option>
-                              <option value="event">Event</option>
-                              <option value="star">Star</option>
-                              <option value="check_circle">Check</option>
-                              <option value="flag">Flag</option>
-                              <option value="location_on">Location</option>
-                            </select>
-                            <input
-                              v-model="event.color"
-                              type="color"
-                              class="w-12 h-10 rounded border cursor-pointer"
-                              :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                            />
-                          </div>
-                          <div v-if="config.style === 'zigzag'" class="flex gap-2">
-                            <label class="flex items-center gap-2 cursor-pointer text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                              <input
-                                v-model="event.position"
-                                type="radio"
-                                :value="'left'"
-                                class="w-4 h-4"
-                                :class="isDarkMode ? 'accent-indigo-500' : 'accent-indigo-600'"
-                              />
-                              Left
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                              <input
-                                v-model="event.position"
-                                type="radio"
-                                :value="'right'"
-                                class="w-4 h-4"
-                                :class="isDarkMode ? 'accent-indigo-500' : 'accent-indigo-600'"
-                              />
-                              Right
-                            </label>
-                          </div>
-                        </div>
+                <div v-else-if="config.style === 'horizontal'" class="timeline-horizontal">
+                  <div class="timeline-line timeline-line-horizontal"></div>
+                  <div class="timeline-events-horizontal">
+                    <div v-for="(event, index) in sortedEvents" :key="event.id" class="timeline-event-horizontal">
+                      <div class="timeline-marker timeline-marker-horizontal">
+                        <svg class="timeline-marker-dot" viewBox="0 0 2 2" aria-hidden="true"><circle cx="1" cy="1" r="1" :fill="event.color || config.timelineColor" /></svg>
+                        <span v-if="event.icon" class="material-symbols-outlined timeline-marker-icon text-xs">{{ getIconName(event.icon) }}</span>
+                      </div>
+                      <div class="timeline-content-horizontal">
+                        <div class="timeline-date-horizontal text-xs text-ink-secondary">{{ formatDate(event.date) }}</div>
+                        <div class="timeline-title-horizontal font-semibold text-sm text-ink-strong">{{ event.title || 'Event ' + (index + 1) }}</div>
+                        <div v-if="event.description" class="timeline-description-horizontal text-xs text-ink">{{ event.description }}</div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Preview and Export Panel -->
-              <div class="lg:col-span-2">
-                <!-- Preview Section -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6 mb-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">preview</span>
-                    Preview
-                  </h2>
-                  
-                  <div class="p-8 rounded-lg overflow-x-auto"
-                    :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'"
+                <div v-else-if="config.style === 'zigzag'" class="timeline-zigzag">
+                  <div class="timeline-line timeline-line-zigzag"></div>
+                  <div
+                    v-for="(event, index) in sortedEvents"
+                    :key="event.id"
+                    class="timeline-event-zigzag"
+                    :class="event.position === 'right' ? 'timeline-event-right' : 'timeline-event-left'"
                   >
-                    <figure 
-                      ref="timelinePreview" 
-                      class="timeline-container"
-                      role="img"
-                      :aria-label="config.title || 'Timeline'"
-                      aria-describedby="timeline-summary"
-                      tabindex="0"
-                      :style="{
-                        '--spacing': `${config.spacing}px`,
-                        '--timeline-color': config.timelineColor
-                      }"
-                    >
-                      <!-- Timeline will be rendered here -->
-                      <div v-if="config.style === 'vertical'" class="timeline-vertical">
-                        <div
-                          v-for="(event, index) in sortedEvents"
-                          :key="event.id"
-                          class="timeline-event-vertical"
-                          :style="{ marginBottom: index < sortedEvents.length - 1 ? `${config.spacing}px` : '0' }"
-                        >
-                          <div class="timeline-marker-vertical" :style="{ backgroundColor: event.color || config.timelineColor }">
-                            <span v-if="event.icon" class="material-symbols-outlined text-sm text-white">
-                              {{ getIconName(event.icon) }}
-                            </span>
-                          </div>
-                          <div class="timeline-content-vertical">
-                            <div class="timeline-date-vertical" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                              {{ formatDate(event.date) }}
-                            </div>
-                            <div class="timeline-title-vertical font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                              {{ event.title || 'Event ' + (index + 1) }}
-                            </div>
-                            <div v-if="event.description" class="timeline-description-vertical" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                              {{ event.description }}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div v-else-if="config.style === 'horizontal'" class="timeline-horizontal">
-                        <div class="timeline-line-horizontal" :style="{ backgroundColor: config.timelineColor }"></div>
-                        <div class="timeline-events-horizontal">
-                          <div
-                            v-for="(event, index) in sortedEvents"
-                            :key="event.id"
-                            class="timeline-event-horizontal"
-                            :style="{ left: `${(index / (sortedEvents.length - 1 || 1)) * 100}%` }"
-                          >
-                            <div class="timeline-marker-horizontal" :style="{ backgroundColor: event.color || config.timelineColor }">
-                              <span v-if="event.icon" class="material-symbols-outlined text-xs text-white">
-                                {{ getIconName(event.icon) }}
-                              </span>
-                            </div>
-                            <div class="timeline-content-horizontal">
-                              <div class="timeline-date-horizontal text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                                {{ formatDate(event.date) }}
-                              </div>
-                              <div class="timeline-title-horizontal font-semibold text-sm" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                                {{ event.title || 'Event ' + (index + 1) }}
-                              </div>
-                              <div v-if="event.description" class="timeline-description-horizontal text-xs" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                                {{ event.description }}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div v-else-if="config.style === 'zigzag'" class="timeline-zigzag">
-                        <div class="timeline-line-zigzag" :style="{ backgroundColor: config.timelineColor }"></div>
-                        <div
-                          v-for="(event, index) in sortedEvents"
-                          :key="event.id"
-                          class="timeline-event-zigzag"
-                          :class="event.position === 'right' ? 'timeline-event-right' : 'timeline-event-left'"
-                          :style="{ marginBottom: index < sortedEvents.length - 1 ? `${config.spacing}px` : '0' }"
-                        >
-                          <div class="timeline-marker-zigzag" :style="{ backgroundColor: event.color || config.timelineColor }">
-                            <span v-if="event.icon" class="material-symbols-outlined text-sm text-white">
-                              {{ getIconName(event.icon) }}
-                            </span>
-                          </div>
-                          <div class="timeline-content-zigzag" :class="event.position === 'right' ? 'timeline-content-right' : 'timeline-content-left'">
-                            <div class="timeline-date-zigzag text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                              {{ formatDate(event.date) }}
-                            </div>
-                            <div class="timeline-title-zigzag font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                              {{ event.title || 'Event ' + (index + 1) }}
-                            </div>
-                            <div v-if="event.description" class="timeline-description-zigzag text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                              {{ event.description }}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <figcaption id="timeline-summary" class="sr-only">
-                        {{ config.summary || 'Timeline visualization' }}
-                      </figcaption>
-                    </figure>
-                  </div>
-                </div>
-
-                <!-- Accessibility Panel -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6 mb-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-sm font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <span class="material-symbols-outlined text-indigo-600">verified</span>
-                      Accessibility Score
-                    </h3>
-                    <div class="flex items-center gap-2">
-                      <span 
-                        class="text-lg font-bold"
-                        :class="accessibilityScore >= 100 
-                          ? 'text-green-600' 
-                          : accessibilityScore >= 70 
-                            ? 'text-yellow-600' 
-                            : 'text-red-600'"
-                      >
-                        {{ accessibilityScore }}%
-                      </span>
+                    <div class="timeline-marker timeline-marker-zigzag">
+                      <svg class="timeline-marker-dot" viewBox="0 0 2 2" aria-hidden="true"><circle cx="1" cy="1" r="1" :fill="event.color || config.timelineColor" /></svg>
+                      <span v-if="event.icon" class="material-symbols-outlined timeline-marker-icon text-sm">{{ getIconName(event.icon) }}</span>
                     </div>
-                  </div>
-                  
-                  <div class="space-y-2 text-xs">
-                    <div class="flex items-center justify-between">
-                      <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Alt Text</span>
-                      <span :class="config.title && config.summary && config.keyInsight ? 'text-green-600' : 'text-red-500'">
-                        <span class="material-symbols-outlined text-sm">{{ config.title && config.summary && config.keyInsight ? 'check_circle' : 'error' }}</span>
-                      </span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                      <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Keyboard Navigation</span>
-                      <span class="text-green-600">
-                        <span class="material-symbols-outlined text-sm">check_circle</span>
-                      </span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                      <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Screen Reader</span>
-                      <span class="text-green-600">
-                        <span class="material-symbols-outlined text-sm">check_circle</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  <!-- Fix It Guidance -->
-                  <div v-if="accessibilityScore < 100" class="mt-3 p-3 rounded-lg" :class="isDarkMode ? 'bg-yellow-900/20 border border-yellow-700' : 'bg-yellow-50 border border-yellow-200'">
-                    <h4 class="text-xs font-semibold mb-2 flex items-center gap-1" :class="isDarkMode ? 'text-yellow-300' : 'text-yellow-800'">
-                      <span class="material-symbols-outlined text-sm">info</span>
-                      Fix Required
-                    </h4>
-                    <ul class="space-y-1 text-xs" :class="isDarkMode ? 'text-yellow-200' : 'text-yellow-700'">
-                      <li v-if="!config.title || !config.summary || !config.keyInsight">
-                        • Add required metadata: title, summary, and key insight
-                      </li>
-                    </ul>
-                  </div>
-
-                  <!-- Run axe-core Scan Button -->
-                  <button
-                    @click="runAxeCoreScan"
-                    :disabled="axeScanRunning"
-                    class="w-full mt-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                    :class="isDarkMode 
-                      ? (axeScanRunning ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white')
-                      : (axeScanRunning ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white')"
-                  >
-                    <span v-if="axeScanRunning" class="material-symbols-outlined animate-spin text-sm">refresh</span>
-                    <span v-else class="material-symbols-outlined text-sm">bug_report</span>
-                    {{ axeScanRunning ? 'Scanning...' : 'Run Accessibility Check' }}
-                  </button>
-                  
-                  <!-- axe-core Results -->
-                  <div v-if="axeScanResults" class="mt-3 space-y-2">
-                    <div v-if="axeScanResults.error" class="p-2 rounded text-xs bg-yellow-900/30 text-yellow-300 border border-yellow-700">
-                      <div class="font-semibold">Scan Error</div>
-                      <div class="mt-1">{{ axeScanResults.error }}</div>
-                    </div>
-                    <div 
-                      v-for="(violation, index) in axeScanResults.violations"
-                      :key="index"
-                      class="p-2 rounded text-xs border"
-                      :class="isDarkMode ? 'bg-red-900/30 text-red-300 border-red-700' : 'bg-red-50 text-red-700 border-red-200'"
-                    >
-                      <div class="font-semibold flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">{{ violation.impact === 'critical' ? 'error' : 'warning' }}</span>
-                        {{ violation.id }} ({{ violation.impact || 'moderate' }})
-                      </div>
-                      <div class="mt-1">{{ violation.description }}</div>
-                      <div class="mt-1 text-xs opacity-80">{{ violation.help }}</div>
-                    </div>
-                    <div v-if="axeScanResults.violations && axeScanResults.violations.length === 0 && !axeScanResults.error" class="p-2 rounded text-xs text-green-600 border border-green-200" :class="isDarkMode ? 'bg-green-900/30 border-green-700' : 'bg-green-50'">
-                      <div class="flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">check_circle</span>
-                        No accessibility violations found!
-                      </div>
+                    <div class="timeline-content-zigzag" :class="event.position === 'right' ? 'timeline-content-right' : 'timeline-content-left'">
+                      <div class="timeline-date-zigzag text-xs text-ink-secondary">{{ formatDate(event.date) }}</div>
+                      <div class="timeline-title-zigzag font-semibold text-ink-strong">{{ event.title || 'Event ' + (index + 1) }}</div>
+                      <div v-if="event.description" class="timeline-description-zigzag text-sm text-ink">{{ event.description }}</div>
                     </div>
                   </div>
                 </div>
-
-                <!-- Export Section -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">download</span>
-                    Export
-                  </h2>
-
-                  <div class="space-y-4">
-                    <!-- Export Format Selector -->
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Export Format
-                      </label>
-                      <div class="flex gap-2">
-                        <button
-                          v-for="format in exportFormats"
-                          :key="format.value"
-                          @click="selectedExportFormat = format.value"
-                          class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                          :class="selectedExportFormat === format.value
-                            ? (isDarkMode 
-                              ? 'bg-indigo-600 text-white' 
-                              : 'bg-indigo-600 text-white')
-                            : (isDarkMode
-                              ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                        >
-                          {{ format.label }}
-                        </button>
-                      </div>
-                    </div>
-
-                    <!-- Code Preview -->
-                    <div>
-                      <div class="flex items-center justify-between mb-2">
-                        <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                          Generated Code
-                        </label>
-                        <button
-                          @click="copyCode"
-                          class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
-                            : 'bg-indigo-600 text-white hover:bg-indigo-700'"
-                        >
-                          <span class="material-symbols-outlined text-sm mr-1 align-middle">content_copy</span>
-                          Copy
-                        </button>
-                      </div>
-                      <InlineNotice :notice="notice" class="mb-2" @dismiss="clearNotice" />
-                      <textarea
-                        :value="generatedCode"
-                        readonly
-                        class="w-full h-64 px-4 py-3 border rounded-lg font-mono text-sm resize-none"
-                        :class="isDarkMode 
-                          ? 'bg-slate-950 text-gray-100 border-gray-700' 
-                          : 'bg-gray-50 text-gray-900 border-gray-300'"
-                      ></textarea>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                <figcaption id="timeline-summary" class="sr-only">
+                  {{ config.summary || 'Timeline visualization' }}
+                </figcaption>
+              </figure>
             </div>
-          </div>
+          </UiPanel>
+
+          <UiPanel title="Accessibility score">
+            <template #actions>
+              <UiChip :tone="accessibilityScore >= 100 ? 'success' : accessibilityScore >= 70 ? 'warning' : 'danger'">{{ accessibilityScore }}%</UiChip>
+            </template>
+
+            <ul class="flex flex-col gap-2 text-sm">
+              <li v-for="check in accessibilityChecks" :key="check.label" class="flex items-center justify-between">
+                <span class="text-ink-secondary">{{ check.label }}</span>
+                <span class="material-symbols-outlined text-base" :class="check.ok ? 'text-success' : 'text-danger'" aria-hidden="true">{{ check.ok ? 'check_circle' : 'error' }}</span>
+                <span class="sr-only">{{ check.ok ? 'Passes' : 'Needs work' }}</span>
+              </li>
+            </ul>
+
+            <UiCallout v-if="accessibilityScore < 100" tone="warning" title="Fix required" class="mt-4">
+              <ul>
+                <li v-if="!config.title || !config.summary || !config.keyInsight">Add required metadata: title, summary, and key insight</li>
+              </ul>
+            </UiCallout>
+
+            <UiButton variant="primary" icon="bug_report" class="mt-4" :loading="axeScanRunning" @click="runAxeCoreScan">
+              {{ axeScanRunning ? 'Scanning...' : 'Run accessibility check' }}
+            </UiButton>
+
+            <div v-if="axeScanResults" class="mt-4 flex flex-col gap-2" role="status">
+              <UiCallout v-if="axeScanResults.error" tone="warning" title="Scan error">{{ axeScanResults.error }}</UiCallout>
+              <UiCallout
+                v-for="(violation, index) in axeScanResults.violations"
+                :key="index"
+                tone="danger"
+                :icon="violation.impact === 'critical' ? 'error' : 'warning'"
+                :title="`${violation.id} (${violation.impact || 'moderate'})`"
+              >
+                <p>{{ violation.description }}</p>
+                <p class="mt-1 text-ink-secondary">{{ violation.help }}</p>
+              </UiCallout>
+              <UiCallout v-if="axeScanResults.violations && axeScanResults.violations.length === 0 && !axeScanResults.error" tone="success">
+                No accessibility violations found!
+              </UiCallout>
+            </div>
+          </UiPanel>
+
+          <UiPanel title="Export">
+            <div class="flex flex-col gap-4">
+              <UiSegmented v-model="selectedExportFormat" :options="exportFormats" label="Export format" />
+              <InlineNotice :notice="notice" @dismiss="clearNotice" />
+              <UiCodeBlock :code="generatedCode" label="Generated code" @copy-failed="onCopyFailed" />
+            </div>
+          </UiPanel>
         </div>
       </div>
-    </div>
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import {
+  PageHero, PageSection, PageShell, UiButton, UiCallout, UiChip, UiCodeBlock, UiInput, UiPanel, UiRange, UiSegmented, UiSelect, UiTextarea,
+} from '../components/ui';
+import UiChoiceCards from '../components/ui/UiChoiceCards.vue';
 import { useNotice } from '../composables/useNotice.js';
 import axe from 'axe-core';
 import { AXE_SCAN_OPTIONS } from '../utils/axeScan.js';
-import { scriptSafeJson } from '../utils/scriptSafeJson.js';
+import { generateTimelineCode } from '../utils/timelineExport.js';
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const { notice, showNotice, clearNotice } = useNotice();
 const timelinePreview = ref(null);
 
@@ -663,6 +225,27 @@ const timelineStyles = [
   { label: 'Vertical', value: 'vertical', icon: 'vertical_align_center', description: 'Events stacked vertically' },
   { label: 'Horizontal', value: 'horizontal', icon: 'horizontal_rule', description: 'Events in a horizontal line' },
   { label: 'Zigzag', value: 'zigzag', icon: 'timeline', description: 'Alternating left/right layout' }
+];
+
+const dateFormatOptions = [
+  { value: 'short', label: 'Short (1/1/2024)' },
+  { value: 'medium', label: 'Medium (Jan 1, 2024)' },
+  { value: 'long', label: 'Long (January 1, 2024)' },
+  { value: 'full', label: 'Full (Monday, January 1, 2024)' }
+];
+
+const iconOptions = [
+  { value: '', label: 'No icon' },
+  { value: 'event', label: 'Event' },
+  { value: 'star', label: 'Star' },
+  { value: 'check_circle', label: 'Check' },
+  { value: 'flag', label: 'Flag' },
+  { value: 'location_on', label: 'Location' }
+];
+
+const positionOptions = [
+  { value: 'left', label: 'Left' },
+  { value: 'right', label: 'Right' }
 ];
 
 const exportFormats = [
@@ -770,6 +353,16 @@ const accessibilityScore = computed(() => {
   return Math.round((score / maxScore) * 100);
 });
 
+const accessibilityChecks = computed(() => [
+  { label: 'Alt text', ok: !!(config.value.title && config.value.summary && config.value.keyInsight) },
+  { label: 'Keyboard navigation', ok: true },
+  { label: 'Screen reader', ok: true }
+]);
+
+// User-chosen values for the preview, passed to CSS through v-bind()
+const previewColor = computed(() => config.value.timelineColor);
+const previewSpacing = computed(() => `${config.value.spacing}px`);
+
 // axe-core Integration
 const axeScanRunning = ref(false);
 const axeScanResults = ref(null);
@@ -836,394 +429,10 @@ const removeEvent = (index) => {
   }
 };
 
-const escapeXml = (value) => String(value ?? '')
-  .replace(/&/g, '&amp;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
-  .replace(/'/g, '&apos;');
+const generatedCode = computed(() => generateTimelineCode(selectedExportFormat.value, config.value, sortedEvents.value, formatDate));
 
-const safeColor = (color, fallback = '#6366f1') =>
-  /^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(String(color || '').trim()) ? String(color).trim() : fallback;
-
-const spacingPx = () => {
-  const n = Number(config.value.spacing);
-  return Number.isFinite(n) && n >= 0 ? n : 80;
-};
-
-const generateSvg = (eventsData) => {
-  const lineColor = safeColor(config.value.timelineColor);
-  const title = config.value.title || 'Timeline';
-  const summary = config.value.summary || 'Timeline visualization';
-  const count = eventsData.length;
-  const font = 'font-family="system-ui, -apple-system, sans-serif"';
-  const parts = [];
-  let width;
-  let height;
-
-  if (config.value.style === 'horizontal') {
-    const step = 180;
-    width = Math.max(600, count * step);
-    height = 200;
-    const lineY = 50;
-    parts.push(`  <line x1="0" y1="${lineY}" x2="${width}" y2="${lineY}" stroke="${lineColor}" stroke-width="4" />`);
-    eventsData.forEach((event, index) => {
-      const x = Math.round(step / 2 + index * ((width - step) / Math.max(1, count - 1)));
-      const cx = count === 1 ? width / 2 : x;
-      parts.push(`  <circle cx="${cx}" cy="${lineY}" r="14" fill="${safeColor(event.color, lineColor)}" />`);
-      parts.push(`  <text x="${cx}" y="${lineY + 40}" text-anchor="middle" font-size="12" fill="#4b5563" ${font}>${escapeXml(formatDate(event.date))}</text>`);
-      parts.push(`  <text x="${cx}" y="${lineY + 60}" text-anchor="middle" font-size="14" font-weight="600" fill="#111827" ${font}>${escapeXml(event.title)}</text>`);
-      if (event.description) {
-        parts.push(`  <text x="${cx}" y="${lineY + 80}" text-anchor="middle" font-size="12" fill="#374151" ${font}>${escapeXml(event.description)}</text>`);
-      }
-    });
-  } else {
-    const zigzag = config.value.style === 'zigzag';
-    const rowHeight = Math.max(80, spacingPx());
-    width = zigzag ? 800 : 600;
-    height = Math.max(120, count * rowHeight + 40);
-    const lineX = zigzag ? width / 2 : 40;
-    const firstY = 40;
-    const lastY = firstY + (count - 1) * rowHeight;
-    parts.push(`  <line x1="${lineX}" y1="${firstY}" x2="${lineX}" y2="${Math.max(firstY, lastY)}" stroke="${lineColor}" stroke-width="4" />`);
-    eventsData.forEach((event, index) => {
-      const y = firstY + index * rowHeight;
-      const onLeft = zigzag && event.position !== 'right';
-      const textX = zigzag ? (onLeft ? lineX - 32 : lineX + 32) : lineX + 32;
-      const anchor = onLeft ? 'end' : 'start';
-      parts.push(`  <circle cx="${lineX}" cy="${y}" r="16" fill="${safeColor(event.color, lineColor)}" />`);
-      parts.push(`  <text x="${textX}" y="${y - 6}" text-anchor="${anchor}" font-size="12" fill="#4b5563" ${font}>${escapeXml(formatDate(event.date))}</text>`);
-      parts.push(`  <text x="${textX}" y="${y + 12}" text-anchor="${anchor}" font-size="16" font-weight="600" fill="#111827" ${font}>${escapeXml(event.title)}</text>`);
-      if (event.description) {
-        parts.push(`  <text x="${textX}" y="${y + 30}" text-anchor="${anchor}" font-size="13" fill="#374151" ${font}>${escapeXml(event.description)}</text>`);
-      }
-    });
-  }
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="timeline-title timeline-desc">
-  <title id="timeline-title">${escapeXml(title)}</title>
-  <desc id="timeline-desc">${escapeXml(summary)}</desc>
-${parts.join('\n')}
-</svg>`;
-};
-
-const generatedCode = computed(() => {
-  const eventsData = sortedEvents.value.map(e => ({
-    date: e.date,
-    title: e.title || 'Event',
-    description: e.description || '',
-    icon: e.icon || '',
-    color: e.color || config.value.timelineColor,
-    position: e.position === 'right' ? 'right' : 'left'
-  }));
-  const style = scriptSafeJson(config.value.style);
-  const timelineColor = scriptSafeJson(config.value.timelineColor);
-  const dateFormat = scriptSafeJson(config.value.dateFormat);
-  const spacing = spacingPx();
-  
-  if (selectedExportFormat.value === 'react') {
-    return `import React from 'react';
-
-export interface TimelineEvent {
-  date: string;
-  title: string;
-  description?: string;
-  icon?: string;
-  color?: string;
-  position?: 'left' | 'right';
-}
-
-export interface TimelineProps {
-  events: TimelineEvent[];
-  style?: 'vertical' | 'horizontal' | 'zigzag';
-  timelineColor?: string;
-  dateFormat?: 'short' | 'medium' | 'long' | 'full';
-  spacing?: number;
-}
-
-const DATE_FORMATS: Record<string, Intl.DateTimeFormatOptions> = {
-  short: { month: 'numeric', day: 'numeric', year: 'numeric' },
-  medium: { month: 'short', day: 'numeric', year: 'numeric' },
-  long: { month: 'long', day: 'numeric', year: 'numeric' },
-  full: { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }
-};
-
-const iconMap: Record<string, string> = {
-  event: 'event',
-  star: 'star',
-  check_circle: 'check_circle',
-  flag: 'flag',
-  location_on: 'location_on'
-};
-
-// YYYY-MM-DD is parsed as local time (new Date('2024-01-01') would be UTC).
-const parseDate = (dateString: string) => {
-  const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(dateString || '');
-  const date = match ? new Date(+match[1], +match[2] - 1, +match[3]) : new Date(dateString);
-  return Number.isNaN(date.getTime()) ? null : date;
-};
-
-export const Timeline: React.FC<TimelineProps> = ({
-  events = ${scriptSafeJson(eventsData, 2)},
-  style = ${style},
-  timelineColor = ${timelineColor},
-  dateFormat = ${dateFormat},
-  spacing = ${spacing}
-}) => {
-  const formatDate = (dateString: string) => {
-    const date = parseDate(dateString);
-    return date ? date.toLocaleDateString('en-US', DATE_FORMATS[dateFormat] || DATE_FORMATS.medium) : dateString;
-  };
-
-  const sortedEvents = [...events].sort(
-    (a, b) => (parseDate(a.date)?.getTime() ?? Infinity) - (parseDate(b.date)?.getTime() ?? Infinity)
-  );
-
-  const marker = (event: TimelineEvent, size: number) => (
-    <div
-      className="rounded-full flex items-center justify-center text-white flex-shrink-0"
-      style={{ width: size, height: size, backgroundColor: event.color || timelineColor }}
-      aria-hidden="true"
-    >
-      {event.icon && <span className="material-symbols-outlined text-sm">{iconMap[event.icon] || 'event'}</span>}
-    </div>
-  );
-
-  const content = (event: TimelineEvent, align: 'left' | 'right' | 'center' = 'left') => (
-    <div style={{ textAlign: align }}>
-      <div className="text-sm text-gray-600 mb-1">{formatDate(event.date)}</div>
-      <div className="font-semibold text-lg mb-1">{event.title}</div>
-      {event.description && <div className="text-sm text-gray-700">{event.description}</div>}
-    </div>
-  );
-
-  if (style === 'horizontal') {
-    return (
-      <div className="relative py-8">
-        <div className="absolute left-0 right-0 h-1" style={{ top: 'calc(2rem + 14px)', backgroundColor: timelineColor }} aria-hidden="true" />
-        <ol className="relative flex justify-between gap-4 list-none p-0 m-0">
-          {sortedEvents.map((event, index) => (
-            <li key={index} className="flex flex-col items-center gap-2" style={{ flex: '1 1 0' }}>
-              {marker(event, 32)}
-              {content(event, 'center')}
-            </li>
-          ))}
-        </ol>
-      </div>
-    );
-  }
-
-  if (style === 'zigzag') {
-    return (
-      <div className="relative py-8">
-        <div className="absolute top-0 bottom-0 w-1" style={{ left: '50%', transform: 'translateX(-50%)', backgroundColor: timelineColor }} aria-hidden="true" />
-        <ol className="relative list-none p-0 m-0">
-        {sortedEvents.map((event, index) => {
-          const onRight = event.position === 'right';
-          return (
-            <li
-              key={index}
-              className="relative flex items-start gap-4"
-              style={{ marginBottom: index < sortedEvents.length - 1 ? \`\${spacing}px\` : 0 }}
-            >
-              <div style={{ flex: 1 }}>{!onRight && content(event, 'right')}</div>
-              {marker(event, 48)}
-              <div style={{ flex: 1 }}>{onRight && content(event, 'left')}</div>
-            </li>
-          );
-        })}
-        </ol>
-      </div>
-    );
-  }
-
-  return (
-    <ol className="list-none p-0 m-0">
-      {sortedEvents.map((event, index) => (
-        <li key={index} className="flex gap-4" style={{ marginBottom: index < sortedEvents.length - 1 ? \`\${spacing}px\` : 0 }}>
-          <div className="flex flex-col items-center">
-            {marker(event, 48)}
-            {index < sortedEvents.length - 1 && (
-              <div className="flex-1 w-0.5 my-2" style={{ backgroundColor: timelineColor }} aria-hidden="true"></div>
-            )}
-          </div>
-          <div className="flex-1 pb-4">{content(event)}</div>
-        </li>
-      ))}
-    </ol>
-  );
-};`;
-  } else if (selectedExportFormat.value === 'vue') {
-    const templateTag = String.fromCharCode(60) + 'template' + String.fromCharCode(62);
-    const templateCloseTag = String.fromCharCode(60) + '/' + 'template' + String.fromCharCode(62);
-    const scriptSetupTag = String.fromCharCode(60) + 'script setup' + String.fromCharCode(62);
-    const scriptClose = String.fromCharCode(60) + '/' + 'script' + String.fromCharCode(62);
-    
-    return templateTag + `
-  <!-- Vertical -->
-  <ol v-if="style === 'vertical'" class="list-none p-0 m-0">
-    <li
-      v-for="(event, index) in sortedEvents"
-      :key="index"
-      class="flex gap-4"
-      :style="{ marginBottom: index < sortedEvents.length - 1 ? spacing + 'px' : 0 }"
-    >
-      <div class="flex flex-col items-center">
-        <div
-          class="rounded-full flex items-center justify-center text-white flex-shrink-0"
-          :style="{ width: '48px', height: '48px', backgroundColor: event.color || timelineColor }"
-          aria-hidden="true"
-        >
-          <span v-if="event.icon" class="material-symbols-outlined text-sm">{{ event.icon }}</span>
-        </div>
-        <div
-          v-if="index < sortedEvents.length - 1"
-          class="flex-1 w-0.5 my-2"
-          :style="{ backgroundColor: timelineColor }"
-          aria-hidden="true"
-        ></div>
-      </div>
-      <div class="flex-1 pb-4">
-        <div class="text-sm text-gray-600 mb-1">{{ formatDate(event.date) }}</div>
-        <div class="font-semibold text-lg mb-1">{{ event.title }}</div>
-        <div v-if="event.description" class="text-sm text-gray-700">{{ event.description }}</div>
-      </div>
-    </li>
-  </ol>
-
-  <!-- Horizontal -->
-  <div v-else-if="style === 'horizontal'" class="relative py-8">
-    <div
-      class="absolute left-0 right-0 h-1"
-      :style="{ top: 'calc(2rem + 14px)', backgroundColor: timelineColor }"
-      aria-hidden="true"
-    ></div>
-    <ol class="relative flex justify-between gap-4 list-none p-0 m-0">
-    <li
-      v-for="(event, index) in sortedEvents"
-      :key="index"
-      class="relative flex flex-col items-center gap-2 text-center"
-      style="flex: 1 1 0"
-    >
-      <div
-        class="rounded-full flex items-center justify-center text-white"
-        :style="{ width: '32px', height: '32px', backgroundColor: event.color || timelineColor }"
-        aria-hidden="true"
-      >
-        <span v-if="event.icon" class="material-symbols-outlined text-xs">{{ event.icon }}</span>
-      </div>
-      <div class="text-xs text-gray-600">{{ formatDate(event.date) }}</div>
-      <div class="font-semibold text-sm">{{ event.title }}</div>
-      <div v-if="event.description" class="text-xs text-gray-700">{{ event.description }}</div>
-    </li>
-    </ol>
-  </div>
-
-  <!-- Zigzag -->
-  <div v-else class="relative py-8">
-    <div
-      class="absolute top-0 bottom-0 w-1"
-      :style="{ left: '50%', transform: 'translateX(-50%)', backgroundColor: timelineColor }"
-      aria-hidden="true"
-    ></div>
-    <ol class="relative list-none p-0 m-0">
-    <li
-      v-for="(event, index) in sortedEvents"
-      :key="index"
-      class="relative flex items-start gap-4"
-      :style="{ marginBottom: index < sortedEvents.length - 1 ? spacing + 'px' : 0 }"
-    >
-      <div class="flex-1 text-right">
-        <template v-if="event.position !== 'right'">
-          <div class="text-sm text-gray-600 mb-1">{{ formatDate(event.date) }}</div>
-          <div class="font-semibold mb-1">{{ event.title }}</div>
-          <div v-if="event.description" class="text-sm text-gray-700">{{ event.description }}</div>
-        </template>
-      </div>
-      <div
-        class="rounded-full flex items-center justify-center text-white flex-shrink-0"
-        :style="{ width: '48px', height: '48px', backgroundColor: event.color || timelineColor }"
-        aria-hidden="true"
-      >
-        <span v-if="event.icon" class="material-symbols-outlined text-sm">{{ event.icon }}</span>
-      </div>
-      <div class="flex-1">
-        <template v-if="event.position === 'right'">
-          <div class="text-sm text-gray-600 mb-1">{{ formatDate(event.date) }}</div>
-          <div class="font-semibold mb-1">{{ event.title }}</div>
-          <div v-if="event.description" class="text-sm text-gray-700">{{ event.description }}</div>
-        </template>
-      </div>
-    </li>
-    </ol>
-  </div>
-` + templateCloseTag + `
-
-` + scriptSetupTag + `
-import { computed } from 'vue';
-
-const props = defineProps({
-  events: {
-    type: Array,
-    default: () => ${scriptSafeJson(eventsData, 4)}
-  },
-  style: {
-    type: String,
-    default: ${style}
-  },
-  timelineColor: {
-    type: String,
-    default: ${timelineColor}
-  },
-  dateFormat: {
-    type: String,
-    default: ${dateFormat}
-  },
-  spacing: {
-    type: Number,
-    default: ${spacing}
-  }
-});
-
-const DATE_FORMATS = {
-  short: { month: 'numeric', day: 'numeric', year: 'numeric' },
-  medium: { month: 'short', day: 'numeric', year: 'numeric' },
-  long: { month: 'long', day: 'numeric', year: 'numeric' },
-  full: { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }
-};
-
-// YYYY-MM-DD is parsed as local time (new Date('2024-01-01') would be UTC).
-const parseDate = (dateString) => {
-  const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(dateString || '');
-  const date = match ? new Date(+match[1], +match[2] - 1, +match[3]) : new Date(dateString);
-  return Number.isNaN(date.getTime()) ? null : date;
-};
-
-const formatDate = (dateString) => {
-  const date = parseDate(dateString);
-  return date ? date.toLocaleDateString('en-US', DATE_FORMATS[props.dateFormat] || DATE_FORMATS.medium) : dateString;
-};
-
-const sortedEvents = computed(() =>
-  [...props.events].sort(
-    (a, b) => (parseDate(a.date)?.getTime() ?? Infinity) - (parseDate(b.date)?.getTime() ?? Infinity)
-  )
-);
-` + scriptClose;
-  } else {
-    // SVG export (static, self-contained; text is XML-escaped)
-    return generateSvg(eventsData);
-  }
-});
-
-const copyCode = async () => {
-  try {
-    await navigator.clipboard.writeText(generatedCode.value);
-    showNotice('Code copied to clipboard.', 'success');
-  } catch (error) {
-    console.error('Copy failed:', error);
-    showNotice('Could not copy to the clipboard. Select the code and copy it manually.', 'error');
-  }
+const onCopyFailed = () => {
+  showNotice('Could not copy to the clipboard. Select the code and copy it manually.', 'error');
 };
 
 
@@ -1233,196 +442,122 @@ const copyCode = async () => {
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.timeline-stage {
+  @apply p-8 rounded-tile bg-surface-sunken overflow-x-auto;
 }
 
-/* Vertical Timeline Styles */
+/* Markers: the colour is the event's own, drawn as an SVG fill */
+.timeline-marker {
+  @apply relative z-10 flex items-center justify-center shrink-0;
+}
+.timeline-marker-dot {
+  @apply absolute inset-0 w-full h-full;
+}
+.timeline-marker-icon {
+  @apply relative text-ink-on-accent;
+}
+.timeline-line {
+  background-color: v-bind(previewColor);
+}
+
+/* Vertical */
 .timeline-vertical {
-  position: relative;
-  padding-left: 2rem;
+  @apply relative pl-8;
 }
-
 .timeline-event-vertical {
-  display: flex;
-  gap: 1rem;
-  position: relative;
+  @apply relative flex gap-4;
 }
-
+.timeline-event-vertical:not(:last-child) {
+  margin-bottom: v-bind(previewSpacing);
+}
 .timeline-marker-vertical {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 2;
+  @apply w-12 h-12;
 }
-
 .timeline-event-vertical:not(:last-child) .timeline-marker-vertical::after {
   content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 2px;
-  height: calc(var(--spacing, 80px) - 3rem);
-  background-color: var(--timeline-color, #6366f1);
+  @apply absolute top-full left-1/2 -translate-x-1/2 w-0.5;
+  height: calc(v-bind(previewSpacing) - 3rem);
+  background-color: v-bind(previewColor);
 }
-
 .timeline-content-vertical {
-  flex: 1;
-  padding-bottom: 1rem;
+  @apply flex-1 pb-4;
 }
-
 .timeline-date-vertical {
-  font-size: 0.875rem;
-  margin-bottom: 0.25rem;
+  @apply text-sm mb-1;
 }
-
 .timeline-title-vertical {
-  font-size: 1.125rem;
-  margin-bottom: 0.5rem;
+  @apply text-lg mb-2;
 }
-
 .timeline-description-vertical {
-  font-size: 0.875rem;
-  line-height: 1.5;
+  @apply text-sm leading-normal;
 }
 
-/* Horizontal Timeline Styles */
+/* Horizontal: evenly spaced, equal-width events */
 .timeline-horizontal {
-  position: relative;
-  padding: 2rem 0;
-  min-height: 200px;
+  @apply relative py-8 min-h-52;
 }
-
 .timeline-line-horizontal {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 4px;
-  transform: translateY(-50%);
+  @apply absolute top-12 left-0 right-0 h-1 -translate-y-1/2;
 }
-
 .timeline-events-horizontal {
-  position: relative;
-  display: flex;
-  justify-content: space-between;
+  @apply relative flex justify-between gap-2;
 }
-
 .timeline-event-horizontal {
-  position: absolute;
-  top: 0;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 150px;
+  @apply flex flex-col items-center w-36 shrink-0;
 }
-
 .timeline-marker-horizontal {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  z-index: 2;
-  margin-bottom: 0.5rem;
+  @apply w-8 h-8 mb-2;
 }
-
 .timeline-content-horizontal {
-  text-align: center;
-  margin-top: 0.5rem;
+  @apply text-center mt-2;
 }
-
-.timeline-date-horizontal {
-  margin-bottom: 0.25rem;
-}
-
+.timeline-date-horizontal,
 .timeline-title-horizontal {
-  margin-bottom: 0.25rem;
+  @apply mb-1;
 }
-
 .timeline-description-horizontal {
-  line-height: 1.4;
+  @apply leading-snug;
 }
 
-/* Zigzag Timeline Styles */
+/* Zigzag */
 .timeline-zigzag {
-  position: relative;
-  padding: 2rem 0;
+  @apply relative py-8;
 }
-
 .timeline-line-zigzag {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  transform: translateX(-50%);
+  @apply absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2;
 }
-
 .timeline-event-zigzag {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  min-height: 100px;
+  @apply relative flex items-start min-h-24;
 }
-
+.timeline-event-zigzag:not(:last-child) {
+  margin-bottom: v-bind(previewSpacing);
+}
 .timeline-event-left {
-  flex-direction: row;
+  @apply flex-row;
 }
-
 .timeline-event-right {
-  flex-direction: row-reverse;
+  @apply flex-row-reverse;
 }
-
 .timeline-marker-zigzag {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 2;
-  margin: 0 1rem;
+  @apply w-12 h-12 mx-4;
 }
-
 .timeline-content-zigzag {
-  flex: 1;
+  @apply flex-1 p-3 rounded-control bg-fill-subtle;
   max-width: 45%;
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  background-color: var(--bg-color, rgba(255, 255, 255, 0.1));
 }
-
 .timeline-content-left {
-  text-align: left;
+  @apply text-left;
 }
-
 .timeline-content-right {
-  text-align: right;
+  @apply text-right;
 }
-
 .timeline-date-zigzag {
-  margin-bottom: 0.25rem;
+  @apply mb-1;
 }
-
 .timeline-title-zigzag {
-  font-size: 1rem;
-  margin-bottom: 0.5rem;
+  @apply text-base mb-2;
 }
-
 .timeline-description-zigzag {
-  line-height: 1.5;
+  @apply leading-normal;
 }
 </style>
-

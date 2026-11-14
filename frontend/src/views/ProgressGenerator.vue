@@ -1,513 +1,158 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Progress Indicator Generator
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Create customizable progress bars, circular progress indicators, and step indicators. Generate React or Vue components with animations.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">trending_up</span>
-                      Component Utility
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Progress bar representation -->
-                      <rect x="30" y="80" width="140" height="20" rx="10" fill="url(#progressGradient)" opacity="0.3"/>
-                      <rect x="30" y="80" width="84" height="20" rx="10" fill="url(#progressGradient)" opacity="0.8"/>
-                      <!-- Circular progress -->
-                      <circle cx="100" cy="140" r="30" fill="none" stroke="url(#progressGradient)" stroke-width="8" opacity="0.3"/>
-                      <circle cx="100" cy="140" r="30" fill="none" stroke="url(#progressGradient)" stroke-width="8" opacity="0.8" stroke-dasharray="94.25" stroke-dashoffset="47.125" transform="rotate(-90 100 140)"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/components', label: 'Components' }"
+      title="Progress indicator generator"
+      lead="Create customizable progress bars, circular progress indicators, and step indicators. Generate React or Vue components with animations."
+      spot="tools/progress-generator"
+      size="tool"
+    />
+
+    <PageSection title="Build" description="Pick a type and state, set the value and colours, then export the component.">
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <UiPanel title="Configuration" class="lg:col-span-1">
+          <div class="space-y-5">
+            <UiSegmented v-model="config.type" label="Type" :options="progressTypes" />
+            <UiRange v-model="config.value" label="Value" :min="0" :max="100" unit="%" />
+            <UiSegmented v-model="config.state" label="State" :options="progressStates" />
+            <UiSelect v-model="config.size" label="Size" :options="sizeOptions" />
+            <div class="grid grid-cols-content-aside items-end gap-2">
+              <UiInput v-model="config.fillColor" label="Fill color" mono :placeholder="DEFAULT_FILL" />
+              <UiInput v-model="config.fillColor" type="color" label="Picker" aria-label="Fill color picker" />
+            </div>
+            <div class="grid grid-cols-content-aside items-end gap-2">
+              <UiInput v-model="config.trackColor" label="Track color" mono :placeholder="DEFAULT_TRACK" />
+              <UiInput v-model="config.trackColor" type="color" label="Picker" aria-label="Track color picker" />
+            </div>
+            <UiInput v-model="config.label" label="Label" placeholder="Loading..." />
+            <UiSelect v-model="config.labelPosition" label="Label position" :options="labelPositions" />
+            <div class="space-y-2">
+              <UiCheckbox v-model="config.animated" label="Animated" />
+              <UiCheckbox v-if="config.type === 'linear'" v-model="config.striped" label="Striped Pattern" />
+              <UiCheckbox v-model="config.showPercentage" label="Show Percentage" />
             </div>
           </div>
+        </UiPanel>
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <!-- Configuration Panel -->
-              <div class="lg:col-span-1">
-                <div 
-                  class="rounded-lg shadow-sm border p-6 mb-6 sticky top-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
+        <div class="space-y-6 lg:col-span-2">
+          <UiPanel title="Preview">
+            <div class="space-y-8 rounded-tile bg-surface-sunken p-8">
+              <!-- Linear progress -->
+              <div v-if="config.type === 'linear'">
+                <div
+                  class="progress-track"
+                  :class="`progress-track-${config.size}`"
+                  role="progressbar"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  :aria-valuenow="progressValue"
+                  :aria-label="config.label || 'Progress'"
                 >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">tune</span>
-                    Configuration
-                  </h2>
-
-                  <!-- Type Selector -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Type
-                    </label>
-                    <div class="grid grid-cols-1 gap-2">
-                      <button
-                        v-for="type in progressTypes"
-                        :key="type.value"
-                        @click="config.type = type.value"
-                        class="px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left"
-                        :class="config.type === type.value
-                          ? (isDarkMode 
-                            ? 'bg-indigo-600 text-white' 
-                            : 'bg-indigo-600 text-white')
-                          : (isDarkMode
-                            ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                      >
-                        <span class="material-symbols-outlined text-base mr-2 align-middle">{{ type.icon }}</span>
-                        {{ type.label }}
-                      </button>
-                    </div>
+                  <div class="progress-fill" :class="{ 'is-animated': config.animated, 'is-striped': config.striped }">
+                    <span v-if="config.labelPosition === 'inside' && config.label" class="progress-inside-label">
+                      {{ config.label }} {{ config.showPercentage ? `${config.value}%` : '' }}
+                    </span>
                   </div>
+                </div>
+                <p v-if="config.labelPosition === 'outside' && config.label" class="mt-2 text-sm text-ink">
+                  {{ config.label }} {{ config.showPercentage ? `${config.value}%` : '' }}
+                </p>
+              </div>
 
-                  <!-- Value Input -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Value: {{ config.value }}%
-                    </label>
-                    <input
-                      v-model.number="config.value"
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="1"
-                      class="w-full h-2 rounded-lg appearance-none cursor-pointer"
-                      :class="isDarkMode ? 'bg-slate-700 accent-indigo-500' : 'bg-gray-200 accent-indigo-600'"
+              <!-- Circular progress -->
+              <div v-if="config.type === 'circular'" class="flex justify-center">
+                <div
+                  class="relative inline-flex"
+                  role="progressbar"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  :aria-valuenow="progressValue"
+                  :aria-label="config.label || 'Progress'"
+                >
+                  <svg :width="getCircularSize()" :height="getCircularSize()" class="-rotate-90 transform" aria-hidden="true">
+                    <circle
+                      :cx="getCircularSize() / 2"
+                      :cy="getCircularSize() / 2"
+                      :r="(getCircularSize() - 16) / 2"
+                      fill="none"
+                      :stroke="stateColors.track"
+                      stroke-width="8"
                     />
-                    <div class="flex justify-between text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                      <span>0%</span>
-                      <span>100%</span>
-                    </div>
-                  </div>
-
-                  <!-- State Selector -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      State
-                    </label>
-                    <div class="grid grid-cols-2 gap-2">
-                      <button
-                        v-for="state in progressStates"
-                        :key="state.value"
-                        @click="config.state = state.value"
-                        class="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                        :class="config.state === state.value
-                          ? (isDarkMode 
-                            ? 'bg-indigo-600 text-white' 
-                            : 'bg-indigo-600 text-white')
-                          : (isDarkMode
-                            ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                      >
-                        {{ state.label }}
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Size Selector -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Size
-                    </label>
-                    <select
-                      v-model="config.size"
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                      :class="isDarkMode 
-                        ? 'bg-slate-800 border-gray-600 text-white' 
-                        : 'bg-white border-gray-300 text-gray-900'"
-                    >
-                      <option value="sm">Small</option>
-                      <option value="md">Medium</option>
-                      <option value="lg">Large</option>
-                    </select>
-                  </div>
-
-                  <!-- Color Pickers -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Fill Color
-                    </label>
-                    <div class="flex gap-2">
-                      <input
-                        v-model="config.fillColor"
-                        type="color"
-                        class="w-16 h-10 rounded border cursor-pointer"
-                        :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                      />
-                      <input
-                        v-model="config.fillColor"
-                        type="text"
-                        placeholder="#6366f1"
-                        class="flex-1 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors font-mono text-sm"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Track Color
-                    </label>
-                    <div class="flex gap-2">
-                      <input
-                        v-model="config.trackColor"
-                        type="color"
-                        class="w-16 h-10 rounded border cursor-pointer"
-                        :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                      />
-                      <input
-                        v-model="config.trackColor"
-                        type="text"
-                        placeholder="#e5e7eb"
-                        class="flex-1 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors font-mono text-sm"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Label Configuration -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Label
-                    </label>
-                    <input
-                      v-model="config.label"
-                      type="text"
-                      placeholder="Loading..."
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors mb-2"
-                      :class="isDarkMode 
-                        ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
+                    <circle
+                      :cx="getCircularSize() / 2"
+                      :cy="getCircularSize() / 2"
+                      :r="(getCircularSize() - 16) / 2"
+                      fill="none"
+                      :stroke="stateColors.fill"
+                      stroke-width="8"
+                      :stroke-dasharray="getCircularCircumference()"
+                      :stroke-dashoffset="getCircularOffset()"
+                      :class="{ 'circle-animated': config.animated }"
                     />
-                    <select
-                      v-model="config.labelPosition"
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                      :class="isDarkMode 
-                        ? 'bg-slate-800 border-gray-600 text-white' 
-                        : 'bg-white border-gray-300 text-gray-900'"
-                    >
-                      <option value="inside">Inside</option>
-                      <option value="outside">Outside</option>
-                      <option value="none">None</option>
-                    </select>
-                  </div>
-
-                  <!-- Animation Toggle -->
-                  <div class="mb-4">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                      <input
-                        v-model="config.animated"
-                        type="checkbox"
-                        class="w-4 h-4"
-                        :class="isDarkMode ? 'accent-indigo-500' : 'accent-indigo-600'"
-                      />
-                      <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Animated</span>
-                    </label>
-                  </div>
-
-                  <!-- Striped Pattern Toggle -->
-                  <div v-if="config.type === 'linear'" class="mb-4">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                      <input
-                        v-model="config.striped"
-                        type="checkbox"
-                        class="w-4 h-4"
-                        :class="isDarkMode ? 'accent-indigo-500' : 'accent-indigo-600'"
-                      />
-                      <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Striped Pattern</span>
-                    </label>
-                  </div>
-
-                  <!-- Show Percentage Toggle -->
-                  <div class="mb-4">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                      <input
-                        v-model="config.showPercentage"
-                        type="checkbox"
-                        class="w-4 h-4"
-                        :class="isDarkMode ? 'accent-indigo-500' : 'accent-indigo-600'"
-                      />
-                      <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Show Percentage</span>
-                    </label>
+                  </svg>
+                  <div v-if="config.labelPosition !== 'none'" class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span v-if="config.label" class="text-sm font-medium text-ink">{{ config.label }}</span>
+                    <span v-if="config.showPercentage" class="text-lg font-bold text-ink-strong">{{ config.value }}%</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Preview and Export Panel -->
-              <div class="lg:col-span-2">
-                <!-- Preview Section -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6 mb-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
+              <!-- Step indicator -->
+              <div v-if="config.type === 'steps'" class="space-y-4">
+                <div
+                  class="flex items-center justify-between"
+                  role="progressbar"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  :aria-valuenow="progressValue"
+                  :aria-valuetext="`Step ${completedSteps} of ${STEP_COUNT} complete`"
+                  :aria-label="config.label || 'Progress'"
                 >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">preview</span>
-                    Preview
-                  </h2>
-                  
-                  <div class="space-y-8 p-8 rounded-lg"
-                    :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'"
-                  >
-                    <!-- Linear Progress -->
-                    <div v-if="config.type === 'linear'">
-                      <div
-                        class="relative"
-                        :style="getLinearProgressStyles()"
-                        role="progressbar"
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                        :aria-valuenow="progressValue"
-                        :aria-label="config.label || 'Progress'"
-                      >
-                        <div 
-                          class="h-full rounded-full"
-                          :style="getLinearProgressFillStyles()"
-                        >
-                          <span v-if="config.labelPosition === 'inside' && config.label" 
-                            class="absolute inset-0 flex items-center justify-center text-xs font-medium z-10"
-                            :style="{ color: getTextColor() }"
-                          >
-                            {{ config.label }} {{ config.showPercentage ? `${config.value}%` : '' }}
-                          </span>
-                        </div>
-                      </div>
-                      <p v-if="config.labelPosition === 'outside' && config.label" 
-                        class="text-sm mt-2"
-                        :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                      >
-                        {{ config.label }} {{ config.showPercentage ? `${config.value}%` : '' }}
-                      </p>
+                  <div v-for="(step, index) in STEP_COUNT" :key="index" class="flex items-center">
+                    <div class="step-dot" :class="[`step-dot-${config.size}`, { 'is-complete': index < completedSteps }]">
+                      <span v-if="index < completedSteps" class="material-symbols-outlined text-sm" aria-hidden="true">check</span>
+                      <span v-else class="text-xs">{{ index + 1 }}</span>
                     </div>
-
-                    <!-- Circular Progress -->
-                    <div v-if="config.type === 'circular'" class="flex justify-center">
-                      <div
-                        class="relative"
-                        :style="getCircularProgressStyles()"
-                        role="progressbar"
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                        :aria-valuenow="progressValue"
-                        :aria-label="config.label || 'Progress'"
-                      >
-                        <svg :width="getCircularSize()" :height="getCircularSize()" class="transform -rotate-90">
-                          <circle
-                            :cx="getCircularSize() / 2"
-                            :cy="getCircularSize() / 2"
-                            :r="(getCircularSize() - 16) / 2"
-                            fill="none"
-                            :stroke="getStateColors().track"
-                            stroke-width="8"
-                          />
-                          <circle
-                            :cx="getCircularSize() / 2"
-                            :cy="getCircularSize() / 2"
-                            :r="(getCircularSize() - 16) / 2"
-                            fill="none"
-                            :stroke="getStateColors().fill"
-                            stroke-width="8"
-                            :stroke-dasharray="getCircularCircumference()"
-                            :stroke-dashoffset="getCircularOffset()"
-                            :style="config.animated ? { transition: 'stroke-dashoffset 0.3s ease' } : {}"
-                          />
-                        </svg>
-                        <div v-if="config.labelPosition !== 'none'" 
-                          class="absolute inset-0 flex items-center justify-center flex-col"
-                        >
-                          <span v-if="config.label" 
-                            class="text-sm font-medium"
-                            :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                          >
-                            {{ config.label }}
-                          </span>
-                          <span v-if="config.showPercentage" 
-                            class="text-lg font-bold"
-                            :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                          >
-                            {{ config.value }}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Step Indicator -->
-                    <div v-if="config.type === 'steps'" class="space-y-4">
-                      <div
-                        class="flex items-center justify-between"
-                        role="progressbar"
-                        aria-valuemin="0"
-                        aria-valuemax="100"
-                        :aria-valuenow="progressValue"
-                        :aria-valuetext="`Step ${completedSteps} of ${STEP_COUNT} complete`"
-                        :aria-label="config.label || 'Progress'"
-                      >
-                        <div 
-                          v-for="(step, index) in STEP_COUNT"
-                          :key="index"
-                          class="flex items-center"
-                        >
-                          <div 
-                            class="rounded-full flex items-center justify-center font-medium"
-                            :style="getStepStyles(index)"
-                          >
-                            <span v-if="index < completedSteps" class="material-symbols-outlined text-sm">check</span>
-                            <span v-else class="text-xs">{{ index + 1 }}</span>
-                          </div>
-                          <div 
-                            v-if="index < STEP_COUNT - 1"
-                            class="h-1 mx-1"
-                            :style="{ 
-                              width: '40px',
-                              backgroundColor: index < completedSteps ? getStateColors().fill : getStateColors().track
-                            }"
-                          ></div>
-                        </div>
-                      </div>
-                      <p v-if="config.label" 
-                        class="text-sm text-center"
-                        :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                      >
-                        {{ config.label }} {{ config.showPercentage ? `${config.value}%` : '' }}
-                      </p>
-                    </div>
+                    <div v-if="index < STEP_COUNT - 1" class="step-line" :class="{ 'is-complete': index < completedSteps }"></div>
                   </div>
                 </div>
-
-                <!-- Export Section -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">download</span>
-                    Export
-                  </h2>
-
-                  <div class="space-y-4">
-                    <!-- Export Format Selector -->
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Export Format
-                      </label>
-                      <div class="flex gap-2">
-                        <button
-                          v-for="format in exportFormats"
-                          :key="format.value"
-                          @click="selectedExportFormat = format.value"
-                          class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                          :class="selectedExportFormat === format.value
-                            ? (isDarkMode 
-                              ? 'bg-indigo-600 text-white' 
-                              : 'bg-indigo-600 text-white')
-                            : (isDarkMode
-                              ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                        >
-                          {{ format.label }}
-                        </button>
-                      </div>
-                    </div>
-
-                    <!-- Code Preview -->
-                    <div>
-                      <div class="flex items-center justify-between mb-2">
-                        <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                          Generated Code
-                        </label>
-                        <button
-                          @click="copyCode"
-                          class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
-                            : 'bg-indigo-600 text-white hover:bg-indigo-700'"
-                        >
-                          <span class="material-symbols-outlined text-sm mr-1 align-middle">content_copy</span>
-                          Copy
-                        </button>
-                      </div>
-                      <InlineNotice :notice="notice" class="mb-2" @dismiss="clearNotice" />
-                      <textarea
-                        :value="generatedCode"
-                        readonly
-                        class="w-full h-64 px-4 py-3 border rounded-lg font-mono text-sm resize-none"
-                        :class="isDarkMode 
-                          ? 'bg-slate-950 text-gray-100 border-gray-700' 
-                          : 'bg-gray-50 text-gray-900 border-gray-300'"
-                      ></textarea>
-                    </div>
-                  </div>
-                </div>
+                <p v-if="config.label" class="text-center text-sm text-ink">
+                  {{ config.label }} {{ config.showPercentage ? `${config.value}%` : '' }}
+                </p>
               </div>
             </div>
-          </div>
+          </UiPanel>
+
+          <UiPanel title="Export">
+            <div class="space-y-4">
+              <UiSegmented v-model="selectedExportFormat" label="Export format" :options="exportFormats" />
+              <InlineNotice :notice="notice" @dismiss="clearNotice" />
+              <UiCodeBlock :code="generatedCode" :label="exportLabel" @copied="onCopied" @copy-failed="onCopyFailed" />
+            </div>
+          </UiPanel>
         </div>
       </div>
-    </div>
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import {
+  PageHero,
+  PageSection,
+  PageShell,
+  UiCheckbox,
+  UiCodeBlock,
+  UiInput,
+  UiPanel,
+  UiRange,
+  UiSegmented,
+  UiSelect,
+} from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const { notice, showNotice, clearNotice } = useNotice();
 const STEP_COUNT = 5;
 
@@ -529,6 +174,21 @@ const exportFormats = [
   { label: 'Vue', value: 'vue' },
   { label: 'CSS', value: 'css' }
 ];
+
+const sizeOptions = [
+  { value: 'sm', label: 'Small' },
+  { value: 'md', label: 'Medium' },
+  { value: 'lg', label: 'Large' }
+];
+
+const labelPositions = [
+  { value: 'inside', label: 'Inside' },
+  { value: 'outside', label: 'Outside' },
+  { value: 'none', label: 'None' }
+];
+
+const DEFAULT_FILL = '#6366f1';
+const DEFAULT_TRACK = '#e5e7eb';
 
 const config = ref({
   type: 'linear',
@@ -564,61 +224,10 @@ const getStateColors = () => {
   return stateMap[config.value.state] || stateMap.default;
 };
 
-const getTextColor = () => {
-  return config.value.labelPosition === 'inside' ? '#ffffff' : (isDarkMode.value ? '#e5e7eb' : '#374151');
-};
-
-const getLinearProgressStyles = () => {
-  const sizeMap = {
-    sm: { height: '8px' },
-    md: { height: '12px' },
-    lg: { height: '16px' }
-  };
-  return {
-    width: '100%',
-    backgroundColor: getStateColors().track,
-    borderRadius: '9999px',
-    overflow: 'hidden',
-    ...sizeMap[config.value.size]
-  };
-};
-
-const getLinearProgressFillStyles = () => {
-  const colors = getStateColors();
-  const styles = {
-    width: `${progressValue.value}%`,
-    height: '100%',
-    borderRadius: '9999px',
-    transition: config.value.animated ? 'width 0.3s ease' : 'none',
-    backgroundColor: colors.fill
-  };
-  
-  // Apply striped pattern via inline styles to ensure it works
-  if (config.value.striped) {
-    // Subtle white semi-transparent stripes at 45 degrees (matching screenshot style)
-    styles.backgroundImage = `linear-gradient(
-      45deg,
-      rgba(255, 255, 255, 0.15) 25%,
-      transparent 25%,
-      transparent 50%,
-      rgba(255, 255, 255, 0.15) 50%,
-      rgba(255, 255, 255, 0.15) 75%,
-      transparent 75%,
-      transparent
-    )`;
-    styles.backgroundSize = '1rem 1rem';
-    styles.backgroundRepeat = 'repeat';
-    
-    // Add animation when both striped and animated are enabled
-    if (config.value.animated) {
-      styles.animation = 'progress-stripes 1s linear infinite';
-    }
-  } else {
-    styles.backgroundImage = 'none';
-  }
-  
-  return styles;
-};
+// Preview colours and sizes are the user's design: they reach CSS through
+// v-bind() in the <style> block
+const stateColors = computed(() => getStateColors());
+const fillWidth = computed(() => `${progressValue.value}%`);
 
 const getCircularSize = () => {
   const sizeMap = {
@@ -639,28 +248,9 @@ const getCircularOffset = () => {
   return circumference - (progressValue.value / 100) * circumference;
 };
 
-const getCircularProgressStyles = () => {
-  return {
-    width: `${getCircularSize()}px`,
-    height: `${getCircularSize()}px`
-  };
-};
-
-const getStepStyles = (index) => {
-  const colors = getStateColors();
-  const isCompleted = index < completedSteps.value;
-  const sizeMap = {
-    sm: { width: '32px', height: '32px', fontSize: '12px' },
-    md: { width: '40px', height: '40px', fontSize: '14px' },
-    lg: { width: '48px', height: '48px', fontSize: '16px' }
-  };
-  
-  return {
-    ...sizeMap[config.value.size],
-    backgroundColor: isCompleted ? colors.fill : colors.track,
-    color: isCompleted ? '#ffffff' : (isDarkMode.value ? '#9ca3af' : '#6b7280')
-  };
-};
+// Generated code (output, not page styling) uses Tailwind's white for the inside label
+// style-check: allow generated output
+const GENERATED_LABEL_TEXT = 'text-white';
 
 const STRIPES = 'linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent)';
 
@@ -733,7 +323,7 @@ export const Progress: React.FC<ProgressProps> = ({
           }}
         />
         {labelPosition === 'inside' && text && (
-          <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-white">
+          <span className="absolute inset-0 flex items-center justify-center text-xs font-medium ${GENERATED_LABEL_TEXT}">
             {text}
           </span>
         )}
@@ -902,7 +492,7 @@ export const StepProgress: React.FC<StepProgressProps> = ({
       <div class="h-full rounded-full" :style="fillStyle"></div>
       <span
         v-if="labelPosition === 'inside' && text"
-        class="absolute inset-0 flex items-center justify-center text-xs font-medium text-white"
+        class="absolute inset-0 flex items-center justify-center text-xs font-medium ${GENERATED_LABEL_TEXT}"
       >{{ text }}</span>
     </div>
     <p v-if="labelPosition === 'outside' && text" class="text-sm mt-2">{{ text }}</p>
@@ -1063,57 +653,63 @@ const fillStyle = computed(() => ({
   }
 });
 
-const copyCode = async () => {
-  try {
-    await navigator.clipboard.writeText(generatedCode.value);
-    showNotice('Code copied to clipboard.', 'success');
-  } catch (error) {
-    console.error('Copy failed:', error);
-    showNotice('Could not copy to the clipboard. Select the code and copy it manually.', 'error');
-  }
-};
+const exportLabel = computed(() => exportFormats.find((f) => f.value === selectedExportFormat.value)?.label ?? 'Code');
 
-
-
-
-
+// UiCodeBlock copies the code; these report the result
+const onCopied = () => showNotice('Code copied to clipboard.', 'success');
+const onCopyFailed = () => showNotice('Could not copy to the clipboard. Select the code and copy it manually.', 'error');
 </script>
 
-<style>
-/* Global keyframes for progress animations */
-@keyframes progress-stripes {
-  0% {
-    background-position: 0 0;
-  }
-  100% {
-    background-position: 1rem 0;
-  }
-}
-
-/* Global styles for progress striped pattern */
-.progress-striped {
-  background-image: linear-gradient(
-    45deg,
-    rgba(255, 255, 255, 0.15) 25%,
-    transparent 25%,
-    transparent 50%,
-    rgba(255, 255, 255, 0.15) 50%,
-    rgba(255, 255, 255, 0.15) 75%,
-    transparent 75%,
-    transparent
-  ) !important;
-  background-size: 1rem 1rem !important;
-  background-repeat: repeat !important;
-}
-
-.progress-animated {
-  animation: progress-stripes 1s linear infinite !important;
-}
-</style>
-
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.progress-track {
+  @apply relative w-full overflow-hidden rounded-pill;
+  background-color: v-bind('stateColors.track');
+}
+.progress-track-sm { @apply h-2; }
+.progress-track-md { @apply h-3; }
+.progress-track-lg { @apply h-4; }
+.progress-fill {
+  @apply h-full rounded-pill;
+  width: v-bind(fillWidth);
+  background-color: v-bind('stateColors.fill');
+}
+.progress-fill.is-animated {
+  transition: width 0.3s ease;
+}
+.progress-fill.is-striped {
+  background-image: v-bind(STRIPES);
+  background-size: 1rem 1rem;
+  background-repeat: repeat;
+}
+.progress-fill.is-striped.is-animated {
+  animation: progress-stripes 1s linear infinite;
+}
+@keyframes progress-stripes {
+  0% { background-position: 0 0; }
+  100% { background-position: 1rem 0; }
+}
+.progress-inside-label {
+  @apply absolute inset-0 z-10 flex items-center justify-center text-xs font-medium text-ink-on-accent;
+}
+.circle-animated {
+  transition: stroke-dashoffset 0.3s ease;
+}
+.step-dot {
+  @apply flex items-center justify-center rounded-pill font-medium text-ink-muted;
+  background-color: v-bind('stateColors.track');
+}
+.step-dot.is-complete {
+  @apply text-ink-on-accent;
+  background-color: v-bind('stateColors.fill');
+}
+.step-dot-sm { @apply h-8 w-8 text-xs; }
+.step-dot-md { @apply h-10 w-10 text-sm; }
+.step-dot-lg { @apply h-12 w-12 text-base; }
+.step-line {
+  @apply mx-1 h-1 w-10;
+  background-color: v-bind('stateColors.track');
+}
+.step-line.is-complete {
+  background-color: v-bind('stateColors.fill');
 }
 </style>
-

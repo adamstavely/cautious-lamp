@@ -1,267 +1,74 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Heuristic Evaluation
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Evaluate interfaces using Nielsen's 10 Usability Heuristics. Identify usability issues and prioritize improvements based on severity ratings.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">checklist</span>
-                      Usability Tool
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="Heuristic evaluation"
+      lead="Evaluate interfaces using Nielsen's 10 Usability Heuristics. Identify usability issues and prioritize improvements based on severity ratings."
+      spot="research/heuristic-evaluation"
+      size="tool"
+    />
+
+    <PageSection>
+      <form class="space-y-6" @submit.prevent="submitEvaluation">
+        <UiPanel title="The evaluation" description="What you evaluated, and who evaluated it.">
+          <div class="grid gap-6 md:grid-cols-2">
+            <UiSelect v-model="form.systemName" label="System / application" :options="systemOptions" placeholder="Select a system or application" required />
+            <UiInput v-model="form.evaluator" label="Evaluator name" required placeholder="Enter your name" />
+          </div>
+        </UiPanel>
+
+        <PageSection title="Nielsen's 10 usability heuristics" description="Note any issues and rate how severe they are.">
+          <ol class="space-y-4">
+            <li v-for="(heuristic, index) in heuristics" :key="index">
+              <UiPanel :title="`${index + 1}. ${heuristic.name}`" :description="heuristic.description" heading-tag="h3">
+                <div class="space-y-4">
+                  <UiTextarea
+                    v-model="form.heuristics[index].issues"
+                    label="Issues found"
+                    rows="3"
+                    :placeholder="`Describe any issues related to ${heuristic.name.toLowerCase()}...`"
+                  />
+                  <UiSegmented v-model="form.heuristics[index].severity" label="Severity rating" :options="severityOptions" />
                 </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="heuristicGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized checklist icon -->
-                      <rect x="40" y="40" width="120" height="20" rx="4" fill="url(#heuristicGradient)" opacity="0.4"/>
-                      <rect x="40" y="70" width="120" height="20" rx="4" fill="url(#heuristicGradient)" opacity="0.5"/>
-                      <rect x="40" y="100" width="120" height="20" rx="4" fill="url(#heuristicGradient)" opacity="0.4"/>
-                      <rect x="40" y="130" width="120" height="20" rx="4" fill="url(#heuristicGradient)" opacity="0.5"/>
-                      <circle cx="50" cy="50" r="6" fill="white" opacity="0.8"/>
-                      <circle cx="50" cy="80" r="6" fill="white" opacity="0.8"/>
-                      <circle cx="50" cy="110" r="6" fill="white" opacity="0.8"/>
-                      <circle cx="50" cy="140" r="6" fill="white" opacity="0.8"/>
-                    </svg>
-                  </div>
-                </div>
+              </UiPanel>
+            </li>
+          </ol>
+        </PageSection>
+
+        <UiPanel>
+          <UiTextarea v-model="form.overallAssessment" label="Overall assessment" rows="4" placeholder="Provide an overall assessment and recommendations..." />
+          <template #footer>
+            <div class="flex flex-col gap-4">
+              <InlineNotice :notice="notice" @dismiss="clearNotice" />
+              <div class="flex justify-end gap-3">
+                <UiButton variant="secondary" @click="resetForm">Reset</UiButton>
+                <UiButton type="submit" variant="primary" :loading="isSubmitting">
+                  {{ isSubmitting ? 'Submitting...' : 'Submit evaluation' }}
+                </UiButton>
               </div>
             </div>
-          </div>
+          </template>
+        </UiPanel>
+      </form>
+    </PageSection>
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <div 
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <form @submit.prevent="submitEvaluation" class="space-y-6">
-                <!-- System/Application Dropdown -->
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    System / Application
-                  </label>
-                  <Dropdown
-                    v-model="form.systemName"
-                    :options="systemOptions"
-                    placeholder="Select a system or application"
-                    class="w-full"
-                  />
-                </div>
-
-                <!-- Evaluator Name -->
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Evaluator Name
-                  </label>
-                  <input
-                    v-model="form.evaluator"
-                    type="text"
-                    required
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    :class="isDarkMode 
-                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                    placeholder="Enter your name"
-                  />
-                </div>
-
-                <!-- Heuristics Evaluation -->
-                <div class="space-y-6">
-                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-gray-200' : 'text-gray-900'">
-                    Nielsen's 10 Usability Heuristics
-                  </h3>
-                  
-                  <div v-for="(heuristic, index) in heuristics" :key="index" class="border rounded-lg p-4"
-                    :class="isDarkMode ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                    <div class="flex items-start justify-between mb-3">
-                      <div class="flex-1">
-                        <h4 class="font-semibold mb-1" :class="isDarkMode ? 'text-gray-200' : 'text-gray-900'">
-                          {{ index + 1 }}. {{ heuristic.name }}
-                        </h4>
-                        <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                          {{ heuristic.description }}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <!-- Issues Found -->
-                    <div class="mt-4">
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Issues Found
-                      </label>
-                      <textarea
-                        v-model="form.heuristics[index].issues"
-                        rows="3"
-                        class="w-full px-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        :class="isDarkMode 
-                          ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                        :placeholder="`Describe any issues related to ${heuristic.name.toLowerCase()}...`"
-                      ></textarea>
-                    </div>
-                    
-                    <!-- Severity Rating -->
-                    <div class="mt-4">
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Severity Rating
-                      </label>
-                      <div class="flex items-center gap-4">
-                        <label 
-                          v-for="severity in severityOptions" 
-                          :key="severity.value"
-                          class="flex items-center gap-2 cursor-pointer"
-                        >
-                          <input
-                            type="radio"
-                            :value="severity.value"
-                            v-model="form.heuristics[index].severity"
-                            class="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
-                            :class="isDarkMode ? 'accent-indigo-500' : ''"
-                          />
-                          <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ severity.label }}
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Overall Assessment -->
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Overall Assessment
-                  </label>
-                  <textarea
-                    v-model="form.overallAssessment"
-                    rows="4"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    :class="isDarkMode 
-                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                    placeholder="Provide an overall assessment and recommendations..."
-                  ></textarea>
-                </div>
-
-                <!-- Submit Button -->
-                <div class="flex justify-end gap-4">
-                  <button
-                    type="button"
-                    @click="resetForm"
-                    class="px-6 py-2 border rounded-lg font-medium transition-colors"
-                    :class="isDarkMode 
-                      ? 'border-slate-600 text-gray-300 hover:bg-slate-800' 
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
-                  >
-                    Reset
-                  </button>
-                  <button
-                    type="submit"
-                    :disabled="isSubmitting"
-                    class="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    :class="isDarkMode ? 'bg-indigo-500 hover:bg-indigo-400' : ''"
-                  >
-                    <span v-if="isSubmitting">Submitting...</span>
-                    <span v-else>Submit Evaluation</span>
-                  </button>
-                </div>
-                <InlineNotice :notice="notice" @dismiss="clearNotice" />
-              </form>
-            </div>
-
-            <!-- Results Summary -->
-            <div 
-              v-if="results"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-gray-200' : 'text-gray-900'">
-                Evaluation Summary
-              </h3>
-              <div class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                    <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Total Issues</div>
-                    <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ results.totalIssues }}
-                    </div>
-                  </div>
-                  <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                    <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Critical Issues</div>
-                    <div class="text-2xl font-bold text-red-600">
-                      {{ results.criticalIssues }}
-                    </div>
-                  </div>
-                  <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                    <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Overall Score</div>
-                    <div class="text-2xl font-bold" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                      {{ results.overallScore }}/10
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <PageSection v-if="results" title="Evaluation summary" divided>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <UiStat label="Total issues" :value="results.totalIssues" />
+        <UiStat label="Critical issues" :value="results.criticalIssues" :tone="results.criticalIssues > 0 ? 'danger' : 'neutral'" />
+        <UiStat label="Overall score" :value="`${results.overallScore}/10`" tone="accent" />
       </div>
-    </div>
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, reactive } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import Dropdown from '../components/Dropdown.vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { PageHero, PageSection, PageShell, UiButton, UiInput, UiPanel, UiSegmented, UiSelect, UiStat, UiTextarea } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 import apiClient from '../services/api.js';
 
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = useDarkMode();
 const { notice, showNotice, clearNotice } = useNotice();
 
 // A user-facing reason the submission failed.
@@ -349,10 +156,6 @@ const form = reactive({
   overallAssessment: ''
 });
 
-
-
-
-
 const resetForm = () => {
   form.systemName = '';
   form.evaluator = '';
@@ -430,10 +233,3 @@ const submitEvaluation = async () => {
   }
 };
 </script>
-
-<style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-</style>
-

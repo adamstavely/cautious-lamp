@@ -1,237 +1,229 @@
 <template>
-  <div class="component-preview">
-    <!-- Button Component -->
+  <div class="component-preview" :class="{ 'component-preview-dark': forceDark }" :data-theme="forceDark ? 'dark' : undefined">
+    <!-- Button -->
     <div v-if="component === 'button'" class="flex items-center gap-4">
       <button
-        :class="[
-          'px-6 py-2 rounded-lg font-medium transition-colors',
-          componentProps.variant === 'primary' ? 'bg-indigo-600 text-white hover:bg-indigo-700' :
-          componentProps.variant === 'secondary' ? 'bg-white text-indigo-600 border-2 border-indigo-600 hover:bg-indigo-50' :
-          componentProps.variant === 'tertiary' ? 'bg-transparent text-indigo-600 hover:bg-indigo-50' :
-          componentProps.variant === 'danger' ? 'bg-red-600 text-white hover:bg-red-700' :
-          'bg-indigo-600 text-white hover:bg-indigo-700',
-          componentProps.size === 'sm' ? 'px-4 py-1 text-sm' :
-          componentProps.size === 'lg' ? 'px-8 py-3 text-lg' :
-          '',
-          componentProps.disabled ? 'opacity-50 cursor-not-allowed' : '',
-          componentProps.loading ? 'opacity-75' : ''
-        ]"
+        type="button"
+        class="preview-button"
+        :class="[buttonVariantClass, buttonSizeClass, { 'opacity-75': componentProps.loading }]"
         :disabled="componentProps.disabled || componentProps.loading"
       >
-        <span v-if="componentProps.loading" class="inline-block mr-2">
-          <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        </span>
+        <span v-if="componentProps.loading" class="material-symbols-outlined text-base animate-spin" aria-hidden="true">progress_activity</span>
         {{ componentProps.label || 'Button' }}
       </button>
     </div>
 
-    <!-- Card Component -->
+    <!-- Card -->
     <div v-else-if="component === 'card'" class="w-full max-w-md">
-      <div
-        :class="[
-          'rounded-lg p-6',
-          componentProps.variant === 'elevated' ? 'shadow-lg' :
-          componentProps.variant === 'outlined' ? 'border-2 border-gray-200' :
-          'border border-gray-200',
-          isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white'
-        ]"
-      >
-        <h3 v-if="componentProps.title" class="text-xl font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-          {{ componentProps.title }}
-        </h3>
-        <p v-if="componentProps.content" class="text-sm mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'">
-          {{ componentProps.content }}
-        </p>
+      <div class="preview-card" :class="cardVariantClass">
+        <h3 v-if="componentProps.title" class="text-xl font-semibold mb-2 text-ink-strong">{{ componentProps.title }}</h3>
+        <p v-if="componentProps.content" class="text-sm mb-4 text-ink-secondary">{{ componentProps.content }}</p>
         <div v-if="componentProps.showActions" class="flex gap-2 mt-4">
-          <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm">
-            Action
-          </button>
-          <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm" :class="isDarkMode ? 'border-gray-600 hover:bg-slate-700' : ''">
-            Cancel
-          </button>
+          <UiButton variant="primary" size="sm" label="Action" />
+          <UiButton size="sm" label="Cancel" />
         </div>
       </div>
     </div>
 
-    <!-- Input Component -->
+    <!-- Input -->
     <div v-else-if="component === 'input'" class="w-full max-w-md">
-      <label v-if="componentProps.label" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-        {{ componentProps.label }}
-        <span v-if="componentProps.required" class="text-red-500 ml-1">*</span>
+      <label v-if="componentProps.label" :for="controlId" class="preview-label">
+        {{ componentProps.label }}<span v-if="componentProps.required" class="text-danger ml-1" aria-hidden="true">*</span>
       </label>
       <input
+        :id="controlId"
         :type="componentProps.type || 'text'"
         :placeholder="componentProps.placeholder || ''"
         :required="componentProps.required"
         :disabled="componentProps.disabled"
-        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-        :class="isDarkMode 
-          ? 'border-gray-600 bg-slate-700 text-white' 
-          : 'border-gray-300 bg-white text-gray-900'"
+        :aria-label="componentProps.label ? undefined : 'Preview input'"
+        class="preview-control h-11"
       />
     </div>
 
-    <!-- Select Component -->
+    <!-- Select -->
     <div v-else-if="component === 'select'" class="w-full max-w-md">
-      <label v-if="componentProps.label" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-        {{ componentProps.label }}
-        <span v-if="componentProps.required" class="text-red-500 ml-1">*</span>
+      <label v-if="componentProps.label" :for="controlId" class="preview-label">
+        {{ componentProps.label }}<span v-if="componentProps.required" class="text-danger ml-1" aria-hidden="true">*</span>
       </label>
       <select
+        :id="controlId"
         :required="componentProps.required"
         :disabled="componentProps.disabled"
-        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-        :class="isDarkMode 
-          ? 'border-gray-600 bg-slate-700 text-white' 
-          : 'border-gray-300 bg-white text-gray-900'"
+        :aria-label="componentProps.label ? undefined : 'Preview select'"
+        class="preview-control h-11"
       >
         <option value="">Select an option...</option>
-        <option v-for="option in (componentProps.options || '').split(',').map(o => o.trim())" :key="option" :value="option">
-          {{ option }}
-        </option>
+        <option v-for="option in optionList" :key="option" :value="option">{{ option }}</option>
       </select>
     </div>
 
-    <!-- Checkbox Component -->
+    <!-- Checkbox -->
     <div v-else-if="component === 'checkbox'" class="flex items-center gap-2">
-      <input
-        type="checkbox"
-        :checked="componentProps.checked"
-        :disabled="componentProps.disabled"
-        class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-      />
-      <label class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-        {{ componentProps.label || 'Checkbox' }}
-      </label>
+      <input :id="controlId" type="checkbox" :checked="componentProps.checked" :disabled="componentProps.disabled" class="preview-check" />
+      <label :for="controlId" class="text-sm text-ink">{{ componentProps.label || 'Checkbox' }}</label>
     </div>
 
-    <!-- Radio Component -->
-    <div v-else-if="component === 'radio'" class="space-y-2">
-      <div v-for="option in (componentProps.options || '').split(',').map(o => o.trim())" :key="option" class="flex items-center gap-2">
-        <input
-          type="radio"
-          :name="componentProps.name || 'radio-group'"
-          :value="option"
-          class="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
-        />
-        <label class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-          {{ option }}
-        </label>
+    <!-- Radio -->
+    <div v-else-if="component === 'radio'" class="flex flex-col gap-2" role="radiogroup" aria-label="Preview options">
+      <div v-for="(option, index) in optionList" :key="option" class="flex items-center gap-2">
+        <input :id="`${controlId}-${index}`" type="radio" :name="componentProps.name || `${controlId}-group`" :value="option" class="preview-check" />
+        <label :for="`${controlId}-${index}`" class="text-sm text-ink">{{ option }}</label>
       </div>
     </div>
 
-    <!-- Textarea Component -->
+    <!-- Textarea -->
     <div v-else-if="component === 'textarea'" class="w-full max-w-md">
-      <label v-if="componentProps.label" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-        {{ componentProps.label }}
-        <span v-if="componentProps.required" class="text-red-500 ml-1">*</span>
+      <label v-if="componentProps.label" :for="controlId" class="preview-label">
+        {{ componentProps.label }}<span v-if="componentProps.required" class="text-danger ml-1" aria-hidden="true">*</span>
       </label>
       <textarea
+        :id="controlId"
         :rows="componentProps.rows || 4"
         :placeholder="componentProps.placeholder || ''"
         :required="componentProps.required"
         :disabled="componentProps.disabled"
-        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
-        :class="isDarkMode 
-          ? 'border-gray-600 bg-slate-700 text-white' 
-          : 'border-gray-300 bg-white text-gray-900'"
+        :aria-label="componentProps.label ? undefined : 'Preview textarea'"
+        class="preview-control py-2 resize-none"
       ></textarea>
     </div>
 
-    <!-- Badge Component -->
+    <!-- Badge -->
     <div v-else-if="component === 'badge'" class="flex items-center gap-4">
-      <span
-        :class="[
-          'px-3 py-1 rounded-full text-xs font-medium',
-          componentProps.variant === 'success' ? 'bg-green-100 text-green-800' :
-          componentProps.variant === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-          componentProps.variant === 'error' ? 'bg-red-100 text-red-800' :
-          componentProps.variant === 'info' ? 'bg-blue-100 text-blue-800' :
-          'bg-gray-100 text-gray-800',
-          componentProps.size === 'sm' ? 'text-xs px-2 py-0.5' :
-          componentProps.size === 'lg' ? 'text-sm px-4 py-1.5' :
-          ''
-        ]"
-      >
-        {{ componentProps.label || 'Badge' }}
-      </span>
+      <span class="preview-badge" :class="[`preview-tone-${tone}`, badgeSizeClass]">{{ componentProps.label || 'Badge' }}</span>
     </div>
 
-    <!-- Alert Component -->
+    <!-- Alert -->
     <div v-else-if="component === 'alert'" class="w-full max-w-md">
-      <div
-        :class="[
-          'rounded-lg p-4 flex items-start gap-3',
-          componentProps.variant === 'success' ? 'bg-green-50 border border-green-200' :
-          componentProps.variant === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
-          componentProps.variant === 'error' ? 'bg-red-50 border border-red-200' :
-          'bg-blue-50 border border-blue-200'
-        ]"
-      >
-        <span class="material-symbols-outlined flex-shrink-0 mt-0.5"
-          :class="componentProps.variant === 'success' ? 'text-green-600' :
-                  componentProps.variant === 'warning' ? 'text-yellow-600' :
-                  componentProps.variant === 'error' ? 'text-red-600' :
-                  'text-blue-600'"
-        >
-          {{ componentProps.variant === 'success' ? 'check_circle' :
-             componentProps.variant === 'warning' ? 'warning' :
-             componentProps.variant === 'error' ? 'error' :
-             'info' }}
-        </span>
+      <div class="preview-alert" :class="`preview-tone-${alertTone}`">
+        <span class="material-symbols-outlined flex-shrink-0 mt-0.5" aria-hidden="true">{{ alertIcon }}</span>
         <div class="flex-1">
-          <h4 v-if="componentProps.title" class="font-semibold mb-1"
-            :class="componentProps.variant === 'success' ? 'text-green-900' :
-                    componentProps.variant === 'warning' ? 'text-yellow-900' :
-                    componentProps.variant === 'error' ? 'text-red-900' :
-                    'text-blue-900'"
-          >
-            {{ componentProps.title }}
-          </h4>
-          <p class="text-sm"
-            :class="componentProps.variant === 'success' ? 'text-green-800' :
-                    componentProps.variant === 'warning' ? 'text-yellow-800' :
-                    componentProps.variant === 'error' ? 'text-red-800' :
-                    'text-blue-800'"
-          >
-            {{ componentProps.message || 'Alert message' }}
-          </p>
+          <h4 v-if="componentProps.title" class="font-semibold mb-1">{{ componentProps.title }}</h4>
+          <p class="text-sm text-ink-secondary">{{ componentProps.message || 'Alert message' }}</p>
         </div>
-        <button v-if="componentProps.dismissible" class="flex-shrink-0 p-1 rounded hover:bg-black/10">
-          <span class="material-symbols-outlined text-sm">close</span>
-        </button>
+        <UiButton v-if="componentProps.dismissible" variant="ghost" size="sm" icon="close" icon-only label="Dismiss" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { computed, useId } from 'vue';
+import { UiButton } from './ui';
 
+/**
+ * A live preview of a design-system component (`component`: button, card,
+ * input, select, checkbox, radio, textarea, badge or alert) with the given
+ * `props`. Colours come from tokens, so it follows the page theme; set the
+ * dark prop to render the preview in dark whatever the page theme.
+ */
 const props = defineProps({
   component: {
     type: String,
-    required: true
+    required: true,
   },
   props: {
     type: Object,
-    default: () => ({})
+    default: () => ({}),
   },
+  /** Render the preview in dark (otherwise it follows the page theme) */
+  // style-check: allow prop name kept for backward compatibility with callers
   isDarkMode: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 });
 
-// The page theme, unless the parent forces dark mode
-const pageIsDark = useDarkMode();
-const isDarkMode = computed(() => props.isDarkMode || pageIsDark.value);
+// style-check: allow reads the backward-compatible prop above
+const forceDark = computed(() => props.isDarkMode);
+const controlId = `preview-${useId()}`;
 
 // Create a computed property to ensure reactivity
 const componentProps = computed(() => props.props);
+
+const optionList = computed(() =>
+  String(componentProps.value.options || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean),
+);
+
+const buttonVariantClass = computed(
+  () =>
+    ({
+      primary: 'preview-button-primary',
+      secondary: 'preview-button-secondary',
+      tertiary: 'preview-button-tertiary',
+      danger: 'preview-button-danger',
+    })[componentProps.value.variant] || 'preview-button-primary',
+);
+const buttonSizeClass = computed(() => ({ sm: 'px-4 py-1 text-sm', lg: 'px-8 py-3 text-lg' })[componentProps.value.size] || 'px-6 py-2');
+
+const cardVariantClass = computed(
+  () => ({ elevated: 'shadow-raised border border-line-faint', outlined: 'border-2 border-line' })[componentProps.value.variant] || 'border border-line',
+);
+
+const tone = computed(() => ({ success: 'success', warning: 'warning', error: 'danger', info: 'info' })[componentProps.value.variant] || 'neutral');
+const badgeSizeClass = computed(() => ({ sm: 'text-xs px-2 py-0.5', lg: 'text-sm px-4 py-1.5' })[componentProps.value.size] || 'text-xs px-3 py-1');
+
+const alertTone = computed(() => ({ success: 'success', warning: 'warning', error: 'danger' })[componentProps.value.variant] || 'info');
+const alertIcon = computed(() => ({ success: 'check_circle', warning: 'warning', danger: 'error', info: 'info' })[alertTone.value]);
 </script>
 
+<style scoped>
+.component-preview-dark {
+  @apply text-ink;
+}
+.preview-button {
+  @apply inline-flex items-center gap-2 rounded-pill border border-solid font-medium transition-colors;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.preview-button-primary {
+  @apply border-transparent bg-accent text-ink-on-accent enabled:hover:bg-accent-hover;
+}
+.preview-button-secondary {
+  @apply border-2 border-accent bg-surface-raised text-accent-text enabled:hover:bg-accent-subtle;
+}
+.preview-button-tertiary {
+  @apply border-transparent bg-transparent text-accent-text enabled:hover:bg-accent-subtle;
+}
+.preview-button-danger {
+  @apply border-danger-border bg-danger-bg text-danger enabled:hover:border-danger-solid;
+}
+.preview-card {
+  @apply rounded-card p-6 bg-surface-raised;
+}
+.preview-label {
+  @apply block mb-2 text-sm font-medium text-ink;
+}
+.preview-control {
+  @apply w-full px-3.5 rounded-field border border-solid border-line-control bg-surface-control text-sm text-ink placeholder:text-ink-muted;
+  @apply hover:border-line-control-hover focus:outline focus:outline-2 focus:outline-offset-0 outline-focus focus:border-transparent;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.preview-check {
+  @apply w-4 h-4 accent-accent;
+}
+.preview-badge {
+  @apply inline-flex items-center rounded-pill border font-medium;
+}
+.preview-alert {
+  @apply flex items-start gap-3 rounded-tile border p-4;
+}
+.preview-tone-neutral {
+  @apply border-line bg-fill-subtle text-ink-secondary;
+}
+.preview-tone-success {
+  @apply border-success-border bg-success-bg text-success;
+}
+.preview-tone-warning {
+  @apply border-warning-border bg-warning-bg text-warning;
+}
+.preview-tone-danger {
+  @apply border-danger-border bg-danger-bg text-danger;
+}
+.preview-tone-info {
+  @apply border-info-border bg-info-bg text-info;
+}
+</style>

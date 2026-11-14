@@ -1,213 +1,74 @@
 <template>
   <div>
     <div class="mb-8">
-      <div class="mb-6">
-        <p class="text-gray-600">
-          Sort colors by their prominence in your design—drag between roles or use dropdowns.
-        </p>
-      </div>
+      <p class="text-ink-secondary mb-6">Sort colors by their prominence in your design—drag between roles or use dropdowns.</p>
 
       <!-- Role Assignment Guide - Compact -->
-      <div class="mb-6 bg-purple-50 border border-purple-200 rounded-lg p-4">
-        <div class="flex items-start gap-3">
-          <svg class="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div class="flex-1">
-            <h4 class="text-sm font-semibold text-gray-900 mb-1">Role Assignment Guide</h4>
-            <p class="text-xs text-gray-600 mb-2">
-              Drag colors between sections or use the dropdowns to assign roles.
-            </p>
-            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-700">
-              <div>• Hero = your main brand color</div>
-              <div>• Accents = highlights and CTAs</div>
-              <div>• Neutrals = backgrounds and text</div>
-              <div>• Semantic = success, error, warning, info</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <UiCallout title="Role assignment guide" icon="help" class="mb-6">
+        <p class="mb-2">Drag colors between sections or use the dropdowns to assign roles.</p>
+        <ul class="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+          <li>• Hero = your main brand color</li>
+          <li>• Accents = highlights and CTAs</li>
+          <li>• Neutrals = backgrounds and text</li>
+          <li>• Semantic = success, error, warning, info</li>
+        </ul>
+      </UiCallout>
 
       <!-- Four Column Grid Layout -->
       <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
-        <!-- Hero Colors Section -->
-        <div class="lg:col-span-1">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Hero Colors</h3>
+        <section v-for="zone in zones" :key="zone.key" :aria-labelledby="`role-zone-${zone.key}`">
+          <h3 :id="`role-zone-${zone.key}`" class="text-lg font-semibold text-ink-strong mb-4">{{ zone.title }}</h3>
           <div
-            class="min-h-[200px] p-3 rounded-lg transition-colors border-2 border-dashed"
-            :class="isDraggingOver === 'hero' ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'"
-            @dragover.prevent="handleDragOver($event, 'hero')"
-            @drop.prevent="handleDrop($event, 'hero')"
-            @dragenter.prevent="isDraggingOver = 'hero'"
+            class="drop-zone"
+            :class="{ 'drop-zone-over': isDraggingOver === zone.key }"
+            @dragover.prevent="handleDragOver($event, zone.key)"
+            @drop.prevent="handleDrop($event, zone.key)"
+            @dragenter.prevent="isDraggingOver = zone.key"
             @dragleave="handleDragLeave"
           >
-            <div class="flex flex-wrap gap-3 justify-center">
-              <div
-                v-for="(color, index) in heroColors"
-                :key="`hero-${index}-${color.hex}`"
-                class="flex flex-col items-center"
-              >
-                <div
-                  class="w-28 h-28 rounded-full shadow-md border-2 border-white flex flex-col items-center justify-center cursor-move draggable-color"
-                  :style="{ backgroundColor: color.hex, opacity: draggedColor === color ? 0.5 : 1 }"
+            <ul class="flex flex-wrap gap-3 justify-center">
+              <li v-for="(color, index) in zone.colors" :key="`${zone.key}-${index}-${color.hex}`" class="flex flex-col items-center gap-2">
+                <UiColorSample
+                  class="draggable-color flex flex-col items-center justify-center border-2 shadow-control"
+                  :class="[zone.shape, { 'opacity-50': draggedColor === color }]"
+                  :color="color.hex"
+                  :text-color="getTextColor(color.hex)"
                   draggable="true"
-                  @dragstart="handleDragStart($event, color, 'hero', index)"
+                  @dragstart="handleDragStart($event, color, zone.key, index)"
                   @dragend="handleDragEnd"
                 >
-                  <div class="text-xs font-semibold mb-1 pointer-events-none" :style="getTextColor(color.hex)">Hero</div>
-                  <div class="font-mono text-xs pointer-events-none" :style="getTextColor(color.hex)">{{ color.hex }}</div>
+                  <span class="text-xs font-semibold mb-0.5 pointer-events-none">{{ zone.label(color) }}</span>
+                  <span class="font-code text-xs pointer-events-none">{{ color.hex }}</span>
+                </UiColorSample>
+                <div class="w-32">
+                  <UiSelect
+                    :model-value="color.role || color.type || ''"
+                    :options="roleOptions"
+                    placeholder="Role"
+                    :aria-label="`Role for ${color.hex}`"
+                    @update:model-value="updateRole(color, $event)"
+                  />
                 </div>
-              </div>
-              <div
-                v-if="heroColors.length === 0"
-                class="w-28 h-28 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 bg-white text-xs text-center px-2"
-              >
-                Drop Hero
-              </div>
-            </div>
+              </li>
+              <li v-if="zone.colors.length === 0" class="drop-zone-empty" :class="zone.shape">{{ zone.empty }}</li>
+            </ul>
           </div>
-        </div>
-
-        <!-- Accent Colors Section -->
-        <div class="lg:col-span-1">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Accent Colors</h3>
-          <div
-            class="min-h-[200px] p-3 rounded-lg transition-colors border-2 border-dashed"
-            :class="isDraggingOver === 'accent' ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'"
-            @dragover.prevent="handleDragOver($event, 'accent')"
-            @drop.prevent="handleDrop($event, 'accent')"
-            @dragenter.prevent="isDraggingOver = 'accent'"
-            @dragleave="handleDragLeave"
-          >
-            <div class="flex flex-wrap gap-3 justify-center">
-              <div
-                v-for="(color, index) in accentColors"
-                :key="`accent-${index}-${color.hex}`"
-                class="flex flex-col items-center"
-              >
-                <div
-                  class="w-20 h-20 rounded-full shadow-md border-2 border-white flex flex-col items-center justify-center cursor-move relative draggable-color"
-                  :style="{ backgroundColor: color.hex, opacity: draggedColor === color ? 0.5 : 1 }"
-                  draggable="true"
-                  @dragstart="handleDragStart($event, color, 'accent', index)"
-                  @dragend="handleDragEnd"
-                >
-                  <div class="text-xs font-semibold mb-0.5 pointer-events-none" :style="getTextColor(color.hex)">Accent</div>
-                  <div class="font-mono text-xs pointer-events-none" :style="getTextColor(color.hex)">{{ color.hex }}</div>
-                </div>
-              </div>
-              <div
-                v-if="accentColors.length === 0"
-                class="w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 bg-white text-xs text-center px-2"
-              >
-                Drop Accent
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Neutrals Section -->
-        <div class="lg:col-span-1">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Neutrals</h3>
-          <div
-            class="min-h-[200px] p-3 rounded-lg transition-colors border-2 border-dashed"
-            :class="isDraggingOver === 'neutral' ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'"
-            @dragover.prevent="handleDragOver($event, 'neutral')"
-            @drop.prevent="handleDrop($event, 'neutral')"
-            @dragenter.prevent="isDraggingOver = 'neutral'"
-            @dragleave="handleDragLeave"
-          >
-            <div class="flex flex-wrap gap-3 justify-center">
-              <div
-                v-for="(color, index) in neutralColors"
-                :key="`neutral-${index}-${color.hex}`"
-                class="flex flex-col items-center"
-              >
-                <div
-                  class="w-24 h-14 rounded-lg shadow-md border-2 border-white flex flex-col items-center justify-center cursor-move draggable-color"
-                  :style="{ backgroundColor: color.hex, opacity: draggedColor === color ? 0.5 : 1 }"
-                  draggable="true"
-                  @dragstart="handleDragStart($event, color, 'neutral', index)"
-                  @dragend="handleDragEnd"
-                >
-                  <div class="text-xs font-semibold mb-0.5 pointer-events-none" :style="getTextColor(color.hex)">
-                    {{ getNeutralLabel(color.role) }}
-                  </div>
-                  <div class="font-mono text-xs pointer-events-none" :style="getTextColor(color.hex)">{{ color.hex }}</div>
-                </div>
-              </div>
-              <div
-                v-if="neutralColors.length === 0"
-                class="w-24 h-14 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 bg-white text-xs text-center px-2"
-              >
-                Drop Neutral
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Semantic Colors Section -->
-        <div class="lg:col-span-1">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Semantic Colors</h3>
-          <div
-            class="min-h-[200px] p-3 rounded-lg transition-colors border-2 border-dashed"
-            :class="isDraggingOver === 'semantic' ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'"
-            @dragover.prevent="handleDragOver($event, 'semantic')"
-            @drop.prevent="handleDrop($event, 'semantic')"
-            @dragenter.prevent="isDraggingOver = 'semantic'"
-            @dragleave="handleDragLeave"
-          >
-            <div class="flex flex-wrap gap-3 justify-center">
-              <div
-                v-for="(color, index) in semanticColors"
-                :key="`semantic-${index}-${color.hex}`"
-                class="flex flex-col items-center"
-              >
-                <div
-                  class="w-20 h-20 rounded-full shadow-md border-2 border-white flex flex-col items-center justify-center cursor-move draggable-color"
-                  :style="{ backgroundColor: color.hex, opacity: draggedColor === color ? 0.5 : 1 }"
-                  draggable="true"
-                  @dragstart="handleDragStart($event, color, 'semantic', index)"
-                  @dragend="handleDragEnd"
-                >
-                  <div class="text-xs font-semibold mb-0.5 pointer-events-none" :style="getTextColor(color.hex)">
-                    {{ getSemanticLabel(color.role || color.type) }}
-                  </div>
-                  <div class="font-mono text-xs pointer-events-none" :style="getTextColor(color.hex)">{{ color.hex }}</div>
-                </div>
-              </div>
-              <div
-                v-if="semanticColors.length === 0"
-                class="w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 bg-white text-xs text-center px-2"
-              >
-                Drop Semantic
-              </div>
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
     </div>
 
     <!-- Navigation -->
-    <div class="flex justify-between pt-8 border-t border-gray-200">
-      <button
-        @click="$emit('back')"
-        class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-      >
-        ← Back
-      </button>
-      <button
-        @click="handleNext"
-        class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-      >
-        Next: Export & Use →
-      </button>
+    <div class="flex justify-between pt-8 border-t border-line-faint">
+      <UiButton icon="arrow_back" @click="$emit('back')">Back</UiButton>
+      <UiButton variant="primary" trailing-icon="arrow_forward" @click="handleNext">Next: Export and use</UiButton>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
+import { UiButton, UiCallout, UiSelect } from './ui';
+import UiColorSample from './ui/UiColorSample.vue';
 
 const props = defineProps({
   palette: {
@@ -368,13 +229,10 @@ const semanticColors = computed(() => {
 // Determine text color based on background lightness
 const getTextColor = (hex) => {
   const rgb = hexToRgb(hex);
-  if (!rgb) return { color: '#000000' };
-  
+  if (!rgb) return '#000000';
+
   const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
-  return {
-    color: luminance > 0.5 ? '#000000' : '#FFFFFF',
-    textShadow: luminance > 0.5 ? 'none' : '0 1px 2px rgba(0,0,0,0.2)',
-  };
+  return luminance > 0.5 ? '#000000' : '#FFFFFF';
 };
 
 const getNeutralLabel = (role) => {
@@ -508,34 +366,39 @@ const handleNext = () => {
   emit('next');
 };
 
+// The four role zones, in order
+const zones = computed(() => [
+  { key: 'hero', title: 'Hero colors', colors: heroColors.value, shape: 'w-28 h-28 rounded-pill', label: () => 'Hero', empty: 'Drop Hero' },
+  { key: 'accent', title: 'Accent colors', colors: accentColors.value, shape: 'w-20 h-20 rounded-pill', label: () => 'Accent', empty: 'Drop Accent' },
+  { key: 'neutral', title: 'Neutrals', colors: neutralColors.value, shape: 'w-24 h-14 rounded-tile', label: (color) => getNeutralLabel(color.role), empty: 'Drop Neutral' },
+  { key: 'semantic', title: 'Semantic colors', colors: semanticColors.value, shape: 'w-20 h-20 rounded-pill', label: (color) => getSemanticLabel(color.role || color.type), empty: 'Drop Semantic' },
+]);
+
+// The dropdown alternative to dragging (keyboard and screen reader users)
+const roleOptions = [
+  { value: 'hero', label: 'Hero' },
+  { value: 'accent', label: 'Accent' },
+  { value: 'neutral-light', label: 'Light neutral' },
+  { value: 'neutral-dark', label: 'Dark neutral' },
+  { value: 'success', label: 'Success' },
+  { value: 'error', label: 'Error' },
+  { value: 'warning', label: 'Warning' },
+  { value: 'info', label: 'Info' },
+];
+
 </script>
 
 <style scoped>
-/* Ensure draggable elements have proper cursor */
+.drop-zone {
+  @apply min-h-48 p-3 rounded-tile border-2 border-dashed border-line-control bg-surface-sunken transition-colors;
+}
+.drop-zone-over {
+  @apply border-accent-border bg-accent-subtle;
+}
+.drop-zone-empty {
+  @apply flex items-center justify-center px-2 border-2 border-dashed border-line-control bg-surface-raised text-ink-muted text-xs text-center;
+}
 .draggable-color {
-  cursor: move;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  transition: opacity 0.2s, transform 0.2s;
-}
-
-.draggable-color:hover {
-  transform: scale(1.05);
-}
-
-.draggable-color:active {
-  cursor: grabbing;
-}
-
-/* Prevent text selection during drag */
-.pointer-events-none {
-  pointer-events: none;
-}
-
-/* Drop zone styling */
-.bg-blue-50 {
-  background-color: rgb(239 246 255);
+  @apply cursor-move select-none transition-transform hover:scale-105 active:cursor-grabbing;
 }
 </style>

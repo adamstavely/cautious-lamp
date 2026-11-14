@@ -1,113 +1,97 @@
 <template>
-  <div class="space-y-4">
-    <div class="flex items-center justify-between">
-      <h4 class="font-semibold" :class="c.heading">Workspace Members</h4>
-      <button v-if="isAdmin" type="button" class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors" :class="c.primary" @click="openAdd">
-        Add Member
-      </button>
+  <UiPanel title="Workspace members" heading-tag="h3" flush>
+    <template v-if="isAdmin" #actions>
+      <UiButton variant="primary" size="sm" icon="person_add" @click="openAdd">Add member</UiButton>
+    </template>
+
+    <div v-if="notice" class="px-6 pt-4">
+      <InlineNotice :notice="notice" @dismiss="clearNotice" />
     </div>
 
-    <InlineNotice :notice="notice" @dismiss="clearNotice" />
-
-    <div class="space-y-2">
-      <div
-        v-for="member in workspace.members"
-        :key="member.userId"
-        class="flex items-center justify-between gap-3 p-3 rounded-lg border"
-        :class="c.card"
-      >
+    <ul class="divide-y divide-line-faint">
+      <li v-for="member in workspace.members" :key="member.userId" class="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-100'">
-            <span class="material-symbols-outlined" :class="c.muted" aria-hidden="true">person</span>
-          </div>
+          <span class="flex items-center justify-center w-10 h-10 shrink-0 rounded-pill bg-fill text-ink-muted">
+            <span class="material-symbols-outlined" aria-hidden="true">person</span>
+          </span>
           <div class="min-w-0">
-            <div class="font-medium truncate" :class="c.heading">
+            <p class="font-medium text-ink-strong truncate">
               {{ member.name || member.email }}
-              <span v-if="member.userId === currentUserId" class="text-xs font-normal" :class="c.faint">(you)</span>
-            </div>
-            <div class="text-xs truncate" :class="c.muted">{{ member.email }}</div>
-            <div class="text-xs flex items-center gap-2 mt-1">
-              <span class="px-2 py-0.5 rounded capitalize" :class="c.roleBadge(member.role)">{{ member.role }}</span>
-              <span :class="c.faint">Added {{ formatDate(member.addedAt) }}<template v-if="member.addedBy?.name"> by {{ member.addedBy.name }}</template></span>
-            </div>
+              <span v-if="member.userId === currentUserId" class="text-xs font-normal text-ink-muted">(you)</span>
+            </p>
+            <p class="text-xs text-ink-muted truncate">{{ member.email }}</p>
+            <p class="flex flex-wrap items-center gap-2 mt-1 text-xs text-ink-muted">
+              <UiChip :tone="roleTone(member.role)" class="capitalize">{{ member.role }}</UiChip>
+              <span>Added {{ formatDate(member.addedAt) }}<template v-if="member.addedBy?.name"> by {{ member.addedBy.name }}</template></span>
+            </p>
           </div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <Dropdown
-            v-if="canChangeRole(member)"
-            :model-value="member.role"
-            :options="roleOptions"
-            :is-dark-mode="isDarkMode"
-            @update:model-value="changeRole(member, $event)"
-          />
-          <button
+          <div v-if="canChangeRole(member)" class="w-36">
+            <UiSelect
+              :model-value="member.role"
+              :options="roleOptions"
+              :aria-label="`Role for ${member.email}`"
+              @update:model-value="changeRole(member, $event)"
+            />
+          </div>
+          <UiButton
             v-if="isOwner && member.role !== 'owner'"
-            type="button"
-            class="p-2 rounded-lg transition-colors"
-            :class="c.chip"
-            title="Make owner"
-            :aria-label="`Make ${member.email} the owner`"
+            variant="ghost"
+            size="sm"
+            icon="workspace_premium"
+            icon-only
+            :label="`Make ${member.email} the owner`"
             @click="transfer(member)"
-          >
-            <span class="material-symbols-outlined text-base" aria-hidden="true">workspace_premium</span>
-          </button>
-          <button
-            v-if="canRemove(member)"
-            type="button"
-            class="p-2 rounded-lg transition-colors"
-            :class="c.danger"
-            :title="member.userId === currentUserId ? 'Leave workspace' : 'Remove member'"
-            :aria-label="member.userId === currentUserId ? 'Leave workspace' : `Remove ${member.email}`"
-            @click="remove(member)"
-          >
-            <span class="material-symbols-outlined text-base" aria-hidden="true">{{ member.userId === currentUserId ? 'logout' : 'delete' }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <WorkspaceModal :open="add.open" title="Add Member" icon="person_add" :is-dark-mode="isDarkMode" :busy="add.saving" size="sm" @close="add.open = false">
-      <form class="space-y-4" @submit.prevent="submitAdd">
-        <InlineNotice :notice="add.error ? { type: 'error', message: add.error } : null" @dismiss="add.error = null" />
-        <div>
-          <label :for="`member-email-${workspace.id}`" class="block text-sm mb-2" :class="c.label">Email *</label>
-          <input
-            :id="`member-email-${workspace.id}`"
-            v-model="add.email"
-            type="email"
-            required
-            placeholder="user@example.com"
-            :class="[inputClass, c.input]"
           />
-          <p class="text-xs mt-1" :class="c.faint">They need an account already. Ask an administrator to create one if not.</p>
+          <UiButton
+            v-if="canRemove(member)"
+            variant="danger"
+            size="sm"
+            :icon="member.userId === currentUserId ? 'logout' : 'delete'"
+            icon-only
+            :label="member.userId === currentUserId ? 'Leave workspace' : `Remove ${member.email}`"
+            @click="remove(member)"
+          />
         </div>
-        <div>
-          <div class="block text-sm mb-2" :class="c.label">Role *</div>
-          <Dropdown v-model="add.role" :options="addRoleOptions" :is-dark-mode="isDarkMode" />
-        </div>
-        <div class="flex items-center gap-2 pt-4 border-t" :class="c.border">
-          <button type="submit" class="px-4 py-2 rounded-lg font-medium transition-colors flex-1" :class="add.email && !add.saving ? c.primary : c.disabled" :disabled="!add.email || add.saving">
-            {{ add.saving ? 'Adding…' : 'Add Member' }}
-          </button>
-          <button type="button" class="px-4 py-2 rounded-lg font-medium transition-colors" :class="c.secondary" :disabled="add.saving" @click="add.open = false">Cancel</button>
-        </div>
+      </li>
+    </ul>
+
+    <WorkspaceModal :open="add.open" title="Add member" :busy="add.saving" size="sm" @close="add.open = false">
+      <form :id="addFormId" class="flex flex-col gap-5" @submit.prevent="submitAdd">
+        <InlineNotice :notice="add.error ? { type: 'error', message: add.error } : null" @dismiss="add.error = null" />
+        <UiInput
+          v-model="add.email"
+          type="email"
+          label="Email"
+          required
+          placeholder="user@example.com"
+          hint="They need an account already. Ask an administrator to create one if not."
+        />
+        <UiSelect v-model="add.role" :options="addRoleOptions" label="Role" required />
       </form>
+      <template #footer>
+        <UiButton :disabled="add.saving" @click="add.open = false">Cancel</UiButton>
+        <UiButton variant="primary" type="submit" :form="addFormId" :disabled="!add.email" :loading="add.saving">
+          {{ add.saving ? 'Adding…' : 'Add member' }}
+        </UiButton>
+      </template>
     </WorkspaceModal>
 
-    <ConfirmDialog :state="confirmState" :is-dark-mode="isDarkMode" />
-  </div>
+    <ConfirmDialog :state="confirmState" />
+  </UiPanel>
 </template>
 
 <script setup>
-import { computed, reactive } from 'vue';
-import Dropdown from '../Dropdown.vue';
+import { computed, reactive, useId } from 'vue';
 import InlineNotice from '../InlineNotice.vue';
+import { UiButton, UiChip, UiInput, UiPanel, UiSelect } from '../ui';
 import apiClient, { apiErrorMessage } from '../../services/api.js';
 import { useConfirmDialog } from '../../composables/useConfirmDialog.js';
 import { useNotice } from '../../composables/useNotice.js';
 import ConfirmDialog from './ConfirmDialog.vue';
 import WorkspaceModal from './WorkspaceModal.vue';
-import { atLeast, formatDate, inputClass, ui } from './ui.js';
+import { atLeast, formatDate, roleTone } from './ui.js';
 
 /**
  * Members of a workspace. Admins add and manage editors and viewers; only
@@ -117,11 +101,10 @@ import { atLeast, formatDate, inputClass, ui } from './ui.js';
 const props = defineProps({
   workspace: { type: Object, required: true },
   currentUserId: { type: String, default: null },
-  isDarkMode: { type: Boolean, default: false },
 });
 const emit = defineEmits(['updated', 'left']);
 
-const c = computed(() => ui(props.isDarkMode));
+const addFormId = `add-member-${useId()}`;
 const { notice, showNotice, clearNotice } = useNotice();
 const { confirmState, askConfirm } = useConfirmDialog();
 

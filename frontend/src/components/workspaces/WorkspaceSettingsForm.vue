@@ -1,95 +1,69 @@
 <template>
-  <form class="space-y-4" @submit.prevent="save">
+  <form class="flex flex-col gap-6" @submit.prevent="save">
     <InlineNotice :notice="notice" @dismiss="clearNotice" />
 
-    <div class="rounded-lg border p-4 space-y-4" :class="c.card">
-      <h4 class="font-semibold" :class="c.heading">Details</h4>
-      <div>
-        <label :for="`ws-name-${workspace.id}`" class="block text-sm mb-2" :class="c.label">Name *</label>
-        <input :id="`ws-name-${workspace.id}`" v-model="values.name" type="text" required maxlength="100" :disabled="!canEdit" :class="[inputClass, c.input]" />
-      </div>
-      <div>
-        <label :for="`ws-desc-${workspace.id}`" class="block text-sm mb-2" :class="c.label">Description</label>
-        <textarea :id="`ws-desc-${workspace.id}`" v-model="values.description" rows="3" maxlength="2000" :disabled="!canEdit" :class="[inputClass, c.input]" />
-      </div>
-      <div>
-        <label :for="`ws-slug-${workspace.id}`" class="block text-sm mb-2" :class="c.label">Slug</label>
-        <input
-          :id="`ws-slug-${workspace.id}`"
-          v-model="values.slug"
-          type="text"
-          required
-          maxlength="60"
-          pattern="[a-z0-9]+(-[a-z0-9]+)*"
-          title="Lowercase letters, digits and single hyphens"
-          :disabled="!canEdit"
-          :class="[inputClass, c.input]"
-        />
-        <p class="text-xs mt-1" :class="c.faint">Used in links. Must be unique.</p>
-      </div>
-    </div>
+    <UiPanel title="Details" heading-tag="h3">
+      <UiInput v-model="values.name" label="Name" required maxlength="100" :disabled="!canEdit" />
+      <UiTextarea v-model="values.description" label="Description" :rows="3" maxlength="2000" :disabled="!canEdit" />
+      <UiInput
+        v-model="values.slug"
+        label="Slug"
+        required
+        maxlength="60"
+        pattern="[a-z0-9]+(-[a-z0-9]+)*"
+        title="Lowercase letters, digits and single hyphens"
+        hint="Used in links. Must be unique."
+        :disabled="!canEdit"
+      />
+    </UiPanel>
 
-    <div class="rounded-lg border p-4 space-y-4" :class="c.card">
-      <h4 class="font-semibold" :class="c.heading">Sharing</h4>
-      <label class="flex items-center justify-between gap-4">
-        <span>
-          <span class="font-medium" :class="c.heading">Allow External Sharing</span>
-          <span class="block text-xs mt-1" :class="c.muted">
-            Allow items and components to be shared with other workspaces or made global. Turning this off withdraws everything already shared.
-          </span>
-        </span>
-        <input v-model="values.allowExternalSharing" type="checkbox" class="w-4 h-4 rounded accent-indigo-600" :disabled="!canEdit" />
-      </label>
-      <label class="flex items-center justify-between gap-4">
-        <span>
-          <span class="font-medium" :class="c.heading">Require Approval for Sharing</span>
-          <span class="block text-xs mt-1" :class="c.muted">Only workspace admins can share items; editors can't.</span>
-        </span>
-        <input v-model="values.requireApprovalForSharing" type="checkbox" class="w-4 h-4 rounded accent-indigo-600" :disabled="!canEdit" />
-      </label>
-      <div>
-        <div class="block text-sm mb-2" :class="c.label">Default component status</div>
-        <Dropdown
-          v-model="values.defaultComponentStatus"
-          :options="[
-            { value: 'in-progress', label: 'In progress' },
-            { value: 'planned', label: 'Planned' },
-            { value: 'production', label: 'Production' },
-          ]"
-          :is-dark-mode="isDarkMode"
-        />
-      </div>
-    </div>
+    <UiPanel title="Sharing" heading-tag="h3">
+      <UiCheckbox
+        v-model="values.allowExternalSharing"
+        label="Allow external sharing"
+        hint="Allow items and components to be shared with other workspaces or made global. Turning this off withdraws everything already shared."
+        :disabled="!canEdit"
+      />
+      <UiCheckbox
+        v-model="values.requireApprovalForSharing"
+        label="Require approval for sharing"
+        hint="Only workspace admins can share items; editors can't."
+        :disabled="!canEdit"
+      />
+      <UiSelect v-model="values.defaultComponentStatus" label="Default component status" :options="statusOptions" />
+    </UiPanel>
 
     <div v-if="canEdit" class="flex justify-end">
-      <button type="submit" class="px-4 py-2 rounded-lg font-medium transition-colors" :class="saving ? c.disabled : c.primary" :disabled="saving">
-        {{ saving ? 'Saving…' : 'Save Settings' }}
-      </button>
+      <UiButton variant="primary" type="submit" :loading="saving">{{ saving ? 'Saving…' : 'Save settings' }}</UiButton>
     </div>
-    <p v-else class="text-sm" :class="c.muted">Only workspace admins can change settings.</p>
+    <p v-else class="text-sm text-ink-muted">Only workspace admins can change settings.</p>
 
-    <ConfirmDialog :state="confirmState" :is-dark-mode="isDarkMode" />
+    <ConfirmDialog :state="confirmState" />
   </form>
 </template>
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
-import Dropdown from '../Dropdown.vue';
 import InlineNotice from '../InlineNotice.vue';
+import { UiButton, UiCheckbox, UiInput, UiPanel, UiSelect, UiTextarea } from '../ui';
 import apiClient, { apiErrorMessage } from '../../services/api.js';
 import { useConfirmDialog } from '../../composables/useConfirmDialog.js';
 import { useNotice } from '../../composables/useNotice.js';
 import ConfirmDialog from './ConfirmDialog.vue';
-import { atLeast, inputClass, ui } from './ui.js';
+import { atLeast } from './ui.js';
 
 /** Name, description, slug and sharing settings of a workspace (admin) */
 const props = defineProps({
   workspace: { type: Object, required: true },
-  isDarkMode: { type: Boolean, default: false },
 });
 const emit = defineEmits(['saved']);
 
-const c = computed(() => ui(props.isDarkMode));
+const statusOptions = [
+  { value: 'in-progress', label: 'In progress' },
+  { value: 'planned', label: 'Planned' },
+  { value: 'production', label: 'Production' },
+];
+
 const canEdit = computed(() => atLeast(props.workspace.effectiveRole, 'admin'));
 const { notice, showNotice, clearNotice } = useNotice();
 const { confirmState, askConfirm } = useConfirmDialog();

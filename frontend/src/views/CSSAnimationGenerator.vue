@@ -1,449 +1,105 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      CSS Animation Generator
-                    </h1>
-                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
-                      Production Ready
-                    </span>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Create smooth CSS animations with keyframe editor. Generate animations for transform, opacity, colors, and more.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">label</span>
-                      Design Tool
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="cssAnimationGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized animation icon -->
-                      <circle cx="100" cy="100" r="40" fill="url(#cssAnimationGradient)" opacity="0.6">
-                        <animate attributeName="r" values="40;50;40" dur="2s" repeatCount="indefinite"/>
-                      </circle>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="CSS animation generator"
+      lead="Create smooth CSS animations with a keyframe editor, for transform, opacity, colors and more."
+      spot="tools/css-animation-generator"
+      size="tool"
+    />
 
-          <div class="max-w-6xl mx-auto">
-            <!-- Animation Configuration -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <!-- Basic Settings -->
-              <div 
-                class="rounded-lg border p-6" 
-                :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-              >
-                <h4 
-                  class="font-semibold mb-4 flex items-center gap-2" 
-                  :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                >
-                  <span class="material-symbols-outlined text-indigo-600">settings</span>
-                  Animation Settings
-                </h4>
-                <div class="space-y-4">
-                  <div>
-                    <label 
-                      class="text-sm font-medium mb-2 block"
-                      :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                    >
-                      Animation Name
-                    </label>
-                    <input 
-                      v-model="animationName"
-                      type="text"
-                      placeholder="fadeIn"
-                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
+    <PageSection title="Build">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <UiPanel title="Animation settings">
+          <div class="space-y-4">
+            <UiInput v-model="animationName" placeholder="fadeIn" label="Animation name" />
+            <div class="grid grid-cols-2 gap-4">
+              <UiInput v-model.number="duration" type="number" min="0" step="100" label="Duration" suffix="ms" />
+              <UiInput v-model.number="delay" type="number" min="0" step="100" label="Delay" suffix="ms" />
+            </div>
+            <UiSelect v-model="timingFunction" :options="timingOptions" label="Timing function" />
+            <div class="grid grid-cols-2 gap-4">
+              <UiInput v-model="iterationCount" placeholder="1 or infinite" label="Iteration count" />
+              <UiSelect v-model="direction" :options="directionOptions" label="Direction" />
+            </div>
+            <UiSelect v-model="fillMode" :options="fillModeOptions" label="Fill mode" />
+          </div>
+        </UiPanel>
+
+        <UiPanel title="Keyframes">
+          <template #actions>
+            <div class="flex flex-wrap gap-2" role="group" aria-label="Presets">
+              <UiButton v-for="preset in presets" :key="preset.name" size="sm" :label="preset.name" @click="loadPreset(preset)" />
+            </div>
+          </template>
+          <div class="space-y-4">
+            <div v-for="(keyframe, index) in keyframes" :key="keyframe.id" class="p-4 rounded-tile border border-line-faint bg-surface-sunken">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="font-medium text-sm text-ink-strong">{{ keyframeTitle(keyframe, index) }}</h3>
+                <UiButton
+                  v-if="keyframes.length > 2"
+                  variant="ghost"
+                  size="sm"
+                  icon="delete"
+                  icon-only
+                  :label="`Remove ${keyframeTitle(keyframe, index).toLowerCase()}`"
+                  @click="removeKeyframe(index)"
+                />
+              </div>
+              <div v-if="index > 0 && index < keyframes.length - 1" class="mb-3">
+                <UiInput v-model.number="keyframe.offset" type="number" min="0" max="1" step="0.01" label="Offset (0 to 1)" />
+              </div>
+              <div class="space-y-2">
+                <div v-for="property in animatableProperties" :key="property.name" class="grid grid-cols-content-aside items-center gap-2 min-h-11">
+                  <UiCheckbox
+                    :model-value="keyframe.properties[property.name] !== undefined"
+                    :label="property.label"
+                    @update:model-value="toggleProperty(keyframe, property.name, $event)"
+                  />
+                  <div v-if="keyframe.properties[property.name] !== undefined" class="w-40">
+                    <UiInput
+                      v-model="keyframe.properties[property.name]"
+                      :type="property.type"
+                      :placeholder="property.placeholder"
+                      :aria-label="`${property.label} value`"
                     />
                   </div>
-                  
-                  <div class="grid grid-cols-2 gap-4">
-                    <div>
-                      <label 
-                        class="text-sm font-medium mb-2 block"
-                        :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                      >
-                        Duration (ms)
-                      </label>
-                      <input 
-                        v-model.number="duration"
-                        type="number"
-                        min="0"
-                        step="100"
-                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label 
-                        class="text-sm font-medium mb-2 block"
-                        :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                      >
-                        Delay (ms)
-                      </label>
-                      <input 
-                        v-model.number="delay"
-                        type="number"
-                        min="0"
-                        step="100"
-                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label 
-                      class="text-sm font-medium mb-2 block"
-                      :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                    >
-                      Timing Function
-                    </label>
-                    <select
-                      v-model="timingFunction"
-                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    >
-                      <option value="ease">ease</option>
-                      <option value="linear">linear</option>
-                      <option value="ease-in">ease-in</option>
-                      <option value="ease-out">ease-out</option>
-                      <option value="ease-in-out">ease-in-out</option>
-                      <option value="cubic-bezier(0.4, 0, 0.2, 1)">cubic-bezier (default)</option>
-                    </select>
-                  </div>
-                  
-                  <div class="grid grid-cols-2 gap-4">
-                    <div>
-                      <label 
-                        class="text-sm font-medium mb-2 block"
-                        :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                      >
-                        Iteration Count
-                      </label>
-                      <input 
-                        v-model="iterationCount"
-                        type="text"
-                        placeholder="1 or infinite"
-                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label 
-                        class="text-sm font-medium mb-2 block"
-                        :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                      >
-                        Direction
-                      </label>
-                      <select
-                        v-model="direction"
-                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      >
-                        <option value="normal">normal</option>
-                        <option value="reverse">reverse</option>
-                        <option value="alternate">alternate</option>
-                        <option value="alternate-reverse">alternate-reverse</option>
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label 
-                      class="text-sm font-medium mb-2 block"
-                      :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                    >
-                      Fill Mode
-                    </label>
-                    <select
-                      v-model="fillMode"
-                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    >
-                      <option value="none">none</option>
-                      <option value="forwards">forwards</option>
-                      <option value="backwards">backwards</option>
-                      <option value="both">both</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Keyframes Editor -->
-              <div 
-                class="rounded-lg border p-6" 
-                :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-              >
-                <div class="flex items-center justify-between mb-4">
-                  <h4 
-                    class="font-semibold flex items-center gap-2" 
-                    :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                  >
-                    <span class="material-symbols-outlined text-indigo-600">timeline</span>
-                    Keyframes
-                  </h4>
-                  <div class="flex gap-2">
-                    <button
-                      v-for="preset in presets"
-                      :key="preset.name"
-                      @click="loadPreset(preset)"
-                      class="px-3 py-1.5 text-xs rounded-lg border font-medium transition-colors"
-                      :class="isDarkMode
-                        ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
-                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-                    >
-                      {{ preset.name }}
-                    </button>
-                  </div>
-                </div>
-                
-                <div class="space-y-4">
-                  <div 
-                    v-for="(keyframe, index) in keyframes" 
-                    :key="keyframe.id"
-                    class="p-4 rounded-lg border"
-                    :class="isDarkMode ? 'bg-slate-700 border-gray-600' : 'bg-gray-50 border-gray-200'"
-                  >
-                    <div class="flex items-center justify-between mb-3">
-                      <h5 
-                        class="font-medium text-sm"
-                        :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                      >
-                        Keyframe {{ index === 0 ? 'From (0%)' : index === keyframes.length - 1 ? 'To (100%)' : `${formatOffset(keyframe.offset)}%` }}
-                      </h5>
-                      <button
-                        v-if="keyframes.length > 2"
-                        @click="removeKeyframe(index)"
-                        class="text-red-500 hover:text-red-600 transition-colors"
-                      >
-                        <span class="material-symbols-outlined text-lg">delete</span>
-                      </button>
-                    </div>
-                    
-                    <div class="mb-3" v-if="index > 0 && index < keyframes.length - 1">
-                      <label 
-                        class="text-xs font-medium mb-1 block"
-                        :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                      >
-                        Offset (0-1)
-                      </label>
-                      <input 
-                        v-model.number="keyframe.offset"
-                        type="number"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-600 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                    </div>
-                    
-                    <div class="space-y-2">
-                      <div 
-                        v-for="property in animatableProperties" 
-                        :key="property.name"
-                        class="flex items-center gap-2"
-                      >
-                        <input 
-                          :id="`kf-${keyframe.id}-${property.name}`"
-                          type="checkbox"
-                          :checked="keyframe.properties[property.name] !== undefined"
-                          @change="toggleProperty(keyframe, property.name, $event.target.checked)"
-                          class="rounded"
-                        />
-                        <label 
-                          :for="`kf-${keyframe.id}-${property.name}`"
-                          class="text-xs flex-1 cursor-pointer"
-                          :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                        >
-                          {{ property.label }}
-                        </label>
-                        <input 
-                          v-if="keyframe.properties[property.name] !== undefined"
-                          v-model="keyframe.properties[property.name]"
-                          :type="property.type"
-                          :placeholder="property.placeholder"
-                          class="w-32 px-2 py-1 border rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                          :class="isDarkMode 
-                            ? 'border-gray-600 bg-slate-600 text-white' 
-                            : 'border-gray-300 bg-white text-gray-900'"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <button
-                    @click="addKeyframe"
-                    class="w-full px-4 py-2 text-sm rounded-lg border font-medium transition-colors flex items-center justify-center gap-2"
-                    :class="isDarkMode
-                      ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
-                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-                  >
-                    <span class="material-symbols-outlined text-sm">add</span>
-                    Add Keyframe
-                  </button>
                 </div>
               </div>
             </div>
-
-            <!-- Preview Section -->
-            <div 
-              class="rounded-lg border p-6 mb-6" 
-              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h4 
-                  class="font-semibold flex items-center gap-2" 
-                  :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                >
-                  <span class="material-symbols-outlined text-indigo-600">preview</span>
-                  Live Preview
-                </h4>
-                <button
-                  type="button"
-                  @click="replayPreview"
-                  class="px-3 py-1.5 text-xs rounded-lg border font-medium transition-colors flex items-center gap-1"
-                  :class="isDarkMode
-                    ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-                >
-                  <span class="material-symbols-outlined text-sm">replay</span>
-                  Replay
-                </button>
-              </div>
-              <div 
-                class="w-full h-64 rounded-lg flex items-center justify-center"
-                :class="isDarkMode ? 'bg-slate-900' : 'bg-gray-100'"
-              >
-                <div 
-                  :key="previewKey"
-                  class="w-24 h-24 rounded-lg flex items-center justify-center font-medium"
-                  :style="computedAnimationStyle"
-                  :class="isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white'"
-                >
-                  Preview
-                </div>
-              </div>
-            </div>
-
-            <!-- Export Section -->
-            <div 
-              class="rounded-lg border p-6" 
-              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-            >
-              <h4 
-                class="font-semibold mb-4 flex items-center gap-2" 
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-              >
-                <span class="material-symbols-outlined text-indigo-600">download</span>
-                Export
-              </h4>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button
-                  @click="exportFormat('css')"
-                  class="px-4 py-3 rounded-lg border font-medium transition-colors flex items-center justify-center gap-2"
-                  :class="isDarkMode
-                    ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-                >
-                  <span class="material-symbols-outlined text-lg">code</span>
-                  Export CSS
-                </button>
-                <button
-                  @click="exportFormat('tailwind')"
-                  class="px-4 py-3 rounded-lg border font-medium transition-colors flex items-center justify-center gap-2"
-                  :class="isDarkMode
-                    ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-                >
-                  <span class="material-symbols-outlined text-lg">settings</span>
-                  Export Tailwind
-                </button>
-                <button
-                  @click="exportFormat('json')"
-                  class="px-4 py-3 rounded-lg border font-medium transition-colors flex items-center justify-center gap-2"
-                  :class="isDarkMode
-                    ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-                >
-                  <span class="material-symbols-outlined text-lg">data_object</span>
-                  Export JSON
-                </button>
-              </div>
-            </div>
+            <UiButton icon="add" label="Add keyframe" @click="addKeyframe" />
           </div>
-        </div>
+        </UiPanel>
       </div>
-    </div>
-  </div>
+    </PageSection>
+
+    <PageSection title="Preview" divided>
+      <UiPanel title="Live preview">
+        <template #actions>
+          <UiButton size="sm" icon="replay" label="Replay" @click="replayPreview" />
+        </template>
+        <div class="w-full h-64 rounded-tile flex items-center justify-center bg-surface-sunken">
+          <div :key="previewKey" class="anim-preview flex items-center justify-center font-medium">Preview</div>
+        </div>
+      </UiPanel>
+    </PageSection>
+
+    <PageSection title="Code" divided>
+      <UiCodeBlock :code="cssCode" label="CSS" />
+    </PageSection>
+
+    <PageSection title="Export" description="Download the animation as CSS, a Tailwind config or JSON." divided>
+      <div class="flex flex-wrap gap-3">
+        <UiButton v-for="item in exportButtons" :key="item.format" :icon="item.icon" :label="item.label" @click="exportFormat(item.format)" />
+      </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, watchEffect, onBeforeUnmount } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { PageHero, PageSection, PageShell, UiButton, UiCheckbox, UiCodeBlock, UiInput, UiPanel, UiSelect } from '../components/ui';
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const animationName = ref('fadeIn');
 const duration = ref(300);
 const delay = ref(0);
@@ -621,19 +277,54 @@ onBeforeUnmount(() => {
   styleEl.remove();
 });
 
-const computedAnimationStyle = computed(() => {
-  // Before the animation starts (with a delay), show the first keyframe.
-  const inlineStyles = {};
-  const first = orderedKeyframes.value[0];
-  first?.properties.forEach(([key, value]) => {
-    inlineStyles[toKebab(key)] = value;
-  });
+// Before the animation starts (with a delay), the preview shows the first
+// keyframe. These reach the preview through v-bind() in <style>; a property the
+// first keyframe doesn't set falls back to the preview's own look.
+const firstKeyframe = computed(() => Object.fromEntries(orderedKeyframes.value[0]?.properties ?? []));
+const previewFallbacks = {
+  opacity: '1',
+  transform: 'none',
+  backgroundColor: 'var(--tc-accent)',
+  color: 'var(--app-text-on-accent)',
+  width: '6rem',
+  height: '6rem',
+  borderRadius: 'var(--tc-radius-lg)',
+  boxShadow: 'none',
+};
+const firstValue = (key) => computed(() => firstKeyframe.value[key] ?? previewFallbacks[key]);
+const previewOpacity = firstValue('opacity');
+const previewTransform = firstValue('transform');
+const previewBackground = firstValue('backgroundColor');
+const previewColor = firstValue('color');
+const previewWidth = firstValue('width');
+const previewHeight = firstValue('height');
+const previewRadius = firstValue('borderRadius');
+const previewShadow = firstValue('boxShadow');
 
-  return {
-    ...inlineStyles,
-    animation: animationShorthand.value
-  };
-});
+const cssCode = computed(() => `@keyframes ${safeName.value} {\n${keyframesCss('  ')}\n}\n\n.animated-element {\n  animation: ${animationShorthand.value};\n}\n`);
+
+const timingOptions = [
+  { value: 'ease', label: 'ease' },
+  { value: 'linear', label: 'linear' },
+  { value: 'ease-in', label: 'ease-in' },
+  { value: 'ease-out', label: 'ease-out' },
+  { value: 'ease-in-out', label: 'ease-in-out' },
+  { value: 'cubic-bezier(0.4, 0, 0.2, 1)', label: 'cubic-bezier (default)' },
+];
+const directionOptions = ['normal', 'reverse', 'alternate', 'alternate-reverse'];
+const fillModeOptions = ['none', 'forwards', 'backwards', 'both'];
+
+const keyframeTitle = (keyframe, index) => {
+  if (index === 0) return 'Keyframe from (0%)';
+  if (index === keyframes.value.length - 1) return 'Keyframe to (100%)';
+  return `Keyframe ${formatOffset(keyframe.offset)}%`;
+};
+
+const exportButtons = [
+  { format: 'css', icon: 'code', label: 'Export CSS' },
+  { format: 'tailwind', icon: 'settings', label: 'Export Tailwind' },
+  { format: 'json', icon: 'data_object', label: 'Export JSON' },
+];
 
 const previewKey = ref(0);
 const replayPreview = () => {
@@ -692,8 +383,7 @@ const exportFormat = (format) => {
   const name = safeName.value;
 
   if (format === 'css') {
-    const css = `@keyframes ${name} {\n${keyframesCss('  ')}\n}\n\n.animated-element {\n  animation: ${animationShorthand.value};\n}\n`;
-    downloadFile(css, 'text/css', `animation-${name}-${Date.now()}.css`);
+    downloadFile(cssCode.value, 'text/css', `animation-${name}-${Date.now()}.css`);
   } else if (format === 'tailwind') {
     // Tailwind expects keyframes as a JS object: { '0%': { opacity: '0' } }.
     const keyframeObject = {};
@@ -725,12 +415,19 @@ const exportFormat = (format) => {
     downloadFile(JSON.stringify(config, null, 2), 'application/json', `animation-${name}-${Date.now()}.json`);
   }
 };
-
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+/* The @keyframes rule lives in the page-level <style> element the script keeps in sync */
+.anim-preview {
+  opacity: v-bind(previewOpacity);
+  transform: v-bind(previewTransform);
+  background-color: v-bind(previewBackground);
+  color: v-bind(previewColor);
+  width: v-bind(previewWidth);
+  height: v-bind(previewHeight);
+  border-radius: v-bind(previewRadius);
+  box-shadow: v-bind(previewShadow);
+  animation: v-bind(animationShorthand);
 }
 </style>
-

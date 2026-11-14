@@ -1,316 +1,59 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Lorem Ipsum Generator
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Generate placeholder text for your designs. Create paragraphs, words, sentences, or lists with customizable options.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">text_fields</span>
-                      Text Generator
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="loremGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized text icon -->
-                      <rect x="30" y="50" width="140" height="20" rx="4" fill="url(#loremGradient)" opacity="0.4"/>
-                      <rect x="30" y="80" width="120" height="20" rx="4" fill="url(#loremGradient)" opacity="0.5"/>
-                      <rect x="30" y="110" width="130" height="20" rx="4" fill="url(#loremGradient)" opacity="0.4"/>
-                      <rect x="30" y="140" width="100" height="20" rx="4" fill="url(#loremGradient)" opacity="0.5"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="Lorem ipsum generator"
+      lead="Generate placeholder text for your designs. Create paragraphs, words, sentences, or lists with customizable options."
+      spot="tools/lorem-ipsum-generator"
+      size="tool"
+    />
+
+    <PageSection title="Generation settings" description="Pick a variant, what to generate and how much.">
+      <UiPanel>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+          <UiSelect v-model="variant" label="Variant" :options="variantOptions" />
+          <UiSelect v-model="type" label="Type" :options="typeOptions" />
+          <UiInput v-model="count" type="number" label="Count" min="1" :max="MAX_COUNT" />
+          <UiButton variant="primary" icon="autorenew" class="w-full" @click="generate">Generate</UiButton>
+        </div>
+
+        <fieldset class="mt-6">
+          <legend class="text-sm font-medium text-ink-strong mb-3">HTML formatting</legend>
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <UiCheckbox v-for="option in htmlOptionList" :key="option.key" v-model="htmlOptions[option.key]" :label="option.label" />
           </div>
+        </fieldset>
+      </UiPanel>
+    </PageSection>
 
-          <!-- Generator Section -->
-          <div class="max-w-7xl mx-auto">
-            <div 
-              class="rounded-lg shadow-lg border p-8"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-slate-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <!-- Generation Settings -->
-              <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">settings</span>
-                  Generation Settings
-                </h3>
-              </div>
-              
-              <!-- Controls -->
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                <!-- Variant Selection -->
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Variant</label>
-                  <Dropdown
-                    v-model="variant"
-                    :options="variantOptions"
-                  />
-                </div>
-
-                <!-- Type Selection -->
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Type</label>
-                  <Dropdown
-                    v-model="type"
-                    :options="typeOptions"
-                  />
-                </div>
-
-                <!-- Count -->
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Count</label>
-                  <input
-                    v-model.number="count"
-                    type="number"
-                    min="1"
-                    max="100"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                    :class="isDarkMode 
-                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-
-                <!-- Generate Button -->
-                <div class="flex items-end">
-                  <button
-                    @click="generate"
-                    class="w-full px-6 py-2 text-white font-medium rounded-lg transition-colors"
-                    :class="isDarkMode 
-                      ? 'bg-indigo-500 hover:bg-indigo-400' 
-                      : 'bg-indigo-600 hover:bg-indigo-700'"
-                  >
-                    Generate
-                  </button>
-                </div>
-              </div>
-
-              <!-- HTML Formatting Options -->
-              <div class="mb-8">
-                <label class="block text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">HTML Formatting</label>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      v-model="htmlOptions.links"
-                      class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 accent-indigo-500' 
-                        : 'border-gray-300 bg-white'"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Links</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      v-model="htmlOptions.bold"
-                      class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 accent-indigo-500' 
-                        : 'border-gray-300 bg-white'"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Bold</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      v-model="htmlOptions.italic"
-                      class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 accent-indigo-500' 
-                        : 'border-gray-300 bg-white'"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Italic</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      v-model="htmlOptions.headers"
-                      class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 accent-indigo-500' 
-                        : 'border-gray-300 bg-white'"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Headers</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      v-model="htmlOptions.unorderedLists"
-                      class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 accent-indigo-500' 
-                        : 'border-gray-300 bg-white'"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Unordered Lists</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      v-model="htmlOptions.orderedLists"
-                      class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 accent-indigo-500' 
-                        : 'border-gray-300 bg-white'"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Ordered Lists</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      v-model="htmlOptions.definitionLists"
-                      class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 accent-indigo-500' 
-                        : 'border-gray-300 bg-white'"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Definition Lists</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      v-model="htmlOptions.blockquotes"
-                      class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 accent-indigo-500' 
-                        : 'border-gray-300 bg-white'"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Block Quotes</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      v-model="htmlOptions.code"
-                      class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 accent-indigo-500' 
-                        : 'border-gray-300 bg-white'"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Code/Pre</span>
-                  </label>
-                </div>
-              </div>
-
-              <!-- Output -->
-              <div>
-                <div class="flex items-center justify-between mb-4">
-                  <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">format_align_center</span>
-                    Generated Text
-                  </h3>
-                  <button
-                    @click="copyToClipboard"
-                    class="px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2"
-                    :class="isDarkMode 
-                      ? 'text-indigo-400 hover:text-indigo-300' 
-                      : 'text-indigo-600 hover:text-indigo-700'"
-                  >
-                    <span class="material-symbols-outlined text-lg">content_copy</span>
-                    Copy
-                  </button>
-                </div>
-                <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <!-- HTML Code View -->
-                  <div>
-                    <label class="block text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">HTML Code</label>
-                    <textarea
-                      v-model="output"
-                      readonly
-                      class="w-full px-4 py-3 border rounded-lg text-sm font-mono resize-none overflow-y-auto"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-700 text-gray-100' 
-                        : 'border-gray-300 bg-gray-50 text-gray-900'"
-                      :style="{ minHeight: '200px', maxHeight: '300px' }"
-                    ></textarea>
-                  </div>
-                  <!-- HTML Preview -->
-                  <div>
-                    <label class="block text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Preview</label>
-                    <div
-                      class="w-full px-4 py-3 border rounded-lg text-sm resize-none overflow-y-auto preview-pane"
-                      :class="isDarkMode 
-                        ? 'border-slate-600 bg-slate-800 text-gray-100' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                      :style="{ minHeight: '200px', maxHeight: '300px' }"
-                    >
-                      <div 
-                        v-if="output"
-                        v-html="previewHtml"
-                      ></div>
-                      <div 
-                        v-else
-                        class="text-gray-400 italic"
-                      >
-                        Generated text will appear here...
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+    <PageSection title="Generated text" description="The HTML and how it renders." divided>
+      <template #actions>
+        <UiButton variant="secondary" icon="content_copy" :disabled="!output" @click="copyToClipboard">Copy</UiButton>
+      </template>
+      <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <UiTextarea v-model="output" label="HTML code" readonly mono rows="10" class="resize-none" />
+        <div>
+          <p :id="previewLabelId" class="text-sm font-medium text-ink-strong mb-2">Preview</p>
+          <div class="preview-pane" role="region" :aria-labelledby="previewLabelId" tabindex="0">
+            <div v-if="output" v-html="previewHtml"></div>
+            <p v-else class="text-ink-muted italic">Generated text will appear here...</p>
           </div>
         </div>
       </div>
-    </div>
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import Dropdown from '../components/Dropdown.vue';
+import { ref, computed, onMounted, useId } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { PageHero, PageSection, PageShell, UiButton, UiCheckbox, UiInput, UiPanel, UiSelect, UiTextarea } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = useDarkMode();
 const { notice, showNotice, clearNotice } = useNotice();
 const MAX_COUNT = 100;
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const previewLabelId = `lorem-preview-${useId()}`;
 const variant = ref('classic');
 const type = ref('paragraphs');
 const count = ref(3);
@@ -327,6 +70,18 @@ const htmlOptions = ref({
   blockquotes: false,
   code: false
 });
+
+const htmlOptionList = [
+  { key: 'links', label: 'Links' },
+  { key: 'bold', label: 'Bold' },
+  { key: 'italic', label: 'Italic' },
+  { key: 'headers', label: 'Headers' },
+  { key: 'unorderedLists', label: 'Unordered lists' },
+  { key: 'orderedLists', label: 'Ordered lists' },
+  { key: 'definitionLists', label: 'Definition lists' },
+  { key: 'blockquotes', label: 'Block quotes' },
+  { key: 'code', label: 'Code/Pre' },
+];
 
 const variantOptions = [
   { value: 'classic', label: 'Classic Lorem Ipsum' },
@@ -616,156 +371,64 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+/* The preview renders the generated HTML */
+.preview-pane {
+  @apply w-full min-h-48 max-h-72 overflow-y-auto px-4 py-3 rounded-field border border-solid border-line bg-surface-raised text-sm text-ink;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
 }
-
-/* Preview pane styling */
-.preview-pane :deep(h1) {
-  font-size: 2em;
-  font-weight: bold;
-  margin-top: 0.67em;
-  margin-bottom: 0.67em;
-}
-
 .preview-pane :deep(h2) {
-  font-size: 1.5em;
-  font-weight: bold;
-  margin-top: 0.83em;
-  margin-bottom: 0.83em;
+  @apply text-xl font-semibold text-ink-strong my-3;
 }
-
 .preview-pane :deep(h3) {
-  font-size: 1.17em;
-  font-weight: bold;
-  margin-top: 1em;
-  margin-bottom: 1em;
+  @apply text-lg font-semibold text-ink-strong my-3;
 }
-
 .preview-pane :deep(h4) {
-  font-size: 1em;
-  font-weight: bold;
-  margin-top: 1.33em;
-  margin-bottom: 1.33em;
+  @apply text-base font-semibold text-ink-strong my-3;
 }
-
-.preview-pane :deep(h5) {
-  font-size: 0.83em;
-  font-weight: bold;
-  margin-top: 1.67em;
-  margin-bottom: 1.67em;
-}
-
-.preview-pane :deep(h6) {
-  font-size: 0.67em;
-  font-weight: bold;
-  margin-top: 2.33em;
-  margin-bottom: 2.33em;
-}
-
 .preview-pane :deep(p) {
-  margin-top: 1em;
-  margin-bottom: 1em;
+  @apply my-3;
 }
-
 .preview-pane :deep(ul),
 .preview-pane :deep(ol) {
-  margin-top: 1em;
-  margin-bottom: 1em;
-  padding-left: 2em;
+  @apply my-3 pl-8;
 }
-
 .preview-pane :deep(ul) {
-  list-style-type: disc;
+  @apply list-disc;
 }
-
 .preview-pane :deep(ol) {
-  list-style-type: decimal;
+  @apply list-decimal;
 }
-
 .preview-pane :deep(li) {
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
+  @apply my-2;
 }
-
 .preview-pane :deep(dl) {
-  margin-top: 1em;
-  margin-bottom: 1em;
+  @apply my-3;
 }
-
 .preview-pane :deep(dt) {
-  font-weight: bold;
-  margin-top: 0.5em;
+  @apply font-semibold mt-2;
 }
-
 .preview-pane :deep(dd) {
-  margin-left: 2em;
-  margin-bottom: 0.5em;
+  @apply ml-8 mb-2;
 }
-
 .preview-pane :deep(blockquote) {
-  margin: 1em 2em;
-  padding-left: 1em;
-  border-left: 4px solid #6366f1;
-  font-style: italic;
+  @apply my-3 mx-8 pl-4 border-0 border-l-4 border-solid border-accent italic;
 }
-
-.dark .preview-pane :deep(blockquote) {
-  border-left-color: #818cf8;
-}
-
 .preview-pane :deep(pre) {
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 1em;
-  border-radius: 4px;
-  overflow-x: auto;
-  margin: 1em 0;
+  @apply bg-fill-subtle p-4 rounded-control overflow-x-auto my-3;
 }
-
-.dark .preview-pane :deep(pre) {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
 .preview-pane :deep(code) {
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 0.2em 0.4em;
-  border-radius: 3px;
-  font-family: monospace;
-  font-size: 0.9em;
+  @apply bg-fill px-1.5 py-0.5 rounded-control font-code text-xs;
 }
-
-.dark .preview-pane :deep(code) {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
 .preview-pane :deep(pre code) {
-  background-color: transparent;
-  padding: 0;
+  @apply bg-transparent p-0;
 }
-
 .preview-pane :deep(a) {
-  color: #6366f1;
-  text-decoration: underline;
+  @apply text-accent-text underline hover:text-accent-hover;
 }
-
-.preview-pane :deep(a:hover) {
-  color: #818cf8;
-}
-
-.dark .preview-pane :deep(a) {
-  color: #818cf8;
-}
-
-.dark .preview-pane :deep(a:hover) {
-  color: #a5b4fc;
-}
-
 .preview-pane :deep(strong) {
-  font-weight: bold;
+  @apply font-semibold;
 }
-
 .preview-pane :deep(em) {
-  font-style: italic;
+  @apply italic;
 }
 </style>
-

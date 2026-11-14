@@ -1,370 +1,59 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
+  <PageShell width="wide">
+    <PageHero
+      :back="{ to: '/review', label: 'Review' }"
+      title="My requested reviews"
+      lead="Track your design review requests on a board. See where each review is in the workflow and open it to act on it."
+      spot="site/review-kanban"
+      size="tool"
     >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      My Requested Reviews
-                    </h1>
-                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
-                      Kanban View
-                    </span>
-                    <DemoDataBadge />
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Track all your design review requests in a visual kanban board. See where each review is in the workflow and manage them efficiently.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">view_module</span>
-                      Kanban Board
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      {{ loading ? 'Loading…' : `Updated ${loadedAt ? loadedAt.toLocaleTimeString() : ''}` }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="kanbanGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized kanban icon -->
-                      <rect x="20" y="20" width="50" height="160" rx="4" fill="url(#kanbanGradient)" opacity="0.3"/>
-                      <rect x="75" y="20" width="50" height="160" rx="4" fill="url(#kanbanGradient)" opacity="0.5"/>
-                      <rect x="130" y="20" width="50" height="160" rx="4" fill="url(#kanbanGradient)" opacity="0.7"/>
-                      <circle cx="45" cy="50" r="8" fill="white" opacity="0.6"/>
-                      <circle cx="100" cy="80" r="8" fill="white" opacity="0.6"/>
-                      <circle cx="155" cy="120" r="8" fill="white" opacity="0.6"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+      <template #actions>
+        <DemoDataBadge />
+        <span class="text-sm text-ink-muted" aria-live="polite">{{ loading ? 'Loading…' : loadedAt ? `Updated ${loadedAt.toLocaleTimeString()}` : '' }}</span>
+      </template>
+    </PageHero>
 
-          <!-- Kanban Board -->
-          <div class="max-w-7xl mx-auto">
-            <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <!-- Draft Column -->
-              <div class="w-full">
-                <div 
-                  class="rounded-lg border shadow-sm"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <div 
-                    class="p-4 border-b"
-                    :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-                  >
-                    <div class="flex items-center justify-between">
-                      <h3 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Draft</h3>
-                      <span 
-                        class="px-2 py-1 text-xs font-medium rounded-full"
-                        :class="isDarkMode 
-                          ? 'bg-slate-700 text-gray-300' 
-                          : 'bg-gray-100 text-gray-700'"
-                      >
-                        {{ getReviewsByState('draft').length }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="p-4 space-y-3 min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto">
-                    <div
-                      v-for="review in getReviewsByState('draft')"
-                      :key="review.id"
-                      @click="openReview(review)"
-                      class="p-4 rounded-lg border cursor-pointer transition-all"
-                      :class="isDarkMode 
-                        ? 'bg-slate-700 border-gray-600 hover:border-indigo-400' 
-                        : 'bg-gray-50 border-gray-200 hover:border-indigo-500'"
-                    >
-                      <h4 class="font-medium mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ review.filename }}</h4>
-                      <div class="flex items-center gap-2 mb-2">
-                        <v-chip
-                          :color="getWorkflowColor(review.workflowState || 'draft')"
-                          size="small"
-                          class="font-medium"
-                        >
-                          {{ getWorkflowLabel(review.workflowState || 'draft') }}
-                        </v-chip>
-                      </div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                        {{ formatDate(review.createdAt) }}
-                      </div>
-                    </div>
-                    <div 
-                      v-if="getReviewsByState('draft').length === 0" 
-                      class="text-center py-8 text-sm"
-                      :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
-                    >
-                      No drafts
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- In Review Column -->
-              <div class="w-full">
-                <div 
-                  class="rounded-lg border shadow-sm"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <div 
-                    class="p-4 border-b"
-                    :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-                  >
-                    <div class="flex items-center justify-between">
-                      <h3 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">In Review</h3>
-                      <span 
-                        class="px-2 py-1 text-xs font-medium rounded-full"
-                        :class="isDarkMode 
-                          ? 'bg-blue-900/30 text-blue-300' 
-                          : 'bg-blue-100 text-blue-700'"
-                      >
-                        {{ getReviewsInReview().length }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="p-4 space-y-3 min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto">
-                    <div
-                      v-for="review in getReviewsInReview()"
-                      :key="review.id"
-                      @click="openReview(review)"
-                      class="p-4 rounded-lg border cursor-pointer transition-all"
-                      :class="isDarkMode 
-                        ? 'bg-slate-700 border-gray-600 hover:border-indigo-400' 
-                        : 'bg-gray-50 border-gray-200 hover:border-indigo-500'"
-                    >
-                      <h4 class="font-medium mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ review.filename }}</h4>
-                      <div class="flex items-center gap-2 mb-2">
-                        <v-chip
-                          :color="getWorkflowColor(review.workflowState || 'draft')"
-                          size="small"
-                          class="font-medium"
-                        >
-                          {{ getWorkflowLabel(review.workflowState || 'draft') }}
-                        </v-chip>
-                      </div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                        {{ formatDate(review.createdAt) }}
-                      </div>
-                    </div>
-                    <div 
-                      v-if="getReviewsInReview().length === 0" 
-                      class="text-center py-8 text-sm"
-                      :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
-                    >
-                      No reviews in progress
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Changes Requested Column -->
-              <div class="w-full">
-                <div 
-                  class="rounded-lg border shadow-sm"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <div 
-                    class="p-4 border-b"
-                    :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-                  >
-                    <div class="flex items-center justify-between">
-                      <h3 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Changes Requested</h3>
-                      <span 
-                        class="px-2 py-1 text-xs font-medium rounded-full"
-                        :class="isDarkMode 
-                          ? 'bg-orange-900/30 text-orange-300' 
-                          : 'bg-orange-100 text-orange-700'"
-                      >
-                        {{ getReviewsChangesRequested().length }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="p-4 space-y-3 min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto">
-                    <div
-                      v-for="review in getReviewsChangesRequested()"
-                      :key="review.id"
-                      @click="openReview(review)"
-                      class="p-4 rounded-lg border cursor-pointer transition-all"
-                      :class="isDarkMode 
-                        ? 'bg-slate-700 border-gray-600 hover:border-indigo-400' 
-                        : 'bg-gray-50 border-gray-200 hover:border-indigo-500'"
-                    >
-                      <h4 class="font-medium mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ review.filename }}</h4>
-                      <div class="flex items-center gap-2 mb-2">
-                        <v-chip
-                          :color="getWorkflowColor(review.workflowState || 'draft')"
-                          size="small"
-                          class="font-medium"
-                        >
-                          {{ getWorkflowLabel(review.workflowState || 'draft') }}
-                        </v-chip>
-                      </div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                        {{ formatDate(review.createdAt) }}
-                      </div>
-                    </div>
-                    <div 
-                      v-if="getReviewsChangesRequested().length === 0" 
-                      class="text-center py-8 text-sm"
-                      :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
-                    >
-                      No changes requested
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Approved Column -->
-              <div class="w-full">
-                <div 
-                  class="rounded-lg border shadow-sm"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <div 
-                    class="p-4 border-b"
-                    :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-                  >
-                    <div class="flex items-center justify-between">
-                      <h3 class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Approved</h3>
-                      <span 
-                        class="px-2 py-1 text-xs font-medium rounded-full"
-                        :class="isDarkMode 
-                          ? 'bg-green-900/30 text-green-300' 
-                          : 'bg-green-100 text-green-700'"
-                      >
-                        {{ getReviewsApproved().length }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="p-4 space-y-3 min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto">
-                    <div
-                      v-for="review in getReviewsApproved()"
-                      :key="review.id"
-                      @click="openReview(review)"
-                      class="p-4 rounded-lg border cursor-pointer transition-all"
-                      :class="isDarkMode 
-                        ? 'bg-slate-700 border-gray-600 hover:border-indigo-400' 
-                        : 'bg-gray-50 border-gray-200 hover:border-indigo-500'"
-                    >
-                      <h4 class="font-medium mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ review.filename }}</h4>
-                      <div class="flex items-center gap-2 mb-2">
-                        <v-chip
-                          :color="getWorkflowColor(review.workflowState || 'draft')"
-                          size="small"
-                          class="font-medium"
-                        >
-                          {{ getWorkflowLabel(review.workflowState || 'draft') }}
-                        </v-chip>
-                      </div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                        {{ formatDate(review.createdAt) }}
-                      </div>
-                    </div>
-                    <div 
-                      v-if="getReviewsApproved().length === 0" 
-                      class="text-center py-8 text-sm"
-                      :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
-                    >
-                      No approved reviews
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <PageSection>
+      <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <section v-for="column in columns" :key="column.key" class="kanban-column" :aria-labelledby="`column-${column.key}`">
+          <header class="kanban-column-head">
+            <h2 :id="`column-${column.key}`" class="font-semibold text-ink-strong">{{ column.title }}</h2>
+            <UiChip :tone="column.tone">
+              <span class="sr-only">{{ column.reviews.length }} reviews</span>
+              <span aria-hidden="true">{{ column.reviews.length }}</span>
+            </UiChip>
+          </header>
+          <ul v-if="column.reviews.length" class="kanban-column-body">
+            <li v-for="review in column.reviews" :key="review.id">
+              <router-link :to="reviewLink(review)" class="kanban-card">
+                <span class="kanban-card-title">{{ review.filename }}</span>
+                <UiChip :tone="workflowTone(review.workflowState || 'draft')">{{ workflowLabel(review.workflowState || 'draft') }}</UiChip>
+                <span class="text-xs text-ink-muted">{{ formatDate(review.createdAt) }}</span>
+              </router-link>
+            </li>
+          </ul>
+          <p v-else class="kanban-column-empty">{{ column.empty }}</p>
+        </section>
       </div>
-    </div>
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { ref, computed, onMounted } from 'vue';
 import { useNotice } from '../composables/useNotice.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import DemoDataBadge from '../components/review-ui/DemoDataBadge.vue';
+import { workflowLabel, workflowTone } from '../components/review-ui/workflow.js';
+import { PageHero, PageSection, PageShell, UiChip } from '../components/ui';
 import { getCurrentUser, isMockMode } from '../mockData.js';
 import { reviewAPI, apiErrorMessage } from '../services/api.js';
 
-const router = useRouter();
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const { notice, showNotice, clearNotice } = useNotice();
 const reviews = ref([]);
 const loading = ref(false);
 const loadedAt = ref(null);
-
-// Workflow helper functions
-const getWorkflowLabel = (state) => {
-  const labels = {
-    'draft': 'Draft',
-    'client_review': 'Client Review',
-    'client_approved': 'Client Approved',
-    'art_director_review': 'Art Director Review',
-    'art_director_approved': 'Art Director Approved',
-    'ad_changes_requested': 'AD Changes Requested',
-    'creative_director_review': 'Creative Director Review',
-    'cd_changes_requested': 'CD Changes Requested',
-    'approved': 'Approved & Released'
-  };
-  return labels[state] || state;
-};
-
-const getWorkflowColor = (state) => {
-  const colors = {
-    'draft': 'grey',
-    'client_review': 'blue',
-    'client_approved': 'light-blue',
-    'art_director_review': 'purple',
-    'art_director_approved': 'deep-purple',
-    'ad_changes_requested': 'orange',
-    'creative_director_review': 'indigo',
-    'cd_changes_requested': 'orange',
-    'approved': 'green'
-  };
-  return colors[state] || 'grey';
-};
 
 // The acting user, read once when the board opens
 const user = getCurrentUser();
@@ -404,9 +93,15 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-const openReview = (review) => {
-  router.push(`/review/${encodeURIComponent(review.reviewId || review.id)}`);
-};
+const reviewLink = (review) => `/review/${encodeURIComponent(review.reviewId || review.id)}`;
+
+// The board's columns; each review appears in one
+const columns = computed(() => [
+  { key: 'draft', title: 'Draft', tone: 'neutral', reviews: getReviewsByState('draft'), empty: 'No drafts' },
+  { key: 'in-review', title: 'In review', tone: 'info', reviews: getReviewsInReview(), empty: 'No reviews in progress' },
+  { key: 'changes', title: 'Changes requested', tone: 'warning', reviews: getReviewsChangesRequested(), empty: 'No changes requested' },
+  { key: 'approved', title: 'Approved', tone: 'success', reviews: getReviewsApproved(), empty: 'No approved reviews' },
+]);
 
 const loadReviews = async () => {
   loading.value = true;
@@ -441,8 +136,26 @@ onMounted(loadReviews);
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.kanban-column {
+  @apply flex flex-col rounded-card border border-line bg-surface-sunken;
+}
+.kanban-column-head {
+  @apply flex items-center justify-between gap-2 px-4 py-3 border-b border-line;
+}
+.kanban-column-body {
+  @apply flex flex-col gap-3 p-3 overflow-y-auto;
+  min-height: 400px;
+  max-height: calc(100vh - 300px);
+}
+.kanban-column-empty {
+  @apply px-4 py-8 text-center text-sm text-ink-muted;
+  min-height: 400px;
+}
+.kanban-card {
+  @apply flex flex-col items-start gap-2 rounded-tile border border-line bg-surface-raised p-4 transition-shadow;
+  @apply hover:border-accent-border hover:shadow-card-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
+}
+.kanban-card-title {
+  @apply font-medium text-ink-strong break-words;
 }
 </style>
-

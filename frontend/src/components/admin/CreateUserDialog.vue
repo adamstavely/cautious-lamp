@@ -7,104 +7,61 @@
     @update:model-value="close"
   >
     <!-- After creating: hand over the temporary password -->
-    <div v-if="created" class="space-y-4">
-      <p class="text-sm text-gray-700 dark:text-gray-300" role="status">
+    <template v-if="created">
+      <p class="text-ink" role="status">
         {{ created.name }} ({{ created.email }}) can now sign in with the temporary password below and will be asked
         to choose a new one. Share it with them over a secure channel. It won't be shown again.
       </p>
       <TemporaryPasswordField v-model="password" label="Temporary password" readonly />
-    </div>
+    </template>
 
-    <form v-else :id="formId" class="space-y-5" novalidate @submit.prevent="submit">
+    <form v-else :id="formId" class="flex flex-col gap-5" novalidate @submit.prevent="submit">
       <InlineNotice :notice="generalError ? { type: 'error', message: generalError } : null" @dismiss="generalError = ''" />
 
-      <div>
-        <label :for="`${formId}-email`" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-        <input
-          :id="`${formId}-email`"
-          v-model.trim="form.email"
-          type="email"
-          autocomplete="off"
-          required
-          maxlength="254"
-          :aria-invalid="errors.email ? 'true' : 'false'"
-          :aria-describedby="errors.email ? `${formId}-email-error` : `${formId}-email-hint`"
-          class="w-full rounded-lg border border-solid px-3 py-2 text-sm bg-[#fff] text-gray-900 dark:bg-slate-700 dark:text-white"
-          :class="errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'"
-        />
-        <p v-if="errors.email" :id="`${formId}-email-error`" class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.email }}</p>
-        <p v-else :id="`${formId}-email-hint`" class="mt-1 text-xs text-gray-500 dark:text-gray-400">Emails can't be changed later.</p>
-      </div>
+      <UiInput
+        :id="`${formId}-email`"
+        v-model.trim="form.email"
+        label="Email"
+        type="email"
+        autocomplete="off"
+        required
+        maxlength="254"
+        hint="Emails can't be changed later."
+        :error="errors.email"
+      />
 
-      <div>
-        <label :for="`${formId}-name`" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-        <input
-          :id="`${formId}-name`"
-          v-model="form.name"
-          type="text"
-          autocomplete="off"
-          required
-          maxlength="200"
-          :aria-invalid="errors.name ? 'true' : 'false'"
-          :aria-describedby="errors.name ? `${formId}-name-error` : undefined"
-          class="w-full rounded-lg border border-solid px-3 py-2 text-sm bg-[#fff] text-gray-900 dark:bg-slate-700 dark:text-white"
-          :class="errors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'"
-        />
-        <p v-if="errors.name" :id="`${formId}-name-error`" class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.name }}</p>
-      </div>
+      <UiInput
+        :id="`${formId}-name`"
+        v-model="form.name"
+        label="Name"
+        autocomplete="off"
+        required
+        maxlength="200"
+        :error="errors.name"
+      />
 
       <TemporaryPasswordField v-model="password" :error="errors.password" />
 
-      <fieldset v-if="canAssignRoles">
-        <legend class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Initial roles</legend>
-        <p v-if="!roles.length" class="text-sm text-gray-500 dark:text-gray-400">No roles available.</p>
-        <div v-else class="grid gap-2 sm:grid-cols-2">
-          <label
-            v-for="role in roles"
-            :key="role.id"
-            class="flex cursor-pointer items-start gap-2 rounded p-2 hover:bg-gray-100 dark:hover:bg-slate-700"
-          >
-            <input v-model="form.roles" type="checkbox" :value="role.id" class="mt-1 accent-indigo-600 dark:accent-indigo-500" />
-            <span class="text-sm">
-              <span class="block text-gray-900 dark:text-white">{{ role.name }}</span>
-              <span class="block text-xs text-gray-500 dark:text-gray-400">{{ role.description }}</span>
-            </span>
-          </label>
+      <fieldset v-if="canAssignRoles" class="flex flex-col gap-2">
+        <legend class="mb-2 text-sm font-medium text-ink">Initial roles</legend>
+        <p v-if="!roles.length" class="text-ink-muted">No roles available.</p>
+        <div v-else class="grid gap-3 sm:grid-cols-2">
+          <UiCheckbox v-for="role in roles" :key="role.id" v-model="form.roles" :value="role.id" :label="role.name" :hint="role.description" />
         </div>
-        <p v-if="errors.roles" class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.roles }}</p>
+        <p v-if="errors.roles" class="text-xs font-medium text-danger" role="alert">{{ errors.roles }}</p>
       </fieldset>
-      <p v-else class="text-sm text-gray-500 dark:text-gray-400">
+      <p v-else class="text-ink-muted">
         Assigning roles needs the Role Management permission (admin:rbac). The user will start with no roles.
       </p>
     </form>
 
     <template #actions>
-      <template v-if="created">
-        <button
-          type="button"
-          class="rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
-          @click="close(false)"
-        >
-          Done
-        </button>
-      </template>
+      <UiButton v-if="created" variant="primary" @click="close(false)">Done</UiButton>
       <template v-else>
-        <button
-          type="button"
-          class="rounded-lg px-4 py-2 text-sm font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600"
-          :disabled="saving"
-          @click="close(false)"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          :form="formId"
-          class="rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors bg-indigo-600 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-indigo-500 dark:hover:bg-indigo-400"
-          :disabled="saving"
-        >
+        <UiButton :disabled="saving" @click="close(false)">Cancel</UiButton>
+        <UiButton type="submit" :form="formId" variant="primary" :loading="saving">
           {{ saving ? 'Creating…' : 'Create user' }}
-        </button>
+        </UiButton>
       </template>
     </template>
   </AdminDialog>
@@ -115,6 +72,9 @@ import { nextTick, reactive, ref, watch } from 'vue';
 import AdminDialog from './AdminDialog.vue';
 import TemporaryPasswordField from './TemporaryPasswordField.vue';
 import InlineNotice from '../InlineNotice.vue';
+import UiButton from '../ui/UiButton.vue';
+import UiCheckbox from '../ui/UiCheckbox.vue';
+import UiInput from '../ui/UiInput.vue';
 import {
   adminErrorMessage,
   generatePassword,

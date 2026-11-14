@@ -28,7 +28,7 @@ The tokens come from Trench Coat (`src/styles/trenchcoat/tokens.css`, its clean 
 | Shadow | `shadow-control`, `shadow-raised`, `shadow-overlay`, `hover:shadow-card-hover` |
 | Focus | `outline-focus` with `focus-visible:outline focus-visible:outline-2` |
 | Fonts | `font-ui`, `font-code` |
-| Layout | `grid-cols-content-aside` (text beside a sized column), `grid-cols-aside-content` |
+| Layout | `grid-cols-content-aside` (text beside a sized column), `grid-cols-aside-content`, `h-workspace` (a tool's working area: maps, canvases), `h-embed` (an embedded page) |
 
 Tailwind's spacing, sizing and type scale (`p-6`, `gap-4`, `text-sm`, `w-64`) are the spacing and type tokens; use them as they are. If a value isn't covered, add a named token to `tailwind.config.js` (and `src/styles/tokens.css` if it needs a CSS value). Don't use an arbitrary value.
 
@@ -47,18 +47,25 @@ In `<style scoped>`, use `@apply` with the same names, or `var(--tc-…)` / `var
 | `UiButton` | `variant="primary \| secondary \| ghost \| danger"`, `size="md \| sm"`, `icon`, `icon-only` + `label`, `to`/`href`, `loading` |
 | `UiLink` | Text links; `arrow`, `external` |
 | `UiInput`, `UiTextarea`, `UiSelect`, `UiCheckbox`, `UiSwitch`, `UiSegmented`, `UiRange` | Form controls with label, hint and error built in (`v-model`) |
+| | Options: `hide-label` keeps the label for assistive technology only; `size="sm"` for dense rows (UiInput, UiSelect); UiInput has a `#trailing` slot and `focus()`; UiSelect takes option groups `{ group, options }`; UiSegmented options take `disabled` and `srLabel`; UiTextarea has `#label-aside` |
 | `UiField` | The label, hint and error frame, for a control the kit doesn't have (slot props `id`, `describedBy`, `invalid`) |
 | `UiTabs` | Tabs with arrow-key support; panels in slots named after each tab's value |
 | `UiTable` | Styles a native `<table>` (`caption` required); put it in `<UiPanel flush>` |
 | `UiChip` | Status and category labels; `tone` |
 | `UiCallout` | Notes in the page flow; `tone="info \| success \| warning \| danger"` |
 | `InlineNotice` (`src/components`) | Dismissable results of an action, with `useNotice()` |
-| `UiStat` | A figure with its label |
+| `UiStat` | A figure with its label; `#footer` for a trend, meter or link |
 | `UiEmptyState` | Nothing yet, or not set up: spot, title, body, actions |
 | `UiSpinner` | Loading |
 | `UiCode`, `UiCodeBlock` | Inline code, and generated code with a copy button |
-| `UiDialog` | Modals (`v-model:open`, `#footer`) |
-| `UiSwatch` | A colour from data or user input |
+| `UiDialog` | Modals (`v-model:open`, `#footer`; `size="full"` for full-screen editors) |
+| `UiSwatch` | A colour from data or user input (`flush` for edge-to-edge strips) |
+| `UiColorSample` | An element filled with a data colour that holds content (a palette cell, a demo button) |
+| `UiDesignedButton` | A button drawn from a style object the user is designing (button builders) |
+| `UiTypeSample` | Text set in a size, family, weight or line height from data (type scales, font stacks) |
+| `UiMeter` | A bar for a value out of a maximum: shares, scores, budgets (`label` makes it a meter; `marker` for a threshold) |
+| `UiFileDropZone` | Drop area and file picker, with the chosen file's name and size |
+| `UiRadioChoices`, `UiChoiceCards` | Radio groups for longer options: plain rows, or cards with an icon and a description |
 
 If a page needs something the kit doesn't have and it will recur, add a component to `src/components/ui` (tokens only, documented at the top, exported from `index.js`). Don't hand-build it in the page.
 
@@ -73,7 +80,7 @@ A colour the user picked, a gradient they built, a shadow they're designing, a c
 </style>
 ```
 
-`UiSwatch` does this for single colours. Charts draw series colours as SVG `fill`/`stroke` attributes from their data, which is fine; their axes, gridlines and labels use tokens (`fill-chart-neutral`, `text-ink-muted`).
+`UiSwatch` does this for single colours. Charts draw series colours as SVG `fill`/`stroke` attributes from their data, which is fine; their axes, gridlines and labels use tokens (`fill-chart-neutral`, `text-ink-muted`). Canvas libraries (Chart.js, html2canvas) can't read CSS variables: use `useChartTheme()` (`src/composables/useChartTheme.js`), which resolves the tokens to colours and re-reads them when the theme changes.
 
 ## Page recipe
 

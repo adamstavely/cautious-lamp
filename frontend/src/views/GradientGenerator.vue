@@ -1,916 +1,254 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Gradient Generator
-                    </h1>
-                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
-                      Production Ready
-                    </span>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Create beautiful gradients for your UI designs with custom stops, angles, and color interpolation.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">label</span>
-                      Design Tool
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated Jan 15, 2024
-                    </span>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="Gradient generator"
+      lead="Build CSS gradients with custom stops, layers, blend modes and animation, then copy the code or export a file."
+      spot="tools/gradient-generator"
+      size="tool"
+    />
+
+    <PageSection>
+      <div class="grid lg:grid-cols-3 gap-6 items-start">
+        <div class="lg:col-span-2 flex flex-col gap-6">
+          <!-- Preview -->
+          <UiPanel title="Preview">
+            <template #actions>
+              <UiChip v-if="animationEnabled" tone="accent" icon="sync">Animating</UiChip>
+            </template>
+
+            <div class="gradient-preview" :class="{ 'animate-gradient': animationEnabled }" role="img" aria-label="Gradient preview"></div>
+
+            <div class="grid grid-cols-3 gap-3">
+              <div v-for="tile in backdropTiles" :key="tile.key" class="flex flex-col gap-1.5">
+                <div class="backdrop" :class="`backdrop-${tile.key}`">
+                  <div class="gradient-fill h-16 rounded-control"></div>
+                </div>
+                <p class="text-xs text-center text-ink-secondary">{{ tile.label }}</p>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-3 pt-5 border-t border-line">
+              <h3 class="text-sm font-medium text-ink">Accessibility check</h3>
+              <div class="flex flex-wrap items-end gap-4">
+                <div class="flex items-end gap-2">
+                  <button type="button" class="swatch-button" title="Pick text color" aria-label="Pick text color" @click="openAccessibilityColorPicker($event)">
+                    <UiSwatch :color="accessibilityTextColor" size="fill" :label="`Text color: ${accessibilityTextColor}`" />
+                  </button>
+                  <div class="w-32">
+                    <UiInput v-model="accessibilityTextColor" label="Text color" :placeholder="textColorPlaceholder" mono />
                   </div>
                 </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="gradientGeneratorGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized gradient icon -->
-                      <rect x="20" y="20" width="160" height="160" rx="8" fill="url(#gradientGeneratorGradient)" opacity="0.3"/>
-                      <rect x="40" y="40" width="120" height="120" rx="4" fill="url(#gradientGeneratorGradient)" opacity="0.5"/>
-                      <rect x="60" y="60" width="80" height="80" rx="4" fill="url(#gradientGeneratorGradient)" opacity="0.7"/>
-                    </svg>
-                  </div>
+                <div class="flex flex-wrap items-center gap-2 h-11" role="status">
+                  <span class="text-sm font-medium text-ink">Ratio</span>
+                  <UiChip :tone="contrastTone">{{ contrastRatio.toFixed(2) }}:1</UiChip>
+                  <UiChip :tone="contrastRatio >= 4.5 ? 'success' : 'danger'" :icon="contrastRatio >= 4.5 ? 'check' : 'close'">AA</UiChip>
+                  <UiChip :tone="contrastRatio >= 7 ? 'success' : 'danger'" :icon="contrastRatio >= 7 ? 'check' : 'close'">AAA</UiChip>
                 </div>
+                <div class="gradient-fill text-sample flex-1">Sample</div>
               </div>
             </div>
-          </div>
+          </UiPanel>
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <div class="grid lg:grid-cols-3 gap-6">
-        <!-- Main Gradient Editor -->
-        <div class="lg:col-span-2 space-y-6">
-          <!-- Gradient Preview -->
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">preview</span>
-                Preview
-              </h2>
-              <div 
-                v-if="animationEnabled" 
-                class="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium"
-                :class="isDarkMode 
-                  ? 'bg-indigo-900/30 text-indigo-300' 
-                  : 'bg-indigo-100 text-indigo-700'"
-              >
-                <span class="material-symbols-outlined text-sm animate-spin">sync</span>
-                Animating
+          <!-- Color stops -->
+          <UiPanel title="Color stops" :description="layers.length > 1 ? `Stops for layer ${currentLayerIndex + 1}` : ''">
+            <template #actions>
+              <UiButton size="sm" :loading="loadingPalettes" icon="palette" @click="fetchPalettes">
+                {{ loadingPalettes ? 'Loading…' : 'Load from Palette Builder' }}
+              </UiButton>
+              <UiButton size="sm" variant="primary" icon="add" @click="addColorStop">Add stop</UiButton>
+            </template>
+
+            <InlineNotice :notice="paletteNotice" @dismiss="clearPaletteNotice" />
+
+            <div v-if="availablePalettes.length > 0" class="flex flex-wrap items-end gap-3">
+              <div class="flex-1 min-w-48">
+                <UiSelect
+                  v-model="selectedPaletteId"
+                  label="Palette"
+                  placeholder="Select a palette…"
+                  :options="availablePalettes.map((palette) => ({ value: palette.id, label: palette.name }))"
+                />
               </div>
-            </div>
-            <div
-              class="w-full h-64 rounded-lg shadow-inner mb-4 transition-all"
-              :class="{ 'animate-gradient': animationEnabled }"
-              :style="{ 
-                backgroundImage: animationEnabled ? animatedGradient : cssGradientWithBlend,
-                backgroundBlendMode: animationEnabled ? 'normal' : cssBlendModes,
-                ...animationStyle
-              }"
-            ></div>
-            
-            <!-- Preview on Different Backgrounds -->
-            <div class="grid grid-cols-3 gap-2 mb-4">
-              <div 
-                class="rounded p-2 border"
-                :class="isDarkMode 
-                  ? 'bg-slate-700 border-gray-600' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="h-16 rounded" :style="{ backgroundImage: cssGradientWithBlend, backgroundBlendMode: cssBlendModes }"></div>
-                <p class="text-xs mt-1 text-center" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">White</p>
-              </div>
-              <div 
-                class="rounded p-2 border"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-600' 
-                  : 'bg-gray-900 border-gray-200'"
-              >
-                <div class="h-16 rounded" :style="{ backgroundImage: cssGradientWithBlend, backgroundBlendMode: cssBlendModes }"></div>
-                <p class="text-xs mt-1 text-center text-white">Dark</p>
-              </div>
-              <div 
-                class="rounded p-2 border"
-                :class="isDarkMode 
-                  ? 'bg-slate-600 border-gray-600' 
-                  : 'bg-gray-200 border-gray-200'"
-              >
-                <div class="h-16 rounded" :style="{ backgroundImage: cssGradientWithBlend, backgroundBlendMode: cssBlendModes }"></div>
-                <p class="text-xs mt-1 text-center" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Gray</p>
-              </div>
+              <UiButton variant="primary" :disabled="!selectedPaletteId" @click="importPaletteColors">Import colors</UiButton>
             </div>
 
-            <!-- Accessibility Check -->
-            <div 
-              class="pt-4 border-t"
-              :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-            >
-              <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Accessibility Check</label>
-              <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2">
-                  <label class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Text Color:</label>
-                  <button
-                    @click="openAccessibilityColorPicker($event)"
-                    class="w-8 h-8 rounded border-2 cursor-pointer transition-colors flex-shrink-0"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 hover:border-indigo-400' 
-                      : 'border-gray-300 hover:border-indigo-500'"
-                    :style="{ backgroundColor: accessibilityTextColor }"
-                    title="Pick text color"
-                  ></button>
-                  <input
-                    v-model="accessibilityTextColor"
-                    type="text"
-                    class="w-20 px-2 py-1 border rounded text-xs font-mono"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                    placeholder="#000000"
-                  />
-                </div>
-                <div class="flex items-center gap-3 text-xs">
-                  <span class="font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Ratio:</span>
-                  <span 
-                    :class="contrastRatio >= 4.5 
-                      ? (isDarkMode ? 'text-green-400 font-semibold' : 'text-green-600 font-semibold')
-                      : contrastRatio >= 3 
-                        ? (isDarkMode ? 'text-yellow-400 font-semibold' : 'text-yellow-600 font-semibold')
-                        : (isDarkMode ? 'text-red-400 font-semibold' : 'text-red-600 font-semibold')"
-                  >
-                    {{ contrastRatio.toFixed(2) }}:1
-                  </span>
-                  <span 
-                    :class="contrastRatio >= 4.5 
-                      ? (isDarkMode ? 'text-green-400' : 'text-green-600')
-                      : (isDarkMode ? 'text-red-400' : 'text-red-600')"
-                  >
-                    {{ contrastRatio >= 4.5 ? '✓ AA' : '✗ AA' }}
-                  </span>
-                  <span 
-                    :class="contrastRatio >= 7 
-                      ? (isDarkMode ? 'text-green-400' : 'text-green-600')
-                      : (isDarkMode ? 'text-red-400' : 'text-red-600')"
-                  >
-                    {{ contrastRatio >= 7 ? '✓ AAA' : '✗ AAA' }}
-                  </span>
-                </div>
-                <div 
-                  class="flex-1 p-2 rounded border-2" 
-                  :class="isDarkMode ? 'border-gray-600' : 'border-gray-200'"
-                  :style="{ backgroundImage: cssGradientWithBlend, backgroundBlendMode: cssBlendModes, borderColor: accessibilityTextColor }"
-                >
-                  <p class="text-sm font-semibold text-center" :style="{ color: accessibilityTextColor }">
-                    Sample
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Color Stops -->
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">palette</span>
-                Color Stops
-              </h2>
-              <div class="flex items-center gap-2">
-                <button
-                  @click="fetchPalettes"
-                  :disabled="loadingPalettes"
-                  class="px-4 py-2 rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-wait"
-                  :class="isDarkMode 
-                    ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                >
-                  {{ loadingPalettes ? 'Loading…' : 'Load from Palette Builder' }}
-                </button>
-                <button
-                  @click="addColorStop"
-                  class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium flex items-center gap-2"
-                >
-                  <span class="material-symbols-outlined text-lg">add</span>
-                  Add Stop
-                </button>
-              </div>
-            </div>
-
-            <InlineNotice :notice="paletteNotice" class="mb-4" @dismiss="clearPaletteNotice" />
-
-            <!-- Palette Selector -->
-            <div v-if="availablePalettes.length > 0" class="mb-4 space-y-2">
-              <select
-                v-model="selectedPaletteId"
-                class="w-full px-3 py-2 border rounded-lg text-sm"
-                :class="isDarkMode 
-                  ? 'border-gray-600 bg-slate-700 text-white' 
-                  : 'border-gray-300 bg-white text-gray-900'"
-              >
-                <option value="">Select a palette...</option>
-                <option v-for="palette in availablePalettes" :key="palette.id" :value="palette.id">
-                  {{ palette.name }}
-                </option>
-              </select>
-              <button
-                @click="importPaletteColors"
-                :disabled="!selectedPaletteId"
-                class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Import Colors
-              </button>
-            </div>
-
-            <div class="space-y-3">
-              <div
+            <ol class="flex flex-col gap-3">
+              <li
                 v-for="(stop, index) in colorStops"
                 :key="stop.id"
-                class="flex items-center gap-3 p-3 border rounded-lg transition-colors"
-                :class="[
-                  { 'cursor-move': !isDragging, 'cursor-grabbing': isDragging },
-                  isDarkMode 
-                    ? 'border-gray-600 hover:border-gray-500 bg-slate-700/50' 
-                    : 'border-gray-200 hover:border-gray-300 bg-gray-50'
-                ]"
+                class="stop-row"
+                :class="{ 'cursor-grabbing': isDragging }"
                 @dragover.prevent="handleDragOver(index, $event)"
                 @drop="handleDrop(index, $event)"
               >
-                <!-- Drag Handle -->
-                <div
-                  class="cursor-move flex-shrink-0"
-                  draggable="true"
-                  @dragstart="handleDragStart(index, $event)"
-                  @dragend="handleDragEnd"
-                  title="Drag to reorder"
-                >
-                  <span 
-                    class="material-symbols-outlined"
-                    :class="isDarkMode 
-                      ? 'text-gray-500 hover:text-gray-400' 
-                      : 'text-gray-400 hover:text-gray-600'"
+                <fieldset class="flex flex-wrap items-end gap-3">
+                  <legend class="sr-only">Stop {{ index + 1 }}</legend>
+                  <span
+                    class="material-symbols-outlined drag-handle"
+                    draggable="true"
+                    title="Drag to reorder"
+                    aria-hidden="true"
+                    @dragstart="handleDragStart(index, $event)"
+                    @dragend="handleDragEnd"
                   >drag_indicator</span>
-                </div>
 
-                <!-- Color Swatch Button -->
-                <button
-                  @click="openColorPicker(index, $event)"
-                  class="w-12 h-12 rounded border-2 cursor-pointer transition-colors flex-shrink-0"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 hover:border-indigo-400' 
-                    : 'border-gray-300 hover:border-indigo-500'"
-                  :style="{ backgroundColor: stop.color }"
-                  title="Pick color"
-                  @mousedown.stop
-                ></button>
-                
-                <!-- Hex Input -->
-                <input
-                  v-model="stop.color"
-                  type="text"
-                  @input="updateGradient"
-                  placeholder="#000000"
-                  class="w-24 px-2 py-1 border rounded text-sm font-mono flex-shrink-0"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-700 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
-                  @mousedown.stop
-                  @click.stop
-                />
-                
-                <!-- Position Slider -->
-                <div class="flex-1">
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="text-xs w-12" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Position</span>
-                    <input
-                      v-model.number="stop.position"
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      @input="updateGradient"
-                      @mousedown.stop
-                      @click.stop
-                      class="flex-1"
-                    />
-                    <input
-                      v-model.number="stop.position"
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      @input="updateGradient"
-                      @mousedown.stop
-                      @click.stop
-                      class="w-16 px-2 py-1 border rounded text-sm flex-shrink-0"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
-                    <span class="text-xs w-8" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">%</span>
+                  <button type="button" class="swatch-button" :aria-label="`Pick color for stop ${index + 1}`" title="Pick color" @click="openColorPicker(index, $event)">
+                    <UiSwatch :color="stop.color" size="fill" :label="`Stop ${index + 1}: ${stop.color}`" />
+                  </button>
+
+                  <div class="w-28">
+                    <UiInput :model-value="stop.color" label="Color" :placeholder="textColorPlaceholder" mono @update:model-value="setStopValue(stop, 'color', $event)" />
                   </div>
-                  <!-- Opacity Slider -->
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs w-12" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Opacity</span>
-                    <input
-                      v-model.number="stop.opacity"
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="1"
-                      @input="updateGradient"
-                      @mousedown.stop
-                      @click.stop
-                      class="flex-1"
-                    />
-                    <input
-                      v-model.number="stop.opacity"
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="1"
-                      @input="updateGradient"
-                      @mousedown.stop
-                      @click.stop
-                      class="w-16 px-2 py-1 border rounded text-sm flex-shrink-0"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
-                    <span class="text-xs w-8" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">%</span>
-                  </div>
-                </div>
 
-                <!-- Remove Button -->
-                <button
-                  v-if="colorStops.length > 2"
-                  @click="removeColorStop(index)"
-                  class="p-2 rounded transition-colors flex-shrink-0"
-                  :class="isDarkMode 
-                    ? 'text-red-400 hover:bg-red-900/20' 
-                    : 'text-red-600 hover:bg-red-50'"
-                  title="Remove stop"
-                  @mousedown.stop
-                >
-                  <span class="material-symbols-outlined text-lg">delete</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sidebar -->
-        <div class="space-y-6">
-          <!-- Gradient Type & Settings -->
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h2 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">settings</span>
-                  Settings
-                </h2>
-                <p v-if="layers.length > 1" class="text-xs mt-0.5" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  Editing: <span class="font-medium" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">Layer {{ currentLayerIndex + 1 }}</span>
-                </p>
-              </div>
-              <button
-                @click="showExportModal = true"
-                class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
-                :class="isDarkMode 
-                  ? 'text-gray-400 hover:text-indigo-400 hover:bg-indigo-900/20' 
-                  : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'"
-                title="Export gradient"
-              >
-                <span class="material-symbols-outlined text-xl">download</span>
-                <span class="text-sm font-medium">Export</span>
-              </button>
-            </div>
-
-            <!-- Layers Management -->
-            <div 
-              class="mb-6 pb-6 border-b"
-              :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-            >
-              <div class="flex items-start justify-between mb-3">
-                <div class="flex-1">
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">layers</span>
-                    <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Layers</label>
-                  </div>
-                  <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Stack multiple gradients with blend modes</p>
-                </div>
-                <button
-                  @click="addLayer"
-                  class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1 flex-shrink-0 ml-3"
-                >
-                  <span class="material-symbols-outlined text-sm">add</span>
-                  Add Layer
-                </button>
-              </div>
-              <div class="space-y-2 max-h-64 overflow-y-auto">
-                <div
-                  v-for="(layer, index) in layers"
-                  :key="layer.id"
-                  class="group relative rounded-lg border-2 transition-all"
-                  :class="currentLayerIndex === index 
-                    ? (isDarkMode 
-                      ? 'border-indigo-400 bg-indigo-900/20 shadow-sm' 
-                      : 'border-indigo-500 bg-indigo-50 shadow-sm')
-                    : (isDarkMode 
-                      ? 'border-gray-600 hover:border-gray-500 bg-slate-700' 
-                      : 'border-gray-200 hover:border-gray-300 bg-white')"
-                >
-                  <!-- Layer Header -->
-                  <div class="flex items-center gap-2 p-2">
-                    <input
-                      type="checkbox"
-                      v-model="layer.enabled"
-                      class="rounded"
-                      @click.stop
-                      title="Toggle layer visibility"
+                  <div class="flex-1 min-w-56 grid grid-cols-content-aside items-end gap-x-3 gap-y-3">
+                    <UiRange
+                      :model-value="Number(stop.position) || 0"
+                      label="Position"
+                      unit="%"
+                      :min="0"
+                      :max="100"
+                      :step="0.1"
+                      @update:model-value="setStopValue(stop, 'position', $event)"
                     />
-                    <div class="flex-1 flex items-center gap-2 min-w-0">
-                      <!-- Layer Preview Swatch -->
-                      <div 
-                        class="w-8 h-8 rounded border flex-shrink-0"
-                        :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                        :style="getLayerPreview(layer)"
-                        title="Layer preview"
-                      ></div>
-                      <!-- Layer Info -->
-                      <div class="flex-1 min-w-0">
-                        <button
-                          @click="currentLayerIndex = index"
-                          class="text-left text-sm font-medium transition-colors w-full"
-                          :class="isDarkMode 
-                            ? 'text-white hover:text-indigo-400' 
-                            : 'text-gray-900 hover:text-indigo-600'"
-                        >
-                          Layer {{ index + 1 }}
-                        </button>
-                        <div class="flex items-center gap-2 text-xs mt-0.5" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                          <span class="capitalize">{{ layer.type }}</span>
-                          <span>•</span>
-                          <span class="capitalize">{{ layer.blendMode }}</span>
-                          <span v-if="layer.colorStops.length > 0">•</span>
-                          <span v-if="layer.colorStops.length > 0">{{ layer.colorStops.length }} stops</span>
-                        </div>
-                      </div>
-                      <!-- Layer Actions -->
-                      <div class="flex items-center gap-1">
-                        <button
-                          v-if="index > 0"
-                          @click="moveLayer(index, index - 1)"
-                          class="p-1 rounded transition-colors"
-                          :class="isDarkMode 
-                            ? 'text-gray-500 hover:text-gray-400' 
-                            : 'text-gray-400 hover:text-gray-600'"
-                          title="Move up"
-                        >
-                          <span class="material-symbols-outlined text-sm">arrow_upward</span>
-                        </button>
-                        <button
-                          v-if="index < layers.length - 1"
-                          @click="moveLayer(index, index + 1)"
-                          class="p-1 rounded transition-colors"
-                          :class="isDarkMode 
-                            ? 'text-gray-500 hover:text-gray-400' 
-                            : 'text-gray-400 hover:text-gray-600'"
-                          title="Move down"
-                        >
-                          <span class="material-symbols-outlined text-sm">arrow_downward</span>
-                        </button>
-                        <button
-                          v-if="layers.length > 1"
-                          @click="removeLayer(index)"
-                          class="p-1 rounded transition-colors"
-                          :class="isDarkMode 
-                            ? 'text-red-500 hover:text-red-400' 
-                            : 'text-red-400 hover:text-red-600'"
-                          title="Delete layer"
-                        >
-                          <span class="material-symbols-outlined text-sm">delete</span>
-                        </button>
-                      </div>
+                    <div class="w-24">
+                      <UiInput :model-value="stop.position" type="number" label="Position %" min="0" max="100" step="0.1" @update:model-value="setStopValue(stop, 'position', $event)" />
+                    </div>
+                    <UiRange
+                      :model-value="Number(stop.opacity) || 0"
+                      label="Opacity"
+                      unit="%"
+                      :min="0"
+                      :max="100"
+                      :step="1"
+                      @update:model-value="setStopValue(stop, 'opacity', $event)"
+                    />
+                    <div class="w-24">
+                      <UiInput :model-value="stop.opacity" type="number" label="Opacity %" min="0" max="100" step="1" @update:model-value="setStopValue(stop, 'opacity', $event)" />
                     </div>
                   </div>
-                  
-                  <!-- Active Layer Indicator -->
-                  <div v-if="currentLayerIndex === index" class="absolute top-0 right-0 w-0 h-0 border-l-[12px] border-l-transparent rounded-tr-lg" :class="isDarkMode ? 'border-t-indigo-400' : 'border-t-indigo-500'"></div>
-                  <div v-if="currentLayerIndex === index" class="absolute top-0.5 right-0.5">
-                    <span class="material-symbols-outlined text-white text-xs">edit</span>
-                  </div>
-                </div>
+
+                  <UiButton
+                    v-if="colorStops.length > 2"
+                    icon-only
+                    icon="delete"
+                    variant="ghost"
+                    :label="`Remove stop ${index + 1}`"
+                    @click="removeColorStop(index)"
+                  />
+                </fieldset>
+              </li>
+            </ol>
+          </UiPanel>
+        </div>
+
+        <!-- Settings -->
+        <UiPanel title="Settings" :description="layers.length > 1 ? `Editing layer ${currentLayerIndex + 1}` : ''">
+          <template #actions>
+            <UiButton size="sm" variant="primary" icon="download" @click="showExportModal = true">Export</UiButton>
+          </template>
+
+          <!-- Layers -->
+          <div class="flex flex-col gap-3">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-medium text-ink">Layers</h3>
+                <p class="text-xs text-ink-muted">Stack multiple gradients with blend modes</p>
               </div>
-              <div v-if="layers.length > 1" class="mt-3 p-2 rounded-lg border" :class="isDarkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'">
-                <p class="text-xs flex items-start gap-1.5" :class="isDarkMode ? 'text-blue-300' : 'text-blue-700'">
-                  <span class="material-symbols-outlined text-sm mt-0.5">info</span>
-                  <span>Layers are stacked from bottom (Layer 1) to top. Click a layer to edit it. Use blend modes to combine layers.</span>
-                </p>
-              </div>
+              <UiButton size="sm" icon="add" @click="addLayer">Add layer</UiButton>
             </div>
 
-            <!-- Current Layer Settings -->
-            <div 
-              class="mb-4 pb-4 border-b"
-              :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-            >
-              <div class="flex items-center gap-2 mb-4">
-                <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">tune</span>
-                <h3 class="text-base font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Current Layer Settings</h3>
-              </div>
-              
-              <!-- Gradient Type -->
-              <div class="mb-4">
-                <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Gradient Type</label>
-                <div class="grid grid-cols-3 gap-2">
-                  <button
-                    v-for="type in gradientTypes"
-                    :key="type.value"
-                    @click="gradientType = type.value"
-                    class="px-4 py-2 rounded-lg border-2 transition-all"
-                    :class="gradientType === type.value
-                      ? (isDarkMode 
-                        ? 'border-indigo-400 bg-indigo-900/20 text-indigo-300' 
-                        : 'border-indigo-500 bg-indigo-50 text-indigo-700')
-                      : (isDarkMode 
-                        ? 'border-gray-600 hover:border-gray-500 text-gray-300 bg-slate-700' 
-                        : 'border-gray-200 hover:border-gray-300 text-gray-700 bg-white')"
-                  >
-                    {{ type.label }}
-                  </button>
+            <ul class="flex flex-col gap-2 max-h-64 overflow-y-auto">
+              <li v-for="(layer, index) in layers" :key="layer.id" class="layer-row" :class="{ 'layer-row-on': currentLayerIndex === index }">
+                <UiCheckbox v-model="layer.enabled"><span class="sr-only">Show layer {{ index + 1 }}</span></UiCheckbox>
+                <UiSwatch :color="getLayerPreview(layer).background" :label="`Layer ${index + 1} preview`" />
+                <button type="button" class="layer-select" :aria-current="currentLayerIndex === index ? 'true' : undefined" @click="currentLayerIndex = index">
+                  <span class="block text-sm font-medium">Layer {{ index + 1 }}</span>
+                  <span class="block text-xs text-ink-muted capitalize">
+                    {{ layer.type }} · {{ layer.blendMode }}<template v-if="layer.colorStops.length > 0"> · {{ layer.colorStops.length }} stops</template>
+                  </span>
+                </button>
+                <div class="flex items-center">
+                  <UiButton v-if="index > 0" icon-only size="sm" variant="ghost" icon="arrow_upward" :label="`Move layer ${index + 1} up`" @click="moveLayer(index, index - 1)" />
+                  <UiButton v-if="index < layers.length - 1" icon-only size="sm" variant="ghost" icon="arrow_downward" :label="`Move layer ${index + 1} down`" @click="moveLayer(index, index + 1)" />
+                  <UiButton v-if="layers.length > 1" icon-only size="sm" variant="ghost" icon="delete" :label="`Delete layer ${index + 1}`" @click="removeLayer(index)" />
                 </div>
-              </div>
+              </li>
+            </ul>
 
-              <!-- Linear Gradient Settings -->
-              <div v-if="gradientType === 'linear'" class="mb-4">
-                <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Angle</label>
-                <div class="flex items-center gap-4">
-                  <input
-                    v-model.number="linearAngle"
-                    type="range"
-                    min="0"
-                    max="360"
-                    step="1"
-                    class="flex-1"
-                  />
-                  <div class="flex items-center gap-1">
-                    <input
-                      v-model.number="linearAngle"
-                      type="number"
-                      min="0"
-                      max="360"
-                      class="w-14 px-2 py-2 border rounded-lg text-sm"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
-                    <span class="text-base" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">°</span>
-                  </div>
-                </div>
-                <div class="mt-2 grid grid-cols-3 gap-2">
-                  <button
-                    v-for="direction in linearDirections"
-                    :key="direction.value"
-                    @click="linearAngle = direction.angle"
-                    class="px-3 py-1 text-xs rounded-lg border-2 transition-all"
-                    :class="linearAngle === direction.angle
-                      ? (isDarkMode 
-                        ? 'border-indigo-400 bg-indigo-900/20 text-indigo-300' 
-                        : 'border-indigo-500 bg-indigo-50 text-indigo-700')
-                      : (isDarkMode 
-                        ? 'border-gray-600 hover:border-gray-500 text-gray-300 bg-slate-700' 
-                        : 'border-gray-200 hover:border-gray-300 text-gray-700 bg-white')"
-                  >
-                    {{ direction.label }}
-                  </button>
-                </div>
-              </div>
-
-              <!-- Radial Gradient Settings -->
-              <div v-if="gradientType === 'radial'" class="mb-4 grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Position X</label>
-                  <input
-                    v-model="radialPosition.x"
-                    type="text"
-                    placeholder="50%"
-                    class="w-full px-3 py-2 border rounded-lg text-sm"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Position Y</label>
-                  <input
-                    v-model="radialPosition.y"
-                    type="text"
-                    placeholder="50%"
-                    class="w-full px-3 py-2 border rounded-lg text-sm"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Shape</label>
-                  <select
-                    v-model="radialShape"
-                    class="w-full px-3 py-2 border rounded-lg text-sm"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  >
-                    <option value="ellipse">Ellipse</option>
-                    <option value="circle">Circle</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Size</label>
-                  <select
-                    v-model="radialSize"
-                    class="w-full px-3 py-2 border rounded-lg text-sm"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  >
-                    <option value="farthest-corner">Farthest Corner</option>
-                    <option value="farthest-side">Farthest Side</option>
-                    <option value="closest-corner">Closest Corner</option>
-                    <option value="closest-side">Closest Side</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Conic Gradient Settings -->
-              <div v-if="gradientType === 'conic'" class="mb-4 grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Position X</label>
-                  <input
-                    v-model="conicPosition.x"
-                    type="text"
-                    placeholder="50%"
-                    class="w-full px-3 py-2 border rounded-lg text-sm"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Position Y</label>
-                  <input
-                    v-model="conicPosition.y"
-                    type="text"
-                    placeholder="50%"
-                    class="w-full px-3 py-2 border rounded-lg text-sm"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Angle</label>
-                  <input
-                    v-model.number="conicAngle"
-                    type="number"
-                    min="0"
-                    max="360"
-                    class="w-full px-3 py-2 border rounded-lg text-sm"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-              </div>
-
-              <!-- Blend Mode -->
-              <div class="mb-2">
-                <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Blend Mode</label>
-                <select
-                  v-model="blendMode"
-                  class="w-full px-3 py-2 border rounded-lg text-sm"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-700 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
-                >
-                  <option value="normal">Normal</option>
-                  <option value="multiply">Multiply</option>
-                  <option value="screen">Screen</option>
-                  <option value="overlay">Overlay</option>
-                  <option value="darken">Darken</option>
-                  <option value="lighten">Lighten</option>
-                  <option value="color-dodge">Color Dodge</option>
-                  <option value="color-burn">Color Burn</option>
-                  <option value="hard-light">Hard Light</option>
-                  <option value="soft-light">Soft Light</option>
-                  <option value="difference">Difference</option>
-                  <option value="exclusion">Exclusion</option>
-                </select>
-                <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">How this layer blends with layers below</p>
-              </div>
-            </div>
-
-            <!-- Global Animation Settings -->
-            <div class="pt-1">
-              <div class="flex items-center gap-2 mb-3">
-                <span class="material-symbols-outlined text-lg text-indigo-600 dark:text-indigo-400">animation</span>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Animation</label>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Animates the current active layer</p>
-                </div>
-              </div>
-              <div class="flex items-center justify-between mb-3">
-                <span class="text-sm text-gray-700 dark:text-gray-300">Enable Animation</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    v-model="animationEnabled"
-                    class="sr-only peer"
-                  />
-                  <div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                </label>
-              </div>
-              <p v-if="animationEnabled" class="text-xs text-green-600 dark:text-green-400 mb-3 flex items-center gap-1">
-                <span class="material-symbols-outlined text-sm">check_circle</span>
-                Animation is active - watch the preview above
-              </p>
-              <div v-if="animationEnabled" class="space-y-3 mt-3">
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Animation Type</label>
-                  <select
-                    v-model="animationType"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                  >
-                    <option value="position">Position (scrolls gradient)</option>
-                    <option value="angle">Angle (rotates gradient)</option>
-                    <option value="color">Color (cycles hues)</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Duration: {{ animationDuration }}s</label>
-                  <input
-                    v-model.number="animationDuration"
-                    type="range"
-                    min="0.5"
-                    max="10"
-                    step="0.5"
-                    class="w-full"
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Direction</label>
-                  <select
-                    v-model="animationDirection"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                  >
-                    <option value="normal">Normal</option>
-                    <option value="reverse">Reverse</option>
-                    <option value="alternate">Alternate</option>
-                    <option value="alternate-reverse">Alternate Reverse</option>
-                  </select>
-                </div>
-              </div>
-            </div>
+            <UiCallout v-if="layers.length > 1">
+              Layers are stacked from bottom (Layer 1) to top. Click a layer to edit it. Use blend modes to combine layers.
+            </UiCallout>
           </div>
+
+          <!-- Current layer -->
+          <div class="flex flex-col gap-4 pt-5 border-t border-line">
+            <h3 class="text-sm font-semibold text-ink-strong">Current layer settings</h3>
+
+            <UiSegmented v-model="gradientType" :options="gradientTypes" label="Gradient type" />
+
+            <template v-if="gradientType === 'linear'">
+              <div class="grid grid-cols-content-aside items-end gap-3">
+                <UiRange :model-value="Number(linearAngle) || 0" label="Angle" unit="°" :min="0" :max="360" @update:model-value="linearAngle = $event" />
+                <div class="w-24">
+                  <UiInput v-model="linearAngle" type="number" label="Degrees" suffix="°" min="0" max="360" />
+                </div>
+              </div>
+              <UiSegmented
+                v-model="linearAngle"
+                :options="linearDirections.map((direction) => ({ value: direction.angle, label: direction.label }))"
+                label="Direction presets"
+              />
+            </template>
+
+            <div v-if="gradientType === 'radial'" class="grid grid-cols-2 gap-4">
+              <UiInput v-model="radialPosition.x" label="Position X" placeholder="50%" />
+              <UiInput v-model="radialPosition.y" label="Position Y" placeholder="50%" />
+              <UiSelect v-model="radialShape" label="Shape" :options="radialShapeOptions" />
+              <UiSelect v-model="radialSize" label="Size" :options="radialSizeOptions" />
+            </div>
+
+            <div v-if="gradientType === 'conic'" class="grid grid-cols-2 gap-4">
+              <UiInput v-model="conicPosition.x" label="Position X" placeholder="50%" />
+              <UiInput v-model="conicPosition.y" label="Position Y" placeholder="50%" />
+              <UiInput v-model="conicAngle" type="number" label="Angle" suffix="°" min="0" max="360" />
+            </div>
+
+            <UiSelect v-model="blendMode" label="Blend mode" hint="How this layer blends with layers below" :options="blendModeOptions" />
+          </div>
+
+          <!-- Animation -->
+          <div class="flex flex-col gap-4 pt-5 border-t border-line">
+            <UiSwitch v-model="animationEnabled" label="Animation" hint="Animates the current active layer" />
+            <template v-if="animationEnabled">
+              <UiCallout tone="success" role="status">Animation is active: watch the preview.</UiCallout>
+              <UiSelect v-model="animationType" label="Animation type" :options="animationTypeOptions" />
+              <UiRange v-model="animationDuration" label="Duration" unit="s" :min="0.5" :max="10" :step="0.5" />
+              <UiSelect v-model="animationDirection" label="Direction" :options="animationDirectionOptions" />
+            </template>
+          </div>
+
+        </UiPanel>
+      </div>
+    </PageSection>
+
+    <UiDialog v-model:open="showExportModal" title="Export gradient">
+      <InlineNotice :notice="exportNotice" @dismiss="clearExportNotice" />
+      <UiSelect v-model="exportFormat" label="Code format" :options="exportFormatOptions" />
+      <UiCodeBlock
+        :code="formattedExportCode"
+        :label="exportFormatOptions.find((option) => option.value === exportFormat)?.label || 'Code'"
+        @copied="onExportCopied"
+        @copy-failed="onExportCopyFailed"
+      />
+      <div class="flex flex-col gap-3">
+        <h3 class="text-sm font-medium text-ink">File format</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <UiButton v-for="file in fileExports" :key="file.label" :variant="file.variant" :icon="file.icon" @click="file.run">{{ file.label }}</UiButton>
         </div>
       </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </UiDialog>
 
-    <!-- Export Modal -->
-    <div
-      v-if="showExportModal"
-      class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50"
-      @click="showExportModal = false"
-    >
-      <div
-        class="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-        @click.stop
-      >
-        <div class="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <span class="material-symbols-outlined text-2xl text-indigo-600 dark:text-indigo-400">download</span>
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Export Gradient</h2>
-          </div>
-          <button
-            @click="showExportModal = false"
-            class="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            <span class="material-symbols-outlined text-xl">close</span>
-          </button>
-        </div>
-        
-        <div class="p-6 space-y-6">
-          <InlineNotice :notice="exportNotice" @dismiss="clearExportNotice" />
-
-          <!-- Export Format Selector -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Code Format</label>
-            <select
-              v-model="exportFormat"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-            >
-              <option value="css">CSS</option>
-              <option value="css-vars">CSS Variables</option>
-              <option value="tailwind">Tailwind Config</option>
-              <option value="scss">SCSS Variables</option>
-              <option value="json">JSON</option>
-              <option value="react">React (styled-components)</option>
-              <option value="vue">Vue (style binding)</option>
-            </select>
-            <div class="mt-3 bg-gray-50 dark:bg-slate-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-              <code class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all">{{ formattedExportCode }}</code>
-            </div>
-            <button
-              @click="copyFormattedCode"
-              class="w-full mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
-            >
-              Copy {{ exportFormat.toUpperCase() }}
-            </button>
-          </div>
-
-          <!-- File Export Options -->
-          <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">File Format</label>
-            <div class="grid grid-cols-2 gap-3">
-              <button
-                @click="exportAsImage"
-                class="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-              >
-                <span class="material-symbols-outlined text-lg">image</span>
-                Export as Image
-              </button>
-              <button
-                @click="exportAsSVG"
-                class="px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-              >
-                <span class="material-symbols-outlined text-lg">code</span>
-                Export as SVG
-              </button>
-              <button
-                @click="exportToAdobe"
-                class="px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-              >
-                <span class="material-symbols-outlined text-lg">file_download</span>
-                Export to Adobe
-              </button>
-              <button
-                @click="exportToPenpot"
-                class="px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-              >
-                <span class="material-symbols-outlined text-lg">file_download</span>
-                Export to Penpot
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Color Picker -->
     <ColorPicker
       :show="showColorPicker"
       :initial-color="pickerColor"
@@ -919,22 +257,20 @@
       @apply="handleColorPickerApply"
       @cancel="showColorPicker = false"
     />
-  </div>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import ColorPicker from '../components/ColorPicker.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import { useDarkMode } from '../composables/useDarkMode.js';
 import { useNotice } from '../composables/useNotice.js';
 import apiClient from '../services/api.js';
+import {
+  PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiChip, UiCodeBlock, UiDialog,
+  UiInput, UiPanel, UiRange, UiSegmented, UiSelect, UiSwatch, UiSwitch,
+} from '../components/ui';
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const { notice: paletteNotice, showNotice: showPaletteNotice, clearNotice: clearPaletteNotice } = useNotice();
 const { notice: exportNotice, showNotice: showExportNotice, clearNotice: clearExportNotice } = useNotice();
 
@@ -996,6 +332,72 @@ const gradientTypes = [
   { label: 'Radial', value: 'radial' },
   { label: 'Conic', value: 'conic' },
 ];
+
+const radialShapeOptions = [
+  { value: 'ellipse', label: 'Ellipse' },
+  { value: 'circle', label: 'Circle' },
+];
+
+const radialSizeOptions = [
+  { value: 'farthest-corner', label: 'Farthest Corner' },
+  { value: 'farthest-side', label: 'Farthest Side' },
+  { value: 'closest-corner', label: 'Closest Corner' },
+  { value: 'closest-side', label: 'Closest Side' },
+];
+
+const blendModeOptions = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'multiply', label: 'Multiply' },
+  { value: 'screen', label: 'Screen' },
+  { value: 'overlay', label: 'Overlay' },
+  { value: 'darken', label: 'Darken' },
+  { value: 'lighten', label: 'Lighten' },
+  { value: 'color-dodge', label: 'Color Dodge' },
+  { value: 'color-burn', label: 'Color Burn' },
+  { value: 'hard-light', label: 'Hard Light' },
+  { value: 'soft-light', label: 'Soft Light' },
+  { value: 'difference', label: 'Difference' },
+  { value: 'exclusion', label: 'Exclusion' },
+];
+
+const animationTypeOptions = [
+  { value: 'position', label: 'Position (scrolls gradient)' },
+  { value: 'angle', label: 'Angle (rotates gradient)' },
+  { value: 'color', label: 'Color (cycles hues)' },
+];
+
+const animationDirectionOptions = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'reverse', label: 'Reverse' },
+  { value: 'alternate', label: 'Alternate' },
+  { value: 'alternate-reverse', label: 'Alternate Reverse' },
+];
+
+const exportFormatOptions = [
+  { value: 'css', label: 'CSS' },
+  { value: 'css-vars', label: 'CSS Variables' },
+  { value: 'tailwind', label: 'Tailwind Config' },
+  { value: 'scss', label: 'SCSS Variables' },
+  { value: 'json', label: 'JSON' },
+  { value: 'react', label: 'React (styled-components)' },
+  { value: 'vue', label: 'Vue (style binding)' },
+];
+
+const fileExports = [
+  { label: 'Export as Image', icon: 'image', variant: 'primary', run: () => exportAsImage() },
+  { label: 'Export as SVG', icon: 'code', variant: 'secondary', run: () => exportAsSVG() },
+  { label: 'Export to Adobe', icon: 'file_download', variant: 'secondary', run: () => exportToAdobe() },
+  { label: 'Export to Penpot', icon: 'file_download', variant: 'secondary', run: () => exportToPenpot() },
+];
+
+// Fixed backdrops to judge the gradient against (test colours, not design colours)
+const backdrops = { white: '#ffffff', night: '#111827', gray: '#e5e7eb' };
+const backdropTiles = [
+  { key: 'white', label: 'White' },
+  { key: 'night', label: 'Dark' },
+  { key: 'gray', label: 'Gray' },
+];
+const textColorPlaceholder = '#000000';
 
 const linearDirections = [
   { label: 'To Right', angle: 90, value: 'to right' },
@@ -1184,6 +586,18 @@ const animatedGradient = computed(() => {
   return cssGradientWithBlend.value;
 });
 
+// The main preview's CSS, passed to the stylesheet through v-bind()
+const previewImage = computed(() => (animationEnabled.value ? animatedGradient.value : cssGradientWithBlend.value) || 'none');
+const previewBlend = computed(() => (animationEnabled.value ? 'normal' : cssBlendModes.value || 'normal'));
+const previewAnimation = computed(() => animationStyle.value.animation || 'none');
+const previewSize = computed(() => animationStyle.value.backgroundSize || 'auto');
+const previewRepeat = computed(() => animationStyle.value.backgroundRepeat || 'repeat');
+const previewPosition = computed(() => animationStyle.value.backgroundPosition || '0% 0%');
+const staticImage = computed(() => cssGradientWithBlend.value || 'none');
+const staticBlend = computed(() => cssBlendModes.value || 'normal');
+
+const contrastTone = computed(() => (contrastRatio.value >= 4.5 ? 'success' : contrastRatio.value >= 3 ? 'warning' : 'danger'));
+
 const animationStyle = computed(() => {
   if (!animationEnabled.value) return {};
   
@@ -1292,6 +706,11 @@ const getLayerPreview = (layer) => {
   return { background: gradient };
 };
 
+const setStopValue = (stop, key, value) => {
+  stop[key] = value;
+  updateGradient();
+};
+
 const addColorStop = () => {
   const newPosition = colorStops.value.length > 0
     ? Math.min(100, Math.max(0, colorStops.value[colorStops.value.length - 1].position + 10))
@@ -1369,15 +788,9 @@ const formattedExportCode = computed(() => {
   }
 });
 
-const copyFormattedCode = async () => {
-  try {
-    await navigator.clipboard.writeText(formattedExportCode.value);
-    showExportNotice(`${exportFormat.value.toUpperCase()} code copied to clipboard.`, 'success');
-  } catch (err) {
-    console.error('Failed to copy:', err);
-    showExportNotice('Could not copy to the clipboard. Select the code and copy it manually.', 'error');
-  }
-};
+// The export code block copies; these report the result as before.
+const onExportCopied = () => showExportNotice(`${exportFormat.value.toUpperCase()} code copied to clipboard.`, 'success');
+const onExportCopyFailed = () => showExportNotice('Could not copy to the clipboard. Select the code and copy it manually.', 'error');
 
 // Trigger a download, revoking the object URL once the click has been handled.
 const downloadBlob = (blob, filename) => {
@@ -1853,7 +1266,7 @@ const openColorPicker = (index, event) => {
   pickerColor.value = colorStops.value[index].color;
   
   // Calculate position near the color swatch button
-  const rect = event.target.getBoundingClientRect();
+  const rect = (event.currentTarget || event.target).getBoundingClientRect();
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
   const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
   
@@ -1906,7 +1319,7 @@ const openAccessibilityColorPicker = (event) => {
   pickerColor.value = accessibilityTextColor.value;
   
   // Calculate position near the color swatch button
-  const rect = event.target.getBoundingClientRect();
+  const rect = (event.currentTarget || event.target).getBoundingClientRect();
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
   const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
   
@@ -1949,14 +1362,63 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Scoped styles for component */
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.gradient-preview {
+  @apply w-full h-64 rounded-tile border border-line transition-all;
+  background-image: v-bind(previewImage);
+  background-blend-mode: v-bind(previewBlend);
+  background-size: v-bind(previewSize);
+  background-repeat: v-bind(previewRepeat);
+  background-position: v-bind(previewPosition);
+  animation: v-bind(previewAnimation);
+}
+.gradient-fill {
+  background-image: v-bind(staticImage);
+  background-blend-mode: v-bind(staticBlend);
+}
+.backdrop {
+  @apply p-2 rounded-tile border border-line;
+}
+.backdrop-white {
+  background: v-bind('backdrops.white');
+}
+.backdrop-night {
+  background: v-bind('backdrops.night');
+}
+.backdrop-gray {
+  background: v-bind('backdrops.gray');
+}
+.text-sample {
+  @apply flex items-center justify-center h-11 min-w-32 px-4 rounded-field border-2 border-solid text-sm font-semibold;
+  color: v-bind(accessibilityTextColor);
+  border-color: v-bind(accessibilityTextColor);
+}
+.swatch-button {
+  @apply block w-11 h-11 shrink-0 p-0.5 rounded-control border border-line-control bg-surface-control transition-colors hover:border-accent-border;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
+}
+.stop-row {
+  @apply p-4 rounded-tile border border-line bg-surface-sunken transition-colors hover:border-line-control-hover;
+}
+.drag-handle {
+  @apply self-center cursor-move text-ink-muted hover:text-ink;
+}
+.layer-row {
+  @apply flex items-center gap-3 p-2 rounded-tile border border-line bg-surface-raised transition-colors hover:border-line-control-hover;
+}
+.layer-row-on {
+  @apply border-accent-highlight bg-accent-subtle;
+}
+.layer-select {
+  @apply flex-1 min-w-0 text-left text-ink rounded-control hover:text-accent-text;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
+}
+.layer-row-on .layer-select {
+  @apply text-accent-text;
 }
 </style>
 
 <style>
-/* Global keyframes for animations */
+/* Global keyframes: the preview's animation names them through v-bind() */
 @keyframes gradient-angle {
   0% {
     background-position: 0% 50%;
@@ -1990,7 +1452,6 @@ onMounted(() => {
   }
 }
 
-/* Ensure animations work properly */
 .animate-gradient {
   animation-play-state: running !important;
 }

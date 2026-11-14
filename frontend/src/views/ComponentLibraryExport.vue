@@ -1,427 +1,79 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Component Library Export
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Export your design system components and documentation in various formats.
-                </p>
-              </div>
-            </div>
+  <PageShell width="wide">
+    <PageHero
+      :back="{ to: '/components', label: 'Components' }"
+      title="Component library export"
+      lead="Export your design system components and documentation in various formats."
+      spot="site/handoff-tools"
+      size="tool"
+    />
+
+    <div class="space-y-3 mb-8">
+      <UiSpinner v-if="dataLoading" label="Loading components and tokens…" />
+      <UiCallout v-else-if="dataError" tone="danger" role="alert">
+        {{ dataError }}
+        <template #actions><UiButton size="sm" icon="refresh" label="Retry" @click="loadData" /></template>
+      </UiCallout>
+      <UiCallout v-else tone="success" icon="database" role="status">
+        Exports are built from the live design system: {{ components.length }} components and {{ tokens.length }} tokens.
+      </UiCallout>
+      <InlineNotice :notice="notice" @dismiss="clearNotice" />
+    </div>
+
+    <PageSection title="Formats" description="Pick a format to see its settings, then export.">
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div
+          v-for="format in formats"
+          :key="format.value"
+          class="export-card"
+          :class="{ 'export-card-selected': exportFormat === format.value }"
+          @click="exportFormat = format.value"
+        >
+          <div class="flex items-center gap-3">
+            <span class="export-card-icon material-symbols-outlined" aria-hidden="true">{{ format.icon }}</span>
+            <h3 class="text-lg font-semibold text-ink-strong">{{ format.title }}</h3>
           </div>
-        </div>
-
-        <!-- Data source status -->
-        <div class="max-w-7xl mx-auto mb-6 space-y-3">
-          <div
-            class="rounded-lg border px-4 py-3 flex items-center gap-3 text-sm"
-            :class="isDarkMode ? 'bg-slate-900 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-700'"
-          >
-            <template v-if="dataLoading">
-              <span class="material-symbols-outlined animate-spin" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">progress_activity</span>
-              <span>Loading components and tokens...</span>
-            </template>
-            <template v-else-if="dataError">
-              <span class="material-symbols-outlined" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
-              <span class="flex-1">{{ dataError }}</span>
-              <button
-                type="button"
-                @click="loadData"
-                class="px-3 py-1 rounded-lg font-medium bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                Retry
-              </button>
-            </template>
-            <template v-else>
-              <span class="material-symbols-outlined" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">database</span>
-              <span>Exports are built from the live design system: {{ components.length }} components and {{ tokens.length }} tokens.</span>
-            </template>
-          </div>
-          <InlineNotice :notice="notice" @dismiss="clearNotice" />
-        </div>
-
-        <!-- Export Options -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Storybook -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 cursor-pointer transition-all hover:shadow-md"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
-                : 'bg-white border-gray-200 hover:border-indigo-500'"
-              @click="exportFormat = 'storybook'"
-            >
-              <div class="flex items-center gap-3 mb-4">
-                <div class="p-2 rounded-lg" :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-50'">
-                  <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    library_books
-                  </span>
-                </div>
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  Storybook
-                </h3>
-              </div>
-              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Generate a Storybook project with a story for every component that has Vue source, plus your tokens.
-              </p>
-              <button
-                @click.stop="exportStorybook"
-                :disabled="!canExport"
-                class="w-full px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                :class="isDarkMode 
-                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-              >
-                Export Storybook
-              </button>
-            </div>
-
-            <!-- PDF Documentation -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 cursor-pointer transition-all hover:shadow-md"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
-                : 'bg-white border-gray-200 hover:border-indigo-500'"
-              @click="exportFormat = 'pdf'"
-            >
-              <div class="flex items-center gap-3 mb-4">
-                <div class="p-2 rounded-lg" :class="isDarkMode ? 'bg-red-900/30' : 'bg-red-50'">
-                  <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">
-                    description
-                  </span>
-                </div>
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  PDF Documentation
-                </h3>
-              </div>
-              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Generate a comprehensive PDF document with all components and guidelines.
-              </p>
-              <button
-                @click.stop="exportPDF"
-                :disabled="!canExport"
-                class="w-full px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                :class="isDarkMode 
-                  ? 'bg-red-600 hover:bg-red-700 text-white' 
-                  : 'bg-red-600 hover:bg-red-700 text-white'"
-              >
-                Export PDF
-              </button>
-            </div>
-
-            <!-- Markdown -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 cursor-pointer transition-all hover:shadow-md"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
-                : 'bg-white border-gray-200 hover:border-indigo-500'"
-              @click="exportFormat = 'markdown'"
-            >
-              <div class="flex items-center gap-3 mb-4">
-                <div class="p-2 rounded-lg" :class="isDarkMode ? 'bg-blue-900/30' : 'bg-blue-50'">
-                  <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">
-                    article
-                  </span>
-                </div>
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  Markdown
-                </h3>
-              </div>
-              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Export components, props and tokens as a Markdown file for version control.
-              </p>
-              <button
-                @click.stop="exportMarkdown"
-                :disabled="!canExport"
-                class="w-full px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                :class="isDarkMode 
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'"
-              >
-                Export Markdown
-              </button>
-            </div>
-
-            <!-- NPM Package -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 cursor-pointer transition-all hover:shadow-md"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
-                : 'bg-white border-gray-200 hover:border-indigo-500'"
-              @click="exportFormat = 'npm'"
-            >
-              <div class="flex items-center gap-3 mb-4">
-                <div class="p-2 rounded-lg" :class="isDarkMode ? 'bg-green-900/30' : 'bg-green-50'">
-                  <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">
-                    package_2
-                  </span>
-                </div>
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  NPM Package
-                </h3>
-              </div>
-              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Generate an NPM package with your Vue components and tokens as CSS, SCSS, JS and JSON.
-              </p>
-              <button
-                @click.stop="exportNPM"
-                :disabled="!canExport"
-                class="w-full px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                :class="isDarkMode 
-                  ? 'bg-green-600 hover:bg-green-700 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'"
-              >
-                Export NPM
-              </button>
-            </div>
-
-            <!-- Static Site -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 cursor-pointer transition-all hover:shadow-md"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
-                : 'bg-white border-gray-200 hover:border-indigo-500'"
-              @click="exportFormat = 'static'"
-            >
-              <div class="flex items-center gap-3 mb-4">
-                <div class="p-2 rounded-lg" :class="isDarkMode ? 'bg-purple-900/30' : 'bg-purple-50'">
-                  <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-purple-400' : 'text-purple-600'">
-                    public
-                  </span>
-                </div>
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  Static Site
-                </h3>
-              </div>
-              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Export as a static HTML site for hosting anywhere.
-              </p>
-              <button
-                @click.stop="exportStatic"
-                :disabled="!canExport"
-                class="w-full px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                :class="isDarkMode 
-                  ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                  : 'bg-purple-600 hover:bg-purple-700 text-white'"
-              >
-                Export Static
-              </button>
-            </div>
-
-            <!-- Figma Plugin -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 cursor-pointer transition-all hover:shadow-md"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
-                : 'bg-white border-gray-200 hover:border-indigo-500'"
-              @click="exportFormat = 'figma'"
-            >
-              <div class="flex items-center gap-3 mb-4">
-                <div class="p-2 rounded-lg" :class="isDarkMode ? 'bg-orange-900/30' : 'bg-orange-50'">
-                  <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-orange-400' : 'text-orange-600'">
-                    extension
-                  </span>
-                </div>
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  Figma Plugin
-                </h3>
-              </div>
-              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Generate a Figma plugin that creates color styles from your color tokens.
-              </p>
-              <button
-                @click.stop="exportFigma"
-                :disabled="!canExport"
-                class="w-full px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                :class="isDarkMode 
-                  ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                  : 'bg-orange-600 hover:bg-orange-700 text-white'"
-              >
-                Export Plugin
-              </button>
-            </div>
-
-            <!-- PenPot -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 cursor-pointer transition-all hover:shadow-md"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
-                : 'bg-white border-gray-200 hover:border-indigo-500'"
-              @click="exportFormat = 'penpot'"
-            >
-              <div class="flex items-center gap-3 mb-4">
-                <div class="p-2 rounded-lg" :class="isDarkMode ? 'bg-pink-900/30' : 'bg-pink-50'">
-                  <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-pink-400' : 'text-pink-600'">
-                    draw
-                  </span>
-                </div>
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  PenPot
-                </h3>
-              </div>
-              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Export components and tokens for PenPot design tool.
-              </p>
-              <button
-                @click.stop="exportPenPot"
-                :disabled="!canExport"
-                class="w-full px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                :class="isDarkMode 
-                  ? 'bg-pink-600 hover:bg-pink-700 text-white' 
-                  : 'bg-pink-600 hover:bg-pink-700 text-white'"
-              >
-                Export PenPot
-              </button>
-            </div>
-
-            <!-- Adobe XD -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 cursor-pointer transition-all hover:shadow-md"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
-                : 'bg-white border-gray-200 hover:border-indigo-500'"
-              @click="exportFormat = 'adobe-xd'"
-            >
-              <div class="flex items-center gap-3 mb-4">
-                <div class="p-2 rounded-lg" :class="isDarkMode ? 'bg-purple-900/30' : 'bg-purple-50'">
-                  <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-purple-400' : 'text-purple-600'">
-                    palette
-                  </span>
-                </div>
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  Adobe XD
-                </h3>
-              </div>
-              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Export design tokens and component specifications for Adobe XD.
-              </p>
-              <button
-                @click.stop="exportAdobeXD"
-                :disabled="!canExport"
-                class="w-full px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                :class="isDarkMode 
-                  ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                  : 'bg-purple-600 hover:bg-purple-700 text-white'"
-              >
-                Export Adobe XD
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Export Settings -->
-        <div v-if="exportFormat" class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              Export Settings
-            </h3>
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Include Components
-                </label>
-                <div class="space-y-2">
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" v-model="exportSettings.includeComponents" class="accent-indigo-600" />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">All components</span>
-                  </label>
-                </div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Include Tokens
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" v-model="exportSettings.includeTokens" class="accent-indigo-600" />
-                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Design tokens</span>
-                </label>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Include Documentation
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" v-model="exportSettings.includeDocs" class="accent-indigo-600" />
-                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Guidelines and examples</span>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Export Status -->
-        <div v-if="exportStatus" class="max-w-7xl mx-auto">
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="flex items-center gap-3">
-              <span 
-                class="material-symbols-outlined"
-                :class="exportStatus === 'success' 
-                  ? (isDarkMode ? 'text-green-400' : 'text-green-600')
-                  : (isDarkMode ? 'text-yellow-400' : 'text-yellow-600')"
-              >
-                {{ exportStatus === 'success' ? 'check_circle' : 'hourglass_empty' }}
-              </span>
-              <div class="flex-1">
-                <p class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  {{ exportStatus === 'success' ? 'Export completed successfully!' : 'Exporting...' }}
-                </p>
-                <p v-if="exportStatus === 'success'" class="text-sm mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Your export is ready for download.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+          <p class="text-sm text-ink-secondary flex-1">{{ format.body }}</p>
+          <UiButton
+            variant="primary"
+            icon="download"
+            :label="format.action"
+            :disabled="!canExport"
+            :loading="exportStatus === 'processing' && exportFormat === format.value"
+            @click.stop="format.run"
+          />
         </div>
       </div>
+    </PageSection>
+
+    <PageSection v-if="exportFormat" title="Export settings" description="What goes into the export." divided>
+      <UiPanel>
+        <div class="grid sm:grid-cols-3 gap-4">
+          <UiCheckbox v-model="exportSettings.includeComponents" label="All components" hint="Include components" />
+          <UiCheckbox v-model="exportSettings.includeTokens" label="Design tokens" hint="Include tokens" />
+          <UiCheckbox v-model="exportSettings.includeDocs" label="Guidelines and examples" hint="Include documentation" />
+        </div>
+      </UiPanel>
+    </PageSection>
+
+    <div v-if="exportStatus" class="mt-8">
+      <UiCallout v-if="exportStatus === 'success'" tone="success" title="Export completed successfully!" role="status">
+        Your export is ready for download.
+      </UiCallout>
+      <UiCallout v-else tone="info" icon="hourglass_empty" role="status">Exporting…</UiCallout>
     </div>
-  </div>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import jsPDF from 'jspdf';
 import JSZip from 'jszip';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiPanel, UiSpinner } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 import apiClient from '../services/api.js';
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const { notice, showNotice, clearNotice } = useNotice();
 const exportFormat = ref('');
 const exportStatus = ref('');
@@ -1216,12 +868,28 @@ ${readmeComponentList(comps)}
   await downloadZip(files, 'adobe-xd-design-system.zip');
 });
 
+const formats = [
+  { value: 'storybook', title: 'Storybook', icon: 'library_books', action: 'Export Storybook', run: exportStorybook, body: 'Generate a Storybook project with a story for every component that has Vue source, plus your tokens.' },
+  { value: 'pdf', title: 'PDF documentation', icon: 'description', action: 'Export PDF', run: exportPDF, body: 'Generate a comprehensive PDF document with all components and guidelines.' },
+  { value: 'markdown', title: 'Markdown', icon: 'article', action: 'Export Markdown', run: exportMarkdown, body: 'Export components, props and tokens as a Markdown file for version control.' },
+  { value: 'npm', title: 'NPM package', icon: 'package_2', action: 'Export NPM', run: exportNPM, body: 'Generate an NPM package with your Vue components and tokens as CSS, SCSS, JS and JSON.' },
+  { value: 'static', title: 'Static site', icon: 'public', action: 'Export Static', run: exportStatic, body: 'Export as a static HTML site for hosting anywhere.' },
+  { value: 'figma', title: 'Figma plugin', icon: 'extension', action: 'Export Plugin', run: exportFigma, body: 'Generate a Figma plugin that creates color styles from your color tokens.' },
+  { value: 'penpot', title: 'PenPot', icon: 'draw', action: 'Export PenPot', run: exportPenPot, body: 'Export components and tokens for PenPot design tool.' },
+  { value: 'adobe-xd', title: 'Adobe XD', icon: 'palette', action: 'Export Adobe XD', run: exportAdobeXD, body: 'Export design tokens and component specifications for Adobe XD.' },
+];
+
 onMounted(loadData);
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.export-card {
+  @apply flex flex-col gap-4 rounded-card border border-solid border-line bg-surface-raised p-6 cursor-pointer transition-shadow hover:shadow-card-hover hover:border-accent-border;
+}
+.export-card-selected {
+  @apply border-line-selected bg-accent-subtle;
+}
+.export-card-icon {
+  @apply rounded-control bg-fill p-2 text-xl text-accent-text;
 }
 </style>
-

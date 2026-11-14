@@ -1,503 +1,287 @@
 <template>
   <div>
-    <p class="text-gray-600 mb-8">
+    <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
+
+    <p class="text-ink-secondary mb-8">
       Send your palette through Contrast Testing to make sure every color combo is accessible and readable.
       See the exact scores, check which pairs pass AA/AAA standards, and feel confident your palette works everywhere.
     </p>
 
     <!-- Current Palette Display -->
-    <div v-if="palette.colors && palette.colors.length > 0" class="mb-8">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Current Palette</h3>
-      <div class="flex flex-wrap gap-3">
-        <div
-          v-for="(color, index) in palette.colors"
-          :key="index"
-          class="group relative"
-        >
-          <div
-            class="w-20 h-20 rounded-lg shadow-md border-2 border-gray-200 hover:border-indigo-400 transition-all cursor-pointer"
-            :style="{ backgroundColor: color.hex }"
-          ></div>
+    <section v-if="palette.colors && palette.colors.length > 0" class="mb-8">
+      <h3 class="text-lg font-semibold text-ink-strong mb-4">Current palette</h3>
+      <ul class="flex flex-wrap gap-3">
+        <li v-for="(color, index) in palette.colors" :key="index">
+          <UiColorSample class="w-20 h-20 rounded-tile border-2 shadow-control" :color="color.hex" />
           <div class="mt-1 text-center">
-            <div class="text-xs font-mono text-gray-700">{{ color.hex }}</div>
-            <div v-if="color.role" class="text-xs text-gray-500 capitalize">{{ color.role }}</div>
+            <div class="text-xs font-code text-ink">{{ color.hex }}</div>
+            <div v-if="color.role" class="text-xs text-ink-muted capitalize">{{ color.role }}</div>
           </div>
-        </div>
-      </div>
-    </div>
+        </li>
+      </ul>
+    </section>
 
     <!-- Color Blindness Simulation -->
-    <div v-if="palette.colors && palette.colors.length > 0" class="mb-8">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-xl text-indigo-600">visibility</span>
-        Color Blindness Simulation
+    <section v-if="palette.colors && palette.colors.length > 0" class="mb-8">
+      <h3 class="text-lg font-semibold text-ink-strong mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">visibility</span>
+        Color blindness simulation
       </h3>
-      <p class="text-sm text-gray-600 mb-4">
+      <p class="text-sm text-ink-secondary mb-4">
         Preview how your palette appears to users with different types of color blindness. This helps ensure your color choices remain distinguishable for all users.
       </p>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <button
-          v-for="type in colorBlindnessTypes"
-          :key="type.value"
-          @click="selectedBlindnessType = type.value"
-          class="px-3 py-2 rounded-lg border-2 transition-all text-sm"
-          :class="selectedBlindnessType === type.value
-            ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-            : 'border-gray-200 hover:border-gray-300 text-gray-700'"
-        >
-          {{ type.label }}
-        </button>
+      <div class="mb-4">
+        <UiSegmented v-model="selectedBlindnessType" :options="colorBlindnessTypes" aria-label="Color blindness type" />
       </div>
-      
-      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-        <div
-          v-for="(color, index) in palette.colors"
-          :key="`cb-${color.hex}-${index}`"
-          class="text-center"
-        >
-          <div
-            class="w-full h-16 rounded-lg shadow-md mb-2 border border-gray-200"
-            :style="{ backgroundColor: simulateColorBlindness(color.hex, selectedBlindnessType) }"
-          ></div>
-          <div class="text-xs text-gray-600 font-mono">{{ color.hex }}</div>
-          <div v-if="color.name" class="text-xs text-gray-500">{{ color.name }}</div>
-        </div>
-      </div>
-    </div>
+      <ul class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <li v-for="(color, index) in palette.colors" :key="`cb-${color.hex}-${index}`" class="text-center">
+          <UiColorSample
+            class="w-full h-16 rounded-tile border shadow-control mb-2"
+            :color="simulateColorBlindness(color.hex, selectedBlindnessType)"
+            role="img"
+            :aria-label="`${color.hex} as seen with ${selectedBlindnessType}`"
+          />
+          <div class="text-xs text-ink-secondary font-code">{{ color.hex }}</div>
+          <div v-if="color.name" class="text-xs text-ink-muted">{{ color.name }}</div>
+        </li>
+      </ul>
+    </section>
 
     <!-- Readability Testing -->
-    <div v-if="palette.colors && palette.colors.length > 0" class="mb-8">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-xl text-indigo-600">text_fields</span>
-        Readability Testing
+    <section v-if="palette.colors && palette.colors.length > 0" class="mb-8">
+      <h3 class="text-lg font-semibold text-ink-strong mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">text_fields</span>
+        Readability testing
       </h3>
-      <p class="text-sm text-gray-600 mb-4">
+      <p class="text-sm text-ink-secondary mb-4">
         Test text readability with different font sizes and weights on each palette color to ensure optimal contrast.
       </p>
       <div class="mb-4 grid grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Font Size</label>
-          <select v-model="readabilityFontSize" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-            <option value="12">12px (Small)</option>
-            <option value="14">14px (Normal)</option>
-            <option value="16">16px (Large)</option>
-            <option value="18">18px (Extra Large)</option>
-            <option value="24">24px (Heading)</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Font Weight</label>
-          <select v-model="readabilityFontWeight" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-            <option value="400">Regular (400)</option>
-            <option value="500">Medium (500)</option>
-            <option value="600">Semi-Bold (600)</option>
-            <option value="700">Bold (700)</option>
-          </select>
-        </div>
+        <UiSelect v-model="readabilityFontSize" label="Font size" :options="fontSizeOptions" />
+        <UiSelect v-model="readabilityFontWeight" label="Font weight" :options="fontWeightOptions" />
       </div>
-      
+
       <div class="space-y-4">
-        <div
+        <UiColorSample
           v-for="(color, index) in palette.colors"
           :key="`readability-${color.hex}-${index}`"
-          class="p-4 rounded-lg border border-gray-200"
-          :style="{ backgroundColor: color.hex }"
+          class="p-4 rounded-tile border"
+          :color="color.hex"
+          :text-color="getBestTextColor(color.hex)"
         >
           <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium text-gray-700">{{ color.name || color.hex }}</span>
-            <span
-              class="text-xs px-2 py-1 rounded"
-              :class="getReadabilityClass(color.hex)"
-            >
-              {{ getReadabilityStatus(color.hex) }}
-            </span>
+            <span class="text-sm font-medium">{{ color.name || color.hex }}</span>
+            <UiChip :tone="getReadabilityTone(color.hex)">{{ getReadabilityStatus(color.hex) }}</UiChip>
           </div>
-          <p
-            class="text-gray-900"
-            :style="{
-              fontSize: `${readabilityFontSize}px`,
-              fontWeight: readabilityFontWeight,
-              color: getBestTextColor(color.hex),
-            }"
-          >
+          <p class="readability-sample">
             The quick brown fox jumps over the lazy dog. Readability test for {{ color.name || color.hex }}.
           </p>
-        </div>
+        </UiColorSample>
       </div>
-    </div>
+    </section>
 
-    <div v-if="loading" class="text-center py-8">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      <p class="mt-2 text-gray-600">Testing contrast...</p>
-    </div>
+    <UiSpinner v-if="loading" label="Testing contrast…" />
 
     <div v-else>
-      <!-- Summary -->
-      <div v-if="contrastResults.length > 0" class="mb-8">
-        <div class="flex items-center justify-between mb-6">
-          <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <span class="material-symbols-outlined text-xl text-indigo-600">compare_arrows</span>
-            Contrast Pairs
-          </h3>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <section v-if="contrastResults.length > 0" class="mb-8">
+        <h3 class="text-lg font-semibold text-ink-strong flex items-center gap-2 mb-6">
+          <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">compare_arrows</span>
+          Contrast pairs
+        </h3>
+
+        <!-- Summary (each figure filters the table) -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" role="group" aria-label="Filter contrast pairs">
           <button
-            @click="filter = 'all'"
-            class="bg-blue-50 p-4 rounded-lg border-2 transition-all hover:bg-blue-100 cursor-pointer"
-            :class="filter === 'all' ? 'border-blue-500 shadow-md' : 'border-blue-200'"
+            v-for="card in filterCards"
+            :key="card.value"
+            type="button"
+            class="filter-card"
+            :class="[`filter-card-${card.tone}`, { 'filter-card-on': filter === card.value }]"
+            :aria-pressed="filter === card.value"
+            @click="filter = card.value"
           >
-            <div class="text-2xl font-bold text-blue-900">{{ totalPairs }}</div>
-            <div class="text-sm text-blue-700">Total Pairs</div>
-          </button>
-          <button
-            @click="filter = 'passing'"
-            class="bg-green-50 p-4 rounded-lg border-2 transition-all hover:bg-green-100 cursor-pointer"
-            :class="filter === 'passing' ? 'border-green-500 shadow-md' : 'border-green-200'"
-          >
-            <div class="text-2xl font-bold text-green-900">{{ passingAA }}</div>
-            <div class="text-sm text-green-700">Pass AA</div>
-          </button>
-          <button
-            @click="filter = 'passingAAA'"
-            class="bg-green-50 p-4 rounded-lg border-2 transition-all hover:bg-green-100 cursor-pointer"
-            :class="filter === 'passingAAA' ? 'border-green-500 shadow-md' : 'border-green-200'"
-          >
-            <div class="text-2xl font-bold text-green-900">{{ passingAAA }}</div>
-            <div class="text-sm text-green-700">Pass AAA</div>
-          </button>
-          <button
-            @click="filter = 'failing'"
-            class="bg-red-50 p-4 rounded-lg border-2 transition-all hover:bg-red-100 cursor-pointer"
-            :class="filter === 'failing' ? 'border-red-500 shadow-md' : 'border-red-200'"
-          >
-            <div class="text-2xl font-bold text-red-900">{{ failing }}</div>
-            <div class="text-sm text-red-700">Failing</div>
+            <span class="block text-2xl font-bold text-ink-strong">{{ card.count }}</span>
+            <span class="block text-sm">{{ card.label }}</span>
           </button>
         </div>
 
         <!-- Strategic Color Suggestions -->
-        <div v-if="strategicSuggestions.length > 0" class="mb-8 p-6 bg-indigo-50 rounded-lg border border-indigo-200">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="text-lg font-semibold text-indigo-900">Strategic Color Suggestions</h3>
-              <p class="text-sm text-indigo-700 mt-1">
-                These colors fix multiple failing pairs. Add them to improve your palette's contrast coverage.
-              </p>
-            </div>
-            <button
-              @click="loadStrategicSuggestions"
-              :disabled="loadingStrategic"
-              class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <svg v-if="!loadingStrategic" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <div v-else class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              Refresh Suggestions
-            </button>
-          </div>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div
-              v-for="(suggestion, index) in strategicSuggestions"
-              :key="index"
-              class="bg-white rounded-lg p-4 border border-indigo-200 hover:border-indigo-400 transition-all"
-            >
+        <UiPanel
+          v-if="strategicSuggestions.length > 0"
+          class="mb-8"
+          title="Strategic color suggestions"
+          description="These colors fix multiple failing pairs. Add them to improve your palette's contrast coverage."
+          heading-tag="h3"
+        >
+          <template #actions>
+            <UiButton variant="primary" size="sm" icon="refresh" :loading="loadingStrategic" @click="loadStrategicSuggestions">Refresh suggestions</UiButton>
+          </template>
+
+          <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <li v-for="(suggestion, index) in strategicSuggestions" :key="index" class="rounded-tile border border-line-faint bg-surface-raised p-4 hover:border-accent-border transition-colors">
               <div class="flex items-start gap-3 mb-3">
                 <div v-if="suggestion.replaceColor" class="flex items-center gap-2">
-                  <!-- Before Color -->
                   <div class="text-center">
-                    <div class="text-xs text-gray-500 mb-1">Before</div>
-                    <div
-                      class="w-16 h-16 rounded-lg border-2 border-gray-300 flex-shrink-0"
-                      :style="{ backgroundColor: suggestion.replaceColor }"
-                    ></div>
-                    <div class="text-xs font-mono text-gray-600 mt-1">{{ suggestion.replaceColor }}</div>
+                    <div class="text-xs text-ink-muted mb-1">Before</div>
+                    <UiColorSample class="w-16 h-16 rounded-tile border-2 shrink-0" :color="suggestion.replaceColor" />
+                    <div class="text-xs font-code text-ink-secondary mt-1">{{ suggestion.replaceColor }}</div>
                   </div>
-                  <!-- Arrow -->
-                  <div class="flex items-center text-gray-400">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </div>
-                  <!-- After Color -->
+                  <span class="material-symbols-outlined text-ink-muted" aria-label="becomes">arrow_forward</span>
                   <div class="text-center">
-                    <div class="text-xs text-gray-500 mb-1">After</div>
-                    <div
-                      class="w-16 h-16 rounded-lg border-2 border-indigo-400 flex-shrink-0"
-                      :style="{ backgroundColor: suggestion.hex }"
-                    ></div>
-                    <div class="text-xs font-mono text-gray-900 font-semibold mt-1">{{ suggestion.hex }}</div>
+                    <div class="text-xs text-ink-muted mb-1">After</div>
+                    <UiColorSample class="w-16 h-16 rounded-tile border-2 shrink-0" :color="suggestion.hex" />
+                    <div class="text-xs font-code text-ink-strong font-semibold mt-1">{{ suggestion.hex }}</div>
                   </div>
                 </div>
-                <div v-else>
-                  <div
-                    class="w-16 h-16 rounded-lg border-2 border-gray-300 flex-shrink-0"
-                    :style="{ backgroundColor: suggestion.hex }"
-                  ></div>
-                </div>
+                <UiColorSample v-else class="w-16 h-16 rounded-tile border-2 shrink-0" :color="suggestion.hex" />
                 <div class="flex-1 min-w-0">
-                  <div class="font-mono text-sm font-semibold text-gray-900 mb-1">{{ suggestion.hex }}</div>
-                  <div class="text-xs text-gray-600 capitalize">{{ suggestion.type.replace('-', ' ') }}</div>
-                  <div class="text-xs text-indigo-600 font-medium mt-1">
+                  <div class="font-code text-sm font-semibold text-ink-strong mb-1">{{ suggestion.hex }}</div>
+                  <div class="text-xs text-ink-secondary capitalize">{{ suggestion.type.replace('-', ' ') }}</div>
+                  <div class="text-xs text-accent-text font-medium mt-1">
                     Fixes {{ suggestion.pairsFixed }} pair{{ suggestion.pairsFixed !== 1 ? 's' : '' }}
                   </div>
-                  <div v-if="suggestion.replaceColor" class="text-xs text-purple-600 font-medium mt-1">
-                    Keeps palette size the same
-                  </div>
+                  <div v-if="suggestion.replaceColor" class="text-xs text-info font-medium mt-1">Keeps palette size the same</div>
                 </div>
               </div>
-              
-              <p class="text-xs text-gray-700 mb-3">{{ suggestion.description }}</p>
-              
+
+              <p class="text-xs text-ink mb-3">{{ suggestion.description }}</p>
+
               <div v-if="suggestion.pairsFixedDetails.length > 0" class="mb-3">
-                <div class="text-xs font-medium text-gray-600 mb-1">Sample pairs fixed:</div>
-                <div class="space-y-1 max-h-24 overflow-y-auto">
-                  <div
-                    v-for="(pair, idx) in suggestion.pairsFixedDetails.slice(0, 3)"
-                    :key="idx"
-                    class="text-xs text-gray-500 flex items-center gap-2"
-                  >
-                    <div class="w-4 h-4 rounded border border-gray-300" :style="{ backgroundColor: pair.color1 }"></div>
-                    <div class="w-4 h-4 rounded border border-gray-300" :style="{ backgroundColor: pair.color2 }"></div>
-                    <span class="font-mono">{{ pair.ratio.toFixed(1) }}:1</span>
-                  </div>
-                </div>
+                <div class="text-xs font-medium text-ink-secondary mb-1">Sample pairs fixed:</div>
+                <ul class="space-y-1 max-h-24 overflow-y-auto">
+                  <li v-for="(pair, idx) in suggestion.pairsFixedDetails.slice(0, 3)" :key="idx" class="text-xs text-ink-muted flex items-center gap-2">
+                    <UiSwatch :color="pair.color1" size="sm" />
+                    <UiSwatch :color="pair.color2" size="sm" />
+                    <span class="font-code">{{ pair.ratio.toFixed(1) }}:1</span>
+                  </li>
+                </ul>
               </div>
-              
-              <button
-                v-if="suggestion.replaceColor"
-                @click="applyReplacement(suggestion.replaceColor, suggestion.hex)"
-                class="w-full px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                Replace Color
-              </button>
-              <button
-                v-else
-                @click="applyStrategicColor(suggestion.hex)"
-                class="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Add to Palette
-              </button>
-            </div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between mb-4 gap-4">
+
+              <UiButton v-if="suggestion.replaceColor" variant="primary" size="sm" class="w-full justify-center" @click="applyReplacement(suggestion.replaceColor, suggestion.hex)">
+                Replace color
+              </UiButton>
+              <UiButton v-else variant="primary" size="sm" icon="add" class="w-full justify-center" @click="applyStrategicColor(suggestion.hex)">
+                Add to palette
+              </UiButton>
+            </li>
+          </ul>
+        </UiPanel>
+
+        <div class="flex flex-wrap items-end justify-between mb-4 gap-4">
           <!-- Versatility Insights -->
-          <div v-if="versatileColors.length > 0" class="flex-1 flex items-center gap-4">
-            <h4 class="text-sm font-semibold text-gray-900">Most Versatile Colors:</h4>
-            <div class="flex flex-wrap gap-2">
-              <div
-                v-for="(color, index) in versatileColors.slice(0, 3)"
-                :key="index"
-                class="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-gray-200"
-              >
-                <div
-                  class="w-6 h-6 rounded border border-gray-300"
-                  :style="{ backgroundColor: color.hex }"
-                ></div>
-                <span class="text-xs font-mono text-gray-900">{{ color.hex }}</span>
-                <span class="text-xs text-gray-600">({{ color.count }} pairs)</span>
-              </div>
-            </div>
+          <div v-if="versatileColors.length > 0" class="flex-1 flex flex-wrap items-center gap-4">
+            <h4 class="text-sm font-semibold text-ink-strong">Most versatile colors:</h4>
+            <ul class="flex flex-wrap gap-2">
+              <li v-for="(color, index) in versatileColors.slice(0, 3)" :key="index" class="flex items-center gap-2 px-3 py-1.5 rounded-control border border-line-faint bg-surface-raised">
+                <UiSwatch :color="color.hex" size="sm" />
+                <span class="text-xs font-code text-ink-strong">{{ color.hex }}</span>
+                <span class="text-xs text-ink-secondary">({{ color.count }} pairs)</span>
+              </li>
+            </ul>
           </div>
-          
-          <!-- Filter and Sort Controls -->
-          <div class="flex items-center gap-4 flex-shrink-0">
-            <div class="flex items-center gap-2">
-              <label class="text-sm text-gray-600">Sort:</label>
-              <select
-                v-model="sortBy"
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="ratio">Ratio (Low to High)</option>
-                <option value="ratio-desc">Ratio (High to Low)</option>
-                <option value="passing">Passing First</option>
-                <option value="failing">Failing First</option>
-              </select>
-            </div>
+
+          <div class="w-56 shrink-0">
+            <UiSelect v-model="sortBy" label="Sort" :options="sortOptions" />
           </div>
         </div>
 
         <!-- Contrast Results Table -->
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preview</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ratio</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Standards</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="(result, index) in filteredAndSortedResults" :key="index">
-                <td class="px-6 py-4">
-                  <!-- Text Color 1 on Background Color 2 -->
+        <UiTable caption="Contrast between each pair of palette colors" bordered>
+          <thead>
+            <tr>
+              <th scope="col">Preview</th>
+              <th scope="col">Ratio</th>
+              <th scope="col">Standards</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(result, index) in filteredAndSortedResults" :key="index">
+              <td>
+                <div class="flex items-center gap-2">
+                  <UiColorSample class="flex-1 px-4 py-3 rounded-control border" :color="result.color2" :text-color="result.color1">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-sm font-medium">Sample Text</span>
+                      <div class="flex items-center gap-1">
+                        <UiChip v-if="result.passesAALarge" tone="success" title="Passes AA Large Text (3:1)">AA Large</UiChip>
+                        <UiChip v-if="result.passesAA" tone="success" title="Passes AA Standard (4.5:1)">AA</UiChip>
+                        <UiChip v-if="result.passesAAA" tone="success" title="Passes AAA Standard (7:1)">AAA</UiChip>
+                      </div>
+                    </div>
+                  </UiColorSample>
+                  <div class="text-xs text-ink-muted font-code whitespace-nowrap">{{ result.color1 }} on {{ result.color2 }}</div>
+                </div>
+              </td>
+              <td class="whitespace-nowrap">
+                <div class="flex flex-col">
+                  <span class="font-code text-sm font-semibold" :class="getRatioClass(result.ratio)">{{ result.ratio }}:1</span>
+                  <span class="text-xs text-ink-muted mt-1">{{ getRatioDescription(result.ratio) }}</span>
+                </div>
+              </td>
+              <td class="whitespace-nowrap">
+                <div class="flex flex-col gap-1">
                   <div class="flex items-center gap-2">
+                    <UiChip :tone="result.passesAA ? 'success' : 'danger'">{{ result.passesAA ? '✓ AA' : '✗ AA' }}</UiChip>
+                    <UiChip :tone="result.passesAAA ? 'success' : 'danger'">{{ result.passesAAA ? '✓ AAA' : '✗ AAA' }}</UiChip>
+                  </div>
+                  <div v-if="result.passesAALarge || result.passesAAALarge" class="text-xs text-ink-muted mt-1">
+                    <span v-if="result.passesAALarge">Large text OK</span>
+                  </div>
+                </div>
+              </td>
+              <td class="whitespace-nowrap">
+                <div v-if="!result.passesAA" class="flex flex-col gap-2">
+                  <UiButton
+                    v-if="!suggestionsLoading[suggestionKey(result)]"
+                    variant="primary"
+                    size="sm"
+                    @click="getContrastSuggestion(result)"
+                  >
+                    Get fix
+                  </UiButton>
+                  <UiSpinner v-else label="Loading..." />
+                  <div v-if="contrastSuggestions[suggestionKey(result)]" class="mt-2 p-3 rounded-control border border-line-faint bg-surface-sunken min-w-48 whitespace-normal">
+                    <p class="text-xs text-ink mb-3 font-medium">{{ contrastSuggestions[suggestionKey(result)].description }}</p>
                     <div
-                      class="flex-1 px-4 py-3 rounded border border-gray-300"
-                      :style="{
-                        backgroundColor: result.color2,
-                        color: result.color1,
-                      }"
+                      v-for="fix in ['color1', 'color2']"
+                      :key="fix"
                     >
-                      <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium">Sample Text</span>
-                        <div class="flex items-center gap-2">
-                          <span
-                            v-if="result.passesAALarge"
-                            class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded"
-                            title="Passes AA Large Text (3:1)"
-                          >
-                            AA Large
-                          </span>
-                          <span
-                            v-if="result.passesAA"
-                            class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded"
-                            title="Passes AA Standard (4.5:1)"
-                          >
-                            AA
-                          </span>
-                          <span
-                            v-if="result.passesAAA"
-                            class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded"
-                            title="Passes AAA Standard (7:1)"
-                          >
-                            AAA
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="text-xs text-gray-500 font-mono whitespace-nowrap">
-                      {{ result.color1 }} on {{ result.color2 }}
-                    </div>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex flex-col">
-                    <span class="font-mono text-sm font-semibold" :class="getRatioClass(result.ratio)">
-                      {{ result.ratio }}:1
-                    </span>
-                    <span class="text-xs text-gray-500 mt-1">
-                      {{ getRatioDescription(result.ratio) }}
-                    </span>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex flex-col gap-1">
-                    <div class="flex items-center gap-2">
-                      <span
-                        class="px-2 py-1 text-xs font-semibold rounded w-12 text-center"
-                        :class="result.passesAA ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-                      >
-                        {{ result.passesAA ? '✓ AA' : '✗ AA' }}
-                      </span>
-                      <span
-                        class="px-2 py-1 text-xs font-semibold rounded w-12 text-center"
-                        :class="result.passesAAA ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-                      >
-                        {{ result.passesAAA ? '✓ AAA' : '✗ AAA' }}
-                      </span>
-                    </div>
-                    <div v-if="result.passesAALarge || result.passesAAALarge" class="text-xs text-gray-500 mt-1">
-                      <span v-if="result.passesAALarge">Large text OK</span>
-                    </div>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div v-if="!result.passesAA" class="flex flex-col gap-2">
-                    <button
-                      v-if="!suggestionsLoading[`${result.color1}-${result.color2}`]"
-                      @click="getContrastSuggestion(result)"
-                      class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
-                    >
-                      Get Fix
-                    </button>
-                    <div v-else class="text-xs text-gray-500 flex items-center gap-2">
-                      <div class="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-gray-600"></div>
-                      Loading...
-                    </div>
-                    <div
-                      v-if="contrastSuggestions[`${result.color1}-${result.color2}`]"
-                      class="mt-2 p-3 bg-gray-50 rounded border border-gray-200 min-w-[200px]"
-                    >
-                      <div class="text-xs text-gray-700 mb-3 font-medium">
-                        {{ contrastSuggestions[`${result.color1}-${result.color2}`].description }}
-                      </div>
-                      <div
-                        v-if="contrastSuggestions[`${result.color1}-${result.color2}`].color1Fix"
-                        class="flex items-center gap-2 mb-2 p-2 bg-white rounded"
-                      >
-                        <div
-                          class="w-10 h-10 rounded border-2 border-gray-300 flex-shrink-0"
-                          :style="{ backgroundColor: contrastSuggestions[`${result.color1}-${result.color2}`].color1Fix }"
-                        ></div>
+                      <div v-if="contrastSuggestions[suggestionKey(result)][`${fix}Fix`]" class="flex items-center gap-2 mb-2 p-2 rounded-control bg-surface-raised">
+                        <UiColorSample class="w-10 h-10 rounded-control border-2 shrink-0" :color="contrastSuggestions[suggestionKey(result)][`${fix}Fix`]" />
                         <div class="flex-1 min-w-0">
-                          <div class="text-xs font-mono text-gray-700 break-all">
-                            {{ contrastSuggestions[`${result.color1}-${result.color2}`].color1Fix }}
-                          </div>
-                          <div class="text-xs text-gray-500">Add to palette</div>
+                          <div class="text-xs font-code text-ink break-all">{{ contrastSuggestions[suggestionKey(result)][`${fix}Fix`] }}</div>
+                          <div class="text-xs text-ink-muted">Add to palette</div>
                         </div>
-                        <button
-                          @click.stop="applyContrastFix(result.color1, contrastSuggestions[`${result.color1}-${result.color2}`].color1Fix)"
-                          class="px-3 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex-shrink-0"
+                        <UiButton
+                          variant="primary"
+                          size="sm"
+                          :aria-label="`Add ${contrastSuggestions[suggestionKey(result)][`${fix}Fix`]} to palette`"
+                          @click.stop="applyContrastFix(result[fix], contrastSuggestions[suggestionKey(result)][`${fix}Fix`])"
                         >
                           Add
-                        </button>
-                      </div>
-                      <div
-                        v-if="contrastSuggestions[`${result.color1}-${result.color2}`].color2Fix"
-                        class="flex items-center gap-2 p-2 bg-white rounded"
-                      >
-                        <div
-                          class="w-10 h-10 rounded border-2 border-gray-300 flex-shrink-0"
-                          :style="{ backgroundColor: contrastSuggestions[`${result.color1}-${result.color2}`].color2Fix }"
-                        ></div>
-                        <div class="flex-1 min-w-0">
-                          <div class="text-xs font-mono text-gray-700 break-all">
-                            {{ contrastSuggestions[`${result.color1}-${result.color2}`].color2Fix }}
-                          </div>
-                          <div class="text-xs text-gray-500">Add to palette</div>
-                        </div>
-                        <button
-                          @click.stop="applyContrastFix(result.color2, contrastSuggestions[`${result.color1}-${result.color2}`].color2Fix)"
-                          class="px-3 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex-shrink-0"
-                        >
-                          Add
-                        </button>
-                      </div>
-                      <div
-                        v-if="!contrastSuggestions[`${result.color1}-${result.color2}`].color1Fix && !contrastSuggestions[`${result.color1}-${result.color2}`].color2Fix"
-                        class="text-xs text-orange-600 italic"
-                      >
-                        No automatic fix available. Try manually adjusting colors.
+                        </UiButton>
                       </div>
                     </div>
+                    <p
+                      v-if="!contrastSuggestions[suggestionKey(result)].color1Fix && !contrastSuggestions[suggestionKey(result)].color2Fix"
+                      class="text-xs text-warning italic"
+                    >
+                      No automatic fix available. Try manually adjusting colors.
+                    </p>
                   </div>
-                  <div v-else class="text-xs text-green-600 font-medium">✓ Good contrast</div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </div>
+                <div v-else class="text-xs text-success font-medium">✓ Good contrast</div>
+              </td>
+            </tr>
+          </tbody>
+        </UiTable>
+      </section>
     </div>
 
     <!-- Navigation -->
     <div class="flex justify-between mt-8">
-      <button
-        @click="$emit('back')"
-        class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-      >
-        ← Back
-      </button>
-      <button
-        @click="$emit('next')"
-        class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-      >
-        Next: Assign Roles →
-      </button>
+      <UiButton icon="arrow_back" @click="$emit('back')">Back</UiButton>
+      <UiButton variant="primary" trailing-icon="arrow_forward" @click="$emit('next')">Next: Assign roles</UiButton>
     </div>
   </div>
 </template>
@@ -505,6 +289,12 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import apiClient from '../services/api.js';
+import InlineNotice from './InlineNotice.vue';
+import { UiButton, UiChip, UiPanel, UiSegmented, UiSelect, UiSpinner, UiSwatch, UiTable } from './ui';
+import UiColorSample from './ui/UiColorSample.vue';
+import { useNotice } from '../composables/useNotice.js';
+
+const { notice, showNotice, clearNotice } = useNotice();
 
 const props = defineProps({
   palette: {
@@ -593,9 +383,9 @@ const versatileColors = computed(() => {
 });
 
 const getRatioClass = (ratio) => {
-  if (ratio >= 7) return 'text-green-600';
-  if (ratio >= 4.5) return 'text-yellow-600';
-  return 'text-red-600';
+  if (ratio >= 7) return 'text-success';
+  if (ratio >= 4.5) return 'text-warning';
+  return 'text-danger';
 };
 
 const getRatioDescription = (ratio) => {
@@ -667,7 +457,7 @@ const getContrastSuggestion = async (result) => {
       },
     };
     
-    alert(`Failed to get contrast fix: ${error.message || 'Unknown error'}. Check console for details.`);
+    showNotice(`Failed to get contrast fix: ${error.message || 'Unknown error'}. Check console for details.`, 'error');
   } finally {
     suggestionsLoading.value = { ...suggestionsLoading.value, [key]: false };
   }
@@ -688,7 +478,7 @@ const applyContrastFix = (oldColor, newColor) => {
   
   if (colorExists) {
     console.warn(`Color ${newColor} is already in your palette`);
-    alert(`Color ${newColor} is already in your palette`);
+    showNotice(`Color ${newColor} is already in your palette`, 'warning');
     isApplyingChange = false;
     return;
   }
@@ -744,7 +534,7 @@ const testContrast = async () => {
     // This prevents loops
   } catch (error) {
     console.error('Error testing contrast:', error);
-    alert('Error testing contrast. Please try again.');
+    showNotice('Error testing contrast. Please try again.', 'error');
   } finally {
     loading.value = false;
   }
@@ -927,14 +717,11 @@ const getReadabilityStatus = (bgColor) => {
   return 'Fail';
 };
 
-const getReadabilityClass = (bgColor) => {
-  const whiteContrast = calculateContrast(bgColor, '#ffffff');
-  const blackContrast = calculateContrast(bgColor, '#000000');
-  const bestContrast = Math.max(whiteContrast, blackContrast);
-  
-  if (bestContrast >= 7) return 'bg-green-100 text-green-800';
-  if (bestContrast >= 4.5) return 'bg-yellow-100 text-yellow-800';
-  return 'bg-red-100 text-red-800';
+const getReadabilityTone = (bgColor) => {
+  const status = getReadabilityStatus(bgColor);
+  if (status === 'AAA') return 'success';
+  if (status === 'AA') return 'warning';
+  return 'danger';
 };
 
 const getBestTextColor = (bgColor) => {
@@ -959,4 +746,57 @@ watch(() => props.palette.colors, () => {
     testContrast();
   }, 300);
 }, { deep: true, immediate: false });
+
+const fontSizeOptions = [
+  { value: 12, label: '12px (Small)' },
+  { value: 14, label: '14px (Normal)' },
+  { value: 16, label: '16px (Large)' },
+  { value: 18, label: '18px (Extra Large)' },
+  { value: 24, label: '24px (Heading)' },
+];
+const fontWeightOptions = [
+  { value: 400, label: 'Regular (400)' },
+  { value: 500, label: 'Medium (500)' },
+  { value: 600, label: 'Semi-Bold (600)' },
+  { value: 700, label: 'Bold (700)' },
+];
+const sortOptions = [
+  { value: 'ratio', label: 'Ratio (Low to High)' },
+  { value: 'ratio-desc', label: 'Ratio (High to Low)' },
+  { value: 'passing', label: 'Passing First' },
+  { value: 'failing', label: 'Failing First' },
+];
+const filterCards = computed(() => [
+  { value: 'all', label: 'Total pairs', count: totalPairs.value, tone: 'info' },
+  { value: 'passing', label: 'Pass AA', count: passingAA.value, tone: 'success' },
+  { value: 'passingAAA', label: 'Pass AAA', count: passingAAA.value, tone: 'success' },
+  { value: 'failing', label: 'Failing', count: failing.value, tone: 'danger' },
+]);
+const suggestionKey = (result) => `${result.color1}-${result.color2}`;
+
+// The readability sample takes the chosen size and weight (reach CSS via v-bind)
+const sampleFontSize = computed(() => `${readabilityFontSize.value}px`);
+const sampleFontWeight = computed(() => String(readabilityFontWeight.value));
 </script>
+
+<style scoped>
+.readability-sample {
+  font-size: v-bind(sampleFontSize);
+  font-weight: v-bind(sampleFontWeight);
+}
+.filter-card {
+  @apply p-4 rounded-tile border-2 text-left transition-colors focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.filter-card-info {
+  @apply border-info-border bg-info-bg text-info;
+}
+.filter-card-success {
+  @apply border-success-border bg-success-bg text-success;
+}
+.filter-card-danger {
+  @apply border-danger-border bg-danger-bg text-danger;
+}
+.filter-card-on {
+  @apply border-current shadow-raised;
+}
+</style>

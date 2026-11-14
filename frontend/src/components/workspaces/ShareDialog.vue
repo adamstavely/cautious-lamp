@@ -1,68 +1,42 @@
 <template>
-  <WorkspaceModal :open="open" :title="`Share ${itemName}`" icon="share" :is-dark-mode="isDarkMode" :busy="busy" size="sm" @close="emit('close')">
-    <div class="space-y-4">
-      <InlineNotice :notice="error ? { type: 'error', message: error } : null" @dismiss="emit('clear-error')" />
+  <WorkspaceModal :open="open" :title="`Share ${itemName}`" :busy="busy" size="sm" @close="emit('close')">
+    <InlineNotice :notice="error ? { type: 'error', message: error } : null" @dismiss="emit('clear-error')" />
 
-      <p v-if="!settings.allowExternalSharing" class="text-sm" :class="c.muted">
-        External sharing is turned off in this workspace's settings, so items can't be shared with other workspaces.
-      </p>
-      <template v-else>
-        <p v-if="settings.requireApprovalForSharing && !isAdmin" class="text-sm" :class="c.muted">
-          This workspace requires an admin to share items. Ask a workspace admin to share it.
-        </p>
+    <UiCallout v-if="!settings.allowExternalSharing" tone="info">
+      External sharing is turned off in this workspace's settings, so items can't be shared with other workspaces.
+    </UiCallout>
+    <template v-else>
+      <UiCallout v-if="settings.requireApprovalForSharing && !isAdmin" tone="info">
+        This workspace requires an admin to share items. Ask a workspace admin to share it.
+      </UiCallout>
 
-        <label v-if="isAdmin" class="flex items-start gap-2 p-2 rounded" :class="c.text">
-          <input v-model="isGlobal" type="checkbox" class="w-4 h-4 mt-0.5 rounded accent-indigo-600" />
-          <span class="text-sm">
-            <span class="font-medium">Global</span>
-            <span class="block text-xs" :class="c.muted">Every workspace can see it. Only workspace admins can change this.</span>
-          </span>
-        </label>
+      <UiCheckbox v-if="isAdmin" v-model="isGlobal" label="Global" hint="Every workspace can see it. Only workspace admins can change this." />
 
-        <div v-if="!isGlobal">
-          <div class="block text-sm mb-2" :class="c.label">Share with workspaces</div>
-          <p v-if="targets.length === 0" class="text-sm" :class="c.muted">There are no other workspaces you can see.</p>
-          <div v-else class="space-y-1 max-h-56 overflow-y-auto">
-            <label
-              v-for="ws in targets"
-              :key="ws.id"
-              class="flex items-center gap-2 p-2 rounded cursor-pointer"
-              :class="isDarkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-50'"
-            >
-              <input v-model="selected" type="checkbox" :value="ws.id" class="w-4 h-4 rounded accent-indigo-600" :disabled="!canShare" />
-              <span class="text-sm" :class="c.heading">{{ ws.name }}</span>
-            </label>
-          </div>
-          <p v-if="hidden.length" class="text-xs mt-2" :class="c.faint">
-            Also shared with {{ hidden.length }} workspace{{ hidden.length === 1 ? '' : 's' }} you can't see.
-          </p>
-          <p class="text-xs mt-2" :class="c.faint">Shared items are read-only in other workspaces.</p>
+      <fieldset v-if="!isGlobal" class="flex flex-col gap-2">
+        <legend class="mb-2 text-sm font-medium text-ink-strong">Share with workspaces</legend>
+        <p v-if="targets.length === 0" class="text-ink-muted">There are no other workspaces you can see.</p>
+        <div v-else class="flex flex-col gap-2 max-h-56 overflow-y-auto">
+          <UiCheckbox v-for="ws in targets" :key="ws.id" v-model="selected" :value="ws.id" :label="ws.name" :disabled="!canShare" />
         </div>
-      </template>
+        <p v-if="hidden.length" class="text-xs text-ink-muted">
+          Also shared with {{ hidden.length }} workspace{{ hidden.length === 1 ? '' : 's' }} you can't see.
+        </p>
+        <p class="text-xs text-ink-muted">Shared items are read-only in other workspaces.</p>
+      </fieldset>
+    </template>
 
-      <div class="flex items-center gap-2 pt-4 border-t" :class="c.border">
-        <button
-          type="button"
-          class="px-4 py-2 rounded-lg font-medium transition-colors flex-1"
-          :class="canSave ? c.primary : c.disabled"
-          :disabled="!canSave"
-          @click="save"
-        >
-          {{ busy ? 'Saving…' : 'Save sharing' }}
-        </button>
-        <button type="button" class="px-4 py-2 rounded-lg font-medium transition-colors" :class="c.secondary" :disabled="busy" @click="emit('close')">
-          Cancel
-        </button>
-      </div>
-    </div>
+    <template #footer>
+      <UiButton :disabled="busy" @click="emit('close')">Cancel</UiButton>
+      <UiButton variant="primary" :disabled="!canSave" :loading="busy" @click="save">{{ busy ? 'Saving…' : 'Save sharing' }}</UiButton>
+    </template>
   </WorkspaceModal>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue';
 import InlineNotice from '../InlineNotice.vue';
+import { UiButton, UiCallout, UiCheckbox } from '../ui';
 import WorkspaceModal from './WorkspaceModal.vue';
-import { ui } from './ui.js';
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -74,23 +48,21 @@ const props = defineProps({
   /** Workspaces the user can see, [{ id, name }] */
   workspaces: { type: Array, default: () => [] },
   isAdmin: { type: Boolean, default: false },
-  isDarkMode: { type: Boolean, default: false },
   busy: { type: Boolean, default: false },
   error: { type: String, default: null },
 });
 const emit = defineEmits(['close', 'save', 'clear-error']);
 
-const c = computed(() => ui(props.isDarkMode));
 const settings = computed(() => props.workspace.settings ?? {});
 const targets = computed(() => props.workspaces.filter((ws) => ws.id !== props.workspace.id));
 const canShare = computed(() => settings.value.allowExternalSharing && (props.isAdmin || !settings.value.requireApprovalForSharing));
 const canSave = computed(() => canShare.value && !props.busy);
 
 const selected = ref([]);
+const isGlobal = ref(false);
 /** Shares with workspaces this user can't see are kept as they are */
 const hidden = computed(() => (props.sharing.sharedWith ?? []).filter((id) => !targets.value.some((ws) => ws.id === id)));
 const save = () => emit('save', { workspaceIds: isGlobal.value ? [] : [...selected.value, ...hidden.value], isGlobal: isGlobal.value });
-const isGlobal = ref(false);
 
 watch(
   () => props.open,

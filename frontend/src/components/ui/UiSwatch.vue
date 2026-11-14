@@ -1,5 +1,5 @@
 <template>
-  <span class="ui-swatch" :class="sizeClass" role="img" :aria-label="label || color"></span>
+  <span class="ui-swatch" :class="[sizeClass, { 'ui-swatch-flush': flush }]" role="img" :aria-label="label || color"></span>
 </template>
 
 <script setup>
@@ -15,6 +15,8 @@ const props = defineProps({
   color: { type: String, required: true },
   label: { type: String, default: '' },
   size: { type: String, default: 'md', validator: (v) => ['sm', 'md', 'lg', 'fill'].includes(v) },
+  /** No border or rounding: edge-to-edge colour strips */
+  flush: { type: Boolean, default: false },
 });
 
 const sizeClass = computed(() => ({ sm: 'w-5 h-5', md: 'w-8 h-8', lg: 'w-12 h-12', fill: 'w-full h-full' })[props.size]);
@@ -24,5 +26,8 @@ const sizeClass = computed(() => ({ sm: 'w-5 h-5', md: 'w-8 h-8', lg: 'w-12 h-12
 .ui-swatch {
   @apply inline-block rounded-control border border-line;
   background: v-bind(color);
+}
+.ui-swatch-flush {
+  @apply rounded-none border-0;
 }
 </style>

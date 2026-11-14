@@ -1,344 +1,46 @@
 <template>
   <div>
-    <!-- Palette Quality Score Widget (not sticky, inline) -->
-    <button
-      @click="showModal = true"
-      class="rounded-lg shadow-sm border-2 border-indigo-500 px-4 py-3 hover:shadow-md transition-all duration-300 flex items-center gap-3 w-full"
-      :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
-    >
-      <div class="text-left flex-1 self-center">
-        <div 
-          class="text-xs font-medium flex items-center gap-2 transition-colors duration-300"
-          :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-        >
-          <span 
-            class="material-symbols-outlined text-sm flex-shrink-0 transition-colors duration-300"
-            :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
-          >
-            show_chart
-          </span>
-          <span class="flex-1">Palette Quality Score</span>
-          <span 
-            class="text-sm font-semibold px-2 py-1 rounded flex items-center justify-center h-6 transition-colors duration-300"
-            :class="isDarkMode ? 'text-indigo-300 bg-indigo-900/30' : 'text-indigo-700 bg-indigo-50'"
-          >
-            {{ healthScore }}
-          </span>
-        </div>
-        <div 
-          class="text-xs mt-0.5 transition-colors duration-300"
-          :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'"
-        >
-          {{ metCriteria }}/{{ totalCriteria }} criteria met
-        </div>
-      </div>
+    <!-- Palette quality score: opens the breakdown -->
+    <button type="button" class="score-trigger" aria-haspopup="dialog" @click="showModal = true">
+      <span class="material-symbols-outlined text-base text-accent-text" aria-hidden="true">show_chart</span>
+      <span class="flex flex-col text-left">
+        <span class="text-xs font-medium text-ink-secondary">Palette quality score</span>
+        <span class="text-xs text-ink-muted">{{ metCriteria }}/{{ totalCriteria }} criteria met</span>
+      </span>
+      <UiChip :tone="scoreTone">{{ healthScore }}</UiChip>
     </button>
 
-  <!-- Palette Quality Score Modal -->
-  <div
-    v-if="showModal"
-    class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm transition-colors duration-300"
-    :class="isDarkMode ? 'bg-black/60' : 'bg-black/50'"
-    @click.self="showModal = false"
-  >
-    <div 
-      class="rounded-lg shadow-xl max-w-md w-full mx-4 relative transition-colors duration-300"
-      :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
-    >
-      <!-- Header -->
-      <div 
-        class="flex items-start justify-between p-6 border-b transition-colors duration-300"
-        :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-      >
-        <div class="flex items-start gap-3 flex-1">
+    <UiDialog v-model:open="showModal" title="Palette quality score" size="sm">
+      <p class="text-sm text-ink-secondary mb-5">
+        Your palette quality score measures how complete and accessible your color palette is.
+      </p>
+      <ul class="flex flex-col gap-4">
+        <li v-for="criterion in criteria" :key="criterion.title" class="flex items-start gap-3">
+          <span
+            class="material-symbols-outlined text-xl flex-shrink-0"
+            :class="criterion.met ? 'text-success' : 'text-danger'"
+            :aria-label="criterion.met ? 'Met' : 'Not met'"
+            role="img"
+          >{{ criterion.met ? 'check_circle' : 'cancel' }}</span>
           <div class="flex-1">
-            <h2 
-              class="text-xl font-bold flex items-center gap-2 transition-colors duration-300"
-              :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-            >
-              <span 
-                class="material-symbols-outlined text-xl transition-colors duration-300"
-                :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
-              >
-                show_chart
-              </span>
-              Palette Quality Score
-            </h2>
-            <p 
-              class="text-sm mt-1 transition-colors duration-300"
-              :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-            >
-              Your palette quality score measures how complete and accessible your color palette is.
-            </p>
+            <p class="font-semibold text-ink-strong">{{ criterion.title }}</p>
+            <p class="text-sm mt-0.5 text-ink-secondary">{{ criterion.detail }}</p>
           </div>
-        </div>
-        <button
-          @click="showModal = false"
-          class="p-2 rounded-lg transition-colors duration-300"
-          :class="isDarkMode ? 'hover:bg-slate-700' : 'hover:bg-gray-100'"
-        >
-          <svg 
-            class="w-5 h-5 transition-colors duration-300" 
-            :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <!-- Criteria List -->
-      <div class="p-6">
-        <div class="space-y-4">
-          <!-- Criterion 1: 3+ Colors -->
-          <div class="flex items-start gap-3">
-            <div class="flex-shrink-0 mt-0.5">
-              <svg
-                v-if="healthMetrics.hasThreePlusColors"
-                class="w-5 h-5 text-green-600"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-              </svg>
-              <svg
-                v-else
-                class="w-5 h-5 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <div class="flex-1">
-              <div 
-                class="font-semibold transition-colors duration-300"
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-              >
-                Add 3+ colors
-              </div>
-              <div 
-                class="text-sm mt-0.5 transition-colors duration-300"
-                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-              >
-                {{ (palette?.colors || []).length }} color{{ (palette?.colors || []).length !== 1 ? 's' : '' }} added
-              </div>
-            </div>
-          </div>
-
-          <!-- Criterion 2: Light Neutral -->
-          <div class="flex items-start gap-3">
-            <div class="flex-shrink-0 mt-0.5">
-              <svg
-                v-if="healthMetrics.hasLightNeutral"
-                class="w-5 h-5 text-green-600"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-              </svg>
-              <svg
-                v-else
-                class="w-5 h-5 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <div class="flex-1">
-              <div 
-                class="font-semibold transition-colors duration-300"
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-              >
-                Add a light neutral
-              </div>
-              <div 
-                class="text-sm mt-0.5 transition-colors duration-300"
-                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-              >
-                For backgrounds and light UI elements
-              </div>
-            </div>
-          </div>
-
-          <!-- Criterion 3: Dark Neutral -->
-          <div class="flex items-start gap-3">
-            <div class="flex-shrink-0 mt-0.5">
-              <svg
-                v-if="healthMetrics.hasDarkNeutral"
-                class="w-5 h-5 text-green-600"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-              </svg>
-              <svg
-                v-else
-                class="w-5 h-5 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <div class="flex-1">
-              <div 
-                class="font-semibold transition-colors duration-300"
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-              >
-                Add a dark neutral
-              </div>
-              <div 
-                class="text-sm mt-0.5 transition-colors duration-300"
-                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-              >
-                For text and dark UI elements
-              </div>
-            </div>
-          </div>
-
-          <!-- Criterion 4: Every Color Has Accessible Pairing -->
-          <div class="flex items-start gap-3">
-            <div class="flex-shrink-0 mt-0.5">
-              <svg
-                v-if="healthMetrics.everyColorHasAccessiblePairing"
-                class="w-5 h-5 text-green-600"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-              </svg>
-              <svg
-                v-else
-                class="w-5 h-5 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <div class="flex-1">
-              <div 
-                class="font-semibold transition-colors duration-300"
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-              >
-                Every color has at least 1 accessible pairing
-              </div>
-              <div 
-                class="text-sm mt-0.5 transition-colors duration-300"
-                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-              >
-                <span v-if="(palette?.colors || []).length < 2">
-                  Requires at least 2 colors
-                </span>
-                <span v-else-if="healthMetrics.everyColorHasAccessiblePairing">
-                  All colors have accessible pairings
-                </span>
-                <span v-else>
-                  {{ healthMetrics.colorsWithoutPairing.length }} color{{ healthMetrics.colorsWithoutPairing.length !== 1 ? 's' : '' }} without accessible pairings
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Criterion 5: Contrast Pairings -->
-          <div class="flex items-start gap-3">
-            <div class="flex-shrink-0 mt-0.5">
-              <svg
-                v-if="healthMetrics.hasFourPlusPairings"
-                class="w-5 h-5 text-green-600"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-              </svg>
-              <svg
-                v-else
-                class="w-5 h-5 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <div class="flex-1">
-              <div 
-                class="font-semibold transition-colors duration-300"
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-              >
-                Select 4+ contrast pairings
-              </div>
-              <div 
-                class="text-sm mt-0.5 transition-colors duration-300"
-                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-              >
-                {{ healthMetrics.passingPairings }} pairings selected
-              </div>
-            </div>
-          </div>
-
-          <!-- Criterion 6: Semantic Colors -->
-          <div class="flex items-start gap-3">
-            <div class="flex-shrink-0 mt-0.5">
-              <svg
-                v-if="healthMetrics.hasAllSemanticColors"
-                class="w-5 h-5 text-green-600"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-              </svg>
-              <svg
-                v-else
-                class="w-5 h-5 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <div class="flex-1">
-              <div 
-                class="font-semibold transition-colors duration-300"
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-              >
-                Define 4 semantic colors
-              </div>
-              <div 
-                class="text-sm mt-0.5 transition-colors duration-300"
-                :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-              >
-                <span v-if="healthMetrics.hasAllSemanticColors">
-                  Success, Error, Warning, and Info colors defined
-                </span>
-                <span v-else>
-                  {{ missingSemanticColors }} semantic color{{ missingSemanticColors !== 1 ? 's' : '' }} missing
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+        </li>
+      </ul>
+    </UiDialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, watch } from 'vue';
 import apiClient from '../services/api.js';
+import { UiChip, UiDialog } from './ui';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-
+/**
+ * A compact "Palette quality score" button for the palette builder; it opens
+ * a dialog listing the six criteria and whether the palette meets each.
+ */
 const props = defineProps({
   palette: {
     type: Object,
@@ -464,20 +166,36 @@ const healthScore = computed(() => {
   }
 });
 
-const healthScoreBorderClass = computed(() => {
+const scoreTone = computed(() => {
   const score = healthScore.value;
-  if (score >= 80) return 'border-green-500 bg-green-50';
-  if (score >= 60) return 'border-yellow-500 bg-yellow-50';
-  if (score >= 40) return 'border-orange-500 bg-orange-50';
-  return 'border-red-500 bg-red-50';
+  if (score >= 80) return 'success';
+  if (score >= 40) return 'warning';
+  return 'danger';
 });
 
-const healthScoreTextClass = computed(() => {
-  const score = healthScore.value;
-  if (score >= 80) return 'text-green-700';
-  if (score >= 60) return 'text-yellow-700';
-  if (score >= 40) return 'text-orange-700';
-  return 'text-red-700';
+const plural = (n, word) => `${n} ${word}${n !== 1 ? 's' : ''}`;
+
+const criteria = computed(() => {
+  const m = healthMetrics.value;
+  const colorCount = (props.palette?.colors || []).length;
+  let pairingDetail;
+  if (colorCount < 2) pairingDetail = 'Requires at least 2 colors';
+  else if (m.everyColorHasAccessiblePairing) pairingDetail = 'All colors have accessible pairings';
+  else pairingDetail = `${plural(m.colorsWithoutPairing.length, 'color')} without accessible pairings`;
+  return [
+    { title: 'Add 3+ colors', met: m.hasThreePlusColors, detail: `${plural(colorCount, 'color')} added` },
+    { title: 'Add a light neutral', met: m.hasLightNeutral, detail: 'For backgrounds and light UI elements' },
+    { title: 'Add a dark neutral', met: m.hasDarkNeutral, detail: 'For text and dark UI elements' },
+    { title: 'Every color has at least 1 accessible pairing', met: m.everyColorHasAccessiblePairing, detail: pairingDetail },
+    { title: 'Select 4+ contrast pairings', met: m.hasFourPlusPairings, detail: `${m.passingPairings} pairings selected` },
+    {
+      title: 'Define 4 semantic colors',
+      met: m.hasAllSemanticColors,
+      detail: m.hasAllSemanticColors
+        ? 'Success, Error, Warning, and Info colors defined'
+        : `${plural(missingSemanticColors.value, 'semantic color')} missing`,
+    },
+  ];
 });
 
 // Helper functions
@@ -552,39 +270,12 @@ const fetchContrastResults = async () => {
 };
 
 watch(() => props.palette?.colors, fetchContrastResults, { immediate: true, deep: true });
-
-onMounted(() => {
-  // Dark mode detection
-  const updateDarkMode = () => {
-    const wasDark = isDarkMode.value;
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-    if (wasDark !== isDarkMode.value) {
-      nextTick(() => {});
-    }
-  };
-  
-  const darkModeObserver = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-        updateDarkMode();
-      }
-    });
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-    attributeOldValue: true
-  });
-  
-  updateDarkMode();
-  
-  const darkModeInterval = setInterval(updateDarkMode, 50);
-  
-  onBeforeUnmount(() => {
-    darkModeObserver.disconnect();
-    clearInterval(darkModeInterval);
-  });
-});
 </script>
 
+<style scoped>
+.score-trigger {
+  @apply inline-flex items-center gap-3 rounded-tile border border-line bg-surface-control px-3 py-2 transition-colors;
+  @apply hover:border-line-control-hover hover:bg-fill-hover;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
+}
+</style>

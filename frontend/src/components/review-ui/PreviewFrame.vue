@@ -1,17 +1,15 @@
 <template>
   <div class="webviewer-container" :class="{ 'preview-fill': fill }">
     <!-- Nothing selected yet -->
-    <div v-if="mode === 'empty'" class="preview-placeholder bg-gray-50 dark:bg-slate-700">
-      <p class="text-gray-500 dark:text-gray-400">No document to display</p>
+    <div v-if="mode === 'empty'" class="preview-placeholder">
+      <p class="text-ink-muted">No document to display</p>
     </div>
 
     <!-- Not an http(s) URL: never put it in an iframe -->
-    <div v-else-if="mode === 'invalid'" class="preview-placeholder bg-gray-50 dark:bg-slate-700 p-6">
-      <svg class="w-12 h-12 text-red-500 dark:text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      <p class="text-gray-900 dark:text-gray-100 font-medium mb-2">This link can't be previewed</p>
-      <p class="text-sm text-gray-600 dark:text-gray-400 text-center max-w-md">Only http and https links can be shown here.</p>
+    <div v-else-if="mode === 'invalid'" class="preview-placeholder" role="alert">
+      <span class="material-symbols-outlined preview-placeholder-icon" aria-hidden="true">error</span>
+      <p class="font-medium text-ink-strong">This link can't be previewed</p>
+      <p class="max-w-md text-center text-sm text-ink-secondary">Only http and https links can be shown here.</p>
     </div>
 
     <!-- External website -->
@@ -21,31 +19,26 @@
       :sandbox="IFRAME_SANDBOX"
       referrerpolicy="no-referrer"
       title="Design preview"
-      class="preview-iframe border border-gray-300 dark:border-slate-600 rounded-lg"
+      class="preview-iframe"
     ></iframe>
 
     <!-- PDF or image in WebViewer -->
     <template v-else>
       <div v-show="!loadError" ref="viewer" class="webviewer"></div>
-      <div v-if="loadError" class="preview-placeholder bg-gray-50 dark:bg-slate-700 p-6">
-        <svg class="w-12 h-12 text-red-500 dark:text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <p class="text-gray-900 dark:text-gray-100 font-medium mb-2">Unable to load document</p>
-        <p class="text-sm text-gray-600 dark:text-gray-400 text-center max-w-md mb-4">
+      <div v-if="loadError" class="preview-placeholder preview-placeholder-error" role="alert">
+        <span class="material-symbols-outlined preview-placeholder-icon" aria-hidden="true">error</span>
+        <p class="font-medium text-ink-strong">Unable to load document</p>
+        <p class="max-w-md text-center text-sm text-ink-secondary">
           The document could not be opened in the viewer. It may have failed to download, or the link may have expired.
-          <a :href="safeUrl" target="_blank" rel="noopener noreferrer" class="text-indigo-600 dark:text-indigo-400 underline">Open it in a new tab</a>.
+          <UiLink :href="safeUrl" external>Open it in a new tab</UiLink>.
         </p>
-        <div class="mt-4 w-full">
-          <iframe
-            :src="safeUrl"
-            :sandbox="IFRAME_SANDBOX"
-            referrerpolicy="no-referrer"
-            title="Document preview"
-            class="w-full h-[600px] border border-gray-300 dark:border-slate-600 rounded-lg"
-            style="max-width: 100%;"
-          ></iframe>
-        </div>
+        <iframe
+          :src="safeUrl"
+          :sandbox="IFRAME_SANDBOX"
+          referrerpolicy="no-referrer"
+          title="Document preview"
+          class="preview-fallback-iframe"
+        ></iframe>
       </div>
     </template>
   </div>
@@ -56,6 +49,7 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import WebViewer from '@pdftron/webviewer';
 import { createAnnotationSync } from '../../services/annotationSync.js';
 import { getCurrentUser } from '../../mockData.js';
+import { UiLink } from '../ui';
 
 const props = defineProps({
   url: String,
@@ -311,27 +305,40 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .webviewer-container {
-  width: 100%;
-  height: 100%;
+  @apply w-full h-full;
 }
 
+/* Viewer height follows the window; WebViewer and framed pages need an explicit height */
 .webviewer,
 .preview-iframe {
-  width: 100%;
+  @apply relative w-full;
   height: calc(100vh - 300px);
   min-height: 600px;
   max-height: 900px;
-  position: relative;
+}
+
+.preview-iframe,
+.preview-fallback-iframe {
+  @apply rounded-tile border border-line bg-surface-raised;
+}
+
+.preview-fallback-iframe {
+  @apply mt-4 w-full max-w-full;
+  height: 600px;
 }
 
 .preview-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  @apply flex flex-col items-center justify-center gap-2 rounded-tile bg-surface-sunken p-6;
   min-height: 600px;
   max-height: 900px;
-  border-radius: 0.5rem;
+}
+
+.preview-placeholder-error {
+  max-height: none;
+}
+
+.preview-placeholder-icon {
+  @apply mb-2 text-5xl text-danger;
 }
 
 .preview-fill .webviewer,
@@ -342,7 +349,7 @@ onBeforeUnmount(() => {
   max-height: none;
 }
 
-/* Ensure WebViewer UI is visible */
+/* WebViewer's own UI fills its element */
 .webviewer :deep(.App) {
   width: 100% !important;
   height: 100% !important;

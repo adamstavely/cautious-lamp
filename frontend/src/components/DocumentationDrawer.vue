@@ -3,38 +3,36 @@
   <!-- When closed, show a small toggle button -->
   <div 
     v-if="!isOpen" 
-    class="fixed left-24 top-16 h-[calc(100vh-4rem)] w-12 border-r z-30 flex items-start justify-center pt-4 transition-all duration-300"
-    :class="isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-[#fff] border-slate-200'"
+    class="drawer-rail"
   >
     <button
       @click="toggle"
-      class="p-2 rounded-full transition-colors"
-      :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
+      class="drawer-icon-btn"
       title="Open drawer"
+      aria-label="Open drawer"
     >
-      <span class="material-symbols-outlined">menu</span>
+      <span class="material-symbols-outlined" aria-hidden="true">menu</span>
     </button>
   </div>
   
   <!-- Drawer - when open -->
   <div 
     v-if="isOpen"
-    class="fixed left-24 top-16 h-[calc(100vh-4rem)] w-64 overflow-y-auto z-30 border-r transition-transform duration-300 ease-in-out"
-    :class="isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-[#fff] border-slate-200'"
+    class="drawer-panel"
   >
     <!-- Drawer Content -->
     <div class="p-6">
       <!-- Foundations - only show when not on patterns route -->
       <div v-if="showMainSections" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Foundations</h3>
+          <h3 class="drawer-heading">Foundations</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-full transition-colors"
-            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
+            class="drawer-icon-btn"
             title="Close drawer"
+            aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined">left_panel_close</span>
+            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
           </button>
         </div>
         <nav class="space-y-1">
@@ -42,12 +40,9 @@
             v-for="item in filteredFoundations"
             :key="item.link"
             @click="navigateToDoc(item.link)"
-            class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-            :class="isDarkMode 
-              ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
+            class="drawer-item"
           >
-            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+            <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
             <span class="font-medium">{{ item.text }}</span>
           </button>
         </nav>
@@ -56,14 +51,14 @@
       <!-- Patterns - only show when on patterns route -->
       <div v-if="showPatterns" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Patterns</h3>
+          <h3 class="drawer-heading">Patterns</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-full transition-colors"
-            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
+            class="drawer-icon-btn"
             title="Close drawer"
+            aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined">left_panel_close</span>
+            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
           </button>
         </div>
         <nav class="space-y-6">
@@ -71,18 +66,10 @@
           <div class="space-y-1">
             <router-link
               to="/patterns"
-              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-              :class="[
-                isActive('/patterns') && route.path === '/patterns'
-                  ? (isDarkMode 
-                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                  : (isDarkMode
-                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-              ]"
+              class="drawer-item"
+              :class="{ 'drawer-item-on': isActive('/patterns') && route.path === '/patterns' }"
             >
-              <span class="material-symbols-outlined text-lg">view_quilt</span>
+              <span class="material-symbols-outlined text-lg" aria-hidden="true">view_quilt</span>
               <span class="font-medium">Overview</span>
             </router-link>
           </div>
@@ -91,42 +78,26 @@
           <div class="space-y-1">
             <router-link
               to="/patterns/status"
-              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-              :class="[
-                isActive('/patterns/status')
-                  ? (isDarkMode 
-                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                  : (isDarkMode
-                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-              ]"
+              class="drawer-item"
+              :class="{ 'drawer-item-on': isActive('/patterns/status') }"
             >
-              <span class="material-symbols-outlined text-lg">check_circle</span>
+              <span class="material-symbols-outlined text-lg" aria-hidden="true">check_circle</span>
               <span class="font-medium">Pattern Status</span>
             </router-link>
           </div>
 
           <!-- Design Patterns -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Design Patterns</h4>
+            <h4 class="drawer-subheading">Design Patterns</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredDesignPatterns"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -134,25 +105,17 @@
 
           <!-- Interaction Patterns -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Interaction Patterns</h4>
+            <h4 class="drawer-subheading">Interaction Patterns</h4>
             <div class="space-y-1">
               <a
                 v-for="item in filteredInteractionPatterns"
                 :key="item.link"
                 href="#"
                 @click.prevent="navigateToDoc(item.link)"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </a>
             </div>
@@ -160,24 +123,16 @@
 
           <!-- Code Patterns -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Code Patterns</h4>
+            <h4 class="drawer-subheading">Code Patterns</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredCodePatterns"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -188,14 +143,14 @@
       <!-- Components - only show when on components route -->
       <div v-if="showComponents" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Components</h3>
+          <h3 class="drawer-heading">Components</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-full transition-colors"
-            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
+            class="drawer-icon-btn"
             title="Close drawer"
+            aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined">left_panel_close</span>
+            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
           </button>
         </div>
         <nav class="space-y-6">
@@ -203,40 +158,24 @@
             <div class="space-y-1">
               <router-link
                 to="/components"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive('/components')
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive('/components') }"
               >
-                <span class="material-symbols-outlined text-lg">widgets</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">widgets</span>
                 <span class="font-medium">Overview</span>
               </router-link>
           </div>
 
           <!-- Utilities -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Utilities</h4>
+            <h4 class="drawer-subheading">Utilities</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredComponentUtilities"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
                 <ScanEye v-if="item.icon === 'scan-eye'" :size="20" :stroke-width="2" />
                 <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -247,22 +186,14 @@
 
           <!-- Components -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Components</h4>
+            <h4 class="drawer-subheading">Components</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredComponentItems"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
                 <Pipette v-if="item.icon === 'pipette'" :size="20" :stroke-width="2" />
                 <Captions v-else-if="item.icon === 'captions'" :size="20" :stroke-width="2" />
@@ -277,14 +208,14 @@
       <!-- Getting Started - only show when on getting started route -->
       <div v-if="showGettingStarted" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Getting Started</h3>
+          <h3 class="drawer-heading">Getting Started</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-full transition-colors"
-            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
+            class="drawer-icon-btn"
             title="Close drawer"
+            aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined">left_panel_close</span>
+            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
           </button>
         </div>
         <nav class="space-y-6">
@@ -294,42 +225,26 @@
               v-for="item in filteredGettingStartedBasics.filter(item => item.link === '/getting-started')"
               :key="item.link"
               :to="item.link"
-              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-              :class="[
-                isActive(item.link)
-                  ? (isDarkMode 
-                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                  : (isDarkMode
-                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-              ]"
+              class="drawer-item"
+              :class="{ 'drawer-item-on': isActive(item.link) }"
             >
-              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+              <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
               <span class="font-medium">{{ item.text }}</span>
             </router-link>
           </div>
 
           <!-- About -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">About</h4>
+            <h4 class="drawer-subheading">About</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredGettingStartedBasics.filter(item => item.link !== '/getting-started')"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -337,24 +252,16 @@
 
           <!-- Design Principles -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Design Principles</h4>
+            <h4 class="drawer-subheading">Design Principles</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredGettingStartedPrinciples"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -362,24 +269,16 @@
 
           <!-- Setup & Installation -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Setup & Installation</h4>
+            <h4 class="drawer-subheading">Setup & Installation</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredGettingStartedSetup"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -387,24 +286,16 @@
 
           <!-- Foundations -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Foundations</h4>
+            <h4 class="drawer-subheading">Foundations</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredGettingStartedFoundations"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -412,24 +303,16 @@
 
           <!-- Resources & Support -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Resources & Support</h4>
+            <h4 class="drawer-subheading">Resources & Support</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredGettingStartedResources"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -440,14 +323,14 @@
       <!-- Tools - only show when on tools route -->
       <div v-if="showTools" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Tools</h3>
+          <h3 class="drawer-heading">Tools</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-full transition-colors"
-            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
+            class="drawer-icon-btn"
             title="Close drawer"
+            aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined">left_panel_close</span>
+            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
           </button>
         </div>
         <nav class="space-y-6">
@@ -457,40 +340,24 @@
                 v-for="item in filteredToolGroups.overview"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
           </div>
 
           <!-- Color -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Color</h4>
+            <h4 class="drawer-subheading">Color</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredToolGroups.color"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
                 <SwatchBook v-if="item.icon === 'swatch-book'" :size="20" :stroke-width="2" />
                 <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -501,22 +368,14 @@
 
           <!-- Text & Content -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Text & Content</h4>
+            <h4 class="drawer-subheading">Text & Content</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredToolGroups.text"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
                 <TextInitial v-if="item.icon === 'text-initial'" :size="20" :stroke-width="2" />
                 <Tag v-else-if="item.icon === 'tag'" :size="20" :stroke-width="2" />
@@ -528,24 +387,16 @@
 
           <!-- Development -->
           <div v-if="filteredToolGroups.development.length > 0">
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Development</h4>
+            <h4 class="drawer-subheading">Development</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredToolGroups.development"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -553,22 +404,14 @@
 
           <!-- Image & Video -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Image & Video</h4>
+            <h4 class="drawer-subheading">Image & Video</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredToolGroups.image"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
                 <Captions v-if="item.icon === 'captions'" :size="20" :stroke-width="2" />
                 <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -579,25 +422,17 @@
 
           <!-- References -->
           <div v-if="filteredToolGroups.references && filteredToolGroups.references.length > 0">
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">References</h4>
+            <h4 class="drawer-subheading">References</h4>
             <div class="space-y-1">
               <a
                 v-for="item in filteredToolGroups.references"
                 :key="item.link"
                 href="#"
                 @click.prevent="navigateToDoc(item.link)"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </a>
             </div>
@@ -608,14 +443,14 @@
       <!-- Data Viz - only show when on data-viz route -->
       <div v-if="showDataViz" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Data Visualization</h3>
+          <h3 class="drawer-heading">Data Visualization</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-full transition-colors"
-            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
+            class="drawer-icon-btn"
             title="Close drawer"
+            aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined">left_panel_close</span>
+            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
           </button>
         </div>
         <nav class="space-y-6">
@@ -623,42 +458,26 @@
           <div class="space-y-1">
             <router-link
               to="/data-viz"
-              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-              :class="[
-                isActive('/data-viz') && route.path === '/data-viz'
-                  ? (isDarkMode 
-                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                  : (isDarkMode
-                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-              ]"
+              class="drawer-item"
+              :class="{ 'drawer-item-on': isActive('/data-viz') && route.path === '/data-viz' }"
             >
-              <span class="material-symbols-outlined text-lg">bar_chart</span>
+              <span class="material-symbols-outlined text-lg" aria-hidden="true">bar_chart</span>
               <span class="font-medium">Overview</span>
             </router-link>
           </div>
           
           <!-- Guidance -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Guidance</h4>
+            <h4 class="drawer-subheading">Guidance</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredDataVizGuidance"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -666,24 +485,16 @@
 
           <!-- Generators -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Generators</h4>
+            <h4 class="drawer-subheading">Generators</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredDataVizGenerators"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -691,24 +502,16 @@
 
           <!-- Utilities -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Utilities</h4>
+            <h4 class="drawer-subheading">Utilities</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredDataVizUtilities"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -719,14 +522,14 @@
       <!-- Review - only show when on review route -->
       <div v-if="showReview" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Review</h3>
+          <h3 class="drawer-heading">Review</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-full transition-colors"
-            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
+            class="drawer-icon-btn"
             title="Close drawer"
+            aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined">left_panel_close</span>
+            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
           </button>
         </div>
         <nav class="space-y-1">
@@ -734,16 +537,8 @@
             v-for="item in filteredReviewItems"
             :key="item.link"
             :to="item.link"
-            class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-            :class="[
-              isActive(item.link)
-                ? (isDarkMode 
-                  ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                  : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                : (isDarkMode
-                  ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-            ]"
+            class="drawer-item"
+            :class="{ 'drawer-item-on': isActive(item.link) }"
           >
             <FolderKanban v-if="item.icon === 'folder-kanban'" :size="20" :stroke-width="2" />
             <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
@@ -753,24 +548,16 @@
 
         <!-- Utilities -->
         <div class="mt-6">
-          <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Utilities</h4>
+          <h4 class="drawer-subheading">Utilities</h4>
           <nav class="space-y-1">
             <router-link
               v-for="item in filteredReviewUtilities"
               :key="item.link"
               :to="item.link"
-              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-              :class="[
-                isActive(item.link)
-                  ? (isDarkMode 
-                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                  : (isDarkMode
-                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-              ]"
+              class="drawer-item"
+              :class="{ 'drawer-item-on': isActive(item.link) }"
             >
-              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+              <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
               <span class="font-medium">{{ item.text }}</span>
             </router-link>
           </nav>
@@ -780,14 +567,14 @@
       <!-- HCD - only show when on research route -->
       <div v-if="showResearch" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Human-Centered Design</h3>
+          <h3 class="drawer-heading normal-case">Human-Centered Design</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-full transition-colors"
-            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
+            class="drawer-icon-btn"
             title="Close drawer"
+            aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined">left_panel_close</span>
+            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
           </button>
         </div>
         <nav class="space-y-6">
@@ -795,42 +582,26 @@
           <div class="space-y-1">
             <router-link
               to="/research"
-              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-              :class="[
-                isActive('/research')
-                  ? (isDarkMode 
-                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                  : (isDarkMode
-                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-              ]"
+              class="drawer-item"
+              :class="{ 'drawer-item-on': isActive('/research') }"
             >
-              <span class="material-symbols-outlined text-lg">note_stack</span>
+              <span class="material-symbols-outlined text-lg" aria-hidden="true">note_stack</span>
               <span class="font-medium">Overview</span>
             </router-link>
           </div>
           
           <!-- HCD Guidelines -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">HCD Guidelines</h4>
+            <h4 class="drawer-subheading">HCD Guidelines</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredHumanCenteredDesign"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -838,24 +609,16 @@
 
           <!-- Research Artifacts -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Research Artifacts</h4>
+            <h4 class="drawer-subheading">Research Artifacts</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredResearchArtifacts"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -863,24 +626,16 @@
 
           <!-- UX Research Tools -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">UX Research Tools</h4>
+            <h4 class="drawer-subheading">UX Research Tools</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredUxResearchTools"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -891,14 +646,14 @@
       <!-- Guidelines - only show when on guidelines route -->
       <div v-if="showGuidelines" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Foundations</h3>
+          <h3 class="drawer-heading">Foundations</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-full transition-colors"
-            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
+            class="drawer-icon-btn"
             title="Close drawer"
+            aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined">left_panel_close</span>
+            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
           </button>
         </div>
         <nav class="space-y-6">
@@ -906,43 +661,27 @@
           <div class="space-y-1">
             <router-link
               to="/guidelines"
-              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-              :class="[
-                isActive('/guidelines') && route.path === '/guidelines'
-                  ? (isDarkMode 
-                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                  : (isDarkMode
-                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-              ]"
+              class="drawer-item"
+              :class="{ 'drawer-item-on': isActive('/guidelines') && route.path === '/guidelines' }"
             >
-              <span class="material-symbols-outlined text-lg">menu_book</span>
+              <span class="material-symbols-outlined text-lg" aria-hidden="true">menu_book</span>
               <span class="font-medium">Overview</span>
             </router-link>
           </div>
           
           <!-- Foundations -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Foundations</h4>
+            <h4 class="drawer-subheading">Foundations</h4>
             <div class="space-y-1">
               <a
                 v-for="item in filteredFoundations"
                 :key="item.link"
                 href="#"
                 @click.prevent="navigateToDoc(item.link)"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </a>
               <a
@@ -959,18 +698,10 @@
                 :key="item.link"
                 href="#"
                 @click.prevent="navigateToDoc(item.link)"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </a>
             </div>
@@ -978,25 +709,17 @@
           
           <!-- Artificial Intelligence -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Artificial Intelligence</h4>
+            <h4 class="drawer-subheading">Artificial Intelligence</h4>
             <div class="space-y-1">
               <a
                 v-for="item in filteredArtificialIntelligence.filter(item => item.link.startsWith('/guidelines/ai/'))"
                 :key="item.link"
                 href="#"
                 @click.prevent="navigateToDoc(item.link)"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </a>
             </div>
@@ -1007,14 +730,14 @@
       <!-- Design Assets - only show when on design assets route -->
       <div v-if="showDesignAssets" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Design Assets</h3>
+          <h3 class="drawer-heading">Design Assets</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-full transition-colors"
-            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
+            class="drawer-icon-btn"
             title="Close drawer"
+            aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined">left_panel_close</span>
+            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
           </button>
         </div>
         <nav class="space-y-6">
@@ -1024,42 +747,26 @@
               v-for="item in filteredDesignAssets.filter(item => item.link === '/design-assets')"
               :key="item.link"
               :to="item.link"
-              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-              :class="[
-                isActive(item.link)
-                  ? (isDarkMode 
-                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                  : (isDarkMode
-                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-              ]"
+              class="drawer-item"
+              :class="{ 'drawer-item-on': isActive(item.link) }"
             >
-              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+              <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
               <span class="font-medium">{{ item.text }}</span>
             </router-link>
           </div>
           
           <!-- Icons & Fonts -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Icons & Fonts</h4>
+            <h4 class="drawer-subheading">Icons & Fonts</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredDesignAssets.filter(item => item.link === '/design-assets/icons' || item.link === '/design-assets/font-library' || item.link === '/design-assets/country-flags')"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -1067,24 +774,16 @@
 
           <!-- Seals & Logos -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Seals & Logos</h4>
+            <h4 class="drawer-subheading">Seals & Logos</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredDesignAssets.filter(item => item.link === '/design-assets/company-logos' || item.link === '/design-assets/capability-logos' || item.link === '/design-assets/internal-seals' || item.link === '/design-assets/usg-seals')"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -1092,24 +791,16 @@
 
           <!-- Visuals -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Visuals</h4>
+            <h4 class="drawer-subheading">Visuals</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredDesignAssets.filter(item => item.link === '/design-assets/illustrations' || item.link === '/design-assets/interactives' || item.link === '/design-assets/stock-photos')"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -1120,14 +811,14 @@
       <!-- Admin - only show when on admin route -->
       <div v-if="showAdmin" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Admin</h3>
+          <h3 class="drawer-heading">Admin</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-full transition-colors"
-            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
+            class="drawer-icon-btn"
             title="Close drawer"
+            aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined">left_panel_close</span>
+            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
           </button>
         </div>
         <nav class="space-y-1">
@@ -1135,18 +826,10 @@
             v-for="item in filteredAdminItems"
             :key="item.link"
             :to="item.link"
-            class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-            :class="[
-              isActive(item.link)
-                ? (isDarkMode 
-                  ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                  : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                : (isDarkMode
-                  ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-            ]"
+            class="drawer-item"
+            :class="{ 'drawer-item-on': isActive(item.link) }"
           >
-            <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+            <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
             <span class="font-medium">{{ item.text }}</span>
           </router-link>
         </nav>
@@ -1155,14 +838,14 @@
       <!-- Tokens - only show when on tokens route -->
       <div v-if="showTokens" class="mb-8">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wider" :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'">Tokens</h3>
+          <h3 class="drawer-heading">Tokens</h3>
           <button
             @click="toggle"
-            class="p-2 rounded-full transition-colors"
-            :class="isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'"
+            class="drawer-icon-btn"
             title="Close drawer"
+            aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined">left_panel_close</span>
+            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
           </button>
         </div>
         <nav class="space-y-6">
@@ -1172,42 +855,26 @@
               v-for="item in filteredTokenItems.filter(item => item.link === '/tokens')"
               :key="item.link"
               :to="item.link"
-              class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-              :class="[
-                isActive(item.link)
-                  ? (isDarkMode 
-                    ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                    : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                  : (isDarkMode
-                    ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-              ]"
+              class="drawer-item"
+              :class="{ 'drawer-item-on': isActive(item.link) }"
             >
-              <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+              <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
               <span class="font-medium">{{ item.text }}</span>
             </router-link>
           </div>
 
           <!-- Studio -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Studio</h4>
+            <h4 class="drawer-subheading">Studio</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredTokenItems.filter(item => item.link === '/tokens/studio' || item.link === '/tokens/ai-builder' || item.link === '/tokens/playground')"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -1215,24 +882,16 @@
 
           <!-- Library -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Library</h4>
+            <h4 class="drawer-subheading">Library</h4>
             <div class="space-y-1">
               <router-link
                 v-for="item in filteredTokenItems.filter(item => item.link === '/tokens/library' || item.link === '/tokens/color-palettes')"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -1240,24 +899,16 @@
 
           <!-- Utilities -->
           <div>
-            <h4 class="text-xs font-semibold uppercase tracking-wider mb-2 px-4" :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'">Utilities</h4>
+            <h4 class="drawer-subheading">Utilities</h4>
             <nav class="space-y-1">
               <router-link
                 v-for="item in filteredTokenUtilities"
                 :key="item.link"
                 :to="item.link"
-                class="flex items-center gap-3 px-4 py-2 rounded-xl transition-colors group w-full text-left"
-                :class="[
-                  isActive(item.link)
-                    ? (isDarkMode 
-                      ? 'text-[#9dbcf0] bg-[#263a5c]/40 font-semibold' 
-                      : 'text-[#2f5ea8] bg-[#f2f6fd] font-semibold')
-                    : (isDarkMode
-                      ? 'text-slate-400 hover:bg-slate-900 hover:text-white' 
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
-                ]"
+                class="drawer-item"
+                :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </nav>
@@ -1269,7 +920,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import { Pipette, ScanEye, Captions, Tag, TextInitial, SwatchBook, FolderKanban } from 'lucide-vue-next';
 import { getFeatureFlagForRoute } from '../router/featureFlagGuards';
@@ -1286,7 +937,6 @@ const emit = defineEmits(['close', 'toggle', 'navigate-doc']);
 
 const route = useRoute();
 const router = useRouter();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 
 const close = () => {
   emit('close');
@@ -1856,9 +1506,7 @@ const filteredReviewUtilities = computed(() => {
   return reviewUtilities.filter(item => isRouteEnabled(item.link));
 });
 
-// Watch for dark mode changes and Escape key
-let darkModeObserver = null;
-let darkModeInterval = null;
+// Escape key
 let escapeHandler = null;
 
 // Function to get all flag keys used in the drawer
@@ -1937,24 +1585,6 @@ const loadDrawerFlags = async () => {
 let flagUpdateHandler = null;
 
 onMounted(async () => {
-  // Dark mode observer, set up before the flag request so a failed or slow
-  // request can't leave the drawer stuck on the theme it loaded with
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-  
   // Escape key handler
   escapeHandler = (e) => {
     if (e.key === 'Escape' && props.isOpen) {
@@ -1977,14 +1607,36 @@ onBeforeUnmount(() => {
   if (flagUpdateHandler) {
     window.removeEventListener('feature-flags-updated', flagUpdateHandler);
   }
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
   if (escapeHandler) {
     window.removeEventListener('keydown', escapeHandler);
   }
 });
 </script>
+
+<style scoped>
+/* The closed rail and the open panel sit beside the side nav, under the top bar */
+.drawer-rail {
+  @apply fixed left-24 top-16 bottom-0 z-30 flex items-start justify-center w-drawer-closed pt-4 border-r border-line bg-surface transition-all duration-300;
+}
+.drawer-panel {
+  @apply fixed left-24 top-16 bottom-0 z-30 w-drawer-open overflow-y-auto border-r border-line bg-surface transition-transform duration-300 ease-in-out;
+}
+.drawer-heading {
+  @apply text-sm font-semibold uppercase tracking-wider text-ink-muted;
+}
+.drawer-subheading {
+  @apply mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-ink-muted;
+}
+.drawer-icon-btn {
+  @apply p-2 rounded-pill text-ink-muted transition-colors hover:bg-fill-hover hover:text-ink-strong;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.drawer-item {
+  @apply flex items-center gap-3 w-full px-4 py-2 rounded-tile text-left text-ink-secondary transition-colors hover:bg-fill-hover hover:text-ink-strong;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.drawer-item-on,
+.drawer-item-on:hover {
+  @apply bg-accent-subtle font-semibold text-accent-text;
+}
+</style>

@@ -1,7 +1,7 @@
 <template>
   <div class="ui-field">
     <div v-if="label" class="ui-field-label-row">
-      <component :is="labelTag" :for="labelTag === 'label' ? controlId : undefined" :id="labelId" class="ui-field-label">
+      <component :is="labelTag" :for="labelTag === 'label' ? controlId : undefined" :id="labelId" class="ui-field-label" :class="{ 'sr-only': hideLabel }">
         {{ label }}<span v-if="required" class="ui-field-required" aria-hidden="true">*</span>
       </component>
       <slot name="label-aside" :id="controlId" />
@@ -29,6 +29,8 @@ const props = defineProps({
   error: { type: String, default: '' },
   required: { type: Boolean, default: false },
   group: { type: Boolean, default: false },
+  /** Keep the label for assistive technology but don't show it (dense rows, table cells) */
+  hideLabel: { type: Boolean, default: false },
   id: { type: String, default: '' },
 });
 

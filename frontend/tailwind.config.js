@@ -107,6 +107,9 @@ export default {
       spacing: {
         'drawer-closed': app('drawer-closed'),
         'drawer-open': app('drawer-open'),
+        // A tool's working area (a map, a chart canvas) and an embedded page (a replay, a heatmap)
+        workspace: app('workspace-height'),
+        embed: app('embed-height'),
       },
     },
   },

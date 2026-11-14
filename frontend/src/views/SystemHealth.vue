@@ -1,1038 +1,423 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  System Health
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Monitor your design system's health, track component adoption, and identify areas for improvement.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-                    <defs>
-                      <linearGradient id="healthGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Dashboard/grid representing system health -->
-                    <rect x="35" y="40" width="35" height="35" rx="4" fill="url(#healthGradient)" opacity="0.4"/>
-                    <rect x="82.5" y="40" width="35" height="35" rx="4" fill="url(#healthGradient)" opacity="0.6"/>
-                    <rect x="130" y="40" width="35" height="35" rx="4" fill="url(#healthGradient)" opacity="0.5"/>
-                    <rect x="35" y="90" width="35" height="35" rx="4" fill="url(#healthGradient)" opacity="0.3"/>
-                    <rect x="82.5" y="90" width="35" height="35" rx="4" fill="url(#healthGradient)" opacity="0.5"/>
-                    <rect x="130" y="90" width="35" height="35" rx="4" fill="url(#healthGradient)" opacity="0.4"/>
-                    <!-- Heartbeat/pulse line representing health monitoring -->
-                    <path d="M 30 150 Q 50 140, 70 150 T 110 150 T 150 150 T 170 150" fill="none" stroke="url(#healthGradient)" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+  <PageShell width="wide">
+    <PageHero
+      eyebrow="Admin"
+      title="System health"
+      lead="Monitor your design system's health, track component adoption, and identify areas for improvement."
+      spot="site/system-health"
+    />
 
-        <!-- Health Overview Cards -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <!-- Overall Health Score -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
-                  Overall Health
-                </h3>
-                <div v-if="healthScore?.trend" class="flex items-center gap-1">
-                  <span 
-                    class="material-symbols-outlined text-sm"
-                    :class="healthScore.trend.direction === 'up' 
-                      ? 'text-green-500' 
-                      : healthScore.trend.direction === 'down' 
-                      ? 'text-red-500' 
-                      : 'text-gray-500'"
-                  >
-                    {{ healthScore.trend.direction === 'up' ? 'trending_up' : healthScore.trend.direction === 'down' ? 'trending_down' : 'trending_flat' }}
-                  </span>
-                  <span 
-                    class="text-xs font-medium"
-                    :class="healthScore.trend.direction === 'up' 
-                      ? 'text-green-500' 
-                      : healthScore.trend.direction === 'down' 
-                      ? 'text-red-500' 
-                      : 'text-gray-500'"
-                  >
-                    {{ healthScore.trend.change >= 0 ? '+' : '' }}{{ healthScore.trend.change.toFixed(1) }}
-                  </span>
-                </div>
-              </div>
-              <div class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                {{ formatPercent(overallHealth) }}
-              </div>
-              <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                <div 
-                  class="h-2 rounded-full transition-all"
-                  :class="overallHealth >= 80 ? 'bg-green-500' : overallHealth >= 60 ? 'bg-yellow-500' : 'bg-red-500'"
-                  :style="{ width: `${Math.min(100, overallHealth ?? 0)}%` }"
-                ></div>
-              </div>
-            </div>
-
-            <!-- Component Count -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">widgets</span>
-                  Components
-                </h3>
-              </div>
-              <div class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                {{ metrics.components.total ?? '–' }}
-              </div>
-              <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                {{ metrics.components.productionReady ?? '–' }} production ready
-              </div>
-            </div>
-
-            <!-- Token Count -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-purple-400' : 'text-purple-600'">style</span>
-                  Design Tokens
-                </h3>
-              </div>
-              <div class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                {{ metrics.tokens.total ?? '–' }}
-              </div>
-              <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                {{ metrics.tokens.categories ?? '–' }} categories
-              </div>
-            </div>
-
-            <!-- Accessibility Score -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">accessibility</span>
-                  Accessibility
-                </h3>
-              </div>
-              <div class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                {{ formatPercent(metrics.accessibility.score) }}
-              </div>
-              <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                {{ metrics.accessibility.score === null ? 'No accessibility reports yet' : 'Average of the latest accessibility reports' }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- External tools and services (GET /integrations/status) -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <IntegrationsPanel :is-dark-mode="isDarkMode" />
-        </div>
-
-        <!-- Detailed Metrics -->
-        <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-6 mb-8">
-          <!-- Component Status Breakdown -->
-          <div 
-            class="rounded-lg shadow-sm border"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">info</span>
-                Component Status
-              </h3>
-            </div>
-            <div class="p-6">
-              <div class="space-y-4">
-                <div v-for="status in componentStatuses" :key="status.type" class="flex items-center justify-between">
-                  <div class="flex items-center gap-3">
-                    <div 
-                      class="w-3 h-3 rounded-full"
-                      :class="status.color"
-                    ></div>
-                    <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      {{ status.label }}
-                    </span>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    <div class="w-32 bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                      <div 
-                        class="h-2 rounded-full transition-all"
-                        :class="status.color"
-                        :style="{ width: `${status.percentage}%` }"
-                      ></div>
-                    </div>
-                    <span class="text-sm font-semibold w-8 text-right" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      {{ status.count }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Token Usage -->
-          <div 
-            class="rounded-lg shadow-sm border"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">category</span>
-                Token Usage by Category
-              </h3>
-            </div>
-            <div class="p-6">
-              <div class="space-y-4">
-                <div v-for="category in tokenCategories" :key="category.name" class="flex items-center justify-between">
-                  <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    {{ category.name }}
-                  </span>
-                  <div class="flex items-center gap-4">
-                    <div class="w-32 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                      <div 
-                        class="h-2 rounded-full transition-all bg-indigo-500"
-                        :style="{ width: `${category.percentage}%` }"
-                      ></div>
-                    </div>
-                    <span class="text-sm font-semibold w-8 text-right" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      {{ category.count }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Health Score Factors -->
-        <div v-if="healthScore" class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">analytics</span>
-                Health Score Factors
-              </h3>
-              <p class="text-sm mt-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Weighted factors contributing to overall health score. Factors marked "Not collected" have no data yet and are left out of the score.
-              </p>
-            </div>
-            <div class="p-6">
-              <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Component Coverage</div>
-                  <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ formatPercent(healthScore.factors.componentCoverage) }}
-                  </div>
-                  <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 25%</div>
-                </div>
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Adoption Rate</div>
-                  <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ formatPercent(healthScore.factors.adoptionRate) }}
-                  </div>
-                  <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 25%</div>
-                </div>
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Compliance</div>
-                  <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ formatPercent(healthScore.factors.compliance) }}
-                  </div>
-                  <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 20%</div>
-                </div>
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Maintenance</div>
-                  <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ formatPercent(healthScore.factors.maintenance) }}
-                  </div>
-                  <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 15%</div>
-                </div>
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Accessibility</div>
-                  <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ formatPercent(healthScore.factors.accessibility) }}
-                  </div>
-                  <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 15%</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Health Score Trends -->
-        <div v-if="healthScoreTrends.length === 0" class="max-w-7xl mx-auto mb-8">
-          <div
-            class="rounded-lg shadow-sm border p-6 text-sm"
-            :class="isDarkMode ? 'bg-slate-900 border-gray-700 text-gray-400' : 'bg-white border-gray-200 text-gray-600'"
-            role="status"
-          >
-            No health score history yet. Scores are recorded (at most hourly) as they are measured, starting when the server starts.
-          </div>
-        </div>
-        <div v-else class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">show_chart</span>
-                Health Score Trends (measured, last 30 days)
-              </h3>
-            </div>
-            <div class="p-6">
-              <div class="h-64 flex items-end gap-1">
-                <div
-                  v-for="(trend, index) in healthScoreTrends"
-                  :key="index"
-                  class="flex-1 group relative"
-                >
-                  <div
-                    class="w-full rounded-t transition-all hover:opacity-80 cursor-pointer"
-                    :class="trend.score >= 80 ? 'bg-green-500' : trend.score >= 60 ? 'bg-yellow-500' : 'bg-red-500'"
-                    :style="{ height: `${(trend.score / 100) * 100}%` }"
-                    :title="`${new Date(trend.date).toLocaleDateString()}: ${trend.score.toFixed(1)}%`"
-                  ></div>
-                  <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    <div class="bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                      {{ trend.score.toFixed(1) }}%
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="flex justify-between mt-4 text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                <span>{{ healthScoreTrends.length > 0 ? new Date(healthScoreTrends[0].date).toLocaleDateString() : '' }}</span>
-                <span>{{ healthScoreTrends.length > 0 ? new Date(healthScoreTrends[healthScoreTrends.length - 1].date).toLocaleDateString() : '' }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Health Score Recommendations -->
-        <div v-if="healthScoreRecommendations.length > 0" class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">lightbulb</span>
-                Recommendations to Improve Health Score
-              </h3>
-            </div>
-            <div class="p-6">
-              <div class="space-y-4">
-                <div
-                  v-for="rec in healthScoreRecommendations"
-                  :key="rec.id"
-                  class="p-4 rounded-lg border"
-                  :class="rec.priority === 'high'
-                    ? (isDarkMode ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200')
-                    : rec.priority === 'medium'
-                    ? (isDarkMode ? 'bg-yellow-900/20 border-yellow-700' : 'bg-yellow-50 border-yellow-200')
-                    : (isDarkMode ? 'bg-blue-900/20 border-blue-700' : 'bg-blue-50 border-blue-200')"
-                >
-                  <div class="flex items-start gap-3">
-                    <span 
-                      class="material-symbols-outlined flex-shrink-0 mt-0.5"
-                      :class="rec.priority === 'high' ? 'text-red-400' : rec.priority === 'medium' ? 'text-yellow-400' : 'text-blue-400'"
-                    >
-                      {{ rec.priority === 'high' ? 'priority_high' : 'info' }}
-                    </span>
-                    <div class="flex-1">
-                      <div class="flex items-center gap-2 mb-1">
-                        <h4 class="font-semibold" :class="rec.priority === 'high' 
-                          ? (isDarkMode ? 'text-red-300' : 'text-red-900')
-                          : rec.priority === 'medium'
-                          ? (isDarkMode ? 'text-yellow-300' : 'text-yellow-900')
-                          : (isDarkMode ? 'text-blue-300' : 'text-blue-900')">
-                          {{ rec.title }}
-                        </h4>
-                        <span class="px-2 py-0.5 rounded text-xs font-medium"
-                          :class="rec.priority === 'high'
-                            ? (isDarkMode ? 'bg-red-700 text-red-200' : 'bg-red-100 text-red-700')
-                            : rec.priority === 'medium'
-                            ? (isDarkMode ? 'bg-yellow-700 text-yellow-200' : 'bg-yellow-100 text-yellow-700')
-                            : (isDarkMode ? 'bg-blue-700 text-blue-200' : 'bg-blue-100 text-blue-700')"
-                        >
-                          {{ rec.priority.toUpperCase() }}
-                        </span>
-                      </div>
-                      <p class="text-sm mb-2" :class="rec.priority === 'high' 
-                        ? (isDarkMode ? 'text-red-200' : 'text-red-800')
-                        : rec.priority === 'medium'
-                        ? (isDarkMode ? 'text-yellow-200' : 'text-yellow-800')
-                        : (isDarkMode ? 'text-blue-200' : 'text-blue-800')">
-                        {{ rec.description }}
-                      </p>
-                      <p class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Impact: {{ rec.impact }}
-                      </p>
-                      <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        {{ rec.action }}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Alerts and Warnings -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">warning</span>
-                Alerts & Warnings
-              </h3>
-            </div>
-            <div class="p-6">
-              <div v-if="alerts.length === 0" class="text-center py-8">
-                <span class="material-symbols-outlined text-5xl mb-4" :class="isDarkMode ? 'text-green-600' : 'text-green-500'">
-                  check_circle
-                </span>
-                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  No alerts. Your design system is healthy!
-                </p>
-              </div>
-              <div v-else class="space-y-3">
-                <div
-                  v-for="alert in alerts"
-                  :key="alert.id"
-                  class="p-4 rounded-lg border flex items-start gap-3"
-                  :class="[
-                    alert.severity === 'high' 
-                      ? (isDarkMode ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200')
-                      : alert.severity === 'medium'
-                      ? (isDarkMode ? 'bg-yellow-900/20 border-yellow-700' : 'bg-yellow-50 border-yellow-200')
-                      : (isDarkMode ? 'bg-blue-900/20 border-blue-700' : 'bg-blue-50 border-blue-200')
-                  ]"
-                >
-                  <span 
-                    class="material-symbols-outlined flex-shrink-0 mt-0.5"
-                    :class="alert.severity === 'high' ? 'text-red-400' : alert.severity === 'medium' ? 'text-yellow-400' : 'text-blue-400'"
-                  >
-                    {{ alert.severity === 'high' ? 'error' : alert.severity === 'medium' ? 'warning' : 'info' }}
-                  </span>
-                  <div class="flex-1">
-                    <h4 class="font-semibold mb-1"
-                      :class="alert.severity === 'high' 
-                        ? (isDarkMode ? 'text-red-300' : 'text-red-900')
-                        : alert.severity === 'medium'
-                        ? (isDarkMode ? 'text-yellow-300' : 'text-yellow-900')
-                        : (isDarkMode ? 'text-blue-300' : 'text-blue-900')"
-                    >
-                      {{ alert.title }}
-                    </h4>
-                    <p class="text-sm"
-                      :class="alert.severity === 'high' 
-                        ? (isDarkMode ? 'text-red-200' : 'text-red-800')
-                        : alert.severity === 'medium'
-                        ? (isDarkMode ? 'text-yellow-200' : 'text-yellow-800')
-                        : (isDarkMode ? 'text-blue-200' : 'text-blue-800')"
-                    >
-                      {{ alert.message }}
-                    </p>
-                    <button
-                      v-if="alert.action"
-                      @click="handleAlertAction(alert)"
-                      class="mt-2 text-xs font-medium underline"
-                      :class="alert.severity === 'high' 
-                        ? (isDarkMode ? 'text-red-300' : 'text-red-700')
-                        : alert.severity === 'medium'
-                        ? (isDarkMode ? 'text-yellow-300' : 'text-yellow-700')
-                        : (isDarkMode ? 'text-blue-300' : 'text-blue-700')"
-                    >
-                      {{ alert.action }}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Component Adoption -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">trending_up</span>
-                Component Adoption
-              </h3>
-              <Dropdown
-                :model-value="adoptionTimeframe"
-                @update:model-value="adoptionTimeframe = $event"
-                :options="[
-                  { value: '7d', label: 'Last 7 days' },
-                  { value: '30d', label: 'Last 30 days' },
-                  { value: '90d', label: 'Last 90 days' },
-                  { value: 'all', label: 'All time' }
-                ]"
-                :is-dark-mode="isDarkMode"
-                label="Select timeframe"
-              />
-            </div>
-            <div class="p-6">
-              <div class="space-y-4">
-                <div
-                  v-for="component in topComponents"
-                  :key="component.name"
-                  class="flex items-center justify-between"
-                >
-                  <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-1">
-                      <span class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ component.name }}
-                      </span>
-                      <span 
-                        class="px-2 py-0.5 rounded text-xs font-medium"
-                        :class="getStatusBadgeClass(component.status)"
-                      >
-                        {{ component.status }}
-                      </span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                      <div 
-                        class="bg-indigo-500 h-2 rounded-full transition-all"
-                        :style="{ width: `${component.adoption}%` }"
-                      ></div>
-                    </div>
-                  </div>
-                  <div class="ml-4 text-right">
-                    <div class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ component.adoption }}%
-                    </div>
-                    <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      {{ component.usage }} uses
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Design System Analytics -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">analytics</span>
-                Design System Analytics
-              </h3>
-            </div>
-            <div class="p-6">
-              <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                <!-- Most Used Components -->
-                <div>
-                  <h4 class="text-sm font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <span class="material-symbols-outlined text-base text-indigo-600">star</span>
-                    Most Used Components
-                  </h4>
-                  <div class="space-y-3">
-                    <div
-                      v-for="(comp, index) in mostUsedComponents"
-                      :key="comp.name"
-                      class="flex items-center justify-between"
-                    >
-                      <div class="flex items-center gap-2">
-                        <span class="text-xs font-medium w-6" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                          {{ index + 1 }}.
-                        </span>
-                        <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                          {{ comp.name }}
-                        </span>
-                      </div>
-                      <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ comp.usage }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Token Usage Patterns -->
-                <div>
-                  <h4 class="text-sm font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <span class="material-symbols-outlined text-base text-indigo-600">pattern</span>
-                    Token Usage Patterns
-                  </h4>
-                  <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Not collected: token usage is not tracked yet.
-                  </p>
-                </div>
-
-                <!-- Performance Metrics -->
-                <div>
-                  <h4 class="text-sm font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <span class="material-symbols-outlined text-base text-indigo-600">speed</span>
-                    Performance Metrics
-                  </h4>
-                  <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Not collected: load time and bundle size are not measured yet.
-                  </p>
-                </div>
-              </div>
-
-              <!-- Usage Trends -->
-              <div class="mt-6 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <h4 class="text-sm font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  <span class="material-symbols-outlined text-base text-indigo-600">show_chart</span>
-                  Usage Trends (Last 30 Days)
-                </h4>
-                <div class="flex items-end gap-2 h-32">
-                  <div
-                    v-for="(day, index) in usageTrends"
-                    :key="index"
-                    class="flex-1 flex flex-col items-center justify-end"
-                  >
-                    <div
-                      class="w-full rounded-t transition-all hover:opacity-80"
-                      :class="isDarkMode ? 'bg-indigo-500' : 'bg-indigo-500'"
-                      :style="{ height: `${day.percentage}%` }"
-                      :title="`${day.date}: ${day.usage} uses`"
-                    ></div>
-                    <span class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                      {{ day.label }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Design Debt Metrics -->
-        <div v-if="designDebtMetrics" class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">construction</span>
-                Design Debt Metrics
-              </h3>
-            </div>
-            <div class="p-6">
-              <div class="grid md:grid-cols-3 gap-6 mb-6">
-                <div>
-                  <div class="text-sm mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Deprecated Components in Use
-                  </div>
-                  <div class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ designDebtMetrics.deprecatedComponentsInUse }}
-                  </div>
-                </div>
-                <div>
-                  <div class="text-sm mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Custom Components
-                  </div>
-                  <div class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ designDebtMetrics.customComponentCount }}
-                  </div>
-                </div>
-                <div>
-                  <div class="text-sm mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Technical Debt Score
-                  </div>
-                  <div class="text-3xl font-bold" 
-                    :class="designDebtMetrics.technicalDebtScore >= 70 
-                      ? 'text-red-500' 
-                      : designDebtMetrics.technicalDebtScore >= 40 
-                      ? 'text-yellow-500' 
-                      : 'text-green-500'"
-                  >
-                    {{ designDebtMetrics.technicalDebtScore }}/100
-                  </div>
-                </div>
-              </div>
-              <div v-if="designDebtMetrics.recommendations && designDebtMetrics.recommendations.length > 0">
-                <h4 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Recommendations
-                </h4>
-                <ul class="space-y-2">
-                  <li 
-                    v-for="(rec, index) in designDebtMetrics.recommendations"
-                    :key="index"
-                    class="flex items-start gap-2 text-sm"
-                    :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                  >
-                    <span class="material-symbols-outlined text-indigo-600 text-base">check_circle</span>
-                    {{ rec }}
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Cross-Application Comparison -->
-        <div v-if="crossApplicationComparison.length > 0" class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">compare_arrows</span>
-                Cross-Application Comparison
-              </h3>
-            </div>
-            <div class="p-6">
-              <div class="overflow-x-auto">
-                <table class="w-full">
-                  <thead>
-                    <tr class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Application
-                      </th>
-                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Components Used
-                      </th>
-                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Adoption Rate
-                      </th>
-                      <th class="text-left py-3 px-4 text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Shared Components
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr 
-                      v-for="app in crossApplicationComparison"
-                      :key="app.applicationId"
-                      class="border-b"
-                      :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-                    >
-                      <td class="py-3 px-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ app.applicationName }}
-                      </td>
-                      <td class="py-3 px-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        {{ app.uniqueComponents }}
-                      </td>
-                      <td class="py-3 px-4">
-                        <div class="flex items-center gap-2">
-                          <div class="w-24 bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                            <div 
-                              class="bg-indigo-500 h-2 rounded-full"
-                              :style="{ width: `${app.adoptionRate}%` }"
-                            ></div>
-                          </div>
-                          <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ app.adoptionRate.toFixed(1) }}%
-                          </span>
-                        </div>
-                      </td>
-                      <td class="py-3 px-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        {{ app.sharedComponents.length }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Audit Reports Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">description</span>
-                    Audit Reports
-                  </h3>
-                  <p class="text-sm mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Generate comprehensive audit reports for stakeholders, compliance, and planning
-                  </p>
-                </div>
-                <button
-                  @click="generateAuditReport"
-                  :disabled="generatingReport"
-                  class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                  :class="generatingReport
-                    ? (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-500 cursor-not-allowed')
-                    : (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')"
-                >
-                  <span v-if="generatingReport" class="material-symbols-outlined text-base animate-spin">refresh</span>
-                  <span v-else class="material-symbols-outlined text-base">add</span>
-                  {{ generatingReport ? 'Generating...' : 'Generate Report' }}
-                </button>
-              </div>
-            </div>
-
-            <!-- Executive Summary -->
-            <div v-if="auditReport" class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h4 class="text-md font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-base text-indigo-600">summarize</span>
-                Executive Summary
-              </h4>
-              <div class="grid md:grid-cols-3 gap-4 mb-6">
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-xs mb-1 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Overall Health Score</div>
-                  <div class="text-3xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ formatPercent(auditReport.executiveSummary.overallHealthScore) }}
-                  </div>
-                  <div class="text-sm font-semibold" :class="getHealthGradeColor(auditReport.executiveSummary.healthGrade)">
-                    Grade: {{ auditReport.executiveSummary.healthGrade ?? 'n/a' }}
-                  </div>
-                </div>
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-xs mb-1 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Components</div>
-                  <div class="text-3xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ auditReport.components.total }}
-                  </div>
-                  <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ auditReport.components.byStatus.production.length }} production ready
-                  </div>
-                </div>
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-xs mb-1 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Accessibility</div>
-                  <div class="text-3xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ formatPercent(auditReport.detailedMetrics.accessibility.score) }}
-                  </div>
-                  <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ auditReport.detailedMetrics.accessibility.wcagLevel ? `WCAG ${auditReport.detailedMetrics.accessibility.wcagLevel}` : 'No reports yet' }}
-                  </div>
-                </div>
-              </div>
-
-              <!-- Key Findings -->
-              <div class="mb-6">
-                <h5 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Key Findings</h5>
-                <ul class="space-y-2">
-                  <li 
-                    v-for="(finding, idx) in auditReport.executiveSummary.keyFindings" 
-                    :key="idx"
-                    class="flex items-start gap-2 text-sm"
-                    :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                  >
-                    <span class="material-symbols-outlined text-base text-indigo-600 mt-0.5">check_circle</span>
-                    {{ finding }}
-                  </li>
-                </ul>
-              </div>
-
-              <!-- Export Options -->
-              <div class="flex items-center gap-3 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Export Report:</span>
-                <button
-                  @click="exportReport('json')"
-                  class="px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-2"
-                  :class="isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-white border border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'"
-                >
-                  <span class="material-symbols-outlined text-base">code</span>
-                  JSON
-                </button>
-                <button
-                  @click="exportReport('csv')"
-                  class="px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-2"
-                  :class="isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-white border border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'"
-                >
-                  <span class="material-symbols-outlined text-base">table_chart</span>
-                  CSV
-                </button>
-                <button
-                  @click="exportReport('pdf')"
-                  class="px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-2"
-                  :class="isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-white border border-gray-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'"
-                >
-                  <span class="material-symbols-outlined text-base">picture_as_pdf</span>
-                  PDF
-                </button>
-              </div>
-            </div>
-
-            <!-- Detailed Report Sections -->
-            <div v-if="auditReport && showDetailedReport" class="p-6 space-y-6">
-              <!-- Detailed Metrics -->
-              <div>
-                <h4 class="text-md font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Detailed Metrics</h4>
-                <div class="grid md:grid-cols-2 gap-4">
-                  <div class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
-                    <h5 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Component Metrics</h5>
-                    <div class="space-y-2 text-sm">
-                      <div class="flex justify-between">
-                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Production Ready:</span>
-                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ auditReport.detailedMetrics.components.production }}</span>
-                      </div>
-                      <div class="flex justify-between">
-                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">In Progress:</span>
-                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ auditReport.detailedMetrics.components.inProgress }}</span>
-                      </div>
-                      <div class="flex justify-between">
-                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Deprecated:</span>
-                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ auditReport.detailedMetrics.components.deprecated }}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
-                    <h5 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Compliance Metrics</h5>
-                    <div class="space-y-2 text-sm">
-                      <div class="flex justify-between">
-                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Compliance Score:</span>
-                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ formatPercent(auditReport.detailedMetrics.compliance.score) }}</span>
-                      </div>
-                      <div class="flex justify-between">
-                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Level:</span>
-                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ auditReport.detailedMetrics.compliance.level }}</span>
-                      </div>
-                      <div class="flex justify-between">
-                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">WCAG Compliant:</span>
-                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ auditReport.detailedMetrics.compliance.wcagCompliance === null ? 'Not collected' : auditReport.detailedMetrics.compliance.wcagCompliance ? 'Yes' : 'No' }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Next Steps -->
-              <div>
-                <h4 class="text-md font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Recommended Next Steps</h4>
-                <ul class="space-y-2">
-                  <li 
-                    v-for="(step, idx) in auditReport.nextSteps" 
-                    :key="idx"
-                    class="flex items-start gap-2 text-sm p-3 rounded-lg"
-                    :class="isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-indigo-50 text-gray-700'"
-                  >
-                    <span class="material-symbols-outlined text-base text-indigo-600 mt-0.5">arrow_forward</span>
-                    {{ step }}
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <!-- Toggle Detailed Report -->
-            <div v-if="auditReport" class="p-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <button
-                @click="showDetailedReport = !showDetailedReport"
-                class="text-sm font-medium flex items-center gap-2 transition-colors"
-                :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-700'"
-              >
-                <span class="material-symbols-outlined text-base">
-                  {{ showDetailedReport ? 'expand_less' : 'expand_more' }}
-                </span>
-                {{ showDetailedReport ? 'Hide' : 'Show' }} Detailed Report
-              </button>
-            </div>
-
-            <!-- Empty State -->
-            <div v-if="!auditReport && !generatingReport" class="p-12 text-center">
-              <span class="material-symbols-outlined text-5xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-                description
-              </span>
-              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Generate a comprehensive audit report to document your design system's current state
-              </p>
-            </div>
-          </div>
-        </div>
-        </div>
+    <PageSection title="Overview" description="Measured by the server; figures with no data yet say so.">
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <UiStat label="Overall health" icon="check_circle" :tone="scoreTone(overallHealth)">
+          <span class="flex items-baseline gap-2">
+            {{ formatPercent(overallHealth) }}
+            <span v-if="healthScore?.trend" class="flex items-center gap-1 text-xs font-medium" :class="trendTone">
+              <span class="material-symbols-outlined text-sm" aria-hidden="true">{{ trendIcon }}</span>
+              {{ healthScore.trend.change >= 0 ? '+' : '' }}{{ healthScore.trend.change.toFixed(1) }}
+            </span>
+          </span>
+        </UiStat>
+        <UiStat
+          label="Components"
+          icon="widgets"
+          :value="metrics.components.total ?? 'Not collected'"
+          :hint="`${metrics.components.productionReady ?? '–'} production ready`"
+        />
+        <UiStat
+          label="Design tokens"
+          icon="style"
+          :value="metrics.tokens.total ?? 'Not collected'"
+          :hint="`${metrics.tokens.categories ?? '–'} categories`"
+        />
+        <UiStat
+          label="Accessibility"
+          icon="accessibility"
+          :value="formatPercent(metrics.accessibility.score)"
+          :hint="metrics.accessibility.score === null ? 'No accessibility reports yet' : 'Average of the latest accessibility reports'"
+        />
       </div>
-    </div>
-  </div>
+    </PageSection>
+
+    <!-- External tools and services (GET /integrations/status) -->
+    <PageSection divided>
+      <IntegrationsPanel />
+    </PageSection>
+
+    <PageSection title="Inventory" divided>
+      <div class="grid lg:grid-cols-2 gap-6">
+        <UiPanel title="Component status">
+          <ul class="space-y-4">
+            <li v-for="status in componentStatuses" :key="status.type" class="flex items-center justify-between gap-4">
+              <span class="flex items-center gap-3 text-sm font-medium text-ink">
+                <UiChip :tone="status.tone">{{ status.label }}</UiChip>
+              </span>
+              <span class="flex items-center gap-4">
+                <UiMeter class="w-32" :value="status.percentage" :tone="status.tone" />
+                <span class="text-sm font-semibold w-8 text-right text-ink-strong">{{ status.count ?? '–' }}</span>
+              </span>
+            </li>
+          </ul>
+        </UiPanel>
+
+        <UiPanel title="Token usage by category">
+          <p v-if="tokenCategories.length === 0" class="text-sm text-ink-secondary">Not collected: no token categories reported yet.</p>
+          <ul v-else class="space-y-4">
+            <li v-for="category in tokenCategories" :key="category.name" class="flex items-center justify-between gap-4">
+              <span class="text-sm font-medium text-ink">{{ category.name }}</span>
+              <span class="flex items-center gap-4">
+                <UiMeter class="w-32" :value="category.percentage" />
+                <span class="text-sm font-semibold w-8 text-right text-ink-strong">{{ category.count }}</span>
+              </span>
+            </li>
+          </ul>
+        </UiPanel>
+      </div>
+    </PageSection>
+
+    <PageSection
+      v-if="healthScore"
+      title="Health score factors"
+      description='Weighted factors contributing to overall health score. Factors marked "Not collected" have no data yet and are left out of the score.'
+      divided
+    >
+      <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <UiStat
+          v-for="factor in healthFactors"
+          :key="factor.key"
+          :label="factor.label"
+          :value="formatPercent(healthScore.factors[factor.key])"
+          :hint="`Weight: ${factor.weight}`"
+        />
+      </div>
+    </PageSection>
+
+    <PageSection title="Health score trends" description="Measured, last 30 days." divided>
+      <UiCallout v-if="healthScoreTrends.length === 0" role="status">
+        No health score history yet. Scores are recorded (at most hourly) as they are measured, starting when the server starts.
+      </UiCallout>
+      <UiPanel v-else>
+        <svg
+          class="trend-chart h-64"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          role="img"
+          :aria-label="`Health score from ${trendStart} to ${trendEnd}`"
+        >
+          <rect
+            v-for="(trend, index) in healthScoreTrends"
+            :key="index"
+            :class="scoreFill(trend.score)"
+            class="trend-bar"
+            :x="index * (100 / healthScoreTrends.length) + 0.15"
+            :y="100 - Math.min(100, trend.score)"
+            :width="Math.max(0.1, 100 / healthScoreTrends.length - 0.3)"
+            :height="Math.min(100, trend.score)"
+          >
+            <title>{{ new Date(trend.date).toLocaleDateString() }}: {{ trend.score.toFixed(1) }}%</title>
+          </rect>
+        </svg>
+        <div class="flex justify-between mt-4 text-xs text-ink-muted">
+          <span>{{ trendStart }}</span>
+          <span>{{ trendEnd }}</span>
+        </div>
+      </UiPanel>
+    </PageSection>
+
+    <PageSection v-if="healthScoreRecommendations.length > 0" title="Recommendations to improve health score" divided>
+      <div class="space-y-3">
+        <UiCallout
+          v-for="rec in healthScoreRecommendations"
+          :key="rec.id"
+          :tone="priorityTone(rec.priority)"
+          :icon="rec.priority === 'high' ? 'priority_high' : 'info'"
+          :title="rec.title"
+        >
+          <p class="mb-2"><UiChip :tone="priorityTone(rec.priority)">{{ rec.priority.toUpperCase() }}</UiChip></p>
+          <p class="mb-2">{{ rec.description }}</p>
+          <p class="text-xs font-medium mb-1">Impact: {{ rec.impact }}</p>
+          <p class="text-xs">{{ rec.action }}</p>
+        </UiCallout>
+      </div>
+    </PageSection>
+
+    <PageSection title="Alerts and warnings" divided>
+      <UiEmptyState v-if="alerts.length === 0" spot="admin/component-status" title="No alerts" body="Your design system is healthy!" />
+      <div v-else class="space-y-3">
+        <UiCallout
+          v-for="alert in alerts"
+          :key="alert.id"
+          :tone="priorityTone(alert.severity)"
+          :icon="alert.severity === 'high' ? 'error' : alert.severity === 'medium' ? 'warning' : 'info'"
+          :title="alert.title"
+        >
+          {{ alert.message }}
+          <template v-if="alert.action" #actions>
+            <UiButton size="sm" variant="ghost" @click="handleAlertAction(alert)">{{ alert.action }}</UiButton>
+          </template>
+        </UiCallout>
+      </div>
+    </PageSection>
+
+    <PageSection title="Component adoption" divided>
+      <template #actions>
+        <UiSelect v-model="adoptionTimeframe" label="Timeframe" :options="timeframeOptions" />
+      </template>
+      <UiPanel>
+        <p v-if="topComponents.length === 0" class="text-sm text-ink-secondary">Not collected: no component usage recorded for this timeframe.</p>
+        <ul v-else class="space-y-4">
+          <li v-for="component in topComponents" :key="component.name" class="flex items-center justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 mb-2">
+                <span class="text-sm font-medium text-ink-strong">{{ component.name }}</span>
+                <UiChip :tone="statusTone(component.status)">{{ component.status }}</UiChip>
+              </div>
+              <UiMeter :value="component.adoption" />
+            </div>
+            <div class="text-right">
+              <div class="text-sm font-semibold text-ink-strong">{{ component.adoption }}%</div>
+              <div class="text-xs text-ink-muted">{{ component.usage }} uses</div>
+            </div>
+          </li>
+        </ul>
+      </UiPanel>
+    </PageSection>
+
+    <PageSection title="Design system analytics" divided>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <UiPanel title="Most used components" heading-tag="h3">
+          <p v-if="mostUsedComponents.length === 0" class="text-sm text-ink-secondary">Not collected: no component usage recorded yet.</p>
+          <ol v-else class="space-y-3">
+            <li v-for="(comp, index) in mostUsedComponents" :key="comp.name" class="flex items-center justify-between">
+              <span class="flex items-center gap-2">
+                <span class="text-xs font-medium w-6 text-ink-muted">{{ index + 1 }}.</span>
+                <span class="text-sm text-ink">{{ comp.name }}</span>
+              </span>
+              <span class="text-sm font-semibold text-ink-strong">{{ comp.usage }}</span>
+            </li>
+          </ol>
+        </UiPanel>
+        <UiPanel title="Token usage patterns" heading-tag="h3">
+          <p class="text-sm text-ink-secondary">Not collected: token usage is not tracked yet.</p>
+        </UiPanel>
+        <UiPanel title="Performance metrics" heading-tag="h3">
+          <p class="text-sm text-ink-secondary">Not collected: load time and bundle size are not measured yet.</p>
+        </UiPanel>
+      </div>
+
+      <UiPanel class="mt-6" title="Usage trends" description="Last 30 days." heading-tag="h3">
+        <p v-if="usageTrends.length === 0" class="text-sm text-ink-secondary">Not collected: no usage recorded in the last 30 days.</p>
+        <template v-else>
+          <svg class="trend-chart h-32" viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="Component usage per day, last 30 days">
+            <rect
+              v-for="(day, index) in usageTrends"
+              :key="index"
+              class="trend-bar fill-accent"
+              :x="index * (100 / usageTrends.length) + 0.3"
+              :y="100 - day.percentage"
+              :width="Math.max(0.1, 100 / usageTrends.length - 0.6)"
+              :height="day.percentage"
+            >
+              <title>{{ day.date }}: {{ day.usage }} uses</title>
+            </rect>
+          </svg>
+          <div class="flex gap-2 mt-1" aria-hidden="true">
+            <span v-for="(day, index) in usageTrends" :key="index" class="flex-1 text-center text-xs text-ink-muted">{{ day.label }}</span>
+          </div>
+        </template>
+      </UiPanel>
+    </PageSection>
+
+    <PageSection v-if="designDebtMetrics" title="Design debt metrics" divided>
+      <div class="grid md:grid-cols-3 gap-4 mb-6">
+        <UiStat label="Deprecated components in use" :value="designDebtMetrics.deprecatedComponentsInUse" />
+        <UiStat label="Custom components" :value="designDebtMetrics.customComponentCount" />
+        <UiStat label="Technical debt score" :value="`${designDebtMetrics.technicalDebtScore}/100`" :tone="debtTone(designDebtMetrics.technicalDebtScore)" />
+      </div>
+      <UiPanel v-if="designDebtMetrics.recommendations && designDebtMetrics.recommendations.length > 0" title="Recommendations" heading-tag="h3">
+        <ul class="space-y-2">
+          <li v-for="(rec, index) in designDebtMetrics.recommendations" :key="index" class="flex items-start gap-2 text-sm text-ink">
+            <span class="material-symbols-outlined text-base text-accent-text" aria-hidden="true">check_circle</span>
+            {{ rec }}
+          </li>
+        </ul>
+      </UiPanel>
+    </PageSection>
+
+    <PageSection v-if="crossApplicationComparison.length > 0" title="Cross-application comparison" divided>
+      <UiPanel flush>
+        <UiTable caption="Design system use by application">
+          <thead>
+            <tr>
+              <th scope="col">Application</th>
+              <th scope="col">Components used</th>
+              <th scope="col">Adoption rate</th>
+              <th scope="col">Shared components</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="app in crossApplicationComparison" :key="app.applicationId">
+              <th scope="row" class="font-medium text-ink-strong">{{ app.applicationName }}</th>
+              <td>{{ app.uniqueComponents }}</td>
+              <td>
+                <span class="flex items-center gap-2">
+                  <UiMeter class="w-24" :value="app.adoptionRate" />
+                  {{ app.adoptionRate.toFixed(1) }}%
+                </span>
+              </td>
+              <td>{{ app.sharedComponents.length }}</td>
+            </tr>
+          </tbody>
+        </UiTable>
+      </UiPanel>
+    </PageSection>
+
+    <PageSection
+      title="Audit reports"
+      description="Generate comprehensive audit reports for stakeholders, compliance, and planning."
+      divided
+    >
+      <template #actions>
+        <UiButton variant="primary" icon="add" :loading="generatingReport" @click="generateAuditReport">
+          {{ generatingReport ? 'Generating…' : 'Generate report' }}
+        </UiButton>
+      </template>
+
+      <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
+
+      <UiEmptyState
+        v-if="!auditReport && !generatingReport"
+        spot="admin/audit-logs"
+        title="No report yet"
+        body="Generate a comprehensive audit report to document your design system's current state."
+      />
+
+      <div v-if="auditReport" class="space-y-6">
+        <UiPanel title="Executive summary" heading-tag="h3">
+          <div class="grid md:grid-cols-3 gap-4 mb-6">
+            <UiStat
+              label="Overall health score"
+              :value="formatPercent(auditReport.executiveSummary.overallHealthScore)"
+              :hint="`Grade: ${auditReport.executiveSummary.healthGrade ?? 'n/a'}`"
+              :tone="gradeTone(auditReport.executiveSummary.healthGrade)"
+            />
+            <UiStat
+              label="Components"
+              :value="auditReport.components.total"
+              :hint="`${auditReport.components.byStatus.production.length} production ready`"
+            />
+            <UiStat
+              label="Accessibility"
+              :value="formatPercent(auditReport.detailedMetrics.accessibility.score)"
+              :hint="auditReport.detailedMetrics.accessibility.wcagLevel ? `WCAG ${auditReport.detailedMetrics.accessibility.wcagLevel}` : 'No reports yet'"
+            />
+          </div>
+
+          <h4 class="text-sm font-semibold mb-3 text-ink-strong">Key findings</h4>
+          <ul class="space-y-2">
+            <li v-for="(finding, idx) in auditReport.executiveSummary.keyFindings" :key="idx" class="flex items-start gap-2 text-sm text-ink">
+              <span class="material-symbols-outlined text-base text-accent-text" aria-hidden="true">check_circle</span>
+              {{ finding }}
+            </li>
+          </ul>
+
+          <template #footer>
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="text-sm font-medium text-ink-secondary">Export report:</span>
+              <UiButton size="sm" icon="code" @click="exportReport('json')">JSON</UiButton>
+              <UiButton size="sm" icon="table_chart" @click="exportReport('csv')">CSV</UiButton>
+              <UiButton size="sm" icon="picture_as_pdf" @click="exportReport('pdf')">PDF</UiButton>
+            </div>
+          </template>
+        </UiPanel>
+
+        <div v-if="showDetailedReport" class="space-y-6">
+          <div class="grid md:grid-cols-2 gap-4">
+            <UiPanel title="Component metrics" heading-tag="h3">
+              <dl class="space-y-2 text-sm">
+                <div v-for="row in componentMetricRows" :key="row.label" class="flex justify-between">
+                  <dt class="text-ink-secondary">{{ row.label }}</dt>
+                  <dd class="text-ink-strong">{{ row.value }}</dd>
+                </div>
+              </dl>
+            </UiPanel>
+            <UiPanel title="Compliance metrics" heading-tag="h3">
+              <dl class="space-y-2 text-sm">
+                <div v-for="row in complianceMetricRows" :key="row.label" class="flex justify-between">
+                  <dt class="text-ink-secondary">{{ row.label }}</dt>
+                  <dd class="text-ink-strong">{{ row.value }}</dd>
+                </div>
+              </dl>
+            </UiPanel>
+          </div>
+
+          <UiPanel title="Recommended next steps" heading-tag="h3">
+            <ul class="space-y-2">
+              <li
+                v-for="(step, idx) in auditReport.nextSteps"
+                :key="idx"
+                class="flex items-start gap-2 text-sm p-3 rounded-tile bg-accent-subtle text-ink"
+              >
+                <span class="material-symbols-outlined text-base text-accent-text" aria-hidden="true">arrow_forward</span>
+                {{ step }}
+              </li>
+            </ul>
+          </UiPanel>
+        </div>
+
+        <UiButton
+          variant="ghost"
+          :icon="showDetailedReport ? 'expand_less' : 'expand_more'"
+          :aria-expanded="showDetailedReport"
+          @click="showDetailedReport = !showDetailedReport"
+        >
+          {{ showDetailedReport ? 'Hide' : 'Show' }} detailed report
+        </UiButton>
+      </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import apiClient from '../services/api.js';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import Dropdown from '../components/Dropdown.vue';
 import IntegrationsPanel from '../components/admin/IntegrationsPanel.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useNotice } from '../composables/useNotice.js';
+import {
+  PageHero,
+  PageSection,
+  PageShell,
+  UiButton,
+  UiCallout,
+  UiChip,
+  UiEmptyState,
+  UiPanel,
+  UiSelect,
+  UiStat,
+  UiTable,
+} from '../components/ui';
+import UiMeter from '../components/ui/UiMeter.vue';
 
 const router = useRouter();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
 const adoptionTimeframe = ref('30d');
+
+const timeframeOptions = [
+  { value: '7d', label: 'Last 7 days' },
+  { value: '30d', label: 'Last 30 days' },
+  { value: '90d', label: 'Last 90 days' },
+  { value: 'all', label: 'All time' },
+];
+
+const healthFactors = [
+  { key: 'componentCoverage', label: 'Component coverage', weight: '25%' },
+  { key: 'adoptionRate', label: 'Adoption rate', weight: '25%' },
+  { key: 'compliance', label: 'Compliance', weight: '20%' },
+  { key: 'maintenance', label: 'Maintenance', weight: '15%' },
+  { key: 'accessibility', label: 'Accessibility', weight: '15%' },
+];
 
 /** "Not collected" when the server had no data to measure a value from */
 const formatPercent = (value) => (value === null || value === undefined ? 'Not collected' : `${Number(value).toFixed(1)}%`);
@@ -1062,35 +447,11 @@ const metrics = computed(() => {
 const componentStatuses = computed(() => {
   const total = metrics.value.components.total || 1;
   return [
-    {
-      type: 'production',
-      label: 'Production Ready',
-      count: metrics.value.components.productionReady,
-      percentage: (metrics.value.components.productionReady / total) * 100,
-      color: 'bg-green-500',
-    },
-    {
-      type: 'progress',
-      label: 'In Progress',
-      count: metrics.value.components.inProgress,
-      percentage: (metrics.value.components.inProgress / total) * 100,
-      color: 'bg-yellow-500',
-    },
-    {
-      type: 'planned',
-      label: 'Planned',
-      count: metrics.value.components.planned,
-      percentage: (metrics.value.components.planned / total) * 100,
-      color: 'bg-blue-500',
-    },
-    {
-      type: 'deprecated',
-      label: 'Deprecated',
-      count: metrics.value.components.deprecated,
-      percentage: (metrics.value.components.deprecated / total) * 100,
-      color: 'bg-red-500',
-    },
-  ];
+    { type: 'production', label: 'Production ready', count: metrics.value.components.productionReady, tone: 'success' },
+    { type: 'progress', label: 'In progress', count: metrics.value.components.inProgress, tone: 'warning' },
+    { type: 'planned', label: 'Planned', count: metrics.value.components.planned, tone: 'info' },
+    { type: 'deprecated', label: 'Deprecated', count: metrics.value.components.deprecated, tone: 'danger' },
+  ].map((status) => ({ ...status, percentage: ((status.count ?? 0) / total) * 100 }));
 });
 
 const tokenCategories = computed(() => {
@@ -1142,6 +503,26 @@ const loadHealthScoreTrends = async (days = 30) => {
 // Overall health from the server; null (shown as "Not collected") until it answers or when nothing could be measured
 const overallHealth = computed(() => healthScore.value?.score ?? null);
 
+const trendIcon = computed(() => {
+  const direction = healthScore.value?.trend?.direction;
+  return direction === 'up' ? 'trending_up' : direction === 'down' ? 'trending_down' : 'trending_flat';
+});
+const trendTone = computed(() => {
+  const direction = healthScore.value?.trend?.direction;
+  return direction === 'up' ? 'text-success' : direction === 'down' ? 'text-danger' : 'text-ink-muted';
+});
+
+const trendStart = computed(() => (healthScoreTrends.value.length > 0 ? new Date(healthScoreTrends.value[0].date).toLocaleDateString() : ''));
+const trendEnd = computed(() =>
+  healthScoreTrends.value.length > 0 ? new Date(healthScoreTrends.value[healthScoreTrends.value.length - 1].date).toLocaleDateString() : '',
+);
+
+/** Tone for a 0–100 score: 80+ good, 60+ fair, below that poor */
+const scoreTone = (score) => (score === null || score === undefined ? 'neutral' : score >= 80 ? 'success' : score >= 60 ? 'warning' : 'danger');
+const scoreFill = (score) => ({ success: 'fill-success-solid', warning: 'fill-warning-solid', danger: 'fill-danger-solid', neutral: 'fill-chart-neutral' })[scoreTone(score)];
+const priorityTone = (priority) => (priority === 'high' ? 'danger' : priority === 'medium' ? 'warning' : 'info');
+const debtTone = (score) => (score >= 70 ? 'danger' : score >= 40 ? 'warning' : 'success');
+
 // Combined alerts - merge API alerts with static alerts
 const alerts = computed(() => {
   const inProgress = metrics.value.components.inProgress;
@@ -1157,7 +538,7 @@ const alerts = computed(() => {
         },
       ]
     : [];
-  
+
   // Add health score alerts from API
   const healthAlerts = healthScoreAlerts.value.map((alert, index) => ({
     id: `health-${alert.severity}-${index}`,
@@ -1167,7 +548,7 @@ const alerts = computed(() => {
     action: null,
     actionPath: null,
   }));
-  
+
   return [...healthAlerts, ...staticAlerts];
 });
 
@@ -1186,9 +567,9 @@ const loadAnalytics = async () => {
     // Load component popularity
     const popularityResponse = await apiClient.get(`/api/v1/analytics/component-popularity?timeframe=${adoptionTimeframe.value}`);
     const popularity = popularityResponse.data || [];
-    
+
     // Update top components with real data
-    topComponents.value = popularity.slice(0, 6).map(comp => ({
+    topComponents.value = popularity.slice(0, 6).map((comp) => ({
       name: comp.componentName,
       status: 'Production Ready', // TODO: Get from component status
       adoption: comp.adoptionRate,
@@ -1196,7 +577,7 @@ const loadAnalytics = async () => {
     }));
 
     // Update most used components
-    mostUsedComponents.value = popularity.slice(0, 5).map(comp => ({
+    mostUsedComponents.value = popularity.slice(0, 5).map((comp) => ({
       name: comp.componentName,
       usage: comp.totalUsage,
     }));
@@ -1208,8 +589,8 @@ const loadAnalytics = async () => {
     // Load usage trends
     const trendsResponse = await apiClient.get('/api/v1/analytics/usage-trends?days=30');
     const trends = trendsResponse.data || [];
-    const maxUsage = Math.max(...trends.map(t => t.totalUsage), 1);
-    usageTrends.value = trends.map(trend => {
+    const maxUsage = Math.max(...trends.map((t) => t.totalUsage), 1);
+    usageTrends.value = trends.map((trend) => {
       const date = new Date(trend.date);
       return {
         date: trend.date,
@@ -1228,7 +609,6 @@ const loadAnalytics = async () => {
     crossApplicationComparison.value = comparisonResponse.data || [];
   } catch (error) {
     console.error('Error loading analytics:', error);
-    // Keep mock data as fallback
   } finally {
     loadingAnalytics.value = false;
   }
@@ -1238,15 +618,8 @@ watch(adoptionTimeframe, () => {
   loadAnalytics();
 });
 
-const getStatusBadgeClass = (status) => {
-  const classes = {
-    'Production Ready': isDarkMode.value ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700',
-    'In Progress': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300' : 'bg-yellow-100 text-yellow-700',
-    'Planned': isDarkMode.value ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700',
-    'Deprecated': isDarkMode.value ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-700',
-  };
-  return classes[status] || (isDarkMode.value ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700');
-};
+const statusTone = (status) =>
+  ({ 'Production Ready': 'success', 'In Progress': 'warning', Planned: 'info', Deprecated: 'danger' })[status] || 'neutral';
 
 const handleAlertAction = (alert) => {
   if (alert.actionPath) {
@@ -1254,66 +627,47 @@ const handleAlertAction = (alert) => {
   }
 };
 
-
-
-
-
-// Watch for dark mode changes
-let darkModeObserver = null;
-let darkModeInterval = null;
-
 onMounted(async () => {
-  // Auto-open drawer if navigating from sidebar
-  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-    drawerOpen.value = true;
-    sessionStorage.removeItem('openDrawerOnLoad');
-  }
-
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-
-  // Load health score data
   await loadHealthScore();
   await loadHealthScoreTrends(30);
   await loadAnalytics();
 });
 
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
-
 // Generate audit report
 const generateAuditReport = async () => {
   generatingReport.value = true;
+  clearNotice();
   try {
     const response = await apiClient.get('/api/v1/system-health/audit-report');
     auditReport.value = response.data;
     showDetailedReport.value = false; // Start with summary view
   } catch (error) {
     console.error('Error generating audit report:', error);
-    alert('Failed to generate audit report. Please try again.');
+    showNotice('Failed to generate audit report. Please try again.', 'error');
   } finally {
     generatingReport.value = false;
   }
 };
+
+const componentMetricRows = computed(() => {
+  const c = auditReport.value?.detailedMetrics.components;
+  if (!c) return [];
+  return [
+    { label: 'Production ready', value: c.production },
+    { label: 'In progress', value: c.inProgress },
+    { label: 'Deprecated', value: c.deprecated },
+  ];
+});
+
+const complianceMetricRows = computed(() => {
+  const c = auditReport.value?.detailedMetrics.compliance;
+  if (!c) return [];
+  return [
+    { label: 'Compliance score', value: formatPercent(c.score) },
+    { label: 'Level', value: c.level },
+    { label: 'WCAG compliant', value: c.wcagCompliance === null ? 'Not collected' : c.wcagCompliance ? 'Yes' : 'No' },
+  ];
+});
 
 // Export report in different formats
 const exportReport = (format) => {
@@ -1346,7 +700,7 @@ const exportReport = (format) => {
       ['Compliance Score', formatPercent(auditReport.value.detailedMetrics.compliance.score)],
       ['Adoption Rate', formatPercent(auditReport.value.detailedMetrics.adoption.overallRate)],
     ];
-    const csvContent = csvRows.map(row => row.join(',')).join('\n');
+    const csvContent = csvRows.map((row) => row.join(',')).join('\n');
     const dataBlob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
@@ -1355,28 +709,20 @@ const exportReport = (format) => {
     link.click();
     URL.revokeObjectURL(url);
   } else if (format === 'pdf') {
-    // For PDF, we'd need a library like jsPDF or html2pdf
-    // For now, show a message that PDF export requires additional setup
-    alert('PDF export requires additional setup. Please use JSON or CSV export for now.');
+    // PDF export needs a library such as jsPDF; until then say so in the page
+    showNotice('PDF export requires additional setup. Please use JSON or CSV export for now.', 'info');
   }
 };
 
-// Get health grade color
-const getHealthGradeColor = (grade) => {
-  const colors = {
-    'A': isDarkMode.value ? 'text-green-400' : 'text-green-600',
-    'B': isDarkMode.value ? 'text-blue-400' : 'text-blue-600',
-    'C': isDarkMode.value ? 'text-yellow-400' : 'text-yellow-600',
-    'D': isDarkMode.value ? 'text-orange-400' : 'text-orange-600',
-    'F': isDarkMode.value ? 'text-red-400' : 'text-red-600',
-  };
-  return colors[grade] || (isDarkMode.value ? 'text-gray-400' : 'text-gray-600');
-};
+/** Tone for a health grade: A/B good, C fair, D/F poor */
+const gradeTone = (grade) => ({ A: 'success', B: 'success', C: 'warning', D: 'warning', F: 'danger' })[grade] || 'neutral';
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.trend-chart {
+  @apply block w-full;
+}
+.trend-bar {
+  @apply transition-opacity hover:opacity-80;
 }
 </style>
-

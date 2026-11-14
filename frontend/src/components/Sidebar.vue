@@ -43,12 +43,11 @@
       <button
         @click="toggleDarkMode"
         class="side-item w-full"
-        :title="isDarkMode ? 'Light Mode' : 'Dark Mode'"
-        :aria-label="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
-        aria-pressed="false"
+        :title="darkTheme ? 'Light Mode' : 'Dark Mode'"
+        :aria-label="darkTheme ? 'Switch to light mode' : 'Switch to dark mode'"
       >
-        <span class="material-symbols-outlined flex-shrink-0" aria-hidden="true">
-          {{ isDarkMode ? 'light_mode' : 'dark_mode' }}
+        <span class="material-symbols-outlined side-ic flex-shrink-0" aria-hidden="true">
+          {{ darkTheme ? 'light_mode' : 'dark_mode' }}
         </span>
       </button>
     </div>
@@ -85,7 +84,7 @@ const getInitialDarkMode = () => {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 };
 
-const isDarkMode = ref(getInitialDarkMode());
+const darkTheme = ref(getInitialDarkMode());
 
 // Load dark mode preference from localStorage and sync with Vuetify
 onMounted(() => {
@@ -97,21 +96,21 @@ onMounted(() => {
   mediaQuery.addEventListener('change', (e) => {
     // Only apply if user hasn't manually set a preference
     if (localStorage.getItem('darkMode') === null) {
-      isDarkMode.value = e.matches;
+      darkTheme.value = e.matches;
       applyDarkMode();
     }
   });
 });
 
 // Watch for dark mode changes and apply
-watch(isDarkMode, (newValue) => {
+watch(darkTheme, (newValue) => {
   applyDarkMode();
   localStorage.setItem('darkMode', newValue.toString());
 });
 
 const applyDarkMode = () => {
   // Update Tailwind dark class first
-  if (isDarkMode.value) {
+  if (darkTheme.value) {
     document.documentElement.classList.add('dark');
     theme.change('dark');
   } else {
@@ -121,7 +120,7 @@ const applyDarkMode = () => {
 };
 
 const toggleDarkMode = () => {
-  isDarkMode.value = !isDarkMode.value;
+  darkTheme.value = !darkTheme.value;
 };
 
 const menuItems = [
@@ -162,20 +161,21 @@ const isActive = (path) => {
 
 <style scoped>
 .side {
-  @apply bg-[#fff] border-r border-slate-200 text-slate-600 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-400;
+  @apply bg-surface border-r border-line text-ink-secondary;
 }
 .side-item {
-  @apply flex flex-col items-center gap-1.5 px-1 py-2.5 rounded-xl transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-900 dark:hover:text-white;
+  @apply flex flex-col items-center gap-1.5 px-1 py-2.5 rounded-tile transition-colors hover:bg-fill-hover hover:text-ink-strong;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
 }
 .side-item.on {
-  @apply bg-[#f2f6fd] text-[#2f5ea8] dark:bg-[#263a5c]/40 dark:text-[#9dbcf0];
+  @apply bg-accent-subtle text-accent-text;
 }
 .side-ic {
-  @apply text-slate-400 transition-colors dark:text-slate-500;
+  @apply text-ink-muted transition-colors;
 }
 .side-item:hover .side-ic,
 .side-item.on .side-ic {
-  @apply text-[#2f5ea8] dark:text-[#9dbcf0];
+  @apply text-accent-text;
 }
 .side-label {
   @apply text-xs font-medium text-center leading-tight;
@@ -184,6 +184,6 @@ const isActive = (path) => {
   @apply font-semibold;
 }
 .side-divider {
-  @apply h-px mx-3 my-2 bg-slate-200 dark:bg-slate-800;
+  @apply h-px mx-3 my-2 bg-line;
 }
 </style>

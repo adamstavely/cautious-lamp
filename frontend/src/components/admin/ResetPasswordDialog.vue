@@ -7,15 +7,15 @@
     :max-width="560"
     @update:model-value="close"
   >
-    <div v-if="done" class="space-y-4">
-      <p class="text-sm text-gray-700 dark:text-gray-300" role="status">
+    <template v-if="done">
+      <p class="text-ink" role="status">
         The password was reset and {{ user?.name }} was signed out everywhere. Share the temporary password over a secure
         channel. They'll choose a new one when they sign in. It won't be shown again.
       </p>
       <TemporaryPasswordField v-model="password" readonly />
-    </div>
-    <form v-else :id="formId" class="space-y-4" novalidate @submit.prevent="submit">
-      <p class="text-sm text-gray-700 dark:text-gray-300">
+    </template>
+    <form v-else :id="formId" class="flex flex-col gap-5" novalidate @submit.prevent="submit">
+      <p class="text-ink">
         Sets a temporary password, signs {{ user?.name || 'the user' }} out of every session, and makes them choose a new
         password at their next sign-in.
       </p>
@@ -24,31 +24,12 @@
     </form>
 
     <template #actions>
-      <button
-        v-if="done"
-        type="button"
-        class="rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
-        @click="close(false)"
-      >
-        Done
-      </button>
+      <UiButton v-if="done" variant="primary" @click="close(false)">Done</UiButton>
       <template v-else>
-        <button
-          type="button"
-          class="rounded-lg px-4 py-2 text-sm font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600"
-          :disabled="saving"
-          @click="close(false)"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          :form="formId"
-          class="rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors bg-red-600 hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-          :disabled="saving"
-        >
+        <UiButton :disabled="saving" @click="close(false)">Cancel</UiButton>
+        <UiButton type="submit" :form="formId" variant="danger" :loading="saving">
           {{ saving ? 'Resetting…' : 'Reset password' }}
-        </button>
+        </UiButton>
       </template>
     </template>
   </AdminDialog>
@@ -59,6 +40,7 @@ import { ref, watch } from 'vue';
 import AdminDialog from './AdminDialog.vue';
 import TemporaryPasswordField from './TemporaryPasswordField.vue';
 import InlineNotice from '../InlineNotice.vue';
+import UiButton from '../ui/UiButton.vue';
 import {
   adminErrorMessage,
   generatePassword,

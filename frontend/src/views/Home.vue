@@ -1,185 +1,117 @@
 <template>
-  <div class="home min-h-full bg-[#fff] dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+  <div class="home">
     <div class="max-w-6xl mx-auto px-6 md:px-10 py-12 md:py-16">
-      <!-- Hero -->
-      <section class="grid md:grid-cols-[1fr_auto] items-center gap-10 pb-14 md:pb-20 border-b border-slate-200 dark:border-slate-800">
-        <div>
-          <p class="text-sm font-medium tracking-wide text-[#2f5ea8] dark:text-[#9dbcf0] mb-4">
-            The Agency's design system
-          </p>
-          <h1 class="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] mb-5">
-            Unifying the mission,<br class="hidden sm:block" /> by design.
-          </h1>
-          <p class="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl mb-8">
-            Guidelines, components, tokens, patterns and assets for building digital experiences
-            that look, work and feel like one Agency.
-          </p>
-          <div class="flex flex-wrap gap-3">
-            <router-link to="/getting-started" class="btn btn-primary">
-              Get started
-              <span class="material-symbols-outlined text-lg" aria-hidden="true">arrow_forward</span>
-            </router-link>
-            <router-link to="/components" class="btn btn-secondary">Browse components</router-link>
-            <router-link to="/search" class="btn btn-ghost">
-              <span class="material-symbols-outlined text-lg" aria-hidden="true">search</span>
-              Search
-            </router-link>
-          </div>
-        </div>
-        <div class="spot hidden md:block w-72 h-72 lg:w-80 lg:h-80" aria-hidden="true" v-html="spot('site/compass-rose')"></div>
-      </section>
+      <PageHero
+        eyebrow="The Agency's design system"
+        title="Unifying the mission, by design."
+        lead="Guidelines, components, tokens, patterns and assets for building digital experiences that look, work and feel like one Agency."
+        spot="site/compass-rose"
+      >
+        <template #actions>
+          <UiButton variant="primary" to="/getting-started" trailing-icon="arrow_forward">Get started</UiButton>
+          <UiButton to="/components">Browse components</UiButton>
+          <UiButton variant="ghost" to="/search" icon="search">Search</UiButton>
+        </template>
+      </PageHero>
 
-      <!-- Foundations -->
-      <section class="py-14 md:py-16">
-        <div class="section-head">
-          <h2>Start with the foundations</h2>
-          <p>The building blocks every product shares.</p>
-        </div>
+      <PageSection title="Start with the foundations" description="The building blocks every product shares.">
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <router-link v-for="item in foundations" :key="item.to" :to="item.to" class="card group">
-            <div class="spot w-20 h-20 -ml-1 mb-3" aria-hidden="true" v-html="spot(item.art)"></div>
-            <h3 class="card-title">
-              {{ item.title }}
-              <span class="material-symbols-outlined arrow" aria-hidden="true">arrow_forward</span>
-            </h3>
-            <p class="card-body">{{ item.body }}</p>
-          </router-link>
+          <UiCard v-for="item in foundations" :key="item.to" :to="item.to" :title="item.title" :spot="item.art">{{ item.body }}</UiCard>
         </div>
-      </section>
+      </PageSection>
 
-      <!-- Roles -->
-      <section class="py-14 md:py-16 border-t border-slate-200 dark:border-slate-800">
-        <div class="section-head">
-          <h2>Made for how you work</h2>
-          <p>Paths through the system for each discipline.</p>
-        </div>
+      <PageSection title="Made for how you work" description="Paths through the system for each discipline." divided>
         <div class="grid md:grid-cols-3 gap-4">
           <router-link v-for="role in roles" :key="role.to" :to="role.to" class="role group">
-            <div class="spot w-28 h-28 mx-auto mb-4" aria-hidden="true" v-html="spot(role.art)"></div>
-            <h3 class="card-title justify-center">{{ role.title }}</h3>
-            <p class="card-body text-center mb-4">{{ role.body }}</p>
-            <span class="link">
+            <SpotArt :name="role.art" size="lg" class="mb-4" />
+            <h3 class="role-title">{{ role.title }}</h3>
+            <p class="role-body">{{ role.body }}</p>
+            <span class="role-cta">
               {{ role.cta }}
-              <span class="material-symbols-outlined arrow" aria-hidden="true">arrow_forward</span>
+              <span class="material-symbols-outlined role-arrow" aria-hidden="true">arrow_forward</span>
             </span>
           </router-link>
         </div>
-      </section>
+      </PageSection>
 
-      <!-- Showcase -->
-      <section class="py-14 md:py-16 border-t border-slate-200 dark:border-slate-800">
-        <div class="section-head">
-          <h2>What you see is what you build</h2>
-          <p>These components use the same tokens the products ship with, so the docs can't drift from production.</p>
-        </div>
-        <div class="grid lg:grid-cols-[1.05fr_0.95fr] gap-4">
-          <div class="panel">
-            <div class="panel-body">
-              <div class="flex flex-wrap items-center gap-3">
-                <span class="btn btn-primary">Primary</span>
-                <span class="btn btn-secondary">Secondary</span>
-                <span class="btn btn-ghost">
-                  <span class="material-symbols-outlined text-lg" aria-hidden="true">download</span>
-                  Ghost
-                </span>
-              </div>
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="chip chip-stable">Stable</span>
-                <span class="chip chip-beta">Beta</span>
-                <span class="chip chip-deprecated">Deprecated</span>
-                <span class="chip">
-                  <span class="material-symbols-outlined" aria-hidden="true">accessibility_new</span>
-                  WCAG 2.1 AA
-                </span>
-              </div>
-              <router-link to="/components/buttons" class="specimen group">
-                <div class="flex items-start gap-3">
-                  <div class="spot w-12 h-12 shrink-0 -m-1" aria-hidden="true" v-html="spot('foundations/component-button')"></div>
-                  <div class="min-w-0 flex-1">
-                    <h3 class="font-semibold group-hover:text-[#2f5ea8] dark:group-hover:text-[#9dbcf0] transition-colors">Button</h3>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 font-mono">@design-system/button</p>
-                  </div>
-                  <span class="chip chip-stable">Stable</span>
-                </div>
-                <p class="card-body">Triggers an action. Primary, secondary and ghost variants in three sizes, with loading and icon states.</p>
-                <div class="flex flex-wrap gap-1.5">
-                  <span class="code">variant</span>
-                  <span class="code">size</span>
-                  <span class="code">loading</span>
-                </div>
-              </router-link>
+      <PageSection
+        title="What you see is what you build"
+        description="These components use the same tokens the products ship with, so the docs can't drift from production."
+        divided
+      >
+        <div class="grid lg:grid-cols-2 gap-4">
+          <UiPanel>
+            <!-- Specimens: the real components, shown rather than used -->
+            <div class="flex flex-wrap items-center gap-3" inert>
+              <UiButton variant="primary">Primary</UiButton>
+              <UiButton>Secondary</UiButton>
+              <UiButton variant="ghost" icon="download">Ghost</UiButton>
             </div>
-            <div class="panel-foot">
+            <div class="flex flex-wrap items-center gap-2">
+              <UiChip tone="accent">Stable</UiChip>
+              <UiChip tone="warning">Beta</UiChip>
+              <UiChip>Deprecated</UiChip>
+              <UiChip icon="accessibility_new">WCAG 2.1 AA</UiChip>
+            </div>
+            <router-link to="/components/buttons" class="specimen group">
+              <div class="flex items-start gap-3">
+                <SpotArt name="foundations/component-button" size="sm" class="-m-1" />
+                <div class="min-w-0 flex-1">
+                  <h3 class="specimen-title">Button</h3>
+                  <p class="font-code text-xs text-ink-muted">@design-system/button</p>
+                </div>
+                <UiChip tone="accent">Stable</UiChip>
+              </div>
+              <p class="text-sm leading-relaxed text-ink-secondary">Triggers an action. Primary, secondary and ghost variants in three sizes, with loading and icon states.</p>
+              <div class="flex flex-wrap gap-1.5">
+                <UiCode>variant</UiCode>
+                <UiCode>size</UiCode>
+                <UiCode>loading</UiCode>
+              </div>
+            </router-link>
+            <template #footer>
               <span>Live components</span>
-              <router-link to="/components" class="link">Browse components →</router-link>
-            </div>
-          </div>
+              <UiLink to="/components" arrow>Browse components</UiLink>
+            </template>
+          </UiPanel>
 
-          <div class="panel">
-            <div class="panel-body">
-              <div class="callout">
-                <span class="material-symbols-outlined text-xl" aria-hidden="true">info</span>
-                <p>Color is <b>information, not decoration.</b> Every color in the system is a named token with one job, from text and surfaces to status and focus.</p>
-              </div>
-              <ol class="steps">
-                <li><span><b>Install the tokens</b> so color, type and space come from one place.</span></li>
-                <li><span><b>Compose the components</b> rather than restyling them, and pass props like <span class="code">variant</span> and <span class="code">size</span>.</span></li>
-                <li><span><b>Check accessibility</b> with the contrast and APCA tools before you ship.</span></li>
-              </ol>
-            </div>
-            <div class="panel-foot">
+          <UiPanel>
+            <UiCallout tone="info">
+              Color is <strong class="text-ink-strong">information, not decoration.</strong> Every color in the system is a named token with one job, from text and surfaces to status and focus.
+            </UiCallout>
+            <ol class="steps">
+              <li><span><strong>Install the tokens</strong> so color, type and space come from one place.</span></li>
+              <li><span><strong>Compose the components</strong> rather than restyling them, and pass props like <UiCode>variant</UiCode> and <UiCode>size</UiCode>.</span></li>
+              <li><span><strong>Check accessibility</strong> with the contrast and APCA tools before you ship.</span></li>
+            </ol>
+            <template #footer>
               <span>Getting started</span>
-              <router-link to="/getting-started/quick-start" class="link">Read the guide →</router-link>
-            </div>
-          </div>
+              <UiLink to="/getting-started/quick-start" arrow>Read the guide</UiLink>
+            </template>
+          </UiPanel>
         </div>
-      </section>
+      </PageSection>
 
-      <!-- Tools -->
-      <section class="py-14 md:py-16 border-t border-slate-200 dark:border-slate-800">
-        <div class="section-head section-head-split">
-          <div>
-            <h2>Popular tools</h2>
-            <p>Check, generate and convert without leaving the system.</p>
-          </div>
-          <router-link to="/tools" class="link shrink-0">
-            All tools
-            <span class="material-symbols-outlined text-base" aria-hidden="true">arrow_forward</span>
-          </router-link>
-        </div>
+      <PageSection title="Popular tools" description="Check, generate and convert without leaving the system." divided>
+        <template #actions>
+          <UiLink to="/tools" arrow>All tools</UiLink>
+        </template>
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
-          <router-link v-for="tool in tools" :key="tool.to" :to="tool.to" class="tool group">
-            <div class="spot w-14 h-14 shrink-0" aria-hidden="true" v-html="spot(tool.art)"></div>
-            <div class="min-w-0">
-              <h3 class="font-medium group-hover:text-[#2f5ea8] dark:group-hover:text-[#9dbcf0] transition-colors">{{ tool.title }}</h3>
-              <p class="text-sm text-slate-500 dark:text-slate-400 truncate">{{ tool.body }}</p>
-            </div>
-          </router-link>
+          <UiLinkRow v-for="tool in tools" :key="tool.to" :to="tool.to" :title="tool.title" :body="tool.body" :spot="tool.art" />
         </div>
-      </section>
+      </PageSection>
 
-      <!-- More -->
-      <section class="py-14 md:py-16 border-t border-slate-200 dark:border-slate-800">
-        <div class="section-head">
-          <h2>Go further</h2>
-        </div>
+      <PageSection title="Go further" divided>
         <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <router-link v-for="item in more" :key="item.to" :to="item.to" class="card card-sm group">
-            <div class="spot w-16 h-16 -ml-1 mb-2" aria-hidden="true" v-html="spot(item.art)"></div>
-            <h3 class="card-title">
-              {{ item.title }}
-              <span class="material-symbols-outlined arrow" aria-hidden="true">arrow_forward</span>
-            </h3>
-            <p class="card-body">{{ item.body }}</p>
-          </router-link>
+          <UiCard v-for="item in more" :key="item.to" :to="item.to" :title="item.title" :spot="item.art" compact>{{ item.body }}</UiCard>
         </div>
-      </section>
+      </PageSection>
     </div>
   </div>
 </template>
 
 <script setup>
-import { spot } from '../utils/spotIllustrations.js';
+import { PageHero, PageSection, SpotArt, UiButton, UiCallout, UiCard, UiChip, UiCode, UiLink, UiLinkRow, UiPanel } from '../components/ui';
 
 const foundations = [
   { title: 'Guidelines', to: '/guidelines', art: 'site/guidelines', body: 'Principles and best practices for consistent, accessible interfaces.' },
@@ -214,101 +146,41 @@ const more = [
 </script>
 
 <style scoped>
-.spot :deep(svg) {
-  width: 100%;
-  height: 100%;
-  display: block;
+.home {
+  @apply min-h-full bg-surface text-ink;
 }
 
-.btn {
-  @apply inline-flex items-center gap-2 h-11 px-5 rounded-full text-sm font-medium transition-colors;
-}
-.btn-primary {
-  @apply bg-[#2f5ea8] text-white hover:bg-[#264d8b] dark:bg-[#9dbcf0] dark:text-slate-950 dark:hover:bg-[#b8cff5];
-}
-.btn-secondary {
-  @apply border border-slate-300 text-slate-800 hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900;
-}
-.btn-ghost {
-  @apply text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-900;
-}
-
-.section-head {
-  @apply flex flex-col gap-1 mb-8;
-}
-.section-head-split {
-  @apply sm:flex-row sm:items-end sm:justify-between gap-4;
-}
-.section-head h2 {
-  @apply text-2xl md:text-3xl font-semibold tracking-tight;
-}
-.section-head p {
-  @apply text-slate-600 dark:text-slate-400;
-}
-
-.card {
-  @apply block rounded-2xl p-6 border border-slate-200 bg-[#fff] transition-all hover:border-[#8fb0e8] hover:shadow-[0_8px_24px_-12px_rgba(47,94,168,0.25)] dark:border-slate-800 dark:bg-slate-900/40 dark:hover:border-[#6f93d1];
-}
-.card-sm {
-  @apply p-5;
-}
-.card-title {
-  @apply flex items-center gap-1.5 text-lg font-semibold mb-1.5;
-}
-.card-body {
-  @apply text-sm leading-relaxed text-slate-600 dark:text-slate-400;
-}
-
+/* A path per discipline: centred, on a sunken tile that takes the accent on hover */
 .role {
-  @apply flex flex-col items-center rounded-2xl p-8 bg-slate-50 border border-transparent transition-all hover:bg-[#f2f6fd] hover:border-[#dce8fb] dark:bg-slate-900/60 dark:hover:bg-slate-900 dark:hover:border-slate-700;
+  @apply flex flex-col items-center p-8 rounded-card border border-transparent bg-surface-sunken text-center transition-all;
+  @apply hover:border-accent-highlight hover:bg-accent-subtle;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
+}
+.role-title {
+  @apply mb-1.5 text-lg font-semibold text-ink-strong;
+}
+.role-body {
+  @apply mb-4 text-sm leading-relaxed text-ink-secondary;
+}
+.role-cta {
+  @apply inline-flex items-center gap-1 text-sm font-medium text-accent-text group-hover:underline underline-offset-4;
+}
+.role-arrow {
+  @apply text-base transition-transform group-hover:translate-x-1;
 }
 
-.tool {
-  @apply flex items-center gap-4 rounded-xl p-2 -mx-2 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors;
-}
-
-.panel {
-  @apply flex flex-col rounded-2xl border border-slate-200 bg-[#fff] overflow-hidden dark:border-slate-800 dark:bg-slate-900/40;
-}
-.panel-body {
-  @apply flex-1 flex flex-col gap-5 p-6;
-}
-.panel-foot {
-  @apply flex items-center justify-between px-6 py-3 border-t border-slate-200 bg-slate-50 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400;
-}
-
-.chip {
-  @apply inline-flex items-center gap-1 h-6 px-2.5 rounded-full border border-slate-200 text-xs font-medium text-slate-600 dark:border-slate-700 dark:text-slate-300;
-}
-.chip .material-symbols-outlined {
-  @apply text-sm;
-}
-.chip-stable {
-  @apply border-[#dce8fb] bg-[#f2f6fd] text-[#2f5ea8] dark:border-[#263a5c] dark:bg-[#263a5c]/40 dark:text-[#9dbcf0];
-}
-.chip-beta {
-  @apply border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300;
-}
-.chip-deprecated {
-  @apply border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400;
-}
-
+/* A component's catalogue entry */
 .specimen {
-  @apply flex flex-col gap-3 rounded-xl border border-slate-200 p-4 transition-all hover:border-[#8fb0e8] dark:border-slate-800 dark:hover:border-[#6f93d1];
+  @apply flex flex-col gap-3 p-4 rounded-tile border border-line transition-all hover:border-accent-border;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
 }
-.code {
-  @apply inline-block font-mono text-xs px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300;
-}
-
-.callout {
-  @apply flex gap-3 rounded-xl p-4 text-sm leading-relaxed bg-[#f2f6fd] text-[#2f5ea8] dark:bg-[#263a5c]/40 dark:text-[#9dbcf0];
-}
-.callout b {
-  @apply text-slate-900 dark:text-white font-semibold;
+.specimen-title {
+  @apply font-semibold text-ink-strong transition-colors group-hover:text-accent-text;
 }
 
+/* Numbered steps */
 .steps {
-  @apply flex flex-col gap-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400;
+  @apply flex flex-col gap-4 text-sm leading-relaxed text-ink-secondary;
   counter-reset: step;
 }
 .steps li {
@@ -316,21 +188,10 @@ const more = [
   counter-increment: step;
 }
 .steps li::before {
-  @apply flex-none grid place-items-center w-7 h-7 rounded-full text-xs font-semibold bg-[#2f5ea8] text-white dark:bg-[#9dbcf0] dark:text-slate-950;
+  @apply flex-none grid place-items-center w-7 h-7 rounded-pill bg-accent text-xs font-semibold text-ink-on-accent;
   content: counter(step);
 }
-.steps b {
-  @apply text-slate-900 dark:text-white font-semibold;
-}
-
-.link {
-  @apply inline-flex items-center gap-1 text-sm font-medium text-[#2f5ea8] dark:text-[#9dbcf0] hover:underline underline-offset-4;
-}
-
-.arrow {
-  @apply text-base text-slate-400 transition-transform;
-}
-.group:hover .arrow {
-  @apply translate-x-1 text-[#2f5ea8] dark:text-[#9dbcf0];
+.steps strong {
+  @apply font-semibold text-ink-strong;
 }
 </style>

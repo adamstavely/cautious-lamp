@@ -1,280 +1,129 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <div class="flex-1 h-full transition-all duration-300 relative overflow-hidden" style="margin-left: 48px;">
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-6 min-h-screen">
-          <div class="flex gap-4" style="min-height: calc(100vh - 200px);">
-            <!-- Main Content Area -->
-            <div class="flex-1 overflow-y-auto space-y-4">
-      <InlineNotice :notice="notice" @dismiss="clearNotice" />
+  <PageShell width="full">
+    <div class="review-layout">
+      <!-- Main content -->
+      <div class="flex min-w-0 flex-1 flex-col gap-4">
+        <InlineNotice :notice="notice" @dismiss="clearNotice" />
 
-      <!-- Loading -->
-      <div v-if="loadState === 'loading'" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
-        <div class="p-8 text-center">
-          <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'">Loading review…</p>
-        </div>
-      </div>
+        <!-- Loading -->
+        <UiPanel v-if="loadState === 'loading'">
+          <UiSpinner label="Loading review…" />
+        </UiPanel>
 
-      <!-- Expired, not shared, not found, or failed to load -->
-      <div v-else-if="errorState" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg" role="alert">
-        <div class="p-8 text-center">
-          <div class="flex justify-center mb-4">
-            <div :class="isDarkMode ? 'bg-red-900/20' : 'bg-red-100'" class="w-16 h-16 rounded-full flex items-center justify-center">
-              <svg :class="isDarkMode ? 'text-red-400' : 'text-red-600'" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-          <h2 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-2xl font-bold mb-2">{{ errorState.title }}</h2>
-          <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="mb-4">{{ errorState.message }}</p>
-          <button
-            v-if="errorState.retry"
-            @click="retryLoad"
-            class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors"
-            :class="isDarkMode ? 'bg-indigo-500 hover:bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'"
-          >
-            Try again
-          </button>
+        <!-- Expired, not shared, not found, or failed to load -->
+        <div v-else-if="errorState" role="alert">
+          <UiEmptyState :title="errorState.title" :body="errorState.message" :spot="errorState.spot">
+            <template v-if="errorState.retry" #actions>
+              <UiButton variant="primary" icon="refresh" @click="retryLoad">Try again</UiButton>
+            </template>
+          </UiEmptyState>
         </div>
-      </div>
 
-      <!-- Waiting for the password -->
-      <div v-else-if="loadState === 'password'" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
-        <div class="p-8 text-center">
-          <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="mb-4">This review is password protected.</p>
-          <button
-            v-if="!passwordRequired"
-            @click="passwordRequired = true"
-            class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors"
-            :class="isDarkMode ? 'bg-indigo-500 hover:bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'"
-          >
-            Enter password
-          </button>
-        </div>
-      </div>
+        <!-- Waiting for the password -->
+        <UiEmptyState v-else-if="loadState === 'password'" title="Password required" body="This review is password protected." spot="site/building-trust">
+          <template v-if="!passwordRequired" #actions>
+            <UiButton variant="primary" icon="lock_open" @click="passwordRequired = true">Enter password</UiButton>
+          </template>
+        </UiEmptyState>
 
-      <!-- Completed Review Message -->
-      <div v-else-if="reviewCompleted" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
-        <div class="p-8 text-center">
-          <div class="flex justify-center mb-4">
-            <div :class="isDarkMode ? 'bg-green-900/20' : 'bg-green-100'" class="w-16 h-16 rounded-full flex items-center justify-center">
-              <svg :class="isDarkMode ? 'text-green-400' : 'text-green-600'" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-          <h2 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-2xl font-bold mb-2">Review Complete</h2>
-          <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="mb-4">This review has been marked as complete by the designer.</p>
-          <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-sm">Comments and review information are preserved, but the review link is no longer active.</p>
-        </div>
-      </div>
+        <!-- Completed Review Message -->
+        <UiEmptyState v-else-if="reviewCompleted" title="Review complete" spot="site/review">
+          This review has been marked as complete by the designer.
+          Comments and review information are preserved, but the review link is no longer active.
+        </UiEmptyState>
 
-      <!-- File Preview Section -->
-      <div v-else :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
-        <div :class="isDarkMode ? 'border-slate-700' : 'border-gray-200'" class="border-b px-6 py-4">
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex-1">
-              <h2 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-xl font-bold mb-2 flex items-center gap-3 flex-wrap">{{ metadata.filename }} <DemoDataBadge /></h2>
-              <p v-if="metadata.designer" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'" class="text-sm">Designer: {{ metadata.designer }}</p>
-            </div>
-            <div class="flex items-center gap-3">
-              <button
-                v-if="metadata.versions.length > 1"
-                @click="toggleComparisonMode"
-                class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm compare-versions-btn"
-                :class="isDarkMode 
-                  ? 'bg-indigo-500 hover:bg-indigo-400' 
-                  : 'bg-indigo-600 hover:bg-indigo-700'"
-              >
-                <span class="material-symbols-outlined text-base">compare</span>
-                {{ comparisonMode ? 'Single View' : 'Compare Versions' }}
-              </button>
-              <button
-                v-if="previewUrl && !comparisonMode"
-                @click="openInNewTab"
-                class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm open-new-tab-btn"
-                :class="isDarkMode 
-                  ? 'bg-indigo-500 hover:bg-indigo-400' 
-                  : 'bg-indigo-600 hover:bg-indigo-700'"
-              >
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-                Open in New Tab
-              </button>
-            </div>
-          </div>
-        </div>
-        <div class="p-6">
+        <!-- File Preview Section -->
+        <UiPanel v-else :title="metadata.filename" :description="metadata.designer ? `Designer: ${metadata.designer}` : ''" heading-tag="h1">
+          <template #actions>
+            <DemoDataBadge />
+            <UiButton v-if="metadata.versions.length > 1" icon="compare" @click="toggleComparisonMode">
+              {{ comparisonMode ? 'Single view' : 'Compare versions' }}
+            </UiButton>
+            <UiButton v-if="previewUrl && !comparisonMode" icon="open_in_new" @click="openInNewTab">Open in new tab</UiButton>
+          </template>
+
           <!-- Single View Mode -->
-          <div v-if="!comparisonMode">
-        <VersionSelector
-          v-model="selectedVersion"
-          :versions="metadata.versions"
-          @update:modelValue="loadVersion"
-        />
-        <PreviewFrame 
-          ref="previewFrameRef"
-          :url="previewUrl" 
-          :review-id="reviewId"
-          :version-id="selectedVersion"
-          :content-type="previewContentType"
-          :read-only="reviewCompleted"
-          @annotations-changed="handleAnnotationsChanged"
-        />
+          <div v-if="!comparisonMode" class="flex flex-col gap-4">
+            <div class="max-w-sm">
+              <VersionSelector
+                v-model="selectedVersion"
+                :versions="metadata.versions"
+                @update:modelValue="loadVersion"
+              />
+            </div>
+            <PreviewFrame
+              ref="previewFrameRef"
+              :url="previewUrl"
+              :review-id="reviewId"
+              :version-id="selectedVersion"
+              :content-type="previewContentType"
+              :read-only="reviewCompleted"
+              @annotations-changed="handleAnnotationsChanged"
+            />
           </div>
-          
+
           <!-- Comparison Mode -->
-          <div v-else class="space-y-4">
-            <div class="grid grid-cols-2 gap-6">
-              <!-- Left Version -->
-              <div>
-                <div class="mb-3">
-                  <label :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'" class="block text-sm font-medium mb-2">Version 1</label>
-                  <VersionSelector
-                    v-model="leftVersion"
-                    :versions="metadata.versions"
-                    @update:modelValue="loadLeftVersion"
-                  />
-                </div>
-                <div :class="isDarkMode ? 'border-indigo-800' : 'border-indigo-200'" class="border-2 rounded-lg overflow-hidden">
-                  <PreviewFrame 
-                    :url="leftPreviewUrl" 
-                    :review-id="reviewId"
-                    :version-id="leftVersion"
-                    :content-type="leftContentType"
-                    :sync-annotations="false"
-                    read-only
-                  />
-                </div>
+          <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="flex flex-col gap-3">
+              <VersionSelector
+                v-model="leftVersion"
+                label="Version 1"
+                :versions="metadata.versions"
+                @update:modelValue="loadLeftVersion"
+              />
+              <div class="compare-frame">
+                <PreviewFrame
+                  :url="leftPreviewUrl"
+                  :review-id="reviewId"
+                  :version-id="leftVersion"
+                  :content-type="leftContentType"
+                  :sync-annotations="false"
+                  read-only
+                />
               </div>
-              
-              <!-- Right Version -->
-              <div>
-                <div class="mb-3">
-                  <label :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'" class="block text-sm font-medium mb-2">Version 2</label>
-                  <VersionSelector
-                    v-model="rightVersion"
-                    :versions="metadata.versions"
-                    @update:modelValue="loadRightVersion"
-                  />
-                </div>
-                <div :class="isDarkMode ? 'border-indigo-800' : 'border-indigo-200'" class="border-2 rounded-lg overflow-hidden">
-                  <PreviewFrame 
-                    :url="rightPreviewUrl" 
-                    :review-id="reviewId"
-                    :version-id="rightVersion"
-                    :content-type="rightContentType"
-                    :sync-annotations="false"
-                    read-only
-                  />
-                </div>
+            </div>
+            <div class="flex flex-col gap-3">
+              <VersionSelector
+                v-model="rightVersion"
+                label="Version 2"
+                :versions="metadata.versions"
+                @update:modelValue="loadRightVersion"
+              />
+              <div class="compare-frame">
+                <PreviewFrame
+                  :url="rightPreviewUrl"
+                  :review-id="reviewId"
+                  :version-id="rightVersion"
+                  :content-type="rightContentType"
+                  :sync-annotations="false"
+                  read-only
+                />
               </div>
             </div>
           </div>
-        </div>
+        </UiPanel>
+
+        <PasswordPrompt
+          v-model="passwordRequired"
+          :error="passwordError"
+          :loading="passwordSubmitting"
+          @submit="submitPassword"
+        />
       </div>
 
-    <PasswordPrompt
-      v-model="passwordRequired"
-      :error="passwordError"
-      :loading="passwordSubmitting"
-      @submit="submitPassword"
-    />
-    </div>
-
-    <!-- Right Sidebar -->
-    <div v-if="loadState === 'ready'" class="w-72 flex-shrink-0">
-      <div class="space-y-4">
-        <!-- Designer Tools Card -->
-        <div v-if="isDesigner && !reviewCompleted" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="rounded-lg shadow-lg">
-          <div class="p-4">
-            <div class="flex items-center gap-2 mb-3">
-              <svg :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <h3 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-sm font-bold uppercase tracking-wider">DESIGNER TOOLS</h3>
-            </div>
-            <div class="grid gap-2 grid-cols-4">
-              <!-- Set or change the password (the API never returns it, only hasPassword) -->
-              <v-tooltip v-if="can('manage-password')" :text="metadata.hasPassword ? 'Change Password' : 'Set Password'">
-                <template #activator="{ props }">
-                  <button
-                    @click="handleChangePassword"
-                    class="flex items-center justify-center p-2 rounded-lg transition-colors"
-                    :class="isDarkMode 
-                      ? 'hover:bg-slate-600 bg-slate-800' 
-                      : 'hover:bg-white bg-white'"
-                    v-bind="props"
-                  >
-                    <svg :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                    </svg>
-                  </button>
-                </template>
-              </v-tooltip>
-              
-              <!-- Extend Expiration -->
-              <v-tooltip v-if="can('extend')" text="Extend Expiration">
-                <template #activator="{ props }">
-                  <button
-                    @click="handleExtendExpiration"
-                    class="flex items-center justify-center p-2 rounded-lg transition-colors"
-                    :class="isDarkMode 
-                      ? 'hover:bg-slate-600 bg-slate-800' 
-                      : 'hover:bg-white bg-white'"
-                    v-bind="props"
-                  >
-                    <svg :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                </template>
-              </v-tooltip>
-              
-              <!-- Upload New Version -->
-              <v-tooltip v-if="can('upload-version')" text="Upload New Version">
-                <template #activator="{ props }">
-                  <button
-                    @click="handleUploadNewVersion"
-                    class="flex items-center justify-center p-2 rounded-lg transition-colors"
-                    :class="isDarkMode 
-                      ? 'hover:bg-slate-600 bg-slate-800' 
-                      : 'hover:bg-white bg-white'"
-                    v-bind="props"
-                  >
-                    <svg :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                  </button>
-                </template>
-              </v-tooltip>
-              
-              <!-- Sharing Settings -->
-              <v-tooltip v-if="can('manage-sharing')" text="Sharing Settings">
-                <template #activator="{ props }">
-                  <button
-                    @click="handleSharingSettings"
-                    class="flex items-center justify-center p-2 rounded-lg transition-colors"
-                    :class="isDarkMode 
-                      ? 'hover:bg-slate-600 bg-slate-800' 
-                      : 'hover:bg-white bg-white'"
-                    v-bind="props"
-                  >
-                    <svg :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                    </svg>
-                  </button>
-                </template>
-              </v-tooltip>
-            </div>
+      <!-- Right sidebar -->
+      <aside v-if="loadState === 'ready'" class="review-sidebar" aria-label="Review tools">
+        <!-- Designer tools -->
+        <UiPanel v-if="isDesigner && !reviewCompleted" title="Designer tools" heading-tag="h3">
+          <div class="flex flex-wrap gap-2">
+            <!-- Set or change the password (the API never returns it, only hasPassword) -->
+            <UiButton v-if="can('manage-password')" icon-only icon="key" :label="metadata.hasPassword ? 'Change password' : 'Set password'" @click="handleChangePassword" />
+            <UiButton v-if="can('extend')" icon-only icon="calendar_month" label="Extend expiration" @click="handleExtendExpiration" />
+            <UiButton v-if="can('upload-version')" icon-only icon="upload" label="Upload new version" @click="handleUploadNewVersion" />
+            <UiButton v-if="can('manage-sharing')" icon-only icon="share" label="Sharing settings" @click="handleSharingSettings" />
           </div>
-        </div>
-        
+        </UiPanel>
+
         <WorkflowCard
           :workflow-state="metadata.workflowState"
           :allowed-actions="metadata.allowedActions || []"
@@ -290,7 +139,7 @@
           @workflow-resubmit="handleResubmitForReview"
           @workflow-completed="handleMarkCompleted"
         />
-        
+
         <CommentsSidebar
           :comments="comments"
           :version-id="selectedVersion"
@@ -302,7 +151,7 @@
           @emoji-reaction-toggled="handleEmojiReactionToggled"
           @emoji-reaction-toggled-reply="handleEmojiReactionToggledReply"
         />
-      </div>
+      </aside>
     </div>
 
     <!-- Version Upload Modal -->
@@ -315,7 +164,7 @@
     <!-- Request Changes Modal -->
     <PromptModal
       v-model="showRejectModal"
-      title="Request Changes"
+      title="Request changes"
       label="What needs to change? (optional)"
       placeholder="Reason for the designer"
       :required="false"
@@ -325,8 +174,8 @@
     <!-- Change Password Modal -->
     <PromptModal
       v-model="showPasswordModal"
-      :title="metadata.hasPassword ? 'Change Password' : 'Set Password'"
-      label="Enter new password (leave empty to remove password)"
+      :title="metadata.hasPassword ? 'Change password' : 'Set password'"
+      label="New password (leave empty to remove the password)"
       placeholder="Enter new password or leave empty"
       type="password"
       :required="false"
@@ -334,142 +183,39 @@
     />
 
     <!-- Sharing Settings Modal -->
-    <v-dialog :model-value="showSharingModal" @update:model-value="showSharingModal = $event" max-width="600">
-      <v-card :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" style="background-color: var(--v-theme-surface) !important;">
-        <v-card-title :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="d-flex align-center justify-space-between px-6 pt-6 pb-4" style="background-color: var(--v-theme-surface) !important;">
-          <div class="d-flex align-center">
-            <svg :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-            </svg>
-            <span :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-lg font-bold">Sharing Settings</span>
-          </div>
-          <button @click.stop="showSharingModal = false" 
-            :class="isDarkMode 
-              ? 'text-gray-500 hover:text-gray-400' 
-              : 'text-gray-400 hover:text-gray-600'" 
-            class="transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </v-card-title>
-        <v-divider />
-        <v-card-text :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="px-6 py-4" style="background-color: var(--v-theme-surface) !important;">
-          <div class="space-y-4">
-            <!-- Sharing Type Selection -->
-            <div>
-              <label :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'" class="block text-sm font-medium mb-2">Who can access this review?</label>
-              <div class="space-y-2">
-                <label class="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    v-model="sharingType"
-                    value="anyone"
-                    :class="isDarkMode 
-                      ? 'text-indigo-400 focus:ring-indigo-400' 
-                      : 'text-indigo-600 focus:ring-indigo-500'"
-                    class="w-4 h-4"
-                  />
-                  <span :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-sm">Anyone with the link</span>
-                </label>
-                <label class="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    v-model="sharingType"
-                    value="restricted"
-                    :class="isDarkMode 
-                      ? 'text-indigo-400 focus:ring-indigo-400' 
-                      : 'text-indigo-600 focus:ring-indigo-500'"
-                    class="w-4 h-4"
-                  />
-                  <span :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-sm">Only people I list</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Approved People List -->
-            <div v-if="sharingType === 'restricted'">
-              <label :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'" class="block text-sm font-medium mb-2">Approved People</label>
-              <div class="space-y-2">
-                <div v-for="(person, index) in approvedPeople" :key="index" class="flex items-center gap-2">
-                  <input
-                    type="email"
-                    v-model="approvedPeople[index]"
-                    placeholder="email@example.com"
-                    class="flex-1 px-3 py-2 border rounded-lg focus:ring-2 text-sm"
-                    :class="isDarkMode 
-                      ? 'border-slate-600 focus:ring-indigo-400 focus:border-indigo-400 bg-slate-700 text-gray-100 placeholder-gray-400' 
-                      : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-gray-900 placeholder-gray-500'"
-                  />
-                  <button
-                    type="button"
-                    @click="removeApprovedPerson(index)"
-                    :class="isDarkMode 
-                      ? 'text-red-400 hover:text-red-300' 
-                      : 'text-red-600 hover:text-red-700'"
-                    class="transition-colors"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  @click="addApprovedPerson"
-                  :class="isDarkMode 
-                    ? 'text-indigo-400 hover:text-indigo-300' 
-                    : 'text-indigo-600 hover:text-indigo-700'"
-                  class="text-sm font-medium transition-colors"
-                >
-                  + Add Person
-                </button>
-              </div>
-            </div>
-          </div>
-        </v-card-text>
-        <v-divider />
-        <v-card-actions :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" class="px-6 py-4" style="background-color: var(--v-theme-surface) !important;">
-          <v-spacer />
-          <v-btn
-            variant="text"
-            @click="showSharingModal = false"
-            :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-          >
-            Cancel
-          </v-btn>
-          <v-btn
-            color="primary"
-            variant="flat"
-            @click="handleSharingChanged"
-          >
-            Save Changes
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <UiDialog v-model:open="showSharingModal" title="Sharing settings">
+      <form :id="sharingFormId" class="flex flex-col gap-5" @submit.prevent="handleSharingChanged">
+        <UiRadioChoices
+          v-model="sharingType"
+          label="Who can access this review?"
+          :options="[
+            { value: 'anyone', label: 'Anyone with the link' },
+            { value: 'restricted', label: 'Only people I list' },
+          ]"
+        />
+        <ApprovedPeopleEditor v-if="sharingType === 'restricted'" v-model="approvedPeople" />
+      </form>
+      <template #footer>
+        <UiButton variant="ghost" @click="showSharingModal = false">Cancel</UiButton>
+        <UiButton variant="primary" type="submit" :form="sharingFormId">Save changes</UiButton>
+      </template>
+    </UiDialog>
 
     <!-- Confirm Completion Modal -->
     <ConfirmModal
       v-model="showConfirmModal"
       :title="confirmModalTitle"
       :message="confirmModalMessage"
-      confirm-text="Mark as Complete"
+      confirm-text="Mark as complete"
       confirm-color="primary"
       @confirm="confirmMarkCompleted"
     />
-
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, useId } from 'vue';
 import { useRoute } from 'vue-router';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import VersionSelector from '../components/review-ui/VersionSelector.vue';
 import PreviewFrame from '../components/review-ui/PreviewFrame.vue';
@@ -480,6 +226,9 @@ import PromptModal from '../components/review-ui/PromptModal.vue';
 import PasswordPrompt from '../components/review-ui/PasswordPrompt.vue';
 import ConfirmModal from '../components/review-ui/ConfirmModal.vue';
 import DemoDataBadge from '../components/review-ui/DemoDataBadge.vue';
+import ApprovedPeopleEditor from '../components/review-ui/ApprovedPeopleEditor.vue';
+import { PageShell, UiButton, UiDialog, UiEmptyState, UiPanel, UiSpinner } from '../components/ui';
+import UiRadioChoices from '../components/ui/UiRadioChoices.vue';
 import { getCurrentUser } from '../mockData.js';
 import {
   reviewAPI,
@@ -491,14 +240,12 @@ import {
   errorStatus,
   apiErrorMessage,
 } from '../services/api.js';
-import { useDarkMode } from '../composables/useDarkMode.js';
 import { useNotice } from '../composables/useNotice.js';
 
 const route = useRoute();
 // The review shown follows the route, so navigating between reviews reloads
 const reviewId = computed(() => String(route.params.id || ''));
 
-const isDarkMode = useDarkMode();
 const { notice, showNotice, clearNotice } = useNotice();
 
 // The acting user, read once (identity is switched elsewhere and the page reloaded)
@@ -545,18 +292,19 @@ const confirmModalTitle = ref('');
 const confirmModalMessage = ref('');
 const sharingType = ref('anyone'); // 'anyone' or 'restricted' (API: 'approved_emails')
 const approvedPeople = ref(['']);
+const sharingFormId = `sharing-${useId()}`;
 
 /** 410 means either completed or expired; the API says which */
 const goneState = (error) => (error?.response?.data?.reason === 'completed' ? 'completed' : 'expired');
 
 const errorStates = {
-  expired: { title: 'This review link has expired', message: 'Ask the designer to extend it if you still need access.' },
-  completed: { title: 'Review complete', message: 'The designer has marked this review as complete, so it no longer accepts feedback.' },
-  forbidden: { title: "This review hasn't been shared with you", message: 'Ask the designer to add your email address to the review.' },
-  notfound: { title: 'Review not found', message: 'The link may be wrong, or the review may have been deleted.' },
+  expired: { title: 'This review link has expired', message: 'Ask the designer to extend it if you still need access.', spot: 'guidelines/time' },
+  completed: { title: 'Review complete', message: 'The designer has marked this review as complete, so it no longer accepts feedback.', spot: 'site/review' },
+  forbidden: { title: "This review hasn't been shared with you", message: 'Ask the designer to add your email address to the review.', spot: 'site/building-trust' },
+  notfound: { title: 'Review not found', message: 'The link may be wrong, or the review may have been deleted.', spot: 'site/not-found' },
 };
 const errorState = computed(() => {
-  if (loadState.value === 'error') return { title: 'The review could not be loaded', message: loadErrorMessage.value, retry: true };
+  if (loadState.value === 'error') return { title: 'The review could not be loaded', message: loadErrorMessage.value, retry: true, spot: 'patterns/error-handling' };
   return errorStates[loadState.value] || null;
 });
 
@@ -948,18 +696,6 @@ const handleSharingSettings = () => {
   showSharingModal.value = true;
 };
 
-const addApprovedPerson = () => {
-  approvedPeople.value.push('');
-};
-
-const removeApprovedPerson = (index) => {
-  if (approvedPeople.value.length > 1) {
-    approvedPeople.value.splice(index, 1);
-  } else {
-    approvedPeople.value[0] = '';
-  }
-};
-
 const handleSharingChanged = async () => {
   const restricted = sharingType.value === 'restricted';
   const emails = restricted ? approvedPeople.value.map((email) => email.trim()).filter(Boolean) : [];
@@ -1033,3 +769,15 @@ watch(reviewId, () => {
   loadReview();
 }, { immediate: true });
 </script>
+
+<style scoped>
+.review-layout {
+  @apply flex flex-col gap-4 xl:flex-row xl:items-start;
+}
+.review-sidebar {
+  @apply flex w-full shrink-0 flex-col gap-4 xl:w-80;
+}
+.compare-frame {
+  @apply overflow-hidden rounded-tile border-2 border-accent-highlight;
+}
+</style>

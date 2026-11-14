@@ -1,267 +1,89 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      CSS Converter
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Bidirectional conversion between CSS and LESS, SASS, and SCSS preprocessor formats with nesting and variable support.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">code</span>
-                      CSS Preprocessor
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="cssConverterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- CSS code icon -->
-                      <rect x="40" y="60" width="120" height="80" rx="4" fill="url(#cssConverterGradient)" opacity="0.3"/>
-                      <line x1="50" y1="80" x2="100" y2="80" stroke="url(#cssConverterGradient)" stroke-width="3" opacity="0.6"/>
-                      <line x1="50" y1="100" x2="130" y2="100" stroke="url(#cssConverterGradient)" stroke-width="3" opacity="0.6"/>
-                      <line x1="50" y1="120" x2="110" y2="120" stroke="url(#cssConverterGradient)" stroke-width="3" opacity="0.6"/>
-                      <path d="M 60 40 L 60 60 M 140 40 L 140 60" stroke="url(#cssConverterGradient)" stroke-width="4" opacity="0.7" stroke-linecap="round"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="CSS converter"
+      lead="Convert between CSS and the LESS, SASS and SCSS preprocessor formats, both ways, with nesting and variable support."
+      spot="tools/css-converter"
+      size="tool"
+    />
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <!-- Conversion Mode Selector -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">swap_horiz</span>
-                Conversion Mode
-              </h2>
-              
-              <div class="flex flex-wrap gap-2">
-                <button
-                  v-for="mode in conversionModes"
-                  :key="mode.value"
-                  @click="selectedMode = mode.value; convertCss()"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  :class="selectedMode === mode.value
-                    ? (isDarkMode 
-                      ? 'bg-indigo-600 text-white' 
-                      : 'bg-indigo-600 text-white')
-                    : (isDarkMode
-                      ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                >
-                  {{ mode.label }}
-                </button>
-              </div>
-            </div>
+    <PageSection title="Convert">
+      <div class="space-y-6">
+        <UiSegmented v-model="selectedMode" :options="conversionModes" label="Conversion mode" @update:model-value="convertCss" />
 
-            <!-- Converter Section -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">code</span>
-                Converter
-              </h2>
+        <InlineNotice :notice="notice" @dismiss="clearNotice" />
 
-              <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <UiPanel title="Input">
+            <template #actions>
+              <UiButton size="sm" variant="ghost" icon="swap_horiz" label="Swap" title="Swap input and output" @click="swapInputs" />
+              <UiButton size="sm" variant="ghost" label="Clear" @click="clearInput" />
+              <UiButton size="sm" variant="ghost" icon="content_copy" icon-only :label="`Copy ${inputLabel}`" @click="copyToClipboard(cssInput)" />
+            </template>
+            <UiTextarea
+              v-model="cssInput"
+              :label="inputLabel"
+              rows="18"
+              mono
+              placeholder="Enter your CSS code here..."
+              @update:model-value="convertCss"
+            />
+          </UiPanel>
 
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Input Section -->
-                <div>
-                  <div class="flex items-center justify-between mb-2">
-                    <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      {{ selectedMode.startsWith('css-to') ? 'CSS' : selectedMode.includes('less') ? 'LESS' : selectedMode.includes('sass') && !selectedMode.includes('scss') ? 'SASS' : 'SCSS' }} Input
-                    </label>
-                    <div class="flex gap-2">
-                      <button
-                        @click="swapInputs"
-                        class="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-1"
-                        :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-                        title="Swap input and output"
-                      >
-                        <span class="material-symbols-outlined text-sm">swap_horiz</span>
-                        Swap
-                      </button>
-                      <button
-                        @click="clearInput"
-                        class="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700"
-                        :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  </div>
-                  <div class="relative">
-                    <textarea
-                      v-model="cssInput"
-                      @input="convertCss"
-                      placeholder="Enter your CSS code here..."
-                      class="w-full h-96 px-4 py-3 border rounded-lg text-sm font-mono resize-none"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-800 text-gray-100' 
-                        : 'border-gray-300 bg-gray-50 text-gray-900'"
-                    ></textarea>
-                    <button
-                      @click="copyToClipboard(cssInput)"
-                      class="absolute top-2 right-2 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-slate-600"
-                      title="Copy CSS"
-                    >
-                      <span class="material-symbols-outlined text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">content_copy</span>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Output Section -->
-                <div>
-                  <div class="flex items-center justify-between mb-2">
-                    <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      {{ selectedMode.startsWith('css-to') ? (selectedMode === 'css-to-less' ? 'LESS' : selectedMode === 'css-to-sass' ? 'SASS' : 'SCSS') : 'CSS' }} Output
-                    </label>
-                    <button
-                      @click="copyToClipboard(convertedOutput)"
-                      class="text-xs px-3 py-1 rounded transition-colors"
-                      :class="isDarkMode 
-                        ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
-                        : 'bg-indigo-600 text-white hover:bg-indigo-700'"
-                    >
-                      <span class="material-symbols-outlined text-sm mr-1 align-middle">content_copy</span>
-                      Copy
-                    </button>
-                  </div>
-                  <div class="relative">
-                    <textarea
-                      v-model="convertedOutput"
-                      placeholder="Converted code will appear here..."
-                      class="w-full h-96 px-4 py-3 border rounded-lg text-sm font-mono resize-none"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-800 text-gray-100' 
-                        : 'border-gray-300 bg-gray-50 text-gray-900'"
-                    ></textarea>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Information Section -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">info</span>
-                About CSS Preprocessors
-              </h2>
-
-              <div class="space-y-6">
-                <!-- LESS Explanation -->
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">LESS</h3>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    LESS (Leaner Style Sheets) is a CSS preprocessor that extends CSS with features like variables, mixins, functions, and nested rules. LESS uses curly braces <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">{}</code> for nesting, similar to CSS.
-                  </p>
-                  <p class="text-sm leading-relaxed" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <strong>Features:</strong> Variables (<code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">@variable</code>), mixins, functions, nested selectors, and operations.
-                  </p>
-                </div>
-
-                <!-- SASS Explanation -->
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">SASS</h3>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    SASS (Syntactically Awesome Style Sheets) is a CSS preprocessor that uses indentation-based syntax (no curly braces or semicolons). SASS files use the <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">.sass</code> extension.
-                  </p>
-                  <p class="text-sm leading-relaxed" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <strong>Features:</strong> Variables (<code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">$variable</code>), mixins, functions, nested selectors (indentation-based), and operations.
-                  </p>
-                </div>
-
-                <!-- SCSS Explanation -->
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">SCSS</h3>
-                  <p class="text-sm leading-relaxed mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    SCSS (Sassy CSS) is the newer syntax for SASS that uses curly braces and semicolons, making it more similar to CSS. SCSS files use the <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">.scss</code> extension.
-                  </p>
-                  <p class="text-sm leading-relaxed" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <strong>Features:</strong> Variables (<code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">$variable</code>), mixins, functions, nested selectors (with braces), and operations. SCSS is a superset of CSS, so any valid CSS is also valid SCSS.
-                  </p>
-                </div>
-
-                <!-- Conversion Notes -->
-                <div>
-                  <h3 class="text-md font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Conversion Notes</h3>
-                  <ul class="list-disc list-inside space-y-1 text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <li>This converter performs basic structural conversion and nesting detection.</li>
-                    <li>For complex conversions, manual review and adjustment may be required.</li>
-                    <li>Variable extraction and mixin conversion require manual implementation.</li>
-                    <li>Nested selectors are automatically detected and converted to the appropriate syntax.</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
+          <UiPanel title="Output">
+            <UiCodeBlock v-if="convertedOutput" :code="convertedOutput" :label="outputLabel" />
+            <p v-else class="text-sm text-ink-muted">Converted code will appear here.</p>
+          </UiPanel>
         </div>
       </div>
-    </div>
-  </div>
+    </PageSection>
+
+    <PageSection title="About CSS preprocessors" divided>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm leading-relaxed text-ink-secondary">
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">LESS</h3>
+          <p>
+            LESS (Leaner Style Sheets) is a CSS preprocessor that extends CSS with features like variables, mixins, functions, and nested rules. LESS uses curly braces <UiCode>{}</UiCode> for nesting, similar to CSS.
+          </p>
+          <p><strong class="text-ink">Features:</strong> Variables (<UiCode>@variable</UiCode>), mixins, functions, nested selectors, and operations.</p>
+        </div>
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">SASS</h3>
+          <p>
+            SASS (Syntactically Awesome Style Sheets) is a CSS preprocessor that uses indentation-based syntax (no curly braces or semicolons). SASS files use the <UiCode>.sass</UiCode> extension.
+          </p>
+          <p><strong class="text-ink">Features:</strong> Variables (<UiCode>$variable</UiCode>), mixins, functions, nested selectors (indentation-based), and operations.</p>
+        </div>
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">SCSS</h3>
+          <p>
+            SCSS (Sassy CSS) is the newer syntax for SASS that uses curly braces and semicolons, making it more similar to CSS. SCSS files use the <UiCode>.scss</UiCode> extension.
+          </p>
+          <p>
+            <strong class="text-ink">Features:</strong> Variables (<UiCode>$variable</UiCode>), mixins, functions, nested selectors (with braces), and operations. SCSS is a superset of CSS, so any valid CSS is also valid SCSS.
+          </p>
+        </div>
+        <div class="space-y-2">
+          <h3 class="text-base font-semibold text-ink-strong">Conversion notes</h3>
+          <ul class="list-disc list-inside space-y-1">
+            <li>This converter performs basic structural conversion and nesting detection.</li>
+            <li>For complex conversions, manual review and adjustment may be required.</li>
+            <li>Variable extraction and mixin conversion require manual implementation.</li>
+            <li>Nested selectors are automatically detected and converted to the appropriate syntax.</li>
+          </ul>
+        </div>
+      </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
+import { computed, ref } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import { useDarkMode } from '../composables/useDarkMode.js';
 import { useNotice } from '../composables/useNotice.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { PageHero, PageSection, PageShell, UiButton, UiCode, UiCodeBlock, UiPanel, UiSegmented, UiTextarea } from '../components/ui';
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const { notice, showNotice, clearNotice } = useNotice();
 
 // Conversion modes
@@ -274,6 +96,17 @@ const conversionModes = [
   { label: 'SCSS → CSS', value: 'scss-to-css' }
 ];
 const selectedMode = ref('css-to-less');
+
+const inputLabel = computed(() => {
+  const mode = selectedMode.value;
+  const format = mode.startsWith('css-to') ? 'CSS' : mode.includes('less') ? 'LESS' : mode.includes('sass') && !mode.includes('scss') ? 'SASS' : 'SCSS';
+  return `${format} input`;
+});
+const outputLabel = computed(() => {
+  const mode = selectedMode.value;
+  const format = mode.startsWith('css-to') ? (mode === 'css-to-less' ? 'LESS' : mode === 'css-to-sass' ? 'SASS' : 'SCSS') : 'CSS';
+  return `${format} output`;
+});
 
 // Input and output
 const cssInput = ref('');
@@ -908,10 +741,3 @@ const copyToClipboard = async (text) => {
   }
 };
 </script>
-
-<style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-</style>
-

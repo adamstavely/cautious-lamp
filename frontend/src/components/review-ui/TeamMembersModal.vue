@@ -1,124 +1,56 @@
 <template>
-  <v-dialog v-model="dialog" max-width="700" persistent>
-    <v-card>
-      <v-card-title class="d-flex align-center justify-space-between">
-        <span class="text-gray-900 dark:text-gray-100">Manage Team Members</span>
-        <button @click="close" class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </v-card-title>
-      
-      <v-divider />
-      
-      <v-card-text class="pt-6">
-        <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
-        <!-- Add Member Form -->
-        <div class="mb-6">
-          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Add Member</h3>
-          <v-form @submit.prevent="addMember">
-            <div class="d-flex flex-column ga-3">
-              <div class="d-flex ga-2">
-                <v-text-field
-                  v-model="newMemberEmail"
-                  label="Email Address"
-                  type="email"
-                  variant="outlined"
-                  placeholder="member@example.com"
-                  required
-                  class="flex-1"
-                />
-                <v-text-field
-                  v-model="newMemberName"
-                  label="Name (optional)"
-                  variant="outlined"
-                  placeholder="John Doe"
-                  class="flex-1"
-                />
-              </div>
-              <div class="d-flex ga-2">
-                <v-select
-                  v-model="newMemberRole"
-                  label="Role"
-                  variant="outlined"
-                  :items="roleOptions"
-                  required
-                  class="flex-1"
-                />
-                <v-btn color="primary" type="submit" :disabled="!newMemberEmail.trim() || busy" :loading="busy" class="align-self-end">
-                  Add
-                </v-btn>
-              </div>
-            </div>
-          </v-form>
-        </div>
-        
-        <!-- Members List -->
+  <UiDialog :open="modelValue" title="Manage team members" size="lg" @update:open="emit('update:modelValue', $event)">
+    <InlineNotice :notice="notice" @dismiss="clearNotice" />
+
+    <section aria-labelledby="add-member-heading" class="flex flex-col gap-4">
+      <h3 id="add-member-heading" class="text-sm font-semibold text-ink-strong">Add member</h3>
+      <form class="grid sm:grid-cols-2 gap-4 items-end" @submit.prevent="addMember">
+        <UiInput v-model="newMemberEmail" label="Email address" type="email" placeholder="member@example.com" required autocomplete="off" />
+        <UiInput v-model="newMemberName" label="Name (optional)" placeholder="John Doe" autocomplete="off" />
+        <UiSelect v-model="newMemberRole" label="Role" :options="roleOptions" required />
         <div>
-          <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            Members ({{ members.length }})
-          </h3>
-          <v-list v-if="members.length > 0">
-            <v-list-item
-              v-for="member in members"
-              :key="member.email"
-              class="px-0"
-            >
-              <template #prepend>
-                <v-avatar color="indigo" size="40">
-                  <span class="text-white">{{ getInitials(member.name || member.email) }}</span>
-                </v-avatar>
-              </template>
-              
-              <v-list-item-title>
-                <div class="d-flex align-center ga-2 flex-wrap">
-                  <span class="text-gray-900 dark:text-gray-100">{{ member.name || member.email }}</span>
-                  <v-chip
-                    :color="getRoleColor(member.role)"
-                    size="small"
-                    class="font-medium"
-                  >
-                    {{ member.role || 'Designer' }}
-                  </v-chip>
-                </div>
-              </v-list-item-title>
-              <v-list-item-subtitle class="text-gray-600 dark:text-gray-300">
-                {{ member.email }}
-              </v-list-item-subtitle>
-              
-              <template #append>
-                <div class="d-flex align-center ga-2">
-                  <v-select
-                    :model-value="member.role"
-                    :items="roleOptions"
-                    variant="outlined"
-                    density="compact"
-                    hide-details
-                    :disabled="busy"
-                    style="min-width: 140px;"
-                    @update:model-value="updateMemberRole(member.email, $event)"
-                  />
-                  <v-btn
-                    icon="mdi-delete"
-                    variant="text"
-                    size="small"
-                    :disabled="busy"
-                    :aria-label="`Remove ${member.name || member.email}`"
-                    @click="removeMember(member.email)"
-                    color="error"
-                  />
-                </div>
-              </template>
-            </v-list-item>
-          </v-list>
-          <div v-else class="text-center py-8 text-gray-500 dark:text-gray-400">
-            No members yet. Add members using the form above.
-          </div>
+          <UiButton variant="primary" type="submit" icon="person_add" :disabled="!newMemberEmail.trim() || busy" :loading="busy">Add</UiButton>
         </div>
-      </v-card-text>
-    </v-card>
-  </v-dialog>
+      </form>
+    </section>
+
+    <section aria-labelledby="members-heading" class="flex flex-col gap-3">
+      <h3 id="members-heading" class="text-sm font-semibold text-ink-strong">Members ({{ members.length }})</h3>
+      <ul v-if="members.length > 0" class="member-list">
+        <li v-for="member in members" :key="member.email" class="member-row">
+          <span class="member-avatar" aria-hidden="true">{{ getInitials(member.name || member.email) }}</span>
+          <div class="min-w-0 flex-1">
+            <p class="flex flex-wrap items-center gap-2">
+              <span class="font-medium text-ink-strong">{{ member.name || member.email }}</span>
+              <UiChip :tone="member.role === 'Art Director' ? 'info' : 'accent'">{{ member.role || 'Designer' }}</UiChip>
+            </p>
+            <p class="text-xs text-ink-muted truncate">{{ member.email }}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-44">
+              <UiSelect
+                :model-value="member.role"
+                :options="roleOptions"
+                :aria-label="`Role for ${member.name || member.email}`"
+                :disabled="busy"
+                @update:model-value="updateMemberRole(member.email, $event)"
+              />
+            </div>
+            <UiButton
+              icon-only
+              icon="delete"
+              variant="ghost"
+              size="sm"
+              :disabled="busy"
+              :label="`Remove ${member.name || member.email}`"
+              @click="removeMember(member.email)"
+            />
+          </div>
+        </li>
+      </ul>
+      <p v-else class="py-6 text-center text-ink-muted">No members yet. Add members using the form above.</p>
+    </section>
+  </UiDialog>
 </template>
 
 <script setup>
@@ -126,6 +58,7 @@ import { ref, computed, watch } from 'vue';
 import { teamsAPI, apiErrorMessage } from '../../services/api.js';
 import { useNotice } from '../../composables/useNotice.js';
 import InlineNotice from '../InlineNotice.vue';
+import { UiButton, UiChip, UiDialog, UiInput, UiSelect } from '../ui';
 
 const props = defineProps({
   modelValue: Boolean,
@@ -135,7 +68,6 @@ const props = defineProps({
 // members-updated: (team) after each change; the dialog stays open
 const emit = defineEmits(['update:modelValue', 'members-updated']);
 
-const dialog = ref(false);
 const newMemberEmail = ref('');
 const newMemberName = ref('');
 const newMemberRole = ref('Designer');
@@ -148,7 +80,6 @@ const members = computed(() => currentTeam.value?.members || []);
 const { notice, showNotice, clearNotice } = useNotice();
 
 watch(() => props.modelValue, (val) => {
-  dialog.value = val;
   if (val) {
     currentTeam.value = props.team ? JSON.parse(JSON.stringify(props.team)) : null;
     newMemberEmail.value = '';
@@ -158,14 +89,6 @@ watch(() => props.modelValue, (val) => {
   }
 });
 
-watch(dialog, (val) => {
-  emit('update:modelValue', val);
-});
-
-const close = () => {
-  dialog.value = false;
-};
-
 const getInitials = (name) => {
   if (!name || !name.trim()) return '?';
   const parts = name.trim().split(/\s+/);
@@ -173,13 +96,6 @@ const getInitials = (name) => {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
   return parts[0][0].toUpperCase();
-};
-
-const getRoleColor = (role) => {
-  if (role === 'Art Director') {
-    return 'purple';
-  }
-  return 'indigo';
 };
 
 /** Run a team change, keep the returned team, and report failures inline. */
@@ -224,3 +140,14 @@ const removeMember = (email) =>
   change((teamId) => teamsAPI.removeMember(teamId, email), 'Failed to remove the member.', 'Member removed.');
 </script>
 
+<style scoped>
+.member-list {
+  @apply flex flex-col divide-y divide-line-faint rounded-tile border border-line;
+}
+.member-row {
+  @apply flex flex-wrap items-center gap-3 px-4 py-3;
+}
+.member-avatar {
+  @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-accent-subtle text-sm font-semibold text-accent-text;
+}
+</style>

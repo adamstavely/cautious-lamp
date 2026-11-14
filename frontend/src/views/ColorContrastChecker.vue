@@ -1,401 +1,149 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Compare colors
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Compare two colors to check contrast, difference, and colorblind safety.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">contrast</span>
-                      Accessibility Tool
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="contrastGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized contrast icon -->
-                      <rect x="40" y="60" width="60" height="80" rx="4" fill="url(#contrastGradient)" opacity="0.5"/>
-                      <rect x="100" y="60" width="60" height="80" rx="4" fill="url(#contrastGradient)" opacity="0.3"/>
-                      <circle cx="70" cy="100" r="8" fill="rgba(255,255,255,0.6)"/>
-                      <circle cx="130" cy="100" r="8" fill="rgba(255,255,255,0.4)"/>
-                    </svg>
-                  </div>
-                </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="Compare colors"
+      lead="Compare two colors to check contrast, difference and colorblind safety."
+      spot="tools/color-contrast-checker"
+      size="tool"
+    />
+
+    <PageSection>
+      <div class="grid lg:grid-cols-3 gap-6 items-start">
+        <div class="flex flex-col gap-6">
+          <UiPanel v-for="field in colorFields" :key="field.type" :title="field.label">
+            <UiInput
+              v-model="colorRefs[field.type].value"
+              :label="`${field.label} value`"
+              :placeholder="field.placeholder"
+              :required="field.required"
+              mono
+            />
+            <button type="button" class="picker-button" :aria-label="`Pick ${field.type} color`" title="Pick color" @click="openColorPicker(field.type, $event)">
+              <span class="block h-32"><UiSwatch :color="colorRefs[field.type].value" size="fill" :label="`${field.label}: ${colorRefs[field.type].value}`" /></span>
+              <span class="picker-button-label">
+                <span class="material-symbols-outlined text-base" aria-hidden="true">colorize</span>
+                Pick color
+              </span>
+            </button>
+            <div v-if="field.type === 'foreground'" class="hue-range">
+              <UiRange
+                :model-value="Math.round(Number(foregroundHue) || 0)"
+                label="Foreground hue"
+                unit="°"
+                :min="0"
+                :max="360"
+                @update:model-value="updateForegroundFromSlider"
+              />
+            </div>
+          </UiPanel>
+
+          <UiPanel title="Supported formats" flush>
+            <UiTable caption="Supported color formats" compact>
+              <thead>
+                <tr>
+                  <th scope="col">Color space</th>
+                  <th scope="col">Opaque</th>
+                  <th scope="col">Alpha</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="format in supportedFormats" :key="format.space">
+                  <td class="font-medium">{{ format.space }}</td>
+                  <td class="font-code text-xs text-ink-secondary">{{ format.opaque }}</td>
+                  <td class="font-code text-xs text-ink-secondary">{{ format.alpha }}</td>
+                </tr>
+              </tbody>
+            </UiTable>
+          </UiPanel>
+        </div>
+
+        <div class="lg:col-span-2 flex flex-col gap-6">
+          <UiPanel title="Contrast">
+            <div class="flex items-center gap-4" role="status">
+              <span class="pair-preview" aria-hidden="true"><span class="pair-preview-fg"></span></span>
+              <div>
+                <p class="text-4xl font-semibold tracking-tight text-ink-strong">{{ contrastRatio.toFixed(2) }}</p>
+                <p class="text-sm text-ink-secondary">Contrast ratio</p>
               </div>
             </div>
-          </div>
+          </UiPanel>
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <div class="grid lg:grid-cols-3 gap-6">
-              <!-- Left Column: Color Inputs -->
-              <div class="lg:col-span-1 space-y-6">
-                <!-- Foreground Color -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <label class="block text-sm font-medium mb-2 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <span class="material-symbols-outlined text-indigo-600">format_color_text</span>
-                    Foreground color<span class="text-red-500">*</span>
-                  </label>
-                  <div class="flex items-center gap-3 mb-4">
-                    <input
-                      v-model="foregroundColor"
-                      type="text"
-                      @input="updateContrast"
-                      placeholder="#7AC600"
-                      class="flex-1 px-3 py-2 border rounded-lg text-sm font-mono"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
-                    <button
-                      @click="openColorPicker('foreground', $event)"
-                      class="w-12 h-12 rounded border-2 cursor-pointer transition-colors flex-shrink-0"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 hover:border-indigo-400' 
-                        : 'border-gray-300 hover:border-indigo-500'"
-                      :style="{ backgroundColor: foregroundColor }"
-                      title="Pick color"
-                    ></button>
-                  </div>
-                  
-                  <!-- Color Swatch -->
-                  <div 
-                    class="w-full h-32 rounded-lg border-2 mb-4"
-                    :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                    :style="{ backgroundColor: foregroundColor }"
-                  ></div>
-                  
-                  <!-- Color Slider -->
-                  <input
-                    type="range"
-                    min="0"
-                    max="360"
-                    :value="foregroundHue"
-                    @input="updateForegroundFromSlider($event.target.value)"
-                    class="w-full h-2 rounded-lg appearance-none cursor-pointer"
-                    :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-200'"
-                  />
-                </div>
+          <UiPanel flush>
+            <UiTable caption="WCAG contrast criteria">
+              <thead>
+                <tr>
+                  <th scope="col">WCAG criteria</th>
+                  <th scope="col">AA score</th>
+                  <th scope="col">AA minimum</th>
+                  <th scope="col">AAA score</th>
+                  <th scope="col">AAA minimum</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(criterion, index) in wcagCriteria" :key="index">
+                  <td>{{ criterion.label }}</td>
+                  <td><UiChip :tone="criterion.aaPass ? 'success' : 'danger'">{{ criterion.aaPass ? 'Pass' : 'Fail' }}</UiChip></td>
+                  <td class="font-code">{{ criterion.aaMinimum }}</td>
+                  <td><UiChip :tone="criterion.aaaPass ? 'success' : 'danger'">{{ criterion.aaaPass ? 'Pass' : 'Fail' }}</UiChip></td>
+                  <td class="font-code">{{ criterion.aaaMinimum }}</td>
+                </tr>
+              </tbody>
+            </UiTable>
+          </UiPanel>
 
-                <!-- Background Color -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <label class="block text-sm font-medium mb-2 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <span class="material-symbols-outlined text-indigo-600">format_color_fill</span>
-                    Background color
-                  </label>
-                  <div class="flex items-center gap-3 mb-4">
-                    <input
-                      v-model="backgroundColor"
-                      type="text"
-                      @input="updateContrast"
-                      placeholder="#0E55A8"
-                      class="flex-1 px-3 py-2 border rounded-lg text-sm font-mono"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
-                    <button
-                      @click="openColorPicker('background', $event)"
-                      class="w-12 h-12 rounded border-2 cursor-pointer transition-colors flex-shrink-0"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 hover:border-indigo-400' 
-                        : 'border-gray-300 hover:border-indigo-500'"
-                      :style="{ backgroundColor: backgroundColor }"
-                      title="Pick color"
-                    ></button>
-                  </div>
-                  
-                  <!-- Color Swatch -->
-                  <div 
-                    class="w-full h-32 rounded-lg border-2"
-                    :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                    :style="{ backgroundColor: backgroundColor }"
-                  ></div>
-                </div>
-
-                <!-- Supported Formats -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h3 class="text-sm font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">code</span>
-                    Supported formats
-                  </h3>
-                  <div class="overflow-x-auto">
-                    <table class="w-full text-xs">
-                      <thead>
-                        <tr class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                          <th class="text-left py-2 font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">COLOR SPACE</th>
-                          <th class="text-left py-2 font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">OPAQUE</th>
-                          <th class="text-left py-2 font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">ALPHA</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                          <td class="py-2 font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">HEX</td>
-                          <td class="py-2 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">#FFFFFF</td>
-                          <td class="py-2 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">#FFFFFFFF</td>
-                        </tr>
-                        <tr class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                          <td class="py-2 font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">RGB</td>
-                          <td class="py-2 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">rgb(255, 255, 255)</td>
-                          <td class="py-2 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">rgba(255, 255, 255, 1)</td>
-                        </tr>
-                        <tr>
-                          <td class="py-2 font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">HSL</td>
-                          <td class="py-2 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">hsl(360, 100%, 50%)</td>
-                          <td class="py-2 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">hsla(360, 100%, 50%, 1)</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+          <UiPanel title="Color blindness simulation" flush>
+            <UiTable caption="Color difference under simulated color vision deficiencies">
+              <thead>
+                <tr>
+                  <th scope="col">Preview</th>
+                  <th scope="col">Vision type</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Color difference</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(vision, index) in visionTypes" :key="index">
+                  <td>
+                    <span class="flex">
+                      <UiSwatch :color="vision.fgColor" :label="`${vision.name} foreground: ${vision.fgColor}`" />
+                      <UiSwatch :color="vision.bgColor" :label="`${vision.name} background: ${vision.bgColor}`" />
+                    </span>
+                  </td>
+                  <td class="font-medium">{{ vision.name }}</td>
+                  <td><UiChip :tone="vision.safe ? 'success' : 'danger'">{{ vision.safe ? 'Safe' : 'Unsafe' }}</UiChip></td>
+                  <td>
+                    <div class="flex items-center gap-3 min-w-40">
+                      <span class="font-code text-sm">{{ vision.deltaE.toFixed(2) }}</span>
+                      <UiMeter
+                        :value="vision.deltaE"
+                        :max="100"
+                        :tone="vision.safe ? 'success' : 'danger'"
+                        :label="`${vision.name} color difference`"
+                        :value-text="`ΔE ${vision.deltaE.toFixed(2)}, ${vision.safe ? 'safe' : 'unsafe'}`"
+                      />
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </UiTable>
+            <template #footer>
+              <div class="flex flex-col gap-3 py-2 text-sm leading-relaxed text-ink-secondary">
+                <h3 class="font-semibold text-ink-strong">How this works</h3>
+                <p>
+                  Ratings are calculated by first converting the colors to their simulated counterparts. The simulated values approximate the
+                  colors that would be seen by fully deficient vision of each particular type. The simulated colors are then compared using
+                  the DeltaE 2000 color difference formula. A color difference value of 11 or more is considered passing; anything lower is
+                  too similar to distinguish.
+                </p>
+                <p>The color difference meters visualize the DeltaE value to give reference to how different the colors would appear for each color vision deficiency.</p>
               </div>
-
-              <!-- Right Column: Contrast Results -->
-              <div class="lg:col-span-2 space-y-6">
-                <!-- Contrast Card -->
-                <div 
-                  class="rounded-lg shadow-sm border"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <div class="p-6">
-                    <!-- Contrast Ratio Display -->
-                    <div class="flex items-center gap-6 mb-8">
-                      <div class="flex items-center gap-2">
-                        <div class="relative w-16 h-16 rounded border-2" :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'">
-                          <div 
-                            class="absolute inset-0 rounded"
-                            :style="{ backgroundColor: backgroundColor }"
-                          ></div>
-                          <div 
-                            class="absolute inset-2 rounded"
-                            :style="{ backgroundColor: foregroundColor }"
-                          ></div>
-                        </div>
-                        <div>
-                          <div class="text-4xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                            {{ contrastRatio.toFixed(2) }}
-                          </div>
-                          <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                            Contrast ratio
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- WCAG Criteria Table -->
-                    <div class="overflow-x-auto">
-                      <table class="w-full">
-                        <thead>
-                          <tr class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                            <th class="text-left py-3 px-4 font-semibold text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">WCAG CRITERIA</th>
-                            <th class="text-left py-3 px-4 font-semibold text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">AA SCORE</th>
-                            <th class="text-left py-3 px-4 font-semibold text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">AA MINIMUM</th>
-                            <th class="text-left py-3 px-4 font-semibold text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">AAA SCORE</th>
-                            <th class="text-left py-3 px-4 font-semibold text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">AAA MINIMUM</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr 
-                            v-for="(criterion, index) in wcagCriteria" 
-                            :key="index"
-                            class="border-b"
-                            :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-                          >
-                            <td class="py-3 px-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                              {{ criterion.label }}
-                            </td>
-                            <td class="py-3 px-4">
-                              <span 
-                                class="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
-                                :class="criterion.aaPass 
-                                  ? (isDarkMode 
-                                    ? 'bg-green-900/30 text-green-300' 
-                                    : 'bg-green-100 text-green-800')
-                                  : (isDarkMode 
-                                    ? 'bg-red-900/30 text-red-300' 
-                                    : 'bg-red-100 text-red-800')"
-                              >
-                                {{ criterion.aaPass ? 'Pass' : 'Fail' }}
-                              </span>
-                            </td>
-                            <td class="py-3 px-4 font-mono text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                              {{ criterion.aaMinimum }}
-                            </td>
-                            <td class="py-3 px-4">
-                              <span 
-                                class="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
-                                :class="criterion.aaaPass 
-                                  ? (isDarkMode 
-                                    ? 'bg-green-900/30 text-green-300' 
-                                    : 'bg-green-100 text-green-800')
-                                  : (isDarkMode 
-                                    ? 'bg-red-900/30 text-red-300' 
-                                    : 'bg-red-100 text-red-800')"
-                              >
-                                {{ criterion.aaaPass ? 'Pass' : 'Fail' }}
-                              </span>
-                            </td>
-                            <td class="py-3 px-4 font-mono text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                              {{ criterion.aaaMinimum }}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Color Difference Card -->
-                <div 
-                  class="rounded-lg shadow-sm border"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <div class="p-6">
-                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <span class="material-symbols-outlined text-indigo-600">visibility</span>
-                      Color Blindness Simulation
-                    </h3>
-                    <div class="overflow-x-auto">
-                      <table class="w-full">
-                        <thead>
-                          <tr class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                            <th class="text-left py-3 px-4 font-semibold text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">PREVIEW</th>
-                            <th class="text-left py-3 px-4 font-semibold text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">VISION TYPE</th>
-                            <th class="text-left py-3 px-4 font-semibold text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">STATUS</th>
-                            <th class="text-left py-3 px-4 font-semibold text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">COLOR DIFFERENCE</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr 
-                            v-for="(vision, index) in visionTypes" 
-                            :key="index"
-                            class="border-b"
-                            :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-                          >
-                            <td class="py-3 px-4">
-                              <div class="flex items-center gap-2">
-                                <div 
-                                  class="w-12 h-8 rounded border"
-                                  :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                                  :style="{ 
-                                    background: `linear-gradient(to right, ${vision.fgColor} 50%, ${vision.bgColor} 50%)`
-                                  }"
-                                ></div>
-                              </div>
-                            </td>
-                            <td class="py-3 px-4 font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                              {{ vision.name }}
-                            </td>
-                            <td class="py-3 px-4">
-                              <span 
-                                class="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
-                                :class="vision.safe 
-                                  ? (isDarkMode 
-                                    ? 'bg-green-900/30 text-green-300' 
-                                    : 'bg-green-100 text-green-800')
-                                  : (isDarkMode 
-                                    ? 'bg-red-900/30 text-red-300' 
-                                    : 'bg-red-100 text-red-800')"
-                              >
-                                {{ vision.safe ? 'Safe' : 'Unsafe' }}
-                              </span>
-                            </td>
-                            <td class="py-3 px-4">
-                              <div class="flex items-center gap-3">
-                                <span class="font-mono text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                                  {{ vision.deltaE.toFixed(2) }}
-                                </span>
-                                <div class="flex-1 h-2 rounded-full overflow-hidden" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-200'">
-                                  <div 
-                                    class="h-full transition-all"
-                                    :class="vision.safe ? 'bg-green-500' : 'bg-red-500'"
-                                    :style="{ width: `${Math.min(100, (vision.deltaE / 100) * 100)}%` }"
-                                  ></div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <!-- How This Works Section -->
-                    <div class="mt-8 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                      <h3 class="text-lg font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        <span class="material-symbols-outlined text-indigo-600">help</span>
-                        How this works
-                      </h3>
-                      <p class="text-sm leading-relaxed" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Ratings are calculated by first converting the colors to their simulated counterparts. The simulated values approximate the colors that would be seen by fully deficient vision of each particular type. The simulated colors are then compared using the DeltaE 2000 color difference formula. A color difference value of 11 or more is considered passing; anything lower is too similar to distinguish.
-                        <br><br>
-                        The color difference meters visualize the DeltaE value to give reference to how different the colors would appear for each color vision deficiency.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+            </template>
+          </UiPanel>
         </div>
       </div>
-    </div>
+    </PageSection>
 
-    <!-- Color Picker -->
     <ColorPicker
       :show="showColorPicker"
       :initial-color="pickerColor"
@@ -404,20 +152,16 @@
       @apply="handleColorPickerApply"
       @cancel="showColorPicker = false"
     />
-  </div>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
 import chroma from 'chroma-js';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { PageHero, PageSection, PageShell, UiChip, UiInput, UiPanel, UiRange, UiSwatch, UiTable } from '../components/ui';
+import UiMeter from '../components/ui/UiMeter.vue';
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const foregroundColor = ref('#7AC600');
 const backgroundColor = ref('#0E55A8');
 const showColorPicker = ref(false);
@@ -426,9 +170,22 @@ const pickerPosition = ref({ left: 0, top: 0 });
 const currentPickerType = ref('foreground');
 const foregroundHue = ref(83);
 
+// The two colour inputs, each with its own picker
+const colorFields = [
+  { type: 'foreground', label: 'Foreground color', placeholder: '#7AC600', required: true },
+  { type: 'background', label: 'Background color', placeholder: '#0E55A8', required: false },
+];
+const colorRefs = { foreground: foregroundColor, background: backgroundColor };
 
+// The formats the inputs accept
+const supportedFormats = [
+  { space: 'HEX', opaque: '#FFFFFF', alpha: '#FFFFFFFF' },
+  { space: 'RGB', opaque: 'rgb(255, 255, 255)', alpha: 'rgba(255, 255, 255, 1)' },
+  { space: 'HSL', opaque: 'hsl(360, 100%, 50%)', alpha: 'hsla(360, 100%, 50%, 1)' },
+];
 
-
+// The hue slider's track shows the hue spectrum (data, not a design colour)
+const hueTrack = 'linear-gradient(to right, hsl(0, 100%, 50%), hsl(60, 100%, 50%), hsl(120, 100%, 50%), hsl(180, 100%, 50%), hsl(240, 100%, 50%), hsl(300, 100%, 50%), hsl(360, 100%, 50%))';
 
 // Calculate relative luminance
 const getLuminance = (rgb) => {
@@ -637,7 +394,7 @@ const updateForegroundFromSlider = (hue) => {
 const openColorPicker = (type, event) => {
   if (event) {
     event.stopPropagation();
-    const rect = event.target.getBoundingClientRect();
+    const rect = (event.currentTarget || event.target).getBoundingClientRect();
     const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     
@@ -695,83 +452,22 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.picker-button {
+  @apply flex flex-col w-full overflow-hidden rounded-tile border border-line-control bg-surface-control p-1 text-left transition-colors hover:border-accent-border;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
 }
-
-/* Custom range slider styles for brand blue */
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
-  cursor: pointer;
+.picker-button-label {
+  @apply flex items-center gap-1.5 px-3 pt-2 pb-1 text-sm font-medium text-ink-secondary;
 }
-
-input[type="range"]::-webkit-slider-runnable-track {
-  background: linear-gradient(to right, hsl(0, 100%, 50%), hsl(60, 100%, 50%), hsl(120, 100%, 50%), hsl(180, 100%, 50%), hsl(240, 100%, 50%), hsl(300, 100%, 50%), hsl(360, 100%, 50%));
-  border-radius: 9999px;
-  height: 8px;
+.pair-preview {
+  @apply relative block w-16 h-16 shrink-0 rounded-control border border-line;
+  background: v-bind(backgroundColor);
 }
-
-input[type="range"]::-moz-range-track {
-  background: linear-gradient(to right, hsl(0, 100%, 50%), hsl(60, 100%, 50%), hsl(120, 100%, 50%), hsl(180, 100%, 50%), hsl(240, 100%, 50%), hsl(300, 100%, 50%), hsl(360, 100%, 50%));
-  border-radius: 9999px;
-  height: 8px;
+.pair-preview-fg {
+  @apply absolute inset-2 rounded-control;
+  background: v-bind(foregroundColor);
 }
-
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  background-color: #4f46e5; /* indigo-600 - brand blue */
-  border: 2px solid #fff;
-  border-radius: 50%;
-  height: 16px;
-  width: 16px;
-  margin-top: -4px;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
-  transition: background-color 0.2s, box-shadow 0.2s;
-}
-
-html.dark input[type="range"]::-webkit-slider-thumb {
-  background-color: #6366f1; /* indigo-500 - brand blue for dark mode */
-  border-color: #1e293b;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-}
-
-input[type="range"]::-webkit-slider-thumb:hover {
-  background-color: #4338ca; /* indigo-700 */
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.3);
-}
-
-html.dark input[type="range"]::-webkit-slider-thumb:hover {
-  background-color: #818cf8; /* indigo-400 */
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
-}
-
-input[type="range"]::-moz-range-thumb {
-  background-color: #4f46e5; /* indigo-600 - brand blue */
-  border: 2px solid #fff;
-  border-radius: 50%;
-  height: 16px;
-  width: 16px;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
-  transition: background-color 0.2s, box-shadow 0.2s;
-}
-
-html.dark input[type="range"]::-moz-range-thumb {
-  background-color: #6366f1; /* indigo-500 - brand blue for dark mode */
-  border-color: #1e293b;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-}
-
-input[type="range"]::-moz-range-thumb:hover {
-  background-color: #4338ca; /* indigo-700 */
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.3);
-}
-
-html.dark input[type="range"]::-moz-range-thumb:hover {
-  background-color: #818cf8; /* indigo-400 */
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+.hue-range :deep(input[type='range']) {
+  background: v-bind(hueTrack);
 }
 </style>
-

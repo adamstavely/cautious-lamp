@@ -10,7 +10,9 @@
         class="ui-segment"
         :class="{ 'ui-segment-on': option.value === modelValue }"
         :aria-checked="option.value === modelValue"
-        :tabindex="option.value === modelValue || (!hasSelection && index === 0) ? 0 : -1"
+        :aria-label="option.srLabel || undefined"
+        :disabled="option.disabled"
+        :tabindex="option.value === modelValue || (!hasSelection && index === firstEnabled) ? 0 : -1"
         @click="select(option.value)"
         @keydown="onKey($event, index)"
       >
@@ -25,7 +27,12 @@
 import { computed, nextTick, ref } from 'vue';
 import UiField from './UiField.vue';
 
-/** One choice from a few short options, shown as round toggles (a radio group). `options` are strings or { value, label, icon }. */
+/**
+ * One choice from a few short options, shown as round toggles (a radio group).
+ * `options` are strings or { value, label, icon, disabled, srLabel } — srLabel
+ * is a fuller name for assistive technology when the visible label is terse
+ * (a "4" on a rating scale: "4, agree").
+ */
 const props = defineProps({
   modelValue: { type: [String, Number, Boolean], default: null },
   options: { type: Array, required: true },
@@ -43,11 +50,20 @@ const hasSelection = computed(() => normalized.value.some((o) => o.value === pro
 
 const select = (value) => emit('update:modelValue', value);
 
+const firstEnabled = computed(() => Math.max(0, normalized.value.findIndex((o) => !o.disabled)));
+
 const onKey = async (event, index) => {
   const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
   if (!step) return;
   event.preventDefault();
-  const next = (index + step + normalized.value.length) % normalized.value.length;
+  const count = normalized.value.length;
+  // Skip disabled options; stop if every other option is disabled
+  let next = index;
+  for (let i = 0; i < count; i++) {
+    next = (next + step + count) % count;
+    if (!normalized.value[next].disabled) break;
+  }
+  if (next === index || normalized.value[next].disabled) return;
   select(normalized.value[next].value);
   await nextTick();
   buttons.value[next]?.focus();
@@ -61,6 +77,7 @@ const onKey = async (event, index) => {
 .ui-segment {
   @apply inline-flex items-center gap-1.5 h-8 px-3.5 rounded-pill text-sm font-medium text-ink-secondary transition-colors hover:text-ink;
   @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 outline-focus;
+  @apply disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-ink-secondary;
 }
 .ui-segment-on {
   @apply bg-surface-raised text-ink-strong shadow-control;

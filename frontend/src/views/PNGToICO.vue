@@ -1,373 +1,91 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Image Converter
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Convert images between different formats: PNG to ICO, BMP to PNG, and WebP to PNG/JPG. Supports multiple sizes in ICO files.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">image</span>
-                      Image Tool
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="icoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized image conversion icon -->
-                      <rect x="40" y="50" width="50" height="50" rx="4" fill="url(#icoGradient)" opacity="0.4"/>
-                      <path d="M 100 75 L 130 75" stroke="rgba(255,255,255,0.6)" stroke-width="4" stroke-linecap="round"/>
-                      <circle cx="150" cy="75" r="25" fill="url(#icoGradient)" opacity="0.6"/>
-                      <circle cx="150" cy="75" r="15" fill="white" opacity="0.8"/>
-                    </svg>
-                  </div>
-                </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="Image converter"
+      lead="Convert images between different formats: PNG to ICO, BMP to PNG, and WebP to PNG/JPG. Supports multiple sizes in ICO files."
+      spot="tools/png-to-ico"
+      size="tool"
+    />
+
+    <PageSection>
+      <UiPanel class="mb-6">
+        <UiSegmented :model-value="conversionMode" label="Conversion mode" :options="modeOptions" @update:model-value="switchMode" />
+      </UiPanel>
+
+      <div class="grid lg:grid-cols-2 gap-6">
+        <UiPanel :title="getUploadLabel()">
+          <div class="space-y-6">
+            <UiFileDropzone
+              ref="fileInput"
+              :file="selectedFile"
+              :accept="getAcceptType()"
+              :prompt="`Drag and drop ${getFileTypeLabel()} here, or`"
+              button-label="Browse files"
+              icon="upload"
+              hint="Maximum file size: 10MB"
+              @select="acceptFile"
+              @remove="clearFile"
+            />
+
+            <UiSegmented
+              v-if="conversionMode === 'webp-to-png' || conversionMode === 'webp-to-jpg'"
+              v-model="webpOutputFormat"
+              label="Output format"
+              :options="conversionMode === 'webp-to-png' ? [{ value: 'png', label: 'PNG' }] : [{ value: 'jpg', label: 'JPG' }]"
+            />
+
+            <fieldset v-if="conversionMode === 'png-to-ico'">
+              <legend class="text-sm font-medium text-ink-strong mb-3">ICO sizes (select multiple)</legend>
+              <div class="grid grid-cols-3 gap-3">
+                <UiCheckbox v-for="size in icoSizes" :key="size" v-model="selectedSizes" :value="size" :label="`${size}×${size}`" />
               </div>
-            </div>
+            </fieldset>
+
+            <InlineNotice :notice="notice" @dismiss="clearNotice" />
           </div>
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <!-- Conversion Mode Selector -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
+          <template #footer>
+            <UiButton
+              variant="primary"
+              icon="download"
+              class="w-full"
+              :loading="isConverting"
+              :disabled="!selectedFile || (conversionMode === 'png-to-ico' && selectedSizes.length === 0)"
+              @click="handleConvert()"
             >
-              <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">swap_horiz</span>
-                Conversion Mode
-              </h2>
-              
-              <div class="flex flex-wrap gap-2">
-                <button
-                  @click="switchMode('png-to-ico')"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  :class="conversionMode === 'png-to-ico'
-                    ? (isDarkMode 
-                      ? 'bg-indigo-600 text-white' 
-                      : 'bg-indigo-600 text-white')
-                    : (isDarkMode
-                      ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                >
-                  PNG → ICO
-                </button>
-                <button
-                  @click="switchMode('bmp-to-png')"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  :class="conversionMode === 'bmp-to-png'
-                    ? (isDarkMode 
-                      ? 'bg-indigo-600 text-white' 
-                      : 'bg-indigo-600 text-white')
-                    : (isDarkMode
-                      ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                >
-                  BMP → PNG
-                </button>
-                <button
-                  @click="switchMode('webp-to-png')"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  :class="conversionMode === 'webp-to-png'
-                    ? (isDarkMode 
-                      ? 'bg-indigo-600 text-white' 
-                      : 'bg-indigo-600 text-white')
-                    : (isDarkMode
-                      ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                >
-                  WebP → PNG
-                </button>
-                <button
-                  @click="switchMode('webp-to-jpg')"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  :class="conversionMode === 'webp-to-jpg'
-                    ? (isDarkMode 
-                      ? 'bg-indigo-600 text-white' 
-                      : 'bg-indigo-600 text-white')
-                    : (isDarkMode
-                      ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                >
-                  WebP → JPG
-                </button>
-              </div>
+              {{ isConverting ? 'Converting...' : getConvertButtonText() }}
+            </UiButton>
+          </template>
+        </UiPanel>
+
+        <UiPanel title="Preview">
+          <div v-if="previewUrl" class="space-y-4">
+            <div class="flex items-center justify-center p-8 rounded-tile border border-line bg-surface-sunken">
+              <img :src="previewUrl" :alt="`Preview of ${selectedFile?.name || 'the chosen image'}`" class="max-w-full max-h-64" />
             </div>
-
-            <div class="grid lg:grid-cols-2 gap-6">
-              <!-- Left Column: Upload and Settings -->
-              <div 
-                class="rounded-lg shadow-sm border p-6"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">upload</span>
-                  {{ getUploadLabel() }}
-                </h2>
-                
-                <!-- File Upload -->
-                <div
-                  @drop.prevent="handleDrop"
-                  @dragover.prevent="isDragging = true"
-                  @dragenter.prevent="isDragging = true"
-                  @dragleave.prevent="isDragging = false"
-                  class="border-2 border-dashed rounded-lg p-8 text-center transition-colors mb-4"
-                  :class="isDragging
-                    ? (isDarkMode 
-                      ? 'border-indigo-400 bg-indigo-900/20' 
-                      : 'border-indigo-500 bg-indigo-50')
-                    : (isDarkMode 
-                      ? 'border-gray-600 bg-slate-800' 
-                      : 'border-gray-300 bg-gray-50')"
-                >
-                  <input
-                    ref="fileInput"
-                    type="file"
-                    :accept="getAcceptType()"
-                    @change="handleFileSelect"
-                    class="hidden"
-                  />
-                  <div class="flex flex-col items-center gap-4">
-                    <span class="material-symbols-outlined text-5xl" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                      upload
-                    </span>
-                    <div>
-                      <p class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Drag and drop {{ getFileTypeLabel() }} here, or
-                      </p>
-                      <button
-                        @click="$refs.fileInput.click()"
-                        type="button"
-                        class="px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                        :class="isDarkMode 
-                          ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
-                          : 'bg-indigo-600 text-white hover:bg-indigo-700'"
-                      >
-                        Browse Files
-                      </button>
-                    </div>
-                    <p class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
-                      Maximum file size: 10MB
-                    </p>
-                  </div>
-                </div>
-
-                <!-- Selected File Info -->
-                <div
-                  v-if="selectedFile"
-                  class="rounded-lg p-4 mb-4"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 border border-gray-700' 
-                    : 'bg-gray-50 border border-gray-200'"
-                >
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                      <span class="material-symbols-outlined" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                        image
-                      </span>
-                      <div>
-                        <p class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          {{ selectedFile.name }}
-                        </p>
-                        <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                          {{ formatFileSize(selectedFile.size) }}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      @click="clearFile"
-                      class="p-1 rounded transition-colors"
-                      :class="isDarkMode 
-                        ? 'text-gray-400 hover:text-white hover:bg-slate-700' 
-                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'"
-                    >
-                      <span class="material-symbols-outlined text-sm">close</span>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Output Format (only for WebP conversions) -->
-                <div v-if="conversionMode === 'webp-to-png' || conversionMode === 'webp-to-jpg'" class="mb-4">
-                  <label class="block text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Output Format
-                  </label>
-                  <div class="grid grid-cols-2 gap-2">
-                    <button
-                      v-if="conversionMode === 'webp-to-png'"
-                      @click="webpOutputFormat = 'png'"
-                      class="px-3 py-2 rounded border text-sm font-medium transition-colors"
-                      :class="webpOutputFormat === 'png'
-                        ? (isDarkMode 
-                          ? 'border-indigo-400 bg-indigo-900/20 text-indigo-400' 
-                          : 'border-indigo-500 bg-indigo-50 text-indigo-600')
-                        : (isDarkMode 
-                          ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                          : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100')"
-                    >
-                      PNG
-                    </button>
-                    <button
-                      v-if="conversionMode === 'webp-to-jpg'"
-                      @click="webpOutputFormat = 'jpg'"
-                      class="px-3 py-2 rounded border text-sm font-medium transition-colors"
-                      :class="webpOutputFormat === 'jpg'
-                        ? (isDarkMode 
-                          ? 'border-indigo-400 bg-indigo-900/20 text-indigo-400' 
-                          : 'border-indigo-500 bg-indigo-50 text-indigo-600')
-                        : (isDarkMode 
-                          ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                          : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100')"
-                    >
-                      JPG
-                    </button>
-                  </div>
-                </div>
-
-                <!-- ICO Sizes (only for PNG to ICO) -->
-                <div v-if="conversionMode === 'png-to-ico'" class="mb-4">
-                  <label class="block text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    ICO Sizes (select multiple)
-                  </label>
-                  <div class="grid grid-cols-3 gap-2">
-                    <label
-                      v-for="size in icoSizes"
-                      :key="size"
-                      class="flex items-center gap-2 p-2 rounded border cursor-pointer transition-colors"
-                      :class="selectedSizes.includes(size)
-                        ? (isDarkMode 
-                          ? 'border-indigo-400 bg-indigo-900/20' 
-                          : 'border-indigo-500 bg-indigo-50')
-                        : (isDarkMode 
-                          ? 'border-gray-600 bg-slate-800' 
-                          : 'border-gray-300 bg-white')"
-                    >
-                      <input
-                        type="checkbox"
-                        :value="size"
-                        v-model="selectedSizes"
-                        class="w-4 h-4"
-                        :class="isDarkMode ? 'accent-indigo-500' : 'accent-indigo-600'"
-                      />
-                      <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        {{ size }}×{{ size }}
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
-
-                <!-- Convert Button -->
-                <button
-                  @click="handleConvert()"
-                  :disabled="!selectedFile || (conversionMode === 'png-to-ico' && selectedSizes.length === 0) || isConverting"
-                  class="w-full px-6 py-3 rounded-lg transition-colors text-sm font-medium"
-                  :class="(!selectedFile || (conversionMode === 'png-to-ico' && selectedSizes.length === 0) || isConverting)
-                    ? (isDarkMode 
-                      ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed')
-                    : (isDarkMode 
-                      ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700')"
-                >
-                  <span v-if="isConverting" class="flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined animate-spin">refresh</span>
-                    Converting...
-                  </span>
-                  <span v-else class="flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined">download</span>
-                    {{ getConvertButtonText() }}
-                  </span>
-                </button>
+            <dl class="text-sm text-ink-secondary space-y-1">
+              <div><dt class="inline font-semibold text-ink">Original size:</dt> <dd class="inline">{{ imageWidth }}×{{ imageHeight }}px</dd></div>
+              <div v-if="conversionMode === 'png-to-ico' && selectedSizes.length > 0">
+                <dt class="inline font-semibold text-ink">ICO sizes:</dt> <dd class="inline">{{ sortedSizes().map((size) => `${size}×${size}`).join(', ') }}</dd>
               </div>
-
-              <!-- Right Column: Preview -->
-              <div 
-                class="rounded-lg shadow-sm border p-6"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">preview</span>
-                  Preview
-                </h2>
-                
-                <div v-if="previewUrl" class="space-y-4">
-                  <div class="flex items-center justify-center p-8 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                    <img :src="previewUrl" alt="Preview" class="max-w-full max-h-64" />
-                  </div>
-                  <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    <p><strong>Original Size:</strong> {{ imageWidth }}×{{ imageHeight }}px</p>
-                    <p v-if="conversionMode === 'png-to-ico' && selectedSizes.length > 0"><strong>ICO Sizes:</strong> {{ sortedSizes().map((size) => `${size}×${size}`).join(', ') }}</p>
-                  </div>
-                </div>
-                <div v-else class="flex items-center justify-center p-12 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                  <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
-                    Upload {{ getFileTypeLabel() }} to see preview
-                  </p>
-                </div>
-              </div>
-            </div>
+            </dl>
           </div>
-        </div>
+          <UiEmptyState v-else title="No image yet" :body="`Upload ${getFileTypeLabel()} to see preview`" />
+        </UiPanel>
       </div>
-    </div>
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { PageHero, PageSection, PageShell, UiButton, UiCheckbox, UiEmptyState, UiPanel, UiSegmented } from '../components/ui';
+import UiFileDropzone from '../components/ui/UiFileDropZone.vue';
 import { useNotice } from '../composables/useNotice.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = useDarkMode();
 const { notice, showNotice, clearNotice } = useNotice();
-const isDragging = ref(false);
 const isConverting = ref(false);
 const selectedFile = ref(null);
 const previewUrl = ref(null);
@@ -376,6 +94,13 @@ const imageHeight = ref(0);
 const fileInput = ref(null);
 const conversionMode = ref('png-to-ico');
 const webpOutputFormat = ref('png');
+
+const modeOptions = [
+  { value: 'png-to-ico', label: 'PNG → ICO' },
+  { value: 'bmp-to-png', label: 'BMP → PNG' },
+  { value: 'webp-to-png', label: 'WebP → PNG' },
+  { value: 'webp-to-jpg', label: 'WebP → JPG' },
+];
 
 const icoSizes = [16, 32, 48, 64, 128, 256];
 const selectedSizes = ref([16, 32, 48]);
@@ -458,15 +183,6 @@ const acceptFile = (file) => {
   }
 };
 
-const handleDrop = (e) => {
-  isDragging.value = false;
-  acceptFile(e.dataTransfer?.files?.[0]);
-};
-
-const handleFileSelect = (e) => {
-  acceptFile(e.target.files?.[0]);
-};
-
 const processFile = (file) => {
   if (file.size > MAX_FILE_SIZE) {
     showNotice('File size must be less than 10MB.', 'error');
@@ -508,9 +224,7 @@ const clearFile = () => {
   previewUrl.value = null;
   imageWidth.value = 0;
   imageHeight.value = 0;
-  if (fileInput.value) {
-    fileInput.value.value = '';
-  }
+  fileInput.value?.reset();
 };
 
 // "logo.PNG" -> "logo.ico"; a name without an extension gets one appended.
@@ -581,14 +295,6 @@ const convertBmpToPng = async () => {
   } finally {
     isConverting.value = false;
   }
-};
-
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 };
 
 const convertToICO = async () => {
@@ -687,10 +393,3 @@ const convertWebP = async () => {
   }
 };
 </script>
-
-<style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-</style>
-

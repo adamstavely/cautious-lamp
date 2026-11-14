@@ -1,363 +1,88 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Spacing Scale Generator
-                    </h1>
-                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
-                      Production Ready
-                    </span>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Generate consistent spacing scales using mathematical ratios. Create harmonious padding, margin, and gap values for your design system.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">label</span>
-                      Design Tool
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="spacingScaleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized spacing scale icon -->
-                      <rect x="40" y="40" width="120" height="20" rx="4" fill="url(#spacingScaleGradient)" opacity="0.6"/>
-                      <rect x="40" y="70" width="100" height="20" rx="4" fill="url(#spacingScaleGradient)" opacity="0.5"/>
-                      <rect x="40" y="100" width="80" height="20" rx="4" fill="url(#spacingScaleGradient)" opacity="0.4"/>
-                      <rect x="40" y="130" width="60" height="20" rx="4" fill="url(#spacingScaleGradient)" opacity="0.3"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="Spacing scale generator"
+      lead="Generate consistent spacing scales from a ratio: harmonious padding, margin and gap values for your design system."
+      spot="tools/spacing-scale-generator"
+      size="tool"
+    />
 
-          <div class="max-w-6xl mx-auto">
-            <!-- Configuration Section -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <!-- Base Spacing Input -->
-              <div 
-                class="rounded-lg border p-6" 
-                :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-              >
-                <label 
-                  class="text-sm font-medium mb-2 block flex items-center gap-2" 
-                  :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                >
-                  <span class="material-symbols-outlined text-indigo-600">straighten</span>
-                  Base Spacing (px)
-                </label>
-                <input 
-                  v-model.number="baseSpacing" 
-                  type="number" 
-                  min="2" 
-                  max="32"
-                  step="1"
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-700 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
-                />
-                <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  Starting value for your spacing scale
-                </p>
-              </div>
-
-              <!-- Ratio Selection -->
-              <div 
-                class="rounded-lg border p-6" 
-                :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-              >
-                <label 
-                  class="text-sm font-medium mb-2 block flex items-center gap-2" 
-                  :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                >
-                  <span class="material-symbols-outlined text-indigo-600">tune</span>
-                  Ratio
-                </label>
-                <Dropdown
-                  v-model="selectedRatio"
-                  :options="ratioOptions"
-                  :isDarkMode="isDarkMode"
-                />
-                <input 
-                  v-if="selectedRatio === 'custom'"
-                  v-model.number="customRatio"
-                  type="number" 
-                  min="1.1" 
-                  max="2.0"
-                  step="0.001"
-                  placeholder="1.333"
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none mt-2"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-700 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
-                />
-              </div>
-            </div>
-
-            <!-- Two Column Layout -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <!-- Left Column: Spacing Scale Values -->
-              <div 
-                class="rounded-lg border p-6" 
-                :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-              >
-                <h4 
-                  class="font-semibold mb-4 flex items-center gap-2" 
-                  :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                >
-                  <span class="material-symbols-outlined text-indigo-600">list</span>
-                  Spacing Scale
-                </h4>
-                <div class="space-y-3">
-                  <div 
-                    v-for="(value, name) in computedSpacingScale" 
-                    :key="name" 
-                    class="flex items-center justify-between p-3 rounded-lg border"
-                    :class="isDarkMode ? 'bg-slate-700 border-gray-600' : 'bg-gray-50 border-gray-200'"
-                  >
-                    <div class="flex items-center gap-3">
-                      <div 
-                        class="w-12 h-12 rounded border-2 flex items-center justify-center font-semibold text-xs"
-                        :style="{ 
-                          padding: value + 'px',
-                          backgroundColor: isDarkMode ? '#1e293b' : '#f1f5f9',
-                          borderColor: isDarkMode ? '#475569' : '#cbd5e1'
-                        }"
-                      >
-                        <div 
-                          class="w-full h-full rounded"
-                          :style="{ 
-                            backgroundColor: isDarkMode ? '#6366f1' : '#6366f1',
-                            opacity: 0.3
-                          }"
-                        ></div>
-                      </div>
-                      <div>
-                        <div 
-                          class="font-medium" 
-                          :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                        >
-                          {{ name.toUpperCase() }}
-                        </div>
-                        <div 
-                          class="text-xs" 
-                          :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
-                        >
-                          {{ value }}px
-                        </div>
-                      </div>
-                    </div>
-                    <div 
-                      class="text-xs font-mono px-2 py-1 rounded"
-                      :class="isDarkMode ? 'bg-slate-600 text-gray-300' : 'bg-gray-200 text-gray-700'"
-                    >
-                      {{ value }}px
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Right Column: Visual Preview -->
-              <div 
-                class="rounded-lg border p-6" 
-                :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-              >
-                <h4 
-                  class="font-semibold mb-4 flex items-center gap-2" 
-                  :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                >
-                  <span class="material-symbols-outlined text-indigo-600">preview</span>
-                  Visual Preview
-                </h4>
-                <div class="space-y-4">
-                  <!-- Card Example -->
-                  <div 
-                    class="rounded-lg border p-4"
-                    :style="{ 
-                      padding: computedSpacingScale.md + 'px',
-                      borderColor: isDarkMode ? '#475569' : '#cbd5e1'
-                    }"
-                    :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-50'"
-                  >
-                    <h5 
-                      class="font-semibold mb-2"
-                      :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                    >
-                      Card Example
-                    </h5>
-                    <p 
-                      class="text-sm mb-3"
-                      :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'"
-                    >
-                      This card uses <code class="px-1 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/30">{{ computedSpacingScale.md }}px</code> padding.
-                    </p>
-                    <div 
-                      class="flex gap-2"
-                      :style="{ gap: computedSpacingScale.sm + 'px' }"
-                    >
-                      <button 
-                        class="px-3 py-1.5 rounded text-sm font-medium transition-colors"
-                        :style="{ 
-                          paddingLeft: computedSpacingScale.md + 'px',
-                          paddingRight: computedSpacingScale.md + 'px',
-                          paddingTop: computedSpacingScale.sm + 'px',
-                          paddingBottom: computedSpacingScale.sm + 'px'
-                        }"
-                        :class="isDarkMode 
-                          ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                          : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-                      >
-                        Button
-                      </button>
-                      <button 
-                        class="px-3 py-1.5 rounded text-sm font-medium border transition-colors"
-                        :style="{ 
-                          paddingLeft: computedSpacingScale.md + 'px',
-                          paddingRight: computedSpacingScale.md + 'px',
-                          paddingTop: computedSpacingScale.sm + 'px',
-                          paddingBottom: computedSpacingScale.sm + 'px'
-                        }"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 hover:bg-slate-600 text-gray-300' 
-                          : 'border-gray-300 hover:bg-gray-100 text-gray-700'"
-                      >
-                        Secondary
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Grid Example -->
-                  <div>
-                    <h6 
-                      class="text-xs font-medium mb-2 uppercase tracking-wide"
-                      :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
-                    >
-                      Grid with Gap
-                    </h6>
-                    <div 
-                      class="grid grid-cols-3 rounded-lg p-2 border"
-                      :style="{ 
-                        gap: computedSpacingScale.base + 'px',
-                        padding: computedSpacingScale.sm + 'px'
-                      }"
-                      :class="isDarkMode ? 'bg-slate-700 border-gray-600' : 'bg-gray-50 border-gray-200'"
-                    >
-                      <div 
-                        v-for="i in 6" 
-                        :key="i"
-                        class="rounded"
-                        :style="{ 
-                          padding: computedSpacingScale.xs + 'px',
-                          backgroundColor: isDarkMode ? '#475569' : '#cbd5e1'
-                        }"
-                      >
-                        <div 
-                          class="w-full h-12 rounded"
-                          :style="{ backgroundColor: '#6366f1', opacity: 0.3 }"
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Export Section -->
-            <div 
-              class="rounded-lg border p-6" 
-              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-            >
-              <h4 
-                class="font-semibold mb-4 flex items-center gap-2" 
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-              >
-                <span class="material-symbols-outlined text-indigo-600">download</span>
-                Export
-              </h4>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button
-                  @click="exportFormat('css')"
-                  class="px-4 py-3 rounded-lg border font-medium transition-colors flex items-center justify-center gap-2"
-                  :class="isDarkMode
-                    ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-                >
-                  <span class="material-symbols-outlined text-lg">code</span>
-                  Export CSS
-                </button>
-                <button
-                  @click="exportFormat('tailwind')"
-                  class="px-4 py-3 rounded-lg border font-medium transition-colors flex items-center justify-center gap-2"
-                  :class="isDarkMode
-                    ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-                >
-                  <span class="material-symbols-outlined text-lg">settings</span>
-                  Export Tailwind
-                </button>
-                <button
-                  @click="exportFormat('json')"
-                  class="px-4 py-3 rounded-lg border font-medium transition-colors flex items-center justify-center gap-2"
-                  :class="isDarkMode
-                    ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-                >
-                  <span class="material-symbols-outlined text-lg">data_object</span>
-                  Export JSON
-                </button>
-              </div>
-            </div>
+    <PageSection title="Settings">
+      <UiPanel>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <UiInput v-model.number="baseSpacing" type="number" min="2" max="32" step="1" label="Base spacing" suffix="px" hint="Starting value for your spacing scale" />
+          <div class="space-y-3">
+            <UiSelect v-model="selectedRatio" :options="ratioOptions" label="Ratio" />
+            <UiInput
+              v-if="selectedRatio === 'custom'"
+              v-model.number="customRatio"
+              type="number"
+              min="1.1"
+              max="2.0"
+              step="0.001"
+              placeholder="1.333"
+              label="Custom ratio"
+            />
           </div>
         </div>
+      </UiPanel>
+    </PageSection>
+
+    <PageSection title="Scale" divided>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <UiPanel title="Spacing scale">
+          <ul class="divide-y divide-line-faint">
+            <li v-for="(value, name) in computedSpacingScale" :key="name" class="grid grid-cols-aside-content items-center gap-4 py-3">
+              <div class="w-16">
+                <div class="font-medium text-ink-strong">{{ name.toUpperCase() }}</div>
+                <div class="text-xs font-code text-ink-muted">{{ value }}px</div>
+              </div>
+              <svg class="w-full h-3" :viewBox="`0 0 ${largestStep} 1`" preserveAspectRatio="none" aria-hidden="true">
+                <rect :width="value" height="1" class="fill-accent" />
+              </svg>
+            </li>
+          </ul>
+        </UiPanel>
+
+        <UiPanel title="Visual preview">
+          <div class="space-y-4">
+            <div class="sample-card rounded-tile border border-line bg-surface-sunken">
+              <h3 class="font-semibold mb-2 text-ink-strong">Card example</h3>
+              <p class="text-sm mb-3 text-ink-secondary">
+                This card uses <code class="font-code px-1 rounded-control bg-accent-subtle text-accent-text">{{ computedSpacingScale.md }}px</code> padding.
+              </p>
+              <div class="sample-actions flex">
+                <span class="sample-button rounded-control text-sm font-medium bg-accent text-ink-on-accent">Button</span>
+                <span class="sample-button rounded-control text-sm font-medium border border-line-control text-ink">Secondary</span>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="text-xs font-medium mb-2 uppercase tracking-wide text-ink-muted">Grid with gap</h3>
+              <div class="sample-grid grid grid-cols-3 rounded-tile border border-line bg-surface-sunken">
+                <div v-for="i in 6" :key="i" class="sample-cell rounded-control bg-fill-strong">
+                  <div class="w-full h-12 rounded-control bg-accent-highlight"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </UiPanel>
       </div>
-    </div>
-  </div>
+    </PageSection>
+
+    <PageSection title="Export" description="Download the scale as CSS custom properties, a Tailwind config or JSON." divided>
+      <div class="flex flex-wrap gap-3">
+        <UiButton v-for="item in exportButtons" :key="item.format" :icon="item.icon" :label="item.label" @click="exportFormat(item.format)" />
+      </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import Dropdown from '../components/Dropdown.vue';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { PageHero, PageSection, PageShell, UiButton, UiInput, UiPanel, UiSelect } from '../components/ui';
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const baseSpacing = ref(4);
 const selectedRatio = ref('major-third');
 const customRatio = ref(1.333);
@@ -417,6 +142,21 @@ const computedSpacingScale = computed(() => {
   };
 });
 
+// The bars in the scale list are drawn relative to the largest step
+const largestStep = computed(() => Math.max(1, ...Object.values(computedSpacingScale.value)));
+
+// The previews read these through v-bind() in <style>
+const spaceXs = computed(() => `${computedSpacingScale.value.xs}px`);
+const spaceSm = computed(() => `${computedSpacingScale.value.sm}px`);
+const spaceBase = computed(() => `${computedSpacingScale.value.base}px`);
+const spaceMd = computed(() => `${computedSpacingScale.value.md}px`);
+
+const exportButtons = [
+  { format: 'css', icon: 'code', label: 'Export CSS' },
+  { format: 'tailwind', icon: 'settings', label: 'Export Tailwind' },
+  { format: 'json', icon: 'data_object', label: 'Export JSON' },
+];
+
 const downloadFile = (content, type, filename) => {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
@@ -464,16 +204,23 @@ const exportFormat = (format) => {
     downloadFile(JSON.stringify(config, null, 2), 'application/json', `spacing-scale-${Date.now()}.json`);
   }
 };
-
-
-
-
-
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.sample-card {
+  padding: v-bind(spaceMd);
+}
+.sample-actions {
+  gap: v-bind(spaceSm);
+}
+.sample-button {
+  padding: v-bind(spaceSm) v-bind(spaceMd);
+}
+.sample-grid {
+  gap: v-bind(spaceBase);
+  padding: v-bind(spaceSm);
+}
+.sample-cell {
+  padding: v-bind(spaceXs);
 }
 </style>
-
