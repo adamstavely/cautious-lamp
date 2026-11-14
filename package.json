@@ -19,10 +19,6 @@
     "test": "npm test --workspaces --if-present"
   },
   "overrides": {
-    "@nestjs/platform-express": {
-      "body-parser": "^1.20.9",
-      "multer": "^2.5.0"
-    },
     "qs": "^6.17.1",
     "image-size": "^2.1.0",
     "@opentelemetry/resource-detector-gcp": {
