@@ -32,6 +32,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check:sfc --workspace frontend
+      - run: npm test --workspace frontend
       - run: npm run build --workspace frontend
 
   packages:
@@ -52,3 +53,12 @@ jobs:
       - run: npm test --workspace mcp-server
       - run: npm run build --workspace eslint-plugin-design-system
       - run: npm test --workspace eslint-plugin-design-system
+      # Not workspaces: they resolve vite, vue and typescript from the root node_modules
+      - run: npm test
+        working-directory: loupe-tool-standalone
+      - run: npm run build && npm run test:pack
+        working-directory: loupe-tool-standalone
+      - run: npm run build && npm run test:pack
+        working-directory: breakpoint-overlay-standalone
+      - run: npm test
+        working-directory: vscode-design-system-extension
