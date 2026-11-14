@@ -300,3 +300,12 @@ export function handleUnauthorized() {
   clearSession();
   if (hadSession) redirectToLogin();
 }
+
+/**
+ * Called when the API answers 403 PASSWORD_CHANGE_REQUIRED: the server only
+ * lets a temporary-password session change its password, so go there.
+ */
+export function handlePasswordChangeRequired() {
+  if (authState.user) authState.user = { ...authState.user, mustChangePassword: true };
+  if (router && router.currentRoute.value?.path !== '/change-password') router.replace({ path: '/change-password' });
+}

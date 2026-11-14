@@ -17,6 +17,7 @@ export interface ApplicationCapabilities {
     /** Governance rule ids (GET /governance/rules); empty means every enabled rule */
     rules: string[];
     scanSchedule: ScanSchedule;
+    /** Last completed governance scan; GovernanceScanScheduler reads it. Accessibility reports don't set it. */
     lastScan?: string;
   };
   visualRegression: {
@@ -65,7 +66,10 @@ export interface ApplicationDoc {
   workspaceId: string | null;
   registeredAt: string;
   updatedAt: string;
+  /** Latest completed scan of either kind (governance scan or accessibility report) */
   lastScanned?: string;
+  /** Last accessibility report (set by accessibility reports only) */
+  lastAccessibilityReport?: string;
   registeredBy: Actor;
   updatedBy: Actor;
   capabilities: ApplicationCapabilities;

@@ -47,6 +47,14 @@ describe('API keys HTTP API', () => {
     return res.body.accessToken as string;
   };
 
+  /** Signs in with a temporary password, replaces it and signs in again, as the frontend does */
+  const signInFirstTime = async (email: string, password: string) => {
+    const temporary = await login(email, password);
+    const newPassword = `${password} (changed)`;
+    expect((await call('POST', '/auth/change-password', { token: temporary, body: { currentPassword: password, newPassword } })).status).toBe(204);
+    return login(email, newPassword);
+  };
+
   beforeAll(async () => {
     process.env.API_KEYS = API_KEY;
     process.env.ADMIN_API_KEY = ADMIN_KEY;
@@ -83,9 +91,9 @@ describe('API keys HTTP API', () => {
     await rbac.updateRole(Role.DEVELOPER, [Permission.ADMIN_USERS, Permission.TOKEN_VIEW]);
     await users.create({ email: 'keys@example.com', name: 'Keys', password: 'keymaster password', roles: [Role.DEVELOPER] }, adminKey);
     await users.create({ email: 'dee@example.com', name: 'Dee', password: 'designer password', roles: [Role.DESIGNER] }, adminKey);
-    adminToken = await login(ADMIN_EMAIL, ADMIN_PASSWORD);
-    keymasterToken = await login('keys@example.com', 'keymaster password');
-    designerToken = await login('dee@example.com', 'designer password');
+    adminToken = await signInFirstTime(ADMIN_EMAIL, ADMIN_PASSWORD);
+    keymasterToken = await signInFirstTime('keys@example.com', 'keymaster password');
+    designerToken = await signInFirstTime('dee@example.com', 'designer password');
   });
 
   afterAll(async () => {
@@ -162,5 +170,26 @@ describe('API keys HTTP API', () => {
     expect((await call('GET', '/auth/me', { token: created.body.apiKey })).status).toBe(401);
     expect(await new KeyManagementService(keyStore).resolveApiKey(created.body.apiKey)).toBeNull();
     expect((await call('POST', '/auth/api-keys/key_nope/revoke', { token: keymasterToken })).status).toBe(404);
+  });
+
+  it('refuses key management to a temporary-password session until the password is changed and the user signs in again', async () => {
+    // A new account holding admin:users, still on the password an admin set
+    const adminKey = (await app.get(AuthService).resolve(ADMIN_KEY))!;
+    await app.get(UsersService).create({ email: 'new@example.com', name: 'New', password: 'temporary password', roles: [Role.DEVELOPER] }, adminKey);
+    const temporary = await login('new@example.com', 'temporary password');
+    const before = (await keyStore.list()).length;
+
+    expect((await call('GET', '/auth/me', { token: temporary })).body).toMatchObject({ mustChangePassword: true, permissions: expect.arrayContaining([Permission.ADMIN_USERS]) });
+    const create = await call('POST', '/auth/api-keys', { token: temporary, body: { name: 'sneaky', scopes: [Permission.TOKEN_VIEW] } });
+    expect(create.status).toBe(403);
+    expect(create.body).toMatchObject({ code: 'PASSWORD_CHANGE_REQUIRED' });
+    expect((await call('GET', '/auth/api-keys', { token: temporary })).body).toMatchObject({ code: 'PASSWORD_CHANGE_REQUIRED' });
+    expect((await keyStore.list()).length).toBe(before);
+
+    // Changing the password ends the session; the next sign-in is unrestricted
+    expect((await call('POST', '/auth/change-password', { token: temporary, body: { currentPassword: 'temporary password', newPassword: 'a permanent password' } })).status).toBe(204);
+    expect((await call('POST', '/auth/api-keys', { token: temporary, body: { name: 'sneaky', scopes: [Permission.TOKEN_VIEW] } })).status).toBe(401);
+    const fresh = await login('new@example.com', 'a permanent password');
+    expect((await call('POST', '/auth/api-keys', { token: fresh, body: { name: 'legit', scopes: [Permission.TOKEN_VIEW] } })).status).toBe(201);
   });
 });

@@ -1,6 +1,7 @@
+import type { EvidenceAccess } from '../governance/evidence-access';
 import { ComplianceCheck } from '../governance/governance.types';
 import { Frequency } from './schedule';
-import { SlaStatus, WcagLevel } from './sla';
+import { Conformance, ConformanceStatus, SlaStatus, WcagLevel } from './sla';
 
 export type Impact = 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW' | 'INFO';
 
@@ -59,6 +60,12 @@ export interface ReportTrend {
 
 export interface AccessibilityReport {
   id: string;
+  /**
+   * Who may read the report: the application's workspace when it was
+   * generated (evidence-access.ts). Reports stored before it existed are for
+   * governance admins only.
+   */
+  access?: EvidenceAccess;
   applicationId: string;
   applicationName: string;
   generatedAt: string;
@@ -70,8 +77,14 @@ export interface AccessibilityReport {
   /** The page that was scanned (URL scans) */
   url?: string;
   engine: 'jsdom' | 'playwright';
-  /** Highest WCAG level with no automated failures (A/AA rules only; automated tests can't prove conformance) */
+  /**
+   * The level the automated checks verified (see WcagLevel): never AA when
+   * criteria need review or the scan was HTML-only. Not a conformance claim.
+   */
   wcagLevel: WcagLevel;
+  /** What was and wasn't verified, separately from the score */
+  conformance: Conformance;
+  /** Automated scan score: 100 minus a penalty per failing A/AA criterion. Criteria needing review don't lower it; see conformance. */
   complianceScore: number;
   totalIssues: number;
   criticalIssues: number;
@@ -81,6 +94,8 @@ export interface AccessibilityReport {
   infoIssues: number;
   /** axe rules that need a manual check */
   needsReview: number;
+  /** The scheduled occurrence (its nextRun) this report was generated for */
+  occurrence?: string;
   /**
    * Present when some rules failed on more elements than are kept as
    * examples. Counts, score and fixes use the full totals; `checks` and
@@ -108,13 +123,43 @@ export interface ReportSchedule {
   time: string;
   enabled: boolean;
   nextRun: string;
+  /** When the last occurrence finished (successfully, or for good) */
   lastRun?: string;
-  lastStatus?: 'success' | 'failed';
+  /** dead-letter: the last occurrence failed every attempt and was given up (see deadLetters) */
+  lastStatus?: 'success' | 'failed' | 'dead-letter';
   lastError?: string;
   lastReportId?: string;
+  /**
+   * The occurrence being run or waiting for a retry. nextRun only moves on
+   * once it completes or is dead-lettered; a claim whose lease expired (the
+   * instance running it died) is taken over by another instance.
+   */
+  pending?: PendingRun;
+  /** Occurrences given up after the last attempt, newest first (at most 10) */
+  deadLetters?: DeadLetter[];
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+}
+
+export interface PendingRun {
+  /** The nextRun being run (ISO); scheduled reports for it get a fixed id */
+  occurrence: string;
+  /** claimed: an instance is running it until leaseUntil; retry: the last attempt failed, the next is due at retryAt */
+  state: 'claimed' | 'retry';
+  attempts: number;
+  /** Identifies the claiming run, so a run whose lease was taken over can't complete it */
+  token: string;
+  leaseUntil?: string;
+  retryAt?: string;
+  lastError?: string;
+}
+
+export interface DeadLetter {
+  occurrence: string;
+  attempts: number;
+  error: string;
+  at: string;
 }
 
 export interface ComplianceSLA {
@@ -134,6 +179,7 @@ export interface ApplicationComplianceSummary {
   latestReportId?: string;
   complianceScore: number | null;
   wcagLevel: WcagLevel | null;
+  conformanceStatus: ConformanceStatus | null;
   totalIssues: number;
   criticalIssues: number;
   highIssues: number;
@@ -149,6 +195,8 @@ export interface MultiApplicationComplianceSummary {
   compliantApplications: number;
   atRiskApplications: number;
   nonCompliantApplications: number;
+  /** The SLA's level couldn't be verified automatically (criteria need a manual check) */
+  needsReviewApplications: number;
   /** No SLA or no report yet */
   unassessedApplications: number;
   /** Mean score over applications with a report (0 when none have one) */

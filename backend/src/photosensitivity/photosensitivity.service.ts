@@ -1,14 +1,26 @@
-import { Injectable, NotFoundException, ServiceUnavailableException, UnprocessableEntityException, Logger, Optional } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+  UnprocessableEntityException,
+  Logger,
+  Optional,
+} from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { AdmissionCancelledError, AdmissionPool, AdmissionRejectedError, AdmissionTicket } from '../common/concurrency/admission-pool';
 import {
   IRISAnalysisResult,
   IrisAnalysisError,
+  IrisConcurrency,
   IrisLocation,
   IrisSettings,
   IrisUnavailableError,
+  irisConcurrencyFromEnv,
   irisSettingsFromEnv,
   locateIris,
   runIris,
@@ -37,39 +49,108 @@ export interface IRISSummary {
   status: 'pass' | 'warning' | 'failure';
 }
 
+/**
+ * A refused analysis: 503 PHOTOSENSITIVITY_BUSY when the server is full, 429
+ * PHOTOSENSITIVITY_QUOTA_EXCEEDED when this caller already has its share.
+ * Both are retryable; `retryAfterSeconds` matches the Retry-After header.
+ */
+export class AnalysisRejectedException extends HttpException {
+  constructor(
+    error: AdmissionRejectedError,
+    readonly retryAfterSeconds: number,
+  ) {
+    const status = error.reason === 'quota' ? HttpStatus.TOO_MANY_REQUESTS : HttpStatus.SERVICE_UNAVAILABLE;
+    super(
+      {
+        statusCode: status,
+        code: error.reason === 'quota' ? 'PHOTOSENSITIVITY_QUOTA_EXCEEDED' : 'PHOTOSENSITIVITY_BUSY',
+        message: error.message,
+        retryAfterSeconds,
+      },
+      status,
+    );
+  }
+}
+
 @Injectable()
 export class PhotosensitivityService {
   private readonly logger = new Logger(PhotosensitivityService.name);
   private readonly iris: IrisSettings;
+  private readonly concurrency: IrisConcurrency;
+  /** Every analysis holds a place here from before its upload until IRIS is done */
+  readonly pool: AdmissionPool;
   private readonly uploadsDir = path.join(process.cwd(), 'uploads', 'videos');
 
   constructor(@Optional() private readonly elasticsearchService?: ElasticsearchService) {
     this.iris = irisSettingsFromEnv();
+    this.concurrency = irisConcurrencyFromEnv();
+    this.pool = new AdmissionPool({
+      maxRunning: this.concurrency.maxConcurrent,
+      maxQueued: this.concurrency.maxQueued,
+      maxPerCaller: this.concurrency.maxPerCaller,
+    });
     // Multer writes uploads here before analysis
     fs.mkdir(this.uploadsDir, { recursive: true }).catch((error) =>
       this.logger.error(`Failed to create the upload directory: ${(error as Error).message}`),
     );
   }
 
+  /** Seconds a refused caller is told to wait (the Retry-After header) */
+  get retryAfterSeconds(): number {
+    return this.concurrency.retryAfterSeconds;
+  }
+
   /**
-   * Analyses a video with IRIS. The uploaded video and IRIS's output are
-   * deleted afterwards; only the summary is kept. 503 when IRIS isn't
-   * installed, 422 when it can't analyse the video.
+   * A place for one analysis by `caller`, taken before the upload is staged.
+   * Throws AnalysisRejectedException (503 or 429) straight away when there is
+   * none. The ticket must be run or cancelled.
+   */
+  admit(caller: string): AdmissionTicket {
+    try {
+      return this.pool.admit(caller);
+    } catch (error) {
+      if (error instanceof AdmissionRejectedError) throw new AnalysisRejectedException(error, this.concurrency.retryAfterSeconds);
+      throw error;
+    }
+  }
+
+  /**
+   * Analyses a video with IRIS, waiting for a free slot first. The uploaded
+   * video and IRIS's output are deleted afterwards, also when the ticket is
+   * cancelled; only the summary is kept. 503 IRIS_UNAVAILABLE when IRIS isn't
+   * installed, 422 when it can't analyse the video (codes in
+   * docs/API_ERROR_CODES.md). Without a ticket, one is taken for `caller`.
    */
   async analyzeVideo(
     videoPath: string,
     options: { enablePatternDetection?: boolean } = {},
+    ticket?: AdmissionTicket,
+    caller = 'internal',
   ): Promise<{ summary: IRISSummary; results: IRISAnalysisResult[] }> {
     try {
-      const results = await runIris(videoPath, { patternDetection: options.enablePatternDetection !== false }, this.iris);
+      const place = ticket ?? this.admit(caller);
+      const results = await place.run((signal) =>
+        runIris(videoPath, { patternDetection: options.enablePatternDetection !== false, signal }, this.iris),
+      );
       return { summary: this.generateSummary(results), results };
     } catch (error) {
-      if (error instanceof IrisUnavailableError) throw new ServiceUnavailableException(error.message);
+      if (error instanceof AdmissionCancelledError) {
+        throw new ServiceUnavailableException({ statusCode: 503, code: 'IRIS_CANCELLED', message: error.message });
+      }
+      if (error instanceof IrisUnavailableError) {
+        throw new ServiceUnavailableException({ statusCode: 503, code: 'IRIS_UNAVAILABLE', message: error.message });
+      }
       if (error instanceof IrisAnalysisError) {
         this.logger.warn(`IRIS analysis failed: ${error.message}`);
-        throw new UnprocessableEntityException(error.message);
+        if (error.code === 'IRIS_CANCELLED') {
+          throw new ServiceUnavailableException({ statusCode: 503, code: error.code, message: error.message });
+        }
+        throw new UnprocessableEntityException({ statusCode: 422, code: error.code, message: error.message });
       }
       throw error;
+    } finally {
+      // runIris has normally deleted it already; not when the ticket was refused or cancelled first
+      await fs.rm(videoPath, { force: true });
     }
   }
 

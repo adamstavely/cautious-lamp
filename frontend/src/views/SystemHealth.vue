@@ -309,7 +309,7 @@
             <UiStat
               label="Accessibility"
               :value="formatPercent(auditReport.detailedMetrics.accessibility.score)"
-              :hint="auditReport.detailedMetrics.accessibility.wcagLevel ? `WCAG ${auditReport.detailedMetrics.accessibility.wcagLevel}` : 'No reports yet'"
+              :hint="auditReport.detailedMetrics.accessibility.wcagLevel ? `Weakest verified level: ${auditReport.detailedMetrics.accessibility.wcagLevel}` : 'No reports yet'"
             />
           </div>
 
@@ -696,7 +696,7 @@ const exportReport = (format) => {
       ['In Progress', auditReport.value.components.byStatus.inProgress.length],
       ['Deprecated', auditReport.value.components.byStatus.deprecated.length],
       ['Accessibility Score', formatPercent(auditReport.value.detailedMetrics.accessibility.score)],
-      ['WCAG Level', auditReport.value.detailedMetrics.accessibility.wcagLevel],
+      ['Weakest verified WCAG level (automated)', auditReport.value.detailedMetrics.accessibility.wcagLevel ?? 'No reports yet'],
       ['Compliance Score', formatPercent(auditReport.value.detailedMetrics.compliance.score)],
       ['Adoption Rate', formatPercent(auditReport.value.detailedMetrics.adoption.overallRate)],
     ];

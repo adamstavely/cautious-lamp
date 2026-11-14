@@ -46,6 +46,11 @@ API key has been revoked.
 
 **Solution**: Create a new API key.
 
+#### `PASSWORD_CHANGE_REQUIRED`
+`403`. The user signed in with a temporary password (a new account or an admin reset) and must change it before calling anything except `GET /auth/me`, `POST /auth/change-password` and `POST /auth/logout`. The WebSocket gateway sends it in an `error` event before disconnecting.
+
+**Solution**: Send the user to the change-password screen; after `POST /auth/change-password` succeeds, sign in again with the new password. See [AUTH.md](AUTH.md#principals).
+
 ### Validation Errors
 
 #### `VALIDATION_ERROR`
@@ -90,6 +95,40 @@ Rate limit exceeded.
 - Implement request throttling
 - Use multiple API keys
 - Contact support for higher limits
+
+### Photosensitivity Analysis
+
+`POST /api/v1/photosensitivity/analyze` ([IRIS_PHOTOSENSITIVITY_SERVICE.md](./IRIS_PHOTOSENSITIVITY_SERVICE.md#limits)). These bodies are `{ "statusCode", "code", "message" }`, plus `retryAfterSeconds` on the two retryable refusals.
+
+#### `PHOTOSENSITIVITY_BUSY`
+`503`, with `Retry-After`. The server is running and queueing as many analyses as it allows. Nothing was uploaded.
+
+**Solution**: Retry after `Retry-After` seconds.
+
+#### `PHOTOSENSITIVITY_QUOTA_EXCEEDED`
+`429`, with `Retry-After`. You already have as many analyses running or queued as one user or API key may. Nothing was uploaded.
+
+**Solution**: Wait for one to finish, then retry.
+
+#### `IRIS_UNAVAILABLE`
+`503`. IRIS isn't installed or configured on this server.
+
+**Solution**: Not retryable; see `GET /api/v1/photosensitivity/verify` and [INTEGRATIONS.md](./INTEGRATIONS.md#iris).
+
+#### `IRIS_TIMEOUT`
+`422`. The analysis ran longer than `IRIS_TIMEOUT_MS` and was stopped.
+
+**Solution**: Analyse a shorter clip.
+
+#### `IRIS_VIDEO_TOO_LONG`
+`422`. The video has more frames than `IRIS_MAX_FRAMES`, or its results are larger than `IRIS_MAX_OUTPUT_BYTES`.
+
+**Solution**: Analyse a shorter clip.
+
+#### `IRIS_ANALYSIS_FAILED`
+`422`. IRIS couldn't analyse the video, usually because it can't read it.
+
+**Solution**: Check the video plays, or re-encode it as MP4.
 
 ### Integration Errors
 

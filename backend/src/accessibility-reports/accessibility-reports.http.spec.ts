@@ -1,7 +1,7 @@
 import { UnprocessableEntityException } from '@nestjs/common';
 import { createServer, Server } from 'http';
 import { AddressInfo } from 'net';
-import { ADMIN_KEY, FakeApplications, authProviders, startApp } from '../governance/testing/fakes';
+import { ADMIN_KEY, FakeApplications, authProviders, readScopeProviders, startApp, userKey, workspace } from '../governance/testing/fakes';
 import { APPLICATION_DIRECTORY } from '../governance/sources';
 import { InMemoryStore } from '../reviews/testing/in-memory-store';
 import { AccessibilityReportsController } from './accessibility-reports.controller';
@@ -54,7 +54,10 @@ describe('axe-core reports from supplied HTML', () => {
 
     const clean = buildReport(await runAxeOnHtml(CLEAN), { ...report, id: 'r2', generatedAt: new Date('2026-01-02T00:00:00Z'), source: 'html', createdBy: 'test' }, report);
     expect(clean.complianceScore).toBe(100);
-    expect(clean.wcagLevel).toBe('AA');
+    // HTML only: no layout, so contrast needs review and AA isn't verified
+    expect(clean.wcagLevel).toBe('A');
+    expect(clean.conformance).toMatchObject({ status: 'needs-review', rendered: false });
+    expect(clean.conformance.reviewCriteria).toContain('1.4.3');
     expect(clean.trend).toMatchObject({ fixedIssues: report.totalIssues, newIssues: 0, scoreChange: 100 - report.complianceScore });
   }, 30000);
 });
@@ -83,6 +86,7 @@ describe('Accessibility reports HTTP API', () => {
         { provide: SLA_STORE, useValue: slaStore },
         { provide: APPLICATION_DIRECTORY, useValue: applications },
         { provide: A11Y_SCANNER, useValue: scanner },
+        ...readScopeProviders(),
         ...authProviders,
       ],
     });
@@ -103,7 +107,7 @@ describe('Accessibility reports HTTP API', () => {
   });
 
   it('returns 404 for unknown ids (not 500)', async () => {
-    expect((await call('GET', '/accessibility-reports/reports/nope')).status).toBe(404);
+    expect((await admin('GET', '/accessibility-reports/reports/nope')).status).toBe(404);
     expect((await admin('PUT', '/accessibility-reports/schedules/nope', { enabled: false })).status).toBe(404);
     expect((await admin('DELETE', '/accessibility-reports/schedules/nope')).status).toBe(404);
     expect((await call('GET', '/accessibility-reports/slas/nope')).status).toBe(404);
@@ -123,15 +127,22 @@ describe('Accessibility reports HTTP API', () => {
     expect(first.status).toBe(201);
     expect(first.body).toMatchObject({ applicationId: 'app-1', source: 'html', engine: 'jsdom', wcagLevel: 'Non-Compliant', createdBy: 'service:admin-key' });
     expect(first.body.totalIssues).toBeGreaterThanOrEqual(3);
-    expect(applications.scans.map((s) => s.id)).toContain('app-1');
+    expect(first.body.access).toEqual({ workspaceId: null });
+    // Only the accessibility timestamp, not the governance one
+    expect(applications.scans).toContainEqual(expect.objectContaining({ id: 'app-1', kind: 'accessibility' }));
+    expect(applications.scans.filter((s) => s.kind === 'governance')).toEqual([]);
 
     const second = await admin('POST', '/accessibility-reports/generate/app-1', { html: CLEAN });
     expect(second.body).toMatchObject({ previousReportId: first.body.id, complianceScore: 100, trend: { fixedIssues: first.body.totalIssues } });
 
-    const list = await call('GET', '/accessibility-reports/reports?applicationId=app-1');
+    const list = await admin('GET', '/accessibility-reports/reports?applicationId=app-1');
     expect(list.body.map((r: AccessibilityReport) => r.id)).toEqual([second.body.id, first.body.id]);
     expect(list.body[0].checks).toBeUndefined();
-    expect((await call('GET', `/accessibility-reports/reports/${first.body.id}`)).body.checks.length).toBe(first.body.totalIssues);
+    expect(list.body[0].conformance).toMatchObject({ status: 'needs-review' });
+    expect((await admin('GET', `/accessibility-reports/reports/${first.body.id}`)).body.checks.length).toBe(first.body.totalIssues);
+    // app-1 has no workspace: its reports are for governance admins only
+    expect((await call('GET', '/accessibility-reports/reports?applicationId=app-1')).body).toEqual([]);
+    expect((await call('GET', `/accessibility-reports/reports/${first.body.id}`)).status).toBe(404);
   }, 30000);
 
   it('scans the application URL when no html is sent, and rejects private URLs', async () => {
@@ -143,7 +154,7 @@ describe('Accessibility reports HTTP API', () => {
   }, 30000);
 
   it('keeps the latest good report when the target answers with an HTTP error', async () => {
-    const latest = (await call('GET', '/accessibility-reports/reports?applicationId=app-2')).body[0];
+    const latest = (await admin('GET', '/accessibility-reports/reports?applicationId=app-2')).body[0];
     expect(latest).toBeDefined();
     const stored = reportStore.docs.size;
     scanUrl.mockRejectedValueOnce(new UnprocessableEntityException('Target unavailable: 93.184.215.14 answered HTTP 404, so there is nothing to audit (no report was created)'));
@@ -151,8 +162,8 @@ describe('Accessibility reports HTTP API', () => {
     expect(res.status).toBe(422);
     expect(res.body.message).toMatch(/Target unavailable.*HTTP 404/);
     expect(reportStore.docs.size).toBe(stored);
-    expect((await call('GET', '/accessibility-reports/reports?applicationId=app-2')).body[0].id).toBe(latest.id);
-    const summary = await call('GET', '/accessibility-reports/summary');
+    expect((await admin('GET', '/accessibility-reports/reports?applicationId=app-2')).body[0].id).toBe(latest.id);
+    const summary = await admin('GET', '/accessibility-reports/summary');
     expect(summary.body.applications.find((a: { applicationId: string }) => a.applicationId === 'app-2').latestReportId).toBe(latest.id);
   });
 
@@ -172,13 +183,17 @@ describe('Accessibility reports HTTP API', () => {
     expect(created.status).toBe(201);
     expect((await admin('POST', '/accessibility-reports/slas', { ...sla, targetScore: 50 })).status).toBe(409);
 
-    const summary = await call('GET', '/accessibility-reports/summary');
+    // app-1's latest report scored 100 from HTML only: AA isn't verified, so it needs review rather than meeting the SLA
+    const summary = await admin('GET', '/accessibility-reports/summary');
     const byApp = Object.fromEntries(summary.body.applications.map((a: { applicationId: string; slaStatus: string }) => [a.applicationId, a.slaStatus]));
-    expect(byApp).toEqual({ 'app-1': 'compliant', 'app-2': 'no-sla' });
-    expect(summary.body).toMatchObject({ totalApplications: 2, reportedApplications: 2, compliantApplications: 1, unassessedApplications: 1, averageScore: 100 });
+    expect(byApp).toEqual({ 'app-1': 'needs-review', 'app-2': 'no-sla' });
+    expect(summary.body).toMatchObject({ totalApplications: 2, reportedApplications: 2, compliantApplications: 0, needsReviewApplications: 1, unassessedApplications: 1, averageScore: 100 });
+    expect(summary.body.applications.find((a: { applicationId: string }) => a.applicationId === 'app-1')).toMatchObject({ wcagLevel: 'A', conformanceStatus: 'needs-review' });
+    // Neither application is in a workspace: a caller without admin:governance sees neither
+    expect((await call('GET', '/accessibility-reports/summary')).body).toMatchObject({ totalApplications: 0, applications: [] });
 
     // The cached summary SystemHealthService reads matches
-    expect(h.moduleRef.get(AccessibilityReportsService).getMultiApplicationComplianceSummary().compliantApplications).toBe(1);
+    expect(h.moduleRef.get(AccessibilityReportsService).getMultiApplicationComplianceSummary().needsReviewApplications).toBe(1);
 
     const updated = await admin('PUT', `/accessibility-reports/slas/${created.body.id}`, { targetScore: 100, criticalIssuesThreshold: 2 });
     expect(updated.body).toMatchObject({ targetScore: 100, criticalIssuesThreshold: 2, applicationId: 'app-1', highIssuesThreshold: 5 });
@@ -210,9 +225,76 @@ describe('Accessibility reports HTTP API', () => {
     const after = (await call('GET', `/accessibility-reports/schedules/${created.body.id}`)).body;
     expect(after).toMatchObject({ lastStatus: 'success', lastRun: now.toISOString() });
     expect(new Date(after.nextRun).getTime()).toBeGreaterThan(now.getTime());
-    expect((await call('GET', `/accessibility-reports/reports/${after.lastReportId}`)).body).toMatchObject({ scheduled: true, scheduleId: created.body.id });
+    expect(after.pending).toBeUndefined();
+    expect((await admin('GET', `/accessibility-reports/reports/${after.lastReportId}`)).body).toMatchObject({ scheduled: true, scheduleId: created.body.id, occurrence: edited.body.nextRun });
 
     expect((await admin('DELETE', `/accessibility-reports/schedules/${created.body.id}`)).status).toBe(204);
+  }, 30000);
+});
+
+/**
+ * Reports follow the same rule as scan evidence (governance/evidence-access.ts):
+ * members of the application's workspace and governance admins. alice is a
+ * member of ws_alpha, bob of ws_beta.
+ */
+describe('Accessibility report visibility', () => {
+  const reportStore = new InMemoryStore<AccessibilityReport>();
+  const applications = new FakeApplications([
+    { id: 'app-alpha', name: 'Alpha app', workspaceId: 'ws_alpha' },
+    { id: 'app-none', name: 'No workspace', workspaceId: null },
+  ]);
+  let h: Awaited<ReturnType<typeof startApp>>;
+  const as = (name: string, method: string, route: string, body?: unknown) => h.call(method, route, body, userKey(name));
+  const ids = async (name: string, query = '') => (await as(name, 'GET', `/accessibility-reports/reports${query}`)).body.map((r: AccessibilityReport) => r.id);
+
+  beforeAll(async () => {
+    h = await startApp({
+      controllers: [AccessibilityReportsController],
+      providers: [
+        AccessibilityReportsService,
+        { provide: REPORT_STORE, useValue: reportStore },
+        { provide: SCHEDULE_STORE, useValue: new InMemoryStore<ReportSchedule>() },
+        { provide: SLA_STORE, useValue: new InMemoryStore<ComplianceSLA>() },
+        { provide: APPLICATION_DIRECTORY, useValue: applications },
+        { provide: A11Y_SCANNER, useValue: { scanHtml: runAxeOnHtml, scanUrl: async () => Promise.reject(new Error('unused')) } },
+        ...readScopeProviders([workspace('ws_alpha', 'alice'), workspace('ws_beta', 'bob')]),
+        ...authProviders,
+      ],
+    });
+  });
+
+  afterAll(async () => {
+    await h.app.close();
+  });
+
+  it("limits report reads and the summary to the application's workspace", async () => {
+    const alpha = await h.call('POST', '/accessibility-reports/generate/app-alpha', { html: FIXTURE }, ADMIN_KEY);
+    expect(alpha.body.access).toEqual({ workspaceId: 'ws_alpha' });
+    const none = await h.call('POST', '/accessibility-reports/generate/app-none', { html: FIXTURE }, ADMIN_KEY);
+
+    expect(await ids('alice')).toEqual([alpha.body.id]);
+    expect((await as('alice', 'GET', `/accessibility-reports/reports/${alpha.body.id}`)).status).toBe(200);
+    expect((await as('alice', 'GET', `/accessibility-reports/reports/${none.body.id}`)).status).toBe(404);
+    expect(await ids('bob')).toEqual([]);
+    expect(await ids('bob', '?applicationId=app-alpha')).toEqual([]);
+    expect((await as('bob', 'GET', `/accessibility-reports/reports/${alpha.body.id}`)).status).toBe(404);
+    expect(await ids('gov')).toEqual(expect.arrayContaining([alpha.body.id, none.body.id]));
+
+    const summaryIds = async (name: string) => (await as(name, 'GET', '/accessibility-reports/summary')).body.applications.map((a: { applicationId: string }) => a.applicationId);
+    expect(await summaryIds('alice')).toEqual(['app-alpha']);
+    expect(await summaryIds('bob')).toEqual([]);
+    expect((await summaryIds('gov')).sort()).toEqual(['app-alpha', 'app-none']);
+  }, 30000);
+
+  it('reads reports stored before access metadata existed as governance-admin-only', async () => {
+    const generated = await h.call('POST', '/accessibility-reports/generate/app-alpha', { html: FIXTURE }, ADMIN_KEY);
+    const { access: _access, conformance: _conformance, ...legacy } = generated.body;
+    reportStore.forceWrite({ ...legacy, id: 'report-legacy' });
+    expect((await as('alice', 'GET', '/accessibility-reports/reports/report-legacy')).status).toBe(404);
+    const read = await as('gov', 'GET', '/accessibility-reports/reports/report-legacy');
+    expect(read.status).toBe(200);
+    // Without stored conformance it is worked out conservatively
+    expect(read.body.conformance).toMatchObject({ derived: true, status: 'failing' });
   }, 30000);
 });
 

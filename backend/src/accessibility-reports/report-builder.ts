@@ -8,7 +8,7 @@ import {
   WcagCriterionResult,
 } from './accessibility-reports.types';
 import { AxeOutcome, AxeRuleResult, MAX_NODES_PER_RULE } from './axe-engine';
-import { WcagLevel } from './sla';
+import { Conformance, WcagLevel } from './sla';
 
 const IMPACT: Record<string, Impact> = { critical: 'CRITICAL', serious: 'HIGH', moderate: 'MODERATE', minor: 'LOW' };
 
@@ -206,11 +206,10 @@ export function buildReport(outcome: AxeOutcome, input: BuildReportInput, previo
     });
   }
 
+  // The score only counts automated failures; what was (and wasn't) verified is in `conformance`
   const failing = Object.values(criteria).filter((c) => c.status === 'fail');
   const score = Math.max(0, 100 - failing.reduce((sum, c) => sum + LEVEL_PENALTY[c.level], 0));
-  let wcagLevel: WcagLevel = 'AA';
-  if (failing.some((c) => c.level === 'A')) wcagLevel = 'Non-Compliant';
-  else if (failing.some((c) => c.level === 'AA')) wcagLevel = 'A';
+  const conformance = assessConformance(criteria, outcome.engine === 'playwright');
 
   const trend: ReportTrend = { scoreChange: 0, issuesChange: 0, newIssues: 0, fixedIssues: 0 };
   if (previous) {
@@ -232,7 +231,8 @@ export function buildReport(outcome: AxeOutcome, input: BuildReportInput, previo
     source: input.source,
     url: outcome.url,
     engine: outcome.engine,
-    wcagLevel,
+    wcagLevel: levelOf(conformance),
+    conformance,
     complianceScore: score,
     totalIssues,
     criticalIssues: counts.CRITICAL,
@@ -250,4 +250,58 @@ export function buildReport(outcome: AxeOutcome, input: BuildReportInput, previo
     trend,
     createdBy: input.createdBy,
   };
+}
+
+/**
+ * What the automated checks verified, level by level. A level is verified
+ * only when every criterion at it and below passed with nothing left to
+ * review; AA also needs a rendered page, since an HTML-only scan has no
+ * layout (contrast, focus visible and target size go untested).
+ */
+export function assessConformance(criteria: Record<string, Pick<WcagCriterionResult, 'level' | 'status'>>, rendered: boolean): Conformance {
+  const at = (level: 'A' | 'AA') => Object.values(criteria).filter((c) => c.level === level);
+  const fails = (level: 'A' | 'AA') => at(level).some((c) => c.status === 'fail');
+  const reviews = (level: 'A' | 'AA') => at(level).some((c) => c.status === 'review');
+  const noFailuresUpTo = fails('A') ? null : fails('AA') ? 'A' : 'AA';
+  let verifiedUpTo: Conformance['verifiedUpTo'] = null;
+  if (!fails('A') && !reviews('A')) verifiedUpTo = 'A';
+  if (verifiedUpTo === 'A' && rendered && !fails('AA') && !reviews('AA')) verifiedUpTo = 'AA';
+  const reviewCriteria = Object.entries(criteria)
+    .filter(([, c]) => c.status === 'review' && c.level !== 'AAA')
+    .map(([key]) => key)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const status = noFailuresUpTo !== 'AA' ? 'failing' : verifiedUpTo === 'AA' ? 'no-automated-failures' : 'needs-review';
+  return { status, noFailuresUpTo, verifiedUpTo, reviewCriteria, rendered };
+}
+
+/** The headline level: what was verified, or why nothing was */
+export function levelOf(conformance: Pick<Conformance, 'noFailuresUpTo' | 'verifiedUpTo'>): WcagLevel {
+  if (conformance.verifiedUpTo) return conformance.verifiedUpTo;
+  return conformance.noFailuresUpTo === null ? 'Non-Compliant' : 'Unverified';
+}
+
+/**
+ * Reports stored before `conformance` existed claimed AA whenever nothing
+ * failed. Read them conservatively: the old level still says which levels
+ * had failures, but any criterion needing review (`needsReview`) or an
+ * HTML-only scan leaves nothing verified, because the stored summary doesn't
+ * say at which level the review items were.
+ */
+export function withConformance<T extends Pick<AccessibilityReport, 'wcagLevel' | 'needsReview' | 'engine'> & { conformance?: Conformance }>(
+  report: T,
+): T & { conformance: Conformance; wcagLevel: WcagLevel } {
+  if (report.conformance) return report as T & { conformance: Conformance };
+  const stored = report.wcagLevel as string;
+  const noFailuresUpTo = stored === 'Non-Compliant' ? null : stored === 'A' ? 'A' : 'AA';
+  const rendered = report.engine === 'playwright';
+  const verifiedUpTo = report.needsReview > 0 || !rendered ? null : noFailuresUpTo;
+  const conformance: Conformance = {
+    status: noFailuresUpTo !== 'AA' ? 'failing' : verifiedUpTo === 'AA' ? 'no-automated-failures' : 'needs-review',
+    noFailuresUpTo,
+    verifiedUpTo,
+    reviewCriteria: [],
+    rendered,
+    derived: true,
+  };
+  return { ...report, conformance, wcagLevel: levelOf(conformance) };
 }

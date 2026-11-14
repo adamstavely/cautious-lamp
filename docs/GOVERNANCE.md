@@ -50,7 +50,7 @@ A rule is data. One interpreter runs every rule (`backend/src/governance/rule-in
 
 A scan runs the selected rules and stores the result, including the version of each rule that ran.
 
-- **Design-system scope** checks each design system component. The component's template (or `code.html`) is the HTML, its `<style>` blocks are the CSS, and its `<script>` blocks plus `code.react` are the JavaScript. `codebase` and `url` aren't accepted for this scope.
+- **Design-system scope** checks each design system component **the caller can read** (the same rule as `GET /components`, `ComponentAccessService`): library and global components, plus the private components of the caller's workspaces and those shared with them. `admin:users` holders scan every component. The component's template (or `code.html`) is the HTML, its `<style>` blocks are the CSS, and its `<script>` blocks plus `code.react` are the JavaScript. `codebase` and `url` aren't accepted for this scope. Internal callers can scan every component on the system's behalf (`ScansService.scan(…, { system: true })`); no request can ask for that.
 - **Application scope** needs an `applicationId` and one of the following:
   - `codebase: { html?, css?, javascript?, file? }`: up to 256 KB per field and 512 KB in total. If `css` or `javascript` is empty, the inline `<style>` or `<script>` blocks in the HTML are used instead. Nest's JSON body limit (100 KB by default, set in `main.ts`) applies first.
   - `url`: the server fetches this public http(s) page and checks its HTML and its inline styles and scripts. Scripts are read, never run. The URL must pass `assertPublicHttpUrl`, and so must every redirect (at most 5). Private addresses are refused again when the connection is made, which stops DNS rebinding. The fetch has a 10 s timeout and a 2 MB size cap.
@@ -58,15 +58,30 @@ A scan runs the selected rules and stores the result, including the version of e
 - `ruleIds` runs those rules, enabled or not. Otherwise every enabled rule runs. `categories` filters either set.
 - **Results.** A rule that finds nothing adds one `pass` check. Each violation adds one check whose `status` is the rule's severity (`error`, `warning` or `info`). A rule that couldn't run adds an `error` check with the reason. A rule that found nothing but couldn't check all of its input is `incomplete`, never a pass, and adds a `warning` check ("Not fully checked: …"). `ruleResults` lists each rule's outcome: `pass`, `fail`, `skipped` (with a reason, e.g. "No CSS to check"), `error` or `incomplete` (with a reason). The `summary` counts `{ passed, warnings, errors, info, total }` always equal the checks by status. Up to 2,000 checks are stored, and `truncated` is set if there were more.
 - **Selector limits.** `selector-attribute` checks every matching element for the attribute. With a `pattern`, at most 10,000 attribute values are tested (1,000 per regex call). If more values match and none of the tested ones fail, the rule is `incomplete`.
-- After an application scan, `lastScanned` is set on the application (through `ApplicationsService.markScanned`).
+- After an application scan, the application's `capabilities.governance.lastScan` and `lastScanned` are set (through `ApplicationsService.markScanned(id, at, 'governance')`). Accessibility reports set `lastAccessibilityReport` and `lastScanned`, never `governance.lastScan`, so a report doesn't stand in for a governance scan. Timestamps never move backwards.
+
+### Who can read scans
+
+Scans contain evidence (component names, HTML snippets), so every stored scan records who may read it in `access` (`governance/evidence-access.ts`), and `GET /governance/scans` and `GET /governance/scans/:id` enforce it. A scan the caller can't read is a `404`, like a missing one, and isn't counted in `total`.
+
+- **Application scans** store `access: { workspaceId }`, the application's workspace when it was scanned. They're readable by `admin:governance` and `admin:users` holders and by members (any role) of that workspace. Scans of applications without a workspace are for governance admins only. Moving an application later doesn't move its old scans.
+- **Design-system scans** store `access: { componentAudiences }`: for each private component in the result, the workspaces that could read it (its own and those it was shared with). A reader must be able to read every one of them; a scan of library and global components only (`[]`) is readable by everyone signed in. `admin:governance` doesn't widen this; `admin:users` reads them all.
+- **Older scans** (stored before `access` existed) fail closed: application scans are readable by governance admins and `admin:users` holders, design-system scans by `admin:users` holders only, since they may contain any component.
 
 ### Scheduled scans
 
 An application's `capabilities.governance.scanSchedule` decides whether it's scanned automatically:
 
 - `manual` (the default): only when someone asks.
-- `daily` and `weekly`: `GovernanceScanScheduler` scans the application's `applicationUrl` once per UTC day, or once per UTC week starting Monday. It runs the rules the application picked, as a `url` scan, and the result appears in scan history like any other scan, created by `service:governance-scheduler`. An application already scanned in the current day or week (by hand, say) isn't scanned again. Governance must be enabled and the application must have a URL, otherwise there's nothing to scan and the schedule is ignored.
-- Each run is claimed with a compare-and-swap write to `scheduled-scan:<applicationId>` in `design-system-governance-meta`, so only one instance runs each occurrence. That document also records `lastStatus` (`success` or `failed`), `lastError` and `lastScanId`. A failed run is logged and retried in the next period.
+- `daily` and `weekly`: `GovernanceScanScheduler` scans the application's `applicationUrl` once per UTC day, or once per UTC week starting Monday. It runs the rules the application picked, as a `url` scan, and the result appears in scan history like any other scan, created by `service:governance-scheduler`. An application whose governance scan already ran in the current day or week (by hand, say) isn't scanned again; an accessibility report doesn't count. Governance must be enabled and the application must have a URL, otherwise there's nothing to scan and the schedule is ignored.
+- **Occurrences.** Each period's run is an occurrence, tracked in `scheduled-scan:<applicationId>` in `design-system-governance-meta` (`value` is the period, e.g. `daily:2026-11-13T00:00:00.000Z`). Its `state` is:
+  - `claimed`: an instance is running it. The claim is a compare-and-swap write with a lease (`leaseUntil`, `GOVERNANCE_SCHEDULER_LEASE_MS`, 10 minutes by default, well over a URL scan's 10 s fetch timeout). If that instance dies, another takes the occurrence over once the lease expires.
+  - `retry`: the attempt failed (`lastStatus: failed`, `lastError`); the next one is due at `retryAt`, 5 minutes later and doubling each time (`GOVERNANCE_SCHEDULER_RETRY_DELAY_MS`).
+  - `completed`: the scan is stored (`lastStatus: success`, `lastScanId`).
+  - `dead-letter`: every attempt failed or died (`GOVERNANCE_SCHEDULER_MAX_ATTEMPTS`, 3 by default). It isn't retried; it's added to `deadLetters` (the 10 newest, `{ period, attempts, error, at }`), logged as an error, and listed by `GET /governance/scheduled-scans`. The next period runs as usual.
+- `attempts` counts the attempts so far. Only the run holding the claim (`token`) can complete it, so a run whose lease was taken over changes nothing.
+- **No duplicates.** A scheduled scan is stored under a fixed id per occurrence (`scan-scheduled-<applicationId>-<frequency>-<period start ms>`). A run that finds its scan already stored (the previous attempt stored it, then died) completes the occurrence without scanning again, and a late run whose scan lands second keeps the first.
+- Markers written before occurrence states existed are read as: `lastStatus: success` completed, `failed` a first attempt due for retry, `running` a claim whose lease started when it was written.
 - The scheduler polls every minute (`GOVERNANCE_SCHEDULER_INTERVAL_MS`). It doesn't run when `GOVERNANCE_SCHEDULER_ENABLED=false` or `NODE_ENV=test`.
 - `on-commit` isn't supported. The server has no repository integration that would tell it about a commit. To scan on every commit, have CI call `POST /api/v1/governance/scans` with an API key that has `admin:governance` after each push, sending either the built code (`codebase`) or the deployed preview URL (`url`). Applications that still have `on-commit` stored are treated as `manual`.
 
@@ -84,8 +99,9 @@ An application's `capabilities.governance.scanSchedule` decides whether it's sca
 | `POST /governance/rules/import` | `admin:governance` | `{ rules, mode?: "merge" \| "replace" }` (at most 200 rules). Every rule is validated before anything is written. Rules with a known `id` are updated; others are created. `replace` also deletes rules that aren't in the import. Returns `{ created, updated, deleted }`. An exported file can be posted as-is. |
 | `POST /governance/rules/test` | `admin:governance` | `{ rule, sample: { html?, css?, javascript? } }`. Returns `{ outcome, reason?, checks, summary }`. Nothing is stored. |
 | `POST /governance/scans` | `component:view`; application scope also needs `admin:governance` | `{ scope: "design-system" \| "application", applicationId?, codebase?, url?, ruleIds?, categories? }` |
-| `GET /governance/scans?applicationId=&scope=&limit=` | signed in | `{ scans, total }` without checks, newest first |
-| `GET /governance/scans/:id` | signed in | The full scan |
+| `GET /governance/scans?applicationId=&scope=&limit=` | signed in | `{ scans, total }` without checks, newest first; only scans the caller may read (see Who can read scans) |
+| `GET /governance/scans/:id` | signed in | The full scan; `404` if the caller may not read it |
+| `GET /governance/scheduled-scans` | `admin:governance` | `{ occurrences, total }`: each scheduled application's latest occurrence (`applicationId`, `value`, `state`, `attempts`, `leaseUntil`, `retryAt`, `lastStatus`, `lastError`, `lastScanId`, `deadLetters`) |
 | `POST /compliance/scan` | as `POST /governance/scans` | For the CLI and MCP server. Same body and response; `scope: "applications"` is accepted. |
 | `POST /compliance/scan-application` | `admin:governance` | For the CLI: `{ applicationId, codebase?, url?, … }` |
 | `GET /rules/export?format=json\|eslint\|prettier` | signed in | Rule summaries for the MCP server. Contains no code. The `eslint` format leaves out each rule's type and pattern, so the ESLint plugin reads `GET /governance/rules/export` instead. |
@@ -105,23 +121,35 @@ A report is generated by `POST /accessibility-reports/generate/:applicationId` w
 What's in a report:
 
 - **WCAG criteria** come from axe's tags (for example `wcag143` maps to 1.4.3). Each criterion is `fail` if any of its rules has violations, `review` if axe couldn't decide, and otherwise `pass`.
-- **Score** starts at 100, loses 15 per failing level A criterion and 10 per failing AA criterion, and stops at 0.
-- **Level** is `Non-Compliant` if any A criterion fails, `A` if only AA criteria fail, and `AA` otherwise. Only A and AA rules run. Automated checks can't prove conformance.
+- **Score** (`complianceScore`) is the automated scan score: it starts at 100, loses 15 per failing level A criterion and 10 per failing AA criterion, and stops at 0. It only counts failures, so criteria needing review don't lower it. What was verified is reported separately, in `conformance`.
+- **Conformance** says what the automated checks could and couldn't establish. Automated checks never prove conformance; at best they find no failures.
+  - `status`: `failing` (an A or AA criterion failed), `needs-review` (nothing failed, but some A/AA criteria need a manual check, or the scan was HTML-only), or `no-automated-failures` (a rendered page passed every automated A/AA check with nothing to review).
+  - `noFailuresUpTo`: the highest level with no automated failures (`null` when an A criterion failed).
+  - `verifiedUpTo`: the highest level whose criteria, at that level and below, all passed with nothing to review (`null` when not even A). HTML-only scans stop at `A`: without layout, contrast, focus visibility and target size aren't tested.
+  - `reviewCriteria`: the A/AA criteria that need a manual check, e.g. `["1.4.3"]`. `rendered`: `false` for HTML-only scans.
+- **Level** (`wcagLevel`) is the headline of `conformance`: `Non-Compliant` if an A criterion fails, `Unverified` if none fails but level A isn't fully verified, otherwise `verifiedUpTo` (`A` or `AA`). So an incomplete 1.4.3 result gives `A` with `needs-review`, not `AA`, and an HTML-only scan never reaches `AA`. Only A and AA rules run.
+- **Older reports** (stored before `conformance` existed) are read conservatively: the stored level still says which levels had failures, but if the report had any criterion needing review (`needsReview > 0`) or was HTML-only, nothing counts as verified (`verifiedUpTo: null`, `wcagLevel: Unverified` unless it was `Non-Compliant`), and `conformance.derived` is `true`.
 - **Issues** are counted per failing element, by impact: critical, high (axe "serious"), moderate and low. Counts, a criterion's `issues` and a fix's `affectedElements` include every element axe found. A report lists at most 50 example elements per rule (in `checks` and `failingElements`). When a rule had more, the report has `sampling: { examplesPerRule: 50, rules: [{ ruleId, shown, total }] }`, so `totalIssues` can be larger than `checks.length`.
 - **Fixes** are grouped by axe rule, with a link to axe's help page.
 - **Trend** compares the report with the application's previous one, matching issues by rule and selector.
 
-Reports are stored in `design-system-a11y-reports` and set the application's `lastScanned`.
+Reports are stored in `design-system-a11y-reports` and set the application's `lastAccessibilityReport` and `lastScanned` (not the governance `lastScan`, so they don't suppress a scheduled governance scan).
+
+**Who can read reports.** Each report stores `access: { workspaceId }`, the application's workspace when it was generated, and the report routes use the same rule as application scans: `admin:governance` and `admin:users` holders, and members of that workspace. Reports of applications without a workspace, and reports stored before `access` existed, are for governance admins and `admin:users` holders only. A report the caller may not read is a `404`. `GET /summary` only includes the applications whose reports the caller may read, by each application's current workspace; the cached summary `SystemHealthService` reads covers every application.
 
 ### Schedules
 
-Each schedule stores `{ applicationId, url?, frequency: daily|weekly|monthly, dayOfWeek? (0–6), dayOfMonth? (1–31), time: "HH:mm" (UTC), enabled, nextRun, lastRun?, lastStatus?, lastError?, lastReportId? }`.
+Each schedule stores `{ applicationId, url?, frequency: daily|weekly|monthly, dayOfWeek? (0–6), dayOfMonth? (1–31), time: "HH:mm" (UTC), enabled, nextRun, lastRun?, lastStatus?: success|failed|dead-letter, lastError?, lastReportId?, pending?, deadLetters? }`.
 
 - `nextRun` is the first time strictly after now. A monthly schedule on the 29th to 31st runs on the last day of shorter months.
 - An invalid time or day returns `400`.
 - Creating a schedule needs a URL: either its own or the application's. The URL must be public.
 - `AccessibilityReportsScheduler` checks for due schedules every minute (`A11Y_SCHEDULER_INTERVAL_MS`). It doesn't run when `A11Y_SCHEDULER_ENABLED=false` or `NODE_ENV=test`.
-- Because `nextRun` is stored, runs survive restarts. Each run is claimed by moving `nextRun` forward with a compare-and-swap write, so if several instances poll, only one runs each occurrence.
+- Because `nextRun` is stored, runs survive restarts. An occurrence (a `nextRun` that has passed) is claimed with a compare-and-swap write that sets `pending: { occurrence, state: "claimed", attempts, token, leaseUntil }`, so if several instances poll, only one runs each attempt. `nextRun` stays put until the occurrence completes or is dead-lettered.
+- **Crash recovery.** The lease lasts `A11Y_SCHEDULER_LEASE_MS` (10 minutes by default, well over the 90 s URL scan deadline). If the instance running it dies, another instance takes the occurrence over once the lease expires. Only the run holding the claim (`token`) can complete it.
+- **Retries.** A failed attempt sets `lastStatus: failed`, `lastError` and `pending.state: "retry"` with `retryAt` 5 minutes later, doubling each time (`A11Y_SCHEDULER_RETRY_DELAY_MS`). After `A11Y_SCHEDULER_MAX_ATTEMPTS` attempts (3 by default), or when the last attempt died, the occurrence is dead-lettered: `lastStatus: dead-letter`, it's added to `deadLetters` (the 10 newest, `{ occurrence, attempts, error, at }`), it's logged as an error, and `nextRun` moves on.
+- **No duplicates.** A scheduled report is stored under a fixed id per occurrence (`report-<scheduleId>-<occurrence ms>`, with `occurrence` on the report). A run that finds its report already stored completes the occurrence without scanning again, and a late run whose report lands second keeps the first.
+- Editing a schedule keeps a pending occurrence; it completes under the new settings.
 - Nothing is emailed. Reports appear in the history.
 
 ### SLAs
@@ -132,8 +160,9 @@ There is one SLA per application: the id is derived from the application, so a s
 
 - `no-sla`: the application has no SLA. This is not counted as non-compliant.
 - `no-report`: there's an SLA but no report yet.
-- `non-compliant`: the score is below the target, the level is below the target level, or there are more critical issues than allowed.
+- `non-compliant`: the score is below the target, a criterion at or below the target level failed (`conformance.noFailuresUpTo` below the target; AA for an AAA target), or there are more critical issues than allowed.
 - `at-risk`: there are more high issues than allowed, or a non-zero threshold is reached exactly, or the score is within 5 points of the target (capped at 100). A threshold of 0 with 0 issues is compliant.
+- `needs-review`: none of the above, but the automated checks couldn't verify the target level (`conformance.verifiedUpTo` below it): criteria need a manual check, the scan was HTML-only and the target is AA, or the target is AAA, which no automated rule tests. This is not counted as compliant.
 - `compliant`: none of the above.
 
 ### Routes (`/api/v1/accessibility-reports`)
@@ -141,8 +170,8 @@ There is one SLA per application: the id is derived from the application, so a s
 | Method and path | Permission |
 | --- | --- |
 | `POST /generate/:applicationId` | `admin:governance` |
-| `GET /summary` | signed in |
-| `GET /reports?applicationId=` (without checks, fixes or criteria), `GET /reports/:id` | signed in |
+| `GET /summary` | signed in; only applications whose reports the caller may read |
+| `GET /reports?applicationId=` (without checks, fixes or criteria), `GET /reports/:id` | signed in; only reports the caller may read (`404` otherwise) |
 | `DELETE /reports/:id` | `admin:governance` |
 | `GET /schedules?applicationId=`, `GET /schedules/:id` | signed in |
 | `POST /schedules`, `PUT /schedules/:id` (partial; the application can't change), `DELETE /schedules/:id` | `admin:governance` |
@@ -160,13 +189,14 @@ Unknown ids return `404`. Bodies are rejected if they have unknown fields, inclu
   compliantApplications,
   atRiskApplications,
   nonCompliantApplications,
+  needsReviewApplications,
   unassessedApplications,
   averageScore,
   applications: [ … ]
 }
 ```
 
-`averageScore` is the mean over applications that have a report. Each application entry has a `complianceScore` that is `null` when the application has no report. `SystemHealthService` reads the same summary synchronously from a cache. The cache is refreshed when the backend starts, after every report or SLA change, and on every `GET /summary`.
+`averageScore` is the mean over applications that have a report. Each application entry has a `complianceScore`, `wcagLevel` and `conformanceStatus` that are `null` when the application has no report. `SystemHealthService` reads the same summary synchronously from a cache. The cache is refreshed when the backend starts, after every report or SLA change, and on every `GET /summary`.
 
 ## Storage
 
@@ -184,5 +214,6 @@ Lists read at most the 10,000 newest documents.
 ## Wiring
 
 - Applications come from `APPLICATION_DIRECTORY` (`governance/sources.ts`). It is bound to `RegistryApplicationDirectory`, which wraps `ApplicationsService` (`find`, `list`, `markScanned`).
-- Design system components and tokens come from `DESIGN_SYSTEM_SOURCE`, which wraps `DesignSystemService.getAllComponents()` and `getAllTokens()`. Swap that provider if those move.
+- Design system components and tokens come from `DESIGN_SYSTEM_SOURCE`, which wraps `DesignSystemService.getAllComponents()` and `getAllTokens()`. Swap that provider if those move. Scans filter the components themselves with `canReadComponent`.
+- Who reads what comes from `READ_SCOPE`, bound to `ComponentAccessService` (`scopeFor`). Scans and accessibility reports both use it with the rules in `governance/evidence-access.ts`.
 - Tests swap these providers for in-memory fakes (`governance/testing/fakes.ts`).

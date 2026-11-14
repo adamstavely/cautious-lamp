@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { DesignSystemService, Component } from '../design-system/design-system.service';
 import { ApplicationsService } from '../applications/applications.service';
+import { ApplicationDoc } from '../applications/application.types';
+import { AuthPrincipal } from '../auth/principal';
 
 export interface ComponentUsage {
   componentId: string;
@@ -80,6 +82,35 @@ export class AnalyticsService {
   ) {}
 
   /**
+   * The applications whose usage a principal may see in analytics
+   * (docs/WORKSPACES.md, "Analytics"): those without a workspace and those in
+   * the caller's workspaces; all of them for `admin:users` and
+   * `admin:governance` holders. Routes pass this to every report, so other
+   * workspaces' applications appear in no list, count or denominator.
+   */
+  async applicationsVisibleTo(principal: AuthPrincipal): Promise<ApplicationDoc[]> {
+    return this.applications.listFor(principal);
+  }
+
+  /** A component's usage records, limited to `applications` when given (internal callers see all) */
+  private usageOf(componentId: string, applications?: ApplicationDoc[]): ComponentUsage[] {
+    const records = this.componentUsage.get(componentId) || [];
+    if (!applications) return records;
+    const ids = new Set(applications.map((app) => app.id));
+    return records.filter((r) => ids.has(r.applicationId));
+  }
+
+  /** Every component's usage records, limited like usageOf */
+  private allUsage(applications?: ApplicationDoc[]): Map<string, ComponentUsage[]> {
+    const result = new Map<string, ComponentUsage[]>();
+    this.componentUsage.forEach((_, componentId) => {
+      const records = this.usageOf(componentId, applications);
+      if (records.length) result.set(componentId, records);
+    });
+    return result;
+  }
+
+  /**
    * Track component usage from a scan
    */
   trackComponentUsage(
@@ -131,17 +162,22 @@ export class AnalyticsService {
   /**
    * Get component popularity rankings
    */
-  async getComponentPopularity(timeframe: '7d' | '30d' | '90d' | 'all' = 'all', components?: Component[]): Promise<ComponentPopularity[]> {
+  async getComponentPopularity(
+    timeframe: '7d' | '30d' | '90d' | 'all' = 'all',
+    components?: Component[],
+    applications?: ApplicationDoc[],
+  ): Promise<ComponentPopularity[]> {
     const cutoffDate = this.getCutoffDate(timeframe);
-    // The caller's visible components (ComponentAccessService); all of them for internal callers
+    // The caller's visible components (ComponentAccessService) and applications
+    // (applicationsVisibleTo); all of them for internal callers
     const allComponents = components ?? this.designSystemService.getAllComponents();
-    const allApplications = await this.applications.list();
+    const allApplications = applications ?? (await this.applications.list());
     const totalApplications = allApplications.length;
 
     const popularity: ComponentPopularity[] = [];
 
     allComponents.forEach(component => {
-      const usageRecords = this.componentUsage.get(component.id) || [];
+      const usageRecords = this.usageOf(component.id, applications);
       const filteredRecords = usageRecords.filter(r => 
         timeframe === 'all' || new Date(r.lastSeen) >= cutoffDate
       );
@@ -151,7 +187,7 @@ export class AnalyticsService {
       const adoptionRate = totalApplications > 0 ? (applicationCount / totalApplications) * 100 : 0;
 
       // Calculate trend
-      const trend = this.calculateTrend(component.id, timeframe);
+      const trend = this.calculateTrend(component.id, timeframe, applications);
       
       popularity.push({
         componentId: component.id,
@@ -170,15 +206,15 @@ export class AnalyticsService {
   /**
    * Get usage analytics for a specific component
    */
-  getComponentUsageAnalytics(componentId: string, timeframe: '7d' | '30d' | '90d' | 'all' = 'all') {
+  getComponentUsageAnalytics(componentId: string, timeframe: '7d' | '30d' | '90d' | 'all' = 'all', applications?: ApplicationDoc[]) {
     const cutoffDate = this.getCutoffDate(timeframe);
-    const usageRecords = this.componentUsage.get(componentId) || [];
+    const usageRecords = this.usageOf(componentId, applications);
     const filteredRecords = usageRecords.filter(r => 
       timeframe === 'all' || new Date(r.lastSeen) >= cutoffDate
     );
 
     const totalUsage = filteredRecords.reduce((sum, r) => sum + r.usageCount, 0);
-    const applications = filteredRecords.map(r => ({
+    const usedBy = filteredRecords.map(r => ({
       applicationId: r.applicationId,
       applicationName: r.applicationName,
       usageCount: r.usageCount,
@@ -191,15 +227,16 @@ export class AnalyticsService {
       componentName: filteredRecords[0]?.componentName || componentId,
       totalUsage,
       applicationCount: filteredRecords.length,
-      applications,
+      applications: usedBy,
     };
   }
 
   /**
    * Get application adoption metrics
    */
-  async getApplicationAdoption(components?: Component[]): Promise<ApplicationAdoption[]> {
-    const allApplications = await this.applications.list();
+  async getApplicationAdoption(components?: Component[], applications?: ApplicationDoc[]): Promise<ApplicationAdoption[]> {
+    // The caller's visible applications (applicationsVisibleTo); all of them for internal callers
+    const allApplications = applications ?? (await this.applications.list());
     // The caller's visible components (ComponentAccessService); all of them for internal callers
     const allComponents = components ?? this.designSystemService.getAllComponents();
     const productionComponents = allComponents.filter(c => c.status === 'production');
@@ -237,11 +274,11 @@ export class AnalyticsService {
   /**
    * Get usage trends over time
    */
-  getUsageTrends(days: number = 30): UsageTrend[] {
+  getUsageTrends(days: number = 30, components?: Component[], applications?: ApplicationDoc[]): UsageTrend[] {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
-    const filteredHistory = this.usageHistory.filter(snapshot => 
+    const filteredHistory = this.scopeHistory(components, applications).filter(snapshot => 
       new Date(snapshot.date) >= cutoffDate
     );
 
@@ -292,8 +329,13 @@ export class AnalyticsService {
   /**
    * Get cross-application comparison
    */
-  async getCrossApplicationComparison(applicationIds?: string[], components?: Component[]): Promise<CrossApplicationComparison[]> {
-    const allApplications = await this.applications.list();
+  async getCrossApplicationComparison(
+    applicationIds?: string[],
+    components?: Component[],
+    applications?: ApplicationDoc[],
+  ): Promise<CrossApplicationComparison[]> {
+    // The caller's visible applications (applicationsVisibleTo): ids of others are ignored
+    const allApplications = applications ?? (await this.applications.list());
     const applicationsToCompare = applicationIds
       ? allApplications.filter(app => applicationIds.includes(app.id))
       : allApplications;
@@ -321,7 +363,7 @@ export class AnalyticsService {
       const sharedComponents = productionComponents
         .filter(comp => {
           return applicationsToCompare.every(appToCheck => {
-            const usageRecords = this.componentUsage.get(comp.id) || [];
+            const usageRecords = this.usageOf(comp.id, applications);
             return usageRecords.some(r => r.applicationId === appToCheck.id);
           });
         })
@@ -345,20 +387,19 @@ export class AnalyticsService {
   /**
    * Get design debt metrics
    */
-  getDesignDebtMetrics(components?: Component[]): DesignDebtMetrics {
-    // The caller's visible components (ComponentAccessService); all of them for internal callers
+  getDesignDebtMetrics(components?: Component[], applications?: ApplicationDoc[]): DesignDebtMetrics {
+    // The caller's visible components (ComponentAccessService) and applications
+    // (applicationsVisibleTo); all of them for internal callers
     const allComponents = components ?? this.designSystemService.getAllComponents();
     const deprecatedComponents = allComponents.filter(c => c.status === 'deprecated');
+    const usage = this.allUsage(applications);
     
     // Find deprecated components still in use
-    const deprecatedInUse = deprecatedComponents.filter(comp => {
-      const usageRecords = this.componentUsage.get(comp.id) || [];
-      return usageRecords.length > 0;
-    });
+    const deprecatedInUse = deprecatedComponents.filter(comp => usage.has(comp.id));
 
     // Estimate custom components (components used but not in design system)
     const allUsedComponentIds = new Set<string>();
-    this.componentUsage.forEach((_, componentId) => {
+    usage.forEach((_, componentId) => {
       allUsedComponentIds.add(componentId);
     });
     
@@ -471,13 +512,39 @@ export class AnalyticsService {
     return cutoff;
   }
 
-  private calculateTrend(componentId: string, timeframe: '7d' | '30d' | '90d' | 'all'): { direction: 'up' | 'down' | 'stable'; change: number } {
+  /**
+   * Usage history limited to the given components and applications, with each
+   * snapshot's totals recomputed from the applications left (internal callers see all)
+   */
+  private scopeHistory(components?: Component[], applications?: ApplicationDoc[]): ComponentUsageSnapshot[] {
+    const componentIds = components && new Set(components.map((c) => c.id));
+    const applicationIds = applications && new Set(applications.map((app) => app.id));
+    return this.usageHistory
+      .filter((snapshot) => !componentIds || componentIds.has(snapshot.componentId))
+      .map((snapshot) => {
+        if (!applicationIds) return snapshot;
+        const apps = snapshot.applications.filter((app) => applicationIds.has(app.applicationId));
+        return {
+          ...snapshot,
+          applications: apps,
+          applicationCount: apps.length,
+          totalUsage: apps.reduce((sum, app) => sum + app.usageCount, 0),
+        };
+      })
+      .filter((snapshot) => snapshot.applications.length > 0);
+  }
+
+  private calculateTrend(
+    componentId: string,
+    timeframe: '7d' | '30d' | '90d' | 'all',
+    applications?: ApplicationDoc[],
+  ): { direction: 'up' | 'down' | 'stable'; change: number } {
     if (timeframe === 'all' || this.usageHistory.length < 2) {
       return { direction: 'stable', change: 0 };
     }
 
     const cutoffDate = this.getCutoffDate(timeframe);
-    const relevantHistory = this.usageHistory
+    const relevantHistory = this.scopeHistory(undefined, applications)
       .filter(s => s.componentId === componentId && new Date(s.date) >= cutoffDate)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 

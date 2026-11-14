@@ -16,7 +16,7 @@ import { ProjectExistsError as SrProjectExistsError, SessionReplayService } from
 import { ProjectCreator } from '../visual-regression/project-access';
 import { ProjectExistsError as VrProjectExistsError, VisualRegressionService } from '../visual-regression/visual-regression.service';
 import { QueryableStore } from '../workspaces/queryable-store';
-import { WorkspaceAccessService, actorOf, isSafeId, newId } from '../workspaces/workspace-access.service';
+import { WorkspaceAccessService, actorOf, isSafeId, isWorkspaceSuperuser, newId } from '../workspaces/workspace-access.service';
 import {
   CapabilitiesDto,
   MoveApplicationDto,
@@ -27,6 +27,9 @@ import { APPLICATION_STORE, ApplicationCapabilities, ApplicationDoc, CapabilityN
 import { DesignSystemVersionInfo, compareVersions, currentDesignSystemVersion, parseVersion } from './design-system-version';
 
 const MAX_WRITE_ATTEMPTS = 5;
+
+/** Which kind of scan completed (see markScanned) */
+export type ScanKind = 'governance' | 'accessibility';
 const DEFAULT_TEAM = 'default-team';
 
 export interface ApplicationFilters {
@@ -53,7 +56,9 @@ export function linkedProjectId(kind: 'visualRegression' | 'sessionReplay', appl
 /**
  * Registered applications, stored in Elasticsearch (`design-system-applications`).
  *
- * Writes need `admin:governance` or the admin role in the application's
+ * Reads are scoped (listFor, getFor): applications without a workspace and
+ * those in the caller's workspaces; `admin:users` and `admin:governance`
+ * holders read every one. Writes need `admin:governance` or the admin role in the application's
  * workspace (docs/WORKSPACES.md). Enabling visual regression or session
  * replay creates a project in that module; failures are returned to the
  * caller instead of being swallowed, and deleting an application deletes its projects.
@@ -90,6 +95,34 @@ export class ApplicationsService {
   /** The application, or null (for callers that treat a missing application as a normal case) */
   async find(id: string): Promise<ApplicationDoc | null> {
     return isSafeId(id) ? ((await this.store.get(id))?.doc ?? null) : null;
+  }
+
+  /**
+   * The applications the principal may read: those without a workspace, and
+   * those in workspaces the principal is a member of. `admin:users` and
+   * `admin:governance` holders read every application.
+   */
+  async listFor(principal: AuthPrincipal, filters: ApplicationFilters = {}): Promise<ApplicationDoc[]> {
+    const all = await this.list(filters);
+    if (this.readsEverything(principal)) return all;
+    const mine = await this.workspaces.memberWorkspaceIds(principal);
+    return all.filter((app) => !app.workspaceId || mine.has(app.workspaceId));
+  }
+
+  /** The application, if the principal may read it; a hidden one is a 404 like a missing one, so ids can't be probed */
+  async getFor(principal: AuthPrincipal, id: string): Promise<ApplicationDoc> {
+    const app = await this.find(id);
+    if (!app || !(await this.canRead(principal, app))) throw new NotFoundException('Application not found');
+    return app;
+  }
+
+  private readsEverything(principal: AuthPrincipal): boolean {
+    return isWorkspaceSuperuser(principal) || hasPermission(principal, Permission.ADMIN_GOVERNANCE);
+  }
+
+  private async canRead(principal: AuthPrincipal, app: ApplicationDoc): Promise<boolean> {
+    if (!app.workspaceId || this.readsEverything(principal)) return true;
+    return (await this.workspaces.memberWorkspaceIds(principal)).has(app.workspaceId);
   }
 
   async listByWorkspace(workspaceId: string): Promise<ApplicationDoc[]> {
@@ -188,17 +221,26 @@ export class ApplicationsService {
     return moved;
   }
 
-  /** Records a governance scan (for the compliance scanner) */
-  async markScanned(id: string, at = new Date()): Promise<ApplicationDoc> {
+  /**
+   * Records a completed scan. Governance scans and accessibility reports keep
+   * their own timestamps, so a report doesn't count as this period's
+   * governance scan (GovernanceScanScheduler reads governance.lastScan).
+   * `lastScanned` is the latest of either. Timestamps never move backwards,
+   * so recording the same scan twice is harmless.
+   */
+  async markScanned(id: string, at: Date, kind: ScanKind): Promise<ApplicationDoc> {
+    const iso = at.toISOString();
+    const later = (current: string | undefined) => (current && current > iso ? current : iso);
     return this.write(id, (app) => {
-      app.lastScanned = at.toISOString();
-      app.capabilities.governance.lastScan = app.lastScanned;
+      app.lastScanned = later(app.lastScanned);
+      if (kind === 'governance') app.capabilities.governance.lastScan = later(app.capabilities.governance.lastScan);
+      else app.lastAccessibilityReport = later(app.lastAccessibilityReport);
     });
   }
 
   /** Deletes the application and its visual-regression and session-replay projects */
   async delete(principal: AuthPrincipal, id: string): Promise<void> {
-    const app = await this.get(id);
+    const app = await this.getFor(principal, id);
     await this.assertCanWrite(principal, app.workspaceId);
     await this.undoProjects({
       visualRegression: app.capabilities?.visualRegression?.projectId,
@@ -213,26 +255,26 @@ export class ApplicationsService {
     return currentDesignSystemVersion();
   }
 
-  async needingUpgrade(currentVersion?: string) {
+  async needingUpgrade(principal: AuthPrincipal, currentVersion?: string) {
     if (currentVersion !== undefined && !parseVersion(currentVersion)) {
       throw new BadRequestException('currentVersion must be a semantic version like 2.1.0');
     }
     const latest = currentVersion?.replace(/^v/, '') ?? this.currentVersion().version;
-    const applications = (await this.list()).filter((app) => compareVersions(app.designSystemVersion, latest) < 0);
+    const applications = (await this.listFor(principal)).filter((app) => compareVersions(app.designSystemVersion, latest) < 0);
     return { applications, currentVersion: latest, upgradeRequired: applications.length };
   }
 
-  async affectedByBreakingChanges(version: string) {
+  async affectedByBreakingChanges(principal: AuthPrincipal, version: string) {
     if (!parseVersion(version)) throw new BadRequestException('version must be a semantic version like 3.0.0');
     const target = version.replace(/^v/, '');
-    const applications = (await this.list()).filter((app) => compareVersions(app.designSystemVersion, target) < 0);
+    const applications = (await this.listFor(principal)).filter((app) => compareVersions(app.designSystemVersion, target) < 0);
     const { breakingChanges, source } = this.breakingChangesFor(target);
     return { applications, affectedCount: applications.length, breakingChanges, breakingChangesSource: source };
   }
 
-  async migrationPlanning() {
+  async migrationPlanning(principal: AuthPrincipal) {
     const { version: currentVersion, source } = this.currentVersion();
-    const apps = await this.list();
+    const apps = await this.listFor(principal);
     const currentMajor = parseVersion(currentVersion)[0];
 
     const applicationsByVersion: Record<string, ApplicationDoc[]> = {};
@@ -304,7 +346,8 @@ export class ApplicationsService {
     id: string,
     fn: (app: ApplicationDoc) => void | Promise<void>,
   ): Promise<ApplicationDoc> {
-    const current = await this.get(id);
+    // An application the caller can't read is a 404, not a 403 that confirms it exists
+    const current = await this.getFor(principal, id);
     await this.assertCanWrite(principal, current.workspaceId);
     return this.write(id, async (app) => {
       // The workspace may have changed since the check; re-check against what we'll write over

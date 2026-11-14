@@ -6,7 +6,9 @@ import { AccessibilityReportsService } from './accessibility-reports.service';
 
 /**
  * Accessibility reports, schedules and SLAs (docs/GOVERNANCE.md). Reads need
- * any signed-in caller; everything that changes data needs admin:governance.
+ * any signed-in caller; reports and the summary only show applications whose
+ * evidence the caller may read (governance admins, or members of the
+ * application's workspace). Everything that changes data needs admin:governance.
  */
 @Controller('api/v1/accessibility-reports')
 export class AccessibilityReportsController {
@@ -19,18 +21,18 @@ export class AccessibilityReportsController {
   }
 
   @Get('summary')
-  getComplianceSummary() {
-    return this.reports.getComplianceSummary();
+  getComplianceSummary(@Principal() principal: AuthPrincipal) {
+    return this.reports.getComplianceSummary(principal);
   }
 
   @Get('reports')
-  getReports(@Query('applicationId') applicationId?: string) {
-    return this.reports.getReports(applicationId || undefined);
+  getReports(@Principal() principal: AuthPrincipal, @Query('applicationId') applicationId?: string) {
+    return this.reports.getReports(principal, applicationId || undefined);
   }
 
   @Get('reports/:reportId')
-  getReport(@Param('reportId') reportId: string) {
-    return this.reports.getReport(reportId);
+  getReport(@Param('reportId') reportId: string, @Principal() principal: AuthPrincipal) {
+    return this.reports.getReport(principal, reportId);
   }
 
   @Delete('reports/:reportId')

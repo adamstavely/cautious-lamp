@@ -21,9 +21,17 @@ Routes marked `@Public()` skip authentication. These are:
 
 Every other route returns `401` without a valid credential. `@RequirePermission(Permission.X, ...)` returns `403` unless the principal has all the listed permissions (on a controller class it applies to every route, merged with any on the route).
 
+**Temporary passwords.** A user with `mustChangePassword` (a new account, the bootstrap admin, or after an admin reset the password) gets a full token, but it is a restricted session on the server: only `GET /auth/me`, `POST /auth/change-password` and `POST /auth/logout` work. Every other route returns `403` with `code: "PASSWORD_CHANGE_REQUIRED"`, whatever the user's roles, so a temporary password can't be used to create API keys, users or anything else. Changing the password revokes the token (see below); the next sign-in is unrestricted. Routes opt in with `@AllowPasswordChangePending()`; nothing else should. The WebSocket gateway refuses such sessions too.
+
 `ApiKeyGuard` accepts any authenticated principal; `AdminKeyGuard` requires `admin:users` (the admin key has it). The API key routes are described under [API keys](#api-keys), and the permissions on other administrative routes under [Administrative routes](#administrative-routes).
 
-The guard only covers HTTP. The visual regression WebSocket gateway checks the same credentials (a user token or an API key) when a client connects. Each `subscribe:project` / `subscribe:run` is then checked against the project's access rules (docs/WORKSPACES.md); a refused subscription gets `{ success: false }` and joins nothing.
+The guard only covers HTTP. The visual regression WebSocket gateway checks the same credentials (a user token or an API key) when a client connects, and refuses a temporary-password session (an `error` event with `code: "PASSWORD_CHANGE_REQUIRED"`, then a disconnect). It keeps the credential for the life of the connection:
+
+- The socket is disconnected when the token or key expires (an `error` event first), without waiting for a reconnect.
+- Each `subscribe:project` / `subscribe:run` resolves the credential again, then checks the project's access rules (docs/WORKSPACES.md). A refused subscription gets `{ success: false }` and joins nothing; a credential that no longer works (signed out, disabled, password reset or changed, key revoked, expired) also ends the connection.
+- Before every broadcast (`project:update`, `run:status-update`, `run:completed`, `result:update`), each subscriber's credential and project access are checked again. A subscriber whose credential no longer works gets nothing and is disconnected; one who can no longer read the project (removed from the workspace, project moved or deleted) gets nothing, is removed from the room and receives `subscription:revoked` with `{ room }`. If the check itself fails (Elasticsearch down), that message is skipped for the subscriber but the connection stays.
+
+User state is cached for up to 30 seconds (see [Tokens](#tokens)), so a sign-out or disablement on another instance reaches open sockets within that time; on the same instance, at once. Broadcasts reach the subscribers connected to the instance that sends them (there is no socket.io adapter).
 
 Identity always comes from `req.principal`. Client-supplied `userId`, `assignedBy`, `addedBy`, `createdBy`, `x-user-id` and `?userId=` are ignored wherever they claim to be the caller. A service principal may name the person it acts for in `x-user-email` / `x-user-name` (URL-encoded); that is a display label only, never identity: it can't satisfy a review's approved-email list or make the key a review's owner. For reviews, a service principal is an outsider unless it has `review:admin` (docs/REVIEW_API.md, "Access").
 
@@ -68,9 +76,9 @@ All under `/api/v1`.
 | Method and path | Permission | Body | Returns |
 | --- | --- | --- | --- |
 | `POST /auth/login` | public | `{ email, password }` | `{ accessToken, expiresAt, user: Me }`. `401` on bad credentials or a disabled user (same message for an unknown email); `423` when locked. |
-| `POST /auth/logout` | any user | | `204`. Bumps `tokenVersion`, which signs out every session. `403` for an API key. |
-| `GET /auth/me` | any principal | | `Me` |
-| `POST /auth/change-password` | any user | `{ currentPassword, newPassword }` | `204`. Clears `mustChangePassword` and bumps `tokenVersion`, so the client must sign in again. A wrong current password returns `400` with the message "Current password is incorrect" (not `401`, which would sign the client out) and counts towards the lockout. The new password must differ from the current one. |
+| `POST /auth/logout` | any user (also on a temporary password) | | `204`. Bumps `tokenVersion`, which signs out every session. `403` for an API key. |
+| `GET /auth/me` | any principal (also on a temporary password) | | `Me` |
+| `POST /auth/change-password` | any user (also on a temporary password) | `{ currentPassword, newPassword }` | `204`. Clears `mustChangePassword` and bumps `tokenVersion`, so the client must sign in again. A wrong current password returns `400` with the message "Current password is incorrect" (not `401`, which would sign the client out) and counts towards the lockout. The new password must differ from the current one. |
 
 `Me` is `{ id, type, email, name, roles: string[], permissions: string[], mustChangePassword }`. For an API key, `email` is `null` and `roles` is empty.
 
@@ -134,7 +142,7 @@ Besides the routes above, these need a permission on the server (`403` otherwise
 | `POST /roadmap/items`, `PUT`/`DELETE /roadmap/items/:id` | `roadmap:edit` |
 | Request triage: `PUT /requests/:id/status`, `PUT /requests/:id/assign`, `POST /requests/:id/merge`, and `PATCH /component-requests/:id/status`, `POST /component-requests/:id/{assign,approve,reject,promote}` | `roadmap:edit` (the frontend shows these actions to the same people) |
 | `POST /components` | `component:create`, and the `editor` role in `workspaceId` if one is given. `isGlobal` is ignored: sharing is set through the workspace routes. |
-| `POST /components/:id/variants`, `DELETE /components/:id/variants/:name` | `component:edit` |
+| `POST /components/:id/variants`, `DELETE /components/:id/variants/:name` | `component:edit`, and for a workspace's component the `editor` role in that workspace (see [Components and workspaces](#components-and-workspaces)) |
 | `POST /patterns-library/patterns`, `PUT /patterns-library/patterns/:id`, `DELETE /patterns-library/patterns/:id` | `pattern:create`, `pattern:edit`, `pattern:delete` |
 | `POST /contribution-workflow/guidelines`, `/templates`, `/checks` (defining the contribution process) | `component:approve` |
 | `POST /contribution-workflow/templates/:id/generate-pr`, `POST /contribution-workflow/checks/run` | `component:create` |
@@ -147,6 +155,8 @@ A component that belongs to a workspace (`workspaceId`) is visible only to that 
 
 The global routes apply this: `GET /components`, `/components/status/:status`, `/component-metadata`, `/search`, `/search/suggestions`, `/search/filters` and the AI chat leave hidden components out, and `/components/:id` (with `/variants`, `/test-coverage`, `/linked-requests`) answers a hidden component exactly like a missing one.
 
+Reading a component is not enough to change it. Changing a workspace's component (today: saving and deleting variants) needs the route's permission (`component:edit`) **and** the `editor` role or higher in the component's own workspace (`admin:users` holders act as owner there). Sharing a component with another workspace, or making it global, never lets anyone else change it: those readers get `403` ("Requires the editor role in the component's workspace"). API keys can't be workspace members, so only the admin key can change workspace components. Library components (no workspace) keep the previous rule: `component:edit` is enough. A hidden component still answers like a missing one. The check is `ComponentAccessService.getForWrite`; new component-changing routes must use it.
+
 ## Encryption key
 
 `ENCRYPTION_KEY` encrypts stored third-party credentials (OAuth secrets, integration tokens). Use 32 random bytes as 64 hex characters (`openssl rand -hex 32`) or 44 base64 characters; any other value is treated as a passphrase and stretched with PBKDF2 and a fixed salt, so every replica and restart derives the same key. Outside development (`NODE_ENV` of `development` or `test`) it is required: without it, storing or reading encrypted values returns `503`. In development a random key is used, so encrypted values don't survive a restart.
@@ -158,7 +168,7 @@ Earlier versions derived a passphrase key with a random salt on each start, so v
 - `/login` is the only route that works without signing in. Other routes redirect to `/login?redirect=<path>`.
 - The access token is kept in `sessionStorage`; `useAuth()` exposes `user`, `permissions`, `hasPermission()`, `login()`, `logout()` and `refreshMe()`.
 - `apiClient` and every other backend call send the user's token. The browser no longer uses `VITE_API_KEY`.
-- When `mustChangePassword` is set, the app shows the change-password screen before anything else.
+- When `mustChangePassword` is set, the app shows the change-password screen before anything else. The server enforces this too: any other call gets `403` with `code: "PASSWORD_CHANGE_REQUIRED"`.
 - A `401` from the API signs the user out and redirects to `/login`. A `403` shows "You don't have access to this".
 - When the token's `expiresAt` passes, the app signs the user out and redirects to `/login?redirect=…&expired=1`, whether or not a request or navigation happens first.
 - Admin routes (`/admin/*`) are guarded by prefix and fail closed:

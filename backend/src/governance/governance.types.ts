@@ -4,6 +4,8 @@
  * ever contains code. See docs/GOVERNANCE.md.
  */
 
+import type { EvidenceAccess } from './evidence-access';
+
 export const RULE_TYPES = ['regex-present', 'regex-absent', 'selector-attribute', 'selector-count', 'token-usage', 'builtin'] as const;
 export type RuleType = (typeof RULE_TYPES)[number];
 
@@ -118,6 +120,12 @@ export interface ScanActor {
 
 export interface ScanRecord {
   id: string;
+  /**
+   * Who may read the scan (evidence-access.ts). Missing on scans stored
+   * before it existed; those are read as governance-admin-only (application
+   * scans) or admin:users-only (design-system scans).
+   */
+  access?: EvidenceAccess;
   scope: ScanScope;
   source: ScanSource;
   applicationId?: string;
@@ -155,6 +163,10 @@ export interface DesignComponent {
   id: string;
   name: string;
   code?: { vue?: string; react?: string; html?: string };
+  /** Owning workspace; missing for library components (see ComponentAccessService) */
+  workspaceId?: string;
+  sharedWith?: string[];
+  isGlobal?: boolean;
 }
 
 /** Size limits (characters) */

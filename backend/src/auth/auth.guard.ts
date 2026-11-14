@@ -4,12 +4,21 @@ import { KeyManagementService } from '../common/security/key-management.service'
 import { SecurityAuditService } from '../common/security/security-audit.service';
 import { Permission } from '../rbac/rbac.service';
 import { AuthService } from './auth.service';
-import { AuthedRequest, IS_PUBLIC_KEY, REQUIRED_PERMISSIONS_KEY } from './principal';
+import {
+  ALLOW_PASSWORD_CHANGE_PENDING_KEY,
+  AuthedRequest,
+  IS_PUBLIC_KEY,
+  REQUIRED_PERMISSIONS_KEY,
+  isPasswordChangePending,
+  passwordChangeRequired,
+} from './principal';
 
 /**
  * Global guard (docs/AUTH.md): every HTTP route needs a user token or an API
  * key unless it is `@Public()`, and `@RequirePermission` routes need those
- * permissions. Registered after the throttler, so floods are cut off first.
+ * permissions. A user who must change their password only gets the
+ * `@AllowPasswordChangePending()` routes. Registered after the throttler, so
+ * floods are cut off first.
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -29,6 +38,14 @@ export class AuthGuard implements CanActivate {
     const principal = await this.auth.resolve(KeyManagementService.extractKey(req.headers?.authorization));
     if (!principal) throw new UnauthorizedException('Sign in or send a valid API key');
     req.principal = principal;
+
+    // A temporary password is a restricted session, whatever the user's roles
+    if (isPasswordChangePending(principal) && !this.reflector.getAllAndOverride<boolean>(ALLOW_PASSWORD_CHANGE_PENDING_KEY, targets)) {
+      void this.audit
+        .logPermissionDenied(principal.id, 'route', req.originalUrl ?? req.url, `${req.method} (password change required)`, req.ip, req.headers['user-agent'])
+        .catch(() => undefined);
+      throw passwordChangeRequired();
+    }
 
     const required = this.reflector.getAllAndMerge<Permission[]>(REQUIRED_PERMISSIONS_KEY, targets) ?? [];
     const missing = required.filter((permission) => !principal.permissions.has(permission));

@@ -67,6 +67,8 @@ export interface ResolvedApiKey {
   id: string;
   name: string;
   scopes?: string[];
+  /** Managed keys with an expiry only */
+  expiresAt?: Date;
 }
 
 function toMetadata(doc: ApiKeyDoc): ApiKeyMetadata {
@@ -132,7 +134,7 @@ export class KeyManagementService {
     const configured = this.configuredKeys.get(this.hashKey(apiKey));
     if (configured) return { ...configured };
     const managed = await this.validateKey(apiKey);
-    return managed ? { id: managed.id, name: managed.name, scopes: managed.scopes } : null;
+    return managed ? { id: managed.id, name: managed.name, scopes: managed.scopes, expiresAt: managed.expiresAt } : null;
   }
 
   /**

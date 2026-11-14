@@ -4,7 +4,7 @@ import { AdminKeyGuard, ApiKeyGuard } from '../common/security/api-key.guard';
 import { SecurityAuditService } from '../common/security/security-audit.service';
 import { Permission, Role } from '../rbac/rbac.service';
 import { AuthGuard } from './auth.guard';
-import { AuthedRequest, Public, RequirePermission } from './principal';
+import { AllowPasswordChangePending, AuthedRequest, Public, RequirePermission } from './principal';
 import { ADMIN_KEY, API_KEY, AuthHarness, createAuthHarness } from './testing/harness';
 
 class TestController {
@@ -18,6 +18,9 @@ class TestController {
 
   @RequirePermission(Permission.TOKEN_VIEW, Permission.TOKEN_EDIT)
   tokens() {}
+
+  @AllowPasswordChangePending()
+  me() {}
 }
 
 @RequirePermission(Permission.ADMIN_RBAC)
@@ -95,6 +98,29 @@ describe('AuthGuard', () => {
   it('merges class and route permissions', async () => {
     const { key } = await h.keys.createKey('rbac-only', { scopes: [Permission.ADMIN_RBAC] });
     await expect(run('both', `Bearer ${key}`)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  describe('a temporary password', () => {
+    it('is a restricted session: only routes marked AllowPasswordChangePending, whatever the roles', async () => {
+      const { accessToken } = await h.createUser('tmp@example.com', [Role.SYSTEM_OWNER], 'a long enough password', { temporaryPassword: true });
+      const req = await run('me', `Bearer ${accessToken}`);
+      expect(req.principal).toMatchObject({ email: 'tmp@example.com', mustChangePassword: true });
+      await run('health');
+      for (const handler of ['open', 'admin', 'both'] as const) {
+        const denied = await run(handler, `Bearer ${accessToken}`).catch((error) => error);
+        expect(denied).toBeInstanceOf(ForbiddenException);
+        expect(denied.getResponse()).toMatchObject({ statusCode: 403, code: 'PASSWORD_CHANGE_REQUIRED' });
+      }
+      expect(h.audit.logPermissionDenied).toHaveBeenCalledWith(expect.any(String), 'route', '/x', 'GET (password change required)', undefined, undefined);
+    });
+
+    it('lifts once the password is changed and the user signs in again', async () => {
+      const { user, password, accessToken } = await h.createUser('tmp2@example.com', [Role.SYSTEM_OWNER], 'a long enough password', { temporaryPassword: true });
+      await h.auth.changePassword((await h.principalFor(accessToken)) as any, password, 'a different long password');
+      await expect(run('admin', `Bearer ${accessToken}`)).rejects.toBeInstanceOf(UnauthorizedException);
+      const { accessToken: fresh } = await h.auth.login(user.email, 'a different long password');
+      await run('admin', `Bearer ${fresh}`);
+    });
   });
 
   it('leaves WebSocket handlers to the gateway', async () => {

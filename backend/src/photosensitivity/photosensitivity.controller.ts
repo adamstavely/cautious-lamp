@@ -1,9 +1,10 @@
-import { Controller, Post, Get, Body, Param, UploadedFile, UseInterceptors, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Req, UploadedFile, UseInterceptors, UseGuards, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PhotosensitivityService } from './photosensitivity.service';
 import { ApiKeyGuard } from '../common/security/api-key.guard';
 import { diskStorage } from 'multer';
 import { randomUUID } from 'crypto';
+import { AdmittedRequest, AnalysisAdmissionGuard, callerKey } from './analysis-admission.guard';
 
 /** Accepted video types and the extension each is stored with */
 const VIDEO_EXTENSIONS: Record<string, string> = {
@@ -19,7 +20,14 @@ const VIDEO_EXTENSIONS: Record<string, string> = {
 export class PhotosensitivityController {
   constructor(private readonly photosensitivityService: PhotosensitivityService) {}
 
+  /**
+   * The admission guard runs first: when the server is full (503
+   * PHOTOSENSITIVITY_BUSY) or the caller has its share (429
+   * PHOTOSENSITIVITY_QUOTA_EXCEEDED), the request is refused with Retry-After
+   * before any of the upload is written.
+   */
   @Post('analyze')
+  @UseGuards(AnalysisAdmissionGuard)
   @UseInterceptors(
     FileInterceptor('video', {
       storage: diskStorage({
@@ -45,15 +53,19 @@ export class PhotosensitivityController {
   async analyzeVideo(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: { enablePatternDetection?: string; outputJson?: string; applicationName?: string },
+    @Req() req: AdmittedRequest,
   ) {
     if (!file) {
       throw new BadRequestException('No video file uploaded');
     }
 
     // outputJson is accepted for older clients and ignored: the response is the same either way
-    const result = await this.photosensitivityService.analyzeVideo(file.path, {
-      enablePatternDetection: body.enablePatternDetection !== 'false',
-    });
+    const result = await this.photosensitivityService.analyzeVideo(
+      file.path,
+      { enablePatternDetection: body.enablePatternDetection !== 'false' },
+      req.analysisTicket,
+      callerKey(req),
+    );
     const applicationName = body.applicationName || 'Unknown Application';
 
     const complianceChecks = this.photosensitivityService.convertToComplianceChecks(

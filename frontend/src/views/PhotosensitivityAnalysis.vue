@@ -20,7 +20,7 @@
             prompt="Drag and drop a video here, or"
             button-label="Browse files"
             icon="video_library"
-            hint="Supported formats: MP4, AVI, MOV, WebM (max 500MB)"
+            hint="Supported formats: MP4, AVI, MOV, WebM (max 200MB)"
             @select="handleFileSelect"
             @remove="selectedFile = null"
           />
@@ -30,6 +30,8 @@
           <UiCallout v-if="irisStatus && !irisStatus.installed" tone="warning" role="status" title="IRIS isn't available on this server">
             {{ irisStatus.message }}
           </UiCallout>
+
+          <UiCallout v-if="busy" tone="warning" role="status" title="The analyzer is busy">{{ busy }}</UiCallout>
 
           <UiCallout v-if="error" tone="danger" role="alert">{{ error }}</UiCallout>
         </div>
@@ -106,6 +108,9 @@ const selectedFile = ref(null);
 const isAnalyzing = ref(false);
 const analysisResult = ref(null);
 const error = ref(null);
+// Set when the server refused the analysis for now (503 PHOTOSENSITIVITY_BUSY
+// or 429 PHOTOSENSITIVITY_QUOTA_EXCEEDED): retryable, so not shown as a failure
+const busy = ref(null);
 const applicationName = ref('');
 const enablePatternDetection = ref(true);
 // From GET /photosensitivity/verify: whether IRIS is installed (nothing is run)
@@ -143,6 +148,7 @@ const analyzeVideo = async () => {
 
   isAnalyzing.value = true;
   error.value = null;
+  busy.value = null;
   analysisResult.value = null;
 
   try {
@@ -160,8 +166,9 @@ const analyzeVideo = async () => {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      // The server gives IRIS up to 10 minutes (IRIS_TIMEOUT_MS), plus the upload
-      timeout: 11 * 60 * 1000,
+      // The server gives IRIS up to 10 minutes (IRIS_TIMEOUT_MS), and an
+      // admitted video may first wait in its queue (IRIS_MAX_QUEUED)
+      timeout: 31 * 60 * 1000,
     });
 
     if (!response.data?.summary) {
@@ -169,7 +176,17 @@ const analyzeVideo = async () => {
     }
     analysisResult.value = response.data;
   } catch (err) {
-    const message = err.response?.data?.message;
+    const data = err.response?.data;
+    const message = data?.message;
+    if (data?.code === 'PHOTOSENSITIVITY_BUSY' || data?.code === 'PHOTOSENSITIVITY_QUOTA_EXCEEDED') {
+      const seconds = Number(data.retryAfterSeconds) || Number(err.response.headers?.['retry-after']) || null;
+      const wait = seconds ? `Try again in ${seconds} seconds.` : 'Try again shortly.';
+      busy.value =
+        data.code === 'PHOTOSENSITIVITY_QUOTA_EXCEEDED'
+          ? `You already have as many analyses running as you're allowed. ${wait}`
+          : `The server is analyzing as many videos as it can. Nothing was uploaded. ${wait}`;
+      return;
+    }
     if (Array.isArray(message)) {
       error.value = message.join(' ');
     } else if (message) {

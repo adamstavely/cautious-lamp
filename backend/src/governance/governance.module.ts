@@ -3,9 +3,11 @@ import { ElasticsearchService } from '@nestjs/elasticsearch';
 import { ApplicationsModule } from '../applications/applications.module';
 import { ApplicationsService } from '../applications/applications.service';
 import { EsIndexService } from '../common/elasticsearch/es-index.service';
+import { ComponentAccessService } from '../design-system/component-access.service';
 import { DesignSystemModule } from '../design-system/design-system.module';
 import { DesignSystemService } from '../design-system/design-system.service';
 import { EsDocumentStore } from '../reviews/document-store';
+import { READ_SCOPE } from './evidence-access';
 import { GovernanceController } from './governance.controller';
 import {
   META_INDEX,
@@ -55,12 +57,14 @@ const esStore = (index: string, properties: Record<string, unknown>) => ({
       inject: [ApplicationsService],
       useFactory: (registry: ApplicationsService) => new RegistryApplicationDirectory(registry),
     },
+    // Who reads which workspaces' evidence: the same scope as component reads
+    { provide: READ_SCOPE, useExisting: ComponentAccessService },
     {
       provide: DESIGN_SYSTEM_SOURCE,
       inject: [DesignSystemService],
       useFactory: (designSystem: DesignSystemService) => new DesignSystemServiceSource(designSystem),
     },
   ],
-  exports: [APPLICATION_DIRECTORY, DESIGN_SYSTEM_SOURCE, RulesService, ScansService],
+  exports: [APPLICATION_DIRECTORY, DESIGN_SYSTEM_SOURCE, READ_SCOPE, RulesService, ScansService],
 })
 export class GovernanceModule {}
