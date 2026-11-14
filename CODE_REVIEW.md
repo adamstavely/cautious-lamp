@@ -104,11 +104,12 @@ Found while fixing these: pattern and contribution bodies weren't validated, so 
 - **Overrides:** `body-parser`, `multer`, `qs`, `image-size` and `gcp-metadata`, in the root `package.json`.
 - **Removed:** the unused `@adobe/leonardo-contrast-colors`, which took its whole vulnerable chain with it.
 
-What's left needs NestJS 11 (`@nestjs/core` injection, `file-type`) or has no upstream fix yet (`style-dictionary`'s bundled glob and deepmerge).
+NestJS was then upgraded from 10 to 11 (Express 5), which cleared the `@nestjs/core` and `file-type` advisories. What's left (6, moderate and low) is `style-dictionary`'s bundled glob and deepmerge, which have no upstream fix yet.
 
 **Known gaps:**
 - **Design and token sync connections:** still kept in memory, so they're lost on restart.
 - **Session replay:** still shows mock sessions when no OpenReplay key is set.
+- **Argos webhooks:** nothing sets a project's webhook secret (`setWebhookSecret` has no route or UI), and the receiver refuses webhooks without one, so Argos build results never arrive by webhook.
 - **Migration:**
   - Clusters seeded partially by the old code keep a v1 seed marker, which a deliberate deletion can't be told apart from.
   - Values encrypted under a passphrase key before R15 must be re-entered.
