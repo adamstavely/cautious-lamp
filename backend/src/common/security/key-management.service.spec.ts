@@ -1,6 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { InMemoryStore } from '../../reviews/testing/in-memory-store';
-import { API_KEY_CACHE_MS, ApiKeyDoc, KeyManagementService } from './key-management.service';
+import { randomBytes } from 'crypto';
+import { API_KEY_CACHE_MAX, API_KEY_CACHE_MS, ApiKeyDoc, KeyManagementService } from './key-management.service';
 
 describe('KeyManagementService', () => {
   const originalEnv = { ...process.env };
@@ -89,6 +90,37 @@ describe('KeyManagementService', () => {
     const service = create({ API_KEYS: '' }, store);
     expect(await service.isValidApiKey('eyJhbGciOiJIUzI1NiJ9.e30.sig')).toBe(false);
     expect(get).not.toHaveBeenCalled();
+  });
+
+  it('keeps nothing for unknown managed keys, and at most API_KEY_CACHE_MAX known ones', async () => {
+    const store = new InMemoryStore<ApiKeyDoc>();
+    const service = create({ API_KEYS: '' }, store);
+    const cache = (service as unknown as { cache: Map<string, unknown> }).cache;
+    const randomKey = () => `dsk_${randomBytes(32).toString('base64url')}`;
+
+    // Unique random credentials, as an unauthenticated caller could send: none are kept
+    for (let i = 0; i < 100; i++) expect(await service.isValidApiKey(randomKey())).toBe(false);
+    expect(cache.size).toBe(0);
+
+    // Real keys are cached up to the limit, the least recently used dropped first
+    const keys: string[] = [];
+    for (let i = 0; i < API_KEY_CACHE_MAX + 5; i++) keys.push((await service.createKey(`k${i}`)).key);
+    // (A key's first use records lastUsed, which drops its entry; the second use caches it)
+    for (const key of keys) expect(await service.isValidApiKey(key)).toBe(true);
+    await new Promise((resolve) => setImmediate(resolve));
+    for (const key of keys) expect(await service.isValidApiKey(key)).toBe(true);
+    expect(cache.size).toBe(API_KEY_CACHE_MAX);
+    const get = jest.spyOn(store, 'get');
+    expect(await service.isValidApiKey(keys[keys.length - 1])).toBe(true);
+    expect(get).not.toHaveBeenCalled();
+    expect(await service.isValidApiKey(keys[0])).toBe(true);
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(cache.size).toBe(API_KEY_CACHE_MAX);
+
+    // An expired entry is dropped when read, then read again from storage
+    jest.useFakeTimers({ now: Date.now() + API_KEY_CACHE_MS + 1, doNotFake: ['nextTick', 'setImmediate'] });
+    expect(await service.isValidApiKey(keys[1])).toBe(true);
+    expect(get).toHaveBeenCalledTimes(2);
   });
 
   it('reads the key from a Bearer header', async () => {

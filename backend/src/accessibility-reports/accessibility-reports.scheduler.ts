@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ClockInput } from '../governance/occurrence-policy';
 import { AccessibilityReportsService } from './accessibility-reports.service';
 
 /**
@@ -29,11 +30,11 @@ export class AccessibilityReportsScheduler implements OnModuleInit, OnModuleDest
   }
 
   /** One pass over due schedules; skipped if the previous pass is still running */
-  async tick(now = new Date()): Promise<void> {
+  async tick(at?: ClockInput): Promise<void> {
     if (this.running) return;
     this.running = true;
     try {
-      const ran = await this.reports.runDueSchedules(now);
+      const ran = await this.reports.runDueSchedules(at);
       if (ran) this.logger.log(`Ran ${ran} scheduled accessibility report(s)`);
     } catch (error) {
       this.logger.warn(`Scheduled reports skipped: ${(error as Error).message}`);

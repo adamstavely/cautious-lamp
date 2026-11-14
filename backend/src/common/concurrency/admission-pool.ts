@@ -64,7 +64,7 @@ export class AdmissionTicket {
         this.pool.enqueue(this);
       });
       if (!granted) throw new AdmissionCancelledError('The analysis was cancelled');
-      this.state = 'running';
+      // grant(true) already made this ticket the slot's owner
     }
     try {
       if (this.signal.aborted) throw new AdmissionCancelledError('The analysis was cancelled');
@@ -90,8 +90,14 @@ export class AdmissionTicket {
     if (wasWaiting) this.grant(false);
   }
 
-  /** Called by the pool when a slot is free (true) or the wait is over (false) */
+  /**
+   * Called by the pool when a slot is free (true) or the wait is over (false).
+   * A granted ticket owns the slot from this moment, before its run()
+   * continuation resumes, so a cancel() in between aborts it as a running job
+   * and the slot is released once, when the task settles.
+   */
   grant(granted: boolean): void {
+    if (granted) this.state = 'running';
     const wake = this.wake;
     this.wake = undefined;
     wake?.(granted);

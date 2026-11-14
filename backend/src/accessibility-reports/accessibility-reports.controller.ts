@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from
 import { AuthPrincipal, Principal, RequirePermission } from '../auth/principal';
 import { Permission } from '../rbac/rbac.service';
 import { CreateScheduleDto, CreateSlaDto, GenerateReportDto, UpdateScheduleDto, UpdateSlaDto, strictBody } from './accessibility-reports.dto';
-import { AccessibilityReportsService } from './accessibility-reports.service';
+import { AccessibilityReportsService, publicSchedule } from './accessibility-reports.service';
 
 /**
  * Accessibility reports, schedules and SLAs (docs/GOVERNANCE.md). Reads need
@@ -45,25 +45,25 @@ export class AccessibilityReportsController {
   // ---------------------------------------------------------- schedules
 
   @Get('schedules')
-  getSchedules(@Query('applicationId') applicationId?: string) {
-    return this.reports.getSchedules(applicationId || undefined);
+  getSchedules(@Principal() principal: AuthPrincipal, @Query('applicationId') applicationId?: string) {
+    return this.reports.getSchedules(principal, applicationId || undefined);
   }
 
   @Get('schedules/:scheduleId')
-  getSchedule(@Param('scheduleId') scheduleId: string) {
-    return this.reports.getSchedule(scheduleId);
+  getSchedule(@Param('scheduleId') scheduleId: string, @Principal() principal: AuthPrincipal) {
+    return this.reports.getSchedule(principal, scheduleId);
   }
 
   @Post('schedules')
   @RequirePermission(Permission.ADMIN_GOVERNANCE)
-  createSchedule(@Body(strictBody()) body: CreateScheduleDto, @Principal() principal: AuthPrincipal) {
-    return this.reports.createSchedule(body, principal);
+  async createSchedule(@Body(strictBody()) body: CreateScheduleDto, @Principal() principal: AuthPrincipal) {
+    return publicSchedule(await this.reports.createSchedule(body, principal));
   }
 
   @Put('schedules/:scheduleId')
   @RequirePermission(Permission.ADMIN_GOVERNANCE)
-  updateSchedule(@Param('scheduleId') scheduleId: string, @Body(strictBody()) body: UpdateScheduleDto) {
-    return this.reports.updateSchedule(scheduleId, body);
+  async updateSchedule(@Param('scheduleId') scheduleId: string, @Body(strictBody()) body: UpdateScheduleDto) {
+    return publicSchedule(await this.reports.updateSchedule(scheduleId, body));
   }
 
   @Delete('schedules/:scheduleId')
@@ -76,13 +76,13 @@ export class AccessibilityReportsController {
   // --------------------------------------------------------------- SLAs
 
   @Get('slas')
-  getSLAs(@Query('applicationId') applicationId?: string) {
-    return this.reports.getSLAs(applicationId || undefined);
+  getSLAs(@Principal() principal: AuthPrincipal, @Query('applicationId') applicationId?: string) {
+    return this.reports.getSLAs(principal, applicationId || undefined);
   }
 
   @Get('slas/:slaId')
-  getSLA(@Param('slaId') slaId: string) {
-    return this.reports.getSLA(slaId);
+  getSLA(@Param('slaId') slaId: string, @Principal() principal: AuthPrincipal) {
+    return this.reports.getSLA(principal, slaId);
   }
 
   @Post('slas')

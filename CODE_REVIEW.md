@@ -136,6 +136,20 @@ A staff-engineer production-readiness review of `main` at `11f8c8f` (14 November
 
 Not addressed, because they are outside the areas worked on: S01 and S12 (component request authorization and forged authors), S04 and S15 (the core component library and roadmap are in memory only; duplicate component ids), S11 (simulated contribution checks), and the review's production gates (readiness checks, graceful shutdown, backups, load testing).
 
+## Status after the second staff-engineer review
+
+A second review at `2b17fad` (14 November 2026) reported T01–T10. The five in code from the earlier fixes are fixed, with tests:
+
+| Finding | Fix |
+| --- | --- |
+| T03 Cancelling during slot handoff leaks IRIS capacity | `AdmissionTicket.grant(true)` makes the ticket the slot's owner at once, so a cancel before its `run()` resumes aborts it as a running job and the slot is released once |
+| T04 Schedule and SLA reads bypass report privacy | Schedule and SLA list and detail reads follow the report rule (the application's workspace, or governance admins; others get an empty list or 404); responses leave out `pending.token` and `pending.leaseUntil` |
+| T05 Long scheduler passes hand out expired leases | Both schedulers read the clock at each claim and each completion (`clockOf` in `occurrence-policy.ts`) |
+| T06 Governance retries lost at a period boundary | A previous-period occurrence still waiting for a retry, or whose run died, is dead-lettered as superseded before the new period runs; one with a live lease finishes first |
+| T07 Unknown API keys fill the lookup cache | Unknown keys are never cached; known keys are capped at 1,000 per instance, least recently used dropped first, expired entries dropped when read |
+
+T01, T02, T08, T09 and T10 are S01, S04, S11, S12 and S15 above, still not addressed.
+
 ## Fix first
 
 In this order. The first five block any deployment beyond a single developer's machine.

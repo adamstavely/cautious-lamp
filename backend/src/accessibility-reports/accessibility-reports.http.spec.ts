@@ -197,7 +197,10 @@ describe('Accessibility reports HTTP API', () => {
 
     const updated = await admin('PUT', `/accessibility-reports/slas/${created.body.id}`, { targetScore: 100, criticalIssuesThreshold: 2 });
     expect(updated.body).toMatchObject({ targetScore: 100, criticalIssuesThreshold: 2, applicationId: 'app-1', highIssuesThreshold: 5 });
-    expect((await call('GET', '/accessibility-reports/slas?applicationId=app-1')).body).toHaveLength(1);
+    expect((await admin('GET', '/accessibility-reports/slas?applicationId=app-1')).body).toHaveLength(1);
+    // app-1 has no workspace: only governance admins read its SLA
+    expect((await call('GET', '/accessibility-reports/slas?applicationId=app-1')).body).toHaveLength(0);
+    expect((await call('GET', `/accessibility-reports/slas/${created.body.id}`)).status).toBe(404);
     expect((await admin('DELETE', `/accessibility-reports/slas/${created.body.id}`)).status).toBe(204);
   });
 
@@ -222,7 +225,7 @@ describe('Accessibility reports HTTP API', () => {
     expect(await service.runDueSchedules(now)).toBe(1);
     expect(await service.runDueSchedules(now)).toBe(0);
     expect(scanUrl.mock.calls.length).toBe(before + 1);
-    const after = (await call('GET', `/accessibility-reports/schedules/${created.body.id}`)).body;
+    const after = (await admin('GET', `/accessibility-reports/schedules/${created.body.id}`)).body;
     expect(after).toMatchObject({ lastStatus: 'success', lastRun: now.toISOString() });
     expect(new Date(after.nextRun).getTime()).toBeGreaterThan(now.getTime());
     expect(after.pending).toBeUndefined();
@@ -239,6 +242,8 @@ describe('Accessibility reports HTTP API', () => {
  */
 describe('Accessibility report visibility', () => {
   const reportStore = new InMemoryStore<AccessibilityReport>();
+  const scheduleStore = new InMemoryStore<ReportSchedule>();
+  const slaStore = new InMemoryStore<ComplianceSLA>();
   const applications = new FakeApplications([
     { id: 'app-alpha', name: 'Alpha app', workspaceId: 'ws_alpha' },
     { id: 'app-none', name: 'No workspace', workspaceId: null },
@@ -253,8 +258,8 @@ describe('Accessibility report visibility', () => {
       providers: [
         AccessibilityReportsService,
         { provide: REPORT_STORE, useValue: reportStore },
-        { provide: SCHEDULE_STORE, useValue: new InMemoryStore<ReportSchedule>() },
-        { provide: SLA_STORE, useValue: new InMemoryStore<ComplianceSLA>() },
+        { provide: SCHEDULE_STORE, useValue: scheduleStore },
+        { provide: SLA_STORE, useValue: slaStore },
         { provide: APPLICATION_DIRECTORY, useValue: applications },
         { provide: A11Y_SCANNER, useValue: { scanHtml: runAxeOnHtml, scanUrl: async () => Promise.reject(new Error('unused')) } },
         ...readScopeProviders([workspace('ws_alpha', 'alice'), workspace('ws_beta', 'bob')]),
@@ -296,6 +301,39 @@ describe('Accessibility report visibility', () => {
     // Without stored conformance it is worked out conservatively
     expect(read.body.conformance).toMatchObject({ derived: true, status: 'failing' });
   }, 30000);
+
+  it("limits schedule and SLA reads to the application's workspace, and hides the scheduler's lease", async () => {
+    const stamp = '2026-11-14T00:00:00.000Z';
+    scheduleStore.forceWrite({
+      id: 'sched-alpha',
+      applicationId: 'app-alpha',
+      url: 'https://alpha.example.com/?token=secret',
+      frequency: 'daily',
+      time: '09:00',
+      enabled: true,
+      nextRun: stamp,
+      pending: { occurrence: stamp, state: 'claimed', attempts: 1, token: 'claim-token', leaseUntil: stamp },
+      createdAt: stamp,
+      updatedAt: stamp,
+      createdBy: 'gov',
+    });
+    slaStore.forceWrite({ id: 'sla-alpha', applicationId: 'app-alpha', targetScore: 90, targetLevel: 'AA', criticalIssuesThreshold: 0, highIssuesThreshold: 5, createdAt: stamp, updatedAt: stamp });
+
+    const scheduleIds = async (name: string) => (await as(name, 'GET', '/accessibility-reports/schedules')).body.map((s: ReportSchedule) => s.id);
+    const slaIds = async (name: string) => (await as(name, 'GET', '/accessibility-reports/slas')).body.map((s: ComplianceSLA) => s.id);
+    expect(await scheduleIds('alice')).toEqual(['sched-alpha']);
+    expect(await slaIds('alice')).toEqual(['sla-alpha']);
+    expect(await scheduleIds('bob')).toEqual([]);
+    expect(await slaIds('bob')).toEqual([]);
+    expect((await as('bob', 'GET', '/accessibility-reports/schedules?applicationId=app-alpha')).body).toEqual([]);
+    expect((await as('bob', 'GET', '/accessibility-reports/schedules/sched-alpha')).status).toBe(404);
+    expect((await as('bob', 'GET', '/accessibility-reports/slas/sla-alpha')).status).toBe(404);
+
+    const read = await as('alice', 'GET', '/accessibility-reports/schedules/sched-alpha');
+    expect(read.status).toBe(200);
+    expect(read.body.pending).toEqual({ occurrence: stamp, state: 'claimed', attempts: 1 });
+    expect(JSON.stringify(await as('gov', 'GET', '/accessibility-reports/schedules'))).not.toContain('claim-token');
+  });
 });
 
 /**

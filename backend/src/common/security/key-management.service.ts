@@ -14,6 +14,8 @@ const KEY_ID_PATTERN = /^key_[0-9a-f]{32}$/;
 
 /** How long a key lookup is reused before reading storage again (other replicas see revocations within this) */
 export const API_KEY_CACHE_MS = 30_000;
+/** Most keys held in that cache at once */
+export const API_KEY_CACHE_MAX = 1_000;
 /** `lastUsed` is written at most this often per key */
 const LAST_USED_WRITE_MS = 60 * 60 * 1000;
 
@@ -98,7 +100,8 @@ function toMetadata(doc: ApiKeyDoc): ApiKeyMetadata {
 export class KeyManagementService {
   private readonly logger = new Logger(KeyManagementService.name);
   /** Lookups by key hash, including misses */
-  private readonly cache = new Map<string, { doc: ApiKeyDoc | null; expires: number }>();
+  /** Keys that exist, by hash, in least-recently-used order (see lookup) */
+  private readonly cache = new Map<string, { doc: ApiKeyDoc; expires: number }>();
 
   /** Keys configured through API_KEYS (comma-separated), by hash */
   private readonly configuredKeys = new Map<string, { id: string; name: string }>();
@@ -311,12 +314,25 @@ export class KeyManagementService {
     return cleaned;
   }
 
-  /** The stored key for a hash (or null), cached for API_KEY_CACHE_MS */
+  /**
+   * The stored key for a hash (or null). Keys that exist are cached for
+   * API_KEY_CACHE_MS, at most API_KEY_CACHE_MAX of them (the least recently
+   * used go first); unknown hashes are never cached, so random credentials
+   * can't fill memory, and a key is usable as soon as it is created.
+   */
   private async lookup(keyHash: string): Promise<ApiKeyDoc | null> {
     const cached = this.cache.get(keyHash);
-    if (cached && cached.expires > Date.now()) return cached.doc;
+    if (cached) {
+      this.cache.delete(keyHash);
+      if (cached.expires > Date.now()) {
+        this.cache.set(keyHash, cached);
+        return cached.doc;
+      }
+    }
     const doc = (await this.store.get(this.idForHash(keyHash)))?.doc ?? null;
+    if (!doc) return null;
     this.cache.set(keyHash, { doc, expires: Date.now() + API_KEY_CACHE_MS });
+    if (this.cache.size > API_KEY_CACHE_MAX) this.cache.delete(this.cache.keys().next().value!);
     return doc;
   }
 
