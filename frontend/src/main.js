@@ -13,6 +13,7 @@ import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
 import App from './App.vue';
 import './style.css';
+import './styles/tokens.css';
 import 'vuetify/styles';
 import { createVuetify } from 'vuetify';
 import * as components from 'vuetify/components';
@@ -44,6 +45,15 @@ const initDarkMode = () => {
 };
 
 const initialTheme = initDarkMode();
+
+// Trench Coat's tokens read the theme from color-scheme, and in browsers
+// without light-dark() from data-theme; keep it in step with the .dark class
+// that the theme toggles set.
+const syncThemeAttribute = () => {
+  document.documentElement.dataset.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+};
+syncThemeAttribute();
+new MutationObserver(syncThemeAttribute).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
 // Credentials and self-asserted identity from before sign-in existed. The admin
 // key in particular should not linger in the browser.

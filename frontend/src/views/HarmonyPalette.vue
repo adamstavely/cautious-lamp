@@ -1,432 +1,194 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
+  <PageShell width="wide">
+    <PageHero
+      :back="{ to: '/tokens/color-palettes', label: 'Color palettes' }"
+      title="Harmony"
+      lead="Accessible UI color palette by Evil Martians. Uses OKLCH and APCA for highly consistent color shades with precise control over text and UI element contrast."
+      spot="foundations/color-palettes"
+      size="tool"
     >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Back Button -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <router-link
-            to="/tokens/color-palettes"
-            class="inline-flex items-center gap-2 text-sm font-medium transition-colors"
-            :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
-          >
-            <span class="material-symbols-outlined text-base">arrow_back</span>
-            Back to Color Palettes
-          </router-link>
-        </div>
+      <template #actions>
+        <UiChip v-for="feature in features" :key="feature" tone="accent">{{ feature }}</UiChip>
+      </template>
+    </PageHero>
 
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-16">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <!-- Background texture/grain effect -->
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <div class="flex items-center gap-3 mb-4">
-                  <div class="w-12 h-12 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-white text-5xl">palette</span>
-                  </div>
-                  <h1 class="text-4xl md:text-5xl font-bold text-white">
-                    Harmony
-                  </h1>
-                </div>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Accessible UI color palette by Evil Martians. Uses OKLCH and APCA for highly consistent color shades with precise control over text and UI element contrast.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+    <PageSection title="Install">
+      <UiCodeBlock code="npm install @evilmartians/harmony" label="Install" />
+    </PageSection>
 
-        <!-- Harmony Palette Section -->
-        <div class="max-w-7xl mx-auto mb-16">
-          <div class="mb-8">
-            <!-- Features Badges -->
-            <div class="flex flex-wrap gap-2 mb-6">
-              <span 
-                class="px-3 py-1.5 rounded-lg text-sm font-medium"
-                :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-700'"
-              >
-                OKLCH
-              </span>
-              <span 
-                class="px-3 py-1.5 rounded-lg text-sm font-medium"
-                :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-700'"
-              >
-                APCA
-              </span>
-              <span 
-                class="px-3 py-1.5 rounded-lg text-sm font-medium"
-                :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-700'"
-              >
-                Tailwind Compatible
-              </span>
-              <span 
-                class="px-3 py-1.5 rounded-lg text-sm font-medium"
-                :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-700'"
-              >
-                P3 Support
-              </span>
-            </div>
-
-            <!-- Install Info -->
-            <div class="mb-8 p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-900 border-gray-700' : 'bg-gray-50 border-gray-200'">
-              <code class="text-sm font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                npm install @evilmartians/harmony
-              </code>
-            </div>
-
-            <!-- Color Palette Grid -->
-            <div class="mb-12">
-              <h3 class="text-2xl font-semibold mb-6" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Color Palette Grid
-              </h3>
-              
-              <!-- Search/Filter -->
-              <div class="mb-6">
-                <input
-                  v-model="searchQuery"
-                  type="text"
-                  placeholder="Search color families..."
-                  class="w-full md:w-96 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  :class="isDarkMode ? 'bg-slate-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                />
-              </div>
-
-              <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
-
-              <!-- Palette Grid Table -->
-              <div class="overflow-x-auto mb-8 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-300 bg-white'">
-                <table class="w-full border-collapse">
-                  <!-- Header Row -->
-                  <thead>
-                    <tr>
-                      <th class="sticky left-0 z-20 p-3 text-left font-semibold border-b-2" :class="isDarkMode ? 'bg-slate-800 border-gray-600 text-gray-200' : 'bg-gray-50 border-gray-400 text-gray-900'">
-                        <div class="min-w-[100px]">Color</div>
-                      </th>
-                      <th 
-                        v-for="shade in shadeLevels" 
-                        :key="shade"
-                        class="p-3 text-center font-semibold border-b-2 min-w-[120px]" 
-                        :class="isDarkMode ? 'bg-slate-800 border-gray-600 text-gray-200' : 'bg-gray-50 border-gray-400 text-gray-900'"
-                      >
-                        <div class="text-base font-bold mb-1">Level {{ shade }}</div>
-                        <div class="text-xs mt-1 font-normal opacity-90">Contrast: {{ getContrastForShade(shade) }}</div>
-                        <div class="text-xs font-normal opacity-90">Chroma: {{ getChromaForShade(shade) }}</div>
-                      </th>
-                    </tr>
-                  </thead>
-                  
-                  <!-- Color Family Rows -->
-                  <tbody>
-                    <tr
-                      v-for="(colors, familyName) in filteredColors"
-                      :key="familyName"
-                      class="border-b transition-colors"
-                      :class="isDarkMode ? 'border-gray-700 hover:bg-slate-700/50' : 'border-gray-200 hover:bg-gray-50'"
-                    >
-                      <!-- Color Family Name -->
-                      <td class="sticky left-0 z-10 p-3 font-semibold capitalize border-r-2 whitespace-nowrap" :class="isDarkMode ? 'bg-slate-800 border-gray-600 text-gray-200' : 'bg-white border-gray-300 text-gray-900'">
-                        {{ familyName }}
-                      </td>
-                      
-                      <!-- Color Cells -->
-                      <td
-                        v-for="shade in shadeLevels"
-                        :key="`${familyName}-${shade}`"
-                        class="p-3 border-r text-center relative group cursor-pointer min-h-[120px]"
-                        :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-                        :style="{ backgroundColor: colors[shade] || (isDarkMode ? '#1e293b' : '#f9fafb') }"
-                        :role="colors[shade] ? 'button' : undefined"
-                        :tabindex="colors[shade] ? 0 : undefined"
-                        :aria-label="colors[shade] ? `Copy ${familyName} ${shade}: ${colors[shade]}` : undefined"
-                        @click="copyToClipboard(colors[shade], `${familyName}-${shade}`)"
-                        @keydown.enter.prevent="copyToClipboard(colors[shade], `${familyName}-${shade}`)"
-                        @keydown.space.prevent="copyToClipboard(colors[shade], `${familyName}-${shade}`)"
-                      >
-                        <!-- Contrast Number (Large) -->
-                        <div 
-                          class="text-3xl font-bold mb-2 leading-none"
-                          :style="getTextColorForCell(colors[shade], `${familyName}-${shade}`)"
-                        >
-                          {{ getContrastForShade(shade) }}
-                        </div>
-                        
-                        <!-- Color Value -->
-                        <div 
-                          class="text-xs font-mono mb-1"
-                          :style="{ ...getTextColorForCell(colors[shade], `${familyName}-${shade}`), opacity: 0.95 }"
-                        >
-                          {{ colorInfo[`${familyName}-${shade}`]?.hex || 'OKLCH' }}
-                        </div>
-                        
-                        <!-- Usage Guideline Icon -->
-                        <div 
-                          class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-sm"
-                          :style="getUsageIconStyle(colors[shade], shade, familyName)"
-                        >
-                          {{ getUsageGuidelineIcon(shade) }}
-                        </div>
-                        
-                        <!-- Copy Indicator on Hover -->
-                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity bg-black bg-opacity-30 rounded">
-                          <span class="material-symbols-outlined text-white drop-shadow-lg text-2xl">{{ copiedColor === `${familyName}-${shade}` ? 'check' : 'content_copy' }}</span>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- Usage Guidelines Legend -->
-              <div class="mt-8 p-6 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
-                <h4 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  Usage Guidelines
-                </h4>
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                  <div 
-                    v-for="(guideline, index) in usageGuidelines" 
-                    :key="index"
-                    class="flex items-center gap-2"
-                  >
-                    <div 
-                      class="w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold"
-                      :style="{ backgroundColor: guideline.color }"
-                      :class="guidelineTextColors[index] === 'white' ? 'text-white' : 'text-black'"
-                    >
-                      {{ guideline.icon }}
-                    </div>
-                    <div>
-                      <div class="text-sm font-medium" :class="isDarkMode ? 'text-gray-200' : 'text-gray-900'">
-                        {{ guideline.label }}
-                      </div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Contrast {{ guideline.contrast }}, {{ guideline.fontSize }}, {{ guideline.lineHeight }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Usage Guidelines -->
-            <div class="mb-12">
-              <h3 class="text-2xl font-semibold mb-8" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Usage Guidelines
-              </h3>
-
-              <!-- Guideline 1: Accent Color Flexibility -->
-              <div class="mb-12">
-                <div class="mb-6">
-                  <h4 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    1. Set up and easily change the accent color later
-                  </h4>
-                  <p class="text-base mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Harmony's equal contrast within level columns allows you to change accent colors (e.g., Blue 600 to another 600 color) while maintaining the same contrast level. This preserves accessibility and readability.
-                  </p>
-                  <p class="text-sm mb-6" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Thanks to equal contrast within level columns, the contrast between text labels and buttons doesn't change when you swap accent colors.
-                  </p>
-                </div>
-
-                <!-- Example Dialog Boxes -->
-                <div class="grid md:grid-cols-2 gap-6 mb-6">
-                  <!-- Blue Accent -->
-                  <div class="rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                    <div class="mb-4">
-                      <div class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Document changed</div>
-                      <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Do you want to save your edits?</div>
-                    </div>
-                    <div class="flex gap-3">
-                      <button class="px-4 py-2 rounded-lg border text-sm font-medium transition-colors" :class="isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'">
-                        Cancel
-                      </button>
-                      <button class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors" style="background-color: oklch(0.5 0.2 250);">
-                        Save
-                      </button>
-                    </div>
-                    <div class="mt-4 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                      Blue 600 accent
-                    </div>
-                  </div>
-
-                  <!-- Teal Accent -->
-                  <div class="rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                    <div class="mb-4">
-                      <div class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Document changed</div>
-                      <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Do you want to save your edits?</div>
-                    </div>
-                    <div class="flex gap-3">
-                      <button class="px-4 py-2 rounded-lg border text-sm font-medium transition-colors" :class="isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'">
-                        Cancel
-                      </button>
-                      <button class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors" style="background-color: oklch(0.5 0.2 180);">
-                        Save
-                      </button>
-                    </div>
-                    <div class="mt-4 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                      Teal 600 accent (same contrast)
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Guideline 2: Light and Dark Themes -->
-              <div class="mb-12">
-                <div class="mb-6">
-                  <h4 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    2. Establish both light and dark themes effortlessly
-                  </h4>
-                  <p class="text-base mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Harmony's palette features mirrored contrast pairs. Every color column (except the central one) has a pair with the same level of contrast on the right (e.g., "65 and 65, 77 and 77").
-                  </p>
-                  <p class="text-sm mb-6" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Consider level 500 as the central column, and other columns make up mirrored contrast pairs. 400 and 600 are one step away from 500. 300 and 700 are two steps away from the center.
-                  </p>
-                </div>
-
-                <!-- Contrast Level Visualization -->
-                <div class="mb-6 p-6 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
-                  <div class="flex items-center justify-center gap-4 mb-4">
-                    <div class="text-center">
-                      <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">77</div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">300</div>
-                    </div>
-                    <div class="text-center">
-                      <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">65</div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">400</div>
-                    </div>
-                    <div class="text-center">
-                      <div class="text-2xl font-bold" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">54</div>
-                      <div class="text-xs font-semibold" :class="isDarkMode ? 'text-indigo-300' : 'text-indigo-700'">500 (center)</div>
-                    </div>
-                    <div class="text-center">
-                      <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">65</div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">600</div>
-                    </div>
-                    <div class="text-center">
-                      <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">77</div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">700</div>
-                    </div>
-                  </div>
-                  <div class="text-center text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Mirrored contrast pairs around level 500
-                  </div>
-                </div>
-
-                <!-- Example Dialog Boxes -->
-                <div class="grid md:grid-cols-2 gap-6">
-                  <!-- Light Theme -->
-                  <div class="rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                    <div class="mb-4">
-                      <div class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Document changed</div>
-                      <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Do you want to save your edits?</div>
-                    </div>
-                    <div class="flex gap-3">
-                      <button class="px-4 py-2 rounded-lg border text-sm font-medium transition-colors" :class="isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'">
-                        Cancel
-                      </button>
-                      <button class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors" style="background-color: oklch(0.5 0.2 250);">
-                        Save
-                      </button>
-                    </div>
-                    <div class="mt-4 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                      Light theme: Slate 200, Blue 600, Blue 100
-                    </div>
-                  </div>
-
-                  <!-- Dark Theme -->
-                  <div class="rounded-lg border p-6 bg-slate-900 border-gray-700">
-                    <div class="mb-4">
-                      <div class="text-sm font-medium mb-2 text-white">Document changed</div>
-                      <div class="text-sm text-gray-300">Do you want to save your edits?</div>
-                    </div>
-                    <div class="flex gap-3">
-                      <button class="px-4 py-2 rounded-lg border border-gray-600 text-sm font-medium text-gray-300 hover:bg-gray-800 transition-colors">
-                        Cancel
-                      </button>
-                      <button class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors" style="background-color: oklch(0.65 0.15 250);">
-                        Save
-                      </button>
-                    </div>
-                    <div class="mt-4 text-xs text-gray-500">
-                      Dark theme: Slate 800, Blue 400, Blue 900
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Guideline 3: Consistent Object Coloring -->
-              <div class="mb-12">
-                <div class="mb-6">
-                  <h4 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    3. Set different colors within one column to similar objects
-                  </h4>
-                  <p class="text-base mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Use colors from the same column for semantically similar but visually distinct objects, such as multicolored user avatars, tags, and notifications.
-                  </p>
-                  <p class="text-sm mb-6" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Colors in every column have equal chroma and lightness, giving them a cohesive look that makes them seem like they belong to the same group. Also, as usual, the contrast level remains the same.
-                  </p>
-                </div>
-
-                <!-- Example Tags -->
-                <div class="flex flex-wrap gap-3">
-                  <div class="px-4 py-2 rounded-full text-sm font-medium text-white" style="background-color: oklch(0.5 0.15 250);">
-                    Music
-                  </div>
-                  <div class="px-4 py-2 rounded-full text-sm font-medium text-white" style="background-color: oklch(0.5 0.15 30);">
-                    Books
-                  </div>
-                  <div class="px-4 py-2 rounded-full text-sm font-medium text-white" style="background-color: oklch(0.5 0.15 300);">
-                    Games
-                  </div>
-                  <div class="px-4 py-2 rounded-full text-sm font-medium text-white" style="background-color: oklch(0.5 0.15 150);">
-                    Video
-                  </div>
-                  <div class="px-4 py-2 rounded-full text-sm font-medium text-white" style="background-color: oklch(0.5 0.15 0);">
-                    Utilities
-                  </div>
-                </div>
-                <div class="mt-4 text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  All tags use colors from the same column (600 level) with equal chroma and lightness
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        </div>
+    <PageSection title="Color palette grid" description="Select a cell to copy its OKLCH value." divided>
+      <div class="mb-6 md:w-96">
+        <UiInput v-model="searchQuery" type="search" icon="search" label="Search color families" placeholder="Search color families..." />
       </div>
-    </div>
-  </div>
+
+      <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
+
+      <UiPanel flush class="mb-8">
+        <UiTable caption="Harmony palette: color families by shade level, with APCA contrast and chroma per level" compact>
+          <thead>
+            <tr>
+              <th scope="col" class="sticky left-0 z-20 bg-surface-raised">Color</th>
+              <th v-for="shade in shadeLevels" :key="shade" scope="col" class="text-center min-w-32">
+                <div class="text-base font-bold text-ink-strong mb-1">Level {{ shade }}</div>
+                <div class="text-xs font-normal">Contrast: {{ getContrastForShade(shade) }}</div>
+                <div class="text-xs font-normal">Chroma: {{ getChromaForShade(shade) }}</div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(colors, familyName) in filteredColors" :key="familyName">
+              <th scope="row" class="sticky left-0 z-10 bg-surface-raised font-semibold capitalize whitespace-nowrap text-ink-strong">
+                {{ familyName }}
+              </th>
+              <td v-for="shade in shadeLevels" :key="`${familyName}-${shade}`" class="p-0">
+                <UiColorSample
+                  v-if="colors[shade]"
+                  tag="button"
+                  class="palette-cell group"
+                  :color="colors[shade]"
+                  :text-color="getTextColorForCell(colors[shade], `${familyName}-${shade}`)"
+                  :aria-label="`Copy ${familyName} ${shade}: ${colors[shade]}`"
+                  @click="copyToClipboard(colors[shade], `${familyName}-${shade}`)"
+                >
+                  <span class="text-3xl font-bold mb-2 leading-none">{{ getContrastForShade(shade) }}</span>
+                  <span class="text-xs font-code mb-1">{{ colorInfo[`${familyName}-${shade}`]?.hex || 'OKLCH' }}</span>
+                  <span class="absolute top-2 right-2 px-1 min-w-6 h-6 rounded-pill border border-current flex items-center justify-center text-xs font-bold" aria-hidden="true">
+                    {{ getUsageGuidelineIcon(shade) }}
+                  </span>
+                  <span class="palette-cell-copy" aria-hidden="true">
+                    <span class="material-symbols-outlined text-xl">{{ copiedColor === `${familyName}-${shade}` ? 'check' : 'content_copy' }}</span>
+                  </span>
+                </UiColorSample>
+                <div v-else class="palette-cell bg-surface-sunken">
+                  <span class="sr-only">No {{ familyName }} {{ shade }}</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </UiTable>
+      </UiPanel>
+
+      <UiPanel title="Usage guidelines" heading-tag="h3">
+        <ul class="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <li v-for="(guideline, index) in usageGuidelines" :key="index" class="flex items-center gap-2">
+            <UiColorSample
+              tag="span"
+              class="w-8 h-8 shrink-0 rounded-pill border flex items-center justify-center text-xs font-bold"
+              :color="guideline.color"
+              :text-color="guidelineTextColors[index]"
+            >
+              {{ guideline.icon }}
+            </UiColorSample>
+            <span>
+              <span class="block text-sm font-medium text-ink-strong">{{ guideline.label }}</span>
+              <span class="block text-xs text-ink-secondary">Contrast {{ guideline.contrast }}, {{ guideline.fontSize }}, {{ guideline.lineHeight }}</span>
+            </span>
+          </li>
+        </ul>
+      </UiPanel>
+    </PageSection>
+
+    <PageSection title="Usage guidelines" divided>
+      <div class="space-y-12">
+        <!-- Guideline 1: Accent Color Flexibility -->
+        <section>
+          <h3 class="text-xl font-semibold text-ink-strong mb-3">1. Set up and easily change the accent color later</h3>
+          <p class="text-base text-ink mb-4">
+            Harmony's equal contrast within level columns allows you to change accent colors (e.g., Blue 600 to another 600 color) while maintaining the same contrast level. This preserves accessibility and readability.
+          </p>
+          <p class="text-sm text-ink-secondary mb-6">
+            Thanks to equal contrast within level columns, the contrast between text labels and buttons doesn't change when you swap accent colors.
+          </p>
+          <div class="grid md:grid-cols-2 gap-6">
+            <UiPanel v-for="example in accentExamples" :key="example.key">
+              <p class="text-sm font-medium text-ink mb-2">Document changed</p>
+              <p class="text-sm text-ink-secondary mb-4">Do you want to save your edits?</p>
+              <div class="flex gap-3" aria-hidden="true">
+                <span class="demo-button border border-line-control text-ink">Cancel</span>
+                <UiColorSample tag="span" class="demo-button" :color="example.accent" :text-color="demoColors.white">Save</UiColorSample>
+              </div>
+              <p class="mt-4 text-xs text-ink-muted">{{ example.note }}</p>
+            </UiPanel>
+          </div>
+        </section>
+
+        <!-- Guideline 2: Light and Dark Themes -->
+        <section>
+          <h3 class="text-xl font-semibold text-ink-strong mb-3">2. Establish both light and dark themes effortlessly</h3>
+          <p class="text-base text-ink mb-4">
+            Harmony's palette features mirrored contrast pairs. Every color column (except the central one) has a pair with the same level of contrast on the right (e.g., "65 and 65, 77 and 77").
+          </p>
+          <p class="text-sm text-ink-secondary mb-6">
+            Consider level 500 as the central column, and other columns make up mirrored contrast pairs. 400 and 600 are one step away from 500. 300 and 700 are two steps away from the center.
+          </p>
+
+          <div class="mb-6 p-6 rounded-tile border border-line-faint bg-surface-sunken">
+            <ul class="flex items-center justify-center gap-4 mb-4">
+              <li v-for="pair in mirroredPairs" :key="pair.level" class="text-center">
+                <span class="block text-2xl font-bold" :class="pair.center ? 'text-accent-text' : 'text-ink-strong'">{{ pair.contrast }}</span>
+                <span class="block text-xs" :class="pair.center ? 'font-semibold text-accent-text' : 'text-ink-secondary'">{{ pair.level }}</span>
+              </li>
+            </ul>
+            <p class="text-center text-xs text-ink-secondary">Mirrored contrast pairs around level 500</p>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-6">
+            <UiPanel>
+              <p class="text-sm font-medium text-ink mb-2">Document changed</p>
+              <p class="text-sm text-ink-secondary mb-4">Do you want to save your edits?</p>
+              <div class="flex gap-3" aria-hidden="true">
+                <span class="demo-button border border-line-control text-ink">Cancel</span>
+                <UiColorSample tag="span" class="demo-button" :color="demoColors.blue600" :text-color="demoColors.white">Save</UiColorSample>
+              </div>
+              <p class="mt-4 text-xs text-ink-muted">Light theme: Slate 200, Blue 600, Blue 100</p>
+            </UiPanel>
+
+            <UiColorSample class="rounded-card border p-6" :color="demoColors.darkSurface" :text-color="demoColors.darkText" :border-color="demoColors.darkBorder">
+              <p class="text-sm font-medium mb-2">Document changed</p>
+              <p class="text-sm opacity-80 mb-4">Do you want to save your edits?</p>
+              <div class="flex gap-3" aria-hidden="true">
+                <UiColorSample tag="span" class="demo-button border" color="transparent" :border-color="demoColors.darkBorder">Cancel</UiColorSample>
+                <UiColorSample tag="span" class="demo-button" :color="demoColors.blue400" :text-color="demoColors.white">Save</UiColorSample>
+              </div>
+              <p class="mt-4 text-xs opacity-70">Dark theme: Slate 800, Blue 400, Blue 900</p>
+            </UiColorSample>
+          </div>
+        </section>
+
+        <!-- Guideline 3: Consistent Object Coloring -->
+        <section>
+          <h3 class="text-xl font-semibold text-ink-strong mb-3">3. Set different colors within one column to similar objects</h3>
+          <p class="text-base text-ink mb-4">
+            Use colors from the same column for semantically similar but visually distinct objects, such as multicolored user avatars, tags, and notifications.
+          </p>
+          <p class="text-sm text-ink-secondary mb-6">
+            Colors in every column have equal chroma and lightness, giving them a cohesive look that makes them seem like they belong to the same group. Also, as usual, the contrast level remains the same.
+          </p>
+          <ul class="flex flex-wrap gap-3">
+            <li v-for="tag in exampleTags" :key="tag.label">
+              <UiColorSample tag="span" class="inline-block px-4 py-2 rounded-pill text-sm font-medium" :color="tag.color" :text-color="demoColors.white">
+                {{ tag.label }}
+              </UiColorSample>
+            </li>
+          </ul>
+          <p class="mt-4 text-xs text-ink-secondary">All tags use colors from the same column (600 level) with equal chroma and lightness</p>
+        </section>
+      </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { PageHero, PageSection, PageShell, UiChip, UiCodeBlock, UiInput, UiPanel, UiTable } from '../components/ui';
+import UiColorSample from '../components/ui/UiColorSample.vue';
 import { useNotice } from '../composables/useNotice.js';
 import harmonyPalette from '@evilmartians/harmony/base';
 
 // Note: much of this page (OKLCH grid, usage guidelines) duplicates
 // ColoredTextPalette.vue; a shared palette-grid component would remove that.
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const { notice, showNotice, clearNotice } = useNotice();
 const searchQuery = ref('');
 const copiedColor = ref(null);
@@ -588,7 +350,7 @@ const isDarkColor = (value) => {
   return calculateLuminance(...rgb) < 0.5;
 };
 
-// Hex value, text colour and badge style for every cell, computed once.
+// Hex value and readable text colour (black or white) for every cell, computed once.
 const colorInfo = computed(() => {
   const info = {};
   Object.entries(harmonyColors.value).forEach(([familyName, shades]) => {
@@ -597,17 +359,14 @@ const colorInfo = computed(() => {
       const dark = rgb ? calculateLuminance(...rgb) < 0.5 : Number(shade) >= 600;
       info[`${familyName}-${shade}`] = {
         hex: rgb ? toHex(rgb) : null,
-        textStyle: { color: dark ? '#ffffff' : '#000000' },
-        iconStyle: dark
-          ? { backgroundColor: 'rgba(255, 255, 255, 0.25)', color: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.3)' }
-          : { backgroundColor: 'rgba(0, 0, 0, 0.25)', color: '#000000', border: '1px solid rgba(0, 0, 0, 0.3)' }
+        textColor: dark ? '#ffffff' : '#000000',
       };
     });
   });
   return info;
 });
 
-const guidelineTextColors = usageGuidelines.map((guideline) => (isDarkColor(guideline.color) ? 'white' : 'black'));
+const guidelineTextColors = usageGuidelines.map((guideline) => (isDarkColor(guideline.color) ? '#ffffff' : '#000000'));
 
 // Get contrast value for shade
 const getContrastForShade = (shade) => {
@@ -639,20 +398,43 @@ const getUsageGuidelineIcon = (shade) => {
 
 // Get text color for cell (white or black based on background luminance)
 const getTextColorForCell = (oklchValue, cacheKey) => {
-  if (!oklchValue) return { color: 'transparent' };
-  return colorInfo.value[cacheKey]?.textStyle || { color: '#000000' };
+  if (!oklchValue) return '';
+  return colorInfo.value[cacheKey]?.textColor || '#000000';
 };
 
-// Get usage icon style
-const getUsageIconStyle = (oklchValue, shade, familyName) => {
-  if (!oklchValue) {
-    return {
-      backgroundColor: isDarkMode.value ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
-      color: isDarkMode.value ? '#ffffff' : '#000000'
-    };
-  }
-  return colorInfo.value[`${familyName}-${shade}`]?.iconStyle || { backgroundColor: 'rgba(0, 0, 0, 0.25)', color: '#000000' };
+// Fixed demo colours for the usage examples (Harmony shades, shown as data)
+const demoColors = {
+  blue600: 'oklch(0.5 0.2 250)',
+  teal600: 'oklch(0.5 0.2 180)',
+  blue400: 'oklch(0.65 0.15 250)',
+  darkSurface: harmonyPalette.slate?.['900'] || 'oklch(0.21 0.04 265)',
+  darkBorder: harmonyPalette.slate?.['700'] || 'oklch(0.37 0.04 257)',
+  darkText: harmonyPalette.slate?.['200'] || 'oklch(0.93 0.01 256)',
+  white: '#ffffff',
 };
+
+const accentExamples = [
+  { key: 'blue', accent: demoColors.blue600, note: 'Blue 600 accent' },
+  { key: 'teal', accent: demoColors.teal600, note: 'Teal 600 accent (same contrast)' },
+];
+
+const mirroredPairs = [
+  { contrast: 77, level: '300' },
+  { contrast: 65, level: '400' },
+  { contrast: 54, level: '500 (center)', center: true },
+  { contrast: 65, level: '600' },
+  { contrast: 77, level: '700' },
+];
+
+const exampleTags = [
+  { label: 'Music', color: 'oklch(0.5 0.15 250)' },
+  { label: 'Books', color: 'oklch(0.5 0.15 30)' },
+  { label: 'Games', color: 'oklch(0.5 0.15 300)' },
+  { label: 'Video', color: 'oklch(0.5 0.15 150)' },
+  { label: 'Utilities', color: 'oklch(0.5 0.15 0)' },
+];
+
+const features = ['OKLCH', 'APCA', 'Tailwind Compatible', 'P3 Support'];
 
 // Copy to clipboard
 let copiedTimer = null;
@@ -674,26 +456,23 @@ const copyToClipboard = async (value, colorName) => {
   }
 };
 
-onMounted(() => {
-  // Auto-open drawer if navigating from sidebar
-  try {
-    if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-      drawerOpen.value = true;
-      sessionStorage.removeItem('openDrawerOnLoad');
-    }
-  } catch {
-    // Storage unavailable (private mode / blocked): just don't auto-open.
-  }
-});
-
 onBeforeUnmount(() => {
   clearTimeout(copiedTimer);
 });
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.palette-cell {
+  @apply relative flex flex-col items-center justify-center w-full h-full min-h-28 p-3 text-center;
+}
+.palette-cell-copy {
+  @apply absolute bottom-2 right-2 flex items-center justify-center rounded-pill bg-surface-overlay text-ink shadow-control p-1 opacity-0 transition-opacity;
+}
+.group:hover .palette-cell-copy,
+.group:focus-visible .palette-cell-copy {
+  @apply opacity-100;
+}
+.demo-button {
+  @apply inline-block px-4 py-2 rounded-pill text-sm font-medium;
 }
 </style>
-

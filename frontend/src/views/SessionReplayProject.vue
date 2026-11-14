@@ -1,486 +1,243 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Loading State -->
-        <div v-if="loading" class="max-w-7xl mx-auto py-12 text-center">
-          <div class="flex justify-center mb-4">
-            <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-          <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading project...</p>
-        </div>
+  <PageShell width="wide">
+    <UiSpinner v-if="loading" label="Loading project…" class="py-12" />
 
-        <!-- Project Content -->
-        <div v-else-if="project" class="max-w-7xl mx-auto">
-          <!-- Header -->
-          <div class="mb-8">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h1 class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ project.name }}</h1>
-                <p class="text-lg" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ project.description || 'No description' }}</p>
-              </div>
-            </div>
-          </div>
+    <template v-else-if="project">
+      <PageHero
+        :back="{ to: '/hcd/session-replay', label: 'Session replay' }"
+        :title="project.name"
+        :lead="project.description || 'No description'"
+        spot="site/session-replay"
+        size="tool"
+      />
 
-          <!-- Tabs -->
-          <div class="mb-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-            <div class="flex gap-2">
-              <button
-                @click="activeTab = 'overview'"
-                class="px-6 py-3 font-medium transition-colors relative"
-                :class="activeTab === 'overview'
-                  ? (isDarkMode ? 'text-indigo-400' : 'text-indigo-600')
-                  : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
-              >
-                Overview
-                <div 
-                  v-if="activeTab === 'overview'"
-                  class="absolute bottom-0 left-0 right-0 h-0.5"
-                  :class="isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600'"
-                ></div>
-              </button>
-              <button
-                @click="navigateToSessionsTab"
-                class="px-6 py-3 font-medium transition-colors relative"
-                :class="activeTab === 'sessions'
-                  ? (isDarkMode ? 'text-indigo-400' : 'text-indigo-600')
-                  : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
-              >
-                Sessions
-                <div 
-                  v-if="activeTab === 'sessions'"
-                  class="absolute bottom-0 left-0 right-0 h-0.5"
-                  :class="isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600'"
-                ></div>
-              </button>
-              <button
-                @click="activeTab = 'heatmaps'"
-                class="px-6 py-3 font-medium transition-colors relative"
-                :class="activeTab === 'heatmaps'
-                  ? (isDarkMode ? 'text-indigo-400' : 'text-indigo-600')
-                  : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
-              >
-                Heatmaps
-                <div 
-                  v-if="activeTab === 'heatmaps'"
-                  class="absolute bottom-0 left-0 right-0 h-0.5"
-                  :class="isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600'"
-                ></div>
-              </button>
-              <button
-                @click="activeTab = 'settings'"
-                class="px-6 py-3 font-medium transition-colors relative"
-                :class="activeTab === 'settings'
-                  ? (isDarkMode ? 'text-indigo-400' : 'text-indigo-600')
-                  : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
-              >
-                Settings
-                <div 
-                  v-if="activeTab === 'settings'"
-                  class="absolute bottom-0 left-0 right-0 h-0.5"
-                  :class="isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600'"
-                ></div>
-              </button>
-            </div>
-          </div>
-
-          <!-- Overview Tab -->
-          <div v-if="activeTab === 'overview'" class="space-y-6">
+      <UiTabs :model-value="activeTab" :tabs="tabs" label="Project views" @update:model-value="selectTab">
+        <template #overview>
+          <div class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div class="rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Total Sessions</div>
-                <div class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ sessions.length }}</div>
-              </div>
-              <div class="rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Sessions with Errors</div>
-                <div class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ sessionsWithErrors }}</div>
-              </div>
-              <div class="rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Live Sessions</div>
-                <div class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ liveSessions }}</div>
-              </div>
+              <UiStat label="Total sessions" :value="sessions.length" />
+              <UiStat label="Sessions with errors" :value="sessionsWithErrors" />
+              <UiStat label="Live sessions" :value="liveSessions" />
             </div>
 
-            <!-- Integration Code -->
-            <div class="rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Integration Code</h3>
-                <button
-                  @click="copyIntegrationCode"
-                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm flex items-center gap-2"
-                >
-                  <span class="material-symbols-outlined text-base">content_copy</span>
-                  Copy Code
-                </button>
-              </div>
-              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Add this code to your application's HTML to start recording sessions.
-              </p>
-              <div class="relative">
-                <pre class="p-4 rounded-lg overflow-x-auto text-xs font-mono" :class="isDarkMode ? 'bg-slate-900 text-gray-300 border border-gray-700' : 'bg-gray-50 text-gray-900 border border-gray-200'"><code>{{ integrationCode }}</code></pre>
-              </div>
-            </div>
+            <UiPanel title="Integration code" heading-tag="h3" description="Add this code to your application's HTML to start recording sessions.">
+              <UiCodeBlock :code="integrationCode" label="HTML" @copied="onIntegrationCodeCopied" @copy-failed="onIntegrationCodeCopyFailed" />
+            </UiPanel>
 
-            <!-- Project Configuration -->
-            <div class="rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Project Configuration</h3>
-              <div class="grid grid-cols-2 gap-4">
+            <UiPanel title="Project configuration" heading-tag="h3">
+              <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">OpenReplay Project Key</div>
-                  <div class="text-sm font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ project.openreplayProjectKey }}</div>
+                  <dt class="font-medium mb-1 text-ink-secondary">OpenReplay project key</dt>
+                  <dd class="font-code text-ink">{{ project.openreplayProjectKey }}</dd>
                 </div>
                 <div>
-                  <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">OpenReplay Base URL</div>
-                  <div class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ project.openreplayBaseUrl }}</div>
+                  <dt class="font-medium mb-1 text-ink-secondary">OpenReplay base URL</dt>
+                  <dd class="break-all text-ink">{{ project.openreplayBaseUrl }}</dd>
                 </div>
                 <div v-if="project.applicationUrl">
-                  <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Application URL</div>
-                  <div class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ project.applicationUrl }}</div>
+                  <dt class="font-medium mb-1 text-ink-secondary">Application URL</dt>
+                  <dd class="break-all text-ink">{{ project.applicationUrl }}</dd>
                 </div>
                 <div>
-                  <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Team</div>
-                  <div class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ project.teamId }}</div>
+                  <dt class="font-medium mb-1 text-ink-secondary">Team</dt>
+                  <dd class="text-ink">{{ project.teamId }}</dd>
                 </div>
                 <div>
-                  <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Created</div>
-                  <div class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ formatDate(project.createdAt) }}</div>
+                  <dt class="font-medium mb-1 text-ink-secondary">Created</dt>
+                  <dd class="text-ink">{{ formatDate(project.createdAt) }}</dd>
                 </div>
-              </div>
+              </dl>
+            </UiPanel>
+          </div>
+        </template>
+
+        <template #sessions>
+          <div class="mb-6 flex flex-wrap items-end gap-4">
+            <div class="flex-1 min-w-0">
+              <UiInput v-model="searchQuery" type="search" label="Search sessions" icon="search" placeholder="Search sessions…" />
             </div>
+            <UiButton icon="refresh" @click="loadSessions">Refresh</UiButton>
           </div>
 
-          <!-- Sessions Tab -->
-          <div v-if="activeTab === 'sessions'">
-            <div class="mb-6 flex items-center gap-4">
-              <div class="flex-1 relative">
-                <input
-                  v-model="searchQuery"
-                  type="text"
-                  placeholder="Search sessions..."
-                  class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  :class="isDarkMode 
-                    ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-400' 
-                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-                />
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
-              </div>
-              <button
-                @click="loadSessions"
-                class="px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
-                :class="isDarkMode 
-                  ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'"
-              >
-                <span class="material-symbols-outlined text-base">refresh</span>
-                Refresh
-              </button>
-            </div>
+          <UiSpinner v-if="sessionsLoading" label="Loading sessions…" class="py-12" />
 
-            <div v-if="sessionsLoading" class="text-center py-12">
-              <div class="flex justify-center mb-4">
-                <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-              </div>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading sessions...</p>
-            </div>
+          <UiEmptyState
+            v-else-if="sessionsProblem"
+            :title="sessionsProblem.notConfigured ? 'OpenReplay isn\'t connected' : 'Sessions could not be loaded'"
+            :body="sessionsProblem.message"
+            :spot="sessionsProblem.notConfigured ? 'site/session-replay' : 'patterns/error-handling'"
+          >
+            <template v-if="sessionsProblem.notConfigured" #actions>
+              <UiButton variant="primary" icon="settings" @click="selectTab('settings')">Open settings</UiButton>
+            </template>
+          </UiEmptyState>
 
-            <div v-else-if="sessionsProblem" class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-              <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">{{ sessionsProblem.notConfigured ? 'link_off' : 'error' }}</span>
-              <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                {{ sessionsProblem.notConfigured ? 'OpenReplay isn\'t connected' : 'Sessions could not be loaded' }}
+          <UiEmptyState
+            v-else-if="filteredSessions.length === 0"
+            title="No sessions found"
+            body="Sessions will appear here once your application starts recording"
+            spot="patterns/empty-loading-states"
+          />
+
+          <UiPanel v-else flush>
+            <UiTable caption="Recorded sessions">
+              <thead>
+                <tr>
+                  <th scope="col">Session</th>
+                  <th scope="col">Started</th>
+                  <th scope="col">Errors</th>
+                  <th scope="col">Duration</th>
+                  <th scope="col">Pages</th>
+                  <th scope="col">Events</th>
+                  <th scope="col">Issue score</th>
+                  <th scope="col">User</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="session in filteredSessions" :key="session.sessionId">
+                  <td>
+                    <span class="flex items-center gap-2">
+                      <UiLink :to="sessionLink(session.sessionId)" class="font-code">
+                        {{ session.sessionId.substring(0, 8) }}<span class="sr-only"> (open replay)</span>
+                      </UiLink>
+                      <UiChip v-if="session.live" tone="info">Live</UiChip>
+                    </span>
+                  </td>
+                  <td class="whitespace-nowrap">{{ formatDate(session.startTime) }}</td>
+                  <td>
+                    <UiChip :tone="session.errorsCount > 0 ? 'danger' : 'success'">
+                      {{ session.errorsCount > 0 ? `${session.errorsCount} errors` : 'No errors' }}
+                    </UiChip>
+                  </td>
+                  <td>{{ formatDuration(session.duration) }}</td>
+                  <td>{{ session.pagesCount }}</td>
+                  <td>{{ session.eventsCount }}</td>
+                  <td :class="{ 'text-danger font-semibold': session.issueScore > 50 }">{{ session.issueScore }}</td>
+                  <td class="text-ink-secondary">{{ session.userEmail || '—' }}</td>
+                </tr>
+              </tbody>
+            </UiTable>
+          </UiPanel>
+        </template>
+
+        <template #heatmaps>
+          <UiSpinner v-if="heatmapsUrlLoading" label="Loading heatmaps…" class="py-12" />
+
+          <div v-else-if="heatmapsUrl" class="space-y-6">
+            <UiPanel
+              title="Heatmaps"
+              heading-tag="h3"
+              description="Visualize user interactions across your application. Heatmaps show where users click, scroll, and move their mouse, helping you identify engagement hotspots and areas that need optimization."
+            >
+              <div class="flex flex-wrap items-center gap-3">
+                <UiButton variant="primary" icon="open_in_new" :href="heatmapsUrl" target="_blank" rel="noopener noreferrer">Open in OpenReplay</UiButton>
+                <UiButton icon="content_copy" @click="copyHeatmapsUrl">Copy link</UiButton>
+              </div>
+            </UiPanel>
+
+            <UiPanel title="Heatmap viewer" heading-tag="h3">
+              <template #actions>
+                <UiLink :href="heatmapsUrl" external>Open full screen</UiLink>
+              </template>
+              <iframe
+                :src="heatmapsUrl"
+                class="w-full h-embed rounded-tile border border-line"
+                allow="fullscreen"
+                title="OpenReplay Heatmaps"
+              ></iframe>
+              <p class="mt-2 text-center text-xs text-ink-muted">
+                If the heatmap viewer doesn't load, click "Open in OpenReplay" to view in a new window. Make sure you're authenticated in OpenReplay.
               </p>
-              <p class="text-sm max-w-lg mx-auto" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ sessionsProblem.message }}</p>
-              <button
-                v-if="sessionsProblem.notConfigured"
-                type="button"
-                class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-                @click="activeTab = 'settings'"
-              >
-                Open settings
-              </button>
-            </div>
+            </UiPanel>
 
-            <div v-else-if="filteredSessions.length === 0" class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-              <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">videocam_off</span>
-              <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">No sessions found</p>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Sessions will appear here once your application starts recording</p>
-            </div>
-
-            <div v-else class="space-y-4">
-              <div
-                v-for="session in filteredSessions"
-                :key="session.sessionId"
-                @click="navigateToSession(session.sessionId)"
-                class="rounded-lg border p-6 cursor-pointer transition-all hover:shadow-lg"
-                :class="isDarkMode 
-                  ? 'bg-slate-800 border-gray-700 hover:border-indigo-400' 
-                  : 'bg-white border-gray-200 hover:border-indigo-500'"
-              >
-                <div class="flex items-center justify-between mb-4">
-                  <div class="flex items-center gap-3">
-                    <span 
-                      class="px-3 py-1 text-sm rounded-full font-medium"
-                      :class="session.errorsCount > 0 
-                        ? (isDarkMode ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700')
-                        : (isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-700')"
-                    >
-                      {{ session.errorsCount > 0 ? `${session.errorsCount} Errors` : 'No Errors' }}
-                    </span>
-                    <span v-if="session.live" class="px-3 py-1 text-sm rounded-full font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                      Live
-                    </span>
-                    <span class="text-sm font-mono" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      {{ session.sessionId.substring(0, 8) }}
-                    </span>
-                  </div>
-                  <span class="material-symbols-outlined" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">chevron_right</span>
-                </div>
-                <div class="text-sm mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  {{ formatDate(session.startTime) }}
-                </div>
-                <div class="grid grid-cols-4 gap-4 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                  <div>
-                    <div class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Duration</div>
-                    <div class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ formatDuration(session.duration) }}</div>
-                  </div>
-                  <div>
-                    <div class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Pages</div>
-                    <div class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ session.pagesCount }}</div>
-                  </div>
-                  <div>
-                    <div class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Events</div>
-                    <div class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ session.eventsCount }}</div>
-                  </div>
-                  <div>
-                    <div class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Issue Score</div>
-                    <div class="text-lg font-semibold" :class="session.issueScore > 50 ? 'text-red-600' : (isDarkMode ? 'text-white' : 'text-gray-900')">
-                      {{ session.issueScore }}
-                    </div>
-                  </div>
-                </div>
-                <div v-if="session.userEmail" class="mt-2 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                  User: {{ session.userEmail }}
-                </div>
-              </div>
-            </div>
+            <UiPanel title="How to use heatmaps" heading-tag="h3">
+              <ol class="space-y-4">
+                <li v-for="(step, index) in heatmapSteps" :key="step.title">
+                  <h4 class="mb-1 font-medium text-ink-strong">{{ index + 1 }}. {{ step.title }}</h4>
+                  <p class="text-sm text-ink-secondary">{{ step.body }}</p>
+                </li>
+              </ol>
+            </UiPanel>
           </div>
 
-          <!-- Heatmaps Tab -->
-          <div v-if="activeTab === 'heatmaps'">
-            <div v-if="heatmapsUrlLoading" class="text-center py-12">
-              <div class="flex justify-center mb-4">
-                <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-              </div>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading heatmaps...</p>
-            </div>
+          <UiEmptyState
+            v-else
+            title="Unable to load heatmaps"
+            body="Make sure your OpenReplay instance is configured correctly and accessible."
+            spot="foundations/data-viz"
+          />
+        </template>
 
-            <div v-else-if="heatmapsUrl" class="space-y-6">
-              <!-- Info Card -->
-              <div class="rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">insights</span>
-                  <div class="flex-1">
-                    <h3 class="text-lg font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Heatmaps</h3>
-                    <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      Visualize user interactions across your application. Heatmaps show where users click, scroll, and move their mouse, helping you identify engagement hotspots and areas that need optimization.
-                    </p>
-                    <div class="flex items-center gap-3">
-                      <a
-                        :href="heatmapsUrl"
-                        target="_blank"
-                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
-                      >
-                        <span class="material-symbols-outlined text-base">open_in_new</span>
-                        Open in OpenReplay
-                      </a>
-                      <button
-                        @click="copyHeatmapsUrl"
-                        class="px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
-                        :class="isDarkMode 
-                          ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                      >
-                        <span class="material-symbols-outlined text-base">content_copy</span>
-                        Copy Link
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Embedded Heatmap Viewer -->
-              <div class="rounded-lg border overflow-hidden" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="p-4 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                  <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Heatmap Viewer</h3>
-                  <a
-                    :href="heatmapsUrl"
-                    target="_blank"
-                    class="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 flex items-center gap-1"
-                  >
-                    Open Full Screen
-                    <span class="material-symbols-outlined text-base">open_in_new</span>
-                  </a>
-                </div>
-                <div class="p-4">
-                  <iframe
-                    :src="heatmapsUrl"
-                    class="w-full h-[800px] border rounded-lg"
-                    :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-                    frameborder="0"
-                    allow="fullscreen"
-                    title="OpenReplay Heatmaps"
-                  ></iframe>
-                  <p class="text-xs mt-2 text-center" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                    If the heatmap viewer doesn't load, click "Open in OpenReplay" to view in a new window. Make sure you're authenticated in OpenReplay.
-                  </p>
-                </div>
-              </div>
-
-              <!-- Help Section -->
-              <div class="rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">How to Use Heatmaps</h3>
-                <div class="space-y-4">
-                  <div>
-                    <h4 class="font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">1. Create a Heatmap</h4>
-                    <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      Click "Open in OpenReplay" to access the full heatmap interface. Create a new heatmap by specifying the URL pattern you want to analyze.
-                    </p>
-                  </div>
-                  <div>
-                    <h4 class="font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">2. Configure Filters</h4>
-                    <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      Apply filters to segment your data by user attributes, session characteristics, or specific issues like click rage.
-                    </p>
-                  </div>
-                  <div>
-                    <h4 class="font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">3. Analyze Results</h4>
-                    <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      View click, scroll, and mouse movement heatmaps to identify engagement hotspots and areas that need optimization.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div v-else class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-              <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">insights</span>
-              <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Unable to load heatmaps</p>
-              <p class="text-sm mb-6" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                Make sure your OpenReplay instance is configured correctly and accessible.
-              </p>
-            </div>
-          </div>
-
-          <!-- Settings Tab -->
-          <div v-if="activeTab === 'settings'" class="rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-            <h3 class="text-lg font-semibold mb-6" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Project Settings</h3>
-            <form @submit.prevent="updateProject" class="space-y-6">
-              <div>
-                <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Project Name</label>
-                <input
-                  v-model="projectForm.name"
-                  type="text"
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Description</label>
-                <textarea
-                  v-model="projectForm.description"
-                  rows="3"
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                ></textarea>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Application URL</label>
-                <input
-                  v-model="projectForm.applicationUrl"
-                  type="url"
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                />
-              </div>
-
-              <div>
-                <label for="openreplay-project-id" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">OpenReplay project ID</label>
-                <input
-                  id="openreplay-project-id"
-                  v-model="projectForm.openreplayProjectKey"
-                  type="text"
-                  inputmode="numeric"
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                />
-                <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">The numeric ID from the project's settings in OpenReplay.</p>
-              </div>
-
-              <div>
-                <label for="openreplay-api-key" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">OpenReplay API key</label>
-                <input
-                  id="openreplay-api-key"
-                  v-model="projectForm.openreplayApiKey"
-                  type="password"
-                  autocomplete="off"
-                  :placeholder="project?.hasApiKey ? 'Saved. Leave blank to keep it' : 'Not set: sessions can\'t be shown'"
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-                />
-                <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Used to list sessions. It's checked against OpenReplay when you save, stored encrypted, and never shown again.</p>
-              </div>
-
-              <div class="flex justify-end gap-3 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <button
-                  type="button"
-                  @click="resetForm"
-                  class="px-4 py-2 rounded-lg transition-colors"
-                  :class="isDarkMode ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  :disabled="saving"
-                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {{ saving ? 'Saving...' : 'Save Changes' }}
-                </button>
-              </div>
+        <template #settings>
+          <UiPanel title="Project settings" heading-tag="h3">
+            <form id="replay-project-settings" class="space-y-5" @submit.prevent="updateProject">
+              <UiInput v-model="projectForm.name" label="Project name" />
+              <UiTextarea v-model="projectForm.description" label="Description" :rows="3" />
+              <UiInput v-model="projectForm.applicationUrl" type="url" label="Application URL" />
+              <UiInput
+                id="openreplay-project-id"
+                v-model="projectForm.openreplayProjectKey"
+                label="OpenReplay project ID"
+                inputmode="numeric"
+                hint="The numeric ID from the project's settings in OpenReplay."
+              />
+              <UiInput
+                id="openreplay-api-key"
+                v-model="projectForm.openreplayApiKey"
+                type="password"
+                autocomplete="off"
+                label="OpenReplay API key"
+                :placeholder="project?.hasApiKey ? 'Saved. Leave blank to keep it' : 'Not set: sessions can\'t be shown'"
+                hint="Used to list sessions. It's checked against OpenReplay when you save, stored encrypted, and never shown again."
+              />
             </form>
-          </div>
-        </div>
-        </div>
-      </div>
-    </div>
-  </div>
+            <template #footer>
+              <div class="flex justify-end gap-3">
+                <UiButton @click="resetForm">Cancel</UiButton>
+                <UiButton variant="primary" type="submit" form="replay-project-settings" :loading="saving">
+                  {{ saving ? 'Saving…' : 'Save changes' }}
+                </UiButton>
+              </div>
+            </template>
+          </UiPanel>
+        </template>
+      </UiTabs>
+    </template>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
+import {
+  PageHero,
+  PageShell,
+  UiButton,
+  UiChip,
+  UiCodeBlock,
+  UiEmptyState,
+  UiInput,
+  UiLink,
+  UiPanel,
+  UiSpinner,
+  UiStat,
+  UiTable,
+  UiTabs,
+  UiTextarea,
+} from '../components/ui';
 import apiClient from '../services/api.js';
 
 const route = useRoute();
 const router = useRouter();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const project = ref(null);
 const loading = ref(false);
 const activeTab = ref('overview');
+const tabs = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'sessions', label: 'Sessions' },
+  { value: 'heatmaps', label: 'Heatmaps' },
+  { value: 'settings', label: 'Settings' },
+];
 const sessions = ref([]);
 const sessionsLoading = ref(false);
 /** Why sessions can't be shown: OpenReplay not connected (503 OPENREPLAY_NOT_CONFIGURED) or another error */
@@ -501,10 +258,6 @@ const projectForm = ref({
 });
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-
-
-
-
 
 const loadProject = async () => {
   loading.value = true;
@@ -540,15 +293,9 @@ const loadIntegrationCode = async () => {
   }
 };
 
-const copyIntegrationCode = async () => {
-  try {
-    await navigator.clipboard.writeText(integrationCode.value);
-    window.showToast?.('Integration code copied to clipboard', 'success');
-  } catch (error) {
-    console.error('Failed to copy:', error);
-    window.showToast?.('Failed to copy code', 'error');
-  }
-};
+// UiCodeBlock copies the code; these report how it went
+const onIntegrationCodeCopied = () => window.showToast?.('Integration code copied to clipboard', 'success');
+const onIntegrationCodeCopyFailed = () => window.showToast?.('Failed to copy code', 'error');
 
 const loadSessions = async () => {
   sessionsLoading.value = true;
@@ -603,8 +350,12 @@ const navigateToSessionsTab = () => {
   router.push(`/hcd/session-replay/${route.params.id}/sessions`);
 };
 
-const navigateToSession = (sessionId) => {
-  router.push(`/hcd/session-replay/${route.params.id}/sessions/${sessionId}`);
+const sessionLink = (sessionId) => `/hcd/session-replay/${route.params.id}/sessions/${sessionId}`;
+
+// The Sessions tab has its own address; the other tabs switch in place
+const selectTab = (tab) => {
+  activeTab.value = tab;
+  if (tab === 'sessions') navigateToSessionsTab();
 };
 
 const formatDate = (dateString) => {
@@ -673,11 +424,24 @@ watch(activeTab, (newTab) => {
   }
 });
 
-let darkModeObserver = null;
+const heatmapSteps = [
+  {
+    title: 'Create a heatmap',
+    body: 'Click "Open in OpenReplay" to access the full heatmap interface. Create a new heatmap by specifying the URL pattern you want to analyze.',
+  },
+  {
+    title: 'Configure filters',
+    body: 'Apply filters to segment your data by user attributes, session characteristics, or specific issues like click rage.',
+  },
+  {
+    title: 'Analyze results',
+    body: 'View click, scroll, and mouse movement heatmaps to identify engagement hotspots and areas that need optimization.',
+  },
+];
 
 onMounted(() => {
   loadProject();
-  
+
   // Set active tab based on route
   if (route.path.includes('/sessions') && !route.params.sessionId) {
     activeTab.value = 'sessions';
@@ -686,21 +450,5 @@ onMounted(() => {
   } else if (route.path.includes('/settings')) {
     activeTab.value = 'settings';
   }
-
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
 });
 </script>
-

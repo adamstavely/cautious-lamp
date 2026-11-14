@@ -10,16 +10,13 @@
       read-only
       fill
     />
-    <div v-else class="flex items-center justify-center h-full">
-      <div class="text-center px-6" :role="state === 'loading' ? 'status' : 'alert'">
-        <p class="text-gray-300">{{ message }}</p>
-        <button
-          v-if="state === 'error'"
-          class="mt-4 px-4 py-2 text-sm font-medium text-white rounded-lg bg-indigo-500 hover:bg-indigo-400 transition-colors"
-          @click="load()"
-        >
-          Try again
-        </button>
+    <div v-else class="flex h-full items-center justify-center">
+      <UiSpinner v-if="state === 'loading'" :label="message" />
+      <div v-else class="flex flex-col items-center gap-4 px-6 text-center" :role="state === 'error' ? 'alert' : 'status'">
+        <SpotArt :name="state === 'password' ? 'site/building-trust' : 'site/not-found'" size="lg" />
+        <p class="text-ink">{{ message }}</p>
+        <UiButton v-if="state === 'error'" variant="primary" icon="refresh" @click="load()">Try again</UiButton>
+        <UiButton v-else-if="state === 'password' && !showPasswordPrompt" variant="primary" icon="lock_open" @click="showPasswordPrompt = true">Enter password</UiButton>
       </div>
     </div>
 
@@ -37,6 +34,7 @@ import { ref, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import PreviewFrame from '../components/review-ui/PreviewFrame.vue';
 import PasswordPrompt from '../components/review-ui/PasswordPrompt.vue';
+import { SpotArt, UiButton, UiSpinner } from '../components/ui';
 import {
   reviewAPI,
   reviewPasswords,
@@ -131,13 +129,8 @@ watch([reviewId, () => route.query.version], () => load(), { immediate: true });
 </script>
 
 <style scoped>
+/* Fills the window: this route has no app frame */
 .fullscreen-preview {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  background: #000;
+  @apply fixed inset-0 h-screen w-screen overflow-hidden bg-surface;
 }
 </style>

@@ -8,126 +8,79 @@
     @update:model-value="close"
   >
     <!-- Step 1: choose permissions -->
-    <div v-if="step === 'edit'" class="space-y-4">
-      <p class="text-sm text-gray-600 dark:text-gray-400" role="status" aria-live="polite">
+    <template v-if="step === 'edit'">
+      <p role="status" aria-live="polite">
         {{ selected.size }} of {{ catalogue.length }} permissions selected.
         <template v-if="added.length || removed.length">{{ added.length }} added, {{ removed.length }} removed.</template>
       </p>
-      <fieldset
-        v-for="group in groups"
-        :key="group.name"
-        class="rounded-lg border border-solid border-gray-200 p-4 bg-gray-50 dark:border-gray-700 dark:bg-slate-900"
-      >
-        <legend class="px-1 font-semibold text-gray-900 dark:text-white">{{ group.name }}</legend>
-        <div class="mb-2 flex justify-end">
-          <button
-            type="button"
-            class="text-xs font-medium text-indigo-700 hover:underline dark:text-indigo-300"
+      <fieldset v-for="group in groups" :key="group.name" class="perm-group">
+        <legend class="perm-group-legend">{{ group.name }}</legend>
+        <div class="mb-1 flex justify-end">
+          <UiButton
+            variant="ghost"
+            size="sm"
             :aria-label="`${allSelected(group) ? 'Clear' : 'Select'} all ${group.name} permissions`"
             @click="toggleGroup(group)"
           >
             {{ allSelected(group) ? 'Clear all' : 'Select all' }}
-          </button>
+          </UiButton>
         </div>
         <div class="grid gap-1 sm:grid-cols-2">
-          <label
-            v-for="permission in group.permissions"
-            :key="permission.value"
-            class="flex cursor-pointer items-center gap-2 rounded p-2 hover:bg-gray-100 dark:hover:bg-slate-800"
-          >
-            <input
-              type="checkbox"
-              :checked="selected.has(permission.value)"
-              class="accent-indigo-600 dark:accent-indigo-500"
-              @change="toggle(permission.value)"
-            />
-            <span class="text-sm text-gray-800 dark:text-gray-200">{{ permission.label }}</span>
-            <code class="ml-auto text-[11px] text-gray-500 dark:text-gray-400">{{ permission.value }}</code>
-            <span
-              v-if="changeOf(permission.value)"
-              class="text-xs font-semibold"
-              :class="changeOf(permission.value) === 'added' ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'"
-            >
+          <div v-for="permission in group.permissions" :key="permission.value" class="perm-option">
+            <UiCheckbox :model-value="selected.has(permission.value)" @update:model-value="toggle(permission.value)">
+              {{ permission.label }}
+            </UiCheckbox>
+            <UiCode class="ml-auto">{{ permission.value }}</UiCode>
+            <UiChip v-if="changeOf(permission.value)" :tone="changeOf(permission.value) === 'added' ? 'success' : 'danger'">
               {{ changeOf(permission.value) === 'added' ? '+ added' : '− removed' }}
-            </span>
-          </label>
+            </UiChip>
+          </div>
         </div>
       </fieldset>
-    </div>
+    </template>
 
     <!-- Step 2: confirm the diff -->
-    <div v-else class="space-y-5">
+    <template v-else>
       <InlineNotice :notice="error ? { type: 'error', message: error } : null" @dismiss="error = ''" />
-      <p class="text-sm text-gray-700 dark:text-gray-300">
+      <p class="text-ink">
         This changes what every member of {{ role?.name }} can do
         <template v-if="memberCount !== null">({{ memberCount }} {{ memberCount === 1 ? 'person' : 'people' }})</template>.
         Changes apply within about 30 seconds.
       </p>
-      <div
-        v-if="removedAdmin.length"
-        class="rounded-lg border border-solid border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
-        role="note"
-      >
+      <UiCallout v-if="removedAdmin.length" tone="warning" role="note">
         Removing administration permissions ({{ removedAdmin.map(labelFor).join(', ') }}).
         <template v-if="affectsMe"> You have this role, so you may lose access to this page.</template>
-      </div>
+      </UiCallout>
       <div class="grid gap-4 sm:grid-cols-2">
         <section aria-labelledby="perm-diff-added">
-          <h3 id="perm-diff-added" class="mb-2 text-sm font-semibold text-emerald-800 dark:text-emerald-300">Added ({{ added.length }})</h3>
-          <p v-if="!added.length" class="text-sm text-gray-500 dark:text-gray-400">None</p>
-          <ul v-else class="space-y-1 text-sm">
-            <li v-for="value in added" :key="value" class="rounded px-2 py-1 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
-              + {{ labelFor(value) }} <code class="text-xs opacity-75">{{ value }}</code>
+          <h3 id="perm-diff-added" class="mb-2 text-sm font-semibold text-success">Added ({{ added.length }})</h3>
+          <p v-if="!added.length" class="text-ink-muted">None</p>
+          <ul v-else class="flex flex-col gap-1">
+            <li v-for="value in added" :key="value" class="perm-diff perm-diff-added">
+              + {{ labelFor(value) }} <UiCode>{{ value }}</UiCode>
             </li>
           </ul>
         </section>
         <section aria-labelledby="perm-diff-removed">
-          <h3 id="perm-diff-removed" class="mb-2 text-sm font-semibold text-red-800 dark:text-red-300">Removed ({{ removed.length }})</h3>
-          <p v-if="!removed.length" class="text-sm text-gray-500 dark:text-gray-400">None</p>
-          <ul v-else class="space-y-1 text-sm">
-            <li v-for="value in removed" :key="value" class="rounded px-2 py-1 bg-red-50 text-red-900 dark:bg-red-950/40 dark:text-red-200">
-              − {{ labelFor(value) }} <code class="text-xs opacity-75">{{ value }}</code>
+          <h3 id="perm-diff-removed" class="mb-2 text-sm font-semibold text-danger">Removed ({{ removed.length }})</h3>
+          <p v-if="!removed.length" class="text-ink-muted">None</p>
+          <ul v-else class="flex flex-col gap-1">
+            <li v-for="value in removed" :key="value" class="perm-diff perm-diff-removed">
+              − {{ labelFor(value) }} <UiCode>{{ value }}</UiCode>
             </li>
           </ul>
         </section>
       </div>
-    </div>
+    </template>
 
     <template #actions>
       <template v-if="step === 'edit'">
-        <button
-          type="button"
-          class="rounded-lg px-4 py-2 text-sm font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600"
-          @click="close(false)"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          class="rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors bg-indigo-600 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-400"
-          :disabled="!added.length && !removed.length"
-          @click="step = 'review'"
-        >
-          Review changes
-        </button>
+        <UiButton @click="close(false)">Cancel</UiButton>
+        <UiButton variant="primary" :disabled="!added.length && !removed.length" @click="step = 'review'">Review changes</UiButton>
       </template>
       <template v-else>
-        <button
-          type="button"
-          class="rounded-lg px-4 py-2 text-sm font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-700 dark:text-gray-300 dark:hover:bg-slate-600"
-          :disabled="saving"
-          @click="back"
-        >
-          Back
-        </button>
-        <button
-          type="button"
-          class="rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors bg-indigo-600 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-indigo-500 dark:hover:bg-indigo-400"
-          :disabled="saving"
-          @click="save"
-        >
-          {{ saving ? 'Saving…' : 'Save permissions' }}
-        </button>
+        <UiButton :disabled="saving" @click="back">Back</UiButton>
+        <UiButton variant="primary" :loading="saving" @click="save">{{ saving ? 'Saving…' : 'Save permissions' }}</UiButton>
       </template>
     </template>
   </AdminDialog>
@@ -137,6 +90,11 @@
 import { computed, ref, watch } from 'vue';
 import AdminDialog from './AdminDialog.vue';
 import InlineNotice from '../InlineNotice.vue';
+import UiButton from '../ui/UiButton.vue';
+import UiCallout from '../ui/UiCallout.vue';
+import UiCheckbox from '../ui/UiCheckbox.vue';
+import UiChip from '../ui/UiChip.vue';
+import UiCode from '../ui/UiCode.vue';
 import { adminErrorMessage, rbacApi } from '../../composables/useAccessAdmin.js';
 
 const props = defineProps({
@@ -232,3 +190,24 @@ const save = async () => {
   }
 };
 </script>
+
+<style scoped>
+.perm-group {
+  @apply rounded-tile border border-solid border-line bg-surface-sunken px-4 pb-4 pt-2;
+}
+.perm-group-legend {
+  @apply px-1 font-semibold text-ink-strong;
+}
+.perm-option {
+  @apply flex items-center gap-2 rounded-control p-2 hover:bg-fill-hover;
+}
+.perm-diff {
+  @apply rounded-control border border-solid px-2 py-1;
+}
+.perm-diff-added {
+  @apply border-success-border bg-success-bg text-success;
+}
+.perm-diff-removed {
+  @apply border-danger-border bg-danger-bg text-danger;
+}
+</style>

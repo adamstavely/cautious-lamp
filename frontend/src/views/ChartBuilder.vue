@@ -1,1645 +1,644 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Chart Builder
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Create beautiful, customizable charts and graphs. Support for line, bar, pie, doughnut, scatter plots, and more.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">bar_chart</span>
-                      Data Visualization
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="chartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Chart representation -->
-                      <rect x="30" y="120" width="20" height="50" rx="2" fill="url(#chartGradient)" opacity="0.7"/>
-                      <rect x="60" y="100" width="20" height="70" rx="2" fill="url(#chartGradient)" opacity="0.7"/>
-                      <rect x="90" y="80" width="20" height="90" rx="2" fill="url(#chartGradient)" opacity="0.7"/>
-                      <rect x="120" y="110" width="20" height="60" rx="2" fill="url(#chartGradient)" opacity="0.7"/>
-                      <rect x="150" y="90" width="20" height="80" rx="2" fill="url(#chartGradient)" opacity="0.7"/>
-                      <!-- Line chart overlay -->
-                      <path d="M 40 140 L 70 120 L 100 100 L 130 130 L 160 110" stroke="rgba(255,255,255,0.6)" stroke-width="3" fill="none" stroke-linecap="round"/>
-                      <!-- Pie chart circle -->
-                      <circle cx="100" cy="50" r="25" fill="url(#chartGradient)" opacity="0.4"/>
-                    </svg>
-                  </div>
-                </div>
+  <PageShell width="full">
+    <PageHero
+      :back="{ to: '/data-viz', label: 'Data visualization' }"
+      title="Chart builder"
+      lead="Create customizable charts and graphs. Support for line, bar, pie, doughnut, scatter plots, and more."
+      spot="tools/chart-builder"
+      size="tool"
+    />
+
+    <PageSection title="Chart type" description="Pick the chart that fits your data.">
+      <template #actions>
+        <UiButton
+          variant="ghost"
+          size="sm"
+          :trailing-icon="chartTypeSectionExpanded ? 'expand_less' : 'expand_more'"
+          :aria-expanded="chartTypeSectionExpanded"
+          aria-controls="chart-type-options"
+          @click="chartTypeSectionExpanded = !chartTypeSectionExpanded"
+        >
+          {{ chartTypeSectionExpanded ? 'Hide chart types' : 'Show chart types' }}
+        </UiButton>
+      </template>
+      <transition name="slide-fade">
+        <div v-show="chartTypeSectionExpanded" id="chart-type-options">
+          <UiChoiceCards v-model="selectedChartType" :options="chartTypes" :columns="5" aria-label="Chart type" />
+        </div>
+      </transition>
+    </PageSection>
+
+    <PageSection title="Build" description="Describe the chart, enter its data, check its accessibility and export it." divided>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 flex flex-col gap-6">
+          <UiPanel title="Configuration">
+            <div class="flex flex-col gap-4">
+              <UiInput
+                v-model="chartConfig.title"
+                label="Chart title"
+                placeholder="Enter chart title"
+                required
+                :error="chartConfig.title ? '' : 'Chart title is required for accessibility compliance.'"
+              />
+              <UiTextarea
+                v-model="chartConfig.summary"
+                label="Chart summary"
+                hint="1-2 sentences"
+                :rows="2"
+                placeholder="Enter a brief summary describing what this chart shows"
+                required
+                :error="chartConfig.summary ? '' : 'Chart summary is required for accessibility compliance.'"
+              />
+              <div class="flex flex-col gap-2">
+                <UiTextarea
+                  v-model="chartConfig.keyInsight"
+                  label="Key insight"
+                  hint="Primary takeaway"
+                  :rows="2"
+                  placeholder="Enter the primary insight or takeaway from this chart"
+                  required
+                  :error="chartConfig.keyInsight ? '' : 'Key insight is required for accessibility compliance.'"
+                />
+                <UiButton
+                  v-if="generatedInsights.primary"
+                  variant="ghost"
+                  size="sm"
+                  icon="auto_awesome"
+                  class="self-start"
+                  @click="chartConfig.keyInsight = generatedInsights.primary"
+                >
+                  Use suggested: "{{ generatedInsights.primary }}"
+                </UiButton>
               </div>
             </div>
-          </div>
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <!-- Chart Type Selector -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h2 
-                @click="chartTypeSectionExpanded = !chartTypeSectionExpanded"
-                class="text-lg font-semibold mb-6 flex items-center justify-between gap-2 cursor-pointer hover:opacity-80 transition-opacity" 
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-              >
-                <div class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-indigo-600">show_chart</span>
-                  Chart Type
+            <div class="mt-6 pt-6 border-t border-line">
+              <!-- Multi-dataset input (stacked, grouped, combo, multi-line) -->
+              <fieldset v-if="selectedChartType === 'stackedBar' || selectedChartType === 'groupedBar' || selectedChartType === 'combo' || selectedChartType === 'line'" class="flex flex-col gap-3">
+                <legend class="mb-2 text-sm font-semibold text-ink-strong">Datasets</legend>
+                <div v-for="(dataset, datasetIndex) in multiDatasetData" :key="datasetIndex" class="data-card">
+                  <div class="flex items-center gap-2">
+                    <div class="flex-1 min-w-0">
+                      <UiInput v-model="dataset.label" placeholder="Dataset label" :aria-label="`Dataset ${datasetIndex + 1} label`" />
+                    </div>
+                    <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove dataset ${datasetIndex + 1}`" :disabled="multiDatasetData.length <= 1" @click="removeDataset(datasetIndex)" />
+                  </div>
+                  <div v-for="(item, itemIndex) in dataset.data" :key="itemIndex" class="flex items-center gap-2">
+                    <div class="flex-1 min-w-0">
+                      <UiInput v-model="item.label" placeholder="Label" :aria-label="`Dataset ${datasetIndex + 1} point ${itemIndex + 1} label`" />
+                    </div>
+                    <div class="w-24">
+                      <UiInput v-model.number="item.value" type="number" placeholder="Value" :aria-label="`Dataset ${datasetIndex + 1} point ${itemIndex + 1} value`" />
+                    </div>
+                    <UiButton icon-only icon="close" variant="ghost" size="sm" :label="`Remove point ${itemIndex + 1}`" :disabled="dataset.data.length <= 1" @click="removeMultiDataItem(datasetIndex, itemIndex)" />
+                  </div>
+                  <UiButton icon="add" size="sm" variant="ghost" class="self-start" @click="addMultiDataItem(datasetIndex)">Add point</UiButton>
                 </div>
-                <span 
-                  class="material-symbols-outlined text-gray-500 transition-transform duration-200"
-                  :class="chartTypeSectionExpanded ? 'rotate-180' : ''"
+                <UiButton icon="add" size="sm" class="self-start" @click="addDataset">Add dataset</UiButton>
+              </fieldset>
+
+              <!-- Gauge -->
+              <fieldset v-else-if="selectedChartType === 'gauge'">
+                <legend class="mb-2 text-sm font-semibold text-ink-strong">Gauge settings</legend>
+                <div class="grid grid-cols-2 gap-2">
+                  <UiInput v-model.number="gaugeData.value" type="number" label="Value" />
+                  <UiInput v-model.number="gaugeData.min" type="number" label="Min" />
+                  <UiInput v-model.number="gaugeData.max" type="number" label="Max" />
+                  <UiInput v-model.number="gaugeData.target" type="number" label="Target" />
+                </div>
+              </fieldset>
+
+              <!-- Waterfall -->
+              <fieldset v-else-if="selectedChartType === 'waterfall'" class="flex flex-col gap-2">
+                <legend class="mb-2 text-sm font-semibold text-ink-strong">Waterfall data</legend>
+                <UiInput v-model.number="waterfallData.base" type="number" label="Base" placeholder="Base value" />
+                <div v-for="(change, index) in waterfallData.changes" :key="index" class="flex items-center gap-2">
+                  <div class="flex-1 min-w-0">
+                    <UiInput v-model="change.label" placeholder="Label" :aria-label="`Change ${index + 1} label`" />
+                  </div>
+                  <div class="w-28">
+                    <UiInput v-model.number="change.value" type="number" placeholder="Change" :aria-label="`Change ${index + 1} value`" />
+                  </div>
+                  <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove change ${index + 1}`" :disabled="waterfallData.changes.length <= 1" @click="waterfallData.changes.splice(index, 1)" />
+                </div>
+                <UiButton icon="add" size="sm" class="self-start" @click="waterfallData.changes.push({ label: `Change ${waterfallData.changes.length + 1}`, value: 0 })">Add change</UiButton>
+              </fieldset>
+
+              <!-- Candlestick -->
+              <fieldset v-else-if="selectedChartType === 'candlestick'" class="flex flex-col gap-3">
+                <legend class="mb-2 text-sm font-semibold text-ink-strong">OHLC data</legend>
+                <div v-for="(item, index) in candlestickData" :key="index" class="data-card">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="col-span-2">
+                      <UiInput v-model="item.date" type="date" :label="`Row ${index + 1} date`" />
+                    </div>
+                    <UiInput v-model.number="item.open" type="number" step="0.01" label="Open" />
+                    <UiInput v-model.number="item.high" type="number" step="0.01" label="High" />
+                    <UiInput v-model.number="item.low" type="number" step="0.01" label="Low" />
+                    <UiInput v-model.number="item.close" type="number" step="0.01" label="Close" />
+                  </div>
+                  <UiButton icon="delete" variant="ghost" size="sm" class="self-end" :disabled="candlestickData.length <= 1" @click="candlestickData.splice(index, 1)">Remove row</UiButton>
+                </div>
+                <UiButton
+                  icon="add"
+                  size="sm"
+                  class="self-start"
+                  @click="candlestickData.push({ date: new Date().toISOString().split('T')[0], open: 100, high: 110, low: 95, close: 105 })"
                 >
-                  expand_more
-                </span>
-              </h2>
-              
-              <transition name="slide-fade">
-                <div v-show="chartTypeSectionExpanded" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <button
-                  v-for="type in chartTypes"
-                  :key="type.value"
-                  @click="selectedChartType = type.value"
-                  class="rounded-lg border p-4 transition-all text-left"
-                  :class="selectedChartType === type.value
-                    ? (isDarkMode 
-                      ? 'bg-indigo-600 border-indigo-500 text-white' 
-                      : 'bg-indigo-600 border-indigo-500 text-white')
-                    : (isDarkMode
-                      ? 'bg-slate-800 border-gray-700 text-gray-300 hover:border-indigo-400' 
-                      : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-500')"
-                >
-                  <div class="flex items-center gap-3 mb-2">
-                    <span class="material-symbols-outlined text-2xl">{{ type.icon }}</span>
-                    <span class="font-semibold">{{ type.label }}</span>
-                  </div>
-                  <p class="text-xs opacity-80">{{ type.description }}</p>
-                </button>
-              </div>
-              </transition>
-            </div>
+                  Add candlestick
+                </UiButton>
+              </fieldset>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <!-- Chart Configuration -->
-              <div class="lg:col-span-1">
-                <div 
-                  class="rounded-lg shadow-sm border p-6 mb-6 sticky top-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">tune</span>
-                    Configuration
-                  </h2>
-
-                  <!-- Chart Title (Required) -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Chart Title <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                      v-model="chartConfig.title"
-                      type="text"
-                      placeholder="Enter chart title"
-                      required
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                      :class="isDarkMode 
-                        ? (chartConfig.title ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' : 'bg-slate-800 border-red-500 text-white placeholder-gray-500')
-                        : (chartConfig.title ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-white border-red-500 text-gray-900 placeholder-gray-400')"
-                    />
-                    <p v-if="!chartConfig.title" class="mt-1 text-xs text-red-500">Chart title is required for accessibility compliance.</p>
-                  </div>
-
-                  <!-- Chart Summary (Required) -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Chart Summary <span class="text-red-500">*</span>
-                      <span class="text-xs font-normal text-gray-500 ml-1">(1-2 sentences)</span>
-                    </label>
-                    <textarea
-                      v-model="chartConfig.summary"
-                      rows="2"
-                      placeholder="Enter a brief summary describing what this chart shows"
-                      required
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors resize-none"
-                      :class="isDarkMode 
-                        ? (chartConfig.summary ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' : 'bg-slate-800 border-red-500 text-white placeholder-gray-500')
-                        : (chartConfig.summary ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-white border-red-500 text-gray-900 placeholder-gray-400')"
-                    ></textarea>
-                    <p v-if="!chartConfig.summary" class="mt-1 text-xs text-red-500">Chart summary is required for accessibility compliance.</p>
-                  </div>
-
-                  <!-- Key Insight (Required) -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Key Insight <span class="text-red-500">*</span>
-                      <span class="text-xs font-normal text-gray-500 ml-1">(Primary takeaway)</span>
-                    </label>
-                    <div class="space-y-2">
-                      <textarea
-                        v-model="chartConfig.keyInsight"
-                        rows="2"
-                        placeholder="Enter the primary insight or takeaway from this chart"
-                        required
-                        class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors resize-none"
-                        :class="isDarkMode 
-                          ? (chartConfig.keyInsight ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' : 'bg-slate-800 border-red-500 text-white placeholder-gray-500')
-                          : (chartConfig.keyInsight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-white border-red-500 text-gray-900 placeholder-gray-400')"
-                      ></textarea>
-                      <button
-                        v-if="generatedInsights.primary"
-                        @click="chartConfig.keyInsight = generatedInsights.primary"
-                        type="button"
-                        class="text-xs px-3 py-1.5 rounded-lg border border-dashed transition-colors flex items-center gap-1"
-                        :class="isDarkMode 
-                          ? 'border-indigo-500 text-indigo-400 hover:bg-indigo-900/20' 
-                          : 'border-indigo-300 text-indigo-600 hover:bg-indigo-50'"
-                      >
-                        <span class="material-symbols-outlined text-sm">auto_awesome</span>
-                        Use suggested: "{{ generatedInsights.primary }}"
-                      </button>
-                      <p v-if="!chartConfig.keyInsight" class="mt-1 text-xs text-red-500">Key insight is required for accessibility compliance.</p>
-                    </div>
-                  </div>
-
-                  <!-- Multi-Dataset Input (for stacked/grouped/combo/multi-line) -->
-                  <div v-if="selectedChartType === 'stackedBar' || selectedChartType === 'groupedBar' || selectedChartType === 'combo' || selectedChartType === 'line'" class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Datasets
-                    </label>
-                    <div class="space-y-4">
-                      <div 
-                        v-for="(dataset, datasetIndex) in multiDatasetData"
-                        :key="datasetIndex"
-                        class="border rounded-lg p-3"
-                        :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'"
-                      >
-                        <div class="flex items-center justify-between mb-2">
-                          <input
-                            v-model="dataset.label"
-                            type="text"
-                            placeholder="Dataset Label"
-                            class="flex-1 px-3 py-1.5 rounded-lg border text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                            :class="isDarkMode 
-                              ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
-                              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                          />
-                          <button
-                            @click="removeDataset(datasetIndex)"
-                            class="ml-2 px-2 py-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                            :disabled="multiDatasetData.length <= 1"
-                          >
-                            <span class="material-symbols-outlined text-lg">delete</span>
-                          </button>
-                        </div>
-                        <div class="space-y-2">
-                          <div 
-                            v-for="(item, itemIndex) in dataset.data"
-                            :key="itemIndex"
-                            class="flex gap-2"
-                          >
-                            <input
-                              v-model="item.label"
-                              type="text"
-                              placeholder="Label"
-                              class="flex-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                            />
-                            <input
-                              v-model.number="item.value"
-                              type="number"
-                              placeholder="Value"
-                              class="w-20 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                            />
-                            <button
-                              @click="removeMultiDataItem(datasetIndex, itemIndex)"
-                              class="px-1.5 py-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                              :disabled="dataset.data.length <= 1"
-                            >
-                              <span class="material-symbols-outlined text-sm">close</span>
-                            </button>
-                          </div>
-                          <button
-                            @click="addMultiDataItem(datasetIndex)"
-                            class="w-full px-2 py-1.5 rounded border border-dashed text-xs font-medium transition-colors"
-                            :class="isDarkMode 
-                              ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
-                              : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
-                          >
-                            <span class="material-symbols-outlined text-xs align-middle mr-1">add</span>
-                            Add Point
-                          </button>
-                        </div>
-                      </div>
-                      <button
-                        @click="addDataset"
-                        class="w-full px-4 py-2 rounded-lg border border-dashed text-sm font-medium transition-colors"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
-                          : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
-                      >
-                        <span class="material-symbols-outlined text-base align-middle mr-1">add</span>
-                        Add Dataset
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Gauge Chart Input -->
-                  <div v-else-if="selectedChartType === 'gauge'" class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Gauge Settings
-                    </label>
-                    <div class="space-y-2">
-                      <div class="flex gap-2">
+              <!-- Heatmap -->
+              <fieldset v-else-if="selectedChartType === 'heatmap'" class="flex flex-col gap-3">
+                <legend class="mb-2 text-sm font-semibold text-ink-strong">Heatmap matrix</legend>
+                <UiInput
+                  :model-value="heatmapData.rows.join(',')"
+                  label="Rows"
+                  placeholder="Mon, Tue, Wed, Thu, Fri"
+                  @update:model-value="heatmapData.rows = $event.split(',').map(r => r.trim()).filter(r => r)"
+                />
+                <UiInput
+                  :model-value="heatmapData.columns.join(',')"
+                  label="Columns"
+                  placeholder="Week 1, Week 2, Week 3, Week 4"
+                  @update:model-value="heatmapData.columns = $event.split(',').map(c => c.trim()).filter(c => c)"
+                />
+                <UiTable caption="Heatmap values" compact bordered>
+                  <thead>
+                    <tr>
+                      <td></td>
+                      <th v-for="(col, colIndex) in heatmapData.columns" :key="colIndex" scope="col">{{ col }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(row, rowIndex) in heatmapData.rows" :key="rowIndex">
+                      <th scope="row">{{ row }}</th>
+                      <td v-for="(col, colIndex) in heatmapData.columns" :key="colIndex">
                         <input
-                          v-model.number="gaugeData.value"
+                          v-model.number="heatmapData.values[rowIndex][colIndex]"
                           type="number"
-                          placeholder="Value"
-                          class="flex-1 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
+                          class="heatmap-cell"
+                          :aria-label="`${row}, ${col}`"
                         />
-                        <input
-                          v-model.number="gaugeData.min"
-                          type="number"
-                          placeholder="Min"
-                          class="w-24 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                        <input
-                          v-model.number="gaugeData.max"
-                          type="number"
-                          placeholder="Max"
-                          class="w-24 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                        <input
-                          v-model.number="gaugeData.target"
-                          type="number"
-                          placeholder="Target"
-                          class="w-24 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                      </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </UiTable>
+              </fieldset>
+
+              <!-- Treemap -->
+              <div v-else-if="selectedChartType === 'treemap'" class="flex flex-col gap-2">
+                <h3 class="text-sm font-semibold text-ink-strong">Hierarchical data</h3>
+                <p class="text-xs text-ink-secondary">Treemap uses hierarchical data structure. Edit the data structure in the code or use sample data.</p>
+                <div class="data-card text-xs text-ink-secondary">
+                  <div class="font-medium text-ink">Root: {{ treemapData.name }} ({{ treemapData.value }})</div>
+                  <div v-for="(child, index) in treemapData.children" :key="index" class="ml-4">
+                    <div class="font-medium text-ink">{{ child.name }} ({{ child.value }})</div>
+                    <div v-for="(grandchild, gIndex) in child.children" :key="gIndex" class="ml-4">
+                      {{ grandchild.name }} ({{ grandchild.value }})
                     </div>
-                  </div>
-
-                  <!-- Waterfall Chart Input -->
-                  <div v-else-if="selectedChartType === 'waterfall'" class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Waterfall Data
-                    </label>
-                    <div class="space-y-2">
-                      <div class="flex gap-2">
-                        <label class="text-xs self-center w-16" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Base:</label>
-                        <input
-                          v-model.number="waterfallData.base"
-                          type="number"
-                          placeholder="Base Value"
-                          class="flex-1 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                      </div>
-                      <div 
-                        v-for="(change, index) in waterfallData.changes"
-                        :key="index"
-                        class="flex gap-2"
-                      >
-                        <input
-                          v-model="change.label"
-                          type="text"
-                          placeholder="Label"
-                          class="flex-1 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                        <input
-                          v-model.number="change.value"
-                          type="number"
-                          placeholder="Change"
-                          class="w-32 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                        <button
-                          @click="waterfallData.changes.splice(index, 1)"
-                          class="px-2 py-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          :disabled="waterfallData.changes.length <= 1"
-                        >
-                          <span class="material-symbols-outlined text-lg">delete</span>
-                        </button>
-                      </div>
-                      <button
-                        @click="waterfallData.changes.push({ label: `Change ${waterfallData.changes.length + 1}`, value: 0 })"
-                        class="w-full px-4 py-2 rounded-lg border border-dashed text-sm font-medium transition-colors"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
-                          : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
-                      >
-                        <span class="material-symbols-outlined text-base align-middle mr-1">add</span>
-                        Add Change
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Candlestick Chart Input -->
-                  <div v-else-if="selectedChartType === 'candlestick'" class="mb-4">
-                    <label class="block text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      OHLC Data
-                    </label>
-                    <div class="space-y-3">
-                      <!-- Header Row -->
-                      <div class="grid grid-cols-12 gap-2 text-xs font-semibold px-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <div class="col-span-3">Date</div>
-                        <div class="col-span-2">Open</div>
-                        <div class="col-span-2">High</div>
-                        <div class="col-span-2">Low</div>
-                        <div class="col-span-2">Close</div>
-                        <div class="col-span-1"></div>
-                      </div>
-                      
-                      <!-- Data Rows -->
-                      <div 
-                        v-for="(item, index) in candlestickData"
-                        :key="index"
-                        class="border rounded-lg p-3"
-                        :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'"
-                      >
-                        <div class="grid grid-cols-12 gap-2 items-center">
-                          <input
-                            v-model="item.date"
-                            type="date"
-                            class="col-span-3 px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                            :class="isDarkMode 
-                              ? 'bg-slate-700 border-gray-600 text-white' 
-                              : 'bg-white border-gray-300 text-gray-900'"
-                          />
-                          <input
-                            v-model.number="item.open"
-                            type="number"
-                            placeholder="Open"
-                            step="0.01"
-                            class="col-span-2 px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                            :class="isDarkMode 
-                              ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
-                              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                          />
-                          <input
-                            v-model.number="item.high"
-                            type="number"
-                            placeholder="High"
-                            step="0.01"
-                            class="col-span-2 px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                            :class="isDarkMode 
-                              ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
-                              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                          />
-                          <input
-                            v-model.number="item.low"
-                            type="number"
-                            placeholder="Low"
-                            step="0.01"
-                            class="col-span-2 px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                            :class="isDarkMode 
-                              ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
-                              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                          />
-                          <input
-                            v-model.number="item.close"
-                            type="number"
-                            placeholder="Close"
-                            step="0.01"
-                            class="col-span-2 px-3 py-2 rounded border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                            :class="isDarkMode 
-                              ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
-                              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                          />
-                          <button
-                            @click="candlestickData.splice(index, 1)"
-                            class="col-span-1 px-2 py-2 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center justify-center"
-                            :disabled="candlestickData.length <= 1"
-                            title="Remove row"
-                          >
-                            <span class="material-symbols-outlined text-base">delete</span>
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <button
-                        @click="candlestickData.push({ date: new Date().toISOString().split('T')[0], open: 100, high: 110, low: 95, close: 105 })"
-                        class="w-full px-4 py-2.5 rounded-lg border border-dashed text-sm font-medium transition-colors"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
-                          : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
-                      >
-                        <span class="material-symbols-outlined text-base align-middle mr-1">add</span>
-                        Add Candlestick
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Heatmap Chart Input -->
-                  <div v-else-if="selectedChartType === 'heatmap'" class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Heatmap Matrix
-                    </label>
-                    <div class="space-y-3">
-                      <div>
-                        <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Rows:</label>
-                        <input
-                          :value="heatmapData.rows.join(',')"
-                          @input="heatmapData.rows = $event.target.value.split(',').map(r => r.trim()).filter(r => r)"
-                          type="text"
-                          placeholder="Mon, Tue, Wed, Thu, Fri"
-                          class="w-full px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                      </div>
-                      <div>
-                        <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Columns:</label>
-                        <input
-                          :value="heatmapData.columns.join(',')"
-                          @input="heatmapData.columns = $event.target.value.split(',').map(c => c.trim()).filter(c => c)"
-                          type="text"
-                          placeholder="Week 1, Week 2, Week 3, Week 4"
-                          class="w-full px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                      </div>
-                      <div class="overflow-x-auto">
-                        <table class="w-full text-xs" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                          <thead>
-                            <tr>
-                              <th class="px-2 py-1 text-left"></th>
-                              <th v-for="(col, colIndex) in heatmapData.columns" :key="colIndex" class="px-2 py-1 text-center border" :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'">
-                                {{ col }}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr v-for="(row, rowIndex) in heatmapData.rows" :key="rowIndex">
-                              <td class="px-2 py-1 font-medium border" :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'">{{ row }}</td>
-                              <td v-for="(col, colIndex) in heatmapData.columns" :key="colIndex" class="px-2 py-1 border" :class="isDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-white'">
-                                <input
-                                  v-model.number="heatmapData.values[rowIndex][colIndex]"
-                                  type="number"
-                                  class="w-full px-1 py-0.5 text-center rounded border-0 focus:ring-1 focus:ring-indigo-500 outline-none"
-                                  :class="isDarkMode 
-                                    ? 'bg-slate-700 text-white' 
-                                    : 'bg-gray-50 text-gray-900'"
-                                />
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Treemap Chart Input -->
-                  <div v-else-if="selectedChartType === 'treemap'" class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Hierarchical Data
-                    </label>
-                    <div class="space-y-2 text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <p>Treemap uses hierarchical data structure. Edit the data structure in the code or use sample data.</p>
-                      <div class="p-3 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                        <div class="font-medium mb-1" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Root: {{ treemapData.name }} ({{ treemapData.value }})</div>
-                        <div v-for="(child, index) in treemapData.children" :key="index" class="ml-4 mt-1">
-                          <div class="font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ child.name }} ({{ child.value }})</div>
-                          <div v-for="(grandchild, gIndex) in child.children" :key="gIndex" class="ml-4 text-xs">
-                            {{ grandchild.name }} ({{ grandchild.value }})
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Sankey Diagram Input -->
-                  <div v-else-if="selectedChartType === 'sankey'" class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Flow Data
-                    </label>
-                    <div class="space-y-3">
-                      <div>
-                        <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Nodes:</label>
-                        <div class="space-y-2">
-                          <div 
-                            v-for="(node, index) in sankeyData.nodes"
-                            :key="index"
-                            class="flex gap-2"
-                          >
-                            <input
-                              v-model="node.id"
-                              type="text"
-                              placeholder="Node ID"
-                              class="flex-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                            />
-                            <input
-                              v-model="node.label"
-                              type="text"
-                              placeholder="Label"
-                              class="flex-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                            />
-                            <button
-                              @click="sankeyData.nodes.splice(index, 1)"
-                              class="px-2 py-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                              :disabled="sankeyData.nodes.length <= 2"
-                            >
-                              <span class="material-symbols-outlined text-sm">close</span>
-                            </button>
-                          </div>
-                          <button
-                            @click="sankeyData.nodes.push({ id: `Node${sankeyData.nodes.length + 1}`, label: `Node ${sankeyData.nodes.length + 1}` })"
-                            class="w-full px-3 py-1.5 rounded border border-dashed text-xs font-medium transition-colors"
-                            :class="isDarkMode 
-                              ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
-                              : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
-                          >
-                            <span class="material-symbols-outlined text-xs align-middle mr-1">add</span>
-                            Add Node
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Links:</label>
-                        <div class="space-y-2">
-                          <div 
-                            v-for="(link, index) in sankeyData.links"
-                            :key="index"
-                            class="flex gap-2"
-                          >
-                            <select
-                              v-model="link.source"
-                              class="flex-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'"
-                            >
-                              <option v-for="node in sankeyData.nodes" :key="node.id" :value="node.id">{{ node.label }}</option>
-                            </select>
-                            <span class="self-center text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">→</span>
-                            <select
-                              v-model="link.target"
-                              class="flex-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'"
-                            >
-                              <option v-for="node in sankeyData.nodes" :key="node.id" :value="node.id">{{ node.label }}</option>
-                            </select>
-                            <input
-                              v-model.number="link.value"
-                              type="number"
-                              placeholder="Value"
-                              class="w-20 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                            />
-                            <button
-                              @click="sankeyData.links.splice(index, 1)"
-                              class="px-2 py-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                            >
-                              <span class="material-symbols-outlined text-sm">close</span>
-                            </button>
-                          </div>
-                          <button
-                            @click="sankeyData.links.push({ source: sankeyData.nodes[0]?.id || '', target: sankeyData.nodes[1]?.id || '', value: 10 })"
-                            class="w-full px-3 py-1.5 rounded border border-dashed text-xs font-medium transition-colors"
-                            :class="isDarkMode 
-                              ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
-                              : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
-                          >
-                            <span class="material-symbols-outlined text-xs align-middle mr-1">add</span>
-                            Add Link
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Funnel Chart Input -->
-                  <div v-else-if="selectedChartType === 'funnel'" class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Funnel Stages
-                    </label>
-                    <div class="space-y-2">
-                      <div 
-                        v-for="(item, index) in funnelData"
-                        :key="index"
-                        class="flex gap-2"
-                      >
-                        <input
-                          v-model="item.label"
-                          type="text"
-                          placeholder="Stage Label"
-                          class="flex-1 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                        <input
-                          v-model.number="item.value"
-                          type="number"
-                          placeholder="Value"
-                          class="w-32 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                        <button
-                          @click="funnelData.splice(index, 1)"
-                          class="px-2 py-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          :disabled="funnelData.length <= 1"
-                        >
-                          <span class="material-symbols-outlined text-lg">delete</span>
-                        </button>
-                      </div>
-                      <button
-                        @click="funnelData.push({ label: `Stage ${funnelData.length + 1}`, value: 0 })"
-                        class="w-full px-4 py-2 rounded-lg border border-dashed text-sm font-medium transition-colors"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
-                          : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
-                      >
-                        <span class="material-symbols-outlined text-base align-middle mr-1">add</span>
-                        Add Stage
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Choropleth Map Input -->
-
-                  <!-- Bullet Graph Input -->
-                  <div v-else-if="selectedChartType === 'bulletGraph'" class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Bullet Items
-                    </label>
-                    <div class="space-y-3">
-                      <div 
-                        v-for="(item, index) in bulletGraphData"
-                        :key="index"
-                        class="border rounded-lg p-3"
-                        :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'"
-                      >
-                        <div class="flex items-center justify-between mb-2">
-                          <input
-                            v-model="item.label"
-                            type="text"
-                            placeholder="Item label"
-                            class="flex-1 px-3 py-1.5 rounded-lg border text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                            :class="isDarkMode 
-                              ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
-                              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                          />
-                          <button
-                            @click="bulletGraphData.splice(index, 1)"
-                            class="ml-2 px-2 py-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                            :disabled="bulletGraphData.length <= 1"
-                          >
-                            <span class="material-symbols-outlined text-lg">delete</span>
-                          </button>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                          <div>
-                            <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Value</label>
-                            <input
-                              v-model.number="item.value"
-                              type="number"
-                              class="w-full px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-700 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'"
-                            />
-                          </div>
-                          <div>
-                            <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Target</label>
-                            <input
-                              v-model.number="item.target"
-                              type="number"
-                              class="w-full px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-700 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'"
-                            />
-                          </div>
-                          <div>
-                            <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Max</label>
-                            <input
-                              v-model.number="item.max"
-                              type="number"
-                              class="w-full px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-700 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'"
-                            />
-                          </div>
-                          <div>
-                            <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Good Range</label>
-                            <input
-                              v-model.number="item.ranges.good"
-                              type="number"
-                              class="w-full px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-700 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        @click="bulletGraphData.push({ label: `Item ${bulletGraphData.length + 1}`, value: 50, target: 60, max: 100, ranges: { poor: 0, fair: 30, good: 60, excellent: 80 } })"
-                        class="w-full px-4 py-2 rounded-lg border border-dashed text-sm font-medium transition-colors"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
-                          : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
-                      >
-                        <span class="material-symbols-outlined text-base align-middle mr-1">add</span>
-                        Add Bullet Item
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Chord Diagram Input -->
-                  <div v-else-if="selectedChartType === 'chordDiagram'" class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Relationship Data
-                    </label>
-                    <div class="space-y-3">
-                      <div>
-                        <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Entities:</label>
-                        <div class="space-y-2">
-                          <div 
-                            v-for="(node, index) in chordDiagramData.nodes"
-                            :key="index"
-                            class="flex gap-2"
-                          >
-                            <input
-                              v-model="node.id"
-                              type="text"
-                              placeholder="ID"
-                              class="w-20 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                            />
-                            <input
-                              v-model="node.label"
-                              type="text"
-                              placeholder="Entity name"
-                              class="flex-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                            />
-                            <button
-                              @click="chordDiagramData.nodes.splice(index, 1)"
-                              class="px-2 py-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                              :disabled="chordDiagramData.nodes.length <= 2"
-                            >
-                              <span class="material-symbols-outlined text-sm">close</span>
-                            </button>
-                          </div>
-                          <button
-                            @click="chordDiagramData.nodes.push({ id: `Entity${chordDiagramData.nodes.length + 1}`, label: `Entity ${chordDiagramData.nodes.length + 1}` })"
-                            class="w-full px-3 py-1.5 rounded border border-dashed text-xs font-medium transition-colors"
-                            :class="isDarkMode 
-                              ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
-                              : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
-                          >
-                            <span class="material-symbols-outlined text-xs align-middle mr-1">add</span>
-                            Add Entity
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <label class="text-xs mb-1 block" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Relationships:</label>
-                        <div class="space-y-2">
-                          <div 
-                            v-for="(link, index) in chordDiagramData.links"
-                            :key="index"
-                            class="flex gap-2"
-                          >
-                            <select
-                              v-model="link.source"
-                              class="flex-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'"
-                            >
-                              <option v-for="node in chordDiagramData.nodes" :key="node.id" :value="node.id">{{ node.label }}</option>
-                            </select>
-                            <span class="self-center text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">↔</span>
-                            <select
-                              v-model="link.target"
-                              class="flex-1 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'"
-                            >
-                              <option v-for="node in chordDiagramData.nodes" :key="node.id" :value="node.id">{{ node.label }}</option>
-                            </select>
-                            <input
-                              v-model.number="link.value"
-                              type="number"
-                              placeholder="Value"
-                              class="w-20 px-2 py-1.5 rounded border text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                              :class="isDarkMode 
-                                ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                            />
-                            <button
-                              @click="chordDiagramData.links.splice(index, 1)"
-                              class="px-2 py-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                            >
-                              <span class="material-symbols-outlined text-sm">close</span>
-                            </button>
-                          </div>
-                          <button
-                            @click="chordDiagramData.links.push({ source: chordDiagramData.nodes[0]?.id || '', target: chordDiagramData.nodes[1]?.id || '', value: 10 })"
-                            class="w-full px-3 py-1.5 rounded border border-dashed text-xs font-medium transition-colors"
-                            :class="isDarkMode 
-                              ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
-                              : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
-                          >
-                            <span class="material-symbols-outlined text-xs align-middle mr-1">add</span>
-                            Add Relationship
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Single Dataset Input -->
-                  <div v-else class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Data
-                    </label>
-                    <div class="space-y-2">
-                      <div 
-                        v-for="(item, index) in chartData"
-                        :key="index"
-                        class="flex gap-2"
-                      >
-                        <input
-                          v-model="item.label"
-                          type="text"
-                          placeholder="Label"
-                          class="flex-1 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                        <input
-                          v-model.number="item.value"
-                          type="number"
-                          placeholder="Value"
-                          class="w-24 px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                        <button
-                          @click="removeDataItem(index)"
-                          class="px-2 py-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          :disabled="chartData.length <= 1"
-                        >
-                          <span class="material-symbols-outlined text-lg">delete</span>
-                        </button>
-                      </div>
-                      <button
-                        @click="addDataItem"
-                        class="w-full px-4 py-2 rounded-lg border border-dashed text-sm font-medium transition-colors"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 text-gray-400 hover:border-indigo-400 hover:text-indigo-400' 
-                          : 'border-gray-300 text-gray-600 hover:border-indigo-500 hover:text-indigo-600'"
-                      >
-                        <span class="material-symbols-outlined text-base align-middle mr-1">add</span>
-                        Add Data Point
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Color Scheme -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Color Scheme
-                    </label>
-                    <Dropdown
-                      v-model="chartConfig.colorScheme"
-                      :options="colorSchemeOptions"
-                      :is-dark-mode="isDarkMode"
-                      @update:modelValue="initializeCustomColors"
-                    />
-                  </div>
-
-                  <!-- Custom Colors - Always show when custom is selected, or show for all schemes -->
-                  <div v-if="chartConfig.colorScheme === 'custom' || getDataForColors().length > 0" class="mb-4">
-                    <div class="flex items-center justify-between mb-2">
-                      <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        {{ chartConfig.colorScheme === 'custom' ? 'Custom Colors' : 'Chart Colors' }}
-                      </label>
-                      <button
-                        v-if="chartConfig.colorScheme !== 'custom'"
-                        @click="chartConfig.colorScheme = 'custom'; initializeCustomColors()"
-                        class="text-xs px-2 py-1 rounded text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
-                      >
-                        Customize
-                      </button>
-                    </div>
-                    <div v-if="chartConfig.colorScheme === 'custom'" class="space-y-2 max-h-64 overflow-y-auto">
-                      <div 
-                        v-for="(item, index) in getDataForColors()"
-                        :key="index"
-                        class="flex items-center gap-2"
-                      >
-                        <span class="text-xs w-24 truncate" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                          {{ item.label || `Item ${index + 1}` }}
-                        </span>
-                        <input
-                          v-model="customColors[index]"
-                          type="color"
-                          class="w-12 h-8 rounded border cursor-pointer flex-shrink-0"
-                          :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                        />
-                        <input
-                          v-model="customColors[index]"
-                          type="text"
-                          placeholder="#6366f1"
-                          class="flex-1 px-2 py-1.5 rounded border text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-500' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                        />
-                      </div>
-                      <div v-if="getDataForColors().length === 0" class="text-xs text-center py-2" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
-                        Add data points to customize colors
-                      </div>
-                    </div>
-                    <div v-else class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      Using {{ chartConfig.colorScheme }} color scheme. Click "Customize" to set individual colors.
-                    </div>
-                  </div>
-
-                  <!-- Show Legend -->
-                  <div class="mb-4">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                      <input
-                        v-model="chartConfig.showLegend"
-                        type="checkbox"
-                        class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                      />
-                      <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Show Legend
-                      </span>
-                    </label>
-                  </div>
-
-                  <!-- Axis Labels (only for charts with scales) -->
-                  <div v-if="selectedChartType !== 'pie' && selectedChartType !== 'doughnut' && selectedChartType !== 'polar' && selectedChartType !== 'gauge'" class="mb-4 space-y-3">
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        X Axis Label
-                      </label>
-                      <input
-                        v-model="chartConfig.xAxisLabel"
-                        type="text"
-                        placeholder="Enter X axis label"
-                        class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Y Axis Label
-                      </label>
-                      <input
-                        v-model="chartConfig.yAxisLabel"
-                        type="text"
-                        placeholder="Enter Y axis label"
-                        class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Motion Controls -->
-                  <div class="mb-4 space-y-3 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <h3 class="text-sm font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <span class="material-symbols-outlined text-indigo-600">accessibility</span>
-                      Motion & Animation Controls
-                    </h3>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                      <input
-                        v-model="chartConfig.reduceMotion"
-                        type="checkbox"
-                        class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                      />
-                      <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Reduce Motion
-                      </span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                      <input
-                        v-model="chartConfig.pauseAnimation"
-                        type="checkbox"
-                        class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                      />
-                      <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Pause Animation
-                      </span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                      <input
-                        v-model="chartConfig.disableAutoUpdate"
-                        type="checkbox"
-                        class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                      />
-                      <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Disable Auto-Update
-                      </span>
-                    </label>
-                  </div>
-
-                  <!-- Secondary Encoding (Color Independence) -->
-                  <div v-if="selectedChartType === 'stackedBar' || selectedChartType === 'groupedBar' || selectedChartType === 'combo' || selectedChartType === 'line' || selectedChartType === 'pie' || selectedChartType === 'doughnut' || selectedChartType === 'polar'" class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Secondary Encoding
-                      <span v-if="colorOnlyEncoding" class="text-red-500 ml-1">*</span>
-                    </label>
-                    <select
-                      v-model="chartConfig.secondaryEncoding"
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                      :class="isDarkMode 
-                        ? (colorOnlyEncoding ? 'bg-slate-800 border-red-500 text-white' : 'bg-slate-800 border-gray-600 text-white')
-                        : (colorOnlyEncoding ? 'bg-white border-red-500 text-gray-900' : 'bg-white border-gray-300 text-gray-900')"
-                    >
-                      <option value="none">None</option>
-                      <option value="shape">Shape Patterns</option>
-                      <option value="pattern">Pattern Fills</option>
-                      <option value="lineStyle">Line Styles</option>
-                      <option value="icon">Icon Labels</option>
-                      <option value="text">Text Labels</option>
-                    </select>
-                    <p v-if="colorOnlyEncoding" class="mt-1 text-xs text-red-500">
-                      This chart relies solely on color to communicate meaning. Add a second visual channel to continue.
-                    </p>
-                  </div>
-
-                  <!-- Data Unit -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Data Unit (Optional)
-                    </label>
-                    <input
-                      v-model="chartConfig.dataUnit"
-                      type="text"
-                      placeholder="e.g., %, $, kg"
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                      :class="isDarkMode 
-                        ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                    />
-                  </div>
-
-                  <!-- Accessibility Scoring Panel -->
-                  <div class="mb-4 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <div class="flex items-center justify-between mb-3">
-                      <h3 class="text-sm font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        <span class="material-symbols-outlined text-indigo-600">verified</span>
-                        Accessibility Score
-                      </h3>
-                      <div class="flex items-center gap-2">
-                        <span 
-                          class="text-lg font-bold"
-                          :class="accessibilityScore >= 100 
-                            ? 'text-green-600' 
-                            : accessibilityScore >= 70 
-                              ? 'text-yellow-600' 
-                              : 'text-red-600'"
-                        >
-                          {{ accessibilityScore }}%
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div class="space-y-2 text-xs">
-                      <div class="flex items-center justify-between">
-                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Alt Text</span>
-                        <span :class="chartConfig.title && chartConfig.summary && chartConfig.keyInsight ? 'text-green-600' : 'text-red-500'">
-                          <span class="material-symbols-outlined text-sm">{{ chartConfig.title && chartConfig.summary && chartConfig.keyInsight ? 'check_circle' : 'error' }}</span>
-                        </span>
-                      </div>
-                      <div class="flex items-center justify-between">
-                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Color Independence</span>
-                        <span :class="!colorOnlyEncoding ? 'text-green-600' : 'text-red-500'">
-                          <span class="material-symbols-outlined text-sm">{{ !colorOnlyEncoding ? 'check_circle' : 'error' }}</span>
-                        </span>
-                      </div>
-                      <div class="flex items-center justify-between">
-                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Contrast</span>
-                        <span :class="contrastIssues.length === 0 ? 'text-green-600' : 'text-red-500'">
-                          <span class="material-symbols-outlined text-sm">{{ contrastIssues.length === 0 ? 'check_circle' : 'error' }}</span>
-                        </span>
-                      </div>
-                      <div class="flex items-center justify-between">
-                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Keyboard Navigation</span>
-                        <span class="text-green-600">
-                          <span class="material-symbols-outlined text-sm">check_circle</span>
-                        </span>
-                      </div>
-                      <div class="flex items-center justify-between">
-                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Screen Reader</span>
-                        <span class="text-green-600">
-                          <span class="material-symbols-outlined text-sm">check_circle</span>
-                        </span>
-                      </div>
-                      <div class="flex items-center justify-between">
-                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Motion Safety</span>
-                        <span :class="chartConfig.reduceMotion || chartConfig.pauseAnimation ? 'text-green-600' : 'text-yellow-500'">
-                          <span class="material-symbols-outlined text-sm">{{ chartConfig.reduceMotion || chartConfig.pauseAnimation ? 'check_circle' : 'warning' }}</span>
-                        </span>
-                      </div>
-                      <div class="flex items-center justify-between">
-                        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Zoom Integrity</span>
-                        <span :class="zoomIssues.length === 0 ? 'text-green-600' : 'text-yellow-500'">
-                          <span class="material-symbols-outlined text-sm">{{ zoomIssues.length === 0 ? 'check_circle' : 'warning' }}</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    <!-- Fix It Guidance -->
-                    <div v-if="accessibilityScore < 100" class="mt-3 p-3 rounded-lg" :class="isDarkMode ? 'bg-yellow-900/20 border border-yellow-700' : 'bg-yellow-50 border border-yellow-200'">
-                      <h4 class="text-xs font-semibold mb-2 flex items-center gap-1" :class="isDarkMode ? 'text-yellow-300' : 'text-yellow-800'">
-                        <span class="material-symbols-outlined text-sm">info</span>
-                        Fix Required
-                      </h4>
-                      <ul class="space-y-1 text-xs" :class="isDarkMode ? 'text-yellow-200' : 'text-yellow-700'">
-                        <li v-if="!chartConfig.title || !chartConfig.summary || !chartConfig.keyInsight">
-                          • Add required metadata: title, summary, and key insight
-                        </li>
-                        <li v-if="colorOnlyEncoding">
-                          • Add secondary encoding (shape, pattern, line style, icon, or text labels)
-                        </li>
-                        <li v-if="contrastIssues.length > 0">
-                          • Fix contrast issues: {{ contrastIssues.length }} color(s) below WCAG AA minimum
-                        </li>
-                        <li v-if="zoomIssues.length > 0">
-                          • Zoom/Scaling warnings: {{ zoomIssues.join('; ') }}
-                        </li>
-                      </ul>
-                    </div>
-
-                    <!-- Run axe-core Scan Button -->
-                    <button
-                      @click="runAxeCoreScan"
-                      :disabled="axeScanRunning"
-                      class="w-full mt-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                      :class="isDarkMode 
-                        ? (axeScanRunning ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white')
-                        : (axeScanRunning ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white')"
-                    >
-                      <span v-if="axeScanRunning" class="material-symbols-outlined animate-spin text-sm">refresh</span>
-                      <span v-else class="material-symbols-outlined text-sm">bug_report</span>
-                      {{ axeScanRunning ? 'Scanning...' : 'Run Accessibility Check' }}
-                    </button>
-                    
-                    <!-- axe-core Results -->
-                    <div v-if="axeScanResults" class="mt-3 space-y-2">
-                      <div v-if="axeScanResults.error" class="p-2 rounded text-xs bg-yellow-900/30 text-yellow-300 border border-yellow-700">
-                        <div class="font-semibold">Scan Error</div>
-                        <div class="mt-1">{{ axeScanResults.error }}</div>
-                      </div>
-                      <div 
-                        v-for="(violation, index) in axeScanResults.violations"
-                        :key="index"
-                        class="p-2 rounded text-xs border"
-                        :class="isDarkMode ? 'bg-red-900/30 text-red-300 border-red-700' : 'bg-red-50 text-red-700 border-red-200'"
-                      >
-                        <div class="font-semibold flex items-center gap-2">
-                          <span class="material-symbols-outlined text-sm">{{ violation.impact === 'critical' ? 'error' : 'warning' }}</span>
-                          {{ violation.id }} ({{ violation.impact || 'moderate' }})
-                        </div>
-                        <div class="mt-1">{{ violation.description }}</div>
-                        <div class="mt-1 text-xs opacity-80">{{ violation.help }}</div>
-                        <div v-if="violation.nodes && violation.nodes.length > 0" class="mt-2 text-xs opacity-70">
-                          Found in {{ violation.nodes.length }} element(s)
-                        </div>
-                      </div>
-                      <div v-if="axeScanResults.violations && axeScanResults.violations.length === 0 && !axeScanResults.error" class="p-2 rounded text-xs text-green-600 border border-green-200" :class="isDarkMode ? 'bg-green-900/30 border-green-700' : 'bg-green-50'">
-                        <div class="flex items-center gap-2">
-                          <span class="material-symbols-outlined text-sm">check_circle</span>
-                          No accessibility violations found!
-                        </div>
-                      </div>
-                      <div v-if="axeScanResults.passes && axeScanResults.passes.length > 0" class="mt-2 text-xs opacity-60" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        {{ axeScanResults.passes.length }} accessibility check(s) passed
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Export Buttons -->
-                  <div class="space-y-2 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <button
-                      @click="exportChart('html')"
-                      :disabled="!canExport"
-                      class="w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                      :class="isDarkMode 
-                        ? (canExport ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-gray-800 text-gray-500 cursor-not-allowed')
-                        : (canExport ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-                    >
-                      <span class="material-symbols-outlined text-lg">html</span>
-                      Export as HTML
-                    </button>
-                    <button
-                      @click="exportChart('png')"
-                      :disabled="!canExport"
-                      class="w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                      :class="isDarkMode 
-                        ? (canExport ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-800 text-gray-500 cursor-not-allowed')
-                        : (canExport ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-                    >
-                      <span class="material-symbols-outlined text-lg">download</span>
-                      Export as PNG
-                    </button>
-                    <button
-                      @click="exportChart('caption')"
-                      class="w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                      :class="isDarkMode 
-                        ? 'bg-slate-700 hover:bg-slate-600 text-white' 
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                    >
-                      <span class="material-symbols-outlined text-lg">subtitles</span>
-                      Export caption (TXT)
-                    </button>
-                    <button
-                      @click="exportChart('json')"
-                      class="w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                      :class="isDarkMode 
-                        ? 'bg-slate-700 hover:bg-slate-600 text-white' 
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                    >
-                      <span class="material-symbols-outlined text-lg">code</span>
-                      Export Config (JSON)
-                    </button>
-                    <button
-                      @click="exportChart('pdf')"
-                      :disabled="!canExport"
-                      class="w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                      :class="isDarkMode 
-                        ? (canExport ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-800 text-gray-500 cursor-not-allowed')
-                        : (canExport ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-                    >
-                      <span class="material-symbols-outlined text-lg">picture_as_pdf</span>
-                      Export as PDF
-                    </button>
-                    <button
-                      @click="exportChart('ppt')"
-                      :disabled="!canExport"
-                      class="w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                      :class="isDarkMode 
-                        ? (canExport ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-800 text-gray-500 cursor-not-allowed')
-                        : (canExport ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-                    >
-                      <span class="material-symbols-outlined text-lg">slideshow</span>
-                      Export as PPT
-                    </button>
-                    <button
-                      @click="exportChart('word')"
-                      :disabled="!canExport"
-                      class="w-full px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                      :class="isDarkMode 
-                        ? (canExport ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-800 text-gray-500 cursor-not-allowed')
-                        : (canExport ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-                    >
-                      <span class="material-symbols-outlined text-lg">description</span>
-                      Export as Word
-                    </button>
-                    <InlineNotice v-if="notice" class="mt-2" :notice="notice" @dismiss="clearNotice" />
-                    <p v-if="accessibilityScore < 100" class="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
-                      ⚠️ Accessibility score: {{ accessibilityScore }}%. Export will show warnings but is allowed.
-                    </p>
                   </div>
                 </div>
               </div>
 
-              <!-- Chart Preview -->
-              <div class="lg:col-span-2">
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <span class="material-symbols-outlined text-indigo-600">preview</span>
-                      Preview
-                    </h2>
+              <!-- Sankey -->
+              <div v-else-if="selectedChartType === 'sankey'" class="flex flex-col gap-6">
+                <fieldset class="flex flex-col gap-2">
+                  <legend class="mb-2 text-sm font-semibold text-ink-strong">Nodes</legend>
+                  <div v-for="(node, index) in sankeyData.nodes" :key="index" class="flex items-center gap-2">
+                    <div class="flex-1 min-w-0">
+                      <UiInput v-model="node.id" placeholder="Node ID" :aria-label="`Node ${index + 1} ID`" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <UiInput v-model="node.label" placeholder="Label" :aria-label="`Node ${index + 1} label`" />
+                    </div>
+                    <UiButton icon-only icon="close" variant="ghost" size="sm" :label="`Remove node ${index + 1}`" :disabled="sankeyData.nodes.length <= 2" @click="sankeyData.nodes.splice(index, 1)" />
+                  </div>
+                  <UiButton icon="add" size="sm" class="self-start" @click="sankeyData.nodes.push({ id: `Node${sankeyData.nodes.length + 1}`, label: `Node ${sankeyData.nodes.length + 1}` })">Add node</UiButton>
+                </fieldset>
+                <fieldset class="flex flex-col gap-2">
+                  <legend class="mb-2 text-sm font-semibold text-ink-strong">Links</legend>
+                  <div v-for="(link, index) in sankeyData.links" :key="index" class="data-card">
                     <div class="flex items-center gap-2">
-                      <button
-                        @click="loadSampleData"
-                        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                        :class="isDarkMode 
-                          ? 'bg-slate-700 hover:bg-slate-600 text-white' 
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                      >
-                        Load Sample Data
-                      </button>
+                      <div class="flex-1 min-w-0"><UiSelect v-model="link.source" :options="sankeyNodeOptions" :aria-label="`Link ${index + 1} from`" /></div>
+                      <span class="material-symbols-outlined text-base text-ink-muted" aria-hidden="true">arrow_forward</span>
+                      <div class="flex-1 min-w-0"><UiSelect v-model="link.target" :options="sankeyNodeOptions" :aria-label="`Link ${index + 1} to`" /></div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <div class="flex-1 min-w-0"><UiInput v-model.number="link.value" type="number" placeholder="Value" :aria-label="`Link ${index + 1} value`" /></div>
+                      <UiButton icon-only icon="close" variant="ghost" size="sm" :label="`Remove link ${index + 1}`" @click="sankeyData.links.splice(index, 1)" />
                     </div>
                   </div>
+                  <UiButton
+                    icon="add"
+                    size="sm"
+                    class="self-start"
+                    @click="sankeyData.links.push({ source: sankeyData.nodes[0]?.id || '', target: sankeyData.nodes[1]?.id || '', value: 10 })"
+                  >
+                    Add link
+                  </UiButton>
+                </fieldset>
+              </div>
 
-                  <div class="bg-gray-50 dark:bg-slate-800 rounded-lg p-6 min-h-[400px] flex items-center justify-center">
-                    <figure 
-                      ref="chartFigure"
-                      class="w-full" 
-                      style="max-width: 100%; height: 400px;"
-                      role="img"
-                      :aria-label="chartConfig.title || 'Chart'"
-                      :aria-describedby="`chart-summary-${chartKey} chart-data-table-${chartKey}`"
-                      tabindex="0"
-                      @keydown="handleChartKeyboard"
-                      @focus="chartFocused = true"
-                      @blur="chartFocused = false"
-                      :class="chartFocused ? 'ring-2 ring-indigo-500 ring-offset-2' : ''"
-                    >
-                      <div class="w-full h-full">
-                        <LineChart
-                        v-if="selectedChartType === 'line' || selectedChartType === 'area'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        :data="chartDataForDisplay"
-                        :options="chartOptions"
-                      />
-                      <BarChart
-                        v-else-if="selectedChartType === 'bar' || selectedChartType === 'horizontalBar' || selectedChartType === 'stackedBar' || selectedChartType === 'groupedBar' || selectedChartType === 'combo'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        :data="chartDataForDisplay"
-                        :options="chartOptions"
-                      />
-                      <PieChart
-                        v-else-if="selectedChartType === 'pie'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        :data="chartDataForDisplay"
-                        :options="chartOptions"
-                      />
-                      <DoughnutChart
-                        v-else-if="selectedChartType === 'doughnut'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        :data="chartDataForDisplay"
-                        :options="chartOptions"
-                      />
-                      <ScatterChart
-                        v-else-if="selectedChartType === 'scatter'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        :data="scatterDataForDisplay"
-                        :options="chartOptions"
-                      />
-                      <RadarChart
-                        v-else-if="selectedChartType === 'radar'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        :data="chartDataForDisplay"
-                        :options="chartOptions"
-                      />
-                      <BubbleChart
-                        v-else-if="selectedChartType === 'bubble'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        :data="bubbleDataForDisplay"
-                        :options="chartOptions"
-                      />
-                      <PolarAreaChart
-                        v-else-if="selectedChartType === 'polar'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        :data="chartDataForDisplay"
-                        :options="chartOptions"
-                      />
-                      <DoughnutChart
-                        v-else-if="selectedChartType === 'gauge'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        :data="chartDataForDisplay"
-                        :options="chartOptions"
-                      />
-                      <BarChart
-                        v-else-if="selectedChartType === 'waterfall' || selectedChartType === 'funnel'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        :data="chartDataForDisplay"
-                        :options="chartOptions"
-                      />
-                      <Chart
-                        v-else-if="selectedChartType === 'candlestick'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        type="candlestick"
-                        :data="chartDataForDisplay"
-                        :options="chartOptions"
-                      />
-                      <Chart
-                        v-else-if="selectedChartType === 'heatmap'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        type="matrix"
-                        :data="chartDataForDisplay"
-                        :options="chartOptions"
-                      />
-                      <!-- Custom SVG Treemap -->
-                      <div
-                        v-else-if="selectedChartType === 'treemap'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        class="w-full h-full"
-                      >
-                        <TreemapSVG :data="treemapData" :colors="colorSchemes[chartConfig.colorScheme] || colorSchemes.default" />
-                      </div>
-                      <!-- Custom SVG Sankey -->
-                      <div
-                        v-else-if="selectedChartType === 'sankey'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        class="w-full h-full"
-                      >
-                        <SankeySVG :data="sankeyData" :colors="colorSchemes[chartConfig.colorScheme] || colorSchemes.default" />
-                      </div>
-                      <!-- Custom SVG Bullet Graph -->
-                      <div
-                        v-else-if="selectedChartType === 'bulletGraph'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        class="w-full h-full"
-                      >
-                        <BulletGraphSVG :data="bulletGraphData" :colors="colorSchemes[chartConfig.colorScheme] || colorSchemes.default" />
-                      </div>
-                      <!-- Custom SVG Chord Diagram -->
-                      <div
-                        v-else-if="selectedChartType === 'chordDiagram'"
-                        :key="`chart-${selectedChartType}-${chartKey}`"
-                        class="w-full h-full"
-                      >
-                        <ChordDiagramSVG :data="chordDiagramData" :colors="colorSchemes[chartConfig.colorScheme] || colorSchemes.default" />
-                      </div>
-                      </div>
-                      <figcaption :id="`chart-summary-${chartKey}`" class="sr-only">
-                        {{ chartConfig.summary || 'Chart visualization' }}
-                      </figcaption>
-                    </figure>
+              <!-- Funnel -->
+              <fieldset v-else-if="selectedChartType === 'funnel'" class="flex flex-col gap-2">
+                <legend class="mb-2 text-sm font-semibold text-ink-strong">Funnel stages</legend>
+                <div v-for="(item, index) in funnelData" :key="index" class="flex items-center gap-2">
+                  <div class="flex-1 min-w-0">
+                    <UiInput v-model="item.label" placeholder="Stage label" :aria-label="`Stage ${index + 1} label`" />
                   </div>
+                  <div class="w-28">
+                    <UiInput v-model.number="item.value" type="number" placeholder="Value" :aria-label="`Stage ${index + 1} value`" />
+                  </div>
+                  <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove stage ${index + 1}`" :disabled="funnelData.length <= 1" @click="funnelData.splice(index, 1)" />
+                </div>
+                <UiButton icon="add" size="sm" class="self-start" @click="funnelData.push({ label: `Stage ${funnelData.length + 1}`, value: 0 })">Add stage</UiButton>
+              </fieldset>
 
-                  <!-- Data Table -->
-                  <div class="mt-6">
-                    <div class="flex items-center justify-between mb-3">
-                      <h3 class="text-sm font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        <span class="material-symbols-outlined text-indigo-600">table_chart</span>
-                        Data Table
-                      </h3>
-                      <button
-                        @click="dataTableVisible = !dataTableVisible"
-                        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-                        :class="isDarkMode 
-                          ? 'bg-slate-700 hover:bg-slate-600 text-white' 
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                        :aria-expanded="dataTableVisible"
-                        aria-controls="chart-data-table"
-                      >
-                        <span class="material-symbol-outlined text-sm">{{ dataTableVisible ? 'expand_less' : 'expand_more' }}</span>
-                        {{ dataTableVisible ? 'Hide' : 'Show' }} Table
-                      </button>
+              <!-- Bullet graph -->
+              <fieldset v-else-if="selectedChartType === 'bulletGraph'" class="flex flex-col gap-3">
+                <legend class="mb-2 text-sm font-semibold text-ink-strong">Bullet items</legend>
+                <div v-for="(item, index) in bulletGraphData" :key="index" class="data-card">
+                  <div class="flex items-center gap-2">
+                    <div class="flex-1 min-w-0">
+                      <UiInput v-model="item.label" placeholder="Item label" :aria-label="`Bullet item ${index + 1} label`" />
                     </div>
-                    <div 
-                      v-show="dataTableVisible"
-                      id="chart-data-table"
-                      :id="`chart-data-table-${chartKey}`"
-                      class="overflow-x-auto"
-                    >
-                      <table class="w-full border-collapse text-sm" role="table">
-                        <thead>
-                          <tr>
-                            <th 
-                              v-for="(header, index) in dataTableHeaders"
-                              :key="index"
-                              scope="col"
-                              class="px-4 py-2 text-left border-b font-semibold cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-                              :class="isDarkMode ? 'border-gray-700 text-gray-300' : 'border-gray-300 text-gray-700'"
-                              @click="toggleDataTableSort(header.key)"
-                              @keydown.enter="toggleDataTableSort(header.key)"
-                              tabindex="0"
-                              :aria-sort="dataTableSortColumn === header.key ? (dataTableSortDirection === 'asc' ? 'ascending' : 'descending') : 'none'"
-                            >
-                              <div class="flex items-center gap-2">
-                                {{ header.label }}
-                                <span v-if="dataTableSortColumn === header.key" class="material-symbols-outlined text-xs">
-                                  {{ dataTableSortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
-                                </span>
-                              </div>
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr 
-                            v-for="(row, rowIndex) in sortedDataTable"
-                            :key="rowIndex"
-                            class="border-b"
-                            :class="isDarkMode ? 'border-gray-700 hover:bg-slate-800' : 'border-gray-200 hover:bg-gray-50'"
-                          >
-                            <td 
-                              v-for="(header, colIndex) in dataTableHeaders"
-                              :key="colIndex"
-                              class="px-4 py-2"
-                              :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                            >
-                              {{ typeof row[header.key] === 'number' ? row[header.key].toLocaleString() : row[header.key] }}
-                              <span v-if="header.key === 'value' && chartConfig.dataUnit" class="text-xs text-gray-500 ml-1">
-                                {{ chartConfig.dataUnit }}
-                              </span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
+                    <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove bullet item ${index + 1}`" :disabled="bulletGraphData.length <= 1" @click="bulletGraphData.splice(index, 1)" />
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <UiInput v-model.number="item.value" type="number" label="Value" />
+                    <UiInput v-model.number="item.target" type="number" label="Target" />
+                    <UiInput v-model.number="item.max" type="number" label="Max" />
+                    <UiInput v-model.number="item.ranges.good" type="number" label="Good range" />
                   </div>
                 </div>
+                <UiButton
+                  icon="add"
+                  size="sm"
+                  class="self-start"
+                  @click="bulletGraphData.push({ label: `Item ${bulletGraphData.length + 1}`, value: 50, target: 60, max: 100, ranges: { poor: 0, fair: 30, good: 60, excellent: 80 } })"
+                >
+                  Add bullet item
+                </UiButton>
+              </fieldset>
+
+              <!-- Chord diagram -->
+              <div v-else-if="selectedChartType === 'chordDiagram'" class="flex flex-col gap-6">
+                <fieldset class="flex flex-col gap-2">
+                  <legend class="mb-2 text-sm font-semibold text-ink-strong">Entities</legend>
+                  <div v-for="(node, index) in chordDiagramData.nodes" :key="index" class="flex items-center gap-2">
+                    <div class="w-24">
+                      <UiInput v-model="node.id" placeholder="ID" :aria-label="`Entity ${index + 1} ID`" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <UiInput v-model="node.label" placeholder="Entity name" :aria-label="`Entity ${index + 1} name`" />
+                    </div>
+                    <UiButton icon-only icon="close" variant="ghost" size="sm" :label="`Remove entity ${index + 1}`" :disabled="chordDiagramData.nodes.length <= 2" @click="chordDiagramData.nodes.splice(index, 1)" />
+                  </div>
+                  <UiButton
+                    icon="add"
+                    size="sm"
+                    class="self-start"
+                    @click="chordDiagramData.nodes.push({ id: `Entity${chordDiagramData.nodes.length + 1}`, label: `Entity ${chordDiagramData.nodes.length + 1}` })"
+                  >
+                    Add entity
+                  </UiButton>
+                </fieldset>
+                <fieldset class="flex flex-col gap-2">
+                  <legend class="mb-2 text-sm font-semibold text-ink-strong">Relationships</legend>
+                  <div v-for="(link, index) in chordDiagramData.links" :key="index" class="data-card">
+                    <div class="flex items-center gap-2">
+                      <div class="flex-1 min-w-0"><UiSelect v-model="link.source" :options="chordNodeOptions" :aria-label="`Relationship ${index + 1} from`" /></div>
+                      <span class="material-symbols-outlined text-base text-ink-muted" aria-hidden="true">sync_alt</span>
+                      <div class="flex-1 min-w-0"><UiSelect v-model="link.target" :options="chordNodeOptions" :aria-label="`Relationship ${index + 1} to`" /></div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <div class="flex-1 min-w-0"><UiInput v-model.number="link.value" type="number" placeholder="Value" :aria-label="`Relationship ${index + 1} value`" /></div>
+                      <UiButton icon-only icon="close" variant="ghost" size="sm" :label="`Remove relationship ${index + 1}`" @click="chordDiagramData.links.splice(index, 1)" />
+                    </div>
+                  </div>
+                  <UiButton
+                    icon="add"
+                    size="sm"
+                    class="self-start"
+                    @click="chordDiagramData.links.push({ source: chordDiagramData.nodes[0]?.id || '', target: chordDiagramData.nodes[1]?.id || '', value: 10 })"
+                  >
+                    Add relationship
+                  </UiButton>
+                </fieldset>
+              </div>
+
+              <!-- Single dataset -->
+              <fieldset v-else class="flex flex-col gap-2">
+                <legend class="mb-2 text-sm font-semibold text-ink-strong">Data</legend>
+                <div v-for="(item, index) in chartData" :key="index" class="flex items-center gap-2">
+                  <div class="flex-1 min-w-0">
+                    <UiInput v-model="item.label" placeholder="Label" :aria-label="`Point ${index + 1} label`" />
+                  </div>
+                  <div class="w-24">
+                    <UiInput v-model.number="item.value" type="number" placeholder="Value" :aria-label="`Point ${index + 1} value`" />
+                  </div>
+                  <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove point ${index + 1}`" :disabled="chartData.length <= 1" @click="removeDataItem(index)" />
+                </div>
+                <UiButton icon="add" size="sm" class="self-start" @click="addDataItem">Add data point</UiButton>
+              </fieldset>
+            </div>
+
+            <div class="mt-6 pt-6 border-t border-line flex flex-col gap-4">
+              <UiSelect v-model="chartConfig.colorScheme" label="Color scheme" :options="colorSchemeOptions" @update:model-value="initializeCustomColors" />
+
+              <div v-if="chartConfig.colorScheme === 'custom' || getDataForColors().length > 0" class="flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-medium text-ink">{{ chartConfig.colorScheme === 'custom' ? 'Custom colors' : 'Chart colors' }}</h3>
+                  <UiButton v-if="chartConfig.colorScheme !== 'custom'" variant="ghost" size="sm" icon="palette" @click="chartConfig.colorScheme = 'custom'; initializeCustomColors()">Customize</UiButton>
+                </div>
+                <div v-if="chartConfig.colorScheme === 'custom'" class="flex flex-col gap-2 max-h-64 overflow-y-auto">
+                  <div v-for="(item, index) in getDataForColors()" :key="index" class="flex items-center gap-2">
+                    <span class="w-24 truncate text-xs text-ink-secondary">{{ item.label || `Item ${index + 1}` }}</span>
+                    <div class="w-12">
+                      <UiInput v-model="customColors[index]" type="color" :aria-label="`Color for ${item.label || `item ${index + 1}`}`" />
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <!-- style-check: allow the placeholder shows an example hex value the user types -->
+                      <UiInput v-model="customColors[index]" placeholder="#6366f1" mono :aria-label="`Color value for ${item.label || `item ${index + 1}`}`" />
+                    </div>
+                  </div>
+                  <p v-if="getDataForColors().length === 0" class="py-2 text-center text-xs text-ink-muted">Add data points to customize colors</p>
+                </div>
+                <p v-else class="text-xs text-ink-secondary">Using {{ chartConfig.colorScheme }} color scheme. Click "Customize" to set individual colors.</p>
+              </div>
+
+              <UiCheckbox v-model="chartConfig.showLegend" label="Show legend" />
+
+              <template v-if="selectedChartType !== 'pie' && selectedChartType !== 'doughnut' && selectedChartType !== 'polar' && selectedChartType !== 'gauge'">
+                <UiInput v-model="chartConfig.xAxisLabel" label="X axis label" placeholder="Enter X axis label" />
+                <UiInput v-model="chartConfig.yAxisLabel" label="Y axis label" placeholder="Enter Y axis label" />
+              </template>
+            </div>
+
+            <fieldset class="mt-6 pt-6 border-t border-line flex flex-col gap-3">
+              <legend class="sr-only">Motion and animation controls</legend>
+              <h3 class="text-sm font-semibold text-ink-strong" aria-hidden="true">Motion and animation controls</h3>
+              <UiCheckbox v-model="chartConfig.reduceMotion" label="Reduce motion" />
+              <UiCheckbox v-model="chartConfig.pauseAnimation" label="Pause animation" />
+              <UiCheckbox v-model="chartConfig.disableAutoUpdate" label="Disable auto-update" />
+            </fieldset>
+
+            <div class="mt-6 pt-6 border-t border-line flex flex-col gap-4">
+              <UiSelect
+                v-if="selectedChartType === 'stackedBar' || selectedChartType === 'groupedBar' || selectedChartType === 'combo' || selectedChartType === 'line' || selectedChartType === 'pie' || selectedChartType === 'doughnut' || selectedChartType === 'polar'"
+                v-model="chartConfig.secondaryEncoding"
+                label="Secondary encoding"
+                :options="secondaryEncodingOptions"
+                :required="colorOnlyEncoding"
+                :error="colorOnlyEncoding ? 'This chart relies solely on color to communicate meaning. Add a second visual channel to continue.' : ''"
+              />
+              <UiInput v-model="chartConfig.dataUnit" label="Data unit (optional)" placeholder="e.g., %, $, kg" />
+            </div>
+          </UiPanel>
+
+          <UiPanel title="Accessibility score">
+            <template #actions>
+              <UiChip :tone="accessibilityScore >= 100 ? 'success' : accessibilityScore >= 70 ? 'warning' : 'danger'">{{ accessibilityScore }}%</UiChip>
+            </template>
+
+            <ul class="flex flex-col gap-2 text-sm">
+              <li v-for="check in accessibilityChecks" :key="check.label" class="flex items-center justify-between">
+                <span class="text-ink-secondary">{{ check.label }}</span>
+                <span class="material-symbols-outlined text-base" :class="checkTone[check.state]" aria-hidden="true">{{ checkIcon[check.state] }}</span>
+                <span class="sr-only">{{ checkText[check.state] }}</span>
+              </li>
+            </ul>
+
+            <UiCallout v-if="accessibilityScore < 100" tone="warning" title="Fix required" class="mt-4">
+              <ul class="flex flex-col gap-1">
+                <li v-if="!chartConfig.title || !chartConfig.summary || !chartConfig.keyInsight">Add required metadata: title, summary, and key insight</li>
+                <li v-if="colorOnlyEncoding">Add secondary encoding (shape, pattern, line style, icon, or text labels)</li>
+                <li v-if="contrastIssues.length > 0">Fix contrast issues: {{ contrastIssues.length }} color(s) below WCAG AA minimum</li>
+                <li v-if="zoomIssues.length > 0">Zoom/Scaling warnings: {{ zoomIssues.join('; ') }}</li>
+              </ul>
+            </UiCallout>
+
+            <UiButton variant="primary" icon="bug_report" class="mt-4" :loading="axeScanRunning" @click="runAxeCoreScan">
+              {{ axeScanRunning ? 'Scanning...' : 'Run accessibility check' }}
+            </UiButton>
+
+            <div v-if="axeScanResults" class="mt-4 flex flex-col gap-2" role="status">
+              <UiCallout v-if="axeScanResults.error" tone="warning" title="Scan error">{{ axeScanResults.error }}</UiCallout>
+              <UiCallout
+                v-for="(violation, index) in axeScanResults.violations"
+                :key="index"
+                tone="danger"
+                :icon="violation.impact === 'critical' ? 'error' : 'warning'"
+                :title="`${violation.id} (${violation.impact || 'moderate'})`"
+              >
+                <p>{{ violation.description }}</p>
+                <p class="mt-1 text-ink-secondary">{{ violation.help }}</p>
+                <p v-if="violation.nodes && violation.nodes.length > 0" class="mt-1 text-ink-muted">Found in {{ violation.nodes.length }} element(s)</p>
+              </UiCallout>
+              <UiCallout v-if="axeScanResults.violations && axeScanResults.violations.length === 0 && !axeScanResults.error" tone="success">
+                No accessibility violations found!
+              </UiCallout>
+              <p v-if="axeScanResults.passes && axeScanResults.passes.length > 0" class="text-xs text-ink-muted">
+                {{ axeScanResults.passes.length }} accessibility check(s) passed
+              </p>
+            </div>
+          </UiPanel>
+
+          <UiPanel title="Export">
+            <div class="flex flex-col gap-2">
+              <UiButton
+                v-for="action in exportActions"
+                :key="action.format"
+                :variant="action.format === 'html' ? 'primary' : 'secondary'"
+                :icon="action.icon"
+                :disabled="action.gated && !canExport"
+                @click="exportChart(action.format)"
+              >
+                {{ action.label }}
+              </UiButton>
+            </div>
+            <InlineNotice v-if="notice" class="mt-3" :notice="notice" @dismiss="clearNotice" />
+            <UiCallout v-if="accessibilityScore < 100" tone="warning" class="mt-3">
+              Accessibility score: {{ accessibilityScore }}%. Export will show warnings but is allowed.
+            </UiCallout>
+          </UiPanel>
+        </div>
+
+        <div ref="previewPanel" class="lg:col-span-2">
+          <UiPanel title="Preview">
+            <template #actions>
+              <UiButton size="sm" icon="dataset" @click="loadSampleData">Load sample data</UiButton>
+            </template>
+
+            <div class="chart-stage">
+              <figure
+                ref="chartFigure"
+                class="chart-figure"
+                role="img"
+                :aria-label="chartConfig.title || 'Chart'"
+                :aria-describedby="`chart-summary-${chartKey} chart-data-table-${chartKey}`"
+                tabindex="0"
+                @keydown="handleChartKeyboard"
+                @focus="chartFocused = true"
+                @blur="chartFocused = false"
+              >
+                <div class="w-full h-full">
+                  <LineChart
+                    v-if="selectedChartType === 'line' || selectedChartType === 'area'"
+                    :key="`chart-${selectedChartType}-${chartKey}`"
+                    :data="chartDataForDisplay"
+                    :options="chartOptions"
+                  />
+                  <BarChart
+                    v-else-if="selectedChartType === 'bar' || selectedChartType === 'horizontalBar' || selectedChartType === 'stackedBar' || selectedChartType === 'groupedBar' || selectedChartType === 'combo'"
+                    :key="`chart-${selectedChartType}-${chartKey}`"
+                    :data="chartDataForDisplay"
+                    :options="chartOptions"
+                  />
+                  <PieChart
+                    v-else-if="selectedChartType === 'pie'"
+                    :key="`chart-${selectedChartType}-${chartKey}`"
+                    :data="chartDataForDisplay"
+                    :options="chartOptions"
+                  />
+                  <DoughnutChart
+                    v-else-if="selectedChartType === 'doughnut'"
+                    :key="`chart-${selectedChartType}-${chartKey}`"
+                    :data="chartDataForDisplay"
+                    :options="chartOptions"
+                  />
+                  <ScatterChart
+                    v-else-if="selectedChartType === 'scatter'"
+                    :key="`chart-${selectedChartType}-${chartKey}`"
+                    :data="scatterDataForDisplay"
+                    :options="chartOptions"
+                  />
+                  <RadarChart
+                    v-else-if="selectedChartType === 'radar'"
+                    :key="`chart-${selectedChartType}-${chartKey}`"
+                    :data="chartDataForDisplay"
+                    :options="chartOptions"
+                  />
+                  <BubbleChart
+                    v-else-if="selectedChartType === 'bubble'"
+                    :key="`chart-${selectedChartType}-${chartKey}`"
+                    :data="bubbleDataForDisplay"
+                    :options="chartOptions"
+                  />
+                  <PolarAreaChart
+                    v-else-if="selectedChartType === 'polar'"
+                    :key="`chart-${selectedChartType}-${chartKey}`"
+                    :data="chartDataForDisplay"
+                    :options="chartOptions"
+                  />
+                  <DoughnutChart
+                    v-else-if="selectedChartType === 'gauge'"
+                    :key="`chart-${selectedChartType}-${chartKey}`"
+                    :data="chartDataForDisplay"
+                    :options="chartOptions"
+                  />
+                  <BarChart
+                    v-else-if="selectedChartType === 'waterfall' || selectedChartType === 'funnel'"
+                    :key="`chart-${selectedChartType}-${chartKey}`"
+                    :data="chartDataForDisplay"
+                    :options="chartOptions"
+                  />
+                  <Chart
+                    v-else-if="selectedChartType === 'candlestick'"
+                    :key="`chart-${selectedChartType}-${chartKey}`"
+                    type="candlestick"
+                    :data="chartDataForDisplay"
+                    :options="chartOptions"
+                  />
+                  <Chart
+                    v-else-if="selectedChartType === 'heatmap'"
+                    :key="`chart-${selectedChartType}-${chartKey}`"
+                    type="matrix"
+                    :data="chartDataForDisplay"
+                    :options="chartOptions"
+                  />
+                  <div v-else-if="selectedChartType === 'treemap'" :key="`chart-${selectedChartType}-${chartKey}`" class="w-full h-full">
+                    <TreemapSVG :data="treemapData" :colors="colorSchemes[chartConfig.colorScheme] || colorSchemes.default" />
+                  </div>
+                  <div v-else-if="selectedChartType === 'sankey'" :key="`chart-${selectedChartType}-${chartKey}`" class="w-full h-full">
+                    <SankeySVG :data="sankeyData" :colors="colorSchemes[chartConfig.colorScheme] || colorSchemes.default" />
+                  </div>
+                  <div v-else-if="selectedChartType === 'bulletGraph'" :key="`chart-${selectedChartType}-${chartKey}`" class="w-full h-full">
+                    <BulletGraphSVG :data="bulletGraphData" :colors="colorSchemes[chartConfig.colorScheme] || colorSchemes.default" />
+                  </div>
+                  <div v-else-if="selectedChartType === 'chordDiagram'" :key="`chart-${selectedChartType}-${chartKey}`" class="w-full h-full">
+                    <ChordDiagramSVG :data="chordDiagramData" :colors="colorSchemes[chartConfig.colorScheme] || colorSchemes.default" />
+                  </div>
+                </div>
+                <figcaption :id="`chart-summary-${chartKey}`" class="sr-only">
+                  {{ chartConfig.summary || 'Chart visualization' }}
+                </figcaption>
+              </figure>
+            </div>
+
+            <div class="mt-6">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold text-ink-strong">Data table</h3>
+                <UiButton
+                  size="sm"
+                  :icon="dataTableVisible ? 'expand_less' : 'expand_more'"
+                  :aria-expanded="dataTableVisible"
+                  :aria-controls="`chart-data-table-${chartKey}`"
+                  @click="dataTableVisible = !dataTableVisible"
+                >
+                  {{ dataTableVisible ? 'Hide' : 'Show' }} table
+                </UiButton>
+              </div>
+              <div v-show="dataTableVisible" :id="`chart-data-table-${chartKey}`">
+                <UiTable :caption="`${chartConfig.title || 'Chart'} data`" bordered>
+                  <thead>
+                    <tr>
+                      <th
+                        v-for="(header, index) in dataTableHeaders"
+                        :key="index"
+                        scope="col"
+                        :aria-sort="dataTableSortColumn === header.key ? (dataTableSortDirection === 'asc' ? 'ascending' : 'descending') : 'none'"
+                      >
+                        <button type="button" class="table-sort" @click="toggleDataTableSort(header.key)">
+                          {{ header.label }}
+                          <span class="material-symbols-outlined text-sm" aria-hidden="true">
+                            {{ dataTableSortColumn === header.key ? (dataTableSortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more' }}
+                          </span>
+                        </button>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(row, rowIndex) in sortedDataTable" :key="rowIndex">
+                      <td v-for="(header, colIndex) in dataTableHeaders" :key="colIndex">
+                        {{ typeof row[header.key] === 'number' ? row[header.key].toLocaleString() : row[header.key] }}
+                        <span v-if="header.key === 'value' && chartConfig.dataUnit" class="ml-1 text-xs text-ink-muted">{{ chartConfig.dataUnit }}</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </UiTable>
               </div>
             </div>
-          </div>
+          </UiPanel>
         </div>
       </div>
-    </div>
-    
-    <!-- Screen Reader Announcements -->
+    </PageSection>
+
+    <!-- Screen reader announcements -->
     <div id="chart-announcements" aria-live="polite" aria-atomic="true" class="sr-only"></div>
-  </div>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, h } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import Dropdown from '../components/Dropdown.vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import {
+  PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiChip, UiInput, UiPanel, UiSelect, UiTable, UiTextarea,
+} from '../components/ui';
+import UiChoiceCards from '../components/ui/UiChoiceCards.vue';
+import { useChartTheme, rgbToHex } from '../composables/useChartTheme.js';
 import { useNotice } from '../composables/useNotice.js';
 import { calculateContrast } from '../composables/useContrast.js';
 import axe from 'axe-core';
@@ -1761,12 +760,14 @@ ChartJS.register(
   colorScaleLegendPlugin
 );
 
-const isDarkMode = useDarkMode();
+// Token colours resolved for the canvas charts (axes, grid, labels, tooltips)
+const chartTheme = useChartTheme();
 const { notice, showNotice, clearNotice } = useNotice();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 // This page's own chart <figure> (exports and the axe scan target it, not the
 // first figure[role="img"] in the document).
 const chartFigure = ref(null);
+// The preview panel (chart and its data table): what the axe scan checks
+const previewPanel = ref(null);
 
 const selectedChartType = ref('line');
 const chartTypeSectionExpanded = ref(true);
@@ -2142,8 +1143,8 @@ const contrastIssues = computed(() => {
     ? (customColors.value.length > 0 ? customColors.value : colorSchemes.default)
     : (colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default);
   
-  // Background color (white or dark based on theme)
-  const bgColor = isDarkMode.value ? '#0f172a' : '#ffffff';
+  // The surface the chart sits on, in the current theme
+  const bgColor = rgbToHex(chartTheme.value.surface);
   
   // Check each color against background
   colors.forEach((color, index) => {
@@ -2455,6 +1456,20 @@ const announceDataPoint = (index, select = false) => {
   }
 };
 
+// Accessibility checklist: ok, warn (advice) or fail (fix needed)
+const accessibilityChecks = computed(() => [
+  { label: 'Alt text', state: chartConfig.value.title && chartConfig.value.summary && chartConfig.value.keyInsight ? 'ok' : 'fail' },
+  { label: 'Color independence', state: !colorOnlyEncoding.value ? 'ok' : 'fail' },
+  { label: 'Contrast', state: contrastIssues.value.length === 0 ? 'ok' : 'fail' },
+  { label: 'Keyboard navigation', state: 'ok' },
+  { label: 'Screen reader', state: 'ok' },
+  { label: 'Motion safety', state: chartConfig.value.reduceMotion || chartConfig.value.pauseAnimation ? 'ok' : 'warn' },
+  { label: 'Zoom integrity', state: zoomIssues.value.length === 0 ? 'ok' : 'warn' }
+]);
+const checkTone = { ok: 'text-success', warn: 'text-warning', fail: 'text-danger' };
+const checkIcon = { ok: 'check_circle', warn: 'warning', fail: 'error' };
+const checkText = { ok: 'Passes', warn: 'Worth checking', fail: 'Needs work' };
+
 const canExport = computed(() => {
   // Allow export regardless of accessibility status
   // Warnings will still be shown in the accessibility panel
@@ -2495,7 +1510,7 @@ const runAxeCoreScan = async () => {
     // Find the chart preview container (the parent div that contains the chart)
     // This includes the figure element and potentially the data table
     const chartContainer = chartFigure.value;
-    const previewSection = chartContainer?.closest('.rounded-lg.shadow-sm.border') || null;
+    const previewSection = previewPanel.value || null;
     
     // Use the preview section if available, otherwise fall back to chart container
     const scanTarget = previewSection || chartContainer;
@@ -2575,6 +1590,28 @@ const colorSchemes = {
   orange: ['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7', '#fffbeb']
 };
 
+const secondaryEncodingOptions = [
+  { value: 'none', label: 'None' },
+  { value: 'shape', label: 'Shape patterns' },
+  { value: 'pattern', label: 'Pattern fills' },
+  { value: 'lineStyle', label: 'Line styles' },
+  { value: 'icon', label: 'Icon labels' },
+  { value: 'text', label: 'Text labels' }
+];
+
+const exportActions = [
+  { format: 'html', label: 'Export as HTML', icon: 'html', gated: true },
+  { format: 'png', label: 'Export as PNG', icon: 'download', gated: true },
+  { format: 'caption', label: 'Export caption (TXT)', icon: 'subtitles', gated: false },
+  { format: 'json', label: 'Export config (JSON)', icon: 'code', gated: false },
+  { format: 'pdf', label: 'Export as PDF', icon: 'picture_as_pdf', gated: true },
+  { format: 'ppt', label: 'Export as PPT', icon: 'slideshow', gated: true },
+  { format: 'word', label: 'Export as Word', icon: 'description', gated: true }
+];
+
+const sankeyNodeOptions = computed(() => sankeyData.value.nodes.map((node) => ({ value: node.id, label: node.label })));
+const chordNodeOptions = computed(() => chordDiagramData.value.nodes.map((node) => ({ value: node.id, label: node.label })));
+
 const colorSchemeOptions = [
   { value: 'default', label: 'Default' },
   { value: 'indigo', label: 'Indigo' },
@@ -2608,7 +1645,7 @@ const chartDataForDisplay = computed(() => {
       labels: ['Value', 'Remaining'],
       datasets: [{
         data: [valuePercent, remaining],
-        backgroundColor: [colors[0], '#e5e7eb'],
+        backgroundColor: [colors[0], chartTheme.value.neutral],
         borderWidth: 0
       }]
     };
@@ -2859,9 +1896,9 @@ const bubbleDataForDisplay = computed(() => {
 });
 
 const chartOptions = computed(() => {
-  const isDark = isDarkMode.value;
-  const textColor = isDark ? '#e2e8f0' : '#1e293b';
-  const gridColor = isDark ? '#334155' : '#e2e8f0';
+  const theme = chartTheme.value;
+  const textColor = theme.text;
+  const gridColor = theme.grid;
   const chartType = selectedChartType.value;
   
   // Check for prefers-reduced-motion
@@ -2886,7 +1923,7 @@ const chartOptions = computed(() => {
       title: {
         display: !!chartConfig.value.title,
         text: chartConfig.value.title,
-        color: textColor,
+        color: theme.title,
         font: {
           size: 18,
           weight: 'bold'
@@ -2910,10 +1947,10 @@ const chartOptions = computed(() => {
         }
       },
       tooltip: {
-        backgroundColor: isDark ? '#1e293b' : '#ffffff',
-        titleColor: textColor,
+        backgroundColor: theme.tooltip,
+        titleColor: theme.title,
         bodyColor: textColor,
-        borderColor: isDark ? '#334155' : '#e2e8f0',
+        borderColor: theme.border,
         borderWidth: 1,
         animation: shouldReduceMotion ? false : undefined
       }
@@ -3527,7 +2564,7 @@ const captureChart = async () => {
   if (!chartElement) throw new Error('chart element not found');
   const html2canvas = (await import('html2canvas')).default;
   return html2canvas(chartElement, {
-    backgroundColor: isDarkMode.value ? '#0f172a' : '#ffffff',
+    backgroundColor: chartTheme.value.surface,
     scale: 2
   });
 };
@@ -4137,12 +3174,7 @@ const exportChart = async (format) => {
 
 
 onMounted(() => {
-  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-    drawerOpen.value = true;
-    sessionStorage.removeItem('openDrawerOnLoad');
-  }
-  
-  // Load sample data on mount
+  // Load sample data on mount (PageShell opens the docs drawer when the side nav asks)
   loadSampleData();
   // Initialize custom colors if custom scheme is selected
   initializeCustomColors();
@@ -4399,7 +3431,7 @@ const TreemapSVG = {
     
     return () => h('div', {
       ref: containerRef,
-      class: 'w-full h-full min-h-[400px]'
+      class: 'w-full h-full min-h-96'
     }, [
       h('svg', {
         width: width.value,
@@ -4415,20 +3447,18 @@ const TreemapSVG = {
               width: Math.max(1, rect.width),
               height: Math.max(1, rect.height),
               fill: rect.color,
-              stroke: '#fff',
+              class: 'stroke-surface-raised cursor-pointer',
               'stroke-width': 2,
-              rx: 2,
-              style: { cursor: 'pointer' }
+              rx: 2
             }),
             rect.width > 40 && rect.height > 20 ? h('text', {
               x: rect.x + rect.width / 2,
               y: rect.y + rect.height / 2,
               'text-anchor': 'middle',
               'dominant-baseline': 'middle',
-              fill: '#fff',
+              class: 'fill-ink-on-accent pointer-events-none',
               'font-size': Math.min(rect.width, rect.height) / 8,
-              'font-weight': 'bold',
-              style: { pointerEvents: 'none' }
+              'font-weight': 'bold'
             }, [
               h('tspan', {
                 x: rect.x + rect.width / 2,
@@ -4530,7 +3560,7 @@ const SankeySVG = {
             width: node.width,
             height: node.height,
             fill: props.colors[index % props.colors.length],
-            stroke: '#fff',
+            class: 'stroke-surface-raised',
             'stroke-width': 2,
             rx: 4
           }),
@@ -4539,7 +3569,7 @@ const SankeySVG = {
             y: node.y + node.height / 2,
             'text-anchor': 'middle',
             'dominant-baseline': 'middle',
-            fill: '#fff',
+            class: 'fill-ink-on-accent',
             'font-size': 12,
             'font-weight': 'bold'
           }, node.label)
@@ -4597,7 +3627,7 @@ const BulletGraphSVG = {
             y: item.y - 15,
             width: item.poorWidth,
             height: 30,
-            fill: '#d32f2f',
+            class: 'fill-danger-solid',
             opacity: 0.3,
             'aria-label': `Poor range: 0 to ${item.ranges.fair}`
           }),
@@ -4606,7 +3636,7 @@ const BulletGraphSVG = {
             y: item.y - 15,
             width: item.fairWidth,
             height: 30,
-            fill: '#f57c00',
+            class: 'fill-warning-solid',
             opacity: 0.3,
             'aria-label': `Fair range: ${item.ranges.fair} to ${item.ranges.good}`
           }),
@@ -4615,7 +3645,7 @@ const BulletGraphSVG = {
             y: item.y - 15,
             width: item.goodWidth,
             height: 30,
-            fill: '#388e3c',
+            class: 'fill-success-solid',
             opacity: 0.3,
             'aria-label': `Good range: ${item.ranges.good} to ${item.ranges.excellent}`
           }),
@@ -4634,7 +3664,7 @@ const BulletGraphSVG = {
             y1: item.y - 20,
             x2: 80 + item.targetX,
             y2: item.y + 20,
-            stroke: '#000',
+            class: 'stroke-ink-strong',
             'stroke-width': 3,
             'stroke-dasharray': '5,5',
             'aria-label': `Target: ${item.target}`
@@ -4645,7 +3675,7 @@ const BulletGraphSVG = {
             y: item.y + 5,
             'text-anchor': 'start',
             'dominant-baseline': 'middle',
-            fill: '#000',
+            class: 'fill-ink-strong',
             'font-size': 12,
             'font-weight': 'bold'
           }, item.label),
@@ -4655,7 +3685,7 @@ const BulletGraphSVG = {
             y: item.y + 5,
             'text-anchor': 'start',
             'dominant-baseline': 'middle',
-            fill: '#000',
+            class: 'fill-ink-secondary',
             'font-size': 11
           }, item.value)
         ])
@@ -4743,22 +3773,20 @@ const ChordDiagramSVG = {
             cy: node.y,
             r: 20,
             fill: node.color,
-            stroke: '#fff',
+            class: 'stroke-surface-raised cursor-pointer focus-visible:outline focus-visible:outline-2 outline-focus',
             'stroke-width': 2,
             'aria-label': `Entity: ${node.label}`,
             tabindex: 0,
-            role: 'button',
-            style: { cursor: 'pointer' }
+            role: 'button'
           }),
           h('text', {
             x: node.x + (node.x > centerX ? 30 : -30),
             y: node.y,
             'text-anchor': node.x > centerX ? 'start' : 'end',
             'dominant-baseline': 'middle',
-            fill: '#000',
+            class: 'fill-ink-strong pointer-events-none',
             'font-size': 11,
-            'font-weight': 'bold',
-            style: { pointerEvents: 'none' }
+            'font-weight': 'bold'
           }, node.label)
         ])
       )
@@ -4771,18 +3799,30 @@ const ChordDiagramSVG = {
 .slide-fade-enter-active {
   transition: all 0.3s ease-out;
 }
-
 .slide-fade-leave-active {
   transition: all 0.3s ease-in;
 }
-
 .slide-fade-enter-from,
 .slide-fade-leave-to {
   opacity: 0;
   transform: translateY(-10px);
 }
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+
+/* A group of inputs for one item (a dataset, a row, a link) */
+.data-card {
+  @apply flex flex-col gap-2 p-3 rounded-tile border border-line bg-surface-sunken;
+}
+.heatmap-cell {
+  @apply w-16 h-8 px-1 text-center text-sm rounded-control border border-line-control bg-surface-control text-ink;
+  @apply focus:outline focus:outline-2 focus:outline-offset-0 outline-focus;
+}
+.chart-stage {
+  @apply flex items-center justify-center p-6 rounded-tile bg-surface-raised border border-line;
+}
+.chart-figure {
+  @apply w-full max-w-full h-96 rounded-tile focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 outline-focus;
+}
+.table-sort {
+  @apply inline-flex items-center gap-1 uppercase tracking-wide hover:text-ink rounded-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
 }
 </style>
-

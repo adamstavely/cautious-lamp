@@ -1,225 +1,76 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Color Converter
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Convert colors between different color spaces and formats. Get accurate conversions for HEX, RGB, HSL, HSV, LAB, LCH, CMYK, XYZ, and more.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">palette</span>
-                      Color Tool
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="converterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized converter icon -->
-                      <rect x="30" y="80" width="140" height="40" rx="4" fill="url(#converterGradient)" opacity="0.3"/>
-                      <circle cx="50" cy="100" r="15" fill="url(#converterGradient)" opacity="0.5"/>
-                      <path d="M 80 100 L 120 100" stroke="rgba(255,255,255,0.6)" stroke-width="4" stroke-linecap="round"/>
-                      <circle cx="150" cy="100" r="15" fill="url(#converterGradient)" opacity="0.7"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="Color converter"
+      lead="Convert colors between color spaces and formats: HEX, RGB, HSL, HSV, LAB, LCH, OKLAB, OKLCH, CMYK, XYZ and more."
+      spot="tools/color-converter"
+      size="tool"
+    />
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <div class="grid lg:grid-cols-3 gap-6">
-              <!-- Left Column: Input and Bulk Conversion -->
-              <div class="lg:col-span-1 space-y-6">
-                <!-- Convert Color Section -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">palette</span>
-                    Convert color
-                  </h2>
-                  
-                  <!-- Color Input -->
-                  <div class="mb-6">
-                    <label for="color-input" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Color</label>
-                    <div class="flex items-center gap-3 mb-4">
-                      <input
-                        id="color-input"
-                        v-model="inputColor"
-                        type="text"
-                        :aria-invalid="inputError ? 'true' : 'false'"
-                        aria-describedby="color-input-error"
-                        placeholder="#7AC600"
-                        class="flex-1 px-3 py-2 border rounded-lg text-sm font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                        aria-label="Color input in hex, RGB, HSL, or other format"
+    <PageSection>
+      <div class="grid lg:grid-cols-3 gap-6 items-start">
+        <div class="flex flex-col gap-6">
+          <UiPanel title="Convert color">
+            <UiInput
+              id="color-input"
+              v-model="inputColor"
+              label="Color"
+              hint="Hex, RGB, HSL, LAB, LCH, OKLAB, OKLCH or a color name"
+              :error="inputError"
+              :placeholder="colorPlaceholder"
+              mono
+            />
+            <button type="button" class="picker-button" aria-label="Open color picker" title="Pick color" @click="openColorPicker($event)">
+              <span class="color-preview" role="img" :aria-label="`Color preview: ${currentColor}`"></span>
+              <span class="picker-button-label">
+                <span class="material-symbols-outlined text-base" aria-hidden="true">colorize</span>
+                Pick color
+              </span>
+            </button>
+          </UiPanel>
+
+          <UiPanel title="Have a lot to convert?" description="Use the bulk converter to convert all your colors in the formats you need.">
+            <UiButton icon="format_list_bulleted" @click="showBulkModal = true">Convert bulk</UiButton>
+          </UiPanel>
+        </div>
+
+        <div class="lg:col-span-2 flex flex-col gap-4">
+          <InlineNotice v-if="!showBulkModal" :notice="notice" @dismiss="clearNotice" />
+          <UiPanel flush>
+            <UiTable :caption="`Conversions of ${currentColor}`">
+              <thead>
+                <tr>
+                  <th scope="col">Color space</th>
+                  <th scope="col">Channels</th>
+                  <th scope="col">String format</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(conversion, index) in conversions" :key="index">
+                  <td class="font-medium whitespace-nowrap">{{ conversion.name }}</td>
+                  <td class="font-code text-xs text-ink-secondary">{{ conversion.channels }}</td>
+                  <td>
+                    <div class="flex items-center gap-1">
+                      <code class="font-code text-xs px-2 py-1 rounded-control bg-fill text-ink">{{ conversion.string }}</code>
+                      <UiButton
+                        icon-only
+                        icon="content_copy"
+                        size="sm"
+                        variant="ghost"
+                        :label="`Copy ${conversion.name} value: ${conversion.string}`"
+                        @click="copyToClipboard(conversion.string)"
                       />
-                      <button
-                        @click="openColorPicker($event)"
-                        class="w-12 h-12 rounded border-2 cursor-pointer transition-colors flex-shrink-0"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 hover:border-indigo-400' 
-                          : 'border-gray-300 hover:border-indigo-500'"
-                        :style="{ backgroundColor: currentColor }"
-                        title="Pick color"
-                        aria-label="Open color picker"
-                      ></button>
                     </div>
-                    
-                    <p
-                      v-if="inputError"
-                      id="color-input-error"
-                      class="text-sm mb-4"
-                      :class="isDarkMode ? 'text-red-300' : 'text-red-700'"
-                    >{{ inputError }}</p>
-
-                    <!-- Color Swatch -->
-                    <div 
-                      class="w-full h-32 rounded-lg border-2"
-                      :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                      :style="{ backgroundColor: currentColor }"
-                      role="img"
-                      :aria-label="`Color preview: ${currentColor}`"
-                    ></div>
-                  </div>
-                </div>
-
-                <!-- Bulk Conversion Section -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h3 class="text-lg font-semibold mb-2 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">format_list_bulleted</span>
-                    Have a lot to convert?
-                  </h3>
-                  <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Use the bulk converter to convert all your colors in the formats you need.
-                  </p>
-                  <button
-                    @click="showBulkModal = true"
-                    class="w-full px-4 py-2 rounded-lg border-2 transition-colors text-sm font-medium"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 hover:border-indigo-400 text-gray-300 hover:text-indigo-300' 
-                      : 'border-gray-300 hover:border-indigo-500 text-gray-700 hover:text-indigo-700'"
-                  >
-                    Convert bulk
-                  </button>
-                </div>
-              </div>
-
-              <!-- Right Column: Conversion Results -->
-              <div class="lg:col-span-2">
-                <div 
-                  class="rounded-lg shadow-sm border"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <div v-if="notice && !showBulkModal" class="p-4 pb-0">
-                    <InlineNotice :notice="notice" @dismiss="clearNotice" />
-                  </div>
-                  <div class="overflow-x-auto">
-                    <table class="w-full">
-                      <thead>
-                        <tr class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                          <th class="text-left py-3 px-4 font-semibold text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">COLOR SPACE</th>
-                          <th class="text-left py-3 px-4 font-semibold text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">CHANNELS</th>
-                          <th class="text-left py-3 px-4 font-semibold text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">STRING FORMAT</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr 
-                          v-for="(conversion, index) in conversions" 
-                          :key="index"
-                          class="border-b"
-                          :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-                        >
-                          <td class="py-3 px-4 font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                            {{ conversion.name }}
-                          </td>
-                          <td class="py-3 px-4 font-mono text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ conversion.channels }}
-                          </td>
-                          <td class="py-3 px-4">
-                            <div class="flex items-center gap-2">
-                              <code 
-                                class="font-mono text-sm px-2 py-1 rounded"
-                                :class="isDarkMode 
-                                  ? 'bg-slate-800 text-gray-300' 
-                                  : 'bg-gray-100 text-gray-900'"
-                              >
-                                {{ conversion.string }}
-                              </code>
-                              <button
-                                @click="copyToClipboard(conversion.string)"
-                                class="p-1 rounded transition-colors"
-                                :class="isDarkMode 
-                                  ? 'text-gray-400 hover:text-indigo-400' 
-                                  : 'text-gray-400 hover:text-indigo-600'"
-                                :title="`Copy ${conversion.name} value`"
-                                :aria-label="`Copy ${conversion.name} value: ${conversion.string}`"
-                              >
-                                <span class="material-symbols-outlined text-sm" aria-hidden="true">content_copy</span>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                  </td>
+                </tr>
+              </tbody>
+            </UiTable>
+          </UiPanel>
         </div>
       </div>
-    </div>
+    </PageSection>
 
-    <!-- Color Picker -->
     <ColorPicker
       :show="showColorPicker"
       :initial-color="currentColor"
@@ -229,90 +80,36 @@
       @cancel="showColorPicker = false"
     />
 
-    <!-- Bulk Conversion Modal -->
-    <v-dialog v-model="showBulkModal" max-width="800" persistent>
-      <v-card :class="isDarkMode ? 'bg-slate-800' : 'bg-white'">
-        <v-card-title class="d-flex align-center justify-space-between px-6 pt-6 pb-4" :class="isDarkMode ? 'bg-slate-800 text-white' : 'bg-white text-gray-900'">
-          <span class="text-xl font-semibold">Bulk Color Converter</span>
-          <button @click="showBulkModal = false" :class="isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </v-card-title>
-        <v-divider />
-        <v-card-text class="px-6 py-4" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'">
-          <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-            Enter colors separated by commas, newlines, or spaces. One color per line recommended.
-          </p>
-          <textarea
-            id="bulk-color-input"
-            v-model="bulkInput"
-            rows="10"
-            placeholder="#7AC600&#10;#FF5733&#10;rgb(122, 198, 0)"
-            class="w-full px-3 py-2 border rounded-lg text-sm font-mono resize-none"
-            :class="isDarkMode 
-              ? 'border-gray-600 bg-slate-700 text-white' 
-              : 'border-gray-300 bg-white text-gray-900'"
-            aria-label="Bulk color input - enter multiple colors separated by commas, newlines, or spaces"
-            aria-describedby="bulk-input-description"
-          ></textarea>
-          <p id="bulk-input-description" class="sr-only">Enter colors separated by commas, newlines, or spaces. One color per line recommended.</p>
-          <div class="mt-4 flex gap-2">
-            <button
-              @click="convertBulk"
-              class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-              :class="isDarkMode 
-                ? 'bg-indigo-500 hover:bg-indigo-400' 
-                : 'bg-indigo-600 hover:bg-indigo-700'"
-            >
-              Convert
-            </button>
-            <button
-              @click="clearBulk"
-              class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              :class="isDarkMode 
-                ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-            >
-              Clear
-            </button>
-          </div>
-          <InlineNotice v-if="notice" class="mt-4" :notice="notice" @dismiss="clearNotice" />
-          <div v-if="bulkResults.length > 0" class="mt-6">
-            <h4 class="font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Results</h4>
-            <div class="max-h-96 overflow-y-auto border rounded-lg" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <pre class="p-4 text-xs font-mono whitespace-pre-wrap" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">{{ bulkResults }}</pre>
-            </div>
-            <button
-              @click="copyBulkResults"
-              class="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-              :class="isDarkMode 
-                ? 'bg-indigo-500 hover:bg-indigo-400' 
-                : 'bg-indigo-600 hover:bg-indigo-700'"
-            >
-              Copy Results
-            </button>
-          </div>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
-  </div>
+    <UiDialog v-model:open="showBulkModal" title="Bulk color converter" size="lg">
+      <UiTextarea
+        id="bulk-color-input"
+        v-model="bulkInput"
+        label="Colors"
+        hint="Separate colors with commas, newlines or spaces. One color per line is easiest to read."
+        :rows="10"
+        :placeholder="bulkPlaceholder"
+        mono
+      />
+      <div class="flex flex-wrap gap-2">
+        <UiButton variant="primary" @click="convertBulk">Convert</UiButton>
+        <UiButton @click="clearBulk">Clear</UiButton>
+      </div>
+      <InlineNotice :notice="notice" @dismiss="clearNotice" />
+      <UiCodeBlock v-if="bulkResults.length > 0" :code="bulkResults" label="Results" @copied="onBulkCopied" @copy-failed="onBulkCopyFailed" />
+    </UiDialog>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, watch, onMounted } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import chroma from 'chroma-js';
 import { Hsluv } from 'hsluv';
-import { useDarkMode } from '../composables/useDarkMode.js';
 import { useNotice } from '../composables/useNotice.js';
+import { PageHero, PageSection, PageShell, UiButton, UiCodeBlock, UiDialog, UiInput, UiPanel, UiTable, UiTextarea } from '../components/ui';
 
-const isDarkMode = useDarkMode();
 const { notice, showNotice, clearNotice } = useNotice();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const inputColor = ref('#7AC600');
 const currentColor = ref('#7AC600');
 const showColorPicker = ref(false);
@@ -320,10 +117,8 @@ const pickerPosition = ref({ left: 0, top: 0 });
 const showBulkModal = ref(false);
 const bulkInput = ref('');
 const bulkResults = ref('');
-
-
-
-
+const colorPlaceholder = '#7AC600';
+const bulkPlaceholder = '#7AC600\n#FF5733\nrgb(122, 198, 0)';
 
 const conversions = ref([]);
 const inputError = ref('');
@@ -568,7 +363,7 @@ const copyToClipboard = async (text) => {
 const openColorPicker = (event) => {
   if (event) {
     event.stopPropagation();
-    const rect = event.target.getBoundingClientRect();
+    const rect = (event.currentTarget || event.target).getBoundingClientRect();
     
     const pickerWidth = 300;
     const pickerHeight = 550;
@@ -667,9 +462,9 @@ const clearBulk = () => {
   bulkResults.value = '';
 };
 
-const copyBulkResults = async () => {
-  await copyToClipboard(bulkResults.value);
-};
+// The results code block copies; report it as the old button did.
+const onBulkCopied = () => showNotice('Copied to clipboard.', 'success');
+const onBulkCopyFailed = () => showNotice('Could not copy to the clipboard.', 'error');
 
 watch(inputColor, () => {
   convertColor();
@@ -681,8 +476,15 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.picker-button {
+  @apply flex flex-col w-full overflow-hidden rounded-tile border border-line-control bg-surface-control text-left transition-colors hover:border-accent-border;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
+}
+.color-preview {
+  @apply block w-full h-32;
+  background: v-bind(currentColor);
+}
+.picker-button-label {
+  @apply flex items-center gap-1.5 px-4 py-2 border-t border-line text-sm font-medium text-ink-secondary;
 }
 </style>
-

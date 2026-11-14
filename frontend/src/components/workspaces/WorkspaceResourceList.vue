@@ -1,41 +1,28 @@
 <template>
-  <div class="rounded-lg border p-6" :class="c.card">
-    <div class="flex items-center justify-between mb-4 gap-4">
-      <h2 class="text-xl font-semibold flex items-center gap-2" :class="c.heading">
-        <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">{{ spec.icon }}</span>
-        {{ spec.label }}
-      </h2>
-      <button
-        v-if="canEdit"
-        type="button"
-        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-        :class="c.primary"
-        @click="openForm()"
-      >
-        <span class="material-symbols-outlined text-base" aria-hidden="true">add</span>
-        Add {{ spec.singular }}
-      </button>
-    </div>
+  <UiPanel :title="spec.label">
+    <template v-if="canEdit" #actions>
+      <UiButton variant="primary" size="sm" icon="add" @click="openForm()">Add {{ spec.singular }}</UiButton>
+    </template>
 
-    <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
+    <InlineNotice :notice="notice" @dismiss="clearNotice" />
 
-    <div v-if="resource.loading.value" class="text-center py-8 text-sm" :class="c.muted">Loading {{ spec.label.toLowerCase() }}…</div>
-    <div v-else-if="resource.error.value" class="text-center py-8 text-sm" :class="c.muted">
+    <UiSpinner v-if="resource.loading.value" :label="`Loading ${spec.label.toLowerCase()}…`" />
+    <UiCallout v-else-if="resource.error.value" tone="danger" role="alert">
       {{ resource.error.value }}
-      <button type="button" class="ml-2 underline text-indigo-600" @click="resource.load()">Try again</button>
-    </div>
-    <div v-else-if="resource.items.value.length === 0" class="text-center py-8 text-sm" :class="c.muted">
-      No {{ spec.label.toLowerCase() }} yet
-    </div>
+      <template #actions>
+        <UiButton size="sm" @click="resource.load()">Try again</UiButton>
+      </template>
+    </UiCallout>
+    <p v-else-if="resource.items.value.length === 0" class="py-6 text-center text-sm text-ink-muted">No {{ spec.label.toLowerCase() }} yet</p>
 
-    <div v-else class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div v-for="item in resource.items.value" :key="item.id" class="rounded-lg border p-4 flex flex-col" :class="c.subCard">
-        <div class="flex items-start justify-between gap-2 mb-2">
+    <ul v-else class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <li v-for="item in resource.items.value" :key="item.id" class="flex flex-col gap-2 rounded-tile border border-line bg-surface-sunken p-4">
+        <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
-            <h5 class="font-semibold break-words" :class="c.heading">{{ item[spec.titleField] }}</h5>
-            <p v-if="subtitleOf(item)" class="text-sm mt-1 break-words" :class="c.muted">{{ subtitleOf(item) }}</p>
+            <h3 class="font-semibold text-ink-strong break-words">{{ item[spec.titleField] }}</h3>
+            <p v-if="subtitleOf(item)" class="mt-1 text-sm text-ink-secondary break-words">{{ subtitleOf(item) }}</p>
           </div>
-          <span class="px-2 py-1 text-xs rounded shrink-0" :class="badgeClass(item)">{{ badgeText(item) }}</span>
+          <UiChip :tone="badgeTone(item)" class="shrink-0">{{ badgeText(item) }}</UiChip>
         </div>
 
         <!-- Previews: images by http(s) URL only, SVG as a sanitized image, Markdown sanitized -->
@@ -43,94 +30,64 @@
           v-if="spec.image && previewUrl(item)"
           :src="previewUrl(item)"
           :alt="item[spec.titleField]"
-          class="mt-2 max-h-32 w-full object-contain rounded"
+          class="max-h-32 w-full object-contain rounded-control"
           loading="lazy"
           referrerpolicy="no-referrer"
         />
-        <img v-if="spec.svg && svgSrc(item)" :src="svgSrc(item)" :alt="item[spec.titleField]" class="mt-2 h-12 w-12 object-contain" />
-        <p v-if="item.description" class="text-xs mt-2 line-clamp-3" :class="c.muted">{{ item.description }}</p>
-        <div
-          v-if="spec.markdown && item[spec.markdown]"
-          class="mt-2 text-sm prose prose-sm max-w-none dark:prose-invert line-clamp-6"
-          v-html="markdownHtml(item)"
-        />
-        <a
-          v-if="safeHttpUrl(item.url) && !spec.image"
-          :href="safeHttpUrl(item.url)"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="text-xs mt-2 text-indigo-600 hover:text-indigo-700 break-all"
-        >
-          {{ item.url }}
-        </a>
-        <div v-if="item.tags?.length" class="flex flex-wrap gap-1 mt-2">
-          <span v-for="tag in item.tags" :key="tag" class="px-2 py-0.5 rounded text-xs" :class="isDarkMode ? 'bg-slate-700 text-gray-300' : 'bg-gray-200 text-gray-700'">{{ tag }}</span>
+        <img v-if="spec.svg && svgSrc(item)" :src="svgSrc(item)" :alt="item[spec.titleField]" class="h-12 w-12 object-contain" />
+        <p v-if="item.description" class="text-xs text-ink-secondary line-clamp-3">{{ item.description }}</p>
+        <div v-if="spec.markdown && item[spec.markdown]" class="resource-markdown line-clamp-6" v-html="markdownHtml(item)" />
+        <UiLink v-if="safeHttpUrl(item.url) && !spec.image" :href="safeHttpUrl(item.url)" external class="text-xs break-all">{{ item.url }}</UiLink>
+        <div v-if="item.tags?.length" class="flex flex-wrap gap-1">
+          <UiChip v-for="tag in item.tags" :key="tag">{{ tag }}</UiChip>
         </div>
 
-        <div v-if="owned(item) && canEdit" class="flex items-center gap-2 mt-auto pt-3">
-          <button type="button" class="text-xs px-2 py-1 rounded transition-colors" :class="c.chip" @click="openForm(item)">Edit</button>
-          <button type="button" class="text-xs px-2 py-1 rounded transition-colors" :class="c.chip" @click="openShare(item)">Share</button>
-          <button type="button" class="text-xs px-2 py-1 rounded transition-colors" :class="c.danger" @click="confirmDelete(item)">Delete</button>
+        <div v-if="owned(item) && canEdit" class="flex flex-wrap items-center gap-2 mt-auto pt-2">
+          <UiButton size="sm" @click="openForm(item)">Edit</UiButton>
+          <UiButton size="sm" @click="openShare(item)">Share</UiButton>
+          <UiButton size="sm" variant="danger" @click="confirmDelete(item)">Delete</UiButton>
         </div>
-        <p v-else-if="!owned(item)" class="text-xs mt-auto pt-3" :class="c.faint">
-          From {{ workspaceName(item.workspaceId) }} · read-only
-        </p>
-      </div>
-    </div>
+        <p v-else-if="!owned(item)" class="mt-auto pt-2 text-xs text-ink-muted">From {{ workspaceName(item.workspaceId) }} · read-only</p>
+      </li>
+    </ul>
 
     <!-- Add / edit -->
-    <WorkspaceModal
-      :open="form.open"
-      :title="form.item ? `Edit ${spec.singular}` : `Add ${spec.singular}`"
-      :icon="spec.icon"
-      :is-dark-mode="isDarkMode"
-      :busy="form.saving"
-      size="md"
-      @close="form.open = false"
-    >
-      <form class="space-y-4" @submit.prevent="saveForm">
+    <WorkspaceModal :open="form.open" :title="form.item ? `Edit ${spec.singular}` : `Add ${spec.singular}`" :busy="form.saving" size="md" @close="form.open = false">
+      <form :id="formId" class="flex flex-col gap-5" @submit.prevent="saveForm">
         <InlineNotice :notice="form.error ? { type: 'error', message: form.error } : null" @dismiss="form.error = null" />
-        <div v-for="field in spec.fields" :key="field.key">
-          <label :for="`f-${uid}-${field.key}`" class="block text-sm mb-2" :class="c.label">
-            {{ field.label }}{{ field.required ? ' *' : '' }}
-          </label>
-          <select
+        <template v-for="field in spec.fields" :key="field.key">
+          <UiSelect
             v-if="field.type === 'select'"
-            :id="`f-${uid}-${field.key}`"
             v-model="form.values[field.key]"
+            :label="field.label"
             :required="field.required"
-            :class="[inputClass, c.input]"
-          >
-            <option v-if="!field.required" value="">—</option>
-            <option v-for="option in field.options" :key="option" :value="option">{{ option }}</option>
-          </select>
-          <textarea
+            :options="field.required ? field.options : [{ value: '', label: '—' }, ...field.options]"
+          />
+          <UiTextarea
             v-else-if="['textarea', 'json', 'svg', 'markdown', 'stages'].includes(field.type)"
-            :id="`f-${uid}-${field.key}`"
             v-model="form.values[field.key]"
+            :label="field.label"
+            :required="field.required"
             :rows="field.type === 'textarea' ? 3 : 6"
             :placeholder="field.placeholder"
-            :class="[inputClass, c.input, field.type === 'json' || field.type === 'svg' ? 'font-mono text-xs' : '']"
+            :mono="field.type === 'json' || field.type === 'svg'"
           />
-          <input
+          <UiInput
             v-else
-            :id="`f-${uid}-${field.key}`"
             v-model="form.values[field.key]"
+            :label="field.label"
             :type="field.type === 'url' ? 'url' : field.type === 'number' ? 'number' : 'text'"
             :required="field.required"
             :placeholder="field.placeholder"
-            :class="[inputClass, c.input]"
           />
-        </div>
-        <div class="flex items-center gap-2 pt-4 border-t" :class="c.border">
-          <button type="submit" class="px-4 py-2 rounded-lg font-medium transition-colors flex-1" :class="form.saving ? c.disabled : c.primary" :disabled="form.saving">
-            {{ form.saving ? 'Saving…' : form.item ? 'Save' : `Add ${spec.singular}` }}
-          </button>
-          <button type="button" class="px-4 py-2 rounded-lg font-medium transition-colors" :class="c.secondary" :disabled="form.saving" @click="form.open = false">
-            Cancel
-          </button>
-        </div>
+        </template>
       </form>
+      <template #footer>
+        <UiButton :disabled="form.saving" @click="form.open = false">Cancel</UiButton>
+        <UiButton variant="primary" type="submit" :form="formId" :loading="form.saving">
+          {{ form.saving ? 'Saving…' : form.item ? 'Save' : `Add ${spec.singular}` }}
+        </UiButton>
+      </template>
     </WorkspaceModal>
 
     <ShareDialog
@@ -140,7 +97,6 @@
       :workspace="workspace"
       :workspaces="workspaces"
       :is-admin="canAdmin"
-      :is-dark-mode="isDarkMode"
       :busy="share.saving"
       :error="share.error"
       @close="share.open = false"
@@ -148,13 +104,14 @@
       @save="saveShare"
     />
 
-    <ConfirmDialog :state="confirmState" :is-dark-mode="isDarkMode" />
-  </div>
+    <ConfirmDialog :state="confirmState" />
+  </UiPanel>
 </template>
 
 <script setup>
-import { computed, reactive, toRef, watch } from 'vue';
+import { computed, reactive, toRef, useId, watch } from 'vue';
 import InlineNotice from '../InlineNotice.vue';
+import { UiButton, UiCallout, UiChip, UiInput, UiLink, UiPanel, UiSelect, UiSpinner, UiTextarea } from '../ui';
 import { useConfirmDialog } from '../../composables/useConfirmDialog.js';
 import { useNotice } from '../../composables/useNotice.js';
 import { useWorkspaceResource } from '../../composables/useWorkspaceResource.js';
@@ -163,7 +120,6 @@ import ShareDialog from './ShareDialog.vue';
 import WorkspaceModal from './WorkspaceModal.vue';
 import { bodyFromForm, formValuesFor, resourceKind } from './resourceKinds.js';
 import { renderMarkdown, safeHttpUrl, svgDataUri } from './safeContent.js';
-import { inputClass, ui } from './ui.js';
 
 /**
  * One kind of workspace item: list, add, edit, delete and share, through
@@ -177,12 +133,9 @@ const props = defineProps({
   workspaces: { type: Array, default: () => [] },
   canEdit: { type: Boolean, default: false },
   canAdmin: { type: Boolean, default: false },
-  isDarkMode: { type: Boolean, default: false },
 });
 
-let uidSeq = 0;
-const uid = `wr${++uidSeq}${Math.random().toString(36).slice(2, 6)}`;
-const c = computed(() => ui(props.isDarkMode));
+const formId = `resource-form-${useId()}`;
 const spec = computed(() => resourceKind(props.kind));
 const resource = useWorkspaceResource(computed(() => props.workspace.id), toRef(props, 'kind'));
 const { notice, showNotice, clearNotice } = useNotice();
@@ -208,12 +161,7 @@ const subtitleOf = (item) => {
   }
 };
 const badgeText = (item) => (item.isGlobal ? 'Global' : !owned(item) ? 'Shared' : item.sharedWith?.length ? `Shared ×${item.sharedWith.length}` : 'Workspace');
-const badgeClass = (item) =>
-  item.isGlobal
-    ? props.isDarkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700'
-    : !owned(item)
-      ? props.isDarkMode ? 'bg-amber-900/30 text-amber-300' : 'bg-amber-100 text-amber-700'
-      : props.isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700';
+const badgeTone = (item) => (item.isGlobal ? 'success' : !owned(item) ? 'warning' : 'info');
 const previewUrl = (item) => safeHttpUrl(item.thumbnailUrl) || safeHttpUrl(item[spec.value.image]);
 const svgSrc = (item) => svgDataUri(item[spec.value.svg]);
 const markdownHtml = (item) => renderMarkdown(item[spec.value.markdown]);
@@ -287,3 +235,33 @@ const saveShare = async (sharing) => {
   }
 };
 </script>
+
+<style scoped>
+/* Sanitized Markdown from the item */
+.resource-markdown {
+  @apply text-sm text-ink-secondary;
+}
+.resource-markdown :deep(h1),
+.resource-markdown :deep(h2),
+.resource-markdown :deep(h3),
+.resource-markdown :deep(h4) {
+  @apply font-semibold text-ink-strong;
+}
+.resource-markdown :deep(p),
+.resource-markdown :deep(ul),
+.resource-markdown :deep(ol) {
+  @apply mb-2;
+}
+.resource-markdown :deep(ul) {
+  @apply list-disc pl-5;
+}
+.resource-markdown :deep(ol) {
+  @apply list-decimal pl-5;
+}
+.resource-markdown :deep(a) {
+  @apply text-accent-text underline;
+}
+.resource-markdown :deep(code) {
+  @apply font-code text-xs rounded-control bg-fill px-1;
+}
+</style>

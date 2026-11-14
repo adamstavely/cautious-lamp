@@ -1,85 +1,32 @@
 <template>
-  <div class="w-full h-full bg-[#fff] dark:bg-slate-950 text-slate-900 dark:text-slate-100 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
+  <PageShell>
+    <PageHero
+      eyebrow="Foundations"
+      title="Design assets"
+      lead="Icons, fonts, flags, seals, photos, illustrations and logos, kept in one place and ready to use across your projects."
+      spot="foundations/design-assets"
+    />
 
-    <!-- Main Content Area -->
-    <div
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
+    <PageSection title="Browse assets" description="Pick a collection to preview, search and download.">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <UiCard v-for="asset in assets" :key="asset.to" :to="asset.to" :title="asset.title" :spot="asset.art" compact>{{ asset.body }}</UiCard>
+      </div>
+    </PageSection>
 
-      <div class="h-full overflow-y-auto">
-        <div class="max-w-6xl mx-auto px-6 md:px-10 py-12 md:py-16">
-          <!-- Hero -->
-          <section class="grid md:grid-cols-[1fr_auto] items-center gap-10 pb-14 md:pb-16 border-b border-slate-200 dark:border-slate-800">
-            <div>
-              <p class="text-sm font-medium tracking-wide text-[#2f5ea8] dark:text-[#9dbcf0] mb-4">Foundations</p>
-              <h1 class="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] mb-5">Design assets</h1>
-              <p class="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
-                Icons, fonts, flags, seals, photos, illustrations and logos, kept in one place and ready
-                to use across your projects.
-              </p>
-            </div>
-            <div class="spot hidden md:block w-64 h-64 lg:w-72 lg:h-72" aria-hidden="true" v-html="spot('foundations/design-assets')"></div>
-          </section>
-
-          <!-- Browse -->
-          <section class="py-14 md:py-16">
-            <div class="section-head">
-              <h2>Browse assets</h2>
-              <p>Pick a collection to preview, search and download.</p>
-            </div>
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              <router-link v-for="asset in assets" :key="asset.to" :to="asset.to" class="card group">
-                <div class="spot w-16 h-16 -ml-1 mb-2" aria-hidden="true" v-html="spot(asset.art)"></div>
-                <h3 class="card-title">
-                  {{ asset.title }}
-                  <span class="material-symbols-outlined arrow" aria-hidden="true">arrow_forward</span>
-                </h3>
-                <p class="card-body">{{ asset.body }}</p>
-              </router-link>
-            </div>
-          </section>
-
-          <!-- Collections -->
-          <section class="py-14 md:py-16 border-t border-slate-200 dark:border-slate-800">
-            <div class="section-head">
-              <h2>Asset collections</h2>
-              <p>Curated sets that bring related assets together.</p>
-            </div>
-            <div class="grid md:grid-cols-3 gap-4">
-              <div v-for="collection in collections" :key="collection.title" class="collection">
-                <div class="spot w-24 h-24 mx-auto mb-3" aria-hidden="true" v-html="spot(collection.art)"></div>
-                <h3 class="card-title justify-center">{{ collection.title }}</h3>
-                <p class="card-body text-center">{{ collection.body }}</p>
-              </div>
-            </div>
-          </section>
+    <PageSection title="Asset collections" description="Curated sets that bring related assets together." divided>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div v-for="collection in collections" :key="collection.title" class="collection">
+          <SpotArt :name="collection.art" size="lg" class="mb-3" />
+          <h3 class="collection-title">{{ collection.title }}</h3>
+          <p class="collection-body">{{ collection.body }}</p>
         </div>
       </div>
-    </div>
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import { spot } from '../utils/spotIllustrations.js';
-
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-
-onMounted(() => {
-  // Auto-open drawer if navigating from sidebar
-  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-    drawerOpen.value = true;
-    sessionStorage.removeItem('openDrawerOnLoad');
-  }
-});
+import { PageHero, PageSection, PageShell, SpotArt, UiCard } from '../components/ui';
 
 const assets = [
   { title: 'Icons', to: '/design-assets/icons', art: 'foundations/icon-library', body: 'Upload and manage icon sets from Material and Lucide.' },
@@ -102,40 +49,13 @@ const collections = [
 </script>
 
 <style scoped>
-.spot :deep(svg) {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.section-head {
-  @apply flex flex-col gap-1 mb-8;
-}
-.section-head h2 {
-  @apply text-2xl md:text-3xl font-semibold tracking-tight;
-}
-.section-head p {
-  @apply text-slate-600 dark:text-slate-400;
-}
-
-.card {
-  @apply block rounded-2xl p-5 border border-slate-200 bg-[#fff] transition-all hover:border-[#8fb0e8] hover:shadow-[0_8px_24px_-12px_rgba(47,94,168,0.25)] dark:border-slate-800 dark:bg-slate-900/40 dark:hover:border-[#6f93d1];
-}
-.card-title {
-  @apply flex items-center gap-1.5 text-lg font-semibold mb-1.5;
-}
-.card-body {
-  @apply text-sm leading-relaxed text-slate-600 dark:text-slate-400;
-}
-
 .collection {
-  @apply flex flex-col items-center rounded-2xl p-8 bg-slate-50 dark:bg-slate-900/60;
+  @apply flex flex-col items-center p-8 rounded-card bg-surface-sunken text-center;
 }
-
-.arrow {
-  @apply text-base text-slate-400 transition-transform;
+.collection-title {
+  @apply mb-1.5 text-lg font-semibold text-ink-strong;
 }
-.group:hover .arrow {
-  @apply translate-x-1 text-[#2f5ea8] dark:text-[#9dbcf0];
+.collection-body {
+  @apply text-sm leading-relaxed text-ink-secondary;
 }
 </style>

@@ -1,53 +1,23 @@
 <template>
-  <v-dialog v-model="dialog" max-width="600" persistent>
-    <v-card>
-      <v-card-title class="d-flex align-center justify-space-between">
-        <span class="text-gray-900 dark:text-gray-100">Edit Team</span>
-        <button @click="close" class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </v-card-title>
-      
-      <v-divider />
-      
-      <v-card-text class="pt-6">
-        <v-form @submit.prevent="submit">
-          <v-text-field
-            v-model="teamName"
-            label="Team Name"
-            variant="outlined"
-            required
-            class="mb-4"
-          />
-          
-          <v-textarea
-            v-model="teamDescription"
-            label="Description"
-            variant="outlined"
-            rows="3"
-            class="mb-4"
-          />
-          
-          <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
-          <div class="d-flex justify-end ga-2">
-            <v-btn variant="text" @click="close">Cancel</v-btn>
-            <v-btn color="primary" type="submit" :disabled="!teamName.trim()" :loading="saving">
-              Save Changes
-            </v-btn>
-          </div>
-        </v-form>
-      </v-card-text>
-    </v-card>
-  </v-dialog>
+  <UiDialog :open="modelValue" title="Edit team" @update:open="emit('update:modelValue', $event)">
+    <form :id="formId" class="flex flex-col gap-5" @submit.prevent="submit">
+      <UiInput v-model="teamName" label="Team name" required autofocus />
+      <UiTextarea v-model="teamDescription" label="Description" :rows="3" />
+      <InlineNotice :notice="notice" @dismiss="clearNotice" />
+    </form>
+    <template #footer>
+      <UiButton variant="ghost" @click="close">Cancel</UiButton>
+      <UiButton variant="primary" type="submit" :form="formId" :disabled="!teamName.trim()" :loading="saving">Save changes</UiButton>
+    </template>
+  </UiDialog>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, useId, watch } from 'vue';
 import { teamsAPI, apiErrorMessage } from '../../services/api.js';
 import { useNotice } from '../../composables/useNotice.js';
 import InlineNotice from '../InlineNotice.vue';
+import { UiButton, UiDialog, UiInput, UiTextarea } from '../ui';
 
 const props = defineProps({
   modelValue: Boolean,
@@ -56,14 +26,13 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'team-updated']);
 
-const dialog = ref(false);
+const formId = `team-edit-${useId()}`;
 const teamName = ref('');
 const teamDescription = ref('');
 const saving = ref(false);
 const { notice, showNotice, clearNotice } = useNotice();
 
 watch(() => props.modelValue, (val) => {
-  dialog.value = val;
   if (val && props.team) {
     teamName.value = props.team.name || '';
     teamDescription.value = props.team.description || '';
@@ -71,12 +40,8 @@ watch(() => props.modelValue, (val) => {
   }
 });
 
-watch(dialog, (val) => {
-  emit('update:modelValue', val);
-});
-
 const close = () => {
-  dialog.value = false;
+  emit('update:modelValue', false);
   teamName.value = '';
   teamDescription.value = '';
 };
@@ -100,4 +65,3 @@ const submit = async () => {
   }
 };
 </script>
-

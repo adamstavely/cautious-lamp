@@ -1,239 +1,174 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
+  <PageShell width="wide">
+    <!-- Loading -->
+    <template v-if="loading">
+      <PageHero :back="{ to: '/admin/workspaces', label: 'Workspaces' }" title="Workspace" size="tool" />
+      <UiSpinner label="Loading workspace…" />
+    </template>
 
-    <!-- Main Content Area -->
-    <div
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
+    <!-- Not found / failed -->
+    <template v-else-if="!workspace">
+      <PageHero
+        :back="{ to: '/admin/workspaces', label: 'Workspaces' }"
+        :title="loadError?.status === 404 ? 'Workspace not found' : 'The workspace could not be loaded'"
+        :lead="loadError?.status === 404 ? `It doesn't exist, or you aren't a member of it.` : loadError?.message"
+        spot="admin/workspace-management"
+        size="tool"
+      >
+        <template #actions>
+          <UiButton v-if="loadError?.status !== 404" variant="primary" @click="loadWorkspace">Try again</UiButton>
+          <UiButton to="/admin/workspaces">Back to Workspaces</UiButton>
+        </template>
+      </PageHero>
+    </template>
 
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Loading State -->
-          <div v-if="loading" class="max-w-7xl mx-auto py-12 text-center">
-            <div class="flex justify-center mb-4">
-              <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-            <p class="text-sm" :class="c.muted">Loading workspace...</p>
-          </div>
+    <!-- Workspace Content -->
+    <template v-else>
+      <PageHero
+        :back="{ to: '/admin/workspaces', label: 'Workspaces' }"
+        :title="workspace.name"
+        :lead="workspace.description || ''"
+        spot="admin/workspace-management"
+        size="tool"
+      >
+        <template #actions>
+          <UiChip :tone="roleTone(workspace.myRole || 'viewer')" class="capitalize">
+            {{ workspace.myRole ? `Your role: ${workspace.myRole}` : 'Administrator access' }}
+          </UiChip>
+          <span class="text-xs text-ink-muted">/{{ workspace.slug }}</span>
+        </template>
+      </PageHero>
 
-          <!-- Not found / failed -->
-          <div v-else-if="!workspace" class="max-w-3xl mx-auto py-12 text-center rounded-lg border" :class="c.card">
-            <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'" aria-hidden="true">
-              {{ loadError?.status === 404 ? 'folder_off' : 'cloud_off' }}
-            </span>
-            <h1 class="text-lg font-semibold mb-2" :class="c.heading">
-              {{ loadError?.status === 404 ? 'Workspace not found' : 'The workspace could not be loaded' }}
-            </h1>
-            <p class="text-sm mb-4" :class="c.muted">
-              {{ loadError?.status === 404 ? "It doesn't exist, or you aren't a member of it." : loadError?.message }}
-            </p>
-            <div class="flex justify-center gap-2">
-              <button v-if="loadError?.status !== 404" type="button" class="px-4 py-2 rounded-lg font-medium" :class="c.primary" @click="loadWorkspace">Try again</button>
-              <button type="button" class="px-4 py-2 rounded-lg font-medium" :class="c.secondary" @click="router.push('/admin/workspaces')">Back to Workspaces</button>
-            </div>
-          </div>
+      <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
 
-          <!-- Workspace Content -->
-          <div v-else class="max-w-7xl mx-auto">
-            <!-- Header -->
-            <div class="mb-8">
-              <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-                <div class="flex items-center gap-3 min-w-0">
-                  <span class="material-symbols-outlined text-indigo-600 text-3xl" aria-hidden="true">folder</span>
-                  <div class="min-w-0">
-                    <h1 class="text-4xl font-bold mb-2 break-words" :class="c.heading">{{ workspace.name }}</h1>
-                    <p v-if="workspace.description" class="text-lg" :class="c.muted">{{ workspace.description }}</p>
-                    <div class="flex items-center gap-2 mt-2 text-xs">
-                      <span class="px-2 py-0.5 rounded capitalize" :class="c.roleBadge(workspace.myRole || 'viewer')">
-                        {{ workspace.myRole ? `Your role: ${workspace.myRole}` : 'Administrator access' }}
-                      </span>
-                      <span :class="c.faint">/{{ workspace.slug }}</span>
-                    </div>
-                  </div>
-                </div>
-                <button type="button" class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-1" :class="c.secondary" @click="router.push('/admin/workspaces')">
-                  <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-                  Back to Workspaces
-                </button>
-              </div>
+      <UiTabs :model-value="activeTab" :tabs="tabs" label="Workspace sections" @update:model-value="setTab">
+        <!-- Overview -->
+        <template #overview>
+          <div class="flex flex-col gap-8">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <UiStat v-for="card in statCards" :key="card.label" :label="card.label" :value="card.value" :hint="card.hint" :tone="card.tone" />
             </div>
 
-            <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
-
-            <!-- Tabs -->
-            <div class="mb-6 border-b" :class="c.border">
-              <div class="flex gap-2 overflow-x-auto" role="tablist">
-                <button
-                  v-for="tab in tabs"
-                  :key="tab.id"
-                  type="button"
-                  role="tab"
-                  :aria-selected="activeTab === tab.id"
-                  class="px-6 py-3 font-medium transition-colors relative whitespace-nowrap"
-                  :class="c.tab(activeTab === tab.id)"
-                  @click="setTab(tab.id)"
-                >
-                  {{ tab.label }}
-                  <div v-if="activeTab === tab.id" class="absolute bottom-0 left-0 right-0 h-0.5" :class="isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600'"></div>
-                </button>
-              </div>
-            </div>
-
-            <!-- Overview Tab -->
-            <div v-if="activeTab === 'overview'" class="space-y-8">
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div v-for="card in statCards" :key="card.label" class="rounded-lg border p-4" :class="c.card">
-                  <div class="text-sm mb-1" :class="c.muted">{{ card.label }}</div>
-                  <div class="text-2xl font-bold" :class="card.class || c.heading">{{ card.value }}</div>
-                  <div v-if="card.hint" class="text-xs mt-1" :class="c.faint">{{ card.hint }}</div>
-                </div>
-              </div>
-
-              <!-- Components Section -->
-              <div class="rounded-lg border p-6" :class="c.card">
-                <h2 class="text-xl font-semibold mb-4" :class="c.heading">Components</h2>
-                <div v-if="componentsError" class="text-center py-8 text-sm" :class="c.muted">{{ componentsError }}</div>
-                <div v-else-if="components.length === 0" class="text-center py-8 text-sm" :class="c.muted">
-                  No components belong to or are shared with this workspace yet
-                </div>
-                <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div v-for="component in components" :key="component.id" class="p-4 rounded-lg border" :class="c.subCard">
-                    <div class="flex items-start justify-between mb-2 gap-2">
-                      <div class="min-w-0">
-                        <h5 class="font-semibold" :class="c.heading">{{ component.name }}</h5>
-                        <p v-if="component.description" class="text-xs mt-1" :class="c.muted">{{ component.description }}</p>
-                      </div>
-                      <span class="px-2 py-1 text-xs rounded shrink-0" :class="componentBadgeClass(component)">{{ componentBadge(component) }}</span>
-                    </div>
-                    <div class="text-xs" :class="c.faint">Status: {{ component.status }}</div>
-                    <div v-if="component.workspaceId === workspace.id && canEdit" class="flex items-center gap-2 mt-3">
-                      <button type="button" class="text-xs px-2 py-1 rounded transition-colors" :class="c.chip" @click="openComponentShare(component)">Share</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Applications Section -->
-              <div class="rounded-lg border p-6" :class="c.card">
-                <div class="flex items-center justify-between mb-4">
-                  <h2 class="text-xl font-semibold" :class="c.heading">Applications</h2>
-                  <router-link v-if="canAdmin" to="/admin/applications/register" class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors" :class="c.primary">
-                    Register Application
-                  </router-link>
-                </div>
-                <div v-if="applications.length === 0" class="text-center py-8 text-sm" :class="c.muted">No applications registered in this workspace</div>
-                <ul v-else class="divide-y" :class="isDarkMode ? 'divide-gray-700' : 'divide-gray-200'">
-                  <li v-for="app in applications" :key="app.id" class="py-3 flex items-center justify-between gap-4">
+            <UiPanel title="Components">
+              <UiCallout v-if="componentsError" tone="danger">{{ componentsError }}</UiCallout>
+              <p v-else-if="components.length === 0" class="py-6 text-center text-sm text-ink-muted">
+                No components belong to or are shared with this workspace yet
+              </p>
+              <ul v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <li v-for="component in components" :key="component.id" class="flex flex-col gap-2 rounded-tile border border-line bg-surface-sunken p-4">
+                  <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
-                      <div class="font-medium" :class="c.heading">{{ app.name }}</div>
-                      <div v-if="app.description" class="text-xs" :class="c.muted">{{ app.description }}</div>
+                      <h3 class="font-semibold text-ink-strong">{{ component.name }}</h3>
+                      <p v-if="component.description" class="mt-1 text-xs text-ink-secondary">{{ component.description }}</p>
                     </div>
-                    <span class="text-xs shrink-0" :class="c.faint">{{ app.designSystemVersion ? `DS v${app.designSystemVersion}` : 'DS version not set' }}</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <!-- Items Tab -->
-            <div v-if="activeTab === 'items'" class="space-y-6">
-              <div class="flex flex-wrap gap-2" role="tablist" aria-label="Item kinds">
-                <button
-                  v-for="kind in RESOURCE_KINDS"
-                  :key="kind.kind"
-                  type="button"
-                  role="tab"
-                  :aria-selected="activeKind === kind.kind"
-                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-                  :class="activeKind === kind.kind ? c.primary : c.chip"
-                  @click="setKind(kind.kind)"
-                >
-                  <span class="material-symbols-outlined text-base" aria-hidden="true">{{ kind.icon }}</span>
-                  {{ kind.label }}
-                </button>
-              </div>
-              <WorkspaceResourceList
-                :workspace="workspace"
-                :kind="activeKind"
-                :workspaces="allWorkspaces"
-                :can-edit="canEdit"
-                :can-admin="canAdmin"
-                :is-dark-mode="isDarkMode"
-              />
-            </div>
-
-            <!-- Members Tab -->
-            <div v-if="activeTab === 'members'">
-              <WorkspaceMembersPanel
-                :workspace="workspace"
-                :current-user-id="user?.id ?? null"
-                :is-dark-mode="isDarkMode"
-                @updated="onSaved"
-                @left="router.push('/admin/workspaces')"
-              />
-            </div>
-
-            <!-- Analytics Tab -->
-            <div v-if="activeTab === 'analytics'" class="space-y-6">
-              <div v-if="analyticsError" class="rounded-lg border p-6 text-sm" :class="[c.card, c.muted]">{{ analyticsError }}</div>
-              <template v-else-if="analytics">
-                <div v-if="!analytics.usageDataAvailable" class="rounded-lg border p-4 text-sm" :class="[c.card, c.muted]">
-                  No component usage has been recorded for this workspace's applications yet, so adoption figures aren't available.
-                  They appear once application scans record which components are used.
-                </div>
-                <div class="rounded-lg border p-6" :class="c.card">
-                  <h4 class="font-semibold mb-4" :class="c.heading">Workspace Analytics</h4>
-                  <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div v-for="metric in analyticsMetrics" :key="metric.label">
-                      <div class="text-sm mb-1" :class="c.muted">{{ metric.label }}</div>
-                      <div class="text-2xl font-bold" :class="c.heading">{{ metric.value }}</div>
-                    </div>
+                    <UiChip :tone="component.isGlobal ? 'success' : 'info'" class="shrink-0">{{ componentBadge(component) }}</UiChip>
                   </div>
-                </div>
-                <div class="grid md:grid-cols-2 gap-6">
-                  <div class="rounded-lg border p-6" :class="c.card">
-                    <h4 class="font-semibold mb-4" :class="c.heading">Components by Status</h4>
-                    <p v-if="Object.keys(analytics.componentsByStatus).length === 0" class="text-sm" :class="c.muted">No components</p>
-                    <div v-for="(count, status) in analytics.componentsByStatus" :key="status" class="flex justify-between text-sm py-1" :class="c.text">
-                      <span class="capitalize">{{ status }}</span>
-                      <span class="font-semibold">{{ count }}</span>
-                    </div>
+                  <p class="text-xs text-ink-muted">Status: {{ component.status }}</p>
+                  <div v-if="component.workspaceId === workspace.id && canEdit">
+                    <UiButton size="sm" icon="share" @click="openComponentShare(component)">Share</UiButton>
                   </div>
-                  <div class="rounded-lg border p-6" :class="c.card">
-                    <h4 class="font-semibold mb-4" :class="c.heading">Most Used Components</h4>
-                    <p v-if="analytics.mostUsedComponents.length === 0" class="text-sm" :class="c.muted">No usage recorded</p>
-                    <div v-for="component in analytics.mostUsedComponents" :key="component.id" class="flex justify-between text-sm py-1" :class="c.text">
-                      <span>{{ component.name }}</span>
-                      <span class="font-semibold">{{ component.usage }} uses · {{ component.applications }} app{{ component.applications === 1 ? '' : 's' }}</span>
-                    </div>
-                  </div>
-                </div>
-                <p class="text-xs" :class="c.faint">
-                  Health score = 100 − 5 × deprecated components − 2 × in-progress components (shown only when the workspace has components).
-                </p>
+                </li>
+              </ul>
+            </UiPanel>
+
+            <UiPanel title="Applications">
+              <template v-if="canAdmin" #actions>
+                <UiButton variant="primary" size="sm" icon="add" to="/admin/applications/register">Register application</UiButton>
               </template>
-              <div v-else class="text-sm" :class="c.muted">Loading analytics…</div>
-            </div>
-
-            <!-- Settings Tab -->
-            <div v-if="activeTab === 'settings'" class="space-y-6">
-              <WorkspaceSettingsForm :workspace="workspace" :is-dark-mode="isDarkMode" @saved="onSaved" />
-              <div v-if="canDelete" class="rounded-lg border p-4" :class="isDarkMode ? 'border-red-900 bg-red-950/20' : 'border-red-200 bg-red-50'">
-                <h4 class="font-semibold mb-1" :class="isDarkMode ? 'text-red-300' : 'text-red-700'">Delete workspace</h4>
-                <p class="text-sm mb-3" :class="c.muted">
-                  Deletes the workspace and its items. Applications and components that belong to it must be moved or deleted first.
-                </p>
-                <button type="button" class="px-4 py-2 rounded-lg font-medium text-white bg-red-600 hover:bg-red-700" @click="deleteWorkspace">Delete workspace</button>
-              </div>
-            </div>
+              <p v-if="applications.length === 0" class="py-6 text-center text-sm text-ink-muted">No applications registered in this workspace</p>
+              <ul v-else class="divide-y divide-line-faint">
+                <li v-for="app in applications" :key="app.id" class="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                  <div class="min-w-0">
+                    <p class="font-medium text-ink-strong">{{ app.name }}</p>
+                    <p v-if="app.description" class="text-xs text-ink-secondary">{{ app.description }}</p>
+                  </div>
+                  <span class="shrink-0 text-xs text-ink-muted">{{ app.designSystemVersion ? `DS v${app.designSystemVersion}` : 'DS version not set' }}</span>
+                </li>
+              </ul>
+            </UiPanel>
           </div>
-        </div>
-      </div>
-    </div>
+        </template>
+
+        <!-- Items -->
+        <template #items>
+          <UiTabs :model-value="activeKind" :tabs="kindTabs" label="Item kinds" @update:model-value="setKind">
+            <WorkspaceResourceList
+              :workspace="workspace"
+              :kind="activeKind"
+              :workspaces="allWorkspaces"
+              :can-edit="canEdit"
+              :can-admin="canAdmin"
+            />
+          </UiTabs>
+        </template>
+
+        <!-- Members -->
+        <template #members>
+          <WorkspaceMembersPanel
+            :workspace="workspace"
+            :current-user-id="user?.id ?? null"
+            @updated="onSaved"
+            @left="router.push('/admin/workspaces')"
+          />
+        </template>
+
+        <!-- Analytics -->
+        <template #analytics>
+          <div class="flex flex-col gap-6">
+            <UiCallout v-if="analyticsError" tone="danger">{{ analyticsError }}</UiCallout>
+            <template v-else-if="analytics">
+              <UiCallout v-if="!analytics.usageDataAvailable" tone="info">
+                No component usage has been recorded for this workspace's applications yet, so adoption figures aren't available.
+                They appear once application scans record which components are used.
+              </UiCallout>
+              <section aria-labelledby="ws-analytics-heading" class="flex flex-col gap-4">
+                <h2 id="ws-analytics-heading" class="text-lg font-semibold text-ink-strong">Workspace analytics</h2>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <UiStat v-for="metric in analyticsMetrics" :key="metric.label" :label="metric.label" :value="metric.value" />
+                </div>
+              </section>
+              <div class="grid md:grid-cols-2 gap-6">
+                <UiPanel title="Components by status" heading-tag="h3">
+                  <p v-if="Object.keys(analytics.componentsByStatus).length === 0" class="text-sm text-ink-muted">No components</p>
+                  <dl v-else class="flex flex-col gap-2 text-sm">
+                    <div v-for="(count, status) in analytics.componentsByStatus" :key="status" class="flex justify-between">
+                      <dt class="capitalize text-ink-secondary">{{ status }}</dt>
+                      <dd class="font-semibold text-ink-strong">{{ count }}</dd>
+                    </div>
+                  </dl>
+                </UiPanel>
+                <UiPanel title="Most used components" heading-tag="h3">
+                  <p v-if="analytics.mostUsedComponents.length === 0" class="text-sm text-ink-muted">No usage recorded</p>
+                  <dl v-else class="flex flex-col gap-2 text-sm">
+                    <div v-for="component in analytics.mostUsedComponents" :key="component.id" class="flex justify-between gap-4">
+                      <dt class="text-ink-secondary">{{ component.name }}</dt>
+                      <dd class="font-semibold text-ink-strong">{{ component.usage }} uses · {{ component.applications }} app{{ component.applications === 1 ? '' : 's' }}</dd>
+                    </div>
+                  </dl>
+                </UiPanel>
+              </div>
+              <p class="text-xs text-ink-muted">
+                Health score = 100 − 5 × deprecated components − 2 × in-progress components (shown only when the workspace has components).
+              </p>
+            </template>
+            <UiSpinner v-else label="Loading analytics…" />
+          </div>
+        </template>
+
+        <!-- Settings -->
+        <template #settings>
+          <div class="flex flex-col gap-6">
+            <WorkspaceSettingsForm :workspace="workspace" @saved="onSaved" />
+            <UiCallout v-if="canDelete" tone="danger" title="Delete workspace">
+              Deletes the workspace and its items. Applications and components that belong to it must be moved or deleted first.
+              <template #actions>
+                <UiButton variant="danger" icon="delete" @click="deleteWorkspace">Delete workspace</UiButton>
+              </template>
+            </UiCallout>
+          </div>
+        </template>
+      </UiTabs>
+    </template>
 
     <ShareDialog
       v-if="workspace"
@@ -243,34 +178,30 @@
       :workspace="workspace"
       :workspaces="allWorkspaces"
       :is-admin="canAdmin"
-      :is-dark-mode="isDarkMode"
       :busy="componentShare.saving"
       :error="componentShare.error"
       @close="componentShare.open = false"
       @clear-error="componentShare.error = null"
       @save="saveComponentShare"
     />
-    <ConfirmDialog :state="confirmState" :is-dark-mode="isDarkMode" />
-  </div>
+    <ConfirmDialog :state="confirmState" />
+  </PageShell>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import InlineNotice from '../components/InlineNotice.vue';
+import { PageHero, PageShell, UiButton, UiCallout, UiChip, UiPanel, UiSpinner, UiStat, UiTabs } from '../components/ui';
 import ConfirmDialog from '../components/workspaces/ConfirmDialog.vue';
 import ShareDialog from '../components/workspaces/ShareDialog.vue';
 import WorkspaceMembersPanel from '../components/workspaces/WorkspaceMembersPanel.vue';
 import WorkspaceResourceList from '../components/workspaces/WorkspaceResourceList.vue';
 import WorkspaceSettingsForm from '../components/workspaces/WorkspaceSettingsForm.vue';
 import { RESOURCE_KINDS } from '../components/workspaces/resourceKinds.js';
-import { atLeast, ui } from '../components/workspaces/ui.js';
+import { atLeast, healthTone, roleTone } from '../components/workspaces/ui.js';
 import { useAuth } from '../composables/useAuth.js';
 import { useConfirmDialog } from '../composables/useConfirmDialog.js';
-import { useDarkMode } from '../composables/useDarkMode.js';
-import { useDrawer } from '../composables/useDrawer.js';
 import { useNotice } from '../composables/useNotice.js';
 import apiClient, { apiErrorMessage } from '../services/api.js';
 
@@ -281,9 +212,6 @@ import apiClient, { apiErrorMessage } from '../services/api.js';
  */
 const route = useRoute();
 const router = useRouter();
-const isDarkMode = useDarkMode();
-const c = computed(() => ui(isDarkMode.value));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const { user } = useAuth();
 const { notice, showNotice, clearNotice } = useNotice();
 const { confirmState, askConfirm } = useConfirmDialog();
@@ -303,33 +231,28 @@ const canAdmin = computed(() => atLeast(workspace.value?.effectiveRole, 'admin')
 const canDelete = computed(() => atLeast(workspace.value?.effectiveRole, 'owner'));
 
 const tabs = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'items', label: 'Items' },
-  { id: 'members', label: 'Members' },
-  { id: 'analytics', label: 'Analytics' },
-  { id: 'settings', label: 'Settings' },
+  { value: 'overview', label: 'Overview' },
+  { value: 'items', label: 'Items' },
+  { value: 'members', label: 'Members' },
+  { value: 'analytics', label: 'Analytics' },
+  { value: 'settings', label: 'Settings' },
 ];
-const activeTab = computed(() => (tabs.some((t) => t.id === route.query.tab) ? route.query.tab : 'overview'));
+const kindTabs = RESOURCE_KINDS.map((k) => ({ value: k.kind, label: k.label, icon: k.icon }));
+const activeTab = computed(() => (tabs.some((t) => t.value === route.query.tab) ? route.query.tab : 'overview'));
 const activeKind = computed(() => (RESOURCE_KINDS.some((k) => k.kind === route.query.kind) ? route.query.kind : RESOURCE_KINDS[0].kind));
 const setTab = (tab) => router.replace({ query: { ...route.query, tab } });
 const setKind = (kind) => router.replace({ query: { ...route.query, tab: 'items', kind } });
 
 const fmt = (value, suffix = '') => (value === null || value === undefined ? '—' : `${value}${suffix}`);
-const healthClass = (score) => {
-  if (score === null || score === undefined) return c.value.heading;
-  if (score >= 80) return isDarkMode.value ? 'text-green-400' : 'text-green-600';
-  if (score >= 60) return isDarkMode.value ? 'text-yellow-400' : 'text-yellow-600';
-  return isDarkMode.value ? 'text-red-400' : 'text-red-600';
-};
 const statCards = computed(() => [
   { label: 'Components', value: fmt(analytics.value?.totalComponents) },
   { label: 'Applications', value: fmt(analytics.value?.totalApplications) },
   {
-    label: 'Adoption Rate',
+    label: 'Adoption rate',
     value: fmt(analytics.value?.adoptionRate, '%'),
     hint: analytics.value && !analytics.value.usageDataAvailable ? 'No usage data yet' : '',
   },
-  { label: 'Health Score', value: fmt(analytics.value?.healthScore), class: healthClass(analytics.value?.healthScore) },
+  { label: 'Health score', value: fmt(analytics.value?.healthScore), tone: healthTone(analytics.value?.healthScore) },
 ]);
 const analyticsMetrics = computed(() => {
   const a = analytics.value;
@@ -355,10 +278,6 @@ const componentBadge = (component) =>
       : component.sharedWith?.length
         ? `Shared ×${component.sharedWith.length}`
         : 'Workspace';
-const componentBadgeClass = (component) =>
-  component.isGlobal
-    ? isDarkMode.value ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700'
-    : isDarkMode.value ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700';
 
 const id = () => encodeURIComponent(workspace.value?.id ?? route.params.id);
 

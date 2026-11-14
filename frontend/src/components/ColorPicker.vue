@@ -4,304 +4,148 @@
     ref="colorPickerContainerRef"
     role="dialog"
     aria-modal="true"
-    aria-labelledby="color-picker-title"
-    :class="[
-      'fixed z-50 rounded-lg shadow-xl border p-4',
-      isDarkMode 
-        ? 'bg-slate-800 border-gray-700' 
-        : 'bg-white border-gray-200'
-    ]"
-    :style="safePickerStyle"
+    :aria-labelledby="ids.title"
+    class="color-picker"
+    :data-theme="previewDarkMode ? 'dark' : undefined"
+    tabindex="-1"
     @click.stop
     @keydown.esc="cancel"
-    tabindex="-1"
   >
-    <div class="w-64">
-      <h2 id="color-picker-title" class="sr-only">Color Picker</h2>
-      <!-- Gradient/Hue Selector -->
-      <div class="relative mb-4">
-        <label for="gradient-canvas" class="sr-only">Saturation and Lightness Selector</label>
+    <div class="w-64 flex flex-col gap-4">
+      <h2 :id="ids.title" class="sr-only">Color picker</h2>
+
+      <!-- Saturation and lightness -->
+      <div class="relative">
         <canvas
-          id="gradient-canvas"
           ref="gradientCanvas"
           width="256"
           height="200"
           role="img"
           :aria-label="`Saturation and lightness selector. Current saturation: ${Math.round(currentSaturation)}%, lightness: ${Math.round(currentLightness)}%`"
-          :class="[
-            'w-full h-48 rounded-lg cursor-crosshair border focus:outline-none focus:ring-2 focus:ring-indigo-500',
-            isDarkMode ? 'border-gray-600' : 'border-gray-300'
-          ]"
+          class="picker-canvas w-full h-48 cursor-crosshair"
+          tabindex="0"
           @mousedown="startGradientDrag"
           @click="handleGradientClick"
           @keydown="handleGradientKeydown"
-          tabindex="0"
         ></canvas>
-        <!-- Selector indicator -->
-        <div
-          class="absolute w-4 h-4 border-2 border-white rounded-full shadow-lg pointer-events-none"
-          :style="selectorStyle"
-        ></div>
+        <div class="picker-selector" aria-hidden="true"></div>
       </div>
-      
-      <!-- Hue Slider -->
-      <div class="mb-4">
-        <label for="hue-canvas" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">Hue</label>
+
+      <!-- Hue -->
+      <div>
+        <p :id="ids.hue" class="picker-label">Hue</p>
         <div class="relative h-8">
           <canvas
-            id="hue-canvas"
             ref="hueCanvas"
             width="256"
             height="32"
             role="slider"
-            :aria-label="`Hue selector. Current hue: ${Math.round(currentHue)} degrees`"
+            :aria-labelledby="ids.hue"
+            :aria-valuetext="`${Math.round(currentHue)} degrees`"
             :aria-valuemin="0"
             :aria-valuemax="360"
             :aria-valuenow="Math.round(currentHue)"
-            :class="[
-              'w-full h-8 rounded cursor-pointer border focus:outline-none focus:ring-2 focus:ring-indigo-500',
-              isDarkMode ? 'border-gray-600' : 'border-gray-300'
-            ]"
+            class="picker-canvas w-full h-8 cursor-pointer"
+            tabindex="0"
             @click="handleHueClick"
             @keydown="handleHueKeydown"
-            tabindex="0"
           ></canvas>
-          <div
-            class="absolute top-0 h-8 w-1 border border-gray-800 pointer-events-none"
-            :style="{ left: `${huePosition}%` }"
-          ></div>
+          <div class="picker-hue-marker" aria-hidden="true"></div>
         </div>
       </div>
-      
-      <!-- RGB Inputs -->
-      <div class="grid grid-cols-3 gap-2 mb-4">
-        <div>
-          <label for="rgb-r-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">R</label>
+
+      <!-- RGB -->
+      <div class="grid grid-cols-3 gap-2">
+        <div v-for="channel in rgbChannels" :key="channel.key">
+          <label :for="`${ids.base}-rgb-${channel.key}`" class="picker-label">{{ channel.short }}</label>
           <input
-            id="rgb-r-input"
-            v-model.number="rgbValues.r"
-            @input="updateFromRGB"
+            :id="`${ids.base}-rgb-${channel.key}`"
+            v-model.number="rgbValues[channel.key]"
             type="number"
             min="0"
             max="255"
-            aria-label="Red value"
-            :class="[
-              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
-              isDarkMode 
-                ? 'border-gray-600 bg-slate-700 text-white' 
-                : 'border-gray-300 bg-white text-gray-900'
-            ]"
-          />
-        </div>
-        <div>
-          <label for="rgb-g-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">G</label>
-          <input
-            id="rgb-g-input"
-            v-model.number="rgbValues.g"
+            :aria-label="`${channel.name} value`"
+            class="picker-input"
             @input="updateFromRGB"
-            type="number"
-            min="0"
-            max="255"
-            aria-label="Green value"
-            :class="[
-              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
-              isDarkMode 
-                ? 'border-gray-600 bg-slate-700 text-white' 
-                : 'border-gray-300 bg-white text-gray-900'
-            ]"
-          />
-        </div>
-        <div>
-          <label for="rgb-b-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">B</label>
-          <input
-            id="rgb-b-input"
-            v-model.number="rgbValues.b"
-            @input="updateFromRGB"
-            type="number"
-            min="0"
-            max="255"
-            aria-label="Blue value"
-            :class="[
-              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
-              isDarkMode 
-                ? 'border-gray-600 bg-slate-700 text-white' 
-                : 'border-gray-300 bg-white text-gray-900'
-            ]"
           />
         </div>
       </div>
-      
-      <!-- Hex Input -->
-      <div class="mb-4">
-        <label for="hex-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">Hex</label>
+
+      <!-- Hex -->
+      <div>
+        <label :for="`${ids.base}-hex`" class="picker-label">Hex</label>
         <input
-          id="hex-input"
+          :id="`${ids.base}-hex`"
           v-model="hexInput"
-          @input="updateFromHex"
           type="text"
           aria-label="Hex color value"
           pattern="^#[0-9A-Fa-f]{6}$"
-          :class="[
-            'w-full px-2 py-1 text-sm border rounded font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
-            isDarkMode 
-              ? 'border-gray-600 bg-slate-700 text-white' 
-              : 'border-gray-300 bg-white text-gray-900'
-          ]"
-          placeholder="#000000"
+          class="picker-input font-code"
+          :placeholder="HEX_PLACEHOLDER"
+          @input="updateFromHex"
         />
       </div>
-      
-      <!-- CMYK Inputs -->
-      <div class="grid grid-cols-4 gap-2 mb-4">
-        <div>
-          <label for="cmyk-c-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">C</label>
+
+      <!-- CMYK -->
+      <div class="grid grid-cols-4 gap-2">
+        <div v-for="channel in cmykChannels" :key="channel.key">
+          <label :for="`${ids.base}-cmyk-${channel.key}`" class="picker-label">{{ channel.short }}</label>
           <input
-            id="cmyk-c-input"
-            v-model.number="cmykValues.c"
-            @input="updateFromCMYK"
+            :id="`${ids.base}-cmyk-${channel.key}`"
+            v-model.number="cmykValues[channel.key]"
             type="number"
             min="0"
             max="100"
             step="0.1"
-            aria-label="Cyan value"
-            :class="[
-              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
-              isDarkMode 
-                ? 'border-gray-600 bg-slate-700 text-white' 
-                : 'border-gray-300 bg-white text-gray-900'
-            ]"
-          />
-        </div>
-        <div>
-          <label for="cmyk-m-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">M</label>
-          <input
-            id="cmyk-m-input"
-            v-model.number="cmykValues.m"
+            :aria-label="`${channel.name} value`"
+            class="picker-input"
             @input="updateFromCMYK"
-            type="number"
-            min="0"
-            max="100"
-            step="0.1"
-            aria-label="Magenta value"
-            :class="[
-              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
-              isDarkMode 
-                ? 'border-gray-600 bg-slate-700 text-white' 
-                : 'border-gray-300 bg-white text-gray-900'
-            ]"
-          />
-        </div>
-        <div>
-          <label for="cmyk-y-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">Y</label>
-          <input
-            id="cmyk-y-input"
-            v-model.number="cmykValues.y"
-            @input="updateFromCMYK"
-            type="number"
-            min="0"
-            max="100"
-            step="0.1"
-            aria-label="Yellow value"
-            :class="[
-              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
-              isDarkMode 
-                ? 'border-gray-600 bg-slate-700 text-white' 
-                : 'border-gray-300 bg-white text-gray-900'
-            ]"
-          />
-        </div>
-        <div>
-          <label for="cmyk-k-input" :class="['block text-xs font-medium mb-1', isDarkMode ? 'text-gray-300' : 'text-gray-700']">K</label>
-          <input
-            id="cmyk-k-input"
-            v-model.number="cmykValues.k"
-            @input="updateFromCMYK"
-            type="number"
-            min="0"
-            max="100"
-            step="0.1"
-            aria-label="Key (black) value"
-            :class="[
-              'w-full px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
-              isDarkMode 
-                ? 'border-gray-600 bg-slate-700 text-white' 
-                : 'border-gray-300 bg-white text-gray-900'
-            ]"
           />
         </div>
       </div>
-      
-      <!-- Color Preview -->
-      <div class="mb-4 flex items-center gap-3" role="region" aria-label="Color preview">
-        <div
-          :class="[
-            'w-16 h-16 rounded-lg border-2',
-            isDarkMode ? 'border-gray-600' : 'border-gray-300'
-          ]"
-          :style="{ backgroundColor: currentHex }"
-          :aria-label="`Selected color: ${currentHex}`"
-          role="img"
-        ></div>
-        <div class="flex-1">
-          <div :class="['text-sm font-mono font-semibold', isDarkMode ? 'text-white' : 'text-gray-900']" aria-live="polite">{{ currentHex }}</div>
-          <div :class="['text-xs', isDarkMode ? 'text-gray-400' : 'text-gray-500']">RGB({{ rgbValues.r }}, {{ rgbValues.g }}, {{ rgbValues.b }})</div>
-          <div :class="['text-xs', isDarkMode ? 'text-gray-400' : 'text-gray-500']">CMYK({{ Math.round(cmykValues.c) }}, {{ Math.round(cmykValues.m) }}, {{ Math.round(cmykValues.y) }}, {{ Math.round(cmykValues.k) }})</div>
+
+      <!-- Preview -->
+      <div class="flex items-center gap-3" role="region" aria-label="Color preview">
+        <span class="w-16 h-16 flex-shrink-0"><UiSwatch :color="currentHex" size="fill" :label="`Selected color: ${currentHex}`" /></span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-code font-semibold text-ink-strong" aria-live="polite">{{ currentHex }}</p>
+          <p class="text-xs text-ink-muted">RGB({{ rgbValues.r }}, {{ rgbValues.g }}, {{ rgbValues.b }})</p>
+          <p class="text-xs text-ink-muted">
+            CMYK({{ Math.round(cmykValues.c) }}, {{ Math.round(cmykValues.m) }}, {{ Math.round(cmykValues.y) }}, {{ Math.round(cmykValues.k) }})
+          </p>
         </div>
       </div>
-      
-      <!-- Eyedropper Button -->
-      <div class="mb-4">
-        <button
-          @click="toggleEyedropper"
-          aria-label="Use eyedropper tool to pick color from screen"
-          :class="[
-            'w-full px-4 py-2 text-sm border rounded-lg transition-colors flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500',
-            isDarkMode
-              ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
-              : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
-          ]"
-        >
-          <span class="material-symbols-outlined eyedropper-icon" aria-hidden="true">colorize</span>
-          Use Eyedropper
-        </button>
+
+      <!-- Eyedropper -->
+      <div class="flex flex-col gap-2">
+        <UiButton size="sm" icon="colorize" class="w-full" @click="toggleEyedropper">Use eyedropper</UiButton>
+        <p v-if="eyedropperMessage" class="text-xs text-danger" role="status">{{ eyedropperMessage }}</p>
       </div>
-      
-      <!-- Buttons -->
+
+      <!-- Actions -->
       <div class="flex gap-2">
-        <button
-          @click="applyColor"
-          aria-label="Apply selected color"
-          class="flex-1 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-        >
-          Apply
-        </button>
-        <button
-          @click="cancel"
-          aria-label="Cancel color selection"
-          :class="[
-            'flex-1 px-4 py-2 text-sm rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2',
-            isDarkMode
-              ? 'bg-slate-700 text-gray-300 hover:bg-slate-600'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          ]"
-        >
-          Cancel
-        </button>
+        <UiButton variant="primary" size="sm" class="flex-1" label="Apply" @click="applyColor" />
+        <UiButton size="sm" class="flex-1" label="Cancel" @click="cancel" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, useId } from 'vue';
+import { UiButton, UiSwatch } from './ui';
+
+/**
+ * A floating colour picker (saturation/lightness field, hue, RGB, hex, CMYK,
+ * eyedropper). Show it with v-model:show; `position` ({ left, top } in px)
+ * places it, kept inside the viewport. Emits `apply` with the hex, or `cancel`.
+ * The position and the picked colour reach CSS through v-bind(), never inline styles.
+ */
 
 // Picker dimensions
 const PICKER_WIDTH = 280;
 const PICKER_HEIGHT = 400;
 const PADDING = 16;
-
-// Use previewDarkMode prop for dark mode styling
-const isDarkMode = computed(() => props.previewDarkMode);
 
 const props = defineProps({
   show: {
@@ -316,11 +160,28 @@ const props = defineProps({
     type: Object,
     default: () => ({ left: 0, top: 0 }),
   },
+  /** Render the picker in dark whatever the page theme (a dark preview); otherwise it follows the page */
   previewDarkMode: {
     type: Boolean,
     default: false,
   },
 });
+
+const uid = useId();
+const ids = { base: `color-picker-${uid}`, title: `color-picker-${uid}-title`, hue: `color-picker-${uid}-hue` };
+const rgbChannels = [
+  { key: 'r', short: 'R', name: 'Red' },
+  { key: 'g', short: 'G', name: 'Green' },
+  { key: 'b', short: 'B', name: 'Blue' },
+];
+const cmykChannels = [
+  { key: 'c', short: 'C', name: 'Cyan' },
+  { key: 'm', short: 'M', name: 'Magenta' },
+  { key: 'y', short: 'Y', name: 'Yellow' },
+  { key: 'k', short: 'K', name: 'Key (black)' },
+];
+const eyedropperMessage = ref('');
+const HEX_PLACEHOLDER = '#000000';
 
 const emit = defineEmits(['update:show', 'apply', 'cancel']);
 
@@ -337,11 +198,11 @@ const currentHue = ref(0);
 const currentSaturation = ref(100);
 const currentLightness = ref(50);
 const cmykValues = ref({ c: 0, m: 0, y: 0, k: 100 });
-const pickerStyle = ref({});
+const hueLeft = computed(() => `${huePosition.value}%`);
 
 // Computed style that ensures picker stays within viewport
 const safePickerStyle = computed(() => {
-  if (!props.show) return {};
+  if (!props.show) return { left: '0px', top: '0px' };
   
   let left = typeof props.position.left === 'string' 
     ? parseFloat(props.position.left) 
@@ -784,6 +645,7 @@ const cancel = () => {
 };
 
 const toggleEyedropper = () => {
+  eyedropperMessage.value = '';
   if ('EyeDropper' in window) {
     const eyeDropper = new window.EyeDropper();
     eyeDropper
@@ -798,7 +660,7 @@ const toggleEyedropper = () => {
         console.error('EyeDropper error:', err);
       });
   } else {
-    alert('EyeDropper API is not supported in your browser');
+    eyedropperMessage.value = 'The eyedropper is not supported in this browser.';
   }
 };
 
@@ -879,3 +741,31 @@ onBeforeUnmount(() => {
 });
 </script>
 
+<style scoped>
+.color-picker {
+  @apply fixed z-50 p-4 rounded-card border border-line bg-surface-overlay text-ink shadow-overlay;
+  @apply focus:outline-none;
+  left: v-bind('safePickerStyle.left');
+  top: v-bind('safePickerStyle.top');
+}
+.picker-canvas {
+  @apply block rounded-control border border-line-control;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
+}
+.picker-selector {
+  @apply absolute w-4 h-4 -ml-2 -mt-2 rounded-pill border-2 border-solid border-surface-raised shadow-overlay pointer-events-none;
+  left: v-bind('selectorStyle.left');
+  top: v-bind('selectorStyle.top');
+}
+.picker-hue-marker {
+  @apply absolute top-0 h-8 w-1 -ml-0.5 rounded-pill border border-solid border-ink-strong bg-surface-raised pointer-events-none;
+  left: v-bind(hueLeft);
+}
+.picker-label {
+  @apply block mb-1 text-xs font-medium text-ink-secondary;
+}
+.picker-input {
+  @apply w-full h-8 px-2 rounded-control border border-solid border-line-control bg-surface-control text-sm text-ink placeholder:text-ink-muted;
+  @apply hover:border-line-control-hover focus:outline focus:outline-2 focus:outline-offset-0 outline-focus focus:border-transparent;
+}
+</style>

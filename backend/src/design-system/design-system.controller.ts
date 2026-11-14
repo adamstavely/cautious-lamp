@@ -40,17 +40,6 @@ export class DesignSystemController {
     };
   }
 
-  @Get('tokens/:name')
-  getToken(
-    @Param('name') name: string,
-  ) {
-    const token = this.designSystemService.getTokenByName(name);
-    if (!token) {
-      throw new BadRequestException(`Token '${name}' not found`);
-    }
-    return token;
-  }
-
   @Get('tokens/category/:category')
   getTokensByCategory(
     @Param('category') category: string,
@@ -255,17 +244,6 @@ export class DesignSystemController {
     @Query('priority') priority?: string,
   ) {
     return this.componentRequestService.getAllRequests({ status, category, assignedTo, priority });
-  }
-
-  @Get('requests/:id')
-  getRequest(
-    @Param('id') id: string,
-  ) {
-    const request = this.componentRequestService.getRequest(id);
-    if (!request) {
-      throw new BadRequestException(`Request ${id} not found`);
-    }
-    return request;
   }
 
   @Post('requests')
@@ -676,5 +654,30 @@ export class DesignSystemController {
     // This would need to query ComponentRequestsService
     // For now, return empty array - this can be enhanced later
     return { requests: [] };
+  }
+
+  // Catch-all routes last: Nest matches in declaration order, so these
+  // would otherwise swallow tokens/relationships, requests/analytics and
+  // requests/templates.
+  @Get('tokens/:name')
+  getToken(
+    @Param('name') name: string,
+  ) {
+    const token = this.designSystemService.getTokenByName(name);
+    if (!token) {
+      throw new BadRequestException(`Token '${name}' not found`);
+    }
+    return token;
+  }
+
+  @Get('requests/:id')
+  getRequest(
+    @Param('id') id: string,
+  ) {
+    const request = this.componentRequestService.getRequest(id);
+    if (!request) {
+      throw new BadRequestException(`Request ${id} not found`);
+    }
+    return request;
   }
 }

@@ -1,890 +1,354 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Color Scale Generator
-                    </h1>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="Color scale generator"
+      lead="Generate sequential, diverging and qualitative color scales, check them for contrast and color blindness, and export them."
+      spot="tools/color-scale-generator"
+      size="tool"
+    />
+
+    <PageSection>
+      <div class="grid lg:grid-cols-3 gap-6 items-start">
+        <div class="lg:col-span-2 flex flex-col gap-6">
+          <UiPanel title="Build the scale">
+            <UiSegmented :model-value="scaleType" :options="scaleTypes" label="Scale type" @update:model-value="scaleType = $event; generateScale()" />
+
+            <!-- Base colors -->
+            <div class="flex flex-col gap-4 pt-5 border-t border-line">
+              <h3 class="text-sm font-semibold text-ink-strong">Base colors</h3>
+
+              <template v-if="scaleType === 'sequential' || scaleType === 'diverging'">
+                <div
+                  v-for="(color, index) in (scaleType === 'sequential' ? sequentialColors : divergingColors)"
+                  :key="`${scaleType}-${index}`"
+                  class="flex items-end gap-3"
+                >
+                  <button
+                    type="button"
+                    class="swatch-button"
+                    :aria-label="`Pick color ${index + 1}`"
+                    title="Pick color"
+                    @click="openColorPicker(`${scaleType}-${index}`, $event)"
+                  >
+                    <UiSwatch :color="color" size="fill" :label="`Color ${index + 1}: ${color}`" />
+                  </button>
+                  <div class="flex-1 min-w-0">
+                    <UiInput
+                      :model-value="color"
+                      :label="`Color ${index + 1}`"
+                      :placeholder="placeholders.color"
+                      mono
+                      @update:model-value="setBaseColor(scaleType === 'sequential' ? sequentialColors : divergingColors, index, $event)"
+                    />
                   </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Generate accessible color scales with precise contrast control. Create sequential, diverging, and qualitative scales that meet WCAG accessibility standards.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">palette</span>
-                      Color Tool
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
+                  <UiButton
+                    v-if="(scaleType === 'sequential' ? sequentialColors : divergingColors).length > 1"
+                    icon-only
+                    icon="delete"
+                    variant="ghost"
+                    :label="`Remove color ${index + 1}`"
+                    @click="scaleType === 'sequential' ? removeSequentialColor(index) : removeDivergingColor(index)"
+                  />
                 </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="scaleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized scale icon -->
-                      <rect x="20" y="40" width="160" height="20" rx="4" fill="url(#scaleGradient)" opacity="0.3"/>
-                      <rect x="20" y="70" width="160" height="20" rx="4" fill="url(#scaleGradient)" opacity="0.5"/>
-                      <rect x="20" y="100" width="160" height="20" rx="4" fill="url(#scaleGradient)" opacity="0.7"/>
-                      <rect x="20" y="130" width="160" height="20" rx="4" fill="url(#scaleGradient)" opacity="0.5"/>
-                    </svg>
-                  </div>
+                <div>
+                  <UiButton icon="add" @click="scaleType === 'sequential' ? addSequentialColor() : addDivergingColor()">Add color</UiButton>
+                </div>
+              </template>
+
+              <UiTextarea
+                v-if="scaleType === 'qualitative'"
+                :model-value="qualitativeColorsInput"
+                label="Base colors (comma-separated)"
+                hint="Enter colors separated by commas"
+                :rows="3"
+                :placeholder="placeholders.qualitative"
+                mono
+                @update:model-value="setQualitativeInput"
+              />
+            </div>
+
+            <!-- Settings -->
+            <div class="flex flex-col gap-4 pt-5 border-t border-line">
+              <h3 class="text-sm font-semibold text-ink-strong">Settings</h3>
+              <div class="grid sm:grid-cols-2 gap-4">
+                <UiInput :model-value="settings.steps" type="number" label="Number of steps" min="3" max="20" @update:model-value="setSetting('steps', $event)" />
+                <UiSelect :model-value="settings.contrast" label="Contrast ratio" :options="contrastOptions" @update:model-value="setSetting('contrast', $event)" />
+                <UiRange :model-value="settings.brightness" label="Brightness" unit="%" :min="0" :max="100" @update:model-value="setSetting('brightness', $event)" />
+                <UiRange :model-value="settings.saturation" label="Saturation" unit="%" :min="0" :max="100" @update:model-value="setSetting('saturation', $event)" />
+              </div>
+              <div class="flex items-end gap-3">
+                <button type="button" class="swatch-button" aria-label="Pick background color" title="Pick background color" @click="openColorPicker('background', $event)">
+                  <UiSwatch :color="settings.backgroundColor" size="fill" :label="`Background color: ${settings.backgroundColor}`" />
+                </button>
+                <div class="flex-1 min-w-0">
+                  <UiInput
+                    :model-value="settings.backgroundColor"
+                    label="Background color"
+                    hint="Used for contrast checking"
+                    :placeholder="placeholders.background"
+                    mono
+                    @update:model-value="setSetting('backgroundColor', $event)"
+                  />
                 </div>
               </div>
             </div>
-          </div>
+          </UiPanel>
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <div class="grid lg:grid-cols-3 gap-6">
-              <!-- Left Column: Controls and Visualizations -->
-              <div class="lg:col-span-2 space-y-6">
-                <!-- Combined Scale Type, Base Colors, Settings, and Preview -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <!-- Scale Type Section -->
-                  <div class="mb-6">
-                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">tune</span>
-                      Scale Type
-                    </h2>
-                    <div class="grid grid-cols-3 gap-3">
-                      <button
-                        v-for="type in scaleTypes"
-                        :key="type.value"
-                        @click="scaleType = type.value; generateScale()"
-                        class="px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium"
-                        :class="scaleType === type.value
-                          ? (isDarkMode 
-                            ? 'border-indigo-400 bg-indigo-900/20 text-indigo-300' 
-                            : 'border-indigo-500 bg-indigo-50 text-indigo-700')
-                          : (isDarkMode 
-                            ? 'border-gray-600 hover:border-gray-500 text-gray-300 bg-slate-700' 
-                            : 'border-gray-200 hover:border-gray-300 text-gray-700 bg-white')"
-                      >
-                        {{ type.label }}
-                      </button>
-                    </div>
+          <UiPanel title="Preview" description="Click a color to copy it.">
+            <template #actions>
+              <UiSegmented v-model="previewDarkMode" :options="previewModeOptions" aria-label="Preview background" />
+            </template>
+
+            <InlineNotice :notice="notice" @dismiss="clearNotice" />
+
+            <div class="scale-backdrop">
+              <button
+                v-for="(color, index) in generatedScale"
+                :key="index"
+                type="button"
+                class="scale-step"
+                :title="`${color} - Click to copy`"
+                :aria-label="`Copy step ${index + 1}: ${color}`"
+                @click="copyColor(color)"
+              >
+                <UiSwatch :color="color" size="fill" />
+                <span class="scale-step-label">{{ color }}</span>
+              </button>
+            </div>
+
+            <ul class="flex flex-col gap-2 max-h-48 overflow-y-auto">
+              <li v-for="(color, index) in generatedScale" :key="index" class="color-row" @click="copyColor(color)">
+                <UiSwatch :color="color" :label="color" />
+                <div class="flex-1 min-w-0">
+                  <p class="font-code text-sm text-ink">{{ color }}</p>
+                  <p class="text-xs text-ink-muted">Step {{ index + 1 }}</p>
+                </div>
+                <UiButton icon-only size="sm" variant="ghost" icon="content_copy" :label="`Copy ${color}`" @click.stop="copyColor(color)" />
+              </li>
+            </ul>
+          </UiPanel>
+
+          <UiPanel v-if="generatedScale.length > 0" title="Colorblindness simulation" description="Simulated colors are ordered by hue and saturation for best comparison of similar colors.">
+            <div v-for="sim in simulationTypes" :key="sim.value" class="flex flex-col gap-2">
+              <h3 class="text-sm font-semibold text-ink-strong">{{ sim.label }}</h3>
+              <svg
+                class="w-full h-auto"
+                :viewBox="`0 0 ${generatedScale.length * 10} 10`"
+                role="img"
+                :aria-label="`The scale as seen with ${sim.label.toLowerCase()}`"
+              >
+                <g v-for="(color, index) in generatedScale" :key="`${sim.value}-${index}`">
+                  <rect :x="index * 10 + 0.4" y="0.4" width="9.2" height="9.2" rx="0.6" :fill="simulateColorBlindness(color, sim.value)">
+                    <title>{{ color }} → {{ simulateColorBlindness(color, sim.value) }}</title>
+                  </rect>
+                  <rect :x="index * 10 + 1.2" y="6.6" width="2.4" height="2.4" rx="0.4" :fill="color" class="stroke-surface-raised" stroke-width="0.3" />
+                </g>
+              </svg>
+            </div>
+          </UiPanel>
+
+          <UiPanel title="Visualizations" description="Sample data drawn with the scale.">
+            <div class="grid md:grid-cols-2 gap-6">
+              <figure class="flex flex-col gap-2">
+                <figcaption class="text-sm font-medium text-ink">Heatmap</figcaption>
+                <div class="chart-frame p-2">
+                  <svg class="w-full h-auto" :viewBox="`0 0 10 ${heatmapRows}`" role="img" aria-label="Heatmap of sample values">
+                    <rect
+                      v-for="(cell, index) in heatmapCells"
+                      :key="index"
+                      :x="cell.x + 0.03"
+                      :y="cell.y + 0.03"
+                      width="0.94"
+                      height="0.94"
+                      :fill="getColorForValue(cell.value)"
+                    >
+                      <title>Value: {{ cell.value.toFixed(2) }}</title>
+                    </rect>
+                  </svg>
+                </div>
+              </figure>
+
+              <figure class="flex flex-col gap-2">
+                <figcaption class="text-sm font-medium text-ink">Scatter plot</figcaption>
+                <div class="chart-frame relative h-52">
+                  <svg width="100%" height="100%" class="absolute inset-0" role="img" aria-label="Scatter plot of sample values">
+                    <circle
+                      v-for="(point, index) in scatterData"
+                      :key="index"
+                      :cx="point.x + '%'"
+                      :cy="point.y + '%'"
+                      r="4"
+                      :fill="getColorForValue(point.value)"
+                      opacity="0.7"
+                    >
+                      <title>Value: {{ point.value.toFixed(2) }}</title>
+                    </circle>
+                  </svg>
+                </div>
+              </figure>
+
+              <figure class="flex flex-col gap-2">
+                <figcaption class="text-sm font-medium text-ink">Bar chart</figcaption>
+                <div class="chart-frame flex flex-col h-52 p-4 gap-1">
+                  <svg class="flex-1 w-full" viewBox="0 0 120 100" preserveAspectRatio="none" role="img" aria-label="Bar chart of sample values">
+                    <rect
+                      v-for="(value, index) in barChartData"
+                      :key="index"
+                      :x="index * 10 + 1"
+                      :y="100 - Math.max(2, value * 100)"
+                      width="8"
+                      :height="Math.max(2, value * 100)"
+                      :fill="getColorForValue(value)"
+                    >
+                      <title>Value: {{ value.toFixed(2) }}</title>
+                    </rect>
+                  </svg>
+                  <div class="flex" aria-hidden="true">
+                    <span v-for="(value, index) in barChartData" :key="index" class="flex-1 text-center text-xs text-ink-muted">{{ index + 1 }}</span>
                   </div>
+                </div>
+              </figure>
 
-                  <!-- Divider -->
-                  <div class="border-t mb-6" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"></div>
-
-                  <!-- Base Colors Section -->
-                  <div class="mb-6">
-                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">palette</span>
-                      Base Colors
-                    </h2>
-                    
-                    <!-- Sequential Scale -->
-                    <div v-if="scaleType === 'sequential'" class="space-y-4">
-                      <div
-                        v-for="(color, index) in sequentialColors"
-                        :key="index"
-                        class="space-y-2"
-                      >
-                        <div class="flex items-center justify-between">
-                          <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                            Color {{ index + 1 }}
-                          </label>
-                          <button
-                            v-if="sequentialColors.length > 1"
-                            @click="removeSequentialColor(index)"
-                            class="text-red-500 hover:text-red-600 transition-colors"
-                            title="Remove color"
-                          >
-                            <span class="material-symbols-outlined text-sm">delete</span>
-                          </button>
-                        </div>
-                        <div class="flex items-center gap-3">
-                          <button
-                            @click="openColorPicker(`sequential-${index}`, $event)"
-                            class="w-16 h-16 rounded border-2 cursor-pointer transition-colors flex-shrink-0"
-                            :class="isDarkMode 
-                              ? 'border-gray-600 hover:border-indigo-400' 
-                              : 'border-gray-300 hover:border-indigo-500'"
-                            :style="{ backgroundColor: color }"
-                            title="Pick color"
-                          ></button>
-                          <input
-                            v-model="sequentialColors[index]"
-                            type="text"
-                            @input="generateScale"
-                            placeholder="#000000"
-                            class="flex-1 px-3 py-2 border rounded-lg text-sm font-mono"
-                            :class="isDarkMode 
-                              ? 'border-gray-600 bg-slate-700 text-white' 
-                              : 'border-gray-300 bg-white text-gray-900'"
-                          />
-                        </div>
-                      </div>
-                      <button
-                        @click="addSequentialColor"
-                        class="w-full px-4 py-2 rounded-lg border-2 border-dashed transition-colors text-sm font-medium"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 hover:border-indigo-400 text-gray-300 hover:text-indigo-300' 
-                          : 'border-gray-300 hover:border-indigo-500 text-gray-700 hover:text-indigo-700'"
-                      >
-                        <span class="material-symbols-outlined text-sm align-middle mr-2">add</span>
-                        Add Color
-                      </button>
-                    </div>
-
-                    <!-- Diverging Scale -->
-                    <div v-if="scaleType === 'diverging'" class="space-y-4">
-                      <div
-                        v-for="(color, index) in divergingColors"
-                        :key="index"
-                        class="space-y-2"
-                      >
-                        <div class="flex items-center justify-between">
-                          <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                            Color {{ index + 1 }}
-                          </label>
-                          <button
-                            v-if="divergingColors.length > 1"
-                            @click="removeDivergingColor(index)"
-                            class="text-red-500 hover:text-red-600 transition-colors"
-                            title="Remove color"
-                          >
-                            <span class="material-symbols-outlined text-sm">delete</span>
-                          </button>
-                        </div>
-                        <div class="flex items-center gap-3">
-                          <button
-                            @click="openColorPicker(`diverging-${index}`, $event)"
-                            class="w-16 h-16 rounded border-2 cursor-pointer transition-colors flex-shrink-0"
-                            :class="isDarkMode 
-                              ? 'border-gray-600 hover:border-indigo-400' 
-                              : 'border-gray-300 hover:border-indigo-500'"
-                            :style="{ backgroundColor: color }"
-                            title="Pick color"
-                          ></button>
-                          <input
-                            v-model="divergingColors[index]"
-                            type="text"
-                            @input="generateScale"
-                            placeholder="#000000"
-                            class="flex-1 px-3 py-2 border rounded-lg text-sm font-mono"
-                            :class="isDarkMode 
-                              ? 'border-gray-600 bg-slate-700 text-white' 
-                              : 'border-gray-300 bg-white text-gray-900'"
-                          />
-                        </div>
-                      </div>
-                      <button
-                        @click="addDivergingColor"
-                        class="w-full px-4 py-2 rounded-lg border-2 border-dashed transition-colors text-sm font-medium"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 hover:border-indigo-400 text-gray-300 hover:text-indigo-300' 
-                          : 'border-gray-300 hover:border-indigo-500 text-gray-700 hover:text-indigo-700'"
-                      >
-                        <span class="material-symbols-outlined text-sm align-middle mr-2">add</span>
-                        Add Color
-                      </button>
-                    </div>
-
-                    <!-- Qualitative Scale -->
-                    <div v-if="scaleType === 'qualitative'" class="space-y-4">
-                      <div>
-                        <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Base Colors (comma-separated)</label>
-                        <textarea
-                          v-model="qualitativeColorsInput"
-                          @input="updateQualitativeColors"
-                          rows="3"
-                          placeholder="#ff0000, #00ff00, #0000ff"
-                          class="w-full px-3 py-2 border rounded-lg text-sm font-mono resize-none"
-                          :class="isDarkMode 
-                            ? 'border-gray-600 bg-slate-700 text-white' 
-                            : 'border-gray-300 bg-white text-gray-900'"
-                        ></textarea>
-                        <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Enter colors separated by commas</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Divider -->
-                  <div class="border-t mb-6" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"></div>
-
-                  <!-- Settings Section -->
-                  <div class="mb-6">
-                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">settings</span>
-                      Settings
-                    </h2>
-                    
-                    <div class="space-y-4">
-                      <div>
-                        <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Number of Steps</label>
-                        <input
-                          v-model.number="settings.steps"
-                          type="number"
-                          min="3"
-                          max="20"
-                          @input="generateScale"
-                          class="w-full px-3 py-2 border rounded-lg text-sm"
-                          :class="isDarkMode 
-                            ? 'border-gray-600 bg-slate-700 text-white' 
-                            : 'border-gray-300 bg-white text-gray-900'"
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Contrast Ratio</label>
-                        <Dropdown
-                          v-model="settings.contrast"
-                          :options="contrastOptions"
-                          :is-dark-mode="isDarkMode"
-                          @update:modelValue="generateScale"
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Brightness</label>
-                        <input
-                          v-model.number="settings.brightness"
-                          type="range"
-                          min="0"
-                          max="100"
-                          step="1"
-                          @input="generateScale"
-                          class="w-full"
-                        />
-                        <div class="text-xs mt-1 text-center" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ settings.brightness }}%</div>
-                      </div>
-                      <div>
-                        <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Saturation</label>
-                        <input
-                          v-model.number="settings.saturation"
-                          type="range"
-                          min="0"
-                          max="100"
-                          step="1"
-                          @input="generateScale"
-                          class="w-full"
-                        />
-                        <div class="text-xs mt-1 text-center" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ settings.saturation }}%</div>
-                      </div>
-                      <div>
-                        <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Background Color</label>
-                        <div class="flex items-center gap-3">
-                          <button
-                            @click="openColorPicker('background', $event)"
-                            class="w-16 h-16 rounded cursor-pointer transition-colors flex-shrink-0"
-                            :class="[
-                              isLightColor(settings.backgroundColor)
-                                ? 'border-2 border-gray-400'
-                                : (isDarkMode 
-                                  ? 'border-2 border-gray-600 hover:border-indigo-400' 
-                                  : 'border-2 border-gray-300 hover:border-indigo-500')
-                            ]"
-                            :style="{ backgroundColor: settings.backgroundColor }"
-                            title="Pick background color"
-                          ></button>
-                          <input
-                            v-model="settings.backgroundColor"
-                            type="text"
-                            @input="generateScale"
-                            placeholder="#ffffff"
-                            class="flex-1 px-3 py-2 border rounded-lg text-sm font-mono"
-                            :class="isDarkMode 
-                              ? 'border-gray-600 bg-slate-700 text-white' 
-                              : 'border-gray-300 bg-white text-gray-900'"
-                          />
-                        </div>
-                        <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Used for contrast checking</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Divider -->
-                  <div class="border-t mb-6" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"></div>
-
-                  <!-- Preview Section -->
-                  <div>
-                    <div class="flex items-center justify-between mb-4">
-                      <h2 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">preview</span>
-                        Preview
-                      </h2>
-                      <button
-                        @click="previewDarkMode = !previewDarkMode"
-                        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                        :class="previewDarkMode
-                          ? (isDarkMode 
-                            ? 'bg-indigo-600 text-white' 
-                            : 'bg-indigo-600 text-white')
-                          : (isDarkMode 
-                            ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                      >
-                        <span class="material-symbols-outlined text-base">{{ previewDarkMode ? 'dark_mode' : 'light_mode' }}</span>
-                        {{ previewDarkMode ? 'Dark' : 'Light' }}
-                      </button>
-                    </div>
-                    
-                    <div class="space-y-4">
-                      <!-- Scale Swatches -->
-                      <div class="rounded-lg overflow-hidden border" :class="previewDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-white'">
-                        <div class="flex h-24">
-                          <div
-                            v-for="(color, index) in generatedScale"
-                            :key="index"
-                            class="flex-1 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-                            :style="{ backgroundColor: color }"
-                            @click="copyColor(color)"
-                            :title="`${color} - Click to copy`"
-                          >
-                            <span class="text-xs font-mono px-1 py-0.5 rounded" :class="getTextColor(color)">{{ color }}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Color List -->
-                      <div class="space-y-2 max-h-48 overflow-y-auto">
-                        <div
+              <figure class="flex flex-col gap-2">
+                <figcaption class="text-sm font-medium text-ink">Area chart</figcaption>
+                <div class="chart-frame relative h-52">
+                  <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="Area chart of sample values">
+                    <defs>
+                      <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop
                           v-for="(color, index) in generatedScale"
                           :key="index"
-                          class="flex items-center gap-3 p-2 rounded border cursor-pointer hover:opacity-80 transition-opacity"
-                          :class="isDarkMode 
-                            ? 'border-gray-600 hover:bg-slate-700' 
-                            : 'border-gray-200 hover:bg-gray-50'"
-                          @click="copyColor(color)"
-                        >
-                          <div 
-                            class="w-8 h-8 rounded border flex-shrink-0"
-                            :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                            :style="{ backgroundColor: color }"
-                          ></div>
-                          <div class="flex-1 min-w-0">
-                            <div class="text-sm font-mono" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ color }}</div>
-                            <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Step {{ index + 1 }}</div>
-                          </div>
-                          <button
-                            @click.stop="copyColor(color)"
-                            class="p-1 rounded transition-colors"
-                            :class="isDarkMode 
-                              ? 'text-gray-400 hover:text-indigo-400' 
-                              : 'text-gray-400 hover:text-indigo-600'"
-                            title="Copy color"
-                          >
-                            <span class="material-symbols-outlined text-sm">content_copy</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Colorblindness Simulation Section -->
-                  <div v-if="generatedScale.length > 0" class="mt-6 rounded-lg p-6" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-100'">
-                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">visibility</span>
-                      Colorblindness Simulation
-                    </h2>
-                    <p class="text-sm mb-6" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      Simulated colors are ordered by hue and saturation for best comparison of similar colors.
-                    </p>
-                    
-                    <div class="space-y-6">
-                      <!-- Protanopia -->
-                      <div>
-                        <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Protanopia</h3>
-                        <div class="flex gap-1">
-                          <div
-                            v-for="(color, index) in generatedScale"
-                            :key="`protanopia-${index}`"
-                            class="flex-1 aspect-square rounded relative group"
-                            :style="{ backgroundColor: simulateColorBlindness(color, 'protanopia') }"
-                            :title="`${color} → ${simulateColorBlindness(color, 'protanopia')}`"
-                          >
-                            <!-- Small original color indicator -->
-                            <div 
-                              class="absolute bottom-1 left-1 w-3 h-3 rounded border border-white"
-                              :style="{ backgroundColor: color }"
-                            ></div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Deuteranopia -->
-                      <div>
-                        <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Deuteranopia</h3>
-                        <div class="flex gap-1">
-                          <div
-                            v-for="(color, index) in generatedScale"
-                            :key="`deuteranopia-${index}`"
-                            class="flex-1 aspect-square rounded relative group"
-                            :style="{ backgroundColor: simulateColorBlindness(color, 'deuteranopia') }"
-                            :title="`${color} → ${simulateColorBlindness(color, 'deuteranopia')}`"
-                          >
-                            <!-- Small original color indicator -->
-                            <div 
-                              class="absolute bottom-1 left-1 w-3 h-3 rounded border border-white"
-                              :style="{ backgroundColor: color }"
-                            ></div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Tritanopia -->
-                      <div>
-                        <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Tritanopia</h3>
-                        <div class="flex gap-1">
-                          <div
-                            v-for="(color, index) in generatedScale"
-                            :key="`tritanopia-${index}`"
-                            class="flex-1 aspect-square rounded relative group"
-                            :style="{ backgroundColor: simulateColorBlindness(color, 'tritanopia') }"
-                            :title="`${color} → ${simulateColorBlindness(color, 'tritanopia')}`"
-                          >
-                            <!-- Small original color indicator -->
-                            <div 
-                              class="absolute bottom-1 left-1 w-3 h-3 rounded border border-white"
-                              :style="{ backgroundColor: color }"
-                            ></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Visualizations Section -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">bar_chart</span>
-                    Visualizations
-                  </h2>
-                  
-                  <div class="grid md:grid-cols-2 gap-6">
-                  <!-- Heatmap Grid -->
-                  <div>
-                    <h3 class="text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Heatmap</h3>
-                    <div class="rounded-lg overflow-hidden border" :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'">
-                      <div 
-                        class="grid grid-cols-10 gap-0.5 p-2"
-                        :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'"
-                      >
-                        <div
-                          v-for="(value, index) in heatmapData"
-                          :key="index"
-                          class="aspect-square"
-                          :style="{ backgroundColor: getColorForValue(value) }"
-                          :title="`Value: ${value.toFixed(2)}`"
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Scatter Plot -->
-                  <div>
-                    <h3 class="text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Scatter Plot</h3>
-                    <div class="rounded-lg overflow-hidden border relative" :class="isDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-gray-50'" style="height: 200px;">
-                      <svg width="100%" height="100%" class="absolute inset-0">
-                        <g v-for="(point, index) in scatterData" :key="index">
-                          <circle
-                            :cx="point.x + '%'"
-                            :cy="point.y + '%'"
-                            r="4"
-                            :fill="getColorForValue(point.value)"
-                            :opacity="0.7"
-                            :title="`Value: ${point.value.toFixed(2)}`"
-                          />
-                        </g>
-                      </svg>
-                    </div>
-                  </div>
-
-                  <!-- Bar Chart -->
-                  <div>
-                    <h3 class="text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Bar Chart</h3>
-                    <div class="rounded-lg overflow-hidden border" :class="isDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-gray-50'" style="height: 200px;">
-                      <div class="flex items-end justify-around h-full p-4 gap-2">
-                        <div
-                          v-for="(value, index) in barChartData"
-                          :key="index"
-                          class="flex-1 flex flex-col items-center"
-                        >
-                          <div
-                            class="w-full rounded-t transition-all hover:opacity-80"
-                            :style="{ 
-                              height: (value * 100) + '%',
-                              backgroundColor: getColorForValue(value),
-                              minHeight: '4px'
-                            }"
-                            :title="`Value: ${value.toFixed(2)}`"
-                          ></div>
-                          <span class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ index + 1 }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Area Chart -->
-                  <div>
-                    <h3 class="text-sm font-medium mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Area Chart</h3>
-                    <div class="rounded-lg overflow-hidden border relative" :class="isDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-gray-50'" style="height: 200px;">
-                      <svg width="100%" height="100%" class="absolute inset-0">
-                        <defs>
-                          <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop
-                              v-for="(color, index) in generatedScale"
-                              :key="index"
-                              :offset="(index / (generatedScale.length - 1)) * 100 + '%'"
-                              :stop-color="color"
-                              stop-opacity="0.6"
-                            />
-                          </linearGradient>
-                        </defs>
-                        <polygon
-                          :points="areaChartPoints"
-                          fill="url(#areaGradient)"
-                          :stroke="generatedScale[Math.floor(generatedScale.length / 2)]"
-                          stroke-width="2"
+                          :offset="(index / Math.max(1, generatedScale.length - 1)) * 100 + '%'"
+                          :stop-color="color"
+                          stop-opacity="0.6"
                         />
-                        <polyline
-                          :points="areaChartPoints"
-                          :stroke="generatedScale[Math.floor(generatedScale.length / 2)]"
-                          stroke-width="2"
-                          fill="none"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                  </div>
+                      </linearGradient>
+                    </defs>
+                    <polygon :points="areaChartPoints" fill="url(#areaGradient)" :stroke="generatedScale[Math.floor(generatedScale.length / 2)]" stroke-width="2" vector-effect="non-scaling-stroke" />
+                  </svg>
                 </div>
-              </div>
-
-              <!-- Right Sidebar: Export and Color Analysis -->
-              <div class="space-y-6">
-                <!-- Export Options -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">download</span>
-                    Export
-                  </h2>
-
-                  <InlineNotice :notice="notice" class="mb-3" @dismiss="clearNotice" />
-                  
-                  <div class="flex flex-col gap-2">
-                    <button
-                      @click="exportCSS"
-                      class="w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                      :class="isDarkMode 
-                        ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
-                        : 'bg-indigo-600 text-white hover:bg-indigo-700'"
-                    >
-                      Export CSS Variables
-                    </button>
-                    <button
-                      @click="exportJSON"
-                      class="w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                      :class="isDarkMode 
-                        ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                    >
-                      Export JSON
-                    </button>
-                    <button
-                      @click="exportTableau"
-                      class="w-full px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                      :class="isDarkMode 
-                        ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                    >
-                      Export Tableau XML
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Color Analysis -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">analytics</span>
-                    Color Analysis
-                  </h2>
-                  
-                  <div class="grid grid-cols-3 gap-4">
-                    <div v-if="generatedScale.length >= 3" class="text-center p-4 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                      <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ getLuminance(generatedScale[0]).toFixed(2) }}
-                      </div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Start Luminance</div>
-                    </div>
-                    <div v-if="generatedScale.length >= 3" class="text-center p-4 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                      <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ getLuminance(generatedScale[Math.floor(generatedScale.length / 2)]).toFixed(2) }}
-                      </div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Mid Luminance</div>
-                    </div>
-                    <div v-if="generatedScale.length >= 3" class="text-center p-4 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                      <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ getLuminance(generatedScale[generatedScale.length - 1]).toFixed(2) }}
-                      </div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">End Luminance</div>
-                    </div>
-                    <div class="text-center p-4 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                      <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ generatedScale.length >= 2 ? getContrastRatio(generatedScale[0], generatedScale[generatedScale.length - 1]).toFixed(2) : '0.00' }}
-                      </div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Contrast Ratio</div>
-                    </div>
-                    <div class="text-center p-4 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                      <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ generatedScale.length }}
-                      </div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Total Colors</div>
-                    </div>
-                    <div class="text-center p-4 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                      <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ generatedScale.length > 0 ? getAverageSaturation().toFixed(0) : '0' }}%
-                      </div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Avg Saturation</div>
-                    </div>
-                  </div>
-
-                  <!-- Accessibility Contrast Check -->
-                  <div v-if="generatedScale.length >= 2" class="mt-6">
-                    <h3 class="text-sm font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">accessibility</span>
-                      Accessibility Contrast Check
-                    </h3>
-                    <div class="overflow-x-auto">
-                      <table class="w-full text-sm">
-                        <thead>
-                          <tr class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                            <th class="text-left py-2 px-3 font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">COMPARED COLORS</th>
-                            <th class="text-left py-2 px-3 font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">PREVIEW</th>
-                            <th class="text-left py-2 px-3 font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">STATUS</th>
-                            <th class="text-left py-2 px-3 font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">CONTRAST</th>
-                            <th class="text-left py-2 px-3 font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">COLOR DIFFERENCE</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <!-- Start color vs Background -->
-                          <tr class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                            <td class="py-3 px-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Start color vs Background</td>
-                            <td class="py-3 px-3">
-                              <div class="flex items-center gap-2">
-                                <div class="w-16 h-8 rounded border flex overflow-hidden" :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'">
-                                  <div class="flex-1" :style="{ backgroundColor: generatedScale[0] }"></div>
-                                  <div class="flex-1" :style="{ backgroundColor: settings.backgroundColor }"></div>
-                                </div>
-                              </div>
-                            </td>
-                            <td class="py-3 px-3">
-                              <span 
-                                class="px-2 py-1 rounded text-xs font-medium"
-                                :class="getContrastStatus(generatedScale[0], settings.backgroundColor) === 'Pass' 
-                                  ? 'bg-green-500 text-white' 
-                                  : 'bg-red-500 text-white'"
-                              >
-                                {{ getContrastStatus(generatedScale[0], settings.backgroundColor) }}
-                              </span>
-                            </td>
-                            <td class="py-3 px-3 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                              {{ getContrastRatio(generatedScale[0], settings.backgroundColor).toFixed(2) }}:1
-                            </td>
-                            <td class="py-3 px-3">
-                              <div class="space-y-1">
-                                <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                                  Delta E {{ getDeltaE(generatedScale[0], settings.backgroundColor).toFixed(2) }}
-                                </div>
-                                <div class="w-24 h-1.5 rounded-full overflow-hidden" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                                  <div 
-                                    class="h-full transition-all"
-                                    :class="getDeltaE(generatedScale[0], settings.backgroundColor) > 50 ? 'bg-teal-500' : 'bg-teal-400'"
-                                    :style="{ width: Math.min(100, (getDeltaE(generatedScale[0], settings.backgroundColor) / 100) * 100) + '%' }"
-                                  ></div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                          <!-- End color vs Background -->
-                          <tr class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                            <td class="py-3 px-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">End color vs Background</td>
-                            <td class="py-3 px-3">
-                              <div class="flex items-center gap-2">
-                                <div class="w-16 h-8 rounded border flex overflow-hidden" :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'">
-                                  <div class="flex-1" :style="{ backgroundColor: generatedScale[generatedScale.length - 1] }"></div>
-                                  <div class="flex-1" :style="{ backgroundColor: settings.backgroundColor }"></div>
-                                </div>
-                              </div>
-                            </td>
-                            <td class="py-3 px-3">
-                              <span 
-                                class="px-2 py-1 rounded text-xs font-medium"
-                                :class="getContrastStatus(generatedScale[generatedScale.length - 1], settings.backgroundColor) === 'Pass' 
-                                  ? 'bg-green-500 text-white' 
-                                  : 'bg-red-500 text-white'"
-                              >
-                                {{ getContrastStatus(generatedScale[generatedScale.length - 1], settings.backgroundColor) }}
-                              </span>
-                            </td>
-                            <td class="py-3 px-3 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                              {{ getContrastRatio(generatedScale[generatedScale.length - 1], settings.backgroundColor).toFixed(2) }}:1
-                            </td>
-                            <td class="py-3 px-3">
-                              <div class="space-y-1">
-                                <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                                  Delta E {{ getDeltaE(generatedScale[generatedScale.length - 1], settings.backgroundColor).toFixed(2) }}
-                                </div>
-                                <div class="w-24 h-1.5 rounded-full overflow-hidden" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                                  <div 
-                                    class="h-full transition-all"
-                                    :class="getDeltaE(generatedScale[generatedScale.length - 1], settings.backgroundColor) > 50 ? 'bg-teal-500' : 'bg-teal-400'"
-                                    :style="{ width: Math.min(100, (getDeltaE(generatedScale[generatedScale.length - 1], settings.backgroundColor) / 100) * 100) + '%' }"
-                                  ></div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                          <!-- Start color vs End color -->
-                          <tr>
-                            <td class="py-3 px-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Start color vs End color</td>
-                            <td class="py-3 px-3">
-                              <div class="flex items-center gap-2">
-                                <div class="w-16 h-8 rounded border flex overflow-hidden" :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'">
-                                  <div class="flex-1" :style="{ backgroundColor: generatedScale[0] }"></div>
-                                  <div class="flex-1" :style="{ backgroundColor: generatedScale[generatedScale.length - 1] }"></div>
-                                </div>
-                              </div>
-                            </td>
-                            <td class="py-3 px-3">
-                              <span 
-                                class="px-2 py-1 rounded text-xs font-medium"
-                                :class="getContrastStatus(generatedScale[0], generatedScale[generatedScale.length - 1]) === 'Pass' 
-                                  ? 'bg-green-500 text-white' 
-                                  : 'bg-red-500 text-white'"
-                              >
-                                {{ getContrastStatus(generatedScale[0], generatedScale[generatedScale.length - 1]) }}
-                              </span>
-                            </td>
-                            <td class="py-3 px-3 font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                              {{ getContrastRatio(generatedScale[0], generatedScale[generatedScale.length - 1]).toFixed(2) }}:1
-                            </td>
-                            <td class="py-3 px-3">
-                              <div class="space-y-1">
-                                <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                                  Delta E {{ getDeltaE(generatedScale[0], generatedScale[generatedScale.length - 1]).toFixed(2) }}
-                                </div>
-                                <div class="w-24 h-1.5 rounded-full overflow-hidden" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                                  <div 
-                                    class="h-full transition-all"
-                                    :class="getDeltaE(generatedScale[0], generatedScale[generatedScale.length - 1]) > 50 ? 'bg-teal-500' : 'bg-teal-400'"
-                                    :style="{ width: Math.min(100, (getDeltaE(generatedScale[0], generatedScale[generatedScale.length - 1]) / 100) * 100) + '%' }"
-                                  ></div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  <!-- Color Space Visualizations -->
-                  <div class="mt-6">
-                    <h3 class="text-sm font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      <span class="material-symbols-outlined text-base" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">palette</span>
-                      Color Space Visualizations
-                    </h3>
-                    
-                    <div class="space-y-6">
-                      <!-- Color Wheel / Chromaticity Diagram -->
-                      <div>
-                        <h4 class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Color Wheel</h4>
-                        <div class="rounded-lg overflow-hidden border relative" :class="isDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-gray-50'" style="height: 200px;">
-                          <canvas ref="colorWheelCanvas" class="w-full h-full"></canvas>
-                        </div>
-                      </div>
-
-                      <!-- RGB Channels Graph -->
-                      <div>
-                        <h4 class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">RGB Channels</h4>
-                        <div class="rounded-lg overflow-hidden border relative" :class="isDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-gray-50'" style="height: 200px;">
-                          <svg width="100%" height="100%" class="absolute inset-0">
-                            <defs>
-                              <pattern id="gridPattern" width="20" height="20" patternUnits="userSpaceOnUse">
-                                <path d="M 20 0 L 0 0 0 20" fill="none" :stroke="isDarkMode ? '#475569' : '#e2e8f0'" stroke-width="0.5"/>
-                              </pattern>
-                            </defs>
-                            <rect width="100%" height="100%" fill="url(#gridPattern)" />
-                            <g v-for="(channel, index) in rgbChannels" :key="index">
-                              <polyline
-                                :points="channel.points"
-                                :stroke="channel.color"
-                                stroke-width="2"
-                                fill="none"
-                              />
-                            </g>
-                          </svg>
-                        </div>
-                      </div>
-
-                      <!-- 3D Color Space Plot -->
-                      <div>
-                        <h4 class="text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">3D Color Space</h4>
-                        <div class="rounded-lg overflow-hidden border relative" :class="isDarkMode ? 'border-gray-600 bg-slate-800' : 'border-gray-300 bg-gray-50'" style="height: 200px;">
-                          <canvas ref="color3dCanvas" class="w-full h-full"></canvas>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              </figure>
             </div>
-          </div>
+          </UiPanel>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="flex flex-col gap-6">
+          <UiPanel title="Export">
+            <div class="flex flex-col gap-2">
+              <UiButton v-for="action in exportActions" :key="action.label" :variant="action.variant" icon="download" @click="action.run">{{ action.label }}</UiButton>
+            </div>
+          </UiPanel>
+
+          <UiPanel title="Color analysis">
+            <dl class="grid grid-cols-2 gap-3">
+              <template v-if="generatedScale.length >= 3">
+                <div class="stat-tile">
+                  <dt class="stat-label">Start luminance</dt>
+                  <dd class="stat-value">{{ getLuminance(generatedScale[0]).toFixed(2) }}</dd>
+                </div>
+                <div class="stat-tile">
+                  <dt class="stat-label">Mid luminance</dt>
+                  <dd class="stat-value">{{ getLuminance(generatedScale[Math.floor(generatedScale.length / 2)]).toFixed(2) }}</dd>
+                </div>
+                <div class="stat-tile">
+                  <dt class="stat-label">End luminance</dt>
+                  <dd class="stat-value">{{ getLuminance(generatedScale[generatedScale.length - 1]).toFixed(2) }}</dd>
+                </div>
+              </template>
+              <div class="stat-tile">
+                <dt class="stat-label">Contrast ratio</dt>
+                <dd class="stat-value">
+                  {{ generatedScale.length >= 2 ? getContrastRatio(generatedScale[0], generatedScale[generatedScale.length - 1]).toFixed(2) : '0.00' }}
+                </dd>
+              </div>
+              <div class="stat-tile">
+                <dt class="stat-label">Total colors</dt>
+                <dd class="stat-value">{{ generatedScale.length }}</dd>
+              </div>
+              <div class="stat-tile">
+                <dt class="stat-label">Avg saturation</dt>
+                <dd class="stat-value">{{ generatedScale.length > 0 ? getAverageSaturation().toFixed(0) : '0' }}%</dd>
+              </div>
+            </dl>
+          </UiPanel>
+
+          <UiPanel v-if="comparisons.length" title="Accessibility contrast check" flush>
+            <UiTable caption="Contrast between the ends of the scale and the background" compact>
+              <thead>
+                <tr>
+                  <th scope="col">Compared colors</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Contrast</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in comparisons" :key="row.label">
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <span class="flex shrink-0">
+                        <UiSwatch :color="row.a" size="sm" :label="row.a" />
+                        <UiSwatch :color="row.b" size="sm" :label="row.b" />
+                      </span>
+                      <span>{{ row.label }}</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                      <span class="text-xs text-ink-muted whitespace-nowrap">Delta E {{ getDeltaE(row.a, row.b).toFixed(2) }}</span>
+                      <UiMeter :value="getDeltaE(row.a, row.b)" :max="100" :label="`${row.label}: color difference`" :value-text="`Delta E ${getDeltaE(row.a, row.b).toFixed(2)}`" />
+                    </div>
+                  </td>
+                  <td>
+                    <UiChip :tone="getContrastStatus(row.a, row.b) === 'Pass' ? 'success' : 'danger'">{{ getContrastStatus(row.a, row.b) }}</UiChip>
+                  </td>
+                  <td class="font-code whitespace-nowrap">{{ getContrastRatio(row.a, row.b).toFixed(2) }}:1</td>
+                </tr>
+              </tbody>
+            </UiTable>
+          </UiPanel>
+
+          <UiPanel title="Color space visualizations">
+            <figure class="flex flex-col gap-2">
+              <figcaption class="text-xs font-medium text-ink-secondary">Color wheel</figcaption>
+              <div class="chart-frame relative h-52">
+                <canvas ref="colorWheelCanvas" class="w-full h-full text-chart-neutral" role="img" aria-label="The scale's path on a hue and saturation wheel"></canvas>
+              </div>
+            </figure>
+
+            <figure class="flex flex-col gap-2">
+              <figcaption class="text-xs font-medium text-ink-secondary">RGB channels</figcaption>
+              <div class="chart-frame relative h-52">
+                <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="Red, green and blue channel values across the scale">
+                  <defs>
+                    <pattern id="gridPattern" width="10" height="10" patternUnits="userSpaceOnUse">
+                      <path d="M 10 0 L 0 0 0 10" fill="none" class="stroke-line-faint" stroke-width="0.5" vector-effect="non-scaling-stroke" />
+                    </pattern>
+                  </defs>
+                  <rect width="100" height="100" fill="url(#gridPattern)" />
+                  <polyline
+                    v-for="channel in rgbChannels"
+                    :key="channel.name"
+                    :points="channel.points"
+                    :stroke="channel.color"
+                    stroke-width="2"
+                    fill="none"
+                    vector-effect="non-scaling-stroke"
+                  />
+                </svg>
+              </div>
+            </figure>
+
+            <figure class="flex flex-col gap-2">
+              <figcaption class="text-xs font-medium text-ink-secondary">3D color space</figcaption>
+              <div class="chart-frame relative h-52">
+                <canvas ref="color3dCanvas" class="w-full h-full text-chart-neutral" role="img" aria-label="The scale's path through RGB space"></canvas>
+              </div>
+            </figure>
+          </UiPanel>
         </div>
       </div>
-    </div>
+    </PageSection>
 
-    <!-- Color Picker -->
     <ColorPicker
       :show="showColorPicker"
       :initial-color="pickerColor"
@@ -893,23 +357,20 @@
       @apply="handleColorPickerApply"
       @cancel="showColorPicker = false"
     />
-  </div>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import { useDarkMode } from '../composables/useDarkMode.js';
 import { useNotice } from '../composables/useNotice.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
-import Dropdown from '../components/Dropdown.vue';
 import chroma from 'chroma-js';
+import {
+  PageHero, PageSection, PageShell, UiButton, UiChip, UiInput, UiPanel, UiRange, UiSegmented, UiSelect, UiSwatch, UiTable, UiTextarea,
+} from '../components/ui';
+import UiMeter from '../components/ui/UiMeter.vue';
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const { notice, showNotice, clearNotice } = useNotice();
 const previewDarkMode = ref(false);
 const scaleType = ref('sequential');
@@ -959,9 +420,65 @@ const pickerColor = ref('#000000');
 const pickerPosition = ref({ left: 0, top: 0 });
 const pickerTarget = ref(null);
 
+// The preview strip sits on a fixed light or dark backdrop (test colours, not design colours)
+const previewBackdrops = { light: '#ffffff', night: '#1e293b' };
+const previewBackdrop = computed(() => (previewDarkMode.value ? previewBackdrops.night : previewBackdrops.light));
+const previewModeOptions = [
+  { value: false, label: 'Light', icon: 'light_mode' },
+  { value: true, label: 'Dark', icon: 'dark_mode' },
+];
 
+const simulationTypes = [
+  { value: 'protanopia', label: 'Protanopia' },
+  { value: 'deuteranopia', label: 'Deuteranopia' },
+  { value: 'tritanopia', label: 'Tritanopia' },
+];
 
+const placeholders = { color: '#000000', background: '#ffffff', qualitative: '#ff0000, #00ff00, #0000ff' };
 
+const exportActions = [
+  { label: 'Export CSS Variables', variant: 'primary', run: () => exportCSS() },
+  { label: 'Export JSON', variant: 'secondary', run: () => exportJSON() },
+  { label: 'Export Tableau XML', variant: 'secondary', run: () => exportTableau() },
+];
+
+const setSetting = (key, value) => {
+  settings.value[key] = value;
+  generateScale();
+};
+
+const setBaseColor = (list, index, value) => {
+  list[index] = value;
+  generateScale();
+};
+
+const setQualitativeInput = (value) => {
+  qualitativeColorsInput.value = value;
+  updateQualitativeColors();
+};
+
+// Rows of the accessibility table: which two colours are compared
+const comparisons = computed(() => {
+  const scale = generatedScale.value;
+  if (scale.length < 2) return [];
+  const first = scale[0];
+  const last = scale[scale.length - 1];
+  const bg = settings.value.backgroundColor;
+  return [
+    { label: 'Start color vs Background', a: first, b: bg },
+    { label: 'End color vs Background', a: last, b: bg },
+    { label: 'Start color vs End color', a: first, b: last },
+  ];
+});
+
+// Heatmap cells laid out on a 10-column grid (SVG units)
+const heatmapCells = computed(() => heatmapData.value.map((value, index) => ({ value, x: index % 10, y: Math.floor(index / 10) })));
+const heatmapRows = computed(() => Math.max(1, Math.ceil(heatmapData.value.length / 10)));
+
+// Canvas drawings can't use CSS tokens directly: read the neutral chart colour
+// from the canvas's own (token) text colour, and leave the background clear
+// so the container's surface shows through.
+const canvasInk = (canvas) => getComputedStyle(canvas).color;
 
 const addSequentialColor = () => {
   sequentialColors.value.push('#808080');
@@ -1336,24 +853,6 @@ const generateQualitativeScale = () => {
   generatedScale.value = applyAdjustments(trimmedScale);
 };
 
-const getTextColor = (bgColor) => {
-  const luminance = chroma(bgColor).luminance();
-  return luminance > 0.5 
-    ? (isDarkMode.value ? 'text-gray-900 bg-white/80' : 'text-gray-900 bg-white/80')
-    : (isDarkMode.value ? 'text-white bg-black/40' : 'text-white bg-black/40');
-};
-
-
-const isLightColor = (color) => {
-  try {
-    const rgb = chroma(color).rgb();
-    const luminance = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
-    return luminance > 0.8; // Consider colors with luminance > 0.8 as light
-  } catch {
-    return false;
-  }
-};
-
 const getContrastRatio = (color1, color2) => {
   return calculateContrastRatio(color1, color2);
 };
@@ -1546,9 +1045,8 @@ const drawColorWheel = () => {
   const centerY = canvas.height / 2;
   const radius = Math.min(canvas.width, canvas.height) / 2 - 10;
   
-  // Clear canvas
-  ctx.fillStyle = isDarkMode.value ? '#1e293b' : '#f8fafc';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Clear canvas (the container's surface shows through)
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   
   // Draw color wheel background (simplified hue circle)
   const imageData = ctx.createImageData(canvas.width, canvas.height);
@@ -1641,16 +1139,15 @@ const draw3DColorSpace = () => {
   
   const ctx = canvas.getContext('2d');
   
-  // Clear canvas
-  ctx.fillStyle = isDarkMode.value ? '#1e293b' : '#f8fafc';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Clear canvas (the container's surface shows through)
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   
   // Draw 3D axes
   const padding = 20;
   const width = canvas.width - padding * 2;
   const height = canvas.height - padding * 2;
   
-  ctx.strokeStyle = isDarkMode.value ? '#64748b' : '#cbd5e1';
+  ctx.strokeStyle = canvasInk(canvas);
   ctx.lineWidth = 1;
   
   // X axis (bottom)
@@ -1847,7 +1344,7 @@ const openColorPicker = (target, event) => {
   
   pickerColor.value = color;
   
-  const rect = event.target.getBoundingClientRect();
+  const rect = (event.currentTarget || event.target).getBoundingClientRect();
   
   const pickerWidth = 280;
   const pickerHeight = 550;
@@ -1935,13 +1432,6 @@ watch(generatedScale, () => {
   refreshScaleCharts();
 }, { deep: true });
 
-watch(isDarkMode, () => {
-  nextTick(() => {
-    drawColorWheel();
-    draw3DColorSpace();
-  });
-});
-
 onMounted(() => {
   generateScale();
   generateVisualizationData();
@@ -1949,91 +1439,34 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.swatch-button {
+  @apply block w-11 h-11 shrink-0 p-0.5 rounded-control border border-line-control bg-surface-control transition-colors hover:border-accent-border;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
 }
-
-/* Custom range slider styles for brand blue */
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
-  cursor: pointer;
+.scale-backdrop {
+  @apply flex gap-1 h-24 p-2 rounded-tile border border-line;
+  background: v-bind(previewBackdrop);
 }
-
-input[type="range"]::-webkit-slider-runnable-track {
-  background: #e0e7ff; /* indigo-100 */
-  border-radius: 9999px;
-  height: 8px;
+.scale-step {
+  @apply relative flex-1 min-w-0 transition-opacity hover:opacity-80 rounded-control;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
 }
-
-html.dark input[type="range"]::-webkit-slider-runnable-track {
-  background: #6366f1; /* indigo-500 */
+.scale-step-label {
+  @apply absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-full truncate px-1 py-0.5 rounded-control bg-surface-overlay font-code text-xs text-ink;
 }
-
-input[type="range"]::-moz-range-track {
-  background: #e0e7ff; /* indigo-100 */
-  border-radius: 9999px;
-  height: 8px;
+.color-row {
+  @apply flex items-center gap-3 p-2 rounded-tile border border-line cursor-pointer transition-colors hover:bg-fill-hover;
 }
-
-html.dark input[type="range"]::-moz-range-track {
-  background: #6366f1; /* indigo-500 */
+.chart-frame {
+  @apply rounded-tile border border-line bg-surface-sunken overflow-hidden;
 }
-
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  background-color: #4f46e5; /* indigo-600 - brand blue */
-  border: 2px solid #fff;
-  border-radius: 50%;
-  height: 16px;
-  width: 16px;
-  margin-top: -4px;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
-  transition: background-color 0.2s, box-shadow 0.2s;
+.stat-tile {
+  @apply flex flex-col-reverse gap-1 p-3 rounded-tile border border-line bg-surface-sunken text-center;
 }
-
-html.dark input[type="range"]::-webkit-slider-thumb {
-  background-color: #6366f1; /* indigo-500 - brand blue for dark mode */
-  border-color: #1e293b;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+.stat-label {
+  @apply text-xs text-ink-secondary;
 }
-
-input[type="range"]::-webkit-slider-thumb:hover {
-  background-color: #4338ca; /* indigo-700 */
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.3);
-}
-
-html.dark input[type="range"]::-webkit-slider-thumb:hover {
-  background-color: #818cf8; /* indigo-400 */
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
-}
-
-input[type="range"]::-moz-range-thumb {
-  background-color: #4f46e5; /* indigo-600 - brand blue */
-  border: 2px solid #fff;
-  border-radius: 50%;
-  height: 16px;
-  width: 16px;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
-  transition: background-color 0.2s, box-shadow 0.2s;
-}
-
-html.dark input[type="range"]::-moz-range-thumb {
-  background-color: #6366f1; /* indigo-500 - brand blue for dark mode */
-  border-color: #1e293b;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-}
-
-input[type="range"]::-moz-range-thumb:hover {
-  background-color: #4338ca; /* indigo-700 */
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.3);
-}
-
-html.dark input[type="range"]::-moz-range-thumb:hover {
-  background-color: #818cf8; /* indigo-400 */
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+.stat-value {
+  @apply text-xl font-semibold text-ink-strong;
 }
 </style>
-

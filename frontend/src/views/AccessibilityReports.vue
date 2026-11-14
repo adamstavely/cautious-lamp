@@ -1,656 +1,496 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
+  <PageShell width="wide">
+    <PageHero
+      eyebrow="Admin"
+      title="Accessibility reports"
+      lead="Automated WCAG compliance monitoring, trend tracking, and prioritized fix recommendations. Stay on top of accessibility across all your applications."
+      spot="site/accessibility-reports"
+    />
 
-    <!-- Main Content Area -->
-    <div
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
+    <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
 
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Accessibility Reports
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Automated WCAG compliance monitoring, trend tracking, and prioritized fix recommendations. Stay on top of accessibility across all your applications.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-                    <defs>
-                      <linearGradient id="accessibilityGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Accessibility icon - person with circle representing inclusion -->
-                    <circle cx="100" cy="100" r="60" fill="none" stroke="url(#accessibilityGradient)" stroke-width="4" opacity="0.6"/>
-                    <circle cx="100" cy="80" r="20" fill="url(#accessibilityGradient)" opacity="0.8"/>
-                    <path d="M 100 100 L 100 140 M 80 120 L 120 120" stroke="url(#accessibilityGradient)" stroke-width="6" stroke-linecap="round" opacity="0.8"/>
-                    <!-- Checkmark representing compliance -->
-                    <path d="M 50 50 L 70 70 L 90 50" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- Tabs -->
-        <div class="max-w-7xl mx-auto mb-6">
-          <div class="flex flex-wrap gap-2 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'" role="tablist">
-            <button
-              v-for="tab in TABS"
-              :key="tab.id"
-              type="button"
-              role="tab"
-              :aria-selected="activeTab === tab.id"
-              class="px-6 py-3 font-medium transition-colors relative"
-              :class="activeTab === tab.id
-                ? (isDarkMode ? 'text-indigo-400' : 'text-indigo-600')
-                : (isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900')"
-              @click="activeTab = tab.id"
-            >
-              {{ tab.label }}
-              <div v-if="activeTab === tab.id" class="absolute bottom-0 left-0 right-0 h-0.5" :class="isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600'"></div>
-            </button>
-          </div>
-        </div>
-
-        <div class="max-w-7xl mx-auto mb-6">
-          <InlineNotice :notice="notice" @dismiss="clearNotice" />
-        </div>
-
-        <!-- Dashboard Tab -->
-        <div v-if="activeTab === 'dashboard'" class="max-w-7xl mx-auto space-y-6">
-          <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
-            <div class="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h3 class="text-lg font-semibold mb-2 flex items-center gap-2" :class="headingClass">
-                  <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">apps</span>
-                  Application
-                </h3>
-                <p class="text-sm" :class="mutedClass">
-                  Choose an application to see its latest report.
-                  <router-link v-if="applicationsLoaded && applications.length === 0" to="/admin/applications/register" class="underline">Register one first.</router-link>
-                </p>
-              </div>
-              <label class="sr-only" for="a11y-app">Application</label>
-              <select id="a11y-app" v-model="selectedApplicationId" class="min-w-[300px] px-4 py-2 rounded-lg border" :class="inputClass">
-                <option value="" disabled>{{ applications.length ? 'Select an application' : 'No applications' }}</option>
-                <option v-for="app in applications" :key="app.id" :value="app.id">{{ app.name }}</option>
-              </select>
-            </div>
+    <UiTabs v-model="activeTab" :tabs="TABS" label="Accessibility reports">
+      <!-- Dashboard -->
+      <template #dashboard>
+        <div class="space-y-6">
+          <UiPanel title="Application" description="Choose an application to see its latest report.">
+            <p v-if="applicationsLoaded && applications.length === 0" class="text-sm text-ink-secondary">
+              <UiLink to="/admin/applications/register">Register one first.</UiLink>
+            </p>
+            <UiSelect
+              id="a11y-app"
+              v-model="selectedApplicationId"
+              label="Application"
+              class="max-w-md"
+              :placeholder="applications.length ? 'Select an application' : 'No applications'"
+              :options="applicationOptions"
+            />
 
             <!-- Generate -->
-            <div v-if="canAdmin && selectedApplicationId" class="mt-6 pt-6 border-t space-y-4" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <fieldset class="flex flex-wrap items-center gap-4 text-sm" :class="labelClass">
-                <legend class="sr-only">What to scan</legend>
-                <label class="flex items-center gap-2"><input v-model="generateSource" type="radio" value="url" class="accent-indigo-600" /> Public URL (rendered in a browser)</label>
-                <label class="flex items-center gap-2"><input v-model="generateSource" type="radio" value="html" class="accent-indigo-600" /> Paste HTML</label>
-              </fieldset>
-              <div v-if="generateSource === 'url'">
-                <label for="a11y-url" class="block text-sm mb-1" :class="labelClass">Page URL</label>
-                <input
-                  id="a11y-url"
-                  v-model.trim="generateUrl"
-                  type="url"
-                  :placeholder="selectedApplication?.applicationUrl || 'https://app.example.com'"
-                  class="w-full px-4 py-2 rounded-lg border"
-                  :class="inputClass"
-                />
-                <p class="text-xs mt-1" :class="mutedClass">Leave empty to use the application's URL{{ selectedApplication?.applicationUrl ? '' : ' (this application has none)' }}.</p>
+            <div v-if="canAdmin && selectedApplicationId" class="pt-5 border-t border-line space-y-4">
+              <UiSegmented v-model="generateSource" label="What to scan" :options="GENERATE_SOURCES" />
+              <UiInput
+                v-if="generateSource === 'url'"
+                id="a11y-url"
+                :model-value="generateUrl"
+                type="url"
+                label="Page URL"
+                :placeholder="selectedApplication?.applicationUrl || 'https://app.example.com'"
+                :hint="`Leave empty to use the application's URL${selectedApplication?.applicationUrl ? '' : ' (this application has none)'}.`"
+                @update:model-value="generateUrl = String($event).trim()"
+              />
+              <UiTextarea
+                v-else
+                id="a11y-html"
+                v-model="generateHtml"
+                label="HTML"
+                rows="6"
+                spellcheck="false"
+                mono
+                hint="Checked without a browser, so colour contrast is listed as needing review rather than tested."
+              />
+              <div>
+                <UiButton variant="primary" icon="play_arrow" :loading="loading" :disabled="!canGenerate" @click="generateReport">
+                  {{ loading ? 'Scanning…' : 'Generate report' }}
+                </UiButton>
               </div>
-              <div v-else>
-                <label for="a11y-html" class="block text-sm mb-1" :class="labelClass">HTML</label>
-                <textarea id="a11y-html" v-model="generateHtml" rows="6" spellcheck="false" class="w-full px-4 py-2 rounded-lg border font-mono text-xs" :class="inputClass"></textarea>
-                <p class="text-xs mt-1" :class="mutedClass">Checked without a browser, so colour contrast is listed as needing review rather than tested.</p>
-              </div>
-              <button
-                type="button"
-                class="px-4 py-2 rounded-lg font-medium bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
-                :disabled="loading || !canGenerate"
-                @click="generateReport"
-              >
-                {{ loading ? 'Scanning…' : 'Generate Report' }}
-              </button>
             </div>
-          </div>
+          </UiPanel>
 
-          <div v-if="loading" class="flex items-center justify-center py-12" role="status">
-            <div class="text-center">
-              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" aria-hidden="true"></div>
-              <p :class="mutedClass">Generating accessibility report…</p>
-            </div>
+          <div v-if="loading" class="flex justify-center py-12">
+            <UiSpinner label="Generating accessibility report…" />
           </div>
 
           <div v-else-if="currentReport" class="space-y-6">
-            <p class="text-sm" :class="mutedClass">
+            <p class="text-sm text-ink-secondary">
               {{ currentReport.applicationName }} · {{ formatDate(currentReport.generatedAt) }} ·
               {{ currentReport.source === 'url' ? `URL ${currentReport.url || ''} (browser)` : 'Supplied HTML (no browser)' }}
               <span v-if="currentReport.scheduled"> · scheduled</span>
             </p>
 
-            <!-- WCAG Compliance Overview -->
-            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
-                <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="mutedClass">
-                  <span class="material-symbols-outlined text-lg" :class="getScoreColor(currentReport.complianceScore)" aria-hidden="true">check_circle</span>
-                  Compliance Score
-                </div>
-                <div class="text-4xl font-bold mb-2" :class="getScoreColor(currentReport.complianceScore)">{{ currentReport.complianceScore }}%</div>
-                <div class="text-sm" :class="mutedClass">{{ levelLabel(currentReport.wcagLevel) }}</div>
-              </div>
-
-              <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
-                <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="mutedClass">
-                  <span class="material-symbols-outlined text-lg text-red-500" aria-hidden="true">error</span>
-                  Critical Issues
-                </div>
-                <div class="text-4xl font-bold text-red-500">{{ currentReport.criticalIssues }}</div>
-                <div class="text-sm" :class="mutedClass">Blocking accessibility</div>
-              </div>
-
-              <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
-                <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="mutedClass">
-                  <span class="material-symbols-outlined text-lg text-orange-500" aria-hidden="true">warning</span>
-                  Total Issues
-                </div>
-                <div class="text-4xl font-bold" :class="headingClass">{{ currentReport.totalIssues }}</div>
-                <div class="text-sm" :class="mutedClass">
+            <!-- WCAG compliance overview -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <UiStat
+                label="Compliance score"
+                icon="check_circle"
+                :value="`${currentReport.complianceScore}%`"
+                :tone="scoreTone(currentReport.complianceScore)"
+                :hint="levelLabel(currentReport.wcagLevel)"
+              />
+              <UiStat label="Critical issues" icon="error" tone="danger" :value="currentReport.criticalIssues" hint="Blocking accessibility" />
+              <UiStat label="Total issues" icon="warning" :value="currentReport.totalIssues">
+                {{ currentReport.totalIssues }}
+                <span class="block text-sm font-normal tracking-normal text-ink-muted">
                   {{ currentReport.highIssues }} high, {{ currentReport.moderateIssues }} moderate, {{ currentReport.lowIssues }} low
                   <span v-if="currentReport.needsReview"> · {{ currentReport.needsReview }} need manual review</span>
-                </div>
-                <div v-if="currentReport.sampling" class="text-xs mt-1" :class="mutedClass">
+                </span>
+                <span v-if="currentReport.sampling" class="block text-xs font-normal tracking-normal text-ink-muted mt-1">
                   Counts include every failing element; {{ currentReport.sampling.rules.length }} rule(s) list only the first {{ currentReport.sampling.examplesPerRule }} as examples.
-                </div>
-              </div>
-
-              <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
-                <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="mutedClass">
-                  <span class="material-symbols-outlined text-lg" :class="currentReport.trend.scoreChange >= 0 ? 'text-green-500' : 'text-red-500'" aria-hidden="true">
-                    {{ currentReport.trend.scoreChange >= 0 ? 'trending_up' : 'trending_down' }}
-                  </span>
-                  Trend
-                </div>
-                <template v-if="currentReport.previousReportId">
-                  <div class="text-4xl font-bold" :class="currentReport.trend.scoreChange >= 0 ? 'text-green-500' : 'text-red-500'">
-                    {{ currentReport.trend.scoreChange >= 0 ? '+' : '' }}{{ currentReport.trend.scoreChange.toFixed(1) }}
-                  </div>
-                  <div class="text-sm" :class="mutedClass">{{ currentReport.trend.fixedIssues }} fixed, {{ currentReport.trend.newIssues }} new</div>
-                </template>
-                <div v-else class="text-sm mt-3" :class="mutedClass">First report for this application.</div>
-              </div>
+                </span>
+              </UiStat>
+              <UiStat
+                v-if="currentReport.previousReportId"
+                label="Trend"
+                :icon="currentReport.trend.scoreChange >= 0 ? 'trending_up' : 'trending_down'"
+                :tone="currentReport.trend.scoreChange >= 0 ? 'success' : 'danger'"
+                :value="`${currentReport.trend.scoreChange >= 0 ? '+' : ''}${currentReport.trend.scoreChange.toFixed(1)}`"
+                :hint="`${currentReport.trend.fixedIssues} fixed, ${currentReport.trend.newIssues} new`"
+              />
+              <UiStat v-else label="Trend" icon="trending_flat" value="–" hint="First report for this application." />
             </div>
 
-            <!-- Issues by Category -->
-            <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="headingClass">
-                <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">category</span>
-                Issues by Category
-              </h3>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div v-for="(count, category) in currentReport.issuesByCategory" :key="category" class="text-center">
-                  <div class="text-2xl font-bold mb-1" :class="headingClass">{{ count }}</div>
-                  <div class="text-xs" :class="mutedClass">{{ formatCategoryName(category) }}</div>
+            <!-- Issues by category -->
+            <UiPanel title="Issues by category">
+              <dl class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div v-for="(count, category) in currentReport.issuesByCategory" :key="category" class="flex flex-col-reverse text-center">
+                  <dt class="text-xs text-ink-muted">{{ formatCategoryName(category) }}</dt>
+                  <dd class="text-2xl font-semibold mb-1 text-ink-strong">{{ count }}</dd>
                 </div>
-              </div>
-            </div>
+              </dl>
+            </UiPanel>
 
-            <!-- Prioritized Fixes -->
-            <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
-              <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="headingClass">
-                  <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">priority_high</span>
-                  Prioritized Fixes
-                </h3>
-                <button type="button" class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2" :class="secondaryButton" @click="exportToPDF">
-                  <span class="material-symbols-outlined text-sm" aria-hidden="true">picture_as_pdf</span>
-                  Export PDF
-                </button>
-              </div>
-              <p v-if="currentReport.prioritizedFixes.length === 0" class="text-sm" :class="mutedClass">No automated violations found.</p>
-              <div class="space-y-3">
-                <div v-for="fix in currentReport.prioritizedFixes.slice(0, 10)" :key="fix.id" class="p-4 rounded-lg border" :class="getSeverityClass(fix.severity)">
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="px-2 py-1 rounded text-xs font-medium" :class="getSeverityBadgeClass(fix.severity)">{{ fix.severity }}</span>
-                    <span class="text-sm font-semibold" :class="headingClass">{{ fix.rule }}</span>
+            <!-- Prioritized fixes -->
+            <UiPanel title="Prioritized fixes">
+              <template #actions>
+                <UiButton size="sm" icon="picture_as_pdf" @click="exportToPDF">Export PDF</UiButton>
+              </template>
+              <p v-if="currentReport.prioritizedFixes.length === 0" class="text-sm text-ink-secondary">No automated violations found.</p>
+              <ul v-else class="space-y-3">
+                <li v-for="fix in currentReport.prioritizedFixes.slice(0, 10)" :key="fix.id" class="tone-card" :class="toneCard(impactTone(fix.severity))">
+                  <div class="flex flex-wrap items-center gap-2 mb-1">
+                    <UiChip :tone="impactTone(fix.severity)">{{ fix.severity }}</UiChip>
+                    <span class="text-sm font-semibold text-ink-strong">{{ fix.rule }}</span>
                   </div>
-                  <p class="text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ fix.description }}</p>
-                  <div class="flex flex-wrap items-center gap-4 text-xs" :class="mutedClass">
+                  <p class="text-sm mb-2 text-ink">{{ fix.description }}</p>
+                  <div class="flex flex-wrap items-center gap-4 text-xs text-ink-secondary">
                     <span>WCAG {{ fix.wcagCriterion }}</span>
                     <span>{{ fix.affectedElements }} elements</span>
                     <span>Effort: {{ fix.effort }}</span>
                     <span>Priority: {{ fix.priority.toFixed(1) }}</span>
-                    <a v-if="fix.helpUrl" :href="fix.helpUrl" target="_blank" rel="noopener noreferrer" class="underline">How to fix</a>
+                    <UiLink v-if="fix.helpUrl" :href="fix.helpUrl" external>How to fix</UiLink>
                   </div>
-                  <div v-if="fix.codeExamples && fix.codeExamples.length > 0" class="mt-3 p-3 rounded space-y-4" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
+                  <div v-if="fix.codeExamples && fix.codeExamples.length > 0" class="mt-3 p-3 rounded-tile bg-surface-sunken space-y-4">
                     <div v-for="(example, idx) in fix.codeExamples" :key="idx" class="space-y-2">
-                      <p class="text-xs italic" :class="mutedClass">{{ example.explanation }}</p>
+                      <p class="text-xs italic text-ink-secondary">{{ example.explanation }}</p>
                       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <p class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-red-300' : 'text-red-600'">Before</p>
-                          <pre class="text-xs p-2 rounded overflow-x-auto" :class="isDarkMode ? 'bg-slate-900 text-gray-300 border border-red-800' : 'bg-red-50 text-red-900 border border-red-200'"><code>{{ example.before }}</code></pre>
+                          <p class="text-xs font-medium mb-1 text-danger">Before</p>
+                          <pre class="code-sample border-danger-border"><code>{{ example.before }}</code></pre>
                         </div>
                         <div>
-                          <p class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-green-300' : 'text-green-600'">After</p>
-                          <pre class="text-xs p-2 rounded overflow-x-auto" :class="isDarkMode ? 'bg-slate-900 text-gray-300 border border-green-800' : 'bg-green-50 text-green-900 border border-green-200'"><code>{{ example.after }}</code></pre>
+                          <p class="text-xs font-medium mb-1 text-success">After</p>
+                          <pre class="code-sample border-success-border"><code>{{ example.after }}</code></pre>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
+                </li>
+              </ul>
+            </UiPanel>
 
-            <!-- WCAG Criteria Breakdown -->
-            <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="headingClass">
-                <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">checklist</span>
-                WCAG Criteria
-              </h3>
-              <p class="text-xs mb-4" :class="mutedClass">Automated checks (axe-core, WCAG 2.x A and AA). Passing them does not prove conformance; criteria marked "Needs review" must be checked by hand.</p>
-              <div class="space-y-4">
-                <div v-for="(criterion, key) in currentReport.wcagCriteria" :key="key" class="rounded-lg border p-4" :class="criterionClass(criterion.status)">
-                  <div class="flex items-start justify-between mb-2">
+            <!-- WCAG criteria breakdown -->
+            <UiPanel
+              title="WCAG criteria"
+              description='Automated checks (axe-core, WCAG 2.x A and AA). Passing them does not prove conformance; criteria marked "Needs review" must be checked by hand.'
+            >
+              <ul class="space-y-4">
+                <li v-for="(criterion, key) in currentReport.wcagCriteria" :key="key" class="tone-card" :class="toneCard(criterionTone(criterion.status))">
+                  <div class="flex items-start justify-between gap-4 mb-2">
                     <div class="flex-1">
-                      <div class="flex items-center gap-2 mb-1">
-                        <span class="text-sm font-semibold" :class="headingClass">{{ criterion.criterion }}</span>
-                        <span class="px-2 py-0.5 rounded text-xs" :class="criterion.level === 'AA' ? (isDarkMode ? 'bg-blue-700 text-blue-200' : 'bg-blue-100 text-blue-700') : (isDarkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700')">
-                          Level {{ criterion.level }}
-                        </span>
+                      <div class="flex flex-wrap items-center gap-2 mb-1">
+                        <span class="text-sm font-semibold text-ink-strong">{{ criterion.criterion }}</span>
+                        <UiChip :tone="criterion.level === 'AA' ? 'info' : 'neutral'">Level {{ criterion.level }}</UiChip>
                       </div>
-                      <p class="text-xs mb-2" :class="mutedClass">{{ criterion.description }}</p>
+                      <p class="text-xs mb-2 text-ink-secondary">{{ criterion.description }}</p>
                     </div>
-                    <div class="text-right ml-4">
-                      <div class="text-lg font-bold" :class="criterion.status === 'pass' ? 'text-green-600' : criterion.status === 'fail' ? 'text-red-600' : 'text-yellow-600'">{{ criterion.issues }}</div>
-                      <div class="text-xs" :class="mutedClass">{{ CRITERION_STATUS[criterion.status] }}</div>
+                    <div class="text-right">
+                      <div class="text-lg font-semibold" :class="toneText(criterionTone(criterion.status))">{{ criterion.issues }}</div>
+                      <div class="text-xs text-ink-muted">{{ CRITERION_STATUS[criterion.status] }}</div>
                     </div>
                   </div>
-                  <div v-if="criterion.failingElements.length > 0" class="mt-3 pt-3 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <div class="text-xs font-medium mb-2" :class="labelClass">
+                  <div v-if="criterion.failingElements.length > 0" class="mt-3 pt-3 border-t border-line">
+                    <div class="text-xs font-medium mb-2 text-ink">
                       Failing elements ({{ criterion.issues > criterion.failingElements.length ? `showing ${criterion.failingElements.length} of ${criterion.issues}` : criterion.failingElements.length }}):
                     </div>
-                    <div class="space-y-2">
-                      <div v-for="(element, idx) in criterion.failingElements" :key="`${element.id}-${idx}`" class="p-2 rounded text-xs" :class="getElementImpactClass(element.impact)">
-                        <div class="font-medium mb-1" :class="headingClass">{{ element.message }}</div>
-                        <div class="flex flex-wrap items-center gap-3" :class="mutedClass">
-                          <span v-if="element.target" class="font-mono">{{ element.target }}</span>
-                          <span v-if="element.impact" class="px-1.5 py-0.5 rounded font-medium" :class="getSeverityBadgeClass(element.impact)">{{ element.impact }}</span>
+                    <ul class="space-y-2">
+                      <li v-for="(element, idx) in criterion.failingElements" :key="`${element.id}-${idx}`" class="tone-card p-2 text-xs" :class="toneCard(impactTone(element.impact))">
+                        <div class="font-medium mb-1 text-ink-strong">{{ element.message }}</div>
+                        <div class="flex flex-wrap items-center gap-3 text-ink-secondary">
+                          <span v-if="element.target" class="font-code">{{ element.target }}</span>
+                          <UiChip v-if="element.impact" :tone="impactTone(element.impact)">{{ element.impact }}</UiChip>
                         </div>
-                        <div v-if="element.element" class="mt-1 font-mono p-1 rounded break-all" :class="isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'">{{ element.element }}</div>
-                      </div>
-                    </div>
+                        <div v-if="element.element" class="mt-1 font-code p-1 rounded-control break-all bg-surface-sunken text-ink">{{ element.element }}</div>
+                      </li>
+                    </ul>
                   </div>
-                </div>
-              </div>
-            </div>
+                </li>
+              </ul>
+            </UiPanel>
           </div>
 
-          <div v-else-if="selectedApplicationId" class="text-center py-12">
-            <p class="text-lg" :class="mutedClass">
-              No report for this application yet.{{ canAdmin ? ' Generate one above.' : '' }}
-            </p>
-          </div>
+          <UiEmptyState
+            v-else-if="selectedApplicationId"
+            spot="site/accessibility-reports"
+            title="No report for this application yet"
+            :body="canAdmin ? 'Generate one above.' : ''"
+          />
         </div>
+      </template>
 
-        <!-- Report History Tab -->
-        <div v-if="activeTab === 'reports'" class="max-w-7xl mx-auto">
-          <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
-            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="headingClass">
-              <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">history</span>
-              Report History
-            </h3>
-            <div v-if="reports.length === 0" class="text-center py-8">
-              <p :class="mutedClass">No reports generated yet.</p>
-            </div>
-            <ul v-else class="space-y-3">
-              <li
-                v-for="report in reports"
-                :key="report.id"
-                class="p-4 rounded-lg border flex flex-wrap items-center justify-between gap-4"
-                :class="currentReport?.id === report.id
-                  ? (isDarkMode ? 'bg-indigo-900/20 border-indigo-600' : 'bg-indigo-50 border-indigo-500')
-                  : (isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200')"
-              >
-                <button type="button" class="flex-1 text-left" @click="openReport(report.id)">
-                  <span class="block font-semibold mb-1" :class="headingClass">{{ report.applicationName }}</span>
-                  <span class="block text-sm" :class="mutedClass">
-                    {{ formatDate(report.generatedAt) }} · {{ report.source === 'url' ? 'URL' : 'HTML' }}{{ report.scheduled ? ' · scheduled' : '' }}
-                  </span>
-                </button>
-                <div class="text-right">
-                  <div class="text-2xl font-bold mb-1" :class="getScoreColor(report.complianceScore)">{{ report.complianceScore }}%</div>
-                  <div class="text-xs" :class="mutedClass">{{ report.totalIssues }} issues</div>
-                </div>
-                <template v-if="canAdmin">
-                  <button v-if="confirmingDelete === `report:${report.id}`" type="button" class="px-3 py-1 rounded text-sm bg-red-600 text-white" @click="deleteReport(report.id)">Confirm delete</button>
-                  <button v-else type="button" class="px-3 py-1 rounded text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" @click="confirmingDelete = `report:${report.id}`">Delete</button>
-                </template>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Schedules Tab -->
-        <div v-if="activeTab === 'schedules'" class="max-w-7xl mx-auto">
-          <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="headingClass">
-                <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">schedule</span>
-                Scheduled Reports
-              </h3>
-              <button v-if="canAdmin" type="button" class="px-4 py-2 rounded-lg font-medium bg-indigo-600 hover:bg-indigo-700 text-white" @click="openScheduleModal()">
-                Create Schedule
+      <!-- Report history -->
+      <template #reports>
+        <UiPanel title="Report history">
+          <p v-if="reports.length === 0" class="text-sm text-ink-secondary">No reports generated yet.</p>
+          <ul v-else class="space-y-3">
+            <li
+              v-for="report in reports"
+              :key="report.id"
+              class="list-row"
+              :class="{ 'list-row-on': currentReport?.id === report.id }"
+            >
+              <button type="button" class="list-row-select" @click="openReport(report.id)">
+                <span class="block font-semibold mb-1 text-ink-strong">{{ report.applicationName }}</span>
+                <span class="block text-sm text-ink-secondary">
+                  {{ formatDate(report.generatedAt) }} · {{ report.source === 'url' ? 'URL' : 'HTML' }}{{ report.scheduled ? ' · scheduled' : '' }}
+                </span>
               </button>
-            </div>
-            <p class="text-xs mb-4" :class="mutedClass">The backend checks for due schedules every minute and scans the page in a browser. Times are UTC. Reports appear in the history; nothing is emailed.</p>
-            <div v-if="schedules.length === 0" class="text-center py-8">
-              <p :class="mutedClass">No schedules configured.</p>
-            </div>
-            <ul v-else class="space-y-3">
-              <li v-for="schedule in schedules" :key="schedule.id" class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <div class="font-semibold mb-1" :class="headingClass">{{ getApplicationName(schedule.applicationId) }}</div>
-                    <div class="text-sm" :class="mutedClass">
-                      {{ schedule.frequency }} at {{ schedule.time }} UTC
-                      <span v-if="schedule.frequency === 'weekly'"> on {{ getDayName(schedule.dayOfWeek) }}</span>
-                      <span v-if="schedule.frequency === 'monthly'"> on day {{ schedule.dayOfMonth }}{{ schedule.dayOfMonth > 28 ? ' (or the last day of shorter months)' : '' }}</span>
-                    </div>
-                    <div class="text-xs mt-1" :class="mutedClass">{{ schedule.url || 'Application URL' }}</div>
-                    <div class="text-xs mt-1" :class="mutedClass">
-                      <span v-if="schedule.enabled">Next run: {{ formatDate(schedule.nextRun) }}</span>
-                      <span v-if="schedule.lastRun"> · Last run: {{ formatDate(schedule.lastRun) }} ({{ schedule.lastStatus === 'failed' ? 'failed' : 'ok' }})</span>
-                    </div>
-                    <div v-if="schedule.lastStatus === 'failed' && schedule.lastError" class="text-xs mt-1 text-red-600">{{ schedule.lastError }}</div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span class="px-2 py-1 rounded text-xs font-medium" :class="schedule.enabled ? (isDarkMode ? 'bg-green-700 text-green-200' : 'bg-green-100 text-green-700') : (isDarkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700')">
-                      {{ schedule.enabled ? 'Enabled' : 'Disabled' }}
+              <div class="text-right">
+                <div class="text-2xl font-semibold mb-1" :class="toneText(scoreTone(report.complianceScore))">{{ report.complianceScore }}%</div>
+                <div class="text-xs text-ink-muted">{{ report.totalIssues }} issues</div>
+              </div>
+              <template v-if="canAdmin">
+                <UiButton v-if="confirmingDelete === `report:${report.id}`" size="sm" variant="danger" @click="deleteReport(report.id)">Confirm delete</UiButton>
+                <UiButton v-else size="sm" variant="ghost" icon="delete" @click="confirmingDelete = `report:${report.id}`">Delete</UiButton>
+              </template>
+            </li>
+          </ul>
+        </UiPanel>
+      </template>
+
+      <!-- Multi-application -->
+      <template #multi-app>
+        <div v-if="complianceSummary" class="space-y-6">
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <UiStat label="Applications" :value="complianceSummary.totalApplications" :hint="`${complianceSummary.reportedApplications} with a report`" />
+            <UiStat label="Meeting SLA" tone="success" :value="complianceSummary.compliantApplications" />
+            <UiStat label="At risk" tone="warning" :value="complianceSummary.atRiskApplications" />
+            <UiStat
+              label="Not meeting SLA"
+              tone="danger"
+              :value="complianceSummary.nonCompliantApplications"
+              :hint="`${complianceSummary.unassessedApplications} not assessed`"
+            />
+            <UiStat
+              label="Average score"
+              :tone="complianceSummary.reportedApplications ? scoreTone(complianceSummary.averageScore) : 'neutral'"
+              :value="complianceSummary.reportedApplications ? `${complianceSummary.averageScore.toFixed(1)}%` : '—'"
+            />
+          </div>
+
+          <UiPanel title="Multi-application compliance" flush>
+            <UiTable caption="Accessibility compliance by application">
+              <thead>
+                <tr>
+                  <th v-for="column in SUMMARY_COLUMNS" :key="column" scope="col">{{ column }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="app in complianceSummary.applications" :key="app.applicationId">
+                  <th scope="row" class="font-medium text-ink-strong">
+                    <button v-if="app.latestReportId" type="button" class="link-button" @click="openReport(app.latestReportId)">{{ app.applicationName }}</button>
+                    <span v-else>{{ app.applicationName }}</span>
+                  </th>
+                  <td>
+                    <span v-if="app.complianceScore !== null" class="text-lg font-semibold" :class="toneText(scoreTone(app.complianceScore))">{{ app.complianceScore }}%</span>
+                    <span v-else class="text-ink-muted">—</span>
+                  </td>
+                  <td>{{ app.wcagLevel ? levelLabel(app.wcagLevel) : '—' }}</td>
+                  <td>{{ app.complianceScore !== null ? `${app.totalIssues} (${app.criticalIssues} critical, ${app.highIssues} high)` : '—' }}</td>
+                  <td><UiChip :tone="slaTone(app.slaStatus)">{{ SLA_LABELS[app.slaStatus] }}</UiChip></td>
+                  <td class="text-ink-secondary">{{ app.lastReportDate ? formatDate(app.lastReportDate) : 'Never' }}</td>
+                  <td>
+                    <span v-if="app.trend" class="text-xs" :class="app.trend.scoreChange >= 0 ? 'text-success' : 'text-danger'">
+                      {{ app.trend.scoreChange >= 0 ? '+' : '' }}{{ app.trend.scoreChange.toFixed(1) }}
                     </span>
-                    <template v-if="canAdmin">
-                      <button type="button" class="px-3 py-1 rounded text-sm" :class="secondaryButton" @click="toggleSchedule(schedule)">{{ schedule.enabled ? 'Disable' : 'Enable' }}</button>
-                      <button type="button" class="px-3 py-1 rounded text-sm" :class="secondaryButton" @click="openScheduleModal(schedule)">Edit</button>
-                      <button v-if="confirmingDelete === `schedule:${schedule.id}`" type="button" class="px-3 py-1 rounded text-sm bg-red-600 text-white" @click="deleteSchedule(schedule.id)">Confirm delete</button>
-                      <button v-else type="button" class="px-3 py-1 rounded text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" @click="confirmingDelete = `schedule:${schedule.id}`">Delete</button>
-                    </template>
-                  </div>
-                </div>
-              </li>
-            </ul>
-          </div>
+                    <span v-else class="text-xs text-ink-muted">—</span>
+                  </td>
+                </tr>
+              </tbody>
+            </UiTable>
+          </UiPanel>
         </div>
+        <UiSpinner v-else label="Loading compliance summary…" />
+      </template>
 
-        <!-- Multi-Application Dashboard Tab -->
-        <div v-if="activeTab === 'multi-app'" class="max-w-7xl mx-auto space-y-6">
-          <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
-            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="headingClass">
-              <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">dashboard</span>
-              Multi-Application Compliance
-            </h3>
-            <div v-if="complianceSummary" class="space-y-6">
-              <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-sm mb-1" :class="mutedClass">Applications</div>
-                  <div class="text-2xl font-bold" :class="headingClass">{{ complianceSummary.totalApplications }}</div>
-                  <div class="text-xs" :class="mutedClass">{{ complianceSummary.reportedApplications }} with a report</div>
+      <!-- Schedules -->
+      <template #schedules>
+        <UiPanel
+          title="Scheduled reports"
+          description="The backend checks for due schedules every minute and scans the page in a browser. Times are UTC. Reports appear in the history; nothing is emailed."
+        >
+          <template v-if="canAdmin" #actions>
+            <UiButton variant="primary" icon="add" @click="openScheduleModal()">Create schedule</UiButton>
+          </template>
+          <p v-if="schedules.length === 0" class="text-sm text-ink-secondary">No schedules configured.</p>
+          <ul v-else class="space-y-3">
+            <li v-for="schedule in schedules" :key="schedule.id" class="list-row">
+              <div class="flex-1 min-w-0">
+                <div class="font-semibold mb-1 text-ink-strong">{{ getApplicationName(schedule.applicationId) }}</div>
+                <div class="text-sm text-ink-secondary">
+                  {{ schedule.frequency }} at {{ schedule.time }} UTC
+                  <span v-if="schedule.frequency === 'weekly'"> on {{ getDayName(schedule.dayOfWeek) }}</span>
+                  <span v-if="schedule.frequency === 'monthly'"> on day {{ schedule.dayOfMonth }}{{ schedule.dayOfMonth > 28 ? ' (or the last day of shorter months)' : '' }}</span>
                 </div>
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-green-900/20 border border-green-700' : 'bg-green-50 border border-green-200'">
-                  <div class="text-sm mb-1" :class="isDarkMode ? 'text-green-300' : 'text-green-700'">Meeting SLA</div>
-                  <div class="text-2xl font-bold text-green-600">{{ complianceSummary.compliantApplications }}</div>
+                <div class="text-xs mt-1 text-ink-muted">{{ schedule.url || 'Application URL' }}</div>
+                <div class="text-xs mt-1 text-ink-muted">
+                  <span v-if="schedule.enabled">Next run: {{ formatDate(schedule.nextRun) }}</span>
+                  <span v-if="schedule.lastRun"> · Last run: {{ formatDate(schedule.lastRun) }} ({{ schedule.lastStatus === 'failed' ? 'failed' : 'ok' }})</span>
                 </div>
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-yellow-900/20 border border-yellow-700' : 'bg-yellow-50 border border-yellow-200'">
-                  <div class="text-sm mb-1" :class="isDarkMode ? 'text-yellow-300' : 'text-yellow-700'">At risk</div>
-                  <div class="text-2xl font-bold text-yellow-600">{{ complianceSummary.atRiskApplications }}</div>
-                </div>
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-red-900/20 border border-red-700' : 'bg-red-50 border border-red-200'">
-                  <div class="text-sm mb-1" :class="isDarkMode ? 'text-red-300' : 'text-red-700'">Not meeting SLA</div>
-                  <div class="text-2xl font-bold text-red-600">{{ complianceSummary.nonCompliantApplications }}</div>
-                  <div class="text-xs" :class="mutedClass">{{ complianceSummary.unassessedApplications }} not assessed</div>
-                </div>
-                <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="text-sm mb-1" :class="mutedClass">Average score</div>
-                  <div class="text-2xl font-bold" :class="complianceSummary.reportedApplications ? getScoreColor(complianceSummary.averageScore) : mutedClass">
-                    {{ complianceSummary.reportedApplications ? `${complianceSummary.averageScore.toFixed(1)}%` : '—' }}
-                  </div>
-                </div>
+                <div v-if="schedule.lastStatus === 'failed' && schedule.lastError" class="text-xs mt-1 text-danger">{{ schedule.lastError }}</div>
               </div>
-
-              <div class="overflow-x-auto">
-                <table class="w-full">
-                  <thead>
-                    <tr class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                      <th v-for="column in SUMMARY_COLUMNS" :key="column" scope="col" class="text-left py-3 px-4 text-sm font-semibold" :class="labelClass">{{ column }}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="app in complianceSummary.applications" :key="app.applicationId" class="border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                      <td class="py-3 px-4 font-medium" :class="headingClass">
-                        <button v-if="app.latestReportId" type="button" class="underline text-left" @click="openReport(app.latestReportId)">{{ app.applicationName }}</button>
-                        <span v-else>{{ app.applicationName }}</span>
-                      </td>
-                      <td class="py-3 px-4">
-                        <span v-if="app.complianceScore !== null" class="text-lg font-bold" :class="getScoreColor(app.complianceScore)">{{ app.complianceScore }}%</span>
-                        <span v-else :class="mutedClass">—</span>
-                      </td>
-                      <td class="py-3 px-4 text-sm" :class="labelClass">{{ app.wcagLevel ? levelLabel(app.wcagLevel) : '—' }}</td>
-                      <td class="py-3 px-4 text-sm" :class="labelClass">{{ app.complianceScore !== null ? `${app.totalIssues} (${app.criticalIssues} critical, ${app.highIssues} high)` : '—' }}</td>
-                      <td class="py-3 px-4">
-                        <span class="px-2 py-1 rounded text-xs font-medium" :class="slaBadge(app.slaStatus)">{{ SLA_LABELS[app.slaStatus] }}</span>
-                      </td>
-                      <td class="py-3 px-4 text-sm" :class="mutedClass">{{ app.lastReportDate ? formatDate(app.lastReportDate) : 'Never' }}</td>
-                      <td class="py-3 px-4">
-                        <span v-if="app.trend" class="text-xs" :class="app.trend.scoreChange >= 0 ? 'text-green-500' : 'text-red-500'">
-                          {{ app.trend.scoreChange >= 0 ? '+' : '' }}{{ app.trend.scoreChange.toFixed(1) }}
-                        </span>
-                        <span v-else class="text-xs" :class="mutedClass">—</span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div class="flex flex-wrap items-center gap-2">
+                <UiChip :tone="schedule.enabled ? 'success' : 'neutral'">{{ schedule.enabled ? 'Enabled' : 'Disabled' }}</UiChip>
+                <template v-if="canAdmin">
+                  <UiButton size="sm" @click="toggleSchedule(schedule)">{{ schedule.enabled ? 'Disable' : 'Enable' }}</UiButton>
+                  <UiButton size="sm" icon="edit" @click="openScheduleModal(schedule)">Edit</UiButton>
+                  <UiButton v-if="confirmingDelete === `schedule:${schedule.id}`" size="sm" variant="danger" @click="deleteSchedule(schedule.id)">Confirm delete</UiButton>
+                  <UiButton v-else size="sm" variant="ghost" icon="delete" @click="confirmingDelete = `schedule:${schedule.id}`">Delete</UiButton>
+                </template>
               </div>
-            </div>
-            <div v-else class="text-center py-8">
-              <p :class="mutedClass">Loading compliance summary…</p>
-            </div>
-          </div>
-        </div>
+            </li>
+          </ul>
+        </UiPanel>
+      </template>
 
-        <!-- SLA Management Tab -->
-        <div v-if="activeTab === 'slas'" class="max-w-7xl mx-auto space-y-6">
-          <div class="rounded-lg shadow-sm border p-6" :class="cardClass">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold flex items-center gap-2" :class="headingClass">
-                <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">gavel</span>
-                Compliance SLAs
-              </h3>
-              <button v-if="canAdmin" type="button" class="px-4 py-2 rounded-lg font-medium bg-indigo-600 hover:bg-indigo-700 text-white" @click="openSLAModal()">Create SLA</button>
-            </div>
-            <p class="text-xs mb-4" :class="mutedClass">One SLA per application. Non-compliant: below the target score or level, or more critical issues than allowed. At risk: more high issues than allowed, at a limit, or within 5 points of the target score.</p>
-            <div v-if="slas.length === 0" class="text-center py-8">
-              <p :class="mutedClass">No SLAs configured.</p>
-            </div>
-            <ul v-else class="space-y-3">
-              <li v-for="sla in slas" :key="sla.id" class="p-4 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                  <div class="flex-1">
-                    <div class="font-semibold mb-2" :class="headingClass">{{ getApplicationName(sla.applicationId) }}</div>
-                    <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div><dt class="text-xs mb-1" :class="mutedClass">Target score</dt><dd class="font-medium" :class="headingClass">{{ sla.targetScore }}%</dd></div>
-                      <div><dt class="text-xs mb-1" :class="mutedClass">Target level</dt><dd class="font-medium" :class="headingClass">WCAG 2.x {{ sla.targetLevel }}</dd></div>
-                      <div><dt class="text-xs mb-1" :class="mutedClass">Max critical issues</dt><dd class="font-medium" :class="headingClass">{{ sla.criticalIssuesThreshold }}</dd></div>
-                      <div><dt class="text-xs mb-1" :class="mutedClass">Max high issues</dt><dd class="font-medium" :class="headingClass">{{ sla.highIssuesThreshold }}</dd></div>
-                    </dl>
-                  </div>
-                  <div v-if="canAdmin" class="flex items-center gap-2">
-                    <button type="button" class="px-3 py-1 rounded text-sm" :class="secondaryButton" @click="openSLAModal(sla)">Edit</button>
-                    <button v-if="confirmingDelete === `sla:${sla.id}`" type="button" class="px-3 py-1 rounded text-sm bg-red-600 text-white" @click="deleteSLA(sla.id)">Confirm delete</button>
-                    <button v-else type="button" class="px-3 py-1 rounded text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" @click="confirmingDelete = `sla:${sla.id}`">Delete</button>
-                  </div>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-        </div>
-      </div>
-    </div>
+      <!-- SLA management -->
+      <template #slas>
+        <UiPanel
+          title="Compliance SLAs"
+          description="One SLA per application. Non-compliant: below the target score or level, or more critical issues than allowed. At risk: more high issues than allowed, at a limit, or within 5 points of the target score."
+        >
+          <template v-if="canAdmin" #actions>
+            <UiButton variant="primary" icon="add" @click="openSLAModal()">Create SLA</UiButton>
+          </template>
+          <p v-if="slas.length === 0" class="text-sm text-ink-secondary">No SLAs configured.</p>
+          <ul v-else class="space-y-3">
+            <li v-for="sla in slas" :key="sla.id" class="list-row">
+              <div class="flex-1">
+                <div class="font-semibold mb-2 text-ink-strong">{{ getApplicationName(sla.applicationId) }}</div>
+                <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div><dt class="text-xs mb-1 text-ink-muted">Target score</dt><dd class="font-medium text-ink-strong">{{ sla.targetScore }}%</dd></div>
+                  <div><dt class="text-xs mb-1 text-ink-muted">Target level</dt><dd class="font-medium text-ink-strong">WCAG 2.x {{ sla.targetLevel }}</dd></div>
+                  <div><dt class="text-xs mb-1 text-ink-muted">Max critical issues</dt><dd class="font-medium text-ink-strong">{{ sla.criticalIssuesThreshold }}</dd></div>
+                  <div><dt class="text-xs mb-1 text-ink-muted">Max high issues</dt><dd class="font-medium text-ink-strong">{{ sla.highIssuesThreshold }}</dd></div>
+                </dl>
+              </div>
+              <div v-if="canAdmin" class="flex items-center gap-2">
+                <UiButton size="sm" icon="edit" @click="openSLAModal(sla)">Edit</UiButton>
+                <UiButton v-if="confirmingDelete === `sla:${sla.id}`" size="sm" variant="danger" @click="deleteSLA(sla.id)">Confirm delete</UiButton>
+                <UiButton v-else size="sm" variant="ghost" icon="delete" @click="confirmingDelete = `sla:${sla.id}`">Delete</UiButton>
+              </div>
+            </li>
+          </ul>
+        </UiPanel>
+      </template>
+    </UiTabs>
 
-    <!-- Schedule Modal -->
-    <div v-if="showScheduleModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="closeScheduleModal" @keydown.esc="closeScheduleModal">
-      <div class="rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" role="dialog" aria-modal="true" aria-labelledby="schedule-modal-title">
-        <div class="p-6 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-          <h2 id="schedule-modal-title" class="text-xl font-semibold flex items-center gap-2" :class="headingClass">
-            <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">schedule</span>
-            {{ editingSchedule ? 'Edit Schedule' : 'Create Schedule' }}
-          </h2>
-          <button type="button" class="p-1 rounded" :class="isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'" aria-label="Close" @click="closeScheduleModal">
-            <span class="material-symbols-outlined" :class="mutedClass" aria-hidden="true">close</span>
-          </button>
+    <!-- Schedule -->
+    <UiDialog
+      :open="showScheduleModal"
+      :title="editingSchedule ? 'Edit schedule' : 'Create schedule'"
+      size="lg"
+      @update:open="(open) => { if (!open) closeScheduleModal(); }"
+    >
+      <form id="a11y-schedule-form" class="space-y-4" @submit.prevent="saveSchedule">
+        <UiSelect
+          id="schedule-app"
+          v-model="scheduleForm.applicationId"
+          label="Application"
+          required
+          :disabled="!!editingSchedule"
+          placeholder="Select an application"
+          :options="applicationOptions"
+        />
+        <UiInput
+          id="schedule-url"
+          :model-value="scheduleForm.url"
+          type="url"
+          label="Page URL"
+          :placeholder="applicationUrlFor(scheduleForm.applicationId) || 'https://app.example.com'"
+          hint="Leave empty to use the application's URL."
+          @update:model-value="scheduleForm.url = String($event).trim()"
+        />
+        <div class="grid md:grid-cols-2 gap-4">
+          <UiSelect id="schedule-frequency" v-model="scheduleForm.frequency" label="Frequency" :options="FREQUENCIES" />
+          <UiInput id="schedule-time" v-model="scheduleForm.time" type="time" label="Time (UTC)" required />
+          <UiSelect
+            v-if="scheduleForm.frequency === 'weekly'"
+            id="schedule-dow"
+            v-model="scheduleForm.dayOfWeek"
+            label="Day of week"
+            :options="DAYS.map((day, index) => ({ value: index, label: day }))"
+          />
+          <UiInput
+            v-if="scheduleForm.frequency === 'monthly'"
+            id="schedule-dom"
+            v-model="scheduleForm.dayOfMonth"
+            type="number"
+            min="1"
+            max="31"
+            required
+            label="Day of month"
+            hint="29–31 run on the last day of shorter months."
+          />
         </div>
-        <form class="p-6 space-y-4" @submit.prevent="saveSchedule">
-          <div>
-            <label for="schedule-app" class="block text-sm font-medium mb-2" :class="labelClass">Application</label>
-            <select id="schedule-app" v-model="scheduleForm.applicationId" required :disabled="!!editingSchedule" class="w-full px-4 py-2 rounded-lg border" :class="inputClass">
-              <option value="" disabled>Select an application</option>
-              <option v-for="app in applications" :key="app.id" :value="app.id">{{ app.name }}</option>
-            </select>
-          </div>
-          <div>
-            <label for="schedule-url" class="block text-sm font-medium mb-2" :class="labelClass">Page URL</label>
-            <input id="schedule-url" v-model.trim="scheduleForm.url" type="url" :placeholder="applicationUrlFor(scheduleForm.applicationId) || 'https://app.example.com'" class="w-full px-4 py-2 rounded-lg border" :class="inputClass" />
-            <p class="text-xs mt-1" :class="mutedClass">Leave empty to use the application's URL.</p>
-          </div>
-          <div class="grid md:grid-cols-2 gap-4">
-            <div>
-              <label for="schedule-frequency" class="block text-sm font-medium mb-2" :class="labelClass">Frequency</label>
-              <select id="schedule-frequency" v-model="scheduleForm.frequency" class="w-full px-4 py-2 rounded-lg border" :class="inputClass">
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
-            </div>
-            <div>
-              <label for="schedule-time" class="block text-sm font-medium mb-2" :class="labelClass">Time (UTC)</label>
-              <input id="schedule-time" v-model="scheduleForm.time" type="time" required class="w-full px-4 py-2 rounded-lg border" :class="inputClass" />
-            </div>
-            <div v-if="scheduleForm.frequency === 'weekly'">
-              <label for="schedule-dow" class="block text-sm font-medium mb-2" :class="labelClass">Day of week</label>
-              <select id="schedule-dow" v-model.number="scheduleForm.dayOfWeek" class="w-full px-4 py-2 rounded-lg border" :class="inputClass">
-                <option v-for="(day, index) in DAYS" :key="day" :value="index">{{ day }}</option>
-              </select>
-            </div>
-            <div v-if="scheduleForm.frequency === 'monthly'">
-              <label for="schedule-dom" class="block text-sm font-medium mb-2" :class="labelClass">Day of month</label>
-              <input id="schedule-dom" v-model.number="scheduleForm.dayOfMonth" type="number" min="1" max="31" required class="w-full px-4 py-2 rounded-lg border" :class="inputClass" />
-              <p class="text-xs mt-1" :class="mutedClass">29–31 run on the last day of shorter months.</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <input id="schedule-enabled" v-model="scheduleForm.enabled" type="checkbox" class="accent-indigo-600" />
-            <label for="schedule-enabled" class="text-sm" :class="labelClass">Enabled</label>
-          </div>
-          <div class="flex gap-4 pt-4">
-            <button type="submit" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-50" :disabled="savingForm">
-              {{ editingSchedule ? 'Save Schedule' : 'Create Schedule' }}
-            </button>
-            <button type="button" class="flex-1 px-4 py-2 rounded-lg border font-medium" :class="isDarkMode ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'" @click="closeScheduleModal">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <UiCheckbox v-model="scheduleForm.enabled" label="Enabled" />
+      </form>
+      <template #footer>
+        <UiButton @click="closeScheduleModal">Cancel</UiButton>
+        <UiButton type="submit" form="a11y-schedule-form" variant="primary" :loading="savingForm">
+          {{ editingSchedule ? 'Save schedule' : 'Create schedule' }}
+        </UiButton>
+      </template>
+    </UiDialog>
 
-    <!-- SLA Modal -->
-    <div v-if="showSLAModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="closeSLAModal" @keydown.esc="closeSLAModal">
-      <div class="rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" :class="isDarkMode ? 'bg-slate-800' : 'bg-white'" role="dialog" aria-modal="true" aria-labelledby="sla-modal-title">
-        <div class="p-6 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-          <h2 id="sla-modal-title" class="text-xl font-semibold flex items-center gap-2" :class="headingClass">
-            <span class="material-symbols-outlined text-indigo-600" aria-hidden="true">gavel</span>
-            {{ editingSLA ? 'Edit SLA' : 'Create SLA' }}
-          </h2>
-          <button type="button" class="p-1 rounded" :class="isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'" aria-label="Close" @click="closeSLAModal">
-            <span class="material-symbols-outlined" :class="mutedClass" aria-hidden="true">close</span>
-          </button>
+    <!-- SLA -->
+    <UiDialog
+      :open="showSLAModal"
+      :title="editingSLA ? 'Edit SLA' : 'Create SLA'"
+      size="lg"
+      @update:open="(open) => { if (!open) closeSLAModal(); }"
+    >
+      <form id="a11y-sla-form" class="space-y-4" @submit.prevent="saveSLA">
+        <UiSelect
+          id="sla-app"
+          v-model="slaForm.applicationId"
+          label="Application"
+          required
+          :disabled="!!editingSLA"
+          placeholder="Select an application"
+          :options="slaApplicationOptions"
+        />
+        <div class="grid md:grid-cols-2 gap-4">
+          <UiInput id="sla-score" v-model="slaForm.targetScore" type="number" min="0" max="100" step="1" required label="Target score (%)" />
+          <UiSelect id="sla-level" v-model="slaForm.targetLevel" label="Target WCAG level" :options="SLA_LEVELS" />
+          <UiInput id="sla-critical" v-model="slaForm.criticalIssuesThreshold" type="number" min="0" step="1" required label="Max critical issues" />
+          <UiInput id="sla-high" v-model="slaForm.highIssuesThreshold" type="number" min="0" step="1" required label="Max high issues" />
         </div>
-        <form class="p-6 space-y-4" @submit.prevent="saveSLA">
-          <div>
-            <label for="sla-app" class="block text-sm font-medium mb-2" :class="labelClass">Application</label>
-            <select id="sla-app" v-model="slaForm.applicationId" required :disabled="!!editingSLA" class="w-full px-4 py-2 rounded-lg border" :class="inputClass">
-              <option value="" disabled>Select an application</option>
-              <option v-for="app in applications" :key="app.id" :value="app.id" :disabled="!editingSLA && slaApplicationIds.has(app.id)">
-                {{ app.name }}{{ !editingSLA && slaApplicationIds.has(app.id) ? ' (has an SLA)' : '' }}
-              </option>
-            </select>
-          </div>
-          <div class="grid md:grid-cols-2 gap-4">
-            <div>
-              <label for="sla-score" class="block text-sm font-medium mb-2" :class="labelClass">Target score (%)</label>
-              <input id="sla-score" v-model.number="slaForm.targetScore" type="number" min="0" max="100" step="1" required class="w-full px-4 py-2 rounded-lg border" :class="inputClass" />
-            </div>
-            <div>
-              <label for="sla-level" class="block text-sm font-medium mb-2" :class="labelClass">Target WCAG level</label>
-              <select id="sla-level" v-model="slaForm.targetLevel" class="w-full px-4 py-2 rounded-lg border" :class="inputClass">
-                <option value="A">A</option>
-                <option value="AA">AA</option>
-                <option value="AAA">AAA (not tested automatically, so never met)</option>
-              </select>
-            </div>
-            <div>
-              <label for="sla-critical" class="block text-sm font-medium mb-2" :class="labelClass">Max critical issues</label>
-              <input id="sla-critical" v-model.number="slaForm.criticalIssuesThreshold" type="number" min="0" step="1" required class="w-full px-4 py-2 rounded-lg border" :class="inputClass" />
-            </div>
-            <div>
-              <label for="sla-high" class="block text-sm font-medium mb-2" :class="labelClass">Max high issues</label>
-              <input id="sla-high" v-model.number="slaForm.highIssuesThreshold" type="number" min="0" step="1" required class="w-full px-4 py-2 rounded-lg border" :class="inputClass" />
-            </div>
-          </div>
-          <div class="flex gap-4 pt-4">
-            <button type="submit" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-50" :disabled="savingForm">
-              {{ editingSLA ? 'Save SLA' : 'Create SLA' }}
-            </button>
-            <button type="button" class="flex-1 px-4 py-2 rounded-lg border font-medium" :class="isDarkMode ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'" @click="closeSLAModal">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
+      </form>
+      <template #footer>
+        <UiButton @click="closeSLAModal">Cancel</UiButton>
+        <UiButton type="submit" form="a11y-sla-form" variant="primary" :loading="savingForm">{{ editingSLA ? 'Save SLA' : 'Create SLA' }}</UiButton>
+      </template>
+    </UiDialog>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import jsPDF from 'jspdf';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import {
+  PageHero,
+  PageShell,
+  UiButton,
+  UiCheckbox,
+  UiChip,
+  UiDialog,
+  UiEmptyState,
+  UiInput,
+  UiLink,
+  UiPanel,
+  UiSegmented,
+  UiSelect,
+  UiSpinner,
+  UiStat,
+  UiTable,
+  UiTabs,
+  UiTextarea,
+} from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 import { useAuth } from '../composables/useAuth.js';
 import apiClient, { apiErrorMessage } from '../services/api.js';
 
 const TABS = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'reports', label: 'Report History' },
-  { id: 'multi-app', label: 'Multi-Application' },
-  { id: 'schedules', label: 'Schedules' },
-  { id: 'slas', label: 'SLA Management' },
+  { value: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { value: 'reports', label: 'Report history', icon: 'history' },
+  { value: 'multi-app', label: 'Multi-application', icon: 'apps' },
+  { value: 'schedules', label: 'Schedules', icon: 'schedule' },
+  { value: 'slas', label: 'SLA management', icon: 'gavel' },
+];
+const GENERATE_SOURCES = [
+  { value: 'url', label: 'Public URL (rendered in a browser)' },
+  { value: 'html', label: 'Paste HTML' },
+];
+const FREQUENCIES = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+];
+const SLA_LEVELS = [
+  { value: 'A', label: 'A' },
+  { value: 'AA', label: 'AA' },
+  { value: 'AAA', label: 'AAA (not tested automatically, so never met)' },
 ];
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const SUMMARY_COLUMNS = ['Application', 'Score', 'WCAG level', 'Issues', 'SLA', 'Last report', 'Trend'];
@@ -663,8 +503,6 @@ const SLA_LABELS = {
 };
 const CRITERION_STATUS = { pass: 'Pass', fail: 'Fail', review: 'Needs review' };
 
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = useDarkMode();
 const { notice, showNotice, clearNotice } = useNotice();
 const { hasPermission } = useAuth();
 const canAdmin = computed(() => hasPermission('admin:governance'));
@@ -697,25 +535,24 @@ const blankSLA = () => ({ applicationId: '', targetScore: 90, targetLevel: 'AA',
 const slaForm = ref(blankSLA());
 
 // ---------- Presentation ----------
-const cardClass = computed(() => (isDarkMode.value ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200'));
-const headingClass = computed(() => (isDarkMode.value ? 'text-white' : 'text-gray-900'));
-const mutedClass = computed(() => (isDarkMode.value ? 'text-gray-400' : 'text-gray-600'));
-const labelClass = computed(() => (isDarkMode.value ? 'text-gray-300' : 'text-gray-700'));
-const inputClass = computed(() => (isDarkMode.value ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'));
-const secondaryButton = computed(() => (isDarkMode.value ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'));
-
 const selectedApplication = computed(() => applications.value.find((a) => a.id === selectedApplicationId.value) ?? null);
 const slaApplicationIds = computed(() => new Set(slas.value.map((s) => s.applicationId)));
+const applicationOptions = computed(() => applications.value.map((app) => ({ value: app.id, label: app.name })));
+// New SLAs can't be added for an application that already has one
+const slaApplicationOptions = computed(() =>
+  applications.value.map((app) => {
+    const taken = !editingSLA.value && slaApplicationIds.value.has(app.id);
+    return { value: app.id, label: `${app.name}${taken ? ' (has an SLA)' : ''}`, disabled: taken };
+  }),
+);
 const canGenerate = computed(() =>
   generateSource.value === 'html' ? !!generateHtml.value.trim() : !!(generateUrl.value || selectedApplication.value?.applicationUrl),
 );
 
-const getScoreColor = (score) => {
-  if (score >= 95) return 'text-green-500';
-  if (score >= 85) return 'text-blue-500';
-  if (score >= 70) return 'text-yellow-500';
-  return 'text-red-500';
-};
+/** 95+ success, 85+ accent, 70+ warning, below that danger */
+const scoreTone = (score) => (score >= 95 ? 'success' : score >= 85 ? 'accent' : score >= 70 ? 'warning' : 'danger');
+const TONE_TEXT = { success: 'text-success', accent: 'text-accent-text', warning: 'text-warning', danger: 'text-danger', info: 'text-info', neutral: 'text-ink-strong' };
+const toneText = (tone) => TONE_TEXT[tone] ?? TONE_TEXT.neutral;
 
 const levelLabel = (level) => (level === 'Non-Compliant' ? 'Fails WCAG A' : `No automated WCAG ${level} failures`);
 
@@ -725,53 +562,18 @@ const formatCategoryName = (category) =>
     .replace(/^./, (s) => s.toUpperCase())
     .trim();
 
-const IMPACT_STYLES = {
-  CRITICAL: ['red'],
-  HIGH: ['orange'],
-  MODERATE: ['yellow'],
-  LOW: ['blue'],
-  INFO: ['gray'],
-};
-const colorFor = (impact) => IMPACT_STYLES[String(impact || '').toUpperCase()]?.[0] ?? 'gray';
-
-// Full class strings so Tailwind keeps them
-const BORDER = {
-  red: ['border-red-200', 'border-red-700'],
-  orange: ['border-orange-200', 'border-orange-700'],
-  yellow: ['border-yellow-200', 'border-yellow-700'],
-  blue: ['border-blue-200', 'border-blue-700'],
-  gray: ['border-gray-200', 'border-gray-700'],
-};
-const BADGE = {
-  red: ['bg-red-100 text-red-700', 'bg-red-700 text-red-200'],
-  orange: ['bg-orange-100 text-orange-700', 'bg-orange-700 text-orange-200'],
-  yellow: ['bg-yellow-100 text-yellow-700', 'bg-yellow-700 text-yellow-200'],
-  blue: ['bg-blue-100 text-blue-700', 'bg-blue-700 text-blue-200'],
-  gray: ['bg-gray-100 text-gray-700', 'bg-gray-700 text-gray-200'],
-};
-const PANEL = {
-  red: ['bg-red-50 border border-red-200', 'bg-red-900/20 border border-red-700'],
-  orange: ['bg-orange-50 border border-orange-200', 'bg-orange-900/20 border border-orange-700'],
-  yellow: ['bg-yellow-50 border border-yellow-200', 'bg-yellow-900/20 border border-yellow-700'],
-  blue: ['bg-blue-50 border border-blue-200', 'bg-blue-900/20 border border-blue-700'],
-  gray: ['bg-gray-50 border border-gray-200', 'bg-gray-900/20 border border-gray-700'],
-};
-const pick = (table, impact) => table[colorFor(impact)][isDarkMode.value ? 1 : 0];
-const getSeverityClass = (severity) => `${isDarkMode.value ? 'bg-slate-800' : 'bg-white'} border ${pick(BORDER, severity)}`;
-const getSeverityBadgeClass = (severity) => pick(BADGE, severity);
-const getElementImpactClass = (impact) => pick(PANEL, impact);
-const criterionClass = (status) =>
-  status === 'pass'
-    ? isDarkMode.value ? 'bg-green-900/20 border-green-700' : 'bg-green-50 border-green-200'
-    : status === 'fail'
-      ? isDarkMode.value ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200'
-      : isDarkMode.value ? 'bg-yellow-900/20 border-yellow-700' : 'bg-yellow-50 border-yellow-200';
-const slaBadge = (status) =>
+// axe impact (CRITICAL, HIGH, MODERATE, LOW, INFO) as a status tone
+const IMPACT_TONES = { CRITICAL: 'danger', HIGH: 'danger', MODERATE: 'warning', LOW: 'info', INFO: 'neutral' };
+const impactTone = (impact) => IMPACT_TONES[String(impact || '').toUpperCase()] ?? 'neutral';
+const criterionTone = (status) => (status === 'pass' ? 'success' : status === 'fail' ? 'danger' : 'warning');
+const toneCard = (tone) =>
   ({
-    compliant: isDarkMode.value ? 'bg-green-700 text-green-200' : 'bg-green-100 text-green-700',
-    'at-risk': isDarkMode.value ? 'bg-yellow-700 text-yellow-200' : 'bg-yellow-100 text-yellow-700',
-    'non-compliant': isDarkMode.value ? 'bg-red-700 text-red-200' : 'bg-red-100 text-red-700',
-  })[status] ?? (isDarkMode.value ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700');
+    success: 'border-success-border bg-success-bg',
+    warning: 'border-warning-border bg-warning-bg',
+    danger: 'border-danger-border bg-danger-bg',
+    info: 'border-info-border bg-info-bg',
+  })[tone] ?? 'border-line bg-surface-raised';
+const slaTone = (status) => ({ compliant: 'success', 'at-risk': 'warning', 'non-compliant': 'danger' })[status] ?? 'neutral';
 
 const formatDate = (value) => {
   const date = value ? new Date(value) : null;
@@ -1029,10 +831,6 @@ watch(activeTab, (tab) => {
 });
 
 onMounted(async () => {
-  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-    drawerOpen.value = true;
-    sessionStorage.removeItem('openDrawerOnLoad');
-  }
   await loadApplications();
   await Promise.all([loadReports(), loadSchedules(), loadSLAs()]);
 });
@@ -1523,7 +1321,22 @@ const exportToPDF = () => {
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.tone-card {
+  @apply rounded-tile border p-4;
+}
+.code-sample {
+  @apply text-xs p-2 rounded-control overflow-x-auto border bg-surface-raised text-ink font-code;
+}
+.list-row {
+  @apply flex flex-wrap items-center justify-between gap-4 p-4 rounded-tile border border-line bg-surface-raised;
+}
+.list-row-on {
+  @apply bg-accent-subtle border-accent-highlight;
+}
+.list-row-select {
+  @apply flex-1 text-left rounded-control focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.link-button {
+  @apply text-left text-accent-text underline underline-offset-2 rounded-control focus-visible:outline focus-visible:outline-2 outline-focus;
 }
 </style>

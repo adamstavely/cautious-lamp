@@ -1,62 +1,35 @@
 <template>
-  <nav 
+  <nav
     data-ds-component="topnav"
     data-ds-path="@design-system/components/topnav"
-    class="sticky top-0 z-40 bg-[#fff] dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 relative" 
-    role="navigation" 
+    class="topnav"
+    role="navigation"
     aria-label="Top navigation"
   >
     <div class="flex items-center h-16">
-      <!-- Left spacer for sidebar -->
-      <div class="w-24 flex-shrink-0"></div>
-      
-      <!-- Site Title - Left Justified -->
-      <router-link
-        to="/"
-        class="flex items-center gap-2 pl-[50px] pr-4 transition-all group flex-shrink-0 -ml-24"
-      >
-        <!-- Custom Carets Icon (overlapping by 25%) -->
-        <svg 
-          width="24" 
-          height="24" 
-          viewBox="0 0 24 24" 
-          fill="none" 
+      <!-- Site title -->
+      <router-link to="/" class="brand group">
+        <!-- Two carets, the right one overlapping the left by 25% -->
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          class="transition-transform group-hover:scale-110 flex-shrink-0"
+          class="brand-mark"
           aria-hidden="true"
         >
-          <!-- Left caret < (width: 4 units, from x=6 to x=10) -->
-          <path 
-            d="M10 6 L6 12 L10 18" 
-            :stroke="isDarkMode ? '#9dbcf0' : '#2f5ea8'"
-            stroke-width="2.5" 
-            stroke-linecap="round" 
-            stroke-linejoin="round"
-            fill="none"
-          />
-          <!-- Right caret > (width: 4 units, from x=9 to x=13, overlapping left by 1 unit = 25%) -->
-          <path 
-            d="M13 6 L17 12 L13 18" 
-            :stroke="isDarkMode ? '#9dbcf0' : '#2f5ea8'"
-            stroke-width="2.5" 
-            stroke-linecap="round" 
-            stroke-linejoin="round"
-            fill="none"
-          />
+          <path d="M10 6 L6 12 L10 18" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+          <path d="M13 6 L17 12 L13 18" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
         </svg>
-        <span class="text-lg sm:text-xl font-semibold tracking-tight text-slate-900 dark:text-white whitespace-nowrap hidden sm:inline">DESIGN.COM</span>
+        <span class="brand-name">DESIGN.COM</span>
       </router-link>
-      
-      <!-- Center Search Bar -->
+
+      <!-- Center search bar -->
       <div class="flex-1 flex justify-center min-w-0">
         <div class="w-full max-w-2xl mx-4 sm:mx-8">
           <div class="relative" ref="searchContainer">
-            <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-xl pointer-events-none"
-              :class="isDarkMode ? 'text-slate-500' : 'text-slate-400'"
-              aria-hidden="true"
-            >
-              search
-            </span>
+            <span class="material-symbols-outlined search-icon" aria-hidden="true">search</span>
             <input
               v-model="searchQuery"
               type="search"
@@ -67,78 +40,69 @@
               @keydown.down.prevent="navigateSearchResults(1)"
               @keydown.up.prevent="navigateSearchResults(-1)"
               @keydown.enter.prevent="selectSearchResult"
-              class="w-full h-10 pl-10 pr-4 border rounded-full focus:outline-none focus:ring-2 focus:ring-[#2f5ea8]/40 dark:focus:ring-[#9dbcf0]/40 text-sm transition-colors"
-              :class="isDarkMode 
-                ? 'border-slate-800 bg-slate-900 text-slate-100 placeholder-slate-500 focus:border-[#6f93d1]' 
-                : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:border-[#8fb0e8] focus:bg-[#fff]'"
+              class="search-input"
               aria-label="Search design system"
-              aria-expanded="showSearchResults"
+              :aria-expanded="showSearchResults ? 'true' : 'false'"
               aria-haspopup="listbox"
             />
             <button
               v-if="searchQuery"
+              type="button"
               @click="showAdvancedFilters = !showAdvancedFilters"
-              class="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded"
-              :class="isDarkMode 
-                ? 'text-gray-400 hover:text-white hover:bg-slate-600' 
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+              class="search-filters-toggle"
               title="Advanced filters"
+              aria-label="Advanced filters"
+              :aria-expanded="showAdvancedFilters ? 'true' : 'false'"
             >
-              <span class="material-symbols-outlined text-sm">tune</span>
+              <span class="material-symbols-outlined text-sm" aria-hidden="true">tune</span>
             </button>
-            
-            <!-- Advanced Filters Panel -->
-            <div
-              v-if="showAdvancedFilters"
-              class="absolute left-0 right-0 top-full mt-2 rounded-lg shadow-xl border z-50 p-4"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-slate-700' 
-                : 'bg-white border-gray-200'"
-            >
+
+            <!-- Advanced filters panel -->
+            <div v-if="showAdvancedFilters" class="popover p-4">
               <div class="space-y-3">
                 <div>
-                  <label class="block text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Type</label>
+                  <p class="filter-label">Type</p>
                   <div class="flex flex-wrap gap-2">
                     <button
                       v-for="type in availableFilters?.types || []"
                       :key="type.value"
+                      type="button"
                       @click="toggleSearchFilter('type', type.value)"
-                      class="px-2 py-1 rounded text-xs"
-                      :class="searchFilters.type?.includes(type.value)
-                        ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
-                        : (isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700')"
+                      class="filter-chip"
+                      :class="{ 'filter-chip-on': searchFilters.type?.includes(type.value) }"
+                      :aria-pressed="searchFilters.type?.includes(type.value) ? 'true' : 'false'"
                     >
                       {{ type.label }} ({{ type.count }})
                     </button>
                   </div>
                 </div>
                 <div>
-                  <label class="block text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Category</label>
+                  <p class="filter-label">Category</p>
                   <div class="flex flex-wrap gap-2">
                     <button
                       v-for="cat in availableFilters?.categories?.slice(0, 8) || []"
                       :key="cat.value"
+                      type="button"
                       @click="toggleSearchFilter('category', cat.value)"
-                      class="px-2 py-1 rounded text-xs"
-                      :class="searchFilters.category?.includes(cat.value)
-                        ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
-                        : (isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700')"
+                      class="filter-chip"
+                      :class="{ 'filter-chip-on': searchFilters.category?.includes(cat.value) }"
+                      :aria-pressed="searchFilters.category?.includes(cat.value) ? 'true' : 'false'"
                     >
                       {{ cat.label }} ({{ cat.count }})
                     </button>
                   </div>
                 </div>
                 <div>
-                  <label class="block text-xs font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Has Props</label>
+                  <p class="filter-label">Has Props</p>
                   <div class="flex flex-wrap gap-2">
                     <button
                       v-for="prop in availableFilters?.commonProps?.slice(0, 6) || []"
                       :key="prop.value"
+                      type="button"
                       @click="toggleSearchFilter('hasProps', prop.value)"
-                      class="px-2 py-1 rounded text-xs"
-                      :class="searchFilters.hasProps?.includes(prop.value)
-                        ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
-                        : (isDarkMode ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700')"
+                      class="filter-chip"
+                      :class="{ 'filter-chip-on': searchFilters.hasProps?.includes(prop.value) }"
+                      :aria-pressed="searchFilters.hasProps?.includes(prop.value) ? 'true' : 'false'"
                     >
                       {{ prop.label }}
                     </button>
@@ -146,82 +110,51 @@
                 </div>
               </div>
             </div>
-            
-            <!-- Search Results Dropdown -->
+
+            <!-- Search results dropdown -->
             <div
               v-if="showSearchResults && (searchQuery.trim() || filteredSearchResults.length > 0)"
-              class="absolute left-0 right-0 top-full mt-2 max-h-[500px] overflow-hidden rounded-lg shadow-xl border z-50"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-slate-700' 
-                : 'bg-white border-gray-200'"
+              class="popover overflow-hidden"
               role="listbox"
               aria-label="Search results"
             >
-              <!-- Results List -->
-              <div class="overflow-y-auto max-h-[500px]">
+              <div class="overflow-y-auto max-h-96">
                 <div v-if="filteredSearchResults.length === 0 && searchQuery.trim()" class="p-8 text-center">
-                  <span class="material-symbols-outlined text-5xl mb-3" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-                    search_off
-                  </span>
-                  <p class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    No results found
-                  </p>
-                  <p class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                    Try a different search term
-                  </p>
+                  <span class="material-symbols-outlined text-5xl mb-3 text-ink-disabled" aria-hidden="true">search_off</span>
+                  <p class="text-sm font-medium mb-1 text-ink-secondary">No results found</p>
+                  <p class="text-xs text-ink-muted">Try a different search term</p>
                 </div>
-                
-                <div v-else-if="filteredSearchResults.length > 0" class="divide-y" :class="isDarkMode ? 'divide-slate-700' : 'divide-gray-200'">
+
+                <div v-else-if="filteredSearchResults.length > 0" class="divide-y divide-line">
                   <router-link
                     v-for="(result, index) in filteredSearchResults"
                     :key="result.id"
                     :to="result.path"
                     @click="closeSearch"
-                    class="block px-4 py-3 transition-colors"
-                    :class="[
-                      selectedSearchIndex === index
-                        ? (isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-50')
-                        : (isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50')
-                    ]"
+                    class="popover-row block px-4 py-3"
+                    :class="{ 'popover-row-on': selectedSearchIndex === index }"
                     role="option"
                     :aria-selected="selectedSearchIndex === index"
                   >
                     <div class="flex items-start gap-3">
-                      <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                        :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'"
-                      >
-                        <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                          {{ result.icon }}
-                        </span>
+                      <div class="result-icon">
+                        <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ result.icon }}</span>
                       </div>
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-1">
-                          <h4 class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                            {{ result.title }}
-                          </h4>
-                          <span 
-                            class="px-2 py-0.5 rounded text-xs font-medium"
-                            :class="getCategoryBadgeClass(result.category)"
-                          >
-                            {{ result.category }}
-                          </span>
+                          <h4 class="text-sm font-semibold text-ink-strong">{{ result.title }}</h4>
+                          <UiChip :tone="getCategoryTone(result.category)">{{ result.category }}</UiChip>
                         </div>
-                        <p class="text-xs mb-1 line-clamp-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                          {{ result.description }}
-                        </p>
-                        <p class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                          {{ result.path }}
-                        </p>
+                        <p class="text-xs mb-1 line-clamp-1 text-ink-secondary">{{ result.description }}</p>
+                        <p class="text-xs text-ink-muted">{{ result.path }}</p>
                       </div>
                     </div>
                   </router-link>
                 </div>
-                
-                <!-- Empty State (when no query) -->
+
+                <!-- Empty state (no query) -->
                 <div v-else class="p-6">
-                  <p class="text-sm text-center" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Start typing to search...
-                  </p>
+                  <p class="text-sm text-center text-ink-secondary">Start typing to search...</p>
                 </div>
               </div>
             </div>
@@ -229,291 +162,229 @@
         </div>
       </div>
 
-      <!-- Right Actions -->
+      <!-- Right actions -->
       <div class="flex items-center gap-4 px-4 sm:px-6 lg:px-8 flex-shrink-0">
-        <!-- Live Chat -->
-        <button
-          class="relative flex items-center justify-center p-2 rounded-full transition-colors"
-          :class="isDarkMode 
-            ? 'text-slate-400 hover:text-[#9dbcf0] hover:bg-slate-900' 
-            : 'text-slate-500 hover:text-[#2f5ea8] hover:bg-slate-100'"
-          title="Live Chat"
-          aria-label="Live Chat"
-        >
-          <span class="material-symbols-outlined flex items-center justify-center" aria-hidden="true">live_help</span>
+        <!-- Live chat -->
+        <button type="button" class="icon-btn" title="Live Chat" aria-label="Live Chat">
+          <span class="material-symbols-outlined" aria-hidden="true">live_help</span>
         </button>
 
         <!-- Feedback -->
-        <router-link
-          to="/feedback"
-          class="relative flex items-center justify-center p-2 rounded-full transition-colors"
-          :class="isDarkMode 
-            ? 'text-slate-400 hover:text-[#9dbcf0] hover:bg-slate-900' 
-            : 'text-slate-500 hover:text-[#2f5ea8] hover:bg-slate-100'"
-          title="Roadmap & Feedback"
-          aria-label="View roadmap and submit feedback"
-        >
-          <span class="material-symbols-outlined flex items-center justify-center" aria-hidden="true">new_releases</span>
+        <router-link to="/feedback" class="icon-btn" title="Roadmap & Feedback" aria-label="View roadmap and submit feedback">
+          <span class="material-symbols-outlined" aria-hidden="true">new_releases</span>
         </router-link>
 
         <!-- Notifications -->
         <div class="relative" ref="notificationsContainer">
           <button
+            type="button"
             @click="toggleNotifications"
-            class="relative flex items-center justify-center p-2 rounded-full transition-colors"
-            :class="isDarkMode 
-              ? 'text-slate-400 hover:text-[#9dbcf0] hover:bg-slate-900' 
-              : 'text-slate-500 hover:text-[#2f5ea8] hover:bg-slate-100'"
+            class="icon-btn"
             title="Notifications"
             :aria-label="`Notifications${totalNotificationCount > 0 ? `, ${totalNotificationCount} unread` : ''}`"
             :aria-expanded="showNotifications"
             aria-haspopup="true"
           >
-            <span class="material-symbols-outlined flex items-center justify-center" aria-hidden="true">notifications</span>
-            <span 
+            <span class="material-symbols-outlined" aria-hidden="true">notifications</span>
+            <span
               v-if="totalNotificationCount > 0"
-              class="absolute top-1 right-1 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-xs font-semibold px-1"
-              :class="breakingChangeNotifications.length > 0 
-                ? (isDarkMode ? 'bg-red-400 text-red-900' : 'bg-red-600 text-white')
-                : (isDarkMode ? 'bg-[#9dbcf0] text-slate-950' : 'bg-[#2f5ea8] text-white')"
+              class="count-badge"
+              :class="breakingChangeNotifications.length > 0 ? 'count-badge-danger' : 'count-badge-accent'"
               aria-hidden="true"
             >
               {{ totalNotificationCount > 9 ? '9+' : totalNotificationCount }}
             </span>
           </button>
-          
-          <!-- Notifications Dropdown -->
+
+          <!-- Notifications dropdown -->
           <div
             v-if="showNotifications"
-            class="absolute right-0 top-full mt-2 w-96 max-h-[600px] overflow-hidden rounded-lg shadow-xl border z-50"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-slate-700' 
-              : 'bg-white border-gray-200'"
+            class="popover popover-end w-96 overflow-hidden"
             role="menu"
             aria-label="Recent activity notifications"
           >
             <!-- Header -->
-            <div class="px-4 py-3 border-b flex items-center justify-between"
-              :class="isDarkMode ? 'border-slate-700' : 'border-gray-200'"
-            >
-              <h3 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="font-semibold text-lg">Notifications</h3>
-              <button
-                @click="closeNotifications"
-                class="p-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-                :class="isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'"
-              >
-                <span class="material-symbols-outlined text-xl">close</span>
+            <div class="px-4 py-3 border-b border-line flex items-center justify-between">
+              <h3 class="font-semibold text-lg text-ink-strong">Notifications</h3>
+              <button type="button" @click="closeNotifications" class="close-btn" aria-label="Close notifications">
+                <span class="material-symbols-outlined text-xl" aria-hidden="true">close</span>
               </button>
             </div>
-            
+
             <!-- Tabs -->
-            <div class="flex border-b" :class="isDarkMode ? 'border-slate-700' : 'border-gray-200'">
+            <div class="flex border-b border-line">
               <button
+                type="button"
                 @click="notificationTab = 'all'"
-                class="flex-1 px-4 py-2 text-sm font-medium transition-colors border-b-2"
-                :class="notificationTab === 'all'
-                  ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
-                  : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-500 hover:text-gray-700')"
+                class="notif-tab"
+                :class="{ 'notif-tab-on': notificationTab === 'all' }"
               >
                 All
-                <span v-if="totalNotificationCount > 0" class="ml-2 px-1.5 py-0.5 rounded text-xs"
-                  :class="isDarkMode ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-700'"
-                >
-                  {{ totalNotificationCount }}
-                </span>
+                <span v-if="totalNotificationCount > 0" class="notif-tab-count">{{ totalNotificationCount }}</span>
               </button>
               <button
+                type="button"
                 @click="notificationTab = 'breaking'"
-                class="flex-1 px-4 py-2 text-sm font-medium transition-colors border-b-2"
-                :class="notificationTab === 'breaking'
-                  ? (isDarkMode ? 'border-red-400 text-red-400' : 'border-red-600 text-red-600')
-                  : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-500 hover:text-gray-700')"
+                class="notif-tab notif-tab-danger"
+                :class="{ 'notif-tab-on': notificationTab === 'breaking' }"
               >
                 Breaking Changes
-                <span v-if="breakingChangeNotifications.length > 0" class="ml-2 px-1.5 py-0.5 rounded text-xs"
-                  :class="isDarkMode ? 'bg-red-900/50 text-red-300' : 'bg-red-100 text-red-700'"
-                >
-                  {{ breakingChangeNotifications.length }}
-                </span>
+                <span v-if="breakingChangeNotifications.length > 0" class="notif-tab-count">{{ breakingChangeNotifications.length }}</span>
               </button>
               <button
+                type="button"
                 @click="notificationTab = 'activity'"
-                class="flex-1 px-4 py-2 text-sm font-medium transition-colors border-b-2"
-                :class="notificationTab === 'activity'
-                  ? (isDarkMode ? 'border-indigo-400 text-indigo-400' : 'border-indigo-600 text-indigo-600')
-                  : (isDarkMode ? 'border-transparent text-gray-400 hover:text-gray-300' : 'border-transparent text-gray-500 hover:text-gray-700')"
+                class="notif-tab"
+                :class="{ 'notif-tab-on': notificationTab === 'activity' }"
               >
                 Activity
-                <span v-if="recentActivity.length > 0" class="ml-2 px-1.5 py-0.5 rounded text-xs"
-                  :class="isDarkMode ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-700'"
-                >
-                  {{ recentActivity.length }}
-                </span>
+                <span v-if="recentActivity.length > 0" class="notif-tab-count">{{ recentActivity.length }}</span>
               </button>
             </div>
-            
-            <!-- Notification List -->
-            <div class="overflow-y-auto max-h-[500px]">
-              <!-- Breaking Changes Tab -->
+
+            <!-- Notification list -->
+            <div class="overflow-y-auto max-h-96">
+              <!-- Breaking changes tab -->
               <div v-if="notificationTab === 'breaking'">
                 <div v-if="breakingChangeNotifications.length === 0" class="p-8 text-center">
-                  <span class="material-symbols-outlined text-4xl mb-3 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">check_circle</span>
-                  <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-sm">No breaking changes</p>
+                  <span class="material-symbols-outlined text-4xl mb-3 block text-ink-disabled" aria-hidden="true">check_circle</span>
+                  <p class="text-sm text-ink-muted">No breaking changes</p>
                 </div>
-                <div v-else class="divide-y" :class="isDarkMode ? 'divide-slate-700' : 'divide-gray-200'">
+                <div v-else class="divide-y divide-line">
                   <div
                     v-for="notification in breakingChangeNotifications"
                     :key="notification.id"
                     @click="goToComponent(notification.componentId)"
-                    class="p-4 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-slate-700"
+                    class="popover-row p-4 cursor-pointer"
                   >
                     <div class="flex items-start gap-3">
-                      <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-red-100 dark:bg-red-900/30">
-                        <span class="material-symbols-outlined text-base text-red-600 dark:text-red-400">warning</span>
+                      <div class="activity-icon activity-icon-danger">
+                        <span class="material-symbols-outlined text-base" aria-hidden="true">warning</span>
                       </div>
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-1">
-                          <h4 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-sm font-semibold">Breaking Change</h4>
-                          <span class="px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
-                            {{ notification.componentName }}
-                          </span>
+                          <h4 class="text-sm font-semibold text-ink-strong">Breaking Change</h4>
+                          <UiChip tone="danger">{{ notification.componentName }}</UiChip>
                         </div>
-                        <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="text-sm mb-1 line-clamp-2">{{ notification.message }}</p>
-                        <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-xs">{{ formatRelativeTime(notification.timestamp) }}</p>
+                        <p class="text-sm mb-1 line-clamp-2 text-ink-secondary">{{ notification.message }}</p>
+                        <p class="text-xs text-ink-muted">{{ formatRelativeTime(notification.timestamp) }}</p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              
-              <!-- Activity Tab -->
+
+              <!-- Activity tab -->
               <div v-else-if="notificationTab === 'activity'">
                 <div v-if="recentActivity.length === 0" class="p-8 text-center">
-                <svg :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" class="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-sm">No recent activity</p>
-              </div>
-              <div v-else class="divide-y"
-                :class="isDarkMode ? 'divide-slate-700' : 'divide-gray-200'"
-              >
-                <div
-                  v-for="activity in recentActivity"
-                  :key="activity.id"
-                  @click="goToReview(activity.reviewId)"
-                  class="p-4 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-slate-700"
-                >
-                  <div class="flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" :class="getActivityIconBg(activity.type, activity.action)">
-                      <svg v-if="activity.type === 'comment'" class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                      <svg v-else-if="activity.action === 'uploaded' || activity.action === 'created_from_url'" class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      <span v-else-if="activity.action === 'version_uploaded'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">difference</span>
-                      <span v-else-if="activity.action === 'approved'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">approval</span>
-                      <span v-else-if="activity.action === 'completed'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">done_all</span>
-                      <span v-else-if="activity.action === 'rejected'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">source_notes</span>
-                      <span v-else-if="activity.action === 'moved_to_review'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">graph_1</span>
-                      <svg v-else-if="activity.type === 'workflow'" class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <svg v-else class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                      <div class="flex items-center gap-2 mb-1">
-                        <h4 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-sm font-semibold truncate">{{ activity.reviewName }}</h4>
-                        <v-chip
-                          :color="getWorkflowColor(activity.workflowState)"
-                          size="x-small"
-                          class="font-medium"
-                        >
-                          {{ getWorkflowLabel(activity.workflowState) }}
-                        </v-chip>
-                      </div>
-                      <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="text-sm mb-1 line-clamp-2">{{ activity.description }}</p>
-                      <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-xs">{{ formatRelativeTime(activity.timestamp) }}</p>
-                    </div>
-                  </div>
+                  <svg class="w-12 h-12 mx-auto mb-3 text-ink-disabled" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p class="text-sm text-ink-muted">No recent activity</p>
                 </div>
-              </div>
-              </div>
-              
-              <!-- All Tab -->
-              <div v-else>
-                <div v-if="totalNotificationCount === 0" class="p-8 text-center">
-                  <span class="material-symbols-outlined text-4xl mb-3 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">notifications_off</span>
-                  <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-sm">No notifications</p>
-                </div>
-                <div v-else class="divide-y" :class="isDarkMode ? 'divide-slate-700' : 'divide-gray-200'">
-                  <!-- Breaking Changes First -->
-                  <div
-                    v-for="notification in breakingChangeNotifications"
-                    :key="`breaking-${notification.id}`"
-                    @click="goToComponent(notification.componentId)"
-                    class="p-4 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-slate-700 border-l-4"
-                    :class="isDarkMode ? 'border-red-500 bg-red-900/10' : 'border-red-500 bg-red-50'"
-                  >
-                    <div class="flex items-start gap-3">
-                      <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-red-100 dark:bg-red-900/30">
-                        <span class="material-symbols-outlined text-base text-red-600 dark:text-red-400">warning</span>
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-1">
-                          <h4 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-sm font-semibold">Breaking Change</h4>
-                          <span class="px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
-                            {{ notification.componentName }}
-                          </span>
-                        </div>
-                        <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="text-sm mb-1 line-clamp-2">{{ notification.message }}</p>
-                        <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-xs">{{ formatRelativeTime(notification.timestamp) }}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <!-- Then Activity -->
+                <div v-else class="divide-y divide-line">
                   <div
                     v-for="activity in recentActivity"
                     :key="activity.id"
                     @click="goToReview(activity.reviewId)"
-                    class="p-4 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-slate-700"
+                    class="popover-row p-4 cursor-pointer"
                   >
                     <div class="flex items-start gap-3">
-                      <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" :class="getActivityIconBg(activity.type, activity.action)">
-                        <svg v-if="activity.type === 'comment'" class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div class="activity-icon" :class="`activity-icon-${getActivityTone(activity.type, activity.action)}`">
+                        <svg v-if="activity.type === 'comment'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
-                        <svg v-else-if="activity.action === 'uploaded' || activity.action === 'created_from_url'" class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg v-else-if="activity.action === 'uploaded' || activity.action === 'created_from_url'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                         </svg>
-                        <span v-else-if="activity.action === 'version_uploaded'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">difference</span>
-                        <span v-else-if="activity.action === 'approved'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">approval</span>
-                        <span v-else-if="activity.action === 'completed'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">done_all</span>
-                        <span v-else-if="activity.action === 'rejected'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">source_notes</span>
-                        <span v-else-if="activity.action === 'moved_to_review'" class="material-symbols-outlined w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" style="font-size: 16px;">graph_1</span>
-                        <svg v-else-if="activity.type === 'workflow'" class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <span v-else-if="activity.action === 'version_uploaded'" class="material-symbols-outlined text-base" aria-hidden="true">difference</span>
+                        <span v-else-if="activity.action === 'approved'" class="material-symbols-outlined text-base" aria-hidden="true">approval</span>
+                        <span v-else-if="activity.action === 'completed'" class="material-symbols-outlined text-base" aria-hidden="true">done_all</span>
+                        <span v-else-if="activity.action === 'rejected'" class="material-symbols-outlined text-base" aria-hidden="true">source_notes</span>
+                        <span v-else-if="activity.action === 'moved_to_review'" class="material-symbols-outlined text-base" aria-hidden="true">graph_1</span>
+                        <svg v-else-if="activity.type === 'workflow'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <svg v-else class="w-4 h-4" :class="getActivityIconColor(activity.type, activity.action)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-1">
-                          <h4 :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-sm font-semibold truncate">{{ activity.reviewName }}</h4>
-                          <v-chip
-                            :color="getWorkflowColor(activity.workflowState)"
-                            size="x-small"
-                            class="font-medium"
-                          >
-                            {{ getWorkflowLabel(activity.workflowState) }}
-                          </v-chip>
+                          <h4 class="text-sm font-semibold truncate text-ink-strong">{{ activity.reviewName }}</h4>
+                          <UiChip :tone="getWorkflowTone(activity.workflowState)">{{ getWorkflowLabel(activity.workflowState) }}</UiChip>
                         </div>
-                        <p :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'" class="text-sm mb-1 line-clamp-2">{{ activity.description }}</p>
-                        <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" class="text-xs">{{ formatRelativeTime(activity.timestamp) }}</p>
+                        <p class="text-sm mb-1 line-clamp-2 text-ink-secondary">{{ activity.description }}</p>
+                        <p class="text-xs text-ink-muted">{{ formatRelativeTime(activity.timestamp) }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- All tab -->
+              <div v-else>
+                <div v-if="totalNotificationCount === 0" class="p-8 text-center">
+                  <span class="material-symbols-outlined text-4xl mb-3 block text-ink-disabled" aria-hidden="true">notifications_off</span>
+                  <p class="text-sm text-ink-muted">No notifications</p>
+                </div>
+                <div v-else class="divide-y divide-line">
+                  <!-- Breaking changes first -->
+                  <div
+                    v-for="notification in breakingChangeNotifications"
+                    :key="`breaking-${notification.id}`"
+                    @click="goToComponent(notification.componentId)"
+                    class="popover-row popover-row-breaking p-4 cursor-pointer"
+                  >
+                    <div class="flex items-start gap-3">
+                      <div class="activity-icon activity-icon-danger">
+                        <span class="material-symbols-outlined text-base" aria-hidden="true">warning</span>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                          <h4 class="text-sm font-semibold text-ink-strong">Breaking Change</h4>
+                          <UiChip tone="danger">{{ notification.componentName }}</UiChip>
+                        </div>
+                        <p class="text-sm mb-1 line-clamp-2 text-ink-secondary">{{ notification.message }}</p>
+                        <p class="text-xs text-ink-muted">{{ formatRelativeTime(notification.timestamp) }}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Then activity -->
+                  <div
+                    v-for="activity in recentActivity"
+                    :key="activity.id"
+                    @click="goToReview(activity.reviewId)"
+                    class="popover-row p-4 cursor-pointer"
+                  >
+                    <div class="flex items-start gap-3">
+                      <div class="activity-icon" :class="`activity-icon-${getActivityTone(activity.type, activity.action)}`">
+                        <svg v-if="activity.type === 'comment'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        <svg v-else-if="activity.action === 'uploaded' || activity.action === 'created_from_url'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <span v-else-if="activity.action === 'version_uploaded'" class="material-symbols-outlined text-base" aria-hidden="true">difference</span>
+                        <span v-else-if="activity.action === 'approved'" class="material-symbols-outlined text-base" aria-hidden="true">approval</span>
+                        <span v-else-if="activity.action === 'completed'" class="material-symbols-outlined text-base" aria-hidden="true">done_all</span>
+                        <span v-else-if="activity.action === 'rejected'" class="material-symbols-outlined text-base" aria-hidden="true">source_notes</span>
+                        <span v-else-if="activity.action === 'moved_to_review'" class="material-symbols-outlined text-base" aria-hidden="true">graph_1</span>
+                        <svg v-else-if="activity.type === 'workflow'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                          <h4 class="text-sm font-semibold truncate text-ink-strong">{{ activity.reviewName }}</h4>
+                          <UiChip :tone="getWorkflowTone(activity.workflowState)">{{ getWorkflowLabel(activity.workflowState) }}</UiChip>
+                        </div>
+                        <p class="text-sm mb-1 line-clamp-2 text-ink-secondary">{{ activity.description }}</p>
+                        <p class="text-xs text-ink-muted">{{ formatRelativeTime(activity.timestamp) }}</p>
                       </div>
                     </div>
                   </div>
@@ -529,7 +400,7 @@
             id="user-menu-button"
             ref="userMenuButton"
             type="button"
-            class="flex items-center gap-2 p-1 rounded-full transition-colors hover:bg-slate-100 dark:hover:bg-slate-900"
+            class="account-btn"
             :title="user ? `${user.name || user.email} (${user.email})` : 'Account'"
             :aria-label="user ? `Account menu for ${user.name || user.email}` : 'Account menu'"
             aria-haspopup="menu"
@@ -539,24 +410,15 @@
             @keydown.down.prevent="openUserMenu(0)"
             @keydown.up.prevent="openUserMenu(-1)"
           >
-            <span
-              class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold bg-[#dce8fb] text-[#2f5ea8] dark:bg-[#263a5c] dark:text-[#cfdffb]"
-              aria-hidden="true"
-            >{{ initials }}</span>
+            <span class="avatar w-8 h-8" aria-hidden="true">{{ initials }}</span>
           </button>
 
-          <div
-            v-if="userMenuOpen"
-            class="absolute right-0 mt-2 w-72 rounded-2xl border border-solid border-slate-200 bg-[#fff] dark:border-slate-800 dark:bg-slate-950 z-50 overflow-hidden"
-          >
-            <div class="flex items-center gap-3 px-4 py-4 border-b border-solid border-slate-200 dark:border-slate-800">
-              <span
-                class="w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-sm font-semibold bg-[#dce8fb] text-[#2f5ea8] dark:bg-[#263a5c] dark:text-[#cfdffb]"
-                aria-hidden="true"
-              >{{ initials }}</span>
+          <div v-if="userMenuOpen" class="account-menu">
+            <div class="flex items-center gap-3 px-4 py-4 border-b border-line">
+              <span class="avatar w-10 h-10 shrink-0" aria-hidden="true">{{ initials }}</span>
               <div class="min-w-0">
-                <p class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{{ user?.name || user?.email }}</p>
-                <p class="text-sm text-slate-500 dark:text-slate-400 truncate">{{ user?.email }}</p>
+                <p class="text-sm font-semibold text-ink-strong truncate">{{ user?.name || user?.email }}</p>
+                <p class="text-sm text-ink-muted truncate">{{ user?.email }}</p>
               </div>
             </div>
             <ul
@@ -583,16 +445,9 @@
           </div>
         </div>
 
-        <!-- App Picker -->
-        <button
-          class="flex items-center justify-center p-2 rounded-full transition-colors"
-          :class="isDarkMode 
-            ? 'text-slate-400 hover:text-[#9dbcf0] hover:bg-slate-900' 
-            : 'text-slate-500 hover:text-[#2f5ea8] hover:bg-slate-100'"
-          title="Switch App"
-          aria-label="Switch application"
-        >
-          <span class="material-symbols-outlined flex items-center justify-center" aria-hidden="true">apps</span>
+        <!-- App picker -->
+        <button type="button" class="icon-btn" title="Switch App" aria-label="Switch application">
+          <span class="material-symbols-outlined" aria-hidden="true">apps</span>
         </button>
       </div>
     </div>
@@ -606,6 +461,7 @@ import { mockAPI, isMockMode, mockReviews, getCurrentUser } from '../mockData.js
 import { useAuth } from '../composables/useAuth.js';
 import { authHeaders } from '../services/api.js';
 import { canAccessPath } from '../router/rbacGuards.js';
+import { UiChip } from './ui';
 
 const router = useRouter();
 const { user, initials, logout } = useAuth();
@@ -883,23 +739,16 @@ const toggleSearchFilter = (filterType, value) => {
   performSearch();
 };
 
-const getCategoryBadgeClass = (category) => {
-  const classes = {
-    'Components': isDarkMode.value ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700',
-    'Tokens': isDarkMode.value ? 'bg-purple-900/30 text-purple-300' : 'bg-purple-100 text-purple-700',
-    'Patterns': isDarkMode.value ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700',
-    'Guidelines': isDarkMode.value ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-700',
-    'Fonts': isDarkMode.value ? 'bg-orange-900/30 text-orange-300' : 'bg-orange-100 text-orange-700',
-    'Tools': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300' : 'bg-yellow-100 text-yellow-700',
-    'Design Assets': isDarkMode.value ? 'bg-pink-900/30 text-pink-300' : 'bg-pink-100 text-pink-700',
-    'Getting Started': isDarkMode.value ? 'bg-teal-900/30 text-teal-300' : 'bg-teal-100 text-teal-700',
-    'HCD': isDarkMode.value ? 'bg-cyan-900/30 text-cyan-300' : 'bg-cyan-100 text-cyan-700',
-    'Admin': isDarkMode.value ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-700',
-    'AI': isDarkMode.value ? 'bg-violet-900/30 text-violet-300' : 'bg-violet-100 text-violet-700',
-    'Review': isDarkMode.value ? 'bg-amber-900/30 text-amber-300' : 'bg-amber-100 text-amber-700',
-  };
-  return classes[category] || (isDarkMode.value ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700');
-};
+// The chip tone for a result's category
+const getCategoryTone = (category) =>
+  ({
+    Components: 'accent',
+    Tokens: 'accent',
+    Patterns: 'accent',
+    Guidelines: 'accent',
+    Review: 'warning',
+    Admin: 'danger',
+  })[category] || 'neutral';
 
 const performSearch = async () => {
   selectedSearchIndex.value = -1;
@@ -1011,8 +860,6 @@ const selectSearchResult = () => {
   }
 };
 
-// Check if dark mode is active - make it reactive
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const showNotifications = ref(false);
 const recentActivity = ref([]);
 const breakingChangeNotifications = ref([]);
@@ -1262,30 +1109,12 @@ const formatRelativeTime = (timestamp) => {
   }
 };
 
-// Get activity icon background color
-const getActivityIconBg = (type, action) => {
-  if (type === 'comment') return isDarkMode.value ? 'bg-blue-900/30' : 'bg-blue-100';
-  if (action === 'uploaded' || action === 'created_from_url') return isDarkMode.value ? 'bg-indigo-900/30' : 'bg-indigo-100';
-  if (action === 'version_uploaded') return isDarkMode.value ? 'bg-purple-900/30' : 'bg-purple-100';
-  if (action === 'approved') return isDarkMode.value ? 'bg-green-900/30' : 'bg-green-100';
-  if (action === 'completed') return isDarkMode.value ? 'bg-green-900/30' : 'bg-green-100';
-  if (action === 'rejected') return isDarkMode.value ? 'bg-orange-900/30' : 'bg-orange-100';
-  if (action === 'moved_to_review') return isDarkMode.value ? 'bg-indigo-900/30' : 'bg-indigo-100';
-  if (type === 'workflow') return isDarkMode.value ? 'bg-purple-900/30' : 'bg-purple-100';
-  return isDarkMode.value ? 'bg-gray-700' : 'bg-gray-100';
-};
-
-// Get activity icon color
-const getActivityIconColor = (type, action) => {
-  if (type === 'comment') return isDarkMode.value ? 'text-blue-400' : 'text-blue-600';
-  if (action === 'uploaded' || action === 'created_from_url') return isDarkMode.value ? 'text-indigo-400' : 'text-indigo-600';
-  if (action === 'version_uploaded') return isDarkMode.value ? 'text-purple-400' : 'text-purple-600';
-  if (action === 'approved') return isDarkMode.value ? 'text-green-400' : 'text-green-600';
-  if (action === 'completed') return isDarkMode.value ? 'text-green-400' : 'text-green-600';
-  if (action === 'rejected') return isDarkMode.value ? 'text-orange-400' : 'text-orange-600';
-  if (action === 'moved_to_review') return isDarkMode.value ? 'text-indigo-400' : 'text-indigo-600';
-  if (type === 'workflow') return isDarkMode.value ? 'text-purple-400' : 'text-purple-600';
-  return isDarkMode.value ? 'text-gray-400' : 'text-gray-600';
+// The tone of an activity's icon: comments and uploads in the accent, approvals in success, rejections in warning
+const getActivityTone = (type, action) => {
+  if (action === 'approved' || action === 'completed') return 'success';
+  if (action === 'rejected') return 'warning';
+  if (type === 'comment' || type === 'workflow' || ['uploaded', 'created_from_url', 'version_uploaded', 'moved_to_review'].includes(action)) return 'accent';
+  return 'neutral';
 };
 
 // Workflow helper functions
@@ -1304,19 +1133,12 @@ const getWorkflowLabel = (state) => {
   return labels[state] || state;
 };
 
-const getWorkflowColor = (state) => {
-  const colors = {
-    'draft': 'grey',
-    'client_review': 'blue',
-    'client_approved': 'light-blue',
-    'art_director_review': 'purple',
-    'art_director_approved': 'deep-purple',
-    'ad_changes_requested': 'orange',
-    'creative_director_review': 'indigo',
-    'cd_changes_requested': 'orange',
-    'approved': 'green'
-  };
-  return colors[state] || 'grey';
+// The chip tone for a review's workflow state
+const getWorkflowTone = (state) => {
+  if (state === 'approved' || state === 'client_approved' || state === 'art_director_approved') return 'success';
+  if (state === 'ad_changes_requested' || state === 'cd_changes_requested') return 'warning';
+  if (state && state.endsWith('_review')) return 'accent';
+  return 'neutral';
 };
 
 // Navigate to review
@@ -1325,32 +1147,7 @@ const goToReview = (reviewId) => {
   closeNotifications();
 };
 
-// Watch for dark class changes on html element using MutationObserver
-let darkModeObserver = null;
-let darkModeInterval = null;
-
 onMounted(() => {
-  // Set up dark mode observer
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  // Also check periodically as a fallback
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  // Check immediately
-  checkDarkMode();
-  
-  // Check every 100ms as fallback
-  darkModeInterval = setInterval(checkDarkMode, 100);
-  
   // Load recent activity
   loadRecentActivity();
   
@@ -1361,30 +1158,137 @@ onMounted(() => {
   document.addEventListener('click', handleClickOutside);
 });
 
-// Cleanup observer and interval on unmount
 onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
   document.removeEventListener('click', handleClickOutside);
 });
 </script>
 
 <style scoped>
+.topnav {
+  @apply sticky top-0 z-40 bg-surface border-b border-line;
+}
+
+.brand {
+  @apply flex items-center gap-2 pl-12 pr-4 flex-shrink-0 rounded-control;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.brand-mark {
+  @apply flex-shrink-0 stroke-accent transition-transform group-hover:scale-110;
+}
+.brand-name {
+  @apply hidden sm:inline text-lg sm:text-xl font-semibold tracking-tight whitespace-nowrap text-ink-strong;
+}
+
+.search-icon {
+  @apply absolute left-3 top-1/2 -translate-y-1/2 text-xl text-ink-muted pointer-events-none;
+}
+.search-input {
+  @apply w-full h-10 pl-10 pr-4 rounded-pill border border-solid border-line bg-surface-sunken text-sm text-ink placeholder:text-ink-muted transition-colors;
+  @apply hover:border-line-control-hover focus:outline focus:outline-2 focus:outline-offset-0 outline-focus focus:border-transparent focus:bg-surface-control;
+}
+.search-filters-toggle {
+  @apply absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-control text-ink-muted hover:bg-fill-hover hover:text-ink-strong;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+
+/* Dropdowns under the search box and the notifications button */
+.popover {
+  @apply absolute left-0 right-0 top-full mt-2 z-50 rounded-tile border border-line bg-surface-overlay shadow-overlay;
+}
+.popover-end {
+  @apply left-auto right-0;
+}
+.popover-row {
+  @apply transition-colors hover:bg-fill-hover;
+}
+.popover-row-on {
+  @apply bg-accent-subtle;
+}
+.popover-row-breaking {
+  @apply border-l-4 border-l-danger-solid bg-danger-bg;
+}
+
+.filter-label {
+  @apply block text-xs font-medium mb-2 text-ink-secondary;
+}
+.filter-chip {
+  @apply px-2 py-1 rounded-control bg-fill text-xs text-ink-secondary hover:bg-fill-hover;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.filter-chip-on,
+.filter-chip-on:hover {
+  @apply bg-accent text-ink-on-accent;
+}
+
+.result-icon {
+  @apply flex items-center justify-center flex-shrink-0 w-8 h-8 mt-0.5 rounded-control bg-accent-subtle text-accent-text;
+}
+
+.icon-btn {
+  @apply relative flex items-center justify-center p-2 rounded-pill text-ink-muted transition-colors hover:bg-fill-hover hover:text-accent-text;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.count-badge {
+  @apply absolute top-1 right-1 flex items-center justify-center h-5 min-w-5 px-1 rounded-pill text-xs font-semibold;
+}
+.count-badge-accent {
+  @apply bg-accent text-ink-on-accent;
+}
+.count-badge-danger {
+  @apply bg-danger-solid text-ink-on-accent;
+}
+
+.close-btn {
+  @apply p-1 rounded-control text-ink-muted transition-colors hover:bg-fill-hover hover:text-ink-strong;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+
+.notif-tab {
+  @apply flex-1 px-4 py-2 border-b-2 border-transparent text-sm font-medium text-ink-muted transition-colors hover:text-ink;
+}
+.notif-tab-on {
+  @apply border-accent text-accent-text hover:text-accent-text;
+}
+.notif-tab-danger.notif-tab-on {
+  @apply border-danger-solid text-danger hover:text-danger;
+}
+.notif-tab-count {
+  @apply ml-2 px-1.5 py-0.5 rounded-control bg-accent-subtle text-xs text-accent-text;
+}
+.notif-tab-danger .notif-tab-count {
+  @apply bg-danger-bg text-danger;
+}
+
+.activity-icon {
+  @apply flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-pill;
+}
+.activity-icon-accent {
+  @apply bg-accent-subtle text-accent-text;
+}
+.activity-icon-success {
+  @apply bg-success-bg text-success;
+}
+.activity-icon-warning {
+  @apply bg-warning-bg text-warning;
+}
+.activity-icon-danger {
+  @apply bg-danger-bg text-danger;
+}
+.activity-icon-neutral {
+  @apply bg-fill text-ink-secondary;
+}
+
+.account-btn {
+  @apply flex items-center gap-2 p-1 rounded-pill transition-colors hover:bg-fill-hover;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.avatar {
+  @apply flex items-center justify-center rounded-pill bg-accent-highlight text-sm font-semibold text-accent-text;
+}
+.account-menu {
+  @apply absolute right-0 mt-2 w-72 z-50 overflow-hidden rounded-card border border-line bg-surface-overlay shadow-overlay;
+}
 .user-menu-item {
-  @apply w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-slate-700 hover:bg-slate-50 focus:bg-slate-100 focus:outline-none
-    dark:text-slate-200 dark:hover:bg-slate-900 dark:focus:bg-slate-900;
+  @apply w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-ink hover:bg-fill-hover focus:bg-fill-hover focus:outline-none;
 }
 </style>
-
-<style>
-/* Ensure dark mode styles apply to TopNav */
-html.dark nav.sticky {
-  background-color: rgb(15 23 42) !important; /* slate-900 */
-  border-color: rgb(51 65 85) !important; /* slate-700 */
-}
-</style>
-

@@ -1,22 +1,16 @@
 <template>
-  <v-dialog :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)" persistent max-width="400">
-    <v-card>
-      <v-card-title class="d-flex align-center">
-        <v-icon :color="type === 'error' ? 'error' : 'success'" class="mr-2">{{ type === 'error' ? 'mdi-alert-circle' : 'mdi-check-circle' }}</v-icon>
-        {{ title }}
-      </v-card-title>
-      <v-card-text>
-        {{ message }}
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn color="primary" @click="close">OK</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <UiDialog :open="modelValue" :title="title" size="sm" @update:open="emit('update:modelValue', $event)">
+    <UiCallout :tone="tone" :role="type === 'error' ? 'alert' : 'status'">{{ message }}</UiCallout>
+    <template #footer>
+      <UiButton variant="primary" @click="close">OK</UiButton>
+    </template>
+  </UiDialog>
 </template>
 
 <script setup>
+import { computed } from 'vue';
+import { UiButton, UiCallout, UiDialog } from '../ui';
+
 const props = defineProps({
   modelValue: Boolean,
   title: {
@@ -33,9 +27,9 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 
+const tone = computed(() => ({ error: 'danger', success: 'success' })[props.type] || 'info');
+
 const close = () => {
   emit('update:modelValue', false);
 };
 </script>
-
-

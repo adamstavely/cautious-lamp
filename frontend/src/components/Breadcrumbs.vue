@@ -1,63 +1,42 @@
 <template>
-  <nav 
-    v-if="crumbs.length > 0" 
+  <nav
+    v-if="crumbs.length > 0"
     data-ds-component="breadcrumbs"
     data-ds-path="@design-system/components/breadcrumbs"
-    class="px-8 pt-6 pb-4 border-b"
-    :class="isDarkMode 
-      ? 'border-slate-800 bg-slate-950' 
-      : 'border-slate-200 bg-[#fff]'"
+    class="breadcrumbs"
+    aria-label="Breadcrumb"
   >
-    <div class="flex items-center gap-2 text-sm">
-      <router-link
-        to="/"
-        class="transition-colors"
-        :class="isDarkMode 
-          ? 'text-slate-400 hover:text-[#9dbcf0]' 
-          : 'text-slate-500 hover:text-[#2f5ea8]'"
-      >
-        Home
-      </router-link>
-      <span 
-        v-for="(crumb, index) in crumbs" 
-        :key="index"
-        class="flex items-center gap-2"
-      >
-        <span :class="isDarkMode ? 'text-slate-600' : 'text-slate-300'">/</span>
+    <ol class="flex flex-wrap items-center gap-2 text-sm">
+      <li>
+        <router-link to="/" class="breadcrumb-link">Home</router-link>
+      </li>
+      <li v-for="(crumb, index) in crumbs" :key="index" class="flex items-center gap-2">
+        <span class="text-ink-disabled" aria-hidden="true">/</span>
         <button
           v-if="index < crumbs.length - 1 && crumb.path"
+          type="button"
+          class="breadcrumb-link"
           @click="handleClick(crumb.path)"
-          class="transition-colors"
-          :class="isDarkMode 
-            ? 'text-slate-400 hover:text-[#9dbcf0]' 
-            : 'text-slate-500 hover:text-[#2f5ea8]'"
         >
           {{ crumb.label }}
         </button>
         <router-link
           v-else-if="index < crumbs.length - 1 && crumb.path && !onNavigate"
           :to="crumb.path"
-          class="transition-colors"
-          :class="isDarkMode 
-            ? 'text-slate-400 hover:text-[#9dbcf0]' 
-            : 'text-slate-500 hover:text-[#2f5ea8]'"
+          class="breadcrumb-link"
         >
           {{ crumb.label }}
         </router-link>
-        <span
-          v-else
-          class="font-medium"
-          :class="isDarkMode ? 'text-white' : 'text-slate-900'"
-        >
+        <span v-else class="font-medium text-ink-strong" :aria-current="index === crumbs.length - 1 ? 'page' : undefined">
           {{ crumb.label }}
         </span>
-      </span>
-    </div>
+      </li>
+    </ol>
   </nav>
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 const props = defineProps({
@@ -73,38 +52,6 @@ const props = defineProps({
 
 const route = useRoute();
 const router = useRouter();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
-
 const crumbs = computed(() => {
   const path = props.customPath || route.path;
   const parts = path.split('/').filter(p => p);
@@ -363,3 +310,12 @@ const handleClick = (crumbPath) => {
 };
 </script>
 
+<style scoped>
+.breadcrumbs {
+  @apply px-8 pt-6 pb-4 border-b border-line bg-surface;
+}
+.breadcrumb-link {
+  @apply text-ink-muted transition-colors hover:text-accent-text;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus rounded-control;
+}
+</style>

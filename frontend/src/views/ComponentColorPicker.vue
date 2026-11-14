@@ -1,1302 +1,388 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
+  <PageShell>
+    <PageHero
+      :back="{ to: '/components', label: 'Components' }"
+      title="Color picker"
+      lead="A comprehensive color picker component with gradient selector, hue slider, and multiple color format support (RGB, HSL, CMYK, Hex)."
+      spot="foundations/component-color-picker"
+      size="tool"
     >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Color Picker
-                    </h1>
-                    <span 
-                      class="px-3 py-1 rounded-full text-sm font-medium border"
-                      :class="getComponentStatusBadgeClass(componentStatus)"
-                    >
-                      {{ componentStatus || 'Production Ready' }}
-                    </span>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    A comprehensive color picker component with gradient selector, hue slider, and multiple color format support (RGB, HSL, CMYK, Hex).
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">label</span>
-                      Version 1.0.0
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated Jan 15, 2024
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="colorPickerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Color picker icon -->
-                      <rect x="50" y="50" width="100" height="100" rx="8" fill="url(#colorPickerGradient)" opacity="0.8"/>
-                      <circle cx="100" cy="100" r="30" fill="white" opacity="0.3"/>
-                      <circle cx="100" cy="100" r="20" fill="url(#colorPickerGradient)" opacity="0.9"/>
-                      <rect x="60" y="160" width="80" height="8" rx="4" fill="url(#colorPickerGradient)" opacity="0.6"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
+      <template #actions>
+        <UiChip :tone="componentStatusTone(componentStatus)">{{ componentStatus || 'Production Ready' }}</UiChip>
+      </template>
+    </PageHero>
+
+    <BreakingChangeAlert :component-versions="componentVersions" :component-id="getComponentId()" @dismiss="() => {}" />
+
+    <PageSection title="Interactive playground" description="Experiment with the ColorPicker component. Click the color swatch to open the picker.">
+      <div class="grid lg:grid-cols-2 gap-6 mb-6">
+        <UiPanel title="Props editor">
+          <UiInput v-model="propValues.initialColor" label="Initial color" :placeholder="HEX_PLACEHOLDER" :hint="HEX_HINT" mono />
+        </UiPanel>
+
+        <UiPanel title="Live preview" flush>
+          <template #actions>
+            <UiButton
+              size="sm"
+              :variant="previewDarkMode ? 'primary' : 'secondary'"
+              :icon="previewDarkMode ? 'dark_mode' : 'light_mode'"
+              :label="previewDarkMode ? 'Dark' : 'Light'"
+              :aria-pressed="previewDarkMode"
+              @click="previewDarkMode = !previewDarkMode"
+            />
+          </template>
+          <div
+            class="preview-stage"
+            :data-tc-theme="previewDarkMode ? 'dark' : 'light'"
+          >
+            <div class="text-center">
+              <p class="text-sm mb-4 text-ink-secondary">Click the color swatch to open the picker</p>
+              <button
+                type="button"
+                class="swatch-button swatch-lg preview-swatch"
+                :title="`Current color: ${selectedColor}. Click to change.`"
+                :aria-label="`Open color picker. Current color: ${selectedColor}`"
+                @click.stop="openPicker($event)"
+              ></button>
+              <p class="text-xs mt-2 font-code text-ink-muted">{{ selectedColor }}</p>
             </div>
+            <ColorPicker
+              :show="showPicker"
+              :initial-color="selectedColor"
+              :position="pickerPosition"
+              :preview-dark-mode="previewDarkMode"
+              @update:show="showPicker = $event"
+              @apply="handleColorApply"
+              @cancel="showPicker = false"
+            />
           </div>
-
-          <!-- Breaking Change Alert -->
-          <BreakingChangeAlert 
-            :component-versions="componentVersions" 
-            :component-id="getComponentId()"
-            @dismiss="() => {}"
-          />
-
-          <!-- Interactive Playground Section -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Interactive Playground</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Experiment with the ColorPicker component. Click the color swatch to open the picker.</p>
-            </div>
-
-            <div class="grid lg:grid-cols-2 gap-6 mb-6">
-              <!-- Props Editor -->
-              <div 
-                class="rounded-lg shadow-sm border"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="p-4 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                  <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">tune</span>
-                    Props Editor
-                  </h3>
-                </div>
-                <div class="p-6">
-                  <div class="space-y-4">
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Initial Color
-                      </label>
-                      <input
-                        v-model="propValues.initialColor"
-                        type="text"
-                        placeholder="#000000"
-                        class="w-full px-3 py-2 border rounded-lg text-sm font-mono"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                        Hex color value (e.g., #4f46e5)
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Live Preview -->
-              <div 
-                class="rounded-lg shadow-sm border"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="p-4 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                  <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">preview</span>
-                    Live Preview
-                  </h3>
-                  <div class="flex items-center gap-2">
-                    <button
-                      @click="previewDarkMode = !previewDarkMode"
-                      class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                      :class="previewDarkMode
-                        ? (isDarkMode 
-                          ? 'bg-indigo-600 text-white' 
-                          : 'bg-indigo-600 text-white')
-                        : (isDarkMode 
-                          ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                    >
-                      <span class="material-symbols-outlined text-base">{{ previewDarkMode ? 'dark_mode' : 'light_mode' }}</span>
-                      {{ previewDarkMode ? 'Dark' : 'Light' }}
-                    </button>
-                  </div>
-                </div>
-                <div class="p-8 min-h-[400px] flex items-center justify-center" :class="previewDarkMode ? 'bg-slate-950 dark' : 'bg-gray-50'">
-                  <div class="text-center">
-                    <p class="text-sm mb-4" :class="previewDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      Click the color swatch to open the picker
-                    </p>
-                    <button
-                      @click.stop="openPicker($event)"
-                      class="w-20 h-20 rounded-lg border-2 cursor-pointer transition-colors shadow-lg hover:scale-105"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 hover:border-indigo-400' 
-                        : 'border-gray-300 hover:border-indigo-500'"
-                      :style="{ backgroundColor: selectedColor }"
-                      :title="`Current color: ${selectedColor}. Click to change.`"
-                      aria-label="Open color picker"
-                    ></button>
-                    <p class="text-xs mt-2 font-mono" :class="previewDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                      {{ selectedColor }}
-                    </p>
-                  </div>
-                  
-                  <!-- Color Picker -->
-                  <ColorPicker
-                    :show="showPicker"
-                    :initial-color="selectedColor"
-                    :position="pickerPosition"
-                    :preview-dark-mode="previewDarkMode"
-                    @update:show="showPicker = $event"
-                    @apply="handleColorApply"
-                    @cancel="showPicker = false"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Generated Code -->
-            <div 
-              class="rounded-lg shadow-sm border"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="p-4 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">code</span>
-                  Generated Code
-                </h3>
-                <div class="flex items-center gap-2">
-                  <button
-                    @click="copyCode"
-                    class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-xs font-medium flex items-center gap-1.5"
-                  >
-                    <span class="material-symbols-outlined text-sm">content_copy</span>
-                    Copy
-                  </button>
-                  <button
-                    @click="exportAsVue"
-                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
-                    :class="codeFormat === 'vue'
-                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
-                      : (isDarkMode 
-                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
-                  >
-                    Vue
-                  </button>
-                  <button
-                    @click="exportAsReact"
-                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
-                    :class="codeFormat === 'react'
-                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
-                      : (isDarkMode 
-                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
-                  >
-                    React
-                  </button>
-                  <button
-                    @click="exportAsReactNative"
-                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
-                    :class="codeFormat === 'react-native'
-                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
-                      : (isDarkMode 
-                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
-                  >
-                    React Native
-                  </button>
-                  <button
-                    @click="exportAsHTML"
-                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
-                    :class="codeFormat === 'html'
-                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
-                      : (isDarkMode 
-                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
-                  >
-                    HTML
-                  </button>
-                </div>
-              </div>
-              <div class="p-6">
-                <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
-                <div class="rounded-lg p-4 overflow-x-auto" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono"><code>{{ generatedCode }}</code></pre>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Usage Examples -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Usage Examples</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Common patterns and use cases for the ColorPicker component.</p>
-            </div>
-            
-            <div class="space-y-8">
-              <!-- Basic Usage -->
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="mb-6">
-                  <h3 class="text-xl font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Basic Usage</h3>
-                  <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Simple color picker with a button trigger.</p>
-                </div>
-                <div class="rounded-lg p-6 mb-4" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <button
-                    @click="openExamplePicker1($event)"
-                    class="w-16 h-16 rounded-lg border-2 cursor-pointer transition-colors"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 hover:border-indigo-400' 
-                      : 'border-gray-300 hover:border-indigo-500'"
-                    :style="{ backgroundColor: exampleColor }"
-                  ></button>
-                  <ColorPicker
-                    :show="exampleShowPicker"
-                    :initial-color="exampleColor"
-                    :position="examplePickerPosition1"
-                    :preview-dark-mode="isDarkMode"
-                    @update:show="exampleShowPicker = $event"
-                    @apply="exampleColor = $event"
-                    @cancel="exampleShowPicker = false"
-                  />
-                </div>
-                <div class="rounded-lg p-4 overflow-x-auto" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono"><code>&lt;template&gt;
-  &lt;button
-    @click="showPicker = !showPicker"
-    :style="{ backgroundColor: selectedColor }"
-  &gt;&lt;/button&gt;
-  
-  &lt;ColorPicker
-    :show="showPicker"
-    :initial-color="selectedColor"
-    :position="{ left: 200, top: 200 }"
-    @update:show="showPicker = $event"
-    @apply="selectedColor = $event"
-    @cancel="showPicker = false"
-  /&gt;
-&lt;/template&gt;
-
-&lt;script setup&gt;
-import { ref } from 'vue';
-import ColorPicker from './components/ColorPicker.vue';
-
-const showPicker = ref(false);
-const selectedColor = ref('#4f46e5');
-&lt;/script&gt;</code></pre>
-                </div>
-              </div>
-
-              <!-- With Positioning -->
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="mb-6">
-                  <h3 class="text-xl font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Dynamic Positioning</h3>
-                  <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Position the picker relative to a button or element.</p>
-                </div>
-                <div class="rounded-lg p-6 mb-4" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <div class="flex gap-4">
-                    <button
-                      v-for="(color, index) in exampleColors"
-                      :key="index"
-                      @click="openExamplePicker(index, $event)"
-                      class="w-16 h-16 rounded-lg border-2 cursor-pointer transition-colors"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 hover:border-indigo-400' 
-                        : 'border-gray-300 hover:border-indigo-500'"
-                      :style="{ backgroundColor: color }"
-                    ></button>
-                  </div>
-                  <ColorPicker
-                    :show="exampleShowPicker2"
-                    :initial-color="exampleColor2"
-                    :position="examplePickerPosition"
-                    :preview-dark-mode="isDarkMode"
-                    @update:show="exampleShowPicker2 = $event"
-                    @apply="handleExampleApply"
-                    @cancel="exampleShowPicker2 = false"
-                  />
-                </div>
-                <div class="rounded-lg p-4 overflow-x-auto" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono"><code>const openColorPicker = (index, event) => {
-  const rect = event.target.getBoundingClientRect();
-  const pickerWidth = 280;
-  const pickerHeight = 400;
-  
-  let left = rect.right + 16;
-  let top = rect.top;
-  
-  // Adjust if picker would go off screen
-  if (left + pickerWidth > window.innerWidth) {
-    left = rect.left - pickerWidth - 16;
-  }
-  
-  pickerPosition.value = { left, top };
-  showPicker.value = true;
-};</code></pre>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Props/API Documentation -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">API Reference</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Complete list of props and events available for the ColorPicker component.</p>
-            </div>
-            
-            <div 
-              class="rounded-2xl border overflow-hidden"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="overflow-x-auto">
-                <table class="w-full">
-                  <thead :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                    <tr>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Prop</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Type</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Default</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody :class="isDarkMode ? 'divide-y divide-gray-700' : 'divide-y divide-gray-200'">
-                    <tr 
-                      class="transition-colors"
-                      :class="isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'"
-                    >
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <code class="text-sm font-mono" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">show</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">Boolean</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">false</code>
-                      </td>
-                      <td class="px-6 py-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Controls the visibility of the color picker.
-                      </td>
-                    </tr>
-                    <tr 
-                      class="transition-colors"
-                      :class="isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'"
-                    >
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <code class="text-sm font-mono" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">initialColor</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">String</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">'#000000'</code>
-                      </td>
-                      <td class="px-6 py-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        The initial color value in hex format (e.g., '#4f46e5').
-                      </td>
-                    </tr>
-                    <tr 
-                      class="transition-colors"
-                      :class="isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'"
-                    >
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <code class="text-sm font-mono" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">position</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">Object</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">{ left: 0, top: 0 }</code>
-                      </td>
-                      <td class="px-6 py-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Position object with <code class="text-xs">left</code> and <code class="text-xs">top</code> properties in pixels. Uses fixed positioning.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Events Table -->
-            <div 
-              class="rounded-2xl border overflow-hidden mt-8"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="p-4 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Events</h3>
-              </div>
-              <div class="overflow-x-auto">
-                <table class="w-full">
-                  <thead :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                    <tr>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Event</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Payload</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody :class="isDarkMode ? 'divide-y divide-gray-700' : 'divide-y divide-gray-200'">
-                    <tr 
-                      class="transition-colors"
-                      :class="isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'"
-                    >
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <code class="text-sm font-mono" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">@update:show</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">Boolean</code>
-                      </td>
-                      <td class="px-6 py-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Emitted when the picker visibility changes. Use <code class="text-xs">v-model:show</code> for two-way binding.
-                      </td>
-                    </tr>
-                    <tr 
-                      class="transition-colors"
-                      :class="isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'"
-                    >
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <code class="text-sm font-mono" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">@apply</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">String</code>
-                      </td>
-                      <td class="px-6 py-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Emitted when the user applies a color selection. Payload is the selected color in hex format.
-                      </td>
-                    </tr>
-                    <tr 
-                      class="transition-colors"
-                      :class="isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'"
-                    >
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <code class="text-sm font-mono" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">@cancel</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">-</code>
-                      </td>
-                      <td class="px-6 py-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Emitted when the user cancels the color selection (e.g., clicks outside or presses Escape).
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- Accessibility -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div 
-              class="border rounded-2xl p-8"
-              :class="isDarkMode 
-                ? 'bg-blue-900/20 border-blue-800' 
-                : 'bg-blue-50 border-blue-200'"
-            >
-              <div class="flex items-start gap-4">
-                <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">accessibility</span>
-                <div>
-                  <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Accessibility</h3>
-                  <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    The ColorPicker component is fully WCAG 2.1 AA compliant and includes comprehensive accessibility features.
-                  </p>
-                  <ul class="space-y-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <li class="flex items-start gap-2">
-                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
-                      <span><strong>Keyboard Navigation:</strong> All interactive elements are keyboard accessible. Use arrow keys to adjust saturation/lightness and hue values. Press <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'">Esc</code> to close the picker.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
-                      <span><strong>ARIA Labels:</strong> All inputs, buttons, and interactive elements have descriptive ARIA labels and roles. The gradient canvas and hue slider use <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'">role="slider"</code> with proper <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'">aria-valuemin</code>, <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'">aria-valuemax</code>, and <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'">aria-valuenow</code> attributes.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
-                      <span><strong>Focus Management:</strong> The picker automatically focuses the gradient canvas when opened, and focus is properly trapped within the modal dialog.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
-                      <span><strong>Screen Reader Support:</strong> All color values are announced with <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'">aria-live="polite"</code> regions, and the color preview includes descriptive labels.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
-                      <span><strong>Color Contrast:</strong> All text and interactive elements meet WCAG AA contrast requirements (4.5:1 for normal text, 3:1 for large text and UI components).</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
-                      <span><strong>Modal Dialog:</strong> The picker uses <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'">role="dialog"</code> with <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'">aria-modal="true"</code> to properly announce it as a modal to screen readers.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
-                      <span><strong>Form Labels:</strong> All input fields have associated labels using the <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'">for</code> attribute or <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'">aria-label</code> for better screen reader support.</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Best Practices -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Best Practices</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Recommended patterns and guidelines for using the ColorPicker component effectively.</p>
-            </div>
-            
-            <div class="space-y-6">
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-green-900/20 border-green-800' 
-                  : 'bg-green-50 border-green-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Provide Clear Color Preview</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Always show a visual preview of the selected color so users can see what they're choosing. Use a color swatch or preview area that updates in real-time.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Visual preview --&gt;
-&lt;button
-  @click="showPicker = true"
-  class="w-16 h-16 rounded-lg border-2"
-  :style="{ backgroundColor: selectedColor }"
-&gt;&lt;/button&gt;
-
-&lt;ColorPicker
-  :show="showPicker"
-  :initial-color="selectedColor"
-  @apply="selectedColor = $event"
-/&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-green-900/20 border-green-800' 
-                  : 'bg-green-50 border-green-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Support Multiple Color Formats</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Allow users to input and view colors in multiple formats (hex, RGB, HSL, CMYK) to accommodate different use cases and user preferences.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Multiple format support --&gt;
-&lt;ColorPicker
-  :show="showPicker"
-  :initial-color="selectedColor"
-  :formats="['hex', 'rgb', 'hsl', 'cmyk']"
-  @apply="handleColorChange"
-/&gt;
-
-&lt;script setup&gt;
-const handleColorChange = (color) => {
-  // Store in preferred format
-  selectedColor.value = color.hex;
-  rgbValue.value = color.rgb;
-  hslValue.value = color.hsl;
-};
-&lt;/script&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-green-900/20 border-green-800' 
-                  : 'bg-green-50 border-green-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Handle Positioning Properly</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Position the color picker relative to the trigger element and ensure it doesn't go off-screen. Adjust position dynamically based on available space.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Dynamic positioning --&gt;
-const openColorPicker = (event) => {
-  const rect = event.target.getBoundingClientRect();
-  const pickerWidth = 280;
-  
-  let left = rect.right + 16;
-  let top = rect.top;
-  
-  // Adjust if picker would go off screen
-  if (left + pickerWidth > window.innerWidth) {
-    left = rect.left - pickerWidth - 16;
-  }
-  
-  pickerPosition.value = { left, top };
-  showPicker.value = true;
-};</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-green-900/20 border-green-800' 
-                  : 'bg-green-50 border-green-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Provide Cancel and Apply Actions</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Always provide clear Cancel and Apply buttons so users can confirm or discard their color selection. This prevents accidental changes.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Clear actions --&gt;
-&lt;ColorPicker
-  :show="showPicker"
-  :initial-color="selectedColor"
-  @apply="selectedColor = $event; showPicker = false"
-  @cancel="showPicker = false"
-/&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Anti-Patterns -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Anti-Patterns</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Common mistakes to avoid when using the ColorPicker component.</p>
-            </div>
-            
-            <div class="space-y-6">
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-red-900/20 border-red-800' 
-                  : 'bg-red-50 border-red-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Don't Auto-Apply Changes</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Avoid applying color changes immediately as the user moves sliders. This can cause performance issues and makes it difficult to cancel changes.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: Auto-applying on every change --&gt;
-&lt;ColorPicker
-  :show="showPicker"
-  @change="selectedColor = $event"  &lt;!-- Applied immediately --&gt;
-/&gt;
-
-&lt;!-- Good: Preview only, apply on confirm --&gt;
-&lt;ColorPicker
-  :show="showPicker"
-  @change="previewColor = $event"  &lt;!-- Preview only --&gt;
-  @apply="selectedColor = $event"  &lt;!-- Apply on confirm --&gt;
-/&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-red-900/20 border-red-800' 
-                  : 'bg-red-50 border-red-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Don't Ignore Screen Boundaries</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Never position the color picker in a fixed location without checking if it fits on screen. Always adjust position dynamically to prevent it from being cut off.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: Fixed position --&gt;
-&lt;ColorPicker
-  :show="showPicker"
-  :position="{ left: 200, top: 200 }"  &lt;!-- May go off screen --&gt;
-/&gt;
-
-&lt;!-- Good: Dynamic positioning --&gt;
-&lt;ColorPicker
-  :show="showPicker"
-  :position="calculatePosition(triggerElement)"  &lt;!-- Adjusts to fit --&gt;
-/&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-red-900/20 border-red-800' 
-                  : 'bg-red-50 border-red-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Don't Hide the Selected Color</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Always display the currently selected color prominently. Users need to see what color is active, especially when reopening the picker.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: No visible color indicator --&gt;
-&lt;button @click="showPicker = true"&gt;
-  Choose Color
-&lt;/button&gt;
-&lt;!-- User can't see current selection --&gt;
-
-&lt;!-- Good: Visible color swatch --&gt;
-&lt;button
-  @click="showPicker = true"
-  class="w-16 h-16 rounded-lg border-2"
-  :style="{ backgroundColor: selectedColor }"
-  :aria-label="`Current color: ${selectedColor}`"
-&gt;&lt;/button&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-red-900/20 border-red-800' 
-                  : 'bg-red-50 border-red-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Don't Use Only Text Input</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      While text input for color values is useful, don't rely solely on it. Provide visual color selection tools (gradient canvas, hue slider) for better UX.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: Text input only --&gt;
-&lt;input
-  type="text"
-  v-model="selectedColor"
-  placeholder="#000000"
-/&gt;
-&lt;!-- No visual selection --&gt;
-
-&lt;!-- Good: Visual picker with text input --&gt;
-&lt;ColorPicker
-  :show="showPicker"
-  :initial-color="selectedColor"
-  @apply="selectedColor = $event"
-/&gt;
-&lt;!-- Visual selection + text input for precision --&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Performance Section -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div 
-              class="rounded-lg shadow-sm border overflow-hidden"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="p-6 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <h2 class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">speed</span>
-                  Performance Metrics
-                </h2>
-                <button
-                  v-if="performanceData"
-                  @click="loadPerformanceData"
-                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                  :class="isDarkMode 
-                    ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                >
-                  <span class="material-symbols-outlined text-base">refresh</span>
-                  Refresh
-                </button>
-              </div>
-              
-              <div v-if="performanceLoading" class="p-12 text-center">
-                <div class="flex justify-center mb-4">
-                  <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Loading performance data...
-                </p>
-              </div>
-
-              <div v-else-if="performanceData" class="p-6">
-                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
-                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">code</span>
-                      Vue Size
-                    </div>
-                    <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ formatSize(performanceData.vueSize) }}
-                    </div>
-                  </div>
-                  
-                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
-                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">code</span>
-                      React Size
-                    </div>
-                    <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ formatSize(performanceData.reactSize) }}
-                    </div>
-                  </div>
-                  
-                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
-                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">storage</span>
-                      Total Size
-                    </div>
-                    <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ formatSize(performanceData.totalSize) }}
-                    </div>
-                    <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                      + {{ formatSize(performanceData.dependenciesSize) }} deps
-                    </div>
-                  </div>
-                  
-                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
-                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">compress</span>
-                      Gzipped
-                    </div>
-                    <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ formatSize(performanceData.gzippedSize) }}
-                    </div>
-                    <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                      <template v-if="performanceData.totalSize > 0">
-                        {{ Math.round((performanceData.gzippedSize / performanceData.totalSize) * 100) }}% of source
-                      </template>
-                      <template v-if="performanceData.brotliSize != null">
-                        · brotli {{ formatSize(performanceData.brotliSize) }}
-                      </template>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="mt-6 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                  <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">info</span>
-                      Status
-                    </h3>
-                    <span 
-                      class="px-3 py-1 text-sm rounded-full font-medium"
-                      :class="getPerformanceStatusClass(performanceData.status)"
-                    >
-                      {{ performanceData.status === 'pass' ? 'Optimal' : performanceData.status === 'warning' ? 'Warning' : 'Error' }}
-                    </span>
-                  </div>
-                  <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    <span v-if="performanceData.dependencies && performanceData.dependencies.length > 0">
-                      Dependencies: {{ performanceData.dependencies.join(', ') }}
-                    </span>
-                    <span v-else>No dependencies</span>
-                  </p>
-                </div>
-
-                <div class="mt-6 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                  <h3 class="text-lg font-semibold flex items-center gap-2 mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">language</span>
-                    Supported Browsers
-                  </h3>
-                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div 
-                      v-for="browser in getSupportedBrowsers()"
-                      :key="browser.name"
-                      class="flex items-center gap-2 p-3 rounded-lg border"
-                      :class="isDarkMode 
-                        ? 'bg-slate-800 border-gray-700' 
-                        : 'bg-gray-50 border-gray-200'"
-                    >
-                      <div 
-                        class="w-8 h-8 flex-shrink-0"
-                        :title="`${browser.name} ${browser.version}+`"
-                        v-html="getBrowserIcon(browser.name)"
-                      ></div>
-                      <div class="flex-1 min-w-0">
-                        <div class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          {{ browser.name }}
-                        </div>
-                        <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                          {{ browser.version }}+
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div v-else-if="performanceError" class="p-12 text-center">
-                <span class="material-symbols-outlined text-4xl mb-4 block" :class="isDarkMode ? 'text-red-400' : 'text-red-500'">error</span>
-                <p class="text-sm font-medium mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  {{ performanceError }}
-                </p>
-                <button
-                  @click="loadPerformanceData"
-                  class="px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
-                >
-                  Retry
-                </button>
-              </div>
-
-              <div v-else class="p-12 text-center">
-                <span class="material-symbols-outlined text-4xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">speed</span>
-                <p class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Performance data unavailable
-                </p>
-                <p class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                  Unable to load performance metrics for this component.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Component Dependencies -->
-          <ComponentDependencyGraphCard :component-id="getComponentId()" />
-
-          <!-- Version History -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Version History</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Track component versions, view changelogs, and manage breaking changes.</p>
-            </div>
-
-            <!-- Current Version Info -->
-            <div 
-              v-if="currentVersion.version"
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <div>
-                  <h3 class="text-xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    Current Version: v{{ currentVersion.version }}
-                  </h3>
-                  <p class="text-sm mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ currentVersion.description }}
-                  </p>
-                </div>
-                <span 
-                  class="px-3 py-1 rounded-full text-xs font-medium"
-                  :class="getStatusBadgeClass(currentVersion.status)"
-                >
-                  {{ currentVersion.status }}
-                </span>
-              </div>
-              <div class="flex items-center gap-4 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                <span>Released: {{ formatDate(currentVersion.releasedAt) }}</span>
-                <span v-if="currentVersion.lastUpdated">Last Updated: {{ formatDate(currentVersion.lastUpdated) }}</span>
-              </div>
-            </div>
-
-            <!-- Version History List -->
-            <div 
-              v-if="componentVersions.length > 0"
-              class="rounded-lg shadow-sm border"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="divide-y" :class="isDarkMode ? 'divide-gray-700' : 'divide-gray-200'">
-                <div
-                  v-for="version in componentVersions"
-                  :key="version.version"
-                  class="p-6"
-                >
-                  <div class="flex items-start justify-between mb-4">
-                    <div class="flex-1">
-                      <div class="flex items-center gap-3 mb-2">
-                        <h4 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          v{{ version.version }}
-                        </h4>
-                        <span 
-                          class="px-2 py-0.5 rounded text-xs font-medium"
-                          :class="getStatusBadgeClass(version.status)"
-                        >
-                          {{ version.status }}
-                        </span>
-                        <span 
-                          v-if="version.breaking"
-                          class="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                        >
-                          Breaking Changes
-                        </span>
-                      </div>
-                      <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        {{ version.description }}
-                      </p>
-                      <div class="text-xs mb-3" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                        Released: {{ formatDate(version.releasedAt) }}
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Changelog -->
-                  <div v-if="version.changelog && version.changelog.length > 0" class="ml-6 border-l-2 pl-4 mb-4"
-                    :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-                  >
-                    <h5 class="text-sm font-semibold mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Changelog
-                    </h5>
-                    <ul class="space-y-1 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <li v-for="(change, idx) in version.changelog" :key="idx" class="flex items-start gap-2">
-                        <span class="mt-1" :class="getChangeTypeColor(change.type)">
-                          {{ getChangeTypeIcon(change.type) }}
-                        </span>
-                        <span>{{ change.description }}</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <!-- Migration Guide -->
-                  <div v-if="version.migrationGuide" class="mt-4 p-4 rounded-lg"
-                    :class="isDarkMode ? 'bg-slate-800 border border-gray-700' : 'bg-yellow-50 border border-yellow-200'"
-                  >
-                    <div class="flex items-start gap-2 mb-2">
-                      <span class="material-symbols-outlined text-yellow-600 dark:text-yellow-400">warning</span>
-                      <h5 class="text-sm font-semibold" :class="isDarkMode ? 'text-yellow-300' : 'text-yellow-900'">
-                        Migration Guide
-                      </h5>
-                    </div>
-                    <p class="text-sm" :class="isDarkMode ? 'text-yellow-200' : 'text-yellow-800'">
-                      {{ version.migrationGuide }}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Empty State -->
-            <div 
-              v-else
-              class="rounded-lg shadow-sm border p-12 text-center"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <span class="material-symbols-outlined text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-                history
-              </span>
-              <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                No version history
-              </p>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                Version history will appear here once versions are added
-              </p>
-            </div>
-          </div>
-
-          <!-- Component Migration Setup -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Component Migration</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Migrate this component from one version to another with step-by-step guidance.</p>
-            </div>
-
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">swap_horiz</span>
-                Component Migration Setup
-              </h3>
-              <div class="space-y-3">
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    From Version
-                  </label>
-                  <Dropdown
-                    :model-value="componentMigration.fromVersion"
-                    @update:model-value="componentMigration.fromVersion = $event"
-                    :options="fromVersionOptions"
-                    :is-dark-mode="isDarkMode"
-                    placeholder="Select version..."
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    To Version
-                  </label>
-                  <Dropdown
-                    :model-value="componentMigration.toVersion"
-                    @update:model-value="componentMigration.toVersion = $event"
-                    :options="toVersionOptions"
-                    :is-dark-mode="isDarkMode"
-                    placeholder="Select version..."
-                    :disabled="!componentMigration.fromVersion"
-                  />
-                </div>
-                <div class="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    v-model="componentMigration.dryRun"
-                    id="dry-run-colorpicker"
-                    class="accent-indigo-600"
-                  />
-                  <label for="dry-run-colorpicker" class="text-sm cursor-pointer" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Dry Run (Preview Only)
-                  </label>
-                </div>
-                <div class="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    v-model="componentMigration.generateCodemod"
-                    id="codemod-colorpicker"
-                    class="accent-indigo-600"
-                  />
-                  <label for="codemod-colorpicker" class="text-sm cursor-pointer" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Generate Codemod
-                  </label>
-                </div>
-                <button
-                  @click="analyzeComponentMigration"
-                  :disabled="!canAnalyzeComponent"
-                  class="w-full px-4 py-2 rounded-lg font-medium transition-colors"
-                  :class="canAnalyzeComponent
-                    ? (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')
-                    : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-                >
-                  Analyze Migration
-                </button>
-              </div>
-
-              <!-- Migration Plan -->
-              <div 
-                v-if="componentMigrationPlan"
-                class="mt-6 pt-6 border-t"
-                :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-              >
-                <div class="flex items-center justify-between mb-4">
-                  <h4 class="text-md font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">list</span>
-                    Migration Plan
-                  </h4>
-                  <button
-                    v-if="componentMigration.generateCodemod && componentCodemodScript"
-                    @click="downloadComponentCodemod"
-                    class="px-4 py-2 rounded-lg font-medium transition-colors text-sm"
-                    :class="isDarkMode 
-                      ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                      : 'bg-purple-600 hover:bg-purple-700 text-white'"
-                  >
-                    Download Codemod
-                  </button>
-                </div>
-                <div class="space-y-3">
-                  <div
-                    v-for="(step, index) in componentMigrationPlan.steps"
-                    :key="index"
-                    class="p-4 rounded-lg border"
-                    :class="step.type === 'breaking'
-                      ? (isDarkMode ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200')
-                      : (isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200')"
-                  >
-                    <div class="flex items-start gap-3">
-                      <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm" :class="step.type === 'breaking' ? 'bg-red-500 text-white' : 'bg-indigo-500 text-white'">
-                        {{ index + 1 }}
-                      </div>
-                      <div class="flex-1">
-                        <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          {{ step.title }}
-                        </div>
-                        <div class="text-xs mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                          {{ step.description }}
-                        </div>
-                        <div v-if="step.code" class="rounded-lg overflow-hidden mt-2" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                          <div class="p-3">
-                            <div class="text-xs text-green-400 font-mono whitespace-pre-wrap" v-pre><code>{{ step.code }}</code></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
+        </UiPanel>
       </div>
-    </div>
-  </div>
+
+      <UiPanel title="Generated code" description="Pick a framework to switch the code and copy it.">
+        <template #actions>
+          <UiButton
+            v-for="format in codeFormats"
+            :key="format.value"
+            size="sm"
+            :variant="codeFormat === format.value ? 'primary' : 'secondary'"
+            :label="format.label"
+            :aria-pressed="codeFormat === format.value"
+            @click="exportAsFormat(format.value)"
+          />
+        </template>
+        <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
+        <UiCodeBlock :code="generatedCode" :label="FORMAT_LABELS[codeFormat]" />
+      </UiPanel>
+    </PageSection>
+
+    <PageSection title="Usage examples" description="Common patterns and use cases for the ColorPicker component." divided>
+      <div class="space-y-6">
+        <UiPanel title="Basic usage" description="Simple color picker with a button trigger.">
+          <div class="example-stage">
+            <button
+              type="button"
+              class="swatch-button swatch-md example-swatch"
+              :aria-label="`Open color picker. Current color: ${exampleColor}`"
+              @click="openExamplePicker1($event)"
+            ></button>
+            <ColorPicker
+              :show="exampleShowPicker"
+              :initial-color="exampleColor"
+              :position="examplePickerPosition1"
+              :preview-dark-mode="appDark"
+              @update:show="exampleShowPicker = $event"
+              @apply="exampleColor = $event"
+              @cancel="exampleShowPicker = false"
+            />
+          </div>
+          <UiCodeBlock :code="basicUsageCode" label="Vue" />
+        </UiPanel>
+
+        <UiPanel title="Dynamic positioning" description="Position the picker relative to a button or element.">
+          <div class="example-stage">
+            <div class="flex gap-4">
+              <button
+                v-for="(color, index) in exampleColors"
+                :key="index"
+                type="button"
+                class="swatch-button swatch-md"
+                :aria-label="`Open color picker for color ${index + 1}. Current color: ${color}`"
+                @click="openExamplePicker(index, $event)"
+              >
+                <UiSwatch :color="color" size="fill" />
+              </button>
+            </div>
+            <ColorPicker
+              :show="exampleShowPicker2"
+              :initial-color="exampleColor2"
+              :position="examplePickerPosition"
+              :preview-dark-mode="appDark"
+              @update:show="exampleShowPicker2 = $event"
+              @apply="handleExampleApply"
+              @cancel="exampleShowPicker2 = false"
+            />
+          </div>
+          <UiCodeBlock :code="positioningCode" label="JavaScript" />
+        </UiPanel>
+      </div>
+    </PageSection>
+
+    <PageSection title="API reference" description="Complete list of props and events available for the ColorPicker component." divided>
+      <div class="space-y-6">
+        <UiPanel title="Props" flush>
+          <UiTable caption="ColorPicker props">
+            <thead>
+              <tr>
+                <th scope="col">Prop</th>
+                <th scope="col">Type</th>
+                <th scope="col">Default</th>
+                <th scope="col">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="prop in apiProps" :key="prop.name">
+                <th scope="row"><UiCode>{{ prop.name }}</UiCode></th>
+                <td><UiCode>{{ prop.type }}</UiCode></td>
+                <td><UiCode>{{ prop.default }}</UiCode></td>
+                <td>{{ prop.description }}</td>
+              </tr>
+            </tbody>
+          </UiTable>
+        </UiPanel>
+
+        <UiPanel title="Events" flush>
+          <UiTable caption="ColorPicker events">
+            <thead>
+              <tr>
+                <th scope="col">Event</th>
+                <th scope="col">Payload</th>
+                <th scope="col">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="event in apiEvents" :key="event.name">
+                <th scope="row"><UiCode>{{ event.name }}</UiCode></th>
+                <td><UiCode>{{ event.payload }}</UiCode></td>
+                <td>{{ event.description }}</td>
+              </tr>
+            </tbody>
+          </UiTable>
+        </UiPanel>
+      </div>
+    </PageSection>
+
+    <PageSection title="Accessibility" divided>
+      <UiCallout tone="info" icon="accessibility" title="WCAG 2.1 AA">
+        <p class="mb-3">The ColorPicker component is fully WCAG 2.1 AA compliant and includes comprehensive accessibility features.</p>
+        <ul class="list-disc pl-5 space-y-2">
+          <li><strong>Keyboard Navigation:</strong> All interactive elements are keyboard accessible. Use arrow keys to adjust saturation/lightness and hue values. Press <UiCode>Esc</UiCode> to close the picker.</li>
+          <li><strong>ARIA Labels:</strong> All inputs, buttons, and interactive elements have descriptive ARIA labels and roles. The gradient canvas and hue slider use <UiCode>role="slider"</UiCode> with proper <UiCode>aria-valuemin</UiCode>, <UiCode>aria-valuemax</UiCode>, and <UiCode>aria-valuenow</UiCode> attributes.</li>
+          <li><strong>Focus Management:</strong> The picker automatically focuses the gradient canvas when opened, and focus is properly trapped within the modal dialog.</li>
+          <li><strong>Screen Reader Support:</strong> All color values are announced with <UiCode>aria-live="polite"</UiCode> regions, and the color preview includes descriptive labels.</li>
+          <li><strong>Color Contrast:</strong> All text and interactive elements meet WCAG AA contrast requirements (4.5:1 for normal text, 3:1 for large text and UI components).</li>
+          <li><strong>Modal Dialog:</strong> The picker uses <UiCode>role="dialog"</UiCode> with <UiCode>aria-modal="true"</UiCode> to properly announce it as a modal to screen readers.</li>
+          <li><strong>Form Labels:</strong> All input fields have associated labels using the <UiCode>for</UiCode> attribute or <UiCode>aria-label</UiCode> for better screen reader support.</li>
+        </ul>
+      </UiCallout>
+    </PageSection>
+
+    <PageSection title="Best practices" description="Recommended patterns and guidelines for using the ColorPicker component effectively." divided>
+      <div class="space-y-6">
+        <UiCallout v-for="item in bestPractices" :key="item.title" tone="success" :title="item.title">
+          <p class="mb-4">{{ item.body }}</p>
+          <UiCodeBlock :code="item.code" label="Example" />
+        </UiCallout>
+      </div>
+    </PageSection>
+
+    <PageSection title="Anti-patterns" description="Common mistakes to avoid when using the ColorPicker component." divided>
+      <div class="space-y-6">
+        <UiCallout v-for="item in antiPatterns" :key="item.title" tone="danger" :title="item.title">
+          <p class="mb-4">{{ item.body }}</p>
+          <UiCodeBlock :code="item.code" label="Example" />
+        </UiCallout>
+      </div>
+    </PageSection>
+
+    <PageSection title="Performance metrics" divided>
+      <UiPanel>
+        <template v-if="performanceData" #actions>
+          <UiButton size="sm" variant="ghost" icon="refresh" label="Refresh" @click="loadPerformanceData" />
+        </template>
+
+        <div v-if="performanceLoading" class="py-12 flex justify-center">
+          <UiSpinner label="Loading performance data…" />
+        </div>
+
+        <div v-else-if="performanceData">
+          <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <UiStat label="Vue size" icon="code" :value="formatSize(performanceData.vueSize)" />
+            <UiStat label="React size" icon="code" :value="formatSize(performanceData.reactSize)" />
+            <UiStat label="Total size" icon="storage" :value="formatSize(performanceData.totalSize)" :hint="`+ ${formatSize(performanceData.dependenciesSize)} deps`" />
+            <UiStat label="Gzipped" icon="compress" :value="formatSize(performanceData.gzippedSize)" :hint="gzipHint" />
+          </div>
+
+          <div class="mt-6 pt-6 border-t border-solid border-line">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-lg font-semibold text-ink-strong">Status</h3>
+              <UiChip :tone="performanceTone(performanceData.status)">
+                {{ performanceData.status === 'pass' ? 'Optimal' : performanceData.status === 'warning' ? 'Warning' : 'Error' }}
+              </UiChip>
+            </div>
+            <p class="text-sm text-ink-secondary">
+              <span v-if="performanceData.dependencies && performanceData.dependencies.length > 0">
+                Dependencies: {{ performanceData.dependencies.join(', ') }}
+              </span>
+              <span v-else>No dependencies</span>
+            </p>
+          </div>
+
+          <div class="mt-6 pt-6 border-t border-solid border-line">
+            <h3 class="text-lg font-semibold text-ink-strong mb-4">Supported browsers</h3>
+            <ul class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <li
+                v-for="browser in getSupportedBrowsers()"
+                :key="browser.name"
+                class="flex items-center gap-2 p-3 rounded-tile border border-solid border-line bg-surface-sunken"
+              >
+                <div class="w-8 h-8 flex-shrink-0" aria-hidden="true" v-html="getBrowserIcon(browser.name)"></div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium text-ink-strong">{{ browser.name }}</div>
+                  <div class="text-xs text-ink-secondary">{{ browser.version }}+</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <UiCallout v-else-if="performanceError" tone="danger" role="alert">
+          {{ performanceError }}
+          <template #actions><UiButton size="sm" icon="refresh" label="Retry" @click="loadPerformanceData" /></template>
+        </UiCallout>
+
+        <UiEmptyState
+          v-else
+          title="Performance data unavailable"
+          body="Unable to load performance metrics for this component."
+          spot="admin/performance-analysis"
+          :bordered="false"
+        />
+      </UiPanel>
+    </PageSection>
+
+    <ComponentDependencyGraphCard :component-id="getComponentId()" />
+
+    <PageSection title="Version history" description="Track component versions, view changelogs, and manage breaking changes." divided>
+      <UiPanel
+        v-if="currentVersion.version"
+        :title="`Current version: v${currentVersion.version}`"
+        :description="currentVersion.description"
+        class="mb-6"
+      >
+        <template #actions>
+          <UiChip :tone="versionTone(currentVersion.status)">{{ currentVersion.status }}</UiChip>
+        </template>
+        <div class="flex flex-wrap items-center gap-4 text-xs text-ink-muted">
+          <span>Released: {{ formatDate(currentVersion.releasedAt) }}</span>
+          <span v-if="currentVersion.lastUpdated">Last Updated: {{ formatDate(currentVersion.lastUpdated) }}</span>
+        </div>
+      </UiPanel>
+
+      <UiPanel v-if="componentVersions.length > 0" flush>
+        <ol class="divide-y divide-line">
+          <li v-for="version in componentVersions" :key="version.version" class="p-6">
+            <div class="flex flex-wrap items-center gap-3 mb-2">
+              <h3 class="text-lg font-semibold text-ink-strong">v{{ version.version }}</h3>
+              <UiChip :tone="versionTone(version.status)">{{ version.status }}</UiChip>
+              <UiChip v-if="version.breaking" tone="danger">Breaking Changes</UiChip>
+            </div>
+            <p class="text-sm mb-3 text-ink">{{ version.description }}</p>
+            <p class="text-xs mb-3 text-ink-muted">Released: {{ formatDate(version.releasedAt) }}</p>
+
+            <div v-if="version.changelog && version.changelog.length > 0" class="ml-6 border-l-2 border-solid border-line pl-4 mb-4">
+              <h4 class="text-sm font-semibold mb-2 text-ink">Changelog</h4>
+              <ul class="space-y-1 text-sm text-ink-secondary">
+                <li v-for="(change, idx) in version.changelog" :key="idx" class="flex items-start gap-2">
+                  <span :class="getChangeTypeColor(change.type)" aria-hidden="true">{{ getChangeTypeIcon(change.type) }}</span>
+                  <span><span class="sr-only">{{ change.type }}: </span>{{ change.description }}</span>
+                </li>
+              </ul>
+            </div>
+
+            <UiCallout v-if="version.migrationGuide" tone="warning" title="Migration Guide" class="mt-4">
+              {{ version.migrationGuide }}
+            </UiCallout>
+          </li>
+        </ol>
+      </UiPanel>
+
+      <UiEmptyState
+        v-else
+        title="No version history"
+        body="Version history will appear here once versions are added"
+        spot="admin/deprecation-manager"
+      />
+    </PageSection>
+
+    <PageSection title="Component migration" description="Migrate this component from one version to another with step-by-step guidance." divided>
+      <UiPanel title="Component migration setup">
+        <div class="space-y-4">
+          <UiSelect
+            v-model="componentMigration.fromVersion"
+            label="From version"
+            :options="fromVersionOptions"
+            placeholder="Select version..."
+          />
+          <UiSelect
+            v-model="componentMigration.toVersion"
+            label="To version"
+            :options="toVersionOptions"
+            placeholder="Select version..."
+            :disabled="!componentMigration.fromVersion"
+          />
+          <UiCheckbox v-model="componentMigration.dryRun" label="Dry Run (Preview Only)" />
+          <UiCheckbox v-model="componentMigration.generateCodemod" label="Generate Codemod" />
+          <UiButton variant="primary" label="Analyze Migration" :disabled="!canAnalyzeComponent" @click="analyzeComponentMigration" />
+        </div>
+
+        <div v-if="componentMigrationPlan" class="mt-6 pt-6 border-t border-solid border-line">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h3 class="text-base font-semibold text-ink-strong">Migration plan</h3>
+            <UiButton
+              v-if="componentMigration.generateCodemod && componentCodemodScript"
+              size="sm"
+              icon="download"
+              label="Download Codemod"
+              @click="downloadComponentCodemod"
+            />
+          </div>
+          <ol class="space-y-3">
+            <li
+              v-for="(step, index) in componentMigrationPlan.steps"
+              :key="index"
+              class="migration-step"
+              :class="{ 'migration-step-breaking': step.type === 'breaking' }"
+            >
+              <span class="migration-step-number" aria-hidden="true">{{ index + 1 }}</span>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-ink-strong">
+                  {{ step.title }}<span v-if="step.type === 'breaking'" class="sr-only"> (breaking)</span>
+                </p>
+                <p class="text-xs mb-2 text-ink-secondary">{{ step.description }}</p>
+                <UiCodeBlock v-if="step.code" :code="step.code" label="JavaScript" />
+              </div>
+            </li>
+          </ol>
+        </div>
+      </UiPanel>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ColorPicker from '../components/ColorPicker.vue';
 import Dropdown from '../components/Dropdown.vue';
 import ComponentDependencyGraphCard from '../components/ComponentDependencyGraphCard.vue';
@@ -1305,13 +391,17 @@ import { useComponentPatternStatus } from '../composables/useComponentPatternSta
 import { useDarkMode } from '../composables/useDarkMode.js';
 import { useNotice } from '../composables/useNotice.js';
 import InlineNotice from '../components/InlineNotice.vue';
+import {
+  PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiChip, UiCode, UiCodeBlock,
+  UiEmptyState, UiInput, UiPanel, UiSelect, UiSpinner, UiStat, UiSwatch, UiTable,
+} from '../components/ui';
 import apiClient from '../services/api.js';
 
 const route = useRoute();
 const { getComponent } = useComponentPatternStatus();
-const isDarkMode = useDarkMode();
+// The ColorPicker popover takes the theme as a prop; the usage examples follow the app's theme
+const appDark = useDarkMode();
 const { notice, showNotice, clearNotice } = useNotice();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const previewDarkMode = ref(false);
 const codeFormat = ref('vue');
 const selectedColor = ref('#4f46e5');
@@ -1348,11 +438,16 @@ const formatSize = (bytes) => {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 };
 
-const getPerformanceStatusClass = (status) => {
-  if (status === 'error') return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
-  if (status === 'warning') return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
-  return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
-};
+const performanceTone = (status) => (status === 'error' ? 'danger' : status === 'warning' ? 'warning' : 'success');
+
+const gzipHint = computed(() => {
+  const data = performanceData.value;
+  if (!data) return '';
+  const parts = [];
+  if (data.totalSize > 0) parts.push(`${Math.round((data.gzippedSize / data.totalSize) * 100)}% of source`);
+  if (data.brotliSize != null) parts.push(`brotli ${formatSize(data.brotliSize)}`);
+  return parts.join(' · ');
+});
 
 const getSupportedBrowsers = () => {
   // Default browser support - can be customized per component
@@ -1503,26 +598,10 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
-const getStatusBadgeClass = (status) => {
-  const classes = {
-    'Current': isDarkMode.value ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700',
-    'Stable': isDarkMode.value ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700',
-    'Deprecated': isDarkMode.value ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-700',
-    'Beta': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300' : 'bg-yellow-100 text-yellow-700',
-  };
-  return classes[status] || (isDarkMode.value ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700');
-};
+const versionTone = (status) => ({ Current: 'success', Stable: 'info', Deprecated: 'danger', Beta: 'warning' })[status] || 'neutral';
 
-const getComponentStatusBadgeClass = (status) => {
-  const classes = {
-    'Production Ready': isDarkMode.value ? 'bg-green-900/30 text-green-300 border-green-400/30' : 'bg-green-100 text-green-700 border-green-300',
-    'In Progress': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300 border-yellow-400/30' : 'bg-yellow-100 text-yellow-700 border-yellow-300',
-    'Planned': isDarkMode.value ? 'bg-blue-900/30 text-blue-300 border-blue-400/30' : 'bg-blue-100 text-blue-700 border-blue-300',
-    'Deprecated': isDarkMode.value ? 'bg-red-900/30 text-red-300 border-red-400/30' : 'bg-red-100 text-red-700 border-red-300',
-    'Beta': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300 border-yellow-400/30' : 'bg-yellow-100 text-yellow-700 border-yellow-300',
-  };
-  return classes[status] || (isDarkMode.value ? 'bg-gray-700 text-gray-300 border-gray-600' : 'bg-gray-100 text-gray-700 border-gray-300');
-};
+const componentStatusTone = (status) =>
+  ({ 'Production Ready': 'success', 'In Progress': 'warning', Planned: 'info', Deprecated: 'danger', Beta: 'warning' })[status] || 'neutral';
 
 const getChangeTypeIcon = (type) => {
   const icons = {
@@ -1539,15 +618,15 @@ const getChangeTypeIcon = (type) => {
 
 const getChangeTypeColor = (type) => {
   const colors = {
-    'added': 'text-green-600 dark:text-green-400',
-    'changed': 'text-blue-600 dark:text-blue-400',
-    'deprecated': 'text-yellow-600 dark:text-yellow-400',
-    'removed': 'text-red-600 dark:text-red-400',
-    'fixed': 'text-purple-600 dark:text-purple-400',
-    'improved': 'text-indigo-600 dark:text-indigo-400',
-    'breaking': 'text-red-600 dark:text-red-400 font-bold',
+    added: 'text-success',
+    changed: 'text-info',
+    deprecated: 'text-warning',
+    removed: 'text-danger',
+    fixed: 'text-accent-text',
+    improved: 'text-accent-text',
+    breaking: 'text-danger font-bold',
   };
-  return colors[type] || 'text-gray-600 dark:text-gray-400';
+  return colors[type] || 'text-ink-secondary';
 };
 
 const openExamplePicker1 = (event) => {
@@ -1935,8 +1014,6 @@ const copyText = async (text, label) => {
   }
 };
 
-const copyCode = () => copyText(generatedCode.value, 'Code');
-
 const FORMAT_LABELS = { vue: 'Vue code', react: 'React code', 'react-native': 'React Native code', html: 'HTML code' };
 
 const exportAsFormat = async (format) => {
@@ -1945,10 +1022,211 @@ const exportAsFormat = async (format) => {
   await copyText(generateCodeForFormat(format), FORMAT_LABELS[format]);
 };
 
-const exportAsVue = () => exportAsFormat('vue');
-const exportAsReact = () => exportAsFormat('react');
-const exportAsReactNative = () => exportAsFormat('react-native');
-const exportAsHTML = () => exportAsFormat('html');
+const codeFormats = [
+  { value: 'vue', label: 'Vue' },
+  { value: 'react', label: 'React' },
+  { value: 'react-native', label: 'React Native' },
+  { value: 'html', label: 'HTML' },
+];
+
+// ---------- documentation content (example code shown on the page) ----------
+
+const SCRIPT_CLOSE = '</' + 'script>';
+const HEX_PLACEHOLDER = '#000000';
+const HEX_HINT = 'Hex color value (e.g., #4f46e5)';
+
+const basicUsageCode = `<template>
+  <button
+    @click="showPicker = !showPicker"
+    :style="{ backgroundColor: selectedColor }"
+  ></button>
+
+  <ColorPicker
+    :show="showPicker"
+    :initial-color="selectedColor"
+    :position="{ left: 200, top: 200 }"
+    @update:show="showPicker = $event"
+    @apply="selectedColor = $event"
+    @cancel="showPicker = false"
+  />
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import ColorPicker from './components/ColorPicker.vue';
+
+const showPicker = ref(false);
+const selectedColor = ref('#4f46e5');
+${SCRIPT_CLOSE}`;
+
+const positioningCode = `const openColorPicker = (index, event) => {
+  const rect = event.target.getBoundingClientRect();
+  const pickerWidth = 280;
+  const pickerHeight = 400;
+
+  let left = rect.right + 16;
+  let top = rect.top;
+
+  // Adjust if picker would go off screen
+  if (left + pickerWidth > window.innerWidth) {
+    left = rect.left - pickerWidth - 16;
+  }
+
+  pickerPosition.value = { left, top };
+  showPicker.value = true;
+};`;
+
+const apiProps = [
+  { name: 'show', type: 'Boolean', default: 'false', description: 'Controls the visibility of the color picker.' },
+  { name: 'initialColor', type: 'String', default: "'#000000'", description: "The initial color value in hex format (e.g., '#4f46e5')." },
+  { name: 'position', type: 'Object', default: '{ left: 0, top: 0 }', description: 'Position object with left and top properties in pixels. Uses fixed positioning.' },
+];
+
+const apiEvents = [
+  { name: '@update:show', payload: 'Boolean', description: 'Emitted when the picker visibility changes. Use v-model:show for two-way binding.' },
+  { name: '@apply', payload: 'String', description: 'Emitted when the user applies a color selection. Payload is the selected color in hex format.' },
+  { name: '@cancel', payload: '-', description: 'Emitted when the user cancels the color selection (e.g., clicks outside or presses Escape).' },
+];
+
+const bestPractices = [
+  {
+    title: 'Provide Clear Color Preview',
+    body: "Always show a visual preview of the selected color so users can see what they're choosing. Use a color swatch or preview area that updates in real-time.",
+    code: `<!-- Good: Visual preview -->
+<button
+  @click="showPicker = true"
+  class="w-16 h-16 rounded-lg border-2"
+  :style="{ backgroundColor: selectedColor }"
+></button>
+
+<ColorPicker
+  :show="showPicker"
+  :initial-color="selectedColor"
+  @apply="selectedColor = $event"
+/>`,
+  },
+  {
+    title: 'Support Multiple Color Formats',
+    body: 'Allow users to input and view colors in multiple formats (hex, RGB, HSL, CMYK) to accommodate different use cases and user preferences.',
+    code: `<!-- Good: Multiple format support -->
+<ColorPicker
+  :show="showPicker"
+  :initial-color="selectedColor"
+  :formats="['hex', 'rgb', 'hsl', 'cmyk']"
+  @apply="handleColorChange"
+/>
+
+<script setup>
+const handleColorChange = (color) => {
+  // Store in preferred format
+  selectedColor.value = color.hex;
+  rgbValue.value = color.rgb;
+  hslValue.value = color.hsl;
+};
+${SCRIPT_CLOSE}`,
+  },
+  {
+    title: 'Handle Positioning Properly',
+    body: "Position the color picker relative to the trigger element and ensure it doesn't go off-screen. Adjust position dynamically based on available space.",
+    code: `<!-- Good: Dynamic positioning -->
+const openColorPicker = (event) => {
+  const rect = event.target.getBoundingClientRect();
+  const pickerWidth = 280;
+
+  let left = rect.right + 16;
+  let top = rect.top;
+
+  // Adjust if picker would go off screen
+  if (left + pickerWidth > window.innerWidth) {
+    left = rect.left - pickerWidth - 16;
+  }
+
+  pickerPosition.value = { left, top };
+  showPicker.value = true;
+};`,
+  },
+  {
+    title: 'Provide Cancel and Apply Actions',
+    body: 'Always provide clear Cancel and Apply buttons so users can confirm or discard their color selection. This prevents accidental changes.',
+    code: `<!-- Good: Clear actions -->
+<ColorPicker
+  :show="showPicker"
+  :initial-color="selectedColor"
+  @apply="selectedColor = $event; showPicker = false"
+  @cancel="showPicker = false"
+/>`,
+  },
+];
+
+const antiPatterns = [
+  {
+    title: "Don't Auto-Apply Changes",
+    body: 'Avoid applying color changes immediately as the user moves sliders. This can cause performance issues and makes it difficult to cancel changes.',
+    code: `<!-- Bad: Auto-applying on every change -->
+<ColorPicker
+  :show="showPicker"
+  @change="selectedColor = $event"  <!-- Applied immediately -->
+/>
+
+<!-- Good: Preview only, apply on confirm -->
+<ColorPicker
+  :show="showPicker"
+  @change="previewColor = $event"  <!-- Preview only -->
+  @apply="selectedColor = $event"  <!-- Apply on confirm -->
+/>`,
+  },
+  {
+    title: "Don't Ignore Screen Boundaries",
+    body: 'Never position the color picker in a fixed location without checking if it fits on screen. Always adjust position dynamically to prevent it from being cut off.',
+    code: `<!-- Bad: Fixed position -->
+<ColorPicker
+  :show="showPicker"
+  :position="{ left: 200, top: 200 }"  <!-- May go off screen -->
+/>
+
+<!-- Good: Dynamic positioning -->
+<ColorPicker
+  :show="showPicker"
+  :position="calculatePosition(triggerElement)"  <!-- Adjusts to fit -->
+/>`,
+  },
+  {
+    title: "Don't Hide the Selected Color",
+    body: 'Always display the currently selected color prominently. Users need to see what color is active, especially when reopening the picker.',
+    code: `<!-- Bad: No visible color indicator -->
+<button @click="showPicker = true">
+  Choose Color
+</button>
+<!-- User can't see current selection -->
+
+<!-- Good: Visible color swatch -->
+<button
+  @click="showPicker = true"
+  class="w-16 h-16 rounded-lg border-2"
+  :style="{ backgroundColor: selectedColor }"
+  :aria-label="\`Current color: \${selectedColor}\`"
+></button>`,
+  },
+  {
+    title: "Don't Use Only Text Input",
+    body: "While text input for color values is useful, don't rely solely on it. Provide visual color selection tools (gradient canvas, hue slider) for better UX.",
+    code: `<!-- Bad: Text input only -->
+<input
+  type="text"
+  v-model="selectedColor"
+  placeholder="#000000"
+/>
+<!-- No visual selection -->
+
+<!-- Good: Visual picker with text input -->
+<ColorPicker
+  :show="showPicker"
+  :initial-color="selectedColor"
+  @apply="selectedColor = $event"
+/>
+<!-- Visual selection + text input for precision -->`,
+  },
+];
 
 
 
@@ -1960,8 +1238,38 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.preview-stage {
+  @apply min-h-96 p-8 flex items-center justify-center bg-surface-sunken text-ink;
+}
+.example-stage {
+  @apply rounded-tile p-6 mb-4 bg-surface-sunken;
+}
+.swatch-button {
+  @apply block overflow-hidden rounded-control border-2 border-solid border-line-control cursor-pointer transition-colors hover:border-accent-border focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.swatch-lg {
+  @apply w-20 h-20 mx-auto shadow-raised;
+}
+.swatch-md {
+  @apply w-16 h-16;
+}
+/* The colours the user picked */
+.preview-swatch {
+  background: v-bind(selectedColor);
+}
+.example-swatch {
+  background: v-bind(exampleColor);
+}
+.migration-step {
+  @apply flex items-start gap-3 p-4 rounded-tile border border-solid border-line bg-surface-sunken;
+}
+.migration-step-breaking {
+  @apply border-danger-border bg-danger-bg;
+}
+.migration-step-number {
+  @apply flex-shrink-0 w-8 h-8 rounded-pill flex items-center justify-center font-bold text-sm bg-accent text-ink-on-accent;
+}
+.migration-step-breaking .migration-step-number {
+  @apply bg-danger-solid;
 }
 </style>
-

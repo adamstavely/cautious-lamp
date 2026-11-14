@@ -1,141 +1,102 @@
 <template>
-  <div class="max-w-7xl mx-auto mb-16">
-    <div class="mb-8">
-      <h2 class="text-3xl font-bold mb-2 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-        <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">account_tree</span>
-        Component Dependencies
-      </h2>
-      <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-        Visualize dependencies and relationships for this component.
-      </p>
-    </div>
-
-    <div 
-      class="rounded-lg shadow-sm border overflow-hidden"
-      :class="isDarkMode 
-        ? 'bg-slate-900 border-gray-700' 
-        : 'bg-white border-gray-200'"
-    >
-      <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-        <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-          Dependency Graph
-        </h3>
-      </div>
-      <div class="p-8 min-h-[400px] relative" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-50'">
-        <div v-if="!currentComponent || componentDependencies.length === 0" class="flex flex-col items-center justify-center h-[400px]">
-          <span class="material-symbols-outlined text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">account_tree</span>
-          <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-            {{ !currentComponent ? 'Component not found' : 'No dependencies' }}
-          </p>
-          <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-            {{ !currentComponent ? 'Unable to load dependency information.' : 'This component has no dependencies.' }}
-          </p>
-        </div>
-        <svg v-else ref="graphSvg" class="w-full h-full" viewBox="0 0 800 400">
-          <!-- Render edges -->
-          <g v-for="edge in filteredEdges" :key="`${edge.from}-${edge.to}`">
-            <line
-              :x1="getNodePosition(edge.from).x"
-              :y1="getNodePosition(edge.from).y"
-              :x2="getNodePosition(edge.to).x"
-              :y2="getNodePosition(edge.to).y"
-              stroke="#6366f1"
-              stroke-width="2"
-              opacity="0.4"
-              marker-end="url(#arrowhead)"
-            />
-          </g>
+  <PageSection title="Component dependencies" description="Visualize dependencies and relationships for this component." divided>
+    <UiPanel title="Dependency graph" flush>
+      <div class="graph-well">
+        <UiEmptyState
+          v-if="!currentComponent || componentDependencies.length === 0"
+          :bordered="false"
+          spot="foundations/component-dependency-graph"
+          :title="!currentComponent ? 'Component not found' : 'No dependencies'"
+          :body="!currentComponent ? 'Unable to load dependency information.' : 'This component has no dependencies.'"
+        />
+        <svg
+          v-else
+          ref="graphSvg"
+          class="w-full h-96"
+          viewBox="0 0 800 400"
+          role="img"
+          :aria-label="`${currentComponent.name} depends on ${componentDependencies.map((d) => d.name).join(', ')}`"
+        >
           <defs>
-            <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-              <polygon points="0 0, 10 3, 0 6" fill="#6366f1" />
+            <marker id="dependency-arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+              <polygon points="0 0, 10 3, 0 6" class="fill-chart-neutral" />
             </marker>
           </defs>
-          <!-- Render nodes -->
-          <g v-for="node in filteredNodes" :key="node.id">
+          <!-- Edges -->
+          <line
+            v-for="edge in filteredEdges"
+            :key="`${edge.from}-${edge.to}`"
+            :x1="getNodePosition(edge.from).x"
+            :y1="getNodePosition(edge.from).y"
+            :x2="getNodePosition(edge.to).x"
+            :y2="getNodePosition(edge.to).y"
+            class="stroke-chart-neutral"
+            stroke-width="2"
+            marker-end="url(#dependency-arrowhead)"
+          />
+          <!-- Nodes -->
+          <g
+            v-for="node in filteredNodes"
+            :key="node.id"
+            class="graph-node"
+            :class="{ 'graph-node-link': node.id !== componentId }"
+            :role="node.id !== componentId ? 'link' : undefined"
+            :tabindex="node.id !== componentId ? 0 : undefined"
+            :aria-label="node.id !== componentId ? `Open ${node.name}` : undefined"
+            @click="handleNodeClick(node.id)"
+            @keydown.enter="handleNodeClick(node.id)"
+          >
             <circle
               :cx="getNodePosition(node.id).x"
               :cy="getNodePosition(node.id).y"
               :r="node.size || 30"
-              :fill="getNodeColor(node.status)"
-              :stroke="componentId === node.id ? '#818cf8' : '#e5e7eb'"
-              :stroke-width="componentId === node.id ? '3' : '2'"
-              class="cursor-pointer transition-all"
-              @click="handleNodeClick(node.id)"
+              :class="[statusFill(node.status), componentId === node.id ? 'stroke-accent' : 'stroke-line']"
+              :stroke-width="componentId === node.id ? 3 : 2"
             />
             <text
               :x="getNodePosition(node.id).x"
-              :y="getNodePosition(node.id).y + 5"
+              :y="getNodePosition(node.id).y + (node.size || 30) + 16"
               text-anchor="middle"
-              class="text-xs font-medium fill-white pointer-events-none"
+              class="text-xs font-medium fill-ink pointer-events-none"
             >
-              {{ node.name.substring(0, 10) }}
+              {{ node.name }}
             </text>
           </g>
         </svg>
-        
-        <!-- Legend -->
-        <div v-if="componentDependencies.length > 0" class="absolute bottom-4 left-4 flex flex-wrap gap-4 p-4 rounded-lg backdrop-blur-sm"
-          :class="isDarkMode ? 'bg-slate-900/80 border border-gray-700' : 'bg-white/80 border border-gray-200'"
-        >
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-4 rounded-full bg-green-500"></div>
-            <span class="text-xs" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Production</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-4 rounded-full bg-yellow-500"></div>
-            <span class="text-xs" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">In Progress</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-4 rounded-full bg-blue-500"></div>
-            <span class="text-xs" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Planned</span>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Dependencies List -->
-    <div v-if="componentDependencies.length > 0" class="mt-6">
-      <div 
-        class="rounded-lg shadow-sm border p-6"
-        :class="isDarkMode 
-          ? 'bg-slate-900 border-gray-700' 
-          : 'bg-white border-gray-200'"
-      >
-        <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-          Dependencies ({{ componentDependencies.length }})
-        </h3>
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-          <router-link
-            v-for="dep in componentDependencies"
-            :key="dep.id"
-            :to="`/components/${dep.id}`"
-            class="block px-4 py-3 rounded-lg border transition-colors"
-            :class="isDarkMode 
-              ? 'border-gray-700 bg-slate-800 text-gray-300 hover:bg-slate-700' 
-              : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'"
-          >
-            <div class="flex items-center gap-3">
-              <div 
-                class="w-3 h-3 rounded-full flex-shrink-0"
-                :class="getStatusColor(dep.status)"
-              ></div>
-              <div class="flex-1 min-w-0">
-                <div class="font-medium truncate">{{ dep.name }}</div>
-                <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                  {{ dep.description }}
-                </div>
-              </div>
-            </div>
-          </router-link>
-        </div>
+        <!-- Legend -->
+        <ul v-if="componentDependencies.length > 0" class="graph-legend" aria-label="Status legend">
+          <li v-for="item in legend" :key="item.status" class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-pill" :class="statusBg(item.status)" aria-hidden="true"></span>
+            <span class="text-xs text-ink-secondary">{{ item.label }}</span>
+          </li>
+        </ul>
       </div>
-    </div>
-  </div>
+    </UiPanel>
+
+    <!-- Dependencies list -->
+    <UiPanel v-if="componentDependencies.length > 0" :title="`Dependencies (${componentDependencies.length})`" class="mt-6">
+      <ul class="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <li v-for="dep in componentDependencies" :key="dep.id">
+          <router-link :to="`/components/${dep.id}`" class="dependency-link">
+            <span class="w-3 h-3 rounded-pill flex-shrink-0 mt-1" :class="statusBg(dep.status)" aria-hidden="true"></span>
+            <span class="flex-1 min-w-0">
+              <span class="block font-medium text-ink-strong truncate">{{ dep.name }}</span>
+              <span class="block text-xs mt-1 text-ink-muted">{{ dep.description }} · {{ statusLabel(dep.status) }}</span>
+            </span>
+          </router-link>
+        </li>
+      </ul>
+    </UiPanel>
+  </PageSection>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { PageSection, UiEmptyState, UiPanel } from './ui';
+
+/** A "Component dependencies" page section for a component detail page: a graph of the component and what it depends on, and links to each dependency. */
 
 const props = defineProps({
   componentId: {
@@ -146,7 +107,6 @@ const props = defineProps({
 });
 
 const router = useRouter();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const graphSvg = ref(null);
 
 // Component data with dependencies - this should match the data from ComponentDependencyGraph.vue
@@ -253,63 +213,43 @@ const getNodePosition = (nodeId) => {
   };
 };
 
-const getNodeColor = (status) => {
-  const colors = {
-    'production': '#10b981',
-    'in-progress': '#f59e0b',
-    'planned': '#3b82f6',
-    'deprecated': '#ef4444'
-  };
-  return colors[status] || '#6b7280';
+const STATUS = {
+  production: { label: 'Production', fill: 'fill-success-solid', bg: 'bg-success-solid' },
+  'in-progress': { label: 'In progress', fill: 'fill-warning-solid', bg: 'bg-warning-solid' },
+  planned: { label: 'Planned', fill: 'fill-info-solid', bg: 'bg-info-solid' },
+  deprecated: { label: 'Deprecated', fill: 'fill-danger-solid', bg: 'bg-danger-solid' },
 };
+const legend = ['production', 'in-progress', 'planned'].map((status) => ({ status, label: STATUS[status].label }));
 
-const getStatusColor = (status) => {
-  const colors = {
-    'production': 'bg-green-500',
-    'in-progress': 'bg-yellow-500',
-    'planned': 'bg-blue-500',
-    'deprecated': 'bg-red-500'
-  };
-  return colors[status] || 'bg-gray-500';
-};
+const statusFill = (status) => STATUS[status]?.fill || 'fill-chart-neutral';
+const statusBg = (status) => STATUS[status]?.bg || 'bg-chart-neutral';
+const statusLabel = (status) => STATUS[status]?.label || status;
 
 const handleNodeClick = (nodeId) => {
   if (nodeId !== props.componentId) {
     router.push(`/components/${nodeId}`);
   }
 };
-
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>
+.graph-well {
+  @apply relative p-6 bg-surface-sunken;
+}
+.graph-node-link {
+  @apply cursor-pointer focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.graph-node circle {
+  @apply transition-opacity;
+}
+.graph-node-link:hover circle {
+  @apply opacity-80;
+}
+.graph-legend {
+  @apply mt-4 flex flex-wrap gap-4;
+}
+.dependency-link {
+  @apply flex items-start gap-3 px-4 py-3 rounded-tile border border-line bg-surface-sunken text-sm transition-colors hover:bg-fill-hover;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+}
 </style>
-

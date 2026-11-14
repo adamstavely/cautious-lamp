@@ -1,31 +1,27 @@
 <template>
-  <v-dialog :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)" persistent max-width="400">
-    <v-card>
-      <v-card-title>{{ title }}</v-card-title>
-      <v-card-text>
-        <v-text-field
-          v-model="inputValue"
-          :label="label"
-          :type="type === 'password' && showPassword ? 'text' : type"
-          :placeholder="placeholder"
-          outlined
-          autofocus
-          :append-inner-icon="type === 'password' ? (showPassword ? 'mdi-eye-off' : 'mdi-eye') : undefined"
-          @click:append-inner="type === 'password' ? (showPassword = !showPassword) : undefined"
-          @keyup.enter="submit"
-        />
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn color="grey" variant="text" @click="cancel">Cancel</v-btn>
-        <v-btn color="primary" @click="submit" :disabled="required && !inputValue.trim()">OK</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <UiDialog :open="modelValue" :title="title" size="sm" @update:open="onOpen">
+    <form :id="formId" class="flex flex-col gap-3" @submit.prevent="submit">
+      <UiInput
+        v-model="inputValue"
+        :label="label"
+        :type="type === 'password' && showPassword ? 'text' : type"
+        :placeholder="placeholder"
+        :required="required"
+        :autocomplete="type === 'password' ? 'new-password' : undefined"
+        autofocus
+      />
+      <UiCheckbox v-if="type === 'password'" v-model="showPassword" label="Show password" />
+    </form>
+    <template #footer>
+      <UiButton variant="ghost" @click="cancel">Cancel</UiButton>
+      <UiButton variant="primary" type="submit" :form="formId" :disabled="required && !String(inputValue).trim()">OK</UiButton>
+    </template>
+  </UiDialog>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, useId, watch } from 'vue';
+import { UiButton, UiCheckbox, UiDialog, UiInput } from '../ui';
 
 const props = defineProps({
   modelValue: Boolean,
@@ -51,6 +47,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'submit', 'cancel']);
 
+const formId = `prompt-${useId()}`;
 const inputValue = ref(props.defaultValue);
 const showPassword = ref(false);
 
@@ -62,8 +59,9 @@ watch(() => props.modelValue, (newVal) => {
 });
 
 const submit = () => {
-  if (props.required && !inputValue.value.trim()) return;
-  emit('submit', inputValue.value);
+  const value = String(inputValue.value ?? '');
+  if (props.required && !value.trim()) return;
+  emit('submit', value);
   emit('update:modelValue', false);
 };
 
@@ -71,5 +69,8 @@ const cancel = () => {
   emit('cancel');
   emit('update:modelValue', false);
 };
-</script>
 
+const onOpen = (open) => {
+  if (!open && props.modelValue) cancel();
+};
+</script>

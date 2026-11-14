@@ -1,360 +1,73 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Loading Spinner Generator
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Create customizable loading animations including spinners, dots, bars, skeleton loaders, and pulse effects. Generate React or Vue components with CSS animations.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">refresh</span>
-                      Component Utility
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="spinnerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Spinner representation -->
-                      <circle cx="100" cy="100" r="40" fill="none" stroke="url(#spinnerGradient)" stroke-width="8" opacity="0.3"/>
-                      <circle cx="100" cy="100" r="40" fill="none" stroke="url(#spinnerGradient)" stroke-width="8" opacity="0.8" stroke-dasharray="125.66" stroke-dashoffset="62.83" transform="rotate(-90 100 100)"/>
-                      <!-- Dots representation -->
-                      <circle cx="60" cy="60" r="6" fill="url(#spinnerGradient)" opacity="0.6"/>
-                      <circle cx="100" cy="60" r="6" fill="url(#spinnerGradient)" opacity="0.8"/>
-                      <circle cx="140" cy="60" r="6" fill="url(#spinnerGradient)" opacity="0.6"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/components', label: 'Components' }"
+      title="Loading spinner generator"
+      lead="Create customizable loading animations including spinners, dots, bars, skeleton loaders, and pulse effects. Generate React or Vue components with CSS animations."
+      spot="tools/loading-spinner-generator"
+      size="tool"
+    />
+
+    <PageSection title="Build" description="Pick a style, colour, size and speed, then export the component.">
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <UiPanel title="Configuration" class="lg:col-span-1">
+          <div class="space-y-5">
+            <UiSegmented v-model="config.style" label="Style" :options="spinnerStyles" />
+            <div class="grid grid-cols-content-aside items-end gap-2">
+              <UiInput v-model="config.color" label="Color" mono :placeholder="DEFAULT_COLOR" />
+              <UiInput v-model="config.color" type="color" label="Picker" aria-label="Color picker" />
+            </div>
+            <UiSelect v-model="config.size" label="Size" :options="sizeOptions" />
+            <UiRange v-model="config.speed" label="Speed" hint="Seconds per cycle: lower is faster." :min="0.5" :max="3" :step="0.1" unit="s" />
+            <div v-if="config.style === 'skeleton'" class="grid grid-cols-2 gap-3">
+              <UiInput v-model="config.skeletonRows" type="number" label="Rows" min="1" max="10" />
+              <UiInput v-model="config.skeletonColumns" type="number" label="Columns" min="1" max="5" />
             </div>
           </div>
+        </UiPanel>
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <!-- Configuration Panel -->
-              <div class="lg:col-span-1">
-                <div 
-                  class="rounded-lg shadow-sm border p-6 mb-6 sticky top-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">tune</span>
-                    Configuration
-                  </h2>
+        <div class="space-y-6 lg:col-span-2">
+          <UiPanel title="Preview">
+            <div class="flex min-h-80 items-center justify-center rounded-tile bg-surface-sunken p-12" role="status" aria-label="Loading">
+              <div v-if="config.style === 'spinner'" class="spin-spinner"></div>
 
-                  <!-- Style Selector -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Style
-                    </label>
-                    <div class="grid grid-cols-1 gap-2">
-                      <button
-                        v-for="style in spinnerStyles"
-                        :key="style.value"
-                        @click="config.style = style.value"
-                        class="px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left"
-                        :class="config.style === style.value
-                          ? (isDarkMode 
-                            ? 'bg-indigo-600 text-white' 
-                            : 'bg-indigo-600 text-white')
-                          : (isDarkMode
-                            ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                      >
-                        <span class="material-symbols-outlined text-base mr-2 align-middle">{{ style.icon }}</span>
-                        {{ style.label }}
-                      </button>
-                    </div>
-                  </div>
+              <div v-if="config.style === 'dots'" class="flex gap-2">
+                <div v-for="i in 3" :key="i" class="spin-dot" :class="`spin-dot-${i}`"></div>
+              </div>
 
-                  <!-- Color Picker -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Color
-                    </label>
-                    <div class="flex gap-2">
-                      <input
-                        v-model="config.color"
-                        type="color"
-                        class="w-16 h-10 rounded border cursor-pointer"
-                        :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                      />
-                      <input
-                        v-model="config.color"
-                        type="text"
-                        placeholder="#6366f1"
-                        class="flex-1 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors font-mono text-sm"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 border-gray-600 text-white placeholder-gray-500' 
-                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'"
-                      />
-                    </div>
-                  </div>
+              <div v-if="config.style === 'bars'" class="spin-bars flex items-end gap-1">
+                <div v-for="i in 5" :key="i" class="spin-bar" :class="`spin-bar-${i}`"></div>
+              </div>
 
-                  <!-- Size Selector -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Size
-                    </label>
-                    <select
-                      v-model="config.size"
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                      :class="isDarkMode 
-                        ? 'bg-slate-800 border-gray-600 text-white' 
-                        : 'bg-white border-gray-300 text-gray-900'"
-                    >
-                      <option value="sm">Small</option>
-                      <option value="md">Medium</option>
-                      <option value="lg">Large</option>
-                    </select>
-                  </div>
-
-                  <!-- Speed/Duration Slider -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Speed: {{ config.speed }}s
-                    </label>
-                    <input
-                      v-model.number="config.speed"
-                      type="range"
-                      min="0.5"
-                      max="3"
-                      step="0.1"
-                      class="w-full h-2 rounded-lg appearance-none cursor-pointer"
-                      :class="isDarkMode ? 'bg-slate-700 accent-indigo-500' : 'bg-gray-200 accent-indigo-600'"
-                    />
-                    <div class="flex justify-between text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                      <span>Fast</span>
-                      <span>Slow</span>
-                    </div>
-                  </div>
-
-                  <!-- Skeleton Configuration (only for skeleton style) -->
-                  <div v-if="config.style === 'skeleton'" class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Rows
-                    </label>
-                    <input
-                      v-model.number="config.skeletonRows"
-                      type="number"
-                      min="1"
-                      max="10"
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                      :class="isDarkMode 
-                        ? 'bg-slate-800 border-gray-600 text-white' 
-                        : 'bg-white border-gray-300 text-gray-900'"
-                    />
-                    <label class="block text-sm font-medium mb-2 mt-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Columns
-                    </label>
-                    <input
-                      v-model.number="config.skeletonColumns"
-                      type="number"
-                      min="1"
-                      max="5"
-                      class="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
-                      :class="isDarkMode 
-                        ? 'bg-slate-800 border-gray-600 text-white' 
-                        : 'bg-white border-gray-300 text-gray-900'"
-                    />
-                  </div>
+              <div v-if="config.style === 'skeleton'" class="w-full space-y-3">
+                <div v-for="row in skeletonRowCount" :key="row" class="flex gap-3">
+                  <div v-for="col in skeletonColumnCount" :key="col" class="spin-skeleton"></div>
                 </div>
               </div>
 
-              <!-- Preview and Export Panel -->
-              <div class="lg:col-span-2">
-                <!-- Preview Section -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6 mb-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">preview</span>
-                    Preview
-                  </h2>
-                  
-                  <div class="flex items-center justify-center p-12 rounded-lg min-h-[300px]"
-                    :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'"
-                    role="status"
-                    aria-label="Loading"
-                  >
-                    <!-- Spinner -->
-                    <div v-if="config.style === 'spinner'" 
-                      :style="getSpinnerStyles()"
-                    ></div>
-
-                    <!-- Dots -->
-                    <div v-if="config.style === 'dots'" 
-                      class="flex gap-2"
-                    >
-                      <div 
-                        v-for="i in 3"
-                        :key="i"
-                        :style="getDotStyles(i)"
-                      ></div>
-                    </div>
-
-                    <!-- Bars -->
-                    <div v-if="config.style === 'bars'" 
-                      class="flex gap-1 items-end"
-                      :style="{ height: getSizeValue().spinner }"
-                    >
-                      <div 
-                        v-for="i in 5"
-                        :key="i"
-                        :style="getBarStyles(i)"
-                      ></div>
-                    </div>
-
-                    <!-- Skeleton -->
-                    <div v-if="config.style === 'skeleton'" 
-                      class="w-full space-y-3"
-                    >
-                      <div 
-                        v-for="row in skeletonRowCount"
-                        :key="row"
-                        class="flex gap-3"
-                      >
-                        <div 
-                          v-for="col in skeletonColumnCount"
-                          :key="col"
-                          :style="getSkeletonStyles()"
-                        ></div>
-                      </div>
-                    </div>
-
-                    <!-- Pulse -->
-                    <div v-if="config.style === 'pulse'" 
-                      :style="getPulseStyles()"
-                    ></div>
-                  </div>
-                </div>
-
-                <!-- Export Section -->
-                <div 
-                  class="rounded-lg shadow-sm border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <h2 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">download</span>
-                    Export
-                  </h2>
-
-                  <div class="space-y-4">
-                    <!-- Export Format Selector -->
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Export Format
-                      </label>
-                      <div class="flex gap-2">
-                        <button
-                          v-for="format in exportFormats"
-                          :key="format.value"
-                          @click="selectedExportFormat = format.value"
-                          class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                          :class="selectedExportFormat === format.value
-                            ? (isDarkMode 
-                              ? 'bg-indigo-600 text-white' 
-                              : 'bg-indigo-600 text-white')
-                            : (isDarkMode
-                              ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                        >
-                          {{ format.label }}
-                        </button>
-                      </div>
-                    </div>
-
-                    <!-- Code Preview -->
-                    <div>
-                      <div class="flex items-center justify-between mb-2">
-                        <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                          Generated Code
-                        </label>
-                        <button
-                          @click="copyCode"
-                          class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                          :class="isDarkMode 
-                            ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
-                            : 'bg-indigo-600 text-white hover:bg-indigo-700'"
-                        >
-                          <span class="material-symbols-outlined text-sm mr-1 align-middle">content_copy</span>
-                          Copy
-                        </button>
-                      </div>
-                      <InlineNotice :notice="notice" class="mb-2" @dismiss="clearNotice" />
-                      <textarea
-                        :value="generatedCode"
-                        readonly
-                        class="w-full h-64 px-4 py-3 border rounded-lg font-mono text-sm resize-none"
-                        :class="isDarkMode 
-                          ? 'bg-slate-950 text-gray-100 border-gray-700' 
-                          : 'bg-gray-50 text-gray-900 border-gray-300'"
-                      ></textarea>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <div v-if="config.style === 'pulse'" class="spin-pulse"></div>
             </div>
-          </div>
+          </UiPanel>
+
+          <UiPanel title="Export">
+            <div class="space-y-4">
+              <UiSegmented v-model="selectedExportFormat" label="Export format" :options="exportFormats" />
+              <InlineNotice :notice="notice" @dismiss="clearNotice" />
+              <UiCodeBlock :code="generatedCode" :label="exportLabel" @copied="onCopied" @copy-failed="onCopyFailed" />
+            </div>
+          </UiPanel>
         </div>
       </div>
-    </div>
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { PageHero, PageSection, PageShell, UiCodeBlock, UiInput, UiPanel, UiRange, UiSegmented, UiSelect } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const { notice, showNotice, clearNotice } = useNotice();
 
 const spinnerStyles = [
@@ -370,6 +83,14 @@ const exportFormats = [
   { label: 'Vue', value: 'vue' },
   { label: 'CSS', value: 'css' }
 ];
+
+const sizeOptions = [
+  { value: 'sm', label: 'Small' },
+  { value: 'md', label: 'Medium' },
+  { value: 'lg', label: 'Large' }
+];
+
+const DEFAULT_COLOR = '#6366f1';
 
 const config = ref({
   style: 'spinner',
@@ -425,64 +146,11 @@ const withAlpha = (color, alphaHex = '20') => {
 
 const getSizeValue = () => SIZE_MAP[config.value.size] || SIZE_MAP.md;
 
-const getSpinnerStyles = () => {
-  const sizes = getSizeValue();
-  return {
-    width: sizes.spinner,
-    height: sizes.spinner,
-    border: `4px solid ${withAlpha(config.value.color)}`,
-    borderTop: `4px solid ${config.value.color}`,
-    borderRadius: '50%',
-    animation: `spinner-rotate ${speed.value}s linear infinite`
-  };
-};
-
-const getDotStyles = (index) => {
-  const sizes = getSizeValue();
-  return {
-    width: sizes.dot,
-    height: sizes.dot,
-    backgroundColor: config.value.color,
-    borderRadius: '50%',
-    animation: `spinner-dot-bounce ${speed.value}s ease-in-out infinite`,
-    animationDelay: `${(index - 1) * 0.15}s`
-  };
-};
-
-const getBarStyles = (index) => {
-  const sizes = getSizeValue();
-  return {
-    width: sizes.bar,
-    height: BAR_HEIGHTS[index - 1],
-    backgroundColor: config.value.color,
-    borderRadius: '2px',
-    transformOrigin: 'bottom',
-    animation: `spinner-bar-bounce ${speed.value}s ease-in-out infinite`,
-    animationDelay: `${(index - 1) * 0.1}s`
-  };
-};
-
-const getSkeletonStyles = () => {
-  return {
-    backgroundColor: config.value.color,
-    opacity: 0.1,
-    borderRadius: '4px',
-    height: '60px',
-    flex: 1,
-    animation: `skeleton-pulse ${speed.value}s ease-in-out infinite`
-  };
-};
-
-const getPulseStyles = () => {
-  const sizes = getSizeValue();
-  return {
-    width: sizes.pulse,
-    height: sizes.pulse,
-    backgroundColor: config.value.color,
-    borderRadius: '50%',
-    animation: `spinner-pulse-scale ${speed.value}s ease-in-out infinite`
-  };
-};
+// The preview's colour, sizes and speed are the user's design: they reach CSS
+// through v-bind() in the <style> block
+const sizes = computed(() => getSizeValue());
+const trackColor = computed(() => withAlpha(config.value.color));
+const duration = computed(() => `${speed.value}s`);
 
 const COMPONENT_NAMES = {
   spinner: 'Spinner',
@@ -748,48 +416,80 @@ ${html}
 */`;
 });
 
-const copyCode = async () => {
-  try {
-    await navigator.clipboard.writeText(generatedCode.value);
-    showNotice('Code copied to clipboard.', 'success');
-  } catch (error) {
-    console.error('Copy failed:', error);
-    showNotice('Could not copy to the clipboard. Select the code and copy it manually.', 'error');
-  }
-};
+const exportLabel = computed(() => exportFormats.find((f) => f.value === selectedExportFormat.value)?.label ?? 'Code');
+
+// UiCodeBlock copies the code; these report the result
+const onCopied = () => showNotice('Code copied to clipboard.', 'success');
+const onCopyFailed = () => showNotice('Could not copy to the clipboard. Select the code and copy it manually.', 'error');
 </script>
 
-<style>
-/* Global keyframes for loading animations - must be global for inline styles to work */
+<style scoped>
+.spin-spinner {
+  width: v-bind('sizes.spinner');
+  height: v-bind('sizes.spinner');
+  border: 4px solid v-bind(trackColor);
+  border-top-color: v-bind('config.color');
+  border-radius: 50%;
+  animation: spinner-rotate v-bind(duration) linear infinite;
+}
+.spin-dot {
+  width: v-bind('sizes.dot');
+  height: v-bind('sizes.dot');
+  background-color: v-bind('config.color');
+  border-radius: 50%;
+  animation: spinner-dot-bounce v-bind(duration) ease-in-out infinite;
+}
+.spin-dot-2 { animation-delay: 0.15s; }
+.spin-dot-3 { animation-delay: 0.3s; }
+.spin-bars {
+  height: v-bind('sizes.spinner');
+}
+.spin-bar {
+  width: v-bind('sizes.bar');
+  background-color: v-bind('config.color');
+  border-radius: 2px;
+  transform-origin: bottom;
+  animation: spinner-bar-bounce v-bind(duration) ease-in-out infinite;
+}
+.spin-bar-1 { height: 20%; }
+.spin-bar-2 { height: 40%; animation-delay: 0.1s; }
+.spin-bar-3 { height: 60%; animation-delay: 0.2s; }
+.spin-bar-4 { height: 40%; animation-delay: 0.3s; }
+.spin-bar-5 { height: 20%; animation-delay: 0.4s; }
+.spin-skeleton {
+  flex: 1;
+  height: 3.75rem;
+  background-color: v-bind('config.color');
+  opacity: 0.1;
+  border-radius: 4px;
+  animation: skeleton-pulse v-bind(duration) ease-in-out infinite;
+}
+.spin-pulse {
+  width: v-bind('sizes.pulse');
+  height: v-bind('sizes.pulse');
+  background-color: v-bind('config.color');
+  border-radius: 50%;
+  animation: spinner-pulse-scale v-bind(duration) ease-in-out infinite;
+}
+
 @keyframes spinner-rotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-
 @keyframes spinner-dot-bounce {
   0%, 80%, 100% { transform: translateY(0); opacity: 0.7; }
   40% { transform: translateY(-10px); opacity: 1; }
 }
-
 @keyframes spinner-bar-bounce {
   0%, 100% { transform: scaleY(0.4); }
   50% { transform: scaleY(1); }
 }
-
 @keyframes skeleton-pulse {
   0%, 100% { opacity: 0.1; }
   50% { opacity: 0.2; }
 }
-
 @keyframes spinner-pulse-scale {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.2); opacity: 0.7; }
 }
 </style>
-
-<style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-</style>
-

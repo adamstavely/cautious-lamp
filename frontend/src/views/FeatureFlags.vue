@@ -1,549 +1,282 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Feature Flags
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Control feature availability across your design system. Turn features on or off, target specific users or groups, and manage gradual rollouts.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-                    <defs>
-                      <linearGradient id="flagsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Flag pole -->
-                    <line x1="50" y1="30" x2="50" y2="170" stroke="url(#flagsGradient)" stroke-width="4" opacity="0.6"/>
-                    <!-- Flag 1 (enabled) -->
-                    <rect x="50" y="40" width="60" height="40" fill="url(#flagsGradient)" opacity="0.8"/>
-                    <path d="M 50 40 L 110 40 L 110 80 L 50 80 Z" fill="url(#flagsGradient)" opacity="0.4"/>
-                    <!-- Flag 2 (enabled) -->
-                    <rect x="50" y="90" width="60" height="40" fill="url(#flagsGradient)" opacity="0.8"/>
-                    <path d="M 50 90 L 110 90 L 110 130 L 50 130 Z" fill="url(#flagsGradient)" opacity="0.4"/>
-                    <!-- Flag 3 (disabled) -->
-                    <rect x="50" y="140" width="60" height="40" fill="url(#flagsGradient)" opacity="0.3"/>
-                    <line x1="50" y1="160" x2="110" y2="160" stroke="url(#flagsGradient)" stroke-width="2" opacity="0.5"/>
-                    <!-- Toggle switches -->
-                    <circle cx="130" cy="60" r="8" fill="url(#flagsGradient)" opacity="0.6"/>
-                    <circle cx="130" cy="110" r="8" fill="url(#flagsGradient)" opacity="0.6"/>
-                    <circle cx="130" cy="160" r="8" fill="white" opacity="0.3"/>
-                  </svg>
-                </div>
-              </div>
+  <PageShell width="wide">
+    <PageHero
+      eyebrow="Admin"
+      title="Feature flags"
+      lead="Control feature availability across your design system. Turn features on or off, target specific users or groups, and manage gradual rollouts."
+      spot="admin/feature-flags"
+    />
+
+    <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
+
+    <PageSection title="Flags">
+      <template #actions>
+        <UiButton variant="primary" icon="add" @click="showCreateModal = true">Create flag</UiButton>
+      </template>
+
+      <UiSpinner v-if="loading" label="Loading feature flags…" />
+
+      <UiEmptyState
+        v-else-if="flags.length === 0"
+        spot="admin/feature-flags"
+        title="No feature flags found"
+        body="Create your first flag to get started."
+      />
+
+      <ul v-else class="space-y-4">
+        <li v-for="flag in flags" :key="flag.id" class="flag-card">
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-3 mb-2">
+              <h3 class="text-lg font-semibold text-ink-strong">{{ flag.name }}</h3>
+              <UiChip :tone="flag.enabled ? 'success' : 'neutral'">{{ flag.enabled ? 'Enabled' : 'Disabled' }}</UiChip>
+              <UiCode>{{ flag.key }}</UiCode>
             </div>
+            <p class="text-sm mb-4 text-ink-secondary">{{ flag.description || 'No description provided' }}</p>
+
+            <div v-if="flag.metadata?.category || flag.metadata?.tags?.length" class="flex flex-wrap gap-2 mb-4">
+              <UiChip v-if="flag.metadata?.category" tone="accent">{{ flag.metadata.category }}</UiChip>
+              <UiChip v-for="tag in flag.metadata?.tags" :key="tag">{{ tag }}</UiChip>
+            </div>
+
+            <dl v-if="flag.targeting" class="text-xs space-y-1 text-ink-secondary">
+              <div v-if="flag.targeting.users && flag.targeting.users.length > 0">
+                <dt class="inline font-semibold">Target users:</dt> <dd class="inline">{{ flag.targeting.users.join(', ') }}</dd>
+              </div>
+              <div v-if="flag.targeting.groups && flag.targeting.groups.length > 0">
+                <dt class="inline font-semibold">Target groups:</dt> <dd class="inline">{{ flag.targeting.groups.join(', ') }}</dd>
+              </div>
+              <div v-if="flag.targeting.percentage !== undefined">
+                <dt class="inline font-semibold">Rollout:</dt> <dd class="inline">{{ flag.targeting.percentage }}% of users</dd>
+              </div>
+            </dl>
           </div>
-        </div>
-
-        <!-- Feature Flags Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="flex items-center justify-between mb-6">
-              <h2 class="text-2xl font-bold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">flag</span>
-                Feature Flags
-              </h2>
-              <button
-                @click="showCreateModal = true"
-                class="px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                :class="isDarkMode 
-                  ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700'"
-              >
-                <span class="material-symbols-outlined text-sm mr-1 align-middle">add</span>
-                Create Flag
-              </button>
-            </div>
-
-            <div v-if="loading" class="text-center py-12">
-              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-              <p class="mt-4 text-gray-600 dark:text-gray-400">Loading feature flags...</p>
-            </div>
-
-            <div v-else class="space-y-4">
-              <div
-                v-for="flag in flags"
-                :key="flag.id"
-                class="border rounded-lg p-4 transition-all"
-                :class="isDarkMode 
-                  ? 'border-gray-700 bg-slate-800 hover:border-indigo-400' 
-                  : 'border-gray-200 bg-gray-50 hover:border-indigo-500'"
-              >
-                <div class="flex items-start justify-between">
-                  <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-2">
-                      <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ flag.name }}
-                      </h3>
-                      <span 
-                        class="px-2 py-1 rounded text-xs font-medium"
-                        :class="flag.enabled 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'"
-                      >
-                        {{ flag.enabled ? 'Enabled' : 'Disabled' }}
-                      </span>
-                      <span class="px-2 py-1 rounded text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">
-                        {{ flag.key }}
-                      </span>
-                    </div>
-                    <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      {{ flag.description || 'No description provided' }}
-                    </p>
-                    
-                    <!-- Metadata -->
-                    <div class="flex flex-wrap gap-2 mb-4">
-                      <span 
-                        v-if="flag.metadata?.category"
-                        class="px-2 py-1 rounded text-xs"
-                        :class="isDarkMode 
-                          ? 'bg-slate-700 text-gray-300' 
-                          : 'bg-gray-200 text-gray-700'"
-                      >
-                        {{ flag.metadata.category }}
-                      </span>
-                      <span
-                        v-for="tag in flag.metadata?.tags"
-                        :key="tag"
-                        class="px-2 py-1 rounded text-xs"
-                        :class="isDarkMode 
-                          ? 'bg-slate-700 text-gray-300' 
-                          : 'bg-gray-200 text-gray-700'"
-                      >
-                        {{ tag }}
-                      </span>
-                    </div>
-
-                    <!-- Targeting Info -->
-                    <div v-if="flag.targeting" class="text-xs space-y-1 mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <div v-if="flag.targeting.users && flag.targeting.users.length > 0">
-                        <strong>Target Users:</strong> {{ flag.targeting.users.join(', ') }}
-                      </div>
-                      <div v-if="flag.targeting.groups && flag.targeting.groups.length > 0">
-                        <strong>Target Groups:</strong> {{ flag.targeting.groups.join(', ') }}
-                      </div>
-                      <div v-if="flag.targeting.percentage !== undefined">
-                        <strong>Rollout:</strong> {{ flag.targeting.percentage }}% of users
-                      </div>
-                    </div>
-                  </div>
-                  <div class="ml-4 flex gap-2">
-                    <button
-                      @click="toggleFlag(flag.id)"
-                      class="p-2 rounded-lg transition-colors"
-                      :class="isDarkMode 
-                        ? flag.enabled
-                          ? 'text-green-400 hover:text-green-300 hover:bg-slate-700'
-                          : 'text-gray-400 hover:text-white hover:bg-slate-700'
-                        : flag.enabled
-                          ? 'text-green-600 hover:text-green-700 hover:bg-gray-100'
-                          : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"
-                      :title="flag.enabled ? 'Disable' : 'Enable'"
-                    >
-                      <span class="material-symbols-outlined">{{ flag.enabled ? 'toggle_on' : 'toggle_off' }}</span>
-                    </button>
-                    <button
-                      @click="editFlag(flag)"
-                      class="p-2 rounded-lg transition-colors"
-                      :class="isDarkMode 
-                        ? 'text-gray-400 hover:text-white hover:bg-slate-700' 
-                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"
-                      title="Edit Flag"
-                    >
-                      <span class="material-symbols-outlined">edit</span>
-                    </button>
-                    <button
-                      @click="deleteFlag(flag.id)"
-                      class="p-2 rounded-lg transition-colors"
-                      :class="isDarkMode 
-                        ? 'text-red-400 hover:text-red-300 hover:bg-slate-700' 
-                        : 'text-red-600 hover:text-red-700 hover:bg-gray-100'"
-                      title="Delete Flag"
-                    >
-                      <span class="material-symbols-outlined">delete</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div v-if="flags.length === 0" class="text-center py-12 text-gray-500 dark:text-gray-400">
-                No feature flags found. Create your first flag to get started.
-              </div>
-            </div>
+          <div class="flex gap-1">
+            <UiButton
+              icon-only
+              variant="ghost"
+              :icon="flag.enabled ? 'toggle_on' : 'toggle_off'"
+              :class="{ 'text-success': flag.enabled }"
+              :label="`${flag.enabled ? 'Disable' : 'Enable'} ${flag.name}`"
+              @click="toggleFlag(flag.id)"
+            />
+            <UiButton icon-only variant="ghost" icon="edit" :label="`Edit ${flag.name}`" @click="editFlag(flag)" />
+            <UiButton icon-only variant="ghost" icon="delete" :label="`Delete ${flag.name}`" @click="deleteFlag(flag)" />
           </div>
-        </div>
-        </div>
-      </div>
-    </div>
+        </li>
+      </ul>
+    </PageSection>
 
-    <!-- Create/Edit Modal -->
-    <div
-      v-if="showCreateModal || showEditModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-      @click.self="closeModal"
+    <!-- Create/Edit -->
+    <UiDialog
+      :open="showCreateModal || showEditModal"
+      :title="showEditModal ? 'Edit feature flag' : 'Create feature flag'"
+      size="lg"
+      @update:open="(open) => { if (!open) closeModal(); }"
     >
-      <div
-        class="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg shadow-xl"
-        :class="isDarkMode ? 'bg-slate-800' : 'bg-white'"
-      >
-        <div class="sticky top-0 p-6 border-b flex items-center justify-between"
-          :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-white'"
+      <form id="feature-flag-form" class="space-y-5" @submit.prevent="saveFlag">
+        <UiCallout title="How feature flags work">
+          <p class="mb-2">
+            Feature flags control access to pages and capabilities. Select a page/route below, and we'll automatically generate the flag key.
+            When disabled, users will be redirected away from that page.
+          </p>
+          <p><strong>Example:</strong> Selecting "/components/testing" creates flag "component-testing" which controls access to the Component Testing page.</p>
+        </UiCallout>
+
+        <UiField
+          label="Page / route"
+          required
+          hint="Select the page or route this flag will control. The flag key will be auto-generated."
+          v-slot="{ id, describedBy }"
         >
-          <h2 class="text-2xl font-bold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-            <span class="material-symbols-outlined text-indigo-600">{{ showEditModal ? 'edit' : 'add' }}</span>
-            {{ showEditModal ? 'Edit Feature Flag' : 'Create Feature Flag' }}
-          </h2>
-          <button
-            @click="closeModal"
-            class="p-2 rounded-lg transition-colors"
-            :class="isDarkMode ? 'text-gray-400 hover:text-white hover:bg-slate-700' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'"
-          >
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-
-        <form @submit.prevent="saveFlag" class="p-6 space-y-4">
-          <!-- Help Section -->
-          <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
-            <div class="flex items-start gap-3">
-              <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5">info</span>
-              <div class="flex-1">
-                <h4 class="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">How Feature Flags Work</h4>
-                <p class="text-xs text-blue-800 dark:text-blue-200 mb-2">
-                  Feature flags control access to pages and capabilities. Select a page/route below, and we'll automatically generate the flag key. 
-                  When disabled, users will be redirected away from that page.
-                </p>
-                <p class="text-xs text-blue-700 dark:text-blue-300">
-                  <strong>Example:</strong> Selecting "/components/testing" creates flag "component-testing" which controls access to the Component Testing page.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Route/Page Selector -->
-          <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Page / Route <span class="text-red-500">*</span>
-            </label>
+          <div class="relative">
             <select
+              :id="id"
               v-model="selectedRoute"
-              @change="updateFlagFromRoute"
+              class="route-select"
               :disabled="showEditModal"
-              class="w-full px-3 py-2 border rounded-lg"
-              :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
+              :aria-describedby="describedBy"
+              @change="updateFlagFromRoute"
             >
               <option value="">-- Select a page or route --</option>
-              <optgroup label="Components">
-                <option value="/components">Components Overview</option>
-                <option value="/components/status">Component Status</option>
-                <option value="/components/loupe">Loupe</option>
-                <option value="/components/testing">Component Testing</option>
-                <option value="/components/documentation">Documentation Generator</option>
-                <option value="/review/handoff">Design-Dev Handoff</option>
-                <option value="/components/composition">Component Composition</option>
-                <option value="/admin/dependencies">Dependency Graph</option>
-              </optgroup>
-              <optgroup label="Tokens">
-                <option value="/tokens">Tokens Overview</option>
-                <option value="/tokens/studio">Token Studio</option>
-                <option value="/tokens/playground">Token Playground</option>
-                <option value="/tokens/library">Style Library</option>
-              </optgroup>
-              <optgroup label="Review">
-                <option value="/review">Review System</option>
-                <option value="/review/my-requests">Review Kanban</option>
-                <option value="/review/management">Review Management</option>
-              </optgroup>
-              <optgroup label="Admin">
-                <option value="/admin/health">System Health</option>
-                <option value="/admin/governance">Governance</option>
-                <option value="/admin/audit">Audit Logs</option>
-                <option value="/admin/roles">Role Management</option>
-                <option value="/admin/feature-flags">Feature Flags</option>
-              </optgroup>
-              <optgroup label="Tools">
-                <option value="/tools/gradient-generator">Gradient Generator</option>
-                <option value="/tools/lorem-ipsum">Lorem Ipsum Generator</option>
-                <option value="/tools/seo-tagging">SEO Tagging</option>
-                <option value="/tools/color-scale">Color Scale Generator</option>
-                <option value="/tools/color-converter">Color Converter</option>
-                <option value="/tools/color-contrast">Color Contrast Checker</option>
-                <option value="/tools/nasa-tlx">NASA-TLX</option>
-                <option value="/tools/sus">System Usability Scale</option>
-                <option value="/tools/png-to-ico">PNG to ICO Converter</option>
-                <option value="/tools/heuristic-evaluation">Heuristic Evaluation</option>
-                <option value="/palette-builder">Palette Builder</option>
-                <option value="/theme-builder">Theme Builder</option>
-              </optgroup>
-              <optgroup label="Fonts">
-                <option value="/fonts">Fonts Overview</option>
-                <option value="/fonts/library">Font Library</option>
-                <option value="/fonts/scale">Font Scale</option>
-                <option value="/fonts/stack">Font Stack</option>
-                <option value="/fonts/subsetting">Font Subsetting</option>
-              </optgroup>
-              <optgroup label="Other">
-                <option value="/patterns">Patterns System</option>
-                <option value="/design-assets/icons">Icon Library</option>
-                <option value="/getting-started">Getting Started</option>
-                <option value="/research">HCD</option>
-                <option value="/research/user-personas">User Persona Generator</option>
-                <option value="/guidelines">Guidelines Documentation</option>
-                <option value="/ai-suggestions">AI Suggestions</option>
-                <option value="/api">Design System API</option>
-                <option value="/feedback">Feedback & Roadmap</option>
-                <option value="/notifications">Change Notifications</option>
-                <option value="/brands">Multi-Brand Support</option>
-              </optgroup>
+          <optgroup label="Components">
+          <option value="/components">Components Overview</option>
+          <option value="/components/status">Component Status</option>
+          <option value="/components/loupe">Loupe</option>
+          <option value="/components/testing">Component Testing</option>
+          <option value="/components/documentation">Documentation Generator</option>
+          <option value="/review/handoff">Design-Dev Handoff</option>
+          <option value="/components/composition">Component Composition</option>
+          <option value="/admin/dependencies">Dependency Graph</option>
+          </optgroup>
+          <optgroup label="Tokens">
+          <option value="/tokens">Tokens Overview</option>
+          <option value="/tokens/studio">Token Studio</option>
+          <option value="/tokens/playground">Token Playground</option>
+          <option value="/tokens/library">Style Library</option>
+          </optgroup>
+          <optgroup label="Review">
+          <option value="/review">Review System</option>
+          <option value="/review/my-requests">Review Kanban</option>
+          <option value="/review/management">Review Management</option>
+          </optgroup>
+          <optgroup label="Admin">
+          <option value="/admin/health">System Health</option>
+          <option value="/admin/governance">Governance</option>
+          <option value="/admin/audit">Audit Logs</option>
+          <option value="/admin/roles">Role Management</option>
+          <option value="/admin/feature-flags">Feature Flags</option>
+          </optgroup>
+          <optgroup label="Tools">
+          <option value="/tools/gradient-generator">Gradient Generator</option>
+          <option value="/tools/lorem-ipsum">Lorem Ipsum Generator</option>
+          <option value="/tools/seo-tagging">SEO Tagging</option>
+          <option value="/tools/color-scale">Color Scale Generator</option>
+          <option value="/tools/color-converter">Color Converter</option>
+          <option value="/tools/color-contrast">Color Contrast Checker</option>
+          <option value="/tools/nasa-tlx">NASA-TLX</option>
+          <option value="/tools/sus">System Usability Scale</option>
+          <option value="/tools/png-to-ico">PNG to ICO Converter</option>
+          <option value="/tools/heuristic-evaluation">Heuristic Evaluation</option>
+          <option value="/palette-builder">Palette Builder</option>
+          <option value="/theme-builder">Theme Builder</option>
+          </optgroup>
+          <optgroup label="Fonts">
+          <option value="/fonts">Fonts Overview</option>
+          <option value="/fonts/library">Font Library</option>
+          <option value="/fonts/scale">Font Scale</option>
+          <option value="/fonts/stack">Font Stack</option>
+          <option value="/fonts/subsetting">Font Subsetting</option>
+          </optgroup>
+          <optgroup label="Other">
+          <option value="/patterns">Patterns System</option>
+          <option value="/design-assets/icons">Icon Library</option>
+          <option value="/getting-started">Getting Started</option>
+          <option value="/research">HCD</option>
+          <option value="/research/user-personas">User Persona Generator</option>
+          <option value="/guidelines">Guidelines Documentation</option>
+          <option value="/ai-suggestions">AI Suggestions</option>
+          <option value="/api">Design System API</option>
+          <option value="/feedback">Feedback & Roadmap</option>
+          <option value="/notifications">Change Notifications</option>
+          <option value="/brands">Multi-Brand Support</option>
+          </optgroup>
               <option value="custom">-- Custom (Manual Entry) --</option>
             </select>
-            <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-              Select the page or route this flag will control. The flag key will be auto-generated.
-            </p>
+            <span class="material-symbols-outlined route-select-chevron" aria-hidden="true">expand_more</span>
           </div>
+        </UiField>
 
-          <!-- Flag Key (auto-generated or manual) -->
-          <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Flag Key <span class="text-red-500">*</span>
-            </label>
-            <input
-              v-model="flagForm.key"
-              type="text"
-              required
-              :disabled="showEditModal || (selectedRoute && selectedRoute !== 'custom')"
-              placeholder="feature-key-name"
-              class="w-full px-3 py-2 border rounded-lg"
-              :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
-            />
-            <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-              <span v-if="selectedRoute && selectedRoute !== 'custom'">
-                Auto-generated from route. This will be used to control access to the selected page.
-              </span>
-              <span v-else>
-                Unique identifier for the feature flag (cannot be changed after creation). Use lowercase with hyphens (e.g., "my-new-feature").
-                <span class="block mt-1 text-orange-600 dark:text-orange-400">
-                  <strong>Note:</strong> For custom flags to work with route protection, you'll need to add the route-to-flag mapping in the router guard configuration.
-                </span>
-              </span>
-            </p>
-          </div>
+        <div>
+          <UiInput
+            v-model="flagForm.key"
+            label="Flag key"
+            required
+            mono
+            :disabled="showEditModal || (!!selectedRoute && selectedRoute !== 'custom')"
+            placeholder="feature-key-name"
+            :hint="selectedRoute && selectedRoute !== 'custom'
+              ? 'Auto-generated from route. This will be used to control access to the selected page.'
+              : 'Unique identifier for the feature flag (cannot be changed after creation). Use lowercase with hyphens (e.g., &quot;my-new-feature&quot;).'"
+          />
+          <UiCallout v-if="!selectedRoute || selectedRoute === 'custom'" tone="warning" class="mt-2">
+            <strong>Note:</strong> For custom flags to work with route protection, you'll need to add the route-to-flag mapping in the router guard configuration.
+          </UiCallout>
+        </div>
 
-          <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Name <span class="text-red-500">*</span>
-            </label>
-            <input
-              v-model="flagForm.name"
-              type="text"
-              required
-              placeholder="Feature Name"
-              class="w-full px-3 py-2 border rounded-lg"
-              :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
-            />
-          </div>
+        <UiInput v-model="flagForm.name" label="Name" required placeholder="Feature Name" />
+        <UiTextarea v-model="flagForm.description" label="Description" rows="3" placeholder="Describe what this feature flag controls" />
+        <UiCheckbox v-model="flagForm.enabled" label="Enabled" />
+        <UiSelect
+          v-model="flagForm.metadata.category"
+          label="Category"
+          required
+          placeholder="-- Select a category --"
+          hint="Select the sidenav section this feature belongs to"
+          :options="CATEGORY_OPTIONS"
+        />
+        <UiInput v-model="flagForm.metadata.tags" label="Tags (comma-separated)" placeholder="tag1, tag2, tag3" />
 
-          <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Description
-            </label>
-            <textarea
-              v-model="flagForm.description"
-              rows="3"
-              placeholder="Describe what this feature flag controls"
-              class="w-full px-3 py-2 border rounded-lg"
-              :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
-            ></textarea>
-          </div>
+        <fieldset class="space-y-4 border-t border-line pt-4">
+          <legend class="text-base font-semibold text-ink-strong float-left w-full mb-3">Targeting (optional)</legend>
+          <UiInput v-model="flagForm.targeting.users" label="Target users (comma-separated user IDs)" placeholder="user1@example.com, user2@example.com" />
+          <UiInput v-model="flagForm.targeting.groups" label="Target groups (comma-separated group names)" placeholder="beta-testers, admins" />
+          <UiInput
+            v-model="flagForm.targeting.percentage"
+            type="number"
+            min="0"
+            max="100"
+            placeholder="50"
+            label="Percentage rollout (0-100)"
+            hint="Enable for a percentage of users (0-100). Leave empty to enable for all users when flag is enabled."
+          />
+        </fieldset>
 
-          <div>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                v-model="flagForm.enabled"
-                type="checkbox"
-                class="rounded"
-                :class="isDarkMode ? 'accent-indigo-500' : 'accent-indigo-600'"
-              />
-              <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Enabled
-              </span>
-            </label>
-          </div>
+        <UiCallout v-if="saveError" tone="danger" role="alert">{{ saveError }}</UiCallout>
+      </form>
+      <template #footer>
+        <UiButton @click="closeModal">Cancel</UiButton>
+        <UiButton type="submit" form="feature-flag-form" variant="primary" :loading="saving">{{ showEditModal ? 'Save changes' : 'Create flag' }}</UiButton>
+      </template>
+    </UiDialog>
 
-          <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Category <span class="text-red-500">*</span>
-            </label>
-            <select
-              v-model="flagForm.metadata.category"
-              required
-              class="w-full px-3 py-2 border rounded-lg"
-              :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
-            >
-              <option value="">-- Select a category --</option>
-              <option value="Getting Started">Getting Started</option>
-              <option value="Guidelines">Guidelines</option>
-              <option value="Components">Components</option>
-              <option value="Tokens">Tokens</option>
-              <option value="Patterns">Patterns</option>
-              <option value="Fonts">Fonts</option>
-              <option value="HCD">HCD</option>
-              <option value="Design Assets">Design Assets</option>
-              <option value="Review">Review</option>
-              <option value="Tools">Tools</option>
-              <option value="Admin">Admin</option>
-              <option value="AI">AI</option>
-              <option value="API">API</option>
-              <option value="Feedback">Feedback</option>
-              <option value="Notifications">Notifications</option>
-              <option value="Branding">Branding</option>
-              <option value="Governance">Governance</option>
-              <option value="Documentation">Documentation</option>
-            </select>
-            <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-              Select the sidenav section this feature belongs to
-            </p>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Tags (comma-separated)
-            </label>
-            <input
-              v-model="flagForm.metadata.tags"
-              type="text"
-              placeholder="tag1, tag2, tag3"
-              class="w-full px-3 py-2 border rounded-lg"
-              :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
-            />
-          </div>
-
-          <div class="border-t pt-4" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-            <h3 class="text-lg font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              <span class="material-symbols-outlined text-base text-indigo-600">track_changes</span>
-              Targeting (Optional)
-            </h3>
-            
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Target Users (comma-separated user IDs)
-                </label>
-                <input
-                  v-model="flagForm.targeting.users"
-                  type="text"
-                  placeholder="user1@example.com, user2@example.com"
-                  class="w-full px-3 py-2 border rounded-lg"
-                  :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Target Groups (comma-separated group names)
-                </label>
-                <input
-                  v-model="flagForm.targeting.groups"
-                  type="text"
-                  placeholder="beta-testers, admins"
-                  class="w-full px-3 py-2 border rounded-lg"
-                  :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Percentage Rollout (0-100)
-                </label>
-                <input
-                  v-model.number="flagForm.targeting.percentage"
-                  type="number"
-                  min="0"
-                  max="100"
-                  placeholder="50"
-                  class="w-full px-3 py-2 border rounded-lg"
-                  :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
-                />
-                <p class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  Enable for a percentage of users (0-100). Leave empty to enable for all users when flag is enabled.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex justify-end gap-3 mt-6 pt-4 border-t"
-            :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-          >
-            <button
-              type="button"
-              @click="closeModal"
-              class="px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-              :class="isDarkMode 
-                ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-              :class="isDarkMode 
-                ? 'bg-indigo-500 text-white hover:bg-indigo-400' 
-                : 'bg-indigo-600 text-white hover:bg-indigo-700'"
-            >
-              {{ showEditModal ? 'Save Changes' : 'Create Flag' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
+    <!-- Delete confirmation -->
+    <UiDialog :open="!!flagToDelete" title="Delete feature flag?" size="sm" @update:open="(open) => { if (!open) flagToDelete = null; }">
+      <p class="text-sm text-ink">Are you sure you want to delete the feature flag "{{ flagToDelete?.name }}"? This cannot be undone.</p>
+      <template #footer>
+        <UiButton @click="flagToDelete = null">Cancel</UiButton>
+        <UiButton variant="danger" icon="delete" @click="confirmDeleteFlag">Delete</UiButton>
+      </template>
+    </UiDialog>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
+import { ref, onMounted } from 'vue';
 import apiClient from '../services/api.js';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { useNotice } from '../composables/useNotice.js';
+import {
+  PageHero,
+  PageSection,
+  PageShell,
+  UiButton,
+  UiCallout,
+  UiCheckbox,
+  UiChip,
+  UiCode,
+  UiDialog,
+  UiEmptyState,
+  UiField,
+  UiInput,
+  UiSelect,
+  UiSpinner,
+  UiTextarea,
+} from '../components/ui';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+const { notice, showNotice, clearNotice } = useNotice();
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-
-
-
+// The sidenav sections a flag can belong to
+const CATEGORY_OPTIONS = [
+  'Getting Started',
+  'Guidelines',
+  'Components',
+  'Tokens',
+  'Patterns',
+  'Fonts',
+  'HCD',
+  'Design Assets',
+  'Review',
+  'Tools',
+  'Admin',
+  'AI',
+  'API',
+  'Feedback',
+  'Notifications',
+  'Branding',
+  'Governance',
+  'Documentation',
+];
 
 const flags = ref([]);
 const loading = ref(false);
@@ -551,6 +284,9 @@ const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const editingFlag = ref(null);
 const selectedRoute = ref('');
+const saving = ref(false);
+const saveError = ref('');
+const flagToDelete = ref(null);
 
 // Route to flag key mapping (reverse of featureFlagGuards)
 const routeToFlagKey = {
@@ -733,7 +469,7 @@ const loadFlags = async () => {
     flags.value = response.data;
   } catch (error) {
     console.error('Failed to load feature flags:', error);
-    alert('Failed to load feature flags. Please try again.');
+    showNotice('Failed to load feature flags. Please try again.', 'error');
   } finally {
     loading.value = false;
   }
@@ -751,7 +487,7 @@ const toggleFlag = async (id) => {
     window.dispatchEvent(new CustomEvent('feature-flags-updated'));
   } catch (error) {
     console.error('Failed to toggle feature flag:', error);
-    alert('Failed to toggle feature flag. Please try again.');
+    showNotice('Failed to toggle feature flag. Please try again.', 'error');
   }
 };
 
@@ -776,19 +512,27 @@ const editFlag = (flag) => {
   showEditModal.value = true;
 };
 
-const deleteFlag = async (id) => {
-  if (!confirm('Are you sure you want to delete this feature flag?')) return;
+// Asks first (in a dialog), then deletes
+const deleteFlag = (flag) => {
+  flagToDelete.value = flag;
+};
 
+const confirmDeleteFlag = async () => {
+  const id = flagToDelete.value?.id;
+  flagToDelete.value = null;
+  if (!id) return;
   try {
     await apiClient.delete(`${API_BASE_URL}/api/v1/feature-flags/${id}`);
     await loadFlags();
   } catch (error) {
     console.error('Failed to delete feature flag:', error);
-    alert('Failed to delete feature flag. Please try again.');
+    showNotice('Failed to delete feature flag. Please try again.', 'error');
   }
 };
 
 const saveFlag = async () => {
+  saving.value = true;
+  saveError.value = '';
   try {
     const payload = {
       key: flagForm.value.key,
@@ -833,7 +577,9 @@ const saveFlag = async () => {
     closeModal();
   } catch (error) {
     console.error('Failed to save feature flag:', error);
-    alert(error.response?.data?.error || 'Failed to save feature flag. Please try again.');
+    saveError.value = error.response?.data?.error || 'Failed to save feature flag. Please try again.';
+  } finally {
+    saving.value = false;
   }
 };
 
@@ -842,6 +588,7 @@ const closeModal = () => {
   showEditModal.value = false;
   editingFlag.value = null;
   selectedRoute.value = '';
+  saveError.value = '';
   flagForm.value = {
     key: '',
     name: '',
@@ -861,37 +608,19 @@ const closeModal = () => {
 
 onMounted(() => {
   loadFlags();
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
 });
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.flag-card {
+  @apply flex items-start justify-between gap-4 rounded-card border border-line bg-surface-raised p-5 transition-colors hover:border-accent-border;
+}
+.route-select {
+  @apply w-full h-11 pl-3.5 pr-10 appearance-none rounded-field border border-solid border-line-control bg-surface-control text-sm text-ink;
+  @apply hover:border-line-control-hover focus:outline focus:outline-2 focus:outline-offset-0 outline-focus focus:border-transparent;
+  @apply disabled:opacity-50;
+}
+.route-select-chevron {
+  @apply absolute right-3 top-1/2 -translate-y-1/2 text-lg text-ink-muted pointer-events-none;
 }
 </style>
-

@@ -1,406 +1,87 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Border Radius Generator
-                    </h1>
-                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
-                      Production Ready
-                    </span>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Generate border radius values with individual corner controls. Perfect for creating rounded corners on cards, buttons, and UI elements.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">label</span>
-                      Design Tool
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="borderRadiusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized border radius icon -->
-                      <rect x="40" y="40" width="120" height="120" rx="16" fill="url(#borderRadiusGradient)" opacity="0.6"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="Border radius generator"
+      lead="Generate border radius values with individual corner controls, for rounded corners on cards, buttons and other UI elements."
+      spot="tools/border-radius-generator"
+      size="tool"
+    />
+
+    <PageSection title="Settings">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <UiPanel title="Unified control">
+          <template #actions>
+            <UiSwitch v-model="locked" label="Lock corners" />
+          </template>
+          <div class="space-y-4">
+            <UiInput v-model.number="unifiedValue" type="number" min="0" step="1" label="Value" />
+            <UiSelect v-model="unit" :options="units" label="Unit" @update:model-value="updateUnified" />
+            <div class="flex flex-wrap gap-2" role="group" aria-label="Presets">
+              <UiButton v-for="preset in presets" :key="preset.name" size="sm" :label="preset.name" @click="loadPreset(preset.value)" />
             </div>
           </div>
+        </UiPanel>
 
-          <div class="max-w-6xl mx-auto">
-            <!-- Configuration Section -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <!-- Unified Control -->
-              <div 
-                class="rounded-lg border p-6" 
-                :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-              >
-                <div class="flex items-center justify-between mb-4">
-                  <h4 
-                    class="font-semibold flex items-center gap-2" 
-                    :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                  >
-                    <span class="material-symbols-outlined text-indigo-600">tune</span>
-                    Unified Control
-                  </h4>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      v-model="locked"
-                      class="rounded"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      {{ locked ? 'Locked' : 'Unlocked' }}
-                    </span>
-                  </label>
-                </div>
-                <div class="space-y-4">
-                  <div>
-                    <label 
-                      class="text-sm font-medium mb-2 block"
-                      :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                    >
-                      Value
-                    </label>
-                    <input 
-                      v-model.number="unifiedValue"
-                      @input="updateUnified"
-                      type="number"
-                      min="0"
-                      step="1"
-                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
-                  </div>
-                  <div>
-                    <label 
-                      class="text-sm font-medium mb-2 block"
-                      :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                    >
-                      Unit
-                    </label>
-                    <select
-                      v-model="unit"
-                      @change="updateUnified"
-                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    >
-                      <option value="px">px</option>
-                      <option value="rem">rem</option>
-                      <option value="em">em</option>
-                      <option value="%">%</option>
-                    </select>
-                  </div>
-                  <div class="flex gap-2">
-                    <button
-                      v-for="preset in presets"
-                      :key="preset.name"
-                      @click="loadPreset(preset.value)"
-                      class="flex-1 px-3 py-2 text-xs rounded-lg border font-medium transition-colors"
-                      :class="isDarkMode
-                        ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
-                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-                    >
-                      {{ preset.name }}
-                    </button>
-                  </div>
-                </div>
-              </div>
+        <UiPanel title="Individual corners" :description="locked ? 'Unlock the corners to set each one.' : ''">
+          <div class="grid grid-cols-2 gap-4">
+            <UiInput
+              v-for="corner in corners"
+              :key="corner.key"
+              :model-value="corner.model.value"
+              type="number"
+              min="0"
+              step="1"
+              :label="corner.label"
+              :disabled="locked"
+              @update:model-value="setCorner(corner, $event)"
+            />
+          </div>
+        </UiPanel>
+      </div>
+    </PageSection>
 
-              <!-- Individual Corner Controls -->
-              <div 
-                class="rounded-lg border p-6" 
-                :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-              >
-                <h4 
-                  class="font-semibold mb-4 flex items-center gap-2" 
-                  :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                >
-                  <span class="material-symbols-outlined text-indigo-600">grid_4x4</span>
-                  Individual Corners
-                </h4>
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label 
-                      class="text-xs font-medium mb-1 block"
-                      :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                    >
-                      Top Left
-                    </label>
-                    <input 
-                      v-model.number="topLeft"
-                      @input="updateFromIndividual"
-                      type="number"
-                      min="0"
-                      step="1"
-                      :disabled="locked"
-                      class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white disabled:opacity-50' 
-                        : 'border-gray-300 bg-white text-gray-900 disabled:opacity-50'"
-                    />
-                  </div>
-                  <div>
-                    <label 
-                      class="text-xs font-medium mb-1 block"
-                      :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                    >
-                      Top Right
-                    </label>
-                    <input 
-                      v-model.number="topRight"
-                      @input="updateFromIndividual"
-                      type="number"
-                      min="0"
-                      step="1"
-                      :disabled="locked"
-                      class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white disabled:opacity-50' 
-                        : 'border-gray-300 bg-white text-gray-900 disabled:opacity-50'"
-                    />
-                  </div>
-                  <div>
-                    <label 
-                      class="text-xs font-medium mb-1 block"
-                      :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                    >
-                      Bottom Right
-                    </label>
-                    <input 
-                      v-model.number="bottomRight"
-                      @input="updateFromIndividual"
-                      type="number"
-                      min="0"
-                      step="1"
-                      :disabled="locked"
-                      class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white disabled:opacity-50' 
-                        : 'border-gray-300 bg-white text-gray-900 disabled:opacity-50'"
-                    />
-                  </div>
-                  <div>
-                    <label 
-                      class="text-xs font-medium mb-1 block"
-                      :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                    >
-                      Bottom Left
-                    </label>
-                    <input 
-                      v-model.number="bottomLeft"
-                      @input="updateFromIndividual"
-                      type="number"
-                      min="0"
-                      step="1"
-                      :disabled="locked"
-                      class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white disabled:opacity-50' 
-                        : 'border-gray-300 bg-white text-gray-900 disabled:opacity-50'"
-                    />
-                  </div>
-                </div>
-              </div>
+    <PageSection title="Preview" divided>
+      <UiPanel title="Visual preview">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div>
+            <p class="preview-label">Box</p>
+            <div class="radius-preview w-full h-24 bg-accent"></div>
+          </div>
+          <div>
+            <p class="preview-label">Card</p>
+            <div class="radius-preview w-full h-24 p-4 border border-line bg-surface-raised">
+              <div class="w-full h-full rounded-control bg-fill"></div>
             </div>
-
-            <!-- Visual Preview Section -->
-            <div 
-              class="rounded-lg border p-6 mb-6" 
-              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-            >
-              <h4 
-                class="font-semibold mb-4 flex items-center gap-2" 
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-              >
-                <span class="material-symbols-outlined text-indigo-600">preview</span>
-                Visual Preview
-              </h4>
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <!-- Box -->
-                <div>
-                  <h6 
-                    class="text-xs font-medium mb-2 uppercase tracking-wide text-center"
-                    :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
-                  >
-                    Box
-                  </h6>
-                  <div 
-                    class="w-full h-24 mx-auto"
-                    :style="computedBorderRadius"
-                    :class="isDarkMode ? 'bg-indigo-600' : 'bg-indigo-500'"
-                  ></div>
-                </div>
-                
-                <!-- Card -->
-                <div>
-                  <h6 
-                    class="text-xs font-medium mb-2 uppercase tracking-wide text-center"
-                    :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
-                  >
-                    Card
-                  </h6>
-                  <div 
-                    class="w-full h-24 mx-auto p-4 border"
-                    :style="computedBorderRadius"
-                    :class="isDarkMode ? 'bg-slate-700 border-gray-600' : 'bg-white border-gray-300'"
-                  >
-                    <div 
-                      class="w-full h-full rounded"
-                      :class="isDarkMode ? 'bg-slate-600' : 'bg-gray-100'"
-                    ></div>
-                  </div>
-                </div>
-                
-                <!-- Button -->
-                <div>
-                  <h6 
-                    class="text-xs font-medium mb-2 uppercase tracking-wide text-center"
-                    :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
-                  >
-                    Button
-                  </h6>
-                  <div 
-                    class="w-full h-12 mx-auto flex items-center justify-center font-medium"
-                    :style="computedBorderRadius"
-                    :class="isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white'"
-                  >
-                    Button
-                  </div>
-                </div>
-                
-                <!-- Circle -->
-                <div>
-                  <h6 
-                    class="text-xs font-medium mb-2 uppercase tracking-wide text-center"
-                    :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'"
-                  >
-                    Circle
-                  </h6>
-                  <div 
-                    class="w-24 h-24 mx-auto"
-                    :style="computedBorderRadius"
-                    :class="isDarkMode ? 'bg-indigo-600' : 'bg-indigo-500'"
-                  ></div>
-                </div>
-              </div>
-              
-              <!-- CSS Output Preview -->
-              <div class="mt-6 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <label 
-                  class="text-sm font-medium mb-2 block"
-                  :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
-                >
-                  CSS Output
-                </label>
-                <div 
-                  class="p-4 rounded-lg font-mono text-sm overflow-x-auto"
-                  :class="isDarkMode ? 'bg-slate-900 text-gray-300' : 'bg-gray-100 text-gray-800'"
-                >
-                  border-radius: {{ computedBorderRadius.borderRadius }};
-                </div>
-              </div>
-            </div>
-
-            <!-- Export Section -->
-            <div 
-              class="rounded-lg border p-6" 
-              :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'"
-            >
-              <h4 
-                class="font-semibold mb-4 flex items-center gap-2" 
-                :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-              >
-                <span class="material-symbols-outlined text-indigo-600">download</span>
-                Export
-              </h4>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button
-                  @click="exportFormat('css')"
-                  class="px-4 py-3 rounded-lg border font-medium transition-colors flex items-center justify-center gap-2"
-                  :class="isDarkMode
-                    ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-                >
-                  <span class="material-symbols-outlined text-lg">code</span>
-                  Export CSS
-                </button>
-                <button
-                  @click="exportFormat('tailwind')"
-                  class="px-4 py-3 rounded-lg border font-medium transition-colors flex items-center justify-center gap-2"
-                  :class="isDarkMode
-                    ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-                >
-                  <span class="material-symbols-outlined text-lg">settings</span>
-                  Export Tailwind
-                </button>
-                <button
-                  @click="exportFormat('json')"
-                  class="px-4 py-3 rounded-lg border font-medium transition-colors flex items-center justify-center gap-2"
-                  :class="isDarkMode
-                    ? 'bg-slate-700 border-gray-600 text-white hover:bg-slate-600'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'"
-                >
-                  <span class="material-symbols-outlined text-lg">data_object</span>
-                  Export JSON
-                </button>
-              </div>
-            </div>
+          </div>
+          <div>
+            <p class="preview-label">Button</p>
+            <div class="radius-preview w-full h-12 flex items-center justify-center font-medium bg-accent text-ink-on-accent">Button</div>
+          </div>
+          <div>
+            <p class="preview-label">Circle</p>
+            <div class="radius-preview w-24 h-24 mx-auto bg-accent"></div>
           </div>
         </div>
+      </UiPanel>
+    </PageSection>
+
+    <PageSection title="Code" divided>
+      <UiCodeBlock :code="cssCode" label="CSS" />
+    </PageSection>
+
+    <PageSection title="Export" description="Download the radius as CSS, a Tailwind config or JSON." divided>
+      <div class="flex flex-wrap gap-3">
+        <UiButton v-for="item in exportButtons" :key="item.format" :icon="item.icon" :label="item.label" @click="exportFormat(item.format)" />
       </div>
-    </div>
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { PageHero, PageSection, PageShell, UiButton, UiCodeBlock, UiInput, UiPanel, UiSelect, UiSwitch } from '../components/ui';
 
-const isDarkMode = useDarkMode();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const locked = ref(true);
 const unit = ref('px');
 const unifiedValue = ref(8);
@@ -442,6 +123,30 @@ const computedBorderRadius = computed(() => {
     borderRadius: `${tl} ${tr} ${br} ${bl}`
   };
 });
+
+// The previews read this through v-bind() in <style>
+const previewRadius = computed(() => computedBorderRadius.value.borderRadius);
+const cssCode = computed(() => `border-radius: ${computedBorderRadius.value.borderRadius};`);
+
+const units = ['px', 'rem', 'em', '%'];
+
+const corners = [
+  { key: 'topLeft', label: 'Top left', model: topLeft },
+  { key: 'topRight', label: 'Top right', model: topRight },
+  { key: 'bottomRight', label: 'Bottom right', model: bottomRight },
+  { key: 'bottomLeft', label: 'Bottom left', model: bottomLeft },
+];
+
+const setCorner = (corner, value) => {
+  corner.model.value = value;
+  updateFromIndividual();
+};
+
+const exportButtons = [
+  { format: 'css', icon: 'code', label: 'Export CSS' },
+  { format: 'tailwind', icon: 'settings', label: 'Export Tailwind' },
+  { format: 'json', icon: 'data_object', label: 'Export JSON' },
+];
 
 const updateUnified = () => {
   if (locked.value) {
@@ -501,17 +206,13 @@ const exportFormat = (format) => {
     downloadFile(JSON.stringify(config, null, 2), 'application/json', `border-radius-${Date.now()}.json`);
   }
 };
-
-
-
-
-
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.preview-label {
+  @apply text-xs font-medium mb-2 uppercase tracking-wide text-center text-ink-muted;
+}
+.radius-preview {
+  border-radius: v-bind(previewRadius);
 }
 </style>
-
-

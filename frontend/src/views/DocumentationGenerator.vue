@@ -1,268 +1,106 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Documentation Generator
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Auto-generate component documentation from code comments. Extract props, examples, and usage guidelines automatically.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-                    <defs>
-                      <linearGradient id="docGenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Documentation representation - document with code -->
-                    <rect x="40" y="30" width="120" height="140" rx="4" fill="url(#docGenGradient)" opacity="0.3"/>
-                    <rect x="50" y="40" width="100" height="8" rx="2" fill="url(#docGenGradient)" opacity="0.6"/>
-                    <rect x="50" y="55" width="80" height="8" rx="2" fill="url(#docGenGradient)" opacity="0.5"/>
-                    <rect x="50" y="70" width="90" height="8" rx="2" fill="url(#docGenGradient)" opacity="0.5"/>
-                    <!-- Code block representation -->
-                    <rect x="50" y="90" width="100" height="60" rx="2" fill="url(#docGenGradient)" opacity="0.2"/>
-                    <rect x="60" y="100" width="60" height="4" rx="1" fill="url(#docGenGradient)" opacity="0.7"/>
-                    <rect x="60" y="110" width="50" height="4" rx="1" fill="url(#docGenGradient)" opacity="0.6"/>
-                    <rect x="60" y="120" width="70" height="4" rx="1" fill="url(#docGenGradient)" opacity="0.6"/>
-                    <rect x="60" y="130" width="45" height="4" rx="1" fill="url(#docGenGradient)" opacity="0.7"/>
-                    <!-- Arrow indicating generation -->
-                    <path d="M 160 100 L 180 100 L 175 95 M 180 100 L 175 105" stroke="url(#docGenGradient)" stroke-width="3" fill="none" opacity="0.6"/>
-                    <!-- Generated documentation -->
-                    <rect x="185" y="85" width="12" height="30" rx="1" fill="url(#docGenGradient)" opacity="0.5"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/components', label: 'Components' }"
+      title="Documentation generator"
+      lead="Auto-generate component documentation from code comments. Extract props, examples, and usage guidelines automatically."
+      spot="tools/documentation-generator"
+      size="tool"
+    />
 
-        <div class="max-w-7xl mx-auto grid lg:grid-cols-3 gap-6">
-          <!-- Left Column: Component Selector -->
-          <div class="lg:col-span-1 space-y-6">
-            <!-- Component Selector -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Select Component
-              </h3>
-              <select
+    <PageSection title="Generate" description="Pick a bundled component or upload a file, choose what to include, then generate.">
+      <div class="grid gap-6 lg:grid-cols-3">
+        <div class="space-y-6 lg:col-span-1">
+          <UiPanel title="Source">
+            <div class="space-y-4">
+              <UiSelect
                 v-model="selectedComponent"
-                @change="loadComponent"
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                :class="isDarkMode 
-                  ? 'border-gray-600 bg-slate-700 text-white' 
-                  : 'border-gray-300 bg-white text-gray-900'"
-              >
-                <option value="">Choose a component...</option>
-                <option v-for="(component, key) in componentData" :key="key" :value="key">{{ component.name }}</option>
-              </select>
-            </div>
-
-            <!-- Upload Component -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Upload Component File
-              </h3>
-              <input
-                type="file"
-                @change="handleFileUpload"
-                accept=".vue,.jsx,.tsx,.js,.ts"
-                class="hidden"
-                ref="fileInput"
-                id="component-file"
+                label="Component"
+                placeholder="Choose a component..."
+                :options="componentOptions"
+                @update:model-value="loadComponent"
               />
-              <label
-                for="component-file"
-                class="block w-full px-4 py-3 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors"
-                :class="isDarkMode 
-                  ? 'border-gray-600 bg-slate-800 text-gray-300 hover:border-gray-500' 
-                  : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-gray-400'"
-              >
-                <span class="material-symbols-outlined text-2xl mb-2 block">upload</span>
-                <span class="text-sm">Click to upload component file</span>
-              </label>
-            </div>
-
-            <!-- Generation Options -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Generation Options
-              </h3>
-              <div class="space-y-2">
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" v-model="options.includeProps" class="accent-indigo-600" />
-                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Include Props</span>
+              <div>
+                <span class="mb-1.5 block text-sm font-medium text-ink">Or upload a component file</span>
+                <input
+                  id="component-file"
+                  ref="fileInput"
+                  type="file"
+                  accept=".vue,.jsx,.tsx,.js,.ts"
+                  class="peer sr-only"
+                  aria-describedby="component-file-hint"
+                  @change="handleFileUpload"
+                />
+                <label
+                  for="component-file"
+                  class="flex w-full cursor-pointer flex-col items-center gap-1 rounded-field border-2 border-dashed border-line-control bg-surface-sunken px-4 py-4 text-center text-ink-secondary transition-colors hover:border-accent-border peer-focus-visible:outline peer-focus-visible:outline-2 outline-focus"
+                >
+                  <span class="material-symbols-outlined text-2xl" aria-hidden="true">upload</span>
+                  <span class="text-sm">Click to upload component file</span>
                 </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" v-model="options.includeExamples" class="accent-indigo-600" />
-                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Include Examples</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" v-model="options.includeAccessibility" class="accent-indigo-600" />
-                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Accessibility Info</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" v-model="options.includeChangelog" class="accent-indigo-600" />
-                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Changelog</span>
-                </label>
+                <p id="component-file-hint" class="mt-1.5 text-xs text-ink-muted">.vue, .jsx, .tsx, .js or .ts</p>
               </div>
             </div>
+          </UiPanel>
 
-            <!-- Generate Button -->
-            <button
-              @click="generateDocumentation"
-              :disabled="!selectedComponent && !uploadedCode"
-              class="w-full px-6 py-3 rounded-lg font-medium transition-colors"
-              :class="selectedComponent || uploadedCode
-                ? (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')
-                : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-            >
-              Generate Documentation
-            </button>
-          </div>
+          <UiPanel title="Generation options">
+            <fieldset class="space-y-2">
+              <legend class="sr-only">Sections to include</legend>
+              <UiCheckbox v-model="options.includeProps" label="Include Props" />
+              <UiCheckbox v-model="options.includeExamples" label="Include Examples" />
+              <UiCheckbox v-model="options.includeAccessibility" label="Accessibility Info" />
+              <UiCheckbox v-model="options.includeChangelog" label="Changelog" />
+            </fieldset>
+          </UiPanel>
 
-          <!-- Right Column: Generated Documentation -->
-          <div class="lg:col-span-2 space-y-6">
-            <!-- Generated Docs Preview -->
-            <div 
-              v-if="generatedDocs"
-              class="rounded-lg shadow-sm border"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="p-6 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  Generated Documentation
-                </h3>
-                <div class="flex items-center gap-2">
-                  <select
-                    v-model="outputFormat"
-                    class="px-3 py-1 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  >
-                    <option value="markdown">Markdown</option>
-                    <option value="html">HTML</option>
-                    <option value="vuepress">VitePress</option>
-                  </select>
-                  <button
-                    @click="copyDocs"
-                    class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                    :class="isDarkMode 
-                      ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                  >
-                    <span class="material-symbols-outlined text-sm">content_copy</span>
-                    Copy
-                  </button>
-                  <button
-                    @click="downloadDocs"
-                    class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                    :class="isDarkMode 
-                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-                  >
-                    <span class="material-symbols-outlined text-sm">download</span>
-                    Download
-                  </button>
-                </div>
-              </div>
-              <div class="p-6">
-                <InlineNotice v-if="notice" class="mb-4" :notice="notice" @dismiss="clearNotice" />
-                <div class="rounded-lg overflow-hidden" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-50'">
-                  <div class="p-4 overflow-x-auto max-h-[600px] overflow-y-auto">
-                    <pre class="text-sm font-mono whitespace-pre-wrap" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"><code>{{ outputText }}</code></pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Documentation Preview -->
-            <div 
-              v-if="generatedDocs"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Preview
-              </h3>
-              <div class="prose prose-slate dark:prose-invert max-w-none" v-html="renderedMarkdown"></div>
-            </div>
-
-            <!-- Empty State -->
-            <div v-if="!generatedDocs" class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-900' : 'border-gray-200 bg-white'">
-              <span class="material-symbols-outlined text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-                description
-              </span>
-              <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                No documentation generated yet
-              </p>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                Select a component or upload a file to generate documentation
-              </p>
-            </div>
-          </div>
+          <UiButton variant="primary" class="w-full" :disabled="!selectedComponent && !uploadedCode" @click="generateDocumentation">
+            Generate Documentation
+          </UiButton>
         </div>
+
+        <div class="space-y-6 lg:col-span-2">
+          <InlineNotice v-if="notice" :notice="notice" @dismiss="clearNotice" />
+
+          <template v-if="generatedDocs">
+            <UiPanel title="Generated documentation">
+              <template #actions>
+                <div class="flex items-end gap-2">
+                  <UiSelect v-model="outputFormat" label="Format" :options="formatOptions" />
+                  <UiButton variant="primary" size="sm" icon="download" @click="downloadDocs">Download</UiButton>
+                </div>
+              </template>
+              <div class="docs-output">
+                <UiCodeBlock :code="outputText" :label="formatLabel" @copied="onCopied" @copy-failed="onCopyFailed" />
+              </div>
+            </UiPanel>
+
+            <UiPanel title="Preview">
+              <!-- Sanitised with DOMPurify in renderedMarkdown -->
+              <div class="docs-preview" v-html="renderedMarkdown"></div>
+            </UiPanel>
+          </template>
+
+          <UiEmptyState
+            v-else
+            title="No documentation generated yet"
+            body="Select a component or upload a file to generate documentation"
+            spot="tools/documentation-generator"
+          />
         </div>
       </div>
-    </div>
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { PageHero, PageSection, PageShell, UiButton, UiCheckbox, UiCodeBlock, UiEmptyState, UiPanel, UiSelect } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = useDarkMode();
 const { notice, showNotice, clearNotice } = useNotice();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const selectedComponent = ref('');
 const uploadedCode = ref('');
 const fileInput = ref(null);
@@ -372,6 +210,14 @@ const escapeHtml = (value) => String(value)
   .replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
+
+const componentOptions = Object.entries(componentData).map(([value, component]) => ({ value, label: component.name }));
+const formatOptions = [
+  { value: 'markdown', label: 'Markdown' },
+  { value: 'html', label: 'HTML' },
+  { value: 'vuepress', label: 'VitePress' },
+];
+const formatLabel = computed(() => formatOptions.find((f) => f.value === outputFormat.value)?.label ?? 'Code');
 
 // What Copy and Download produce for the chosen format.
 const outputText = computed(() => {
@@ -566,24 +412,17 @@ const parseUploadedCode = (code) => {
   return docs;
 };
 
-const copyDocs = async () => {
-  if (!outputText.value) return;
-  try {
-    await navigator.clipboard.writeText(outputText.value);
-    showNotice('Copied to clipboard.', 'success');
-  } catch (err) {
-    console.error('Failed to copy:', err);
-    showNotice('Could not copy to the clipboard.', 'error');
-  }
-};
+// UiCodeBlock copies outputText; these report the result
+const onCopied = () => showNotice('Copied to clipboard.', 'success');
+const onCopyFailed = () => showNotice('Could not copy to the clipboard.', 'error');
 
 const downloadDocs = () => {
   if (!outputText.value) return;
   const extension = outputFormat.value === 'html' ? 'html' : 'md';
   const filename = `${selectedComponent.value || 'component'}.${extension}`;
   const content = outputText.value;
-  
-const blob = new Blob([content], { type: outputFormat.value === 'html' ? 'text/html' : 'text/markdown' });
+
+  const blob = new Blob([content], { type: outputFormat.value === 'html' ? 'text/html' : 'text/markdown' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -593,16 +432,27 @@ const blob = new Blob([content], { type: outputFormat.value === 'html' ? 'text/h
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };
-
-
-
-
-
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.docs-output :deep(pre) {
+  @apply max-h-screen overflow-y-auto whitespace-pre-wrap;
 }
+.docs-preview {
+  @apply max-w-none text-ink;
+}
+.docs-preview :deep(h1) { @apply mb-4 text-3xl font-semibold text-ink-strong; }
+.docs-preview :deep(h2) { @apply mb-3 mt-8 text-2xl font-semibold text-ink-strong; }
+.docs-preview :deep(h3) { @apply mb-2 mt-6 text-lg font-semibold text-ink-strong; }
+.docs-preview :deep(p) { @apply mb-4 leading-relaxed; }
+.docs-preview :deep(ul) { @apply mb-4 list-disc space-y-1 pl-6; }
+.docs-preview :deep(ol) { @apply mb-4 list-decimal space-y-1 pl-6; }
+.docs-preview :deep(a) { @apply text-accent-text underline; }
+.docs-preview :deep(strong) { @apply font-semibold text-ink-strong; }
+.docs-preview :deep(code) { @apply rounded-control bg-fill px-1 py-0.5 font-code text-sm; }
+.docs-preview :deep(pre) { @apply mb-4 overflow-x-auto rounded-tile border border-line bg-surface-sunken p-4; }
+.docs-preview :deep(pre code) { @apply bg-transparent p-0; }
+.docs-preview :deep(table) { @apply mb-4 w-full border-collapse text-sm; }
+.docs-preview :deep(th) { @apply border-b border-line px-3 py-2 text-left font-semibold text-ink-strong; }
+.docs-preview :deep(td) { @apply border-b border-line-faint px-3 py-2 align-top; }
 </style>
-

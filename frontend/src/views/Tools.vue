@@ -1,132 +1,40 @@
 <template>
-  <div class="w-full h-full bg-[#fff] dark:bg-slate-950 text-slate-900 dark:text-slate-100 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" @navigate-doc="handleDocNavigation" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Reference Content - shown when a reference link is clicked -->
-      <div v-if="currentDocLink" class="h-full w-full relative flex flex-col">
-        <!-- Breadcrumbs -->
-        <Breadcrumbs 
-          :custom-path="currentDocLink"
-          :on-navigate="handleBreadcrumbNavigate"
-        />
-        <div class="flex-1 overflow-hidden">
-          <MarkdownViewer :doc-path="currentDocLink" />
-        </div>
+  <PageShell v-model:doc-link="docLink">
+    <PageHero
+      eyebrow="Check, generate, convert"
+      title="Tools"
+      lead="Tools to help you create, iterate and refine your design system, from gradient generators to contrast checkers, all in one place."
+      spot="site/tools"
+    />
+
+    <PageSection title="Popular tools" description="The ones teams reach for most.">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
+        <UiLinkRow v-for="tool in popular" :key="tool.to" :to="tool.to" :title="tool.title" :body="tool.body" :spot="tool.art" />
       </div>
-      
-      <!-- Overview Content - shown by default -->
-      <div v-else class="h-full overflow-y-auto">
-        <!-- Breadcrumbs -->
-        <Breadcrumbs />
+    </PageSection>
 
-        <div class="max-w-6xl mx-auto px-6 md:px-10 py-12 md:py-16">
-          <!-- Hero -->
-          <section class="grid md:grid-cols-[1fr_auto] items-center gap-10 pb-14 md:pb-16 border-b border-slate-200 dark:border-slate-800">
-            <div>
-              <p class="text-sm font-medium tracking-wide text-[#2f5ea8] dark:text-[#9dbcf0] mb-4">Check, generate, convert</p>
-              <h1 class="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] mb-5">Tools</h1>
-              <p class="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
-                Tools to help you create, iterate and refine your design system, from gradient
-                generators to contrast checkers, all in one place.
-              </p>
-            </div>
-            <div class="spot hidden md:block w-64 h-64 lg:w-72 lg:h-72" aria-hidden="true" v-html="spot('site/tools')"></div>
-          </section>
-
-          <!-- Popular -->
-          <section class="py-14 md:py-16">
-            <div class="section-head">
-              <h2>Popular tools</h2>
-              <p>The ones teams reach for most.</p>
-            </div>
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
-              <router-link v-for="tool in popular" :key="tool.to" :to="tool.to" class="tool group">
-                <div class="spot w-14 h-14 shrink-0" aria-hidden="true" v-html="spot(tool.art)"></div>
-                <div class="min-w-0">
-                  <h3 class="font-medium group-hover:text-[#2f5ea8] dark:group-hover:text-[#9dbcf0] transition-colors">{{ tool.title }}</h3>
-                  <p class="text-sm text-slate-500 dark:text-slate-400">{{ tool.body }}</p>
-                </div>
-              </router-link>
-            </div>
-          </section>
-
-          <!-- All tools -->
-          <section class="py-14 md:py-16 border-t border-slate-200 dark:border-slate-800">
-            <div class="section-head">
-              <h2>All tools</h2>
-              <p>Everything for color, type, layout, content, images and code.</p>
-            </div>
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              <router-link v-for="tool in tools" :key="tool.to" :to="tool.to" class="card group">
-                <div class="spot w-16 h-16 -ml-1 mb-2" aria-hidden="true" v-html="spot(tool.art)"></div>
-                <h3 class="card-title">
-                  {{ tool.title }}
-                  <span class="material-symbols-outlined arrow" aria-hidden="true">arrow_forward</span>
-                </h3>
-                <p class="card-body">{{ tool.body }}</p>
-              </router-link>
-            </div>
-          </section>
-        </div>
+    <PageSection title="All tools" description="Everything for color, type, layout, content, images and code." divided>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <UiCard v-for="tool in tools" :key="tool.to" :to="tool.to" :title="tool.title" :spot="tool.art" compact>{{ tool.body }}</UiCard>
       </div>
-    </div>
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import MarkdownViewer from '../components/MarkdownViewer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import { spot } from '../utils/spotIllustrations.js';
+import { PageHero, PageSection, PageShell, UiCard, UiLinkRow } from '../components/ui';
 
 const route = useRoute();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const currentDocLink = ref(null);
 
-const handleBreadcrumbNavigate = (path) => {
-  // Handle navigation from breadcrumbs
-  if (path === '/tools' || path === '/') {
-    currentDocLink.value = null;
-  } else if (path.startsWith('/tools/references/')) {
-    currentDocLink.value = path;
-  }
-};
-
-const handleDocNavigation = (link) => {
-  currentDocLink.value = link;
-  // Open drawer if closed
-  if (!drawerOpen.value) {
-    drawerOpen.value = true;
-  }
-};
-
-onMounted(() => {
-  // Auto-open drawer if navigating from sidebar
-  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-    drawerOpen.value = true;
-    sessionStorage.removeItem('openDrawerOnLoad');
-  }
-});
-
-// Keep the reference content in step with the route (on mount and when moving
-// between /tools/references/* pages, or back to /tools).
+// /tools/references/* shows that reference document in place of the page
+const docLink = ref(null);
 watch(
   () => route.path,
   (path) => {
-    if (path.startsWith('/tools/references/')) {
-      currentDocLink.value = path;
-    } else if (path === '/tools' || path === '/tools/') {
-      currentDocLink.value = null;
-    }
+    if (path.startsWith('/tools/references/')) docLink.value = path;
+    else if (path === '/tools' || path === '/tools/') docLink.value = null;
   },
   { immediate: true },
 );
@@ -164,42 +72,3 @@ const popularPaths = [
 ];
 const popular = popularPaths.map((path) => tools.find((tool) => tool.to === path));
 </script>
-
-<style scoped>
-.spot :deep(svg) {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.section-head {
-  @apply flex flex-col gap-1 mb-8;
-}
-.section-head h2 {
-  @apply text-2xl md:text-3xl font-semibold tracking-tight;
-}
-.section-head p {
-  @apply text-slate-600 dark:text-slate-400;
-}
-
-.card {
-  @apply block rounded-2xl p-5 border border-slate-200 bg-[#fff] transition-all hover:border-[#8fb0e8] hover:shadow-[0_8px_24px_-12px_rgba(47,94,168,0.25)] dark:border-slate-800 dark:bg-slate-900/40 dark:hover:border-[#6f93d1];
-}
-.card-title {
-  @apply flex items-center gap-1.5 text-lg font-semibold mb-1.5;
-}
-.card-body {
-  @apply text-sm leading-relaxed text-slate-600 dark:text-slate-400;
-}
-
-.tool {
-  @apply flex items-center gap-4 rounded-xl p-2 -mx-2 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors;
-}
-
-.arrow {
-  @apply text-base text-slate-400 transition-transform;
-}
-.group:hover .arrow {
-  @apply translate-x-1 text-[#2f5ea8] dark:text-[#9dbcf0];
-}
-</style>

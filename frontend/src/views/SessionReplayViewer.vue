@@ -1,160 +1,88 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <div class="h-full p-8 overflow-y-auto">
-        <Breadcrumbs />
+  <PageShell width="wide">
+    <UiSpinner v-if="loading" label="Loading session…" class="py-12" />
 
-        <!-- Loading State -->
-        <div v-if="loading" class="max-w-7xl mx-auto py-12 text-center">
-          <div class="flex justify-center mb-4">
-            <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-          <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading session...</p>
-        </div>
+    <template v-else-if="session">
+      <PageHero :back="backLink" title="Session replay" spot="site/session-replay" size="tool">
+        <template #lead>
+          <span class="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span>Session ID: <span class="font-code">{{ session.sessionId }}</span></span>
+            <span v-if="session.userEmail">User: {{ session.userEmail }}</span>
+            <span>{{ formatDate(session.startTime) }}</span>
+            <UiChip v-if="session.live" tone="info">Live</UiChip>
+          </span>
+        </template>
+        <template #actions>
+          <UiButton variant="primary" icon="open_in_new" :href="session.replayUrl" target="_blank" rel="noopener noreferrer">Open in OpenReplay</UiButton>
+        </template>
+      </PageHero>
 
-        <!-- Session Content -->
-        <div v-else-if="session" class="max-w-7xl mx-auto">
-          <!-- Header -->
-          <div class="mb-8">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h1 class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Session Replay</h1>
-                <div class="flex items-center gap-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  <span>Session ID: <span class="font-mono">{{ session.sessionId }}</span></span>
-                  <span v-if="session.userEmail">User: {{ session.userEmail }}</span>
-                  <span>{{ formatDate(session.startTime) }}</span>
-                  <span v-if="session.live" class="px-2 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-medium">
-                    Live
-                  </span>
-                </div>
-              </div>
-              <a
-                :href="session.replayUrl"
-                target="_blank"
-                class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
-              >
-                <span class="material-symbols-outlined">open_in_new</span>
-                Open in OpenReplay
-              </a>
-            </div>
-
-            <!-- Summary -->
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-              <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Duration</div>
-                <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ formatDuration(session.duration) }}</div>
-              </div>
-              <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Pages</div>
-                <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ session.pagesCount }}</div>
-              </div>
-              <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Events</div>
-                <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ session.eventsCount }}</div>
-              </div>
-              <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="text-sm font-medium mb-1 text-red-600">Errors</div>
-                <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ session.errorsCount }}</div>
-              </div>
-              <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-                <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Issue Score</div>
-                <div class="text-2xl font-bold" :class="session.issueScore > 50 ? 'text-red-600' : (isDarkMode ? 'text-white' : 'text-gray-900')">
-                  {{ session.issueScore }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Session Replay Embed -->
-          <div class="rounded-lg border overflow-hidden" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-            <div class="p-4 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h2 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Session Replay</h2>
-              <a
-                :href="session.replayUrl"
-                target="_blank"
-                class="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 flex items-center gap-1"
-              >
-                Open Full Screen
-                <span class="material-symbols-outlined text-base">open_in_new</span>
-              </a>
-            </div>
-            <div class="p-4">
-              <iframe
-                :src="session.replayUrl"
-                class="w-full h-[600px] border rounded-lg"
-                :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-                frameborder="0"
-                allow="fullscreen"
-              ></iframe>
-              <p class="text-xs mt-2 text-center" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                If the replay doesn't load, click "Open in OpenReplay" to view in a new window
-              </p>
-            </div>
-          </div>
-
-          <!-- Issue Types -->
-          <div v-if="session.issueTypes && session.issueTypes.length > 0" class="mt-6 rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-            <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Issue Types</h3>
-            <div class="flex flex-wrap gap-2">
-              <span
-                v-for="issueType in session.issueTypes"
-                :key="issueType"
-                class="px-3 py-1 text-sm rounded-full font-medium"
-                :class="isDarkMode ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-700'"
-              >
-                {{ issueType }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Metadata -->
-          <div v-if="session.metadata && Object.keys(session.metadata).length > 0" class="mt-6 rounded-lg border p-6" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'">
-            <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Session Metadata</h3>
-            <div class="grid grid-cols-2 gap-4">
-              <div v-for="(value, key) in session.metadata" :key="key">
-                <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ key }}</div>
-                <div class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ value }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div v-else-if="loadProblem" class="max-w-3xl mx-auto py-12 text-center">
-          <span class="material-symbols-outlined text-6xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">{{ loadProblem.notConfigured ? 'link_off' : 'error' }}</span>
-          <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-            {{ loadProblem.notConfigured ? 'OpenReplay isn\'t connected' : 'This session could not be loaded' }}
-          </p>
-          <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ loadProblem.message }}</p>
-        </div>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <UiStat label="Duration" :value="formatDuration(session.duration)" />
+        <UiStat label="Pages" :value="session.pagesCount" />
+        <UiStat label="Events" :value="session.eventsCount" />
+        <UiStat label="Errors" :tone="session.errorsCount > 0 ? 'danger' : 'neutral'" :value="session.errorsCount" />
+        <UiStat label="Issue score" :tone="session.issueScore > 50 ? 'danger' : 'neutral'" :value="session.issueScore" />
       </div>
-    </div>
-  </div>
+
+      <div class="space-y-6">
+        <UiPanel title="Session replay">
+          <template #actions>
+            <UiLink :href="session.replayUrl" external>Open full screen</UiLink>
+          </template>
+          <iframe
+            :src="session.replayUrl"
+            class="w-full h-embed rounded-tile border border-line"
+            allow="fullscreen"
+            title="OpenReplay session replay"
+          ></iframe>
+          <p class="mt-2 text-center text-xs text-ink-muted">
+            If the replay doesn't load, click "Open in OpenReplay" to view in a new window
+          </p>
+        </UiPanel>
+
+        <UiPanel v-if="session.issueTypes && session.issueTypes.length > 0" title="Issue types">
+          <div class="flex flex-wrap gap-2">
+            <UiChip v-for="issueType in session.issueTypes" :key="issueType" tone="danger">{{ issueType }}</UiChip>
+          </div>
+        </UiPanel>
+
+        <UiPanel v-if="session.metadata && Object.keys(session.metadata).length > 0" title="Session metadata">
+          <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div v-for="(value, key) in session.metadata" :key="key">
+              <dt class="mb-1 font-medium text-ink-secondary">{{ key }}</dt>
+              <dd class="break-all text-ink">{{ value }}</dd>
+            </div>
+          </dl>
+        </UiPanel>
+      </div>
+    </template>
+
+    <template v-else-if="loadProblem">
+      <PageHero :back="backLink" title="Session replay" size="tool" />
+      <UiEmptyState
+        :title="loadProblem.notConfigured ? 'OpenReplay isn\'t connected' : 'This session could not be loaded'"
+        :body="loadProblem.message"
+        :spot="loadProblem.notConfigured ? 'site/session-replay' : 'patterns/error-handling'"
+      />
+    </template>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { PageHero, PageShell, UiButton, UiChip, UiEmptyState, UiLink, UiPanel, UiSpinner, UiStat } from '../components/ui';
 import apiClient from '../services/api.js';
 
 const route = useRoute();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const session = ref(null);
 const loading = ref(false);
 const loadProblem = ref(null);
 
+const backLink = computed(() => ({ to: `/hcd/session-replay/${route.params.id}/sessions`, label: 'Sessions' }));
+
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-
-
-
-
 
 const loadSession = async () => {
   loading.value = true;
@@ -188,25 +116,7 @@ const formatDuration = (seconds) => {
   return `${minutes}m ${secs}s`;
 };
 
-let darkModeObserver = null;
-
 onMounted(() => {
   loadSession();
-
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
 });
 </script>
-

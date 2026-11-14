@@ -1,289 +1,65 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      SEO Tagging Generator
-                    </h1>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Generate SEO meta tags, Open Graph tags, and structured data for your web pages. Optimize your content for search engines and social media.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">search</span>
-                      SEO Tool
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="seoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized SEO icon -->
-                      <circle cx="100" cy="100" r="60" fill="url(#seoGradient)" opacity="0.2"/>
-                      <circle cx="100" cy="100" r="40" fill="url(#seoGradient)" opacity="0.3"/>
-                      <path d="M 70 100 L 90 85 L 110 85 L 130 100 L 110 115 L 90 115 Z" fill="url(#seoGradient)" opacity="0.5"/>
-                      <circle cx="100" cy="100" r="15" fill="white" opacity="0.6"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="SEO tagging generator"
+      lead="Generate SEO meta tags, Open Graph tags, and structured data for your web pages. Optimize your content for search engines and social media."
+      spot="tools/seo-tagging-generator"
+      size="tool"
+    />
 
-          <!-- Generator Section -->
-          <div class="max-w-7xl mx-auto">
-            <div 
-              class="rounded-lg shadow-lg border p-8"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-slate-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <!-- Input Form -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <!-- Page Title -->
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Page Title</label>
-                  <input
-                    v-model="formData.title"
-                    type="text"
-                    placeholder="My Awesome Page"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                    :class="isDarkMode 
-                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-
-                <!-- Description -->
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Description</label>
-                  <input
-                    v-model="formData.description"
-                    type="text"
-                    placeholder="A brief description of the page"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                    :class="isDarkMode 
-                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-
-                <!-- URL -->
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">URL</label>
-                  <input
-                    v-model="formData.url"
-                    type="url"
-                    placeholder="https://example.com/page"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                    :class="isDarkMode 
-                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-
-                <!-- Image URL -->
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Image URL</label>
-                  <input
-                    v-model="formData.image"
-                    type="url"
-                    placeholder="https://example.com/image.jpg"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                    :class="isDarkMode 
-                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-
-                <!-- Site Name -->
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Site Name</label>
-                  <input
-                    v-model="formData.siteName"
-                    type="text"
-                    placeholder="My Website"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                    :class="isDarkMode 
-                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-
-                <!-- Author -->
-                <div>
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Author</label>
-                  <input
-                    v-model="formData.author"
-                    type="text"
-                    placeholder="Author Name"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                    :class="isDarkMode 
-                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-
-                <!-- Keywords -->
-                <div class="md:col-span-2">
-                  <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Keywords (comma-separated)</label>
-                  <input
-                    v-model="formData.keywords"
-                    type="text"
-                    placeholder="keyword1, keyword2, keyword3"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                    :class="isDarkMode 
-                      ? 'border-slate-600 bg-slate-700 text-gray-100 focus:ring-indigo-400 focus:border-indigo-400' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-              </div>
-
-              <!-- Tag Type Selection -->
-              <div class="mb-8">
-                <label class="block text-sm font-medium mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Tag Types</label>
-                <div class="flex flex-wrap gap-4">
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      v-model="tagTypes"
-                      type="checkbox"
-                      value="meta"
-                      class="w-4 h-4 rounded focus:ring-indigo-600 accent-indigo-600"
-                      :class="isDarkMode 
-                        ? 'text-indigo-500 border-slate-600 focus:ring-indigo-500 accent-indigo-500' 
-                        : 'text-indigo-600 border-gray-300'"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Meta Tags</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      v-model="tagTypes"
-                      type="checkbox"
-                      value="og"
-                      class="w-4 h-4 rounded focus:ring-indigo-600 accent-indigo-600"
-                      :class="isDarkMode 
-                        ? 'text-indigo-500 border-slate-600 focus:ring-indigo-500 accent-indigo-500' 
-                        : 'text-indigo-600 border-gray-300'"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Open Graph</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      v-model="tagTypes"
-                      type="checkbox"
-                      value="twitter"
-                      class="w-4 h-4 rounded focus:ring-indigo-600 accent-indigo-600"
-                      :class="isDarkMode 
-                        ? 'text-indigo-500 border-slate-600 focus:ring-indigo-500 accent-indigo-500' 
-                        : 'text-indigo-600 border-gray-300'"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Twitter Cards</span>
-                  </label>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      v-model="tagTypes"
-                      type="checkbox"
-                      value="jsonld"
-                      class="w-4 h-4 rounded focus:ring-indigo-600 accent-indigo-600"
-                      :class="isDarkMode 
-                        ? 'text-indigo-500 border-slate-600 focus:ring-indigo-500 accent-indigo-500' 
-                        : 'text-indigo-600 border-gray-300'"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">JSON-LD</span>
-                  </label>
-                </div>
-              </div>
-
-              <!-- Generate Button -->
-              <div class="mb-8">
-                <button
-                  @click="generate"
-                  class="px-6 py-2 text-white font-medium rounded-lg transition-colors"
-                  :class="isDarkMode 
-                    ? 'bg-indigo-500 hover:bg-indigo-400' 
-                    : 'bg-indigo-600 hover:bg-indigo-700'"
-                >
-                  Generate Tags
-                </button>
-              </div>
-
-              <!-- Output -->
-              <div>
-                <div class="flex items-center justify-between mb-4">
-                  <label class="block text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-900'">Generated Tags</label>
-                  <button
-                    @click="copyToClipboard"
-                    class="px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2"
-                    :class="isDarkMode 
-                      ? 'text-indigo-400 hover:text-indigo-300' 
-                      : 'text-indigo-600 hover:text-indigo-700'"
-                  >
-                    <span class="material-symbols-outlined text-lg">content_copy</span>
-                    Copy
-                  </button>
-                </div>
-                <InlineNotice v-if="notice" class="mb-4" :notice="notice" @dismiss="clearNotice" />
-                <textarea
-                  v-model="output"
-                  readonly
-                  rows="20"
-                  class="w-full px-4 py-3 border rounded-lg text-sm font-mono resize-none"
-                  :class="isDarkMode 
-                    ? 'border-slate-600 bg-slate-700 text-gray-100' 
-                    : 'border-gray-300 bg-gray-50 text-gray-900'"
-                ></textarea>
-              </div>
-            </div>
-          </div>
+    <PageSection title="Page details" description="Fill in what you have; empty fields are left out of the tags.">
+      <UiPanel>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <UiInput v-model="formData.title" label="Page title" placeholder="My Awesome Page" />
+          <UiInput v-model="formData.description" label="Description" placeholder="A brief description of the page" />
+          <UiInput v-model="formData.url" type="url" label="URL" placeholder="https://example.com/page" />
+          <UiInput v-model="formData.image" type="url" label="Image URL" placeholder="https://example.com/image.jpg" />
+          <UiInput v-model="formData.siteName" label="Site name" placeholder="My Website" />
+          <UiInput v-model="formData.author" label="Author" placeholder="Author Name" />
+          <UiInput v-model="formData.keywords" class="md:col-span-2" label="Keywords" hint="Comma-separated" placeholder="keyword1, keyword2, keyword3" />
         </div>
-      </div>
-    </div>
-  </div>
+
+        <fieldset class="mt-6">
+          <legend class="text-sm font-medium text-ink-strong mb-3">Tag types</legend>
+          <div class="flex flex-wrap gap-x-6 gap-y-3">
+            <UiCheckbox v-for="option in tagTypeOptions" :key="option.value" v-model="tagTypes" :value="option.value" :label="option.label" />
+          </div>
+        </fieldset>
+
+        <template #footer>
+          <UiButton variant="primary" icon="sell" @click="generate">Generate tags</UiButton>
+        </template>
+      </UiPanel>
+    </PageSection>
+
+    <PageSection title="Generated tags" description="Paste these into the page's head." divided>
+      <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
+      <UiCodeBlock
+        v-if="output"
+        :code="output"
+        label="HTML"
+        @copied="showNotice('Copied to clipboard.', 'success')"
+        @copy-failed="showNotice('Could not copy to the clipboard.', 'error')"
+      />
+      <UiEmptyState v-else title="No tags yet" body="Fill in the page details and choose Generate tags." />
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { useDarkMode } from '../composables/useDarkMode.js';
+import { PageHero, PageSection, PageShell, UiButton, UiCheckbox, UiCodeBlock, UiEmptyState, UiInput, UiPanel } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 
-const isDarkMode = useDarkMode();
 const { notice, showNotice, clearNotice } = useNotice();
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const tagTypeOptions = [
+  { value: 'meta', label: 'Meta tags' },
+  { value: 'og', label: 'Open Graph' },
+  { value: 'twitter', label: 'Twitter cards' },
+  { value: 'jsonld', label: 'JSON-LD' },
+];
 const tagTypes = ref(['meta', 'og', 'twitter', 'jsonld']);
 const formData = ref({
   title: '',
@@ -295,10 +71,6 @@ const formData = ref({
   keywords: ''
 });
 const output = ref('');
-
-
-
-
 
 const generateMetaTags = () => {
   const tags = [];
@@ -445,23 +217,4 @@ const generate = () => {
   output.value = sections.join('\n');
 };
 
-const copyToClipboard = async () => {
-  if (!output.value) return;
-  
-  try {
-    await navigator.clipboard.writeText(output.value);
-    showNotice('Copied to clipboard.', 'success');
-  } catch (error) {
-    console.error('Failed to copy:', error);
-    showNotice('Could not copy to the clipboard.', 'error');
-  }
-};
-
 </script>
-
-<style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-</style>
-

@@ -1,1794 +1,521 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
+  <PageShell width="wide">
+    <PageHero
+      :back="{ to: '/components', label: 'Components' }"
+      title="Button"
+      lead="A versatile button component for triggering actions throughout your application. Supports multiple variants, sizes, and states."
+      spot="foundations/component-button"
+      size="tool"
     >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Button
-                    </h1>
-                    <span 
-                      class="px-3 py-1 rounded-full text-sm font-medium border"
-                      :class="getComponentStatusBadgeClass(componentStatus)"
-                    >
-                      {{ componentStatus || 'Production Ready' }}
-                    </span>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    A versatile button component for triggering actions throughout your application. Supports multiple variants, sizes, and states.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">label</span>
-                      Version 1.0.0
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
-                      Updated Jan 15, 2024
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="buttonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized button icon -->
-                      <rect x="40" y="80" width="120" height="40" rx="8" fill="url(#buttonGradient)" opacity="0.8"/>
-                      <text x="100" y="105" font-family="Arial" font-size="16" font-weight="bold" fill="white" text-anchor="middle" opacity="0.9">Button</text>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <template #actions>
+        <UiChip :tone="componentStatusTone(componentStatus)">{{ componentStatus || 'Production Ready' }}</UiChip>
+      </template>
+    </PageHero>
+
+    <BreakingChangeAlert
+      :component-versions="componentVersions"
+      :component-id="getComponentId()"
+      @dismiss="() => {}"
+    />
+
+    <!-- Interactive playground -->
+    <PageSection
+      title="Interactive playground"
+      description="Experiment with the Button component. Edit props, see live previews, and export code snippets."
+    >
+      <template #actions>
+        <UiButton variant="primary" icon="share" label="Share playground" @click="sharePlayground" />
+        <UiButton
+          v-if="sharedPlaygroundUrl"
+          :icon="shareUrlCopied ? 'check' : 'content_copy'"
+          :label="shareUrlCopied ? 'Copied!' : 'Copy link'"
+          @click="copyShareUrl"
+        />
+      </template>
+
+      <UiCallout v-if="sharedPlaygroundUrl" tone="success" role="status" class="mb-6">
+        Playground shared! Share this URL: <UiCode class="break-all">{{ sharedPlaygroundUrl }}</UiCode>
+      </UiCallout>
+
+      <div class="grid lg:grid-cols-2 gap-6 mb-6">
+        <UiPanel title="Props editor">
+          <div class="space-y-4">
+            <UiInput v-model="propValues.label" label="Label" hint="Button text" placeholder="Click me" required />
+            <UiSelect v-model="propValues.variant" label="Variant" :options="variantOptions" />
+            <UiSelect v-model="propValues.size" label="Size" :options="sizeOptions" />
+            <UiCheckbox v-model="propValues.disabled" label="Disabled" />
+            <UiCheckbox v-model="propValues.loading" label="Loading" />
           </div>
+        </UiPanel>
 
-          <!-- Breaking Change Alert -->
-          <BreakingChangeAlert 
-            :component-versions="componentVersions" 
-            :component-id="getComponentId()"
-            @dismiss="() => {}"
-          />
-
-          <!-- Interactive Playground Section -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8 flex items-center justify-between">
-              <div>
-                <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Interactive Playground</h2>
-                <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Experiment with the Button component. Edit props, see live previews, and export code snippets.</p>
-              </div>
-              <div class="flex items-center gap-2">
-                <button
-                  @click="sharePlayground"
-                  class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                  :class="isDarkMode 
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-                >
-                  <span class="material-symbols-outlined text-sm">share</span>
-                  Share Playground
-                </button>
-                <button
-                  v-if="sharedPlaygroundUrl"
-                  @click="copyShareUrl"
-                  class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                  :class="isDarkMode 
-                    ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'"
-                >
-                  <span class="material-symbols-outlined text-sm">{{ shareUrlCopied ? 'check' : 'content_copy' }}</span>
-                  {{ shareUrlCopied ? 'Copied!' : 'Copy Link' }}
-                </button>
-              </div>
-            </div>
-            <div v-if="sharedPlaygroundUrl" class="mb-4 p-4 rounded-lg" :class="isDarkMode ? 'bg-green-900/20 border border-green-700' : 'bg-green-50 border border-green-200'">
-              <p class="text-sm" :class="isDarkMode ? 'text-green-300' : 'text-green-700'">
-                <span class="material-symbols-outlined text-base align-middle mr-2">check_circle</span>
-                Playground shared! Share this URL: <code class="px-2 py-1 rounded bg-white/10 text-xs">{{ sharedPlaygroundUrl }}</code>
-              </p>
-            </div>
-
-            <div class="grid lg:grid-cols-2 gap-6 mb-6">
-              <!-- Props Editor -->
-              <div 
-                class="rounded-lg shadow-sm border"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="p-4 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                  <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">tune</span>
-                    Props Editor
-                  </h3>
-                </div>
-                <div class="p-6">
-                  <div class="space-y-4">
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Label
-                        <span class="text-red-500 ml-1">*</span>
-                      </label>
-                      <input
-                        v-model="propValues.label"
-                        type="text"
-                        placeholder="Click me"
-                        class="w-full px-3 py-2 border rounded-lg text-sm"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      />
-                      <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                        Button text
-                      </div>
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Variant
-                      </label>
-                      <select
-                        v-model="propValues.variant"
-                        class="w-full px-3 py-2 border rounded-lg text-sm"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      >
-                        <option value="primary">Primary</option>
-                        <option value="secondary">Secondary</option>
-                        <option value="tertiary">Tertiary</option>
-                        <option value="danger">Danger</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Size
-                      </label>
-                      <select
-                        v-model="propValues.size"
-                        class="w-full px-3 py-2 border rounded-lg text-sm"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 bg-slate-700 text-white' 
-                          : 'border-gray-300 bg-white text-gray-900'"
-                      >
-                        <option value="sm">Small</option>
-                        <option value="md">Medium</option>
-                        <option value="lg">Large</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          v-model="propValues.disabled"
-                          class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 accent-indigo-600"
-                        />
-                        <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                          Disabled
-                        </span>
-                      </label>
-                    </div>
-                    <div>
-                      <label class="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          v-model="propValues.loading"
-                          class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 accent-indigo-600"
-                        />
-                        <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                          Loading
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Live Preview -->
-              <div 
-                class="rounded-lg shadow-sm border"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="p-4 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                  <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">preview</span>
-                    Live Preview
-                  </h3>
-                  <div class="flex items-center gap-2">
-                    <button
-                      @click="previewDarkMode = !previewDarkMode"
-                      class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                      :class="previewDarkMode
-                        ? (isDarkMode 
-                          ? 'bg-indigo-600 text-white' 
-                          : 'bg-indigo-600 text-white')
-                        : (isDarkMode 
-                          ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                    >
-                      <span class="material-symbols-outlined text-base">{{ previewDarkMode ? 'dark_mode' : 'light_mode' }}</span>
-                      {{ previewDarkMode ? 'Dark' : 'Light' }}
-                    </button>
-                    <button
-                      @click="toggleFullscreen"
-                      class="p-2 rounded-lg transition-colors"
-                      :class="isDarkMode 
-                        ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' 
-                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
-                      aria-label="Toggle fullscreen"
-                    >
-                      <span class="material-symbols-outlined">fullscreen</span>
-                    </button>
-                  </div>
-                </div>
-                <div class="p-8 min-h-[400px] flex items-center justify-center" :class="previewDarkMode ? 'bg-slate-950 dark' : 'bg-gray-50'">
-                  <component-preview 
-                    :key="`button-${JSON.stringify(propValues)}`"
-                    component="button"
-                    :props="propValues"
-                    :is-dark-mode="previewDarkMode"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Generated Code -->
-            <div 
-              class="rounded-lg shadow-sm border"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="p-4 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">code</span>
-                  Generated Code
-                </h3>
-                <div class="flex items-center gap-2">
-                  <button
-                    @click="copyCode"
-                    class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-xs font-medium flex items-center gap-1.5"
-                  >
-                    <span class="material-symbols-outlined text-sm">content_copy</span>
-                    Copy
-                  </button>
-                  <button
-                    @click="exportAsVue"
-                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
-                    :class="codeFormat === 'vue'
-                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
-                      : (isDarkMode 
-                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
-                  >
-                    Vue
-                  </button>
-                  <button
-                    @click="exportAsReact"
-                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
-                    :class="codeFormat === 'react'
-                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
-                      : (isDarkMode 
-                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
-                  >
-                    React
-                  </button>
-                  <button
-                    @click="exportAsReactNative"
-                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
-                    :class="codeFormat === 'react-native'
-                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
-                      : (isDarkMode 
-                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
-                  >
-                    React Native
-                  </button>
-                  <button
-                    @click="exportAsHTML"
-                    class="px-3 py-1.5 border rounded-lg transition-colors text-xs font-medium"
-                    :class="codeFormat === 'html'
-                      ? (isDarkMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-indigo-600 text-white border-indigo-600')
-                      : (isDarkMode 
-                        ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50')"
-                  >
-                    HTML
-                  </button>
-                </div>
-              </div>
-              <div class="p-6">
-                <div class="rounded-lg p-4 overflow-x-auto" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono"><code>{{ generatedCode }}</code></pre>
-                </div>
-              </div>
-            </div>
+        <UiPanel title="Live preview">
+          <template #actions>
+            <UiButton
+              size="sm"
+              variant="ghost"
+              :icon="previewDarkMode ? 'dark_mode' : 'light_mode'"
+              :label="previewDarkMode ? 'Dark' : 'Light'"
+              :aria-pressed="previewDarkMode"
+              @click="previewDarkMode = !previewDarkMode"
+            />
+            <UiButton size="sm" variant="ghost" icon="fullscreen" icon-only label="Toggle fullscreen" @click="toggleFullscreen" />
+          </template>
+          <div class="preview-stage" :class="previewDarkMode ? 'bg-surface-inverse dark' : 'bg-surface-sunken'">
+            <component-preview
+              :key="`button-${JSON.stringify(propValues)}`"
+              component="button"
+              :props="propValues"
+              :is-dark-mode="previewDarkMode"
+            />
           </div>
-
-          <!-- Variants Section -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8 flex items-center justify-between">
-              <div>
-                <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Variants</h2>
-                <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Explore different button styles and use cases.</p>
-              </div>
-              <button
-                @click="showVariantBuilder = !showVariantBuilder"
-                class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                :class="showVariantBuilder
-                  ? (isDarkMode ? 'bg-indigo-600 text-white' : 'bg-indigo-600 text-white')
-                  : (isDarkMode ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700')"
-              >
-                <span class="material-symbols-outlined text-base">add</span>
-                {{ showVariantBuilder ? 'Hide Builder' : 'Create Variant' }}
-              </button>
-            </div>
-
-            <!-- Variant Builder -->
-            <div 
-              v-if="showVariantBuilder"
-              class="mb-8 rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">tune</span>
-                Variant Builder
-              </h3>
-
-              <div class="grid lg:grid-cols-2 gap-6">
-                <!-- Configuration Panel -->
-                <div class="space-y-4">
-                  <div>
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Variant Name *
-                    </label>
-                    <input
-                      v-model="newVariant.name"
-                      type="text"
-                      placeholder="e.g., success, danger, outline"
-                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-800 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Description
-                    </label>
-                    <textarea
-                      v-model="newVariant.description"
-                      rows="2"
-                      placeholder="Describe when to use this variant..."
-                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-800 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
-                  </div>
-
-                  <!-- Properties -->
-                  <div class="space-y-4 pt-4 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <h4 class="text-sm font-semibold" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Properties</h4>
-                    
-                    <div class="grid grid-cols-2 gap-4">
-                      <div>
-                        <label class="block text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Background</label>
-                        <input
-                          v-model="newVariant.properties.backgroundColor"
-                          type="text"
-                          placeholder="indigo-600 or {color.primary}"
-                          class="w-full px-3 py-1.5 text-sm border rounded focus:ring-2 focus:ring-indigo-500"
-                          :class="isDarkMode 
-                            ? 'border-gray-600 bg-slate-800 text-white' 
-                            : 'border-gray-300 bg-white text-gray-900'"
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Text Color</label>
-                        <input
-                          v-model="newVariant.properties.textColor"
-                          type="text"
-                          placeholder="white or {color.text}"
-                          class="w-full px-3 py-1.5 text-sm border rounded focus:ring-2 focus:ring-indigo-500"
-                          :class="isDarkMode 
-                            ? 'border-gray-600 bg-slate-800 text-white' 
-                            : 'border-gray-300 bg-white text-gray-900'"
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Border Radius</label>
-                        <select
-                          v-model="newVariant.properties.borderRadius"
-                          class="w-full px-3 py-1.5 text-sm border rounded focus:ring-2 focus:ring-indigo-500"
-                          :class="isDarkMode 
-                            ? 'border-gray-600 bg-slate-800 text-white' 
-                            : 'border-gray-300 bg-white text-gray-900'"
-                        >
-                          <option value="">None</option>
-                          <option value="sm">Small</option>
-                          <option value="md">Medium</option>
-                          <option value="lg">Large</option>
-                          <option value="xl">Extra Large</option>
-                          <option value="full">Full</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label class="block text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Padding</label>
-                        <select
-                          v-model="newVariant.properties.padding"
-                          class="w-full px-3 py-1.5 text-sm border rounded focus:ring-2 focus:ring-indigo-500"
-                          :class="isDarkMode 
-                            ? 'border-gray-600 bg-slate-800 text-white' 
-                            : 'border-gray-300 bg-white text-gray-900'"
-                        >
-                          <option value="">Default</option>
-                          <option value="sm">Small</option>
-                          <option value="md">Medium</option>
-                          <option value="lg">Large</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <!-- Hover State -->
-                    <div class="pt-2 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                      <label class="flex items-center gap-2 mb-2 cursor-pointer">
-                        <input
-                          v-model="showHoverState"
-                          type="checkbox"
-                          class="w-4 h-4 rounded accent-indigo-600"
-                        />
-                        <span class="text-xs font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Configure Hover State</span>
-                      </label>
-                      <div v-if="showHoverState" class="grid grid-cols-2 gap-4 mt-2">
-                        <div>
-                          <label class="block text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Hover BG</label>
-                          <input
-                            v-model="newVariant.properties.hover.backgroundColor"
-                            type="text"
-                            placeholder="indigo-700"
-                            class="w-full px-3 py-1.5 text-sm border rounded"
-                            :class="isDarkMode 
-                              ? 'border-gray-600 bg-slate-800 text-white' 
-                              : 'border-gray-300 bg-white text-gray-900'"
-                          />
-                        </div>
-                        <div>
-                          <label class="block text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Hover Text</label>
-                          <input
-                            v-model="newVariant.properties.hover.textColor"
-                            type="text"
-                            placeholder="white"
-                            class="w-full px-3 py-1.5 text-sm border rounded"
-                            :class="isDarkMode 
-                              ? 'border-gray-600 bg-slate-800 text-white' 
-                              : 'border-gray-300 bg-white text-gray-900'"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="flex gap-3 pt-4">
-                    <button
-                      @click="saveVariant"
-                      :disabled="!newVariant.name || savingVariant"
-                      class="px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                      :class="!newVariant.name || savingVariant
-                        ? (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-500 cursor-not-allowed')
-                        : (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')"
-                    >
-                      <span v-if="savingVariant" class="material-symbols-outlined text-sm animate-spin">refresh</span>
-                      <span v-else class="material-symbols-outlined text-sm">save</span>
-                      {{ savingVariant ? 'Saving...' : 'Save Variant' }}
-                    </button>
-                    <button
-                      @click="resetVariantBuilder"
-                      class="px-4 py-2 rounded-lg font-medium transition-colors"
-                      :class="isDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'"
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Live Preview -->
-                <div>
-                  <h4 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Live Preview</h4>
-                  <div class="rounded-lg p-8 mb-4" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                    <button
-                      :style="getVariantStyles(newVariant.properties)"
-                      class="transition-all"
-                    >
-                      {{ newVariant.name || 'New Variant' }}
-                    </button>
-                  </div>
-                  <div v-if="newVariant.generatedCode" class="rounded-lg p-4 overflow-x-auto" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                    <pre class="text-green-400 text-xs font-mono"><code>{{ newVariant.generatedCode.html || newVariant.generatedCode.vue }}</code></pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="space-y-8">
-              <!-- Primary Variant -->
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="mb-6">
-                  <h3 class="text-xl font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Primary</h3>
-                  <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Use for the main action on a page or in a form.</p>
-                </div>
-                <div class="rounded-lg p-6 mb-4" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <button class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium">
-                    Primary Button
-                  </button>
-                </div>
-                <div class="rounded-lg p-4 overflow-x-auto" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono"><code>&lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"&gt;
-    Primary Button
-&lt;/button&gt;</code></pre>
-                </div>
-              </div>
-
-              <!-- Secondary Variant -->
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="mb-6">
-                  <h3 class="text-xl font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Secondary</h3>
-                  <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Use for secondary actions that are less prominent.</p>
-                </div>
-                <div class="rounded-lg p-6 mb-4" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <button 
-                    class="px-6 py-3 border-2 border-indigo-600 rounded-lg transition-colors font-medium"
-                    :class="isDarkMode 
-                      ? 'bg-slate-700 text-indigo-400 hover:bg-slate-600' 
-                      : 'bg-white text-indigo-600 hover:bg-indigo-50'"
-                  >
-                    Secondary Button
-                  </button>
-                </div>
-                <div class="rounded-lg p-4 overflow-x-auto" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono"><code>&lt;button class="px-6 py-3 bg-white text-indigo-600 border-2 border-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors font-medium"&gt;
-    Secondary Button
-&lt;/button&gt;</code></pre>
-                </div>
-              </div>
-
-              <!-- Sizes -->
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="mb-6">
-                  <h3 class="text-xl font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Sizes</h3>
-                  <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Choose from small, medium, or large button sizes.</p>
-                </div>
-                <div class="rounded-lg p-6 mb-4 flex items-center gap-4" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <button class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                    Small
-                  </button>
-                  <button class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                    Medium
-                  </button>
-                  <button class="px-8 py-4 text-lg bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                    Large
-                  </button>
-                </div>
-                <div class="rounded-lg p-4 overflow-x-auto" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono"><code>&lt;!-- Small --&gt;
-&lt;button class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg"&gt;Small&lt;/button&gt;
-
-&lt;!-- Medium --&gt;
-&lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;Medium&lt;/button&gt;
-
-&lt;!-- Large --&gt;
-&lt;button class="px-8 py-4 text-lg bg-indigo-600 text-white rounded-lg"&gt;Large&lt;/button&gt;</code></pre>
-                </div>
-              </div>
-
-              <!-- Custom Variants -->
-              <div
-                v-for="variant in customVariants"
-                :key="variant.name"
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="mb-6 flex items-center justify-between">
-                  <div>
-                    <div class="flex items-center gap-2 mb-2">
-                      <h3 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ variant.name.charAt(0).toUpperCase() + variant.name.slice(1) }}
-                      </h3>
-                      <span 
-                        class="px-2 py-0.5 rounded text-xs font-medium"
-                        :class="isDarkMode ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700'"
-                      >
-                        Custom
-                      </span>
-                    </div>
-                    <p v-if="variant.description" class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      {{ variant.description }}
-                    </p>
-                  </div>
-                  <button
-                    @click="deleteVariant(variant.name)"
-                    class="p-2 rounded-lg transition-colors"
-                    :class="isDarkMode ? 'hover:bg-slate-800 text-gray-400 hover:text-red-400' : 'hover:bg-gray-100 text-gray-500 hover:text-red-600'"
-                    title="Delete variant"
-                  >
-                    <span class="material-symbols-outlined text-base">delete</span>
-                  </button>
-                </div>
-                <div class="rounded-lg p-6 mb-4" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <button
-                    :style="getVariantStyles(variant.properties)"
-                    class="transition-all"
-                  >
-                    {{ variant.name.charAt(0).toUpperCase() + variant.name.slice(1) }} Button
-                  </button>
-                </div>
-                <div v-if="variant.generatedCode" class="rounded-lg p-4 overflow-x-auto" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono"><code>{{ variant.generatedCode.html || variant.generatedCode.vue }}</code></pre>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Props/API Documentation -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">API Reference</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Complete list of props and options available for the Button component.</p>
-            </div>
-            
-            <div 
-              class="rounded-2xl border overflow-hidden"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="overflow-x-auto">
-                <table class="w-full">
-                  <thead :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                    <tr>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Prop</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Type</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Default</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody :class="isDarkMode ? 'divide-y divide-gray-700' : 'divide-y divide-gray-200'">
-                    <tr 
-                      class="transition-colors"
-                      :class="isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'"
-                    >
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <code class="text-sm font-mono" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">variant</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">'primary' | 'secondary' | 'tertiary'</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">'primary'</code>
-                      </td>
-                      <td class="px-6 py-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        The visual style variant of the button.
-                      </td>
-                    </tr>
-                    <tr 
-                      class="transition-colors"
-                      :class="isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'"
-                    >
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <code class="text-sm font-mono" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">size</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">'sm' | 'md' | 'lg'</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">'md'</code>
-                      </td>
-                      <td class="px-6 py-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        The size of the button.
-                      </td>
-                    </tr>
-                    <tr 
-                      class="transition-colors"
-                      :class="isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'"
-                    >
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <code class="text-sm font-mono" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">disabled</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">boolean</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">false</code>
-                      </td>
-                      <td class="px-6 py-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Whether the button is disabled.
-                      </td>
-                    </tr>
-                    <tr 
-                      class="transition-colors"
-                      :class="isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'"
-                    >
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <code class="text-sm font-mono" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">loading</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">boolean</code>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        <code class="text-xs font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">false</code>
-                      </td>
-                      <td class="px-6 py-4 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        Shows a loading spinner when true.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- Usage Examples -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Usage Examples</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Common patterns and use cases for the Button component.</p>
-            </div>
-            
-            <div class="space-y-6">
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Form Submission</h3>
-                <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;form @submit.prevent="handleSubmit"&gt;
-  &lt;input v-model="email" type="email" placeholder="Email" /&gt;
-  &lt;button 
-    type="submit" 
-    class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-    :disabled="isSubmitting"
-  &gt;
-    {{ isSubmitting ? 'Submitting...' : 'Submit' }}
-  &lt;/button&gt;
-&lt;/form&gt;</code></pre>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Action Buttons</h3>
-                <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Group primary and secondary actions together. Primary actions should be visually prominent, while secondary actions are less emphasized.
-                </p>
-                <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono"><code>&lt;div class="flex gap-4"&gt;
-  &lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"&gt;
-    Save Changes
-  &lt;/button&gt;
-  &lt;button class="px-6 py-3 bg-white text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50"&gt;
-    Cancel
-  &lt;/button&gt;
-&lt;/div&gt;</code></pre>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Icon Buttons</h3>
-                <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Use icon buttons for compact actions or when space is limited. Always include an aria-label for accessibility.
-                </p>
-                <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Icon button with label --&gt;
-&lt;button 
-  class="p-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-  aria-label="Delete item"
-&gt;
-  &lt;span class="material-symbols-outlined"&gt;delete&lt;/span&gt;
-&lt;/button&gt;
-
-&lt;!-- Icon button with text --&gt;
-&lt;button class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg"&gt;
-  &lt;span class="material-symbols-outlined text-sm"&gt;download&lt;/span&gt;
-  Download
-&lt;/button&gt;</code></pre>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Destructive Actions</h3>
-                <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Use a distinct style (typically red) for destructive actions like delete or remove. Consider adding a confirmation step for critical actions.
-                </p>
-                <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Destructive action button --&gt;
-&lt;button 
-  class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700"
-  @click="confirmDelete"
-&gt;
-  Delete Account
-&lt;/button&gt;
-
-&lt;!-- With confirmation dialog --&gt;
-&lt;button 
-  class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700"
-  @click="showDeleteConfirmation = true"
-&gt;
-  Delete Item
-&lt;/button&gt;</code></pre>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Button Groups</h3>
-                <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Group related buttons together, especially when they represent different views or states of the same data.
-                </p>
-                <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Button group for view switching --&gt;
-&lt;div class="inline-flex rounded-lg border" :class="isDarkMode ? 'border-gray-700' : 'border-gray-300'"&gt;
-  &lt;button 
-    class="px-4 py-2 rounded-l-lg"
-    :class="view === 'list' 
-      ? 'bg-indigo-600 text-white' 
-      : 'bg-white text-gray-700 hover:bg-gray-50'"
-    @click="view = 'list'"
-  &gt;
-    List
-  &lt;/button&gt;
-  &lt;button 
-    class="px-4 py-2 rounded-r-lg border-l"
-    :class="view === 'grid' 
-      ? 'bg-indigo-600 text-white' 
-      : 'bg-white text-gray-700 hover:bg-gray-50'"
-    :class="isDarkMode ? 'border-gray-700' : 'border-gray-300'"
-    @click="view = 'grid'"
-  &gt;
-    Grid
-  &lt;/button&gt;
-&lt;/div&gt;</code></pre>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Full-Width Buttons</h3>
-                <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Use full-width buttons on mobile devices or when the button is the primary focus of the view.
-                </p>
-                <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                  <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Full-width button --&gt;
-&lt;button class="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"&gt;
-  Complete Purchase
-&lt;/button&gt;
-
-&lt;!-- Responsive: full-width on mobile, auto on desktop --&gt;
-&lt;button class="w-full md:w-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"&gt;
-  Sign Up
-&lt;/button&gt;</code></pre>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Accessibility -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div 
-              class="border rounded-2xl p-8"
-              :class="isDarkMode 
-                ? 'bg-blue-900/20 border-blue-800' 
-                : 'bg-blue-50 border-blue-200'"
-            >
-              <div class="flex items-start gap-4">
-                <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">accessibility</span>
-                <div>
-                  <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Accessibility</h3>
-                  <ul class="space-y-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    <li class="flex items-start gap-2">
-                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
-                      <span>Buttons should have descriptive text that clearly indicates their action</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
-                      <span>Use <code class="px-1.5 py-0.5 rounded text-xs font-mono" :class="isDarkMode ? 'bg-blue-900/30' : 'bg-blue-100'">aria-label</code> for icon-only buttons</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
-                      <span>Disabled buttons should not be focusable via keyboard navigation</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span class="mt-1" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">•</span>
-                      <span>Ensure sufficient color contrast (WCAG AA minimum)</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Performance Section -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div 
-              class="rounded-lg shadow-sm border overflow-hidden"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="p-6 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <h2 class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">speed</span>
-                  Performance Metrics
-                </h2>
-                <button
-                  v-if="performanceData"
-                  @click="loadPerformanceData"
-                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                  :class="isDarkMode 
-                    ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                >
-                  <span class="material-symbols-outlined text-base">refresh</span>
-                  Refresh
-                </button>
-              </div>
-              
-              <div v-if="performanceLoading" class="p-12 text-center">
-                <div class="flex justify-center mb-4">
-                  <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Loading performance data...
-                </p>
-              </div>
-
-              <div v-else-if="performanceData" class="p-6">
-                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
-                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">code</span>
-                      Vue Size
-                    </div>
-                    <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ formatSize(performanceData.vueSize) }}
-                    </div>
-                  </div>
-                  
-                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
-                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">code</span>
-                      React Size
-                    </div>
-                    <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ formatSize(performanceData.reactSize) }}
-                    </div>
-                  </div>
-                  
-                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
-                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">storage</span>
-                      Total Size
-                    </div>
-                    <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ formatSize(performanceData.totalSize) }}
-                    </div>
-                    <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                      + {{ formatSize(performanceData.dependenciesSize) }} deps
-                    </div>
-                  </div>
-                  
-                  <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
-                    <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">compress</span>
-                      Gzipped
-                    </div>
-                    <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ formatSize(performanceData.gzippedSize) }}
-                    </div>
-                    <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                      {{ Math.round((performanceData.gzippedSize / performanceData.totalSize) * 100) }}% compression
-                    </div>
-                  </div>
-                </div>
-
-                <div class="mt-6 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                  <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">info</span>
-                      Status
-                    </h3>
-                    <span 
-                      class="px-3 py-1 text-sm rounded-full font-medium"
-                      :class="getPerformanceStatusClass(performanceData.status)"
-                    >
-                      {{ performanceData.status === 'pass' ? 'Optimal' : performanceData.status === 'warning' ? 'Warning' : 'Error' }}
-                    </span>
-                  </div>
-                  <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    <span v-if="performanceData.dependencies && performanceData.dependencies.length > 0">
-                      Dependencies: {{ performanceData.dependencies.join(', ') }}
-                    </span>
-                    <span v-else>No dependencies</span>
-                  </p>
-                </div>
-
-                <div class="mt-6 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                  <h3 class="text-lg font-semibold flex items-center gap-2 mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">language</span>
-                    Supported Browsers
-                  </h3>
-                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div 
-                      v-for="browser in getSupportedBrowsers()"
-                      :key="browser.name"
-                      class="flex items-center gap-2 p-3 rounded-lg border"
-                      :class="isDarkMode 
-                        ? 'bg-slate-800 border-gray-700' 
-                        : 'bg-gray-50 border-gray-200'"
-                    >
-                      <div 
-                        class="w-8 h-8 flex-shrink-0"
-                        :title="`${browser.name} ${browser.version}+`"
-                        v-html="getBrowserIcon(browser.name)"
-                      ></div>
-                      <div class="flex-1 min-w-0">
-                        <div class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          {{ browser.name }}
-                        </div>
-                        <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                          {{ browser.version }}+
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div v-else class="p-12 text-center">
-                <span class="material-symbols-outlined text-4xl mb-4 block" :class="isDarkMode ? 'text-gray-600' : 'text-gray-400'">speed</span>
-                <p class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Performance data unavailable
-                </p>
-                <p class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                  Unable to load performance metrics for this component.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Component Dependencies -->
-          <ComponentDependencyGraphCard :component-id="getComponentId()" />
-
-          <!-- Version History -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Version History</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Track component versions, view changelogs, and manage breaking changes.</p>
-            </div>
-
-            <!-- Current Version Info -->
-            <div 
-              v-if="currentVersion.version"
-              class="rounded-lg shadow-sm border p-6 mb-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <div>
-                  <h3 class="text-xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    Current Version: v{{ currentVersion.version }}
-                  </h3>
-                  <p class="text-sm mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ currentVersion.description }}
-                  </p>
-                </div>
-                <span 
-                  class="px-3 py-1 rounded-full text-xs font-medium"
-                  :class="getStatusBadgeClass(currentVersion.status)"
-                >
-                  {{ currentVersion.status }}
-                </span>
-              </div>
-              <div class="flex items-center gap-4 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                <span>Released: {{ formatDate(currentVersion.releasedAt) }}</span>
-                <span v-if="currentVersion.lastUpdated">Last Updated: {{ formatDate(currentVersion.lastUpdated) }}</span>
-              </div>
-            </div>
-
-            <!-- Version History List -->
-            <div 
-              v-if="componentVersions.length > 0"
-              class="rounded-lg shadow-sm border"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="divide-y" :class="isDarkMode ? 'divide-gray-700' : 'divide-gray-200'">
-                <div
-                  v-for="version in componentVersions"
-                  :key="version.version"
-                  class="p-6"
-                >
-                  <div class="flex items-start justify-between mb-4">
-                    <div class="flex-1">
-                      <div class="flex items-center gap-3 mb-2">
-                        <h4 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          v{{ version.version }}
-                        </h4>
-                        <span 
-                          class="px-2 py-0.5 rounded text-xs font-medium"
-                          :class="getStatusBadgeClass(version.status)"
-                        >
-                          {{ version.status }}
-                        </span>
-                        <span 
-                          v-if="version.breaking"
-                          class="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                        >
-                          Breaking Changes
-                        </span>
-                      </div>
-                      <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        {{ version.description }}
-                      </p>
-                      <div class="text-xs mb-3" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                        Released: {{ formatDate(version.releasedAt) }}
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Changelog -->
-                  <div v-if="version.changelog && version.changelog.length > 0" class="ml-6 border-l-2 pl-4 mb-4"
-                    :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-                  >
-                    <h5 class="text-sm font-semibold mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Changelog
-                    </h5>
-                    <ul class="space-y-1 text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <li v-for="(change, idx) in version.changelog" :key="idx" class="flex items-start gap-2">
-                        <span class="mt-1" :class="getChangeTypeColor(change.type)">
-                          {{ getChangeTypeIcon(change.type) }}
-                        </span>
-                        <span>{{ change.description }}</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <!-- Migration Guide -->
-                  <div v-if="version.migrationGuide" class="mt-4 p-4 rounded-lg"
-                    :class="isDarkMode ? 'bg-slate-800 border border-gray-700' : 'bg-yellow-50 border border-yellow-200'"
-                  >
-                    <div class="flex items-start gap-2 mb-2">
-                      <span class="material-symbols-outlined text-yellow-600 dark:text-yellow-400">warning</span>
-                      <h5 class="text-sm font-semibold" :class="isDarkMode ? 'text-yellow-300' : 'text-yellow-900'">
-                        Migration Guide
-                      </h5>
-                    </div>
-                    <p class="text-sm" :class="isDarkMode ? 'text-yellow-200' : 'text-yellow-800'">
-                      {{ version.migrationGuide }}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Empty State -->
-            <div 
-              v-else
-              class="rounded-lg shadow-sm border p-12 text-center"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <span class="material-symbols-outlined text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-                history
-              </span>
-              <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                No version history
-              </p>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                Version history will appear here once versions are added
-              </p>
-            </div>
-          </div>
-
-          <!-- Component Migration Setup -->
-          <div class="max-w-7xl mx-auto mb-16" data-migration-section>
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">swap_horiz</span>
-                Component Migration Guide
-              </h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Auto-generated migration guide to help you update from one version to another.</p>
-            </div>
-
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">swap_horiz</span>
-                Component Migration Setup
-              </h3>
-              <div class="space-y-3">
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    From Version
-                  </label>
-                  <Dropdown
-                    :model-value="componentMigration.fromVersion"
-                    @update:model-value="componentMigration.fromVersion = $event"
-                    :options="fromVersionOptions"
-                    :is-dark-mode="isDarkMode"
-                    placeholder="Select version..."
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    To Version
-                  </label>
-                  <Dropdown
-                    :model-value="componentMigration.toVersion"
-                    @update:model-value="componentMigration.toVersion = $event"
-                    :options="toVersionOptions"
-                    :is-dark-mode="isDarkMode"
-                    placeholder="Select version..."
-                    :disabled="!componentMigration.fromVersion"
-                  />
-                </div>
-                <div class="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    v-model="componentMigration.dryRun"
-                    id="dry-run"
-                    class="accent-indigo-600"
-                  />
-                  <label for="dry-run" class="text-sm cursor-pointer" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Dry Run (Preview Only)
-                  </label>
-                </div>
-                <div class="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    v-model="componentMigration.generateCodemod"
-                    id="codemod"
-                    class="accent-indigo-600"
-                  />
-                  <label for="codemod" class="text-sm cursor-pointer" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Generate Codemod
-                  </label>
-                </div>
-                <button
-                  @click="analyzeComponentMigration"
-                  :disabled="!canAnalyzeComponent"
-                  class="w-full px-4 py-2 rounded-lg font-medium transition-colors"
-                  :class="canAnalyzeComponent
-                    ? (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')
-                    : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-                >
-                  Analyze Migration
-                </button>
-              </div>
-
-              <!-- Migration Plan -->
-              <div 
-                v-if="componentMigrationPlan"
-                class="mt-6 pt-6 border-t"
-                :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-              >
-                <div class="flex items-center justify-between mb-4">
-                  <h4 class="text-md font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-indigo-600">list</span>
-                    Migration Plan
-                  </h4>
-                  <button
-                    v-if="componentMigration.generateCodemod && componentCodemodScript"
-                    @click="downloadComponentCodemod"
-                    class="px-4 py-2 rounded-lg font-medium transition-colors text-sm"
-                    :class="isDarkMode 
-                      ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                      : 'bg-purple-600 hover:bg-purple-700 text-white'"
-                  >
-                    Download Codemod
-                  </button>
-                </div>
-                <div class="space-y-3">
-                  <div
-                    v-for="(step, index) in componentMigrationPlan.steps"
-                    :key="index"
-                    class="p-4 rounded-lg border"
-                    :class="step.type === 'breaking'
-                      ? (isDarkMode ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200')
-                      : (isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200')"
-                  >
-                    <div class="flex items-start gap-3">
-                      <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm" :class="step.type === 'breaking' ? 'bg-red-500 text-white' : 'bg-indigo-500 text-white'">
-                        {{ index + 1 }}
-                      </div>
-                      <div class="flex-1">
-                        <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          {{ step.title }}
-                        </div>
-                        <div class="text-xs mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                          {{ step.description }}
-                        </div>
-                        <div v-if="step.code" class="rounded-lg overflow-hidden mt-2" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                          <div class="p-3">
-                            <div class="text-xs text-green-400 font-mono whitespace-pre-wrap" v-pre><code>{{ step.code }}</code></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Best Practices -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Best Practices</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Recommended patterns and guidelines for using the Button component effectively.</p>
-            </div>
-            
-            <div class="space-y-6">
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-green-900/20 border-green-800' 
-                  : 'bg-green-50 border-green-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Use Descriptive Labels</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Button labels should clearly communicate the action that will occur when clicked. Avoid generic labels like "Click here" or "Submit".
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Descriptive label --&gt;
-&lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
-  Save Changes
-&lt;/button&gt;
-
-&lt;!-- Good: Action-oriented --&gt;
-&lt;button class="px-6 py-3 bg-red-600 text-white rounded-lg"&gt;
-  Delete Account
-&lt;/button&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-green-900/20 border-green-800' 
-                  : 'bg-green-50 border-green-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Provide Visual Feedback</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Use loading states and disabled states to provide clear feedback about the button's current state and prevent duplicate submissions.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Loading state --&gt;
-&lt;button 
-  class="px-6 py-3 bg-indigo-600 text-white rounded-lg"
-  :disabled="isLoading"
-&gt;
-  &lt;span v-if="isLoading"&gt;Processing...&lt;/span&gt;
-  &lt;span v-else&gt;Submit Form&lt;/span&gt;
-&lt;/button&gt;
-
-&lt;!-- Good: Disabled state for invalid forms --&gt;
-&lt;button 
-  class="px-6 py-3 bg-indigo-600 text-white rounded-lg disabled:opacity-50"
-  :disabled="!isFormValid"
-&gt;
-  Save
-&lt;/button&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-green-900/20 border-green-800' 
-                  : 'bg-green-50 border-green-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Use Appropriate Variants</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Choose the right variant based on the action's importance. Use primary for main actions, secondary for secondary actions, and tertiary for less important actions.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Primary for main action --&gt;
-&lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
-  Create Account
-&lt;/button&gt;
-
-&lt;!-- Good: Secondary for alternative action --&gt;
-&lt;button class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg"&gt;
-  Cancel
-&lt;/button&gt;
-
-&lt;!-- Good: Tertiary for less important actions --&gt;
-&lt;button class="px-6 py-3 text-indigo-600 rounded-lg hover:bg-indigo-50"&gt;
-  Learn More
-&lt;/button&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-green-900/20 border-green-800' 
-                  : 'bg-green-50 border-green-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-green-400' : 'text-green-600'">check_circle</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Group Related Actions</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Group related buttons together and use consistent spacing. Place primary actions on the right in left-to-right languages.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-green-400 text-sm font-mono" v-pre><code>&lt;!-- Good: Grouped actions --&gt;
-&lt;div class="flex gap-3 justify-end"&gt;
-  &lt;button class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg"&gt;
-    Cancel
-  &lt;/button&gt;
-  &lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
-    Save Changes
-  &lt;/button&gt;
-&lt;/div&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Anti-Patterns -->
-          <div class="max-w-7xl mx-auto mb-16">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Anti-Patterns</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Common mistakes to avoid when using the Button component.</p>
-            </div>
-            
-            <div class="space-y-6">
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-red-900/20 border-red-800' 
-                  : 'bg-red-50 border-red-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Avoid Generic Labels</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Generic labels like "Click here" or "Submit" don't provide context about what will happen. Users need clear, action-oriented labels.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: Generic label --&gt;
-&lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
-  Click Here
-&lt;/button&gt;
-
-&lt;!-- Bad: Unclear action --&gt;
-&lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
-  Submit
-&lt;/button&gt;
-
-&lt;!-- Good: Descriptive and clear --&gt;
-&lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
-  Save Profile Changes
-&lt;/button&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-red-900/20 border-red-800' 
-                  : 'bg-red-50 border-red-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Don't Use Buttons for Navigation</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Buttons are for actions, not navigation. Use links or router-links for navigation between pages.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: Button for navigation --&gt;
-&lt;button 
-  class="px-6 py-3 bg-indigo-600 text-white rounded-lg"
-  @click="$router.push('/about')"
-&gt;
-  About Us
-&lt;/button&gt;
-
-&lt;!-- Good: Link for navigation --&gt;
-&lt;router-link 
-  to="/about"
-  class="px-6 py-3 text-indigo-600 rounded-lg hover:bg-indigo-50"
-&gt;
-  About Us
-&lt;/router-link&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-red-900/20 border-red-800' 
-                  : 'bg-red-50 border-red-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Avoid Too Many Primary Actions</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Having multiple primary buttons on the same page creates confusion. There should typically be only one primary action per view.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: Multiple primary actions --&gt;
-&lt;div class="flex gap-3"&gt;
-  &lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
-    Save
-  &lt;/button&gt;
-  &lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
-    Publish
-  &lt;/button&gt;
-  &lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
-    Share
-  &lt;/button&gt;
-&lt;/div&gt;
-
-&lt;!-- Good: One primary, others secondary --&gt;
-&lt;div class="flex gap-3"&gt;
-  &lt;button class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg"&gt;
-    Save Draft
-  &lt;/button&gt;
-  &lt;button class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg"&gt;
-    Preview
-  &lt;/button&gt;
-  &lt;button class="px-6 py-3 bg-indigo-600 text-white rounded-lg"&gt;
-    Publish
-  &lt;/button&gt;
-&lt;/div&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                class="rounded-2xl border p-8"
-                :class="isDarkMode 
-                  ? 'bg-red-900/20 border-red-800' 
-                  : 'bg-red-50 border-red-200'"
-              >
-                <div class="flex items-start gap-4">
-                  <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-red-400' : 'text-red-600'">error</span>
-                  <div class="flex-1">
-                    <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Don't Hide Disabled State Reason</h3>
-                    <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      When a button is disabled, users should understand why. Use tooltips or helper text to explain the disabled state.
-                    </p>
-                    <div class="rounded-lg p-4 overflow-x-auto mb-4" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                      <pre class="text-red-400 text-sm font-mono" v-pre><code>&lt;!-- Bad: No explanation for disabled state --&gt;
-&lt;button 
-  class="px-6 py-3 bg-indigo-600 text-white rounded-lg disabled:opacity-50"
-  :disabled="true"
-&gt;
-  Submit
-&lt;/button&gt;
-
-&lt;!-- Good: Tooltip explains why disabled --&gt;
-&lt;div class="relative group"&gt;
-  &lt;button 
-    class="px-6 py-3 bg-indigo-600 text-white rounded-lg disabled:opacity-50"
-    :disabled="!isFormValid"
-    title="Please fill in all required fields"
-  &gt;
-    Submit
-  &lt;/button&gt;
-&lt;/div&gt;</code></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Related Components -->
-          <div class="max-w-7xl mx-auto">
-            <div class="mb-8">
-              <h2 class="text-3xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Related Components</h2>
-              <p :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Components that work well with Button or serve similar purposes.</p>
-            </div>
-            
-            <div class="grid md:grid-cols-3 gap-6">
-              <router-link 
-                to="/components/forms" 
-                class="rounded-2xl border p-6 transition-all group"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-400' 
-                  : 'bg-white border-gray-200 hover:border-indigo-500'"
-              >
-                <div class="flex items-center gap-3 mb-3">
-                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">description</span>
-                  <h3 
-                    class="text-lg font-semibold transition-colors"
-                    :class="isDarkMode 
-                      ? 'text-white group-hover:text-indigo-400' 
-                      : 'text-gray-900 group-hover:text-indigo-600'"
-                  >
-                    Forms
-                  </h3>
-                </div>
-                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Form components that work seamlessly with buttons for submission and actions.
-                </p>
-              </router-link>
-
-              <router-link 
-                to="/components/cards" 
-                class="rounded-2xl border p-6 transition-all group"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-400' 
-                  : 'bg-white border-gray-200 hover:border-indigo-500'"
-              >
-                <div class="flex items-center gap-3 mb-3">
-                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">view_module</span>
-                  <h3 
-                    class="text-lg font-semibold transition-colors"
-                    :class="isDarkMode 
-                      ? 'text-white group-hover:text-indigo-400' 
-                      : 'text-gray-900 group-hover:text-indigo-600'"
-                  >
-                    Cards
-                  </h3>
-                </div>
-                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Card components often include action buttons for user interactions.
-                </p>
-              </router-link>
-
-              <router-link 
-                to="/components/navigation" 
-                class="rounded-2xl border p-6 transition-all group"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-400' 
-                  : 'bg-white border-gray-200 hover:border-indigo-500'"
-              >
-                <div class="flex items-center gap-3 mb-3">
-                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">navigation</span>
-                  <h3 
-                    class="text-lg font-semibold transition-colors"
-                    :class="isDarkMode 
-                      ? 'text-white group-hover:text-indigo-400' 
-                      : 'text-gray-900 group-hover:text-indigo-600'"
-                  >
-                    Navigation
-                  </h3>
-                </div>
-                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Navigation components that complement button usage patterns.
-                </p>
-              </router-link>
-            </div>
-          </div>
-
-        </div>
+        </UiPanel>
       </div>
-    </div>
-  </div>
+
+      <UiPanel title="Generated code" description="Pick a format; choosing one also copies it.">
+        <template #actions>
+          <UiButton
+            v-for="format in codeFormats"
+            :key="format.value"
+            size="sm"
+            :variant="codeFormat === format.value ? 'primary' : 'secondary'"
+            :aria-pressed="codeFormat === format.value"
+            :label="format.label"
+            @click="format.export"
+          />
+        </template>
+        <UiCodeBlock :code="generatedCode" :label="codeFormatLabel" />
+      </UiPanel>
+    </PageSection>
+
+    <!-- Variants -->
+    <PageSection title="Variants" description="Explore different button styles and use cases." divided>
+      <template #actions>
+        <UiButton
+          :variant="showVariantBuilder ? 'primary' : 'secondary'"
+          :icon="showVariantBuilder ? 'remove' : 'add'"
+          :label="showVariantBuilder ? 'Hide builder' : 'Create variant'"
+          :aria-expanded="showVariantBuilder"
+          @click="showVariantBuilder = !showVariantBuilder"
+        />
+      </template>
+
+      <UiPanel v-if="showVariantBuilder" title="Variant builder" class="mb-6">
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <UiInput v-model="newVariant.name" label="Variant name" placeholder="e.g., success, danger, outline" required />
+            <UiTextarea v-model="newVariant.description" label="Description" :rows="2" placeholder="Describe when to use this variant..." />
+
+            <div class="space-y-4 pt-4 border-t border-line-faint">
+              <h3 class="text-sm font-semibold text-ink-strong">Properties</h3>
+              <div class="grid sm:grid-cols-2 gap-4">
+                <UiInput v-model="newVariant.properties.backgroundColor" label="Background" placeholder="indigo-600 or {color.primary}" />
+                <UiInput v-model="newVariant.properties.textColor" label="Text color" placeholder="white or {color.text}" />
+                <UiSelect v-model="newVariant.properties.borderRadius" label="Border radius" :options="radiusOptions" />
+                <UiSelect v-model="newVariant.properties.padding" label="Padding" :options="paddingOptions" />
+              </div>
+
+              <div class="pt-4 border-t border-line-faint space-y-4">
+                <UiCheckbox v-model="showHoverState" label="Configure hover state" />
+                <div v-if="showHoverState" class="grid sm:grid-cols-2 gap-4">
+                  <UiInput v-model="newVariant.properties.hover.backgroundColor" label="Hover background" placeholder="indigo-700" />
+                  <UiInput v-model="newVariant.properties.hover.textColor" label="Hover text" placeholder="white" />
+                </div>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap gap-3 pt-2">
+              <UiButton
+                variant="primary"
+                icon="save"
+                :loading="savingVariant"
+                :disabled="!newVariant.name"
+                :label="savingVariant ? 'Saving...' : 'Save variant'"
+                @click="saveVariant"
+              />
+              <UiButton label="Reset" @click="resetVariantBuilder" />
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h3 class="text-sm font-semibold text-ink-strong">Live preview</h3>
+            <div class="demo-stage">
+              <UiDesignedButton :styles="getVariantStyles(newVariant.properties)">
+                {{ newVariant.name || 'New Variant' }}
+              </UiDesignedButton>
+            </div>
+            <UiCodeBlock
+              v-if="newVariant.generatedCode"
+              :code="newVariant.generatedCode.html || newVariant.generatedCode.vue"
+              label="Variant markup"
+            />
+          </div>
+        </div>
+      </UiPanel>
+
+      <div class="space-y-6">
+        <UiPanel v-for="example in variantExamples" :key="example.title" :title="example.title" :description="example.description">
+          <div class="demo-stage mb-4">
+            <button v-if="example.preview === 'primary'" type="button" class="demo-button demo-primary demo-md">Primary Button</button>
+            <button v-else-if="example.preview === 'secondary'" type="button" class="demo-button demo-secondary demo-md">Secondary Button</button>
+            <template v-else>
+              <button type="button" class="demo-button demo-primary demo-sm">Small</button>
+              <button type="button" class="demo-button demo-primary demo-md">Medium</button>
+              <button type="button" class="demo-button demo-primary demo-lg">Large</button>
+            </template>
+          </div>
+          <UiCodeBlock :code="example.code" label="HTML" />
+        </UiPanel>
+
+        <UiPanel
+          v-for="variant in customVariants"
+          :key="variant.name"
+          :title="capitalize(variant.name)"
+          :description="variant.description"
+        >
+          <template #actions>
+            <UiChip tone="info">Custom</UiChip>
+            <UiButton size="sm" variant="ghost" icon="delete" icon-only :label="`Delete ${variant.name} variant`" @click="deleteVariant(variant.name)" />
+          </template>
+          <div class="demo-stage" :class="{ 'mb-4': variant.generatedCode }">
+            <UiDesignedButton :styles="getVariantStyles(variant.properties)">
+              {{ capitalize(variant.name) }} Button
+            </UiDesignedButton>
+          </div>
+          <UiCodeBlock
+            v-if="variant.generatedCode"
+            :code="variant.generatedCode.html || variant.generatedCode.vue"
+            label="Variant markup"
+          />
+        </UiPanel>
+      </div>
+    </PageSection>
+
+    <!-- API reference -->
+    <PageSection title="API reference" description="Complete list of props and options available for the Button component." divided>
+      <UiPanel flush>
+        <UiTable caption="Button props">
+          <thead>
+            <tr>
+              <th scope="col">Prop</th>
+              <th scope="col">Type</th>
+              <th scope="col">Default</th>
+              <th scope="col">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="prop in apiProps" :key="prop.name">
+              <th scope="row"><UiCode>{{ prop.name }}</UiCode></th>
+              <td class="whitespace-nowrap"><UiCode>{{ prop.type }}</UiCode></td>
+              <td class="whitespace-nowrap"><UiCode>{{ prop.default }}</UiCode></td>
+              <td>{{ prop.description }}</td>
+            </tr>
+          </tbody>
+        </UiTable>
+      </UiPanel>
+    </PageSection>
+
+    <!-- Usage examples -->
+    <PageSection title="Usage examples" description="Common patterns and use cases for the Button component." divided>
+      <div class="space-y-6">
+        <UiPanel v-for="example in usageExamples" :key="example.title" :title="example.title" :description="example.description">
+          <UiCodeBlock :code="example.code" label="Example" />
+        </UiPanel>
+      </div>
+    </PageSection>
+
+    <!-- Accessibility -->
+    <PageSection title="Accessibility" divided>
+      <UiCallout tone="info" icon="accessibility">
+        <ul class="list-disc pl-5 space-y-2">
+          <li>Buttons should have descriptive text that clearly indicates their action</li>
+          <li>Use <UiCode>aria-label</UiCode> for icon-only buttons</li>
+          <li>Disabled buttons should not be focusable via keyboard navigation</li>
+          <li>Ensure sufficient color contrast (WCAG AA minimum)</li>
+        </ul>
+      </UiCallout>
+    </PageSection>
+
+    <!-- Performance -->
+    <PageSection title="Performance metrics" description="Bundle size, dependencies and browser support." divided>
+      <template v-if="performanceData" #actions>
+        <UiButton size="sm" icon="refresh" label="Refresh" @click="loadPerformanceData" />
+      </template>
+
+      <UiSpinner v-if="performanceLoading" label="Loading performance data..." />
+
+      <div v-else-if="performanceData" class="space-y-6">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <UiStat label="Vue size" icon="code" :value="formatSize(performanceData.vueSize)" />
+          <UiStat label="React size" icon="code" :value="formatSize(performanceData.reactSize)" />
+          <UiStat
+            label="Total size"
+            icon="storage"
+            :value="formatSize(performanceData.totalSize)"
+            :hint="`+ ${formatSize(performanceData.dependenciesSize)} deps`"
+          />
+          <UiStat
+            label="Gzipped"
+            icon="compress"
+            :value="formatSize(performanceData.gzippedSize)"
+            :hint="`${Math.round((performanceData.gzippedSize / performanceData.totalSize) * 100)}% compression`"
+          />
+        </div>
+
+        <UiPanel title="Status" heading-tag="h3">
+          <template #actions>
+            <UiChip :tone="performanceStatusTone(performanceData.status)">
+              {{ performanceData.status === 'pass' ? 'Optimal' : performanceData.status === 'warning' ? 'Warning' : 'Error' }}
+            </UiChip>
+          </template>
+          <p class="text-sm text-ink-secondary">
+            <span v-if="performanceData.dependencies && performanceData.dependencies.length > 0">
+              Dependencies: {{ performanceData.dependencies.join(', ') }}
+            </span>
+            <span v-else>No dependencies</span>
+          </p>
+        </UiPanel>
+
+        <UiPanel title="Supported browsers" heading-tag="h3">
+          <ul class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <li
+              v-for="browser in getSupportedBrowsers()"
+              :key="browser.name"
+              class="flex items-center gap-3 p-3 rounded-tile border border-line-faint bg-surface-sunken"
+            >
+              <div class="w-8 h-8 flex-shrink-0" aria-hidden="true" v-html="getBrowserIcon(browser.name)"></div>
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-ink-strong">{{ browser.name }}</p>
+                <p class="text-xs text-ink-muted">{{ browser.version }}+</p>
+              </div>
+            </li>
+          </ul>
+        </UiPanel>
+      </div>
+
+      <UiEmptyState
+        v-else
+        title="Performance data unavailable"
+        body="Unable to load performance metrics for this component."
+        spot="admin/performance-analysis"
+      />
+    </PageSection>
+
+    <!-- Component dependencies -->
+    <ComponentDependencyGraphCard :component-id="getComponentId()" />
+
+    <!-- Version history -->
+    <PageSection title="Version history" description="Track component versions, view changelogs, and manage breaking changes." divided>
+      <UiPanel v-if="currentVersion.version" :title="`Current version: v${currentVersion.version}`" :description="currentVersion.description" class="mb-6">
+        <template #actions>
+          <UiChip :tone="versionStatusTone(currentVersion.status)">{{ currentVersion.status }}</UiChip>
+        </template>
+        <p class="flex flex-wrap gap-4 text-xs text-ink-muted">
+          <span>Released: {{ formatDate(currentVersion.releasedAt) }}</span>
+          <span v-if="currentVersion.lastUpdated">Last Updated: {{ formatDate(currentVersion.lastUpdated) }}</span>
+        </p>
+      </UiPanel>
+
+      <UiPanel v-if="componentVersions.length > 0" flush>
+        <ol class="divide-y divide-line-faint">
+          <li v-for="version in componentVersions" :key="version.version" class="p-6 space-y-3">
+            <div class="flex flex-wrap items-center gap-3">
+              <h3 class="text-lg font-semibold text-ink-strong">v{{ version.version }}</h3>
+              <UiChip :tone="versionStatusTone(version.status)">{{ version.status }}</UiChip>
+              <UiChip v-if="version.breaking" tone="danger">Breaking Changes</UiChip>
+            </div>
+            <p class="text-sm text-ink">{{ version.description }}</p>
+            <p class="text-xs text-ink-muted">Released: {{ formatDate(version.releasedAt) }}</p>
+
+            <div v-if="version.changelog && version.changelog.length > 0" class="ml-6 border-l-2 border-line-faint pl-4">
+              <h4 class="text-sm font-semibold text-ink-strong mb-2">Changelog</h4>
+              <ul class="space-y-1 text-sm text-ink-secondary">
+                <li v-for="(change, idx) in version.changelog" :key="idx" class="flex items-start gap-2">
+                  <span :class="getChangeTypeColor(change.type)" aria-hidden="true">{{ getChangeTypeIcon(change.type) }}</span>
+                  <span><span class="sr-only">{{ change.type }}: </span>{{ change.description }}</span>
+                </li>
+              </ul>
+            </div>
+
+            <UiCallout v-if="version.migrationGuide" tone="warning" title="Migration guide">
+              {{ version.migrationGuide }}
+            </UiCallout>
+          </li>
+        </ol>
+      </UiPanel>
+
+      <UiEmptyState
+        v-else
+        title="No version history"
+        body="Version history will appear here once versions are added"
+        spot="admin/deprecation-manager"
+      />
+    </PageSection>
+
+    <!-- Component migration -->
+    <PageSection
+      title="Component migration guide"
+      description="Auto-generated migration guide to help you update from one version to another."
+      divided
+      data-migration-section
+    >
+      <UiPanel title="Component migration setup">
+        <div class="space-y-4">
+          <UiSelect
+            v-model="componentMigration.fromVersion"
+            label="From version"
+            :options="fromVersionOptions"
+            placeholder="Select version..."
+          />
+          <UiSelect
+            v-model="componentMigration.toVersion"
+            label="To version"
+            :options="toVersionOptions"
+            placeholder="Select version..."
+            :disabled="!componentMigration.fromVersion"
+          />
+          <UiCheckbox v-model="componentMigration.dryRun" label="Dry run (preview only)" />
+          <UiCheckbox v-model="componentMigration.generateCodemod" label="Generate codemod" />
+          <UiButton variant="primary" label="Analyze migration" :disabled="!canAnalyzeComponent" @click="analyzeComponentMigration" />
+        </div>
+
+        <div v-if="componentMigrationPlan" class="mt-6 pt-6 border-t border-line-faint">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h3 class="text-base font-semibold text-ink-strong">Migration plan</h3>
+            <UiButton
+              v-if="componentMigration.generateCodemod && componentCodemodScript"
+              size="sm"
+              icon="download"
+              label="Download codemod"
+              @click="downloadComponentCodemod"
+            />
+          </div>
+          <ol class="space-y-3">
+            <li
+              v-for="(step, index) in componentMigrationPlan.steps"
+              :key="index"
+              class="migration-step"
+              :class="step.type === 'breaking' ? 'migration-step-breaking' : 'migration-step-standard'"
+            >
+              <span class="migration-step-number" aria-hidden="true">{{ index + 1 }}</span>
+              <div class="flex-1 min-w-0 space-y-2">
+                <p class="text-sm font-medium text-ink-strong">
+                  <span class="sr-only">Step {{ index + 1 }}{{ step.type === 'breaking' ? ' (breaking)' : '' }}: </span>{{ step.title }}
+                </p>
+                <p class="text-xs text-ink-secondary">{{ step.description }}</p>
+                <UiCodeBlock v-if="step.code" :code="step.code" label="Code" />
+              </div>
+            </li>
+          </ol>
+        </div>
+      </UiPanel>
+    </PageSection>
+
+    <!-- Best practices -->
+    <PageSection title="Best practices" description="Recommended patterns and guidelines for using the Button component effectively." divided>
+      <div class="space-y-6">
+        <UiPanel v-for="practice in bestPractices" :key="practice.title" :title="practice.title" :description="practice.description">
+          <template #actions><UiChip tone="success" icon="check_circle">Do</UiChip></template>
+          <UiCodeBlock :code="practice.code" label="Example" />
+        </UiPanel>
+      </div>
+    </PageSection>
+
+    <!-- Anti-patterns -->
+    <PageSection title="Anti-patterns" description="Common mistakes to avoid when using the Button component." divided>
+      <div class="space-y-6">
+        <UiPanel v-for="pattern in antiPatterns" :key="pattern.title" :title="pattern.title" :description="pattern.description">
+          <template #actions><UiChip tone="danger" icon="error">Avoid</UiChip></template>
+          <UiCodeBlock :code="pattern.code" label="Example" />
+        </UiPanel>
+      </div>
+    </PageSection>
+
+    <!-- Related components -->
+    <PageSection title="Related components" description="Components that work well with Button or serve similar purposes." divided>
+      <div class="grid md:grid-cols-3 gap-4">
+        <UiCard v-for="related in relatedComponents" :key="related.to" :to="related.to" :title="related.title" :spot="related.spot" compact>
+          {{ related.body }}
+        </UiCard>
+      </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
+import { ref, computed, reactive, onMounted, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
 import ComponentPreview from '../components/ComponentPreview.vue';
 import ComponentDependencyGraphCard from '../components/ComponentDependencyGraphCard.vue';
 import BreakingChangeAlert from '../components/BreakingChangeAlert.vue';
-import Dropdown from '../components/Dropdown.vue';
+import {
+  PageHero,
+  PageSection,
+  PageShell,
+  UiButton,
+  UiCallout,
+  UiCard,
+  UiCheckbox,
+  UiChip,
+  UiCode,
+  UiCodeBlock,
+  UiEmptyState,
+  UiInput,
+  UiPanel,
+  UiSelect,
+  UiSpinner,
+  UiStat,
+  UiTable,
+  UiTextarea,
+} from '../components/ui';
+import UiDesignedButton from '../components/ui/UiDesignedButton.vue';
+import { antiPatterns, bestPractices, usageExamples, variantExamples } from '../data/componentButtonExamples.js';
 import apiClient from '../services/api.js';
 import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
 
 const route = useRoute();
 const { getComponent } = useComponentPatternStatus();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+
+const variantOptions = [
+  { value: 'primary', label: 'Primary' },
+  { value: 'secondary', label: 'Secondary' },
+  { value: 'tertiary', label: 'Tertiary' },
+  { value: 'danger', label: 'Danger' },
+];
+const sizeOptions = [
+  { value: 'sm', label: 'Small' },
+  { value: 'md', label: 'Medium' },
+  { value: 'lg', label: 'Large' },
+];
+const radiusOptions = [
+  { value: '', label: 'None' },
+  { value: 'sm', label: 'Small' },
+  { value: 'md', label: 'Medium' },
+  { value: 'lg', label: 'Large' },
+  { value: 'xl', label: 'Extra Large' },
+  { value: 'full', label: 'Full' },
+];
+const paddingOptions = [
+  { value: '', label: 'Default' },
+  { value: 'sm', label: 'Small' },
+  { value: 'md', label: 'Medium' },
+  { value: 'lg', label: 'Large' },
+];
+
+const apiProps = [
+  { name: 'variant', type: "'primary' | 'secondary' | 'tertiary'", default: "'primary'", description: 'The visual style variant of the button.' },
+  { name: 'size', type: "'sm' | 'md' | 'lg'", default: "'md'", description: 'The size of the button.' },
+  { name: 'disabled', type: 'boolean', default: 'false', description: 'Whether the button is disabled.' },
+  { name: 'loading', type: 'boolean', default: 'false', description: 'Shows a loading spinner when true.' },
+];
+
+const relatedComponents = [
+  { title: 'Forms', to: '/components/forms', spot: 'foundations/components', body: 'Form components that work seamlessly with buttons for submission and actions.' },
+  { title: 'Cards', to: '/components/cards', spot: 'foundations/component-composition', body: 'Card components often include action buttons for user interactions.' },
+  { title: 'Navigation', to: '/components/navigation', spot: 'foundations/pattern-navigation', body: 'Navigation components that complement button usage patterns.' },
+];
+
+const capitalize = (name) => name.charAt(0).toUpperCase() + name.slice(1);
+
 const sharedPlaygroundUrl = ref('');
 const shareUrlCopied = ref(false);
 const previewDarkMode = ref(false);
@@ -1859,10 +586,10 @@ const formatSize = (bytes) => {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 };
 
-const getPerformanceStatusClass = (status) => {
-  if (status === 'error') return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
-  if (status === 'warning') return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
-  return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+const performanceStatusTone = (status) => {
+  if (status === 'error') return 'danger';
+  if (status === 'warning') return 'warning';
+  return 'success';
 };
 
 const getSupportedBrowsers = () => {
@@ -1968,15 +695,6 @@ const generatedCode = computed(() => {
     return `<button${htmlProps}>${label}</button>`;
   }
 });
-
-const copyCode = async () => {
-  try {
-    await navigator.clipboard.writeText(generatedCode.value);
-    // Could add a toast notification here
-  } catch (err) {
-    console.error('Failed to copy:', err);
-  }
-};
 
 const generateCodeForFormat = (format) => {
   const props = Object.entries(propValues)
@@ -2086,6 +804,14 @@ const exportAsHTML = async () => {
   await navigator.clipboard.writeText(htmlCode);
 };
 
+const codeFormats = [
+  { value: 'vue', label: 'Vue', export: exportAsVue },
+  { value: 'react', label: 'React', export: exportAsReact },
+  { value: 'react-native', label: 'React Native', export: exportAsReactNative },
+  { value: 'html', label: 'HTML', export: exportAsHTML },
+];
+const codeFormatLabel = computed(() => codeFormats.find((f) => f.value === codeFormat.value)?.label ?? 'Code');
+
 const toggleFullscreen = () => {
   // Could implement fullscreen preview
 };
@@ -2157,26 +883,12 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 
-const getStatusBadgeClass = (status) => {
-  const classes = {
-    'Current': isDarkMode.value ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700',
-    'Stable': isDarkMode.value ? 'bg-blue-900/30 text-blue-300' : 'bg-blue-100 text-blue-700',
-    'Deprecated': isDarkMode.value ? 'bg-red-900/30 text-red-300' : 'bg-red-100 text-red-700',
-    'Beta': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300' : 'bg-yellow-100 text-yellow-700',
-  };
-  return classes[status] || (isDarkMode.value ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700');
-};
+const versionStatusTone = (status) =>
+  ({ Current: 'success', Stable: 'info', Deprecated: 'danger', Beta: 'warning' })[status] || 'neutral';
 
-const getComponentStatusBadgeClass = (status) => {
-  const classes = {
-    'Production Ready': isDarkMode.value ? 'bg-green-900/30 text-green-300 border-green-400/30' : 'bg-green-100 text-green-700 border-green-300',
-    'In Progress': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300 border-yellow-400/30' : 'bg-yellow-100 text-yellow-700 border-yellow-300',
-    'Planned': isDarkMode.value ? 'bg-blue-900/30 text-blue-300 border-blue-400/30' : 'bg-blue-100 text-blue-700 border-blue-300',
-    'Deprecated': isDarkMode.value ? 'bg-red-900/30 text-red-300 border-red-400/30' : 'bg-red-100 text-red-700 border-red-300',
-    'Beta': isDarkMode.value ? 'bg-yellow-900/30 text-yellow-300 border-yellow-400/30' : 'bg-yellow-100 text-yellow-700 border-yellow-300',
-  };
-  return classes[status] || (isDarkMode.value ? 'bg-gray-700 text-gray-300 border-gray-600' : 'bg-gray-100 text-gray-700 border-gray-300');
-};
+const componentStatusTone = (status) =>
+  ({ 'Production Ready': 'success', 'In Progress': 'warning', Planned: 'info', Deprecated: 'danger', Beta: 'warning' })[status] ||
+  'neutral';
 
 const getChangeTypeIcon = (type) => {
   const icons = {
@@ -2193,15 +905,15 @@ const getChangeTypeIcon = (type) => {
 
 const getChangeTypeColor = (type) => {
   const colors = {
-    'added': 'text-green-600 dark:text-green-400',
-    'changed': 'text-blue-600 dark:text-blue-400',
-    'deprecated': 'text-yellow-600 dark:text-yellow-400',
-    'removed': 'text-red-600 dark:text-red-400',
-    'fixed': 'text-purple-600 dark:text-purple-400',
-    'improved': 'text-indigo-600 dark:text-indigo-400',
-    'breaking': 'text-red-600 dark:text-red-400 font-bold',
+    'added': 'text-success',
+    'changed': 'text-info',
+    'deprecated': 'text-warning',
+    'removed': 'text-danger',
+    'fixed': 'text-accent-text',
+    'improved': 'text-accent-text',
+    'breaking': 'text-danger font-bold',
   };
-  return colors[type] || 'text-gray-600 dark:text-gray-400';
+  return colors[type] || 'text-ink-muted';
 };
 
 // Component Migration Setup
@@ -2714,9 +1426,6 @@ watch(() => newVariant.properties, () => {
   }
 }, { deep: true });
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
 onMounted(() => {
   // Load playground state from URL
   const params = new URLSearchParams(window.location.search);
@@ -2733,42 +1442,56 @@ onMounted(() => {
     }
   }
 
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-  
   // Load performance data
   loadPerformanceData();
   
   // Load custom variants
   loadVariants();
 });
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.preview-stage {
+  @apply min-h-96 p-8 rounded-tile flex items-center justify-center;
+}
+.demo-stage {
+  @apply p-6 rounded-tile bg-surface-sunken flex flex-wrap items-center gap-4;
+}
+.demo-button {
+  @apply rounded-control font-medium transition-colors focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.demo-primary {
+  @apply bg-accent text-ink-on-accent hover:bg-accent-hover;
+}
+.demo-secondary {
+  @apply border-2 border-solid border-accent bg-surface-raised text-accent-text hover:bg-accent-subtle;
+}
+.demo-sm {
+  @apply px-3 py-1.5 text-sm;
+}
+.demo-md {
+  @apply px-6 py-3;
+}
+.demo-lg {
+  @apply px-8 py-4 text-lg;
+}
+.migration-step {
+  @apply flex items-start gap-3 p-4 rounded-tile border border-solid;
+}
+.migration-step-standard {
+  @apply bg-surface-sunken border-line-faint;
+}
+.migration-step-breaking {
+  @apply bg-danger-bg border-danger-border;
+}
+.migration-step-number {
+  @apply flex-shrink-0 w-8 h-8 rounded-pill flex items-center justify-center font-bold text-sm;
+}
+.migration-step-standard .migration-step-number {
+  @apply bg-accent text-ink-on-accent;
+}
+.migration-step-breaking .migration-step-number {
+  @apply bg-danger-solid text-ink-on-accent;
 }
 </style>
 

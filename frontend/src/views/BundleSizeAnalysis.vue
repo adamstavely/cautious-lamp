@@ -1,241 +1,104 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
+  <PageShell width="wide">
+    <PageHero
+      :back="{ to: '/admin/performance', label: 'Performance analysis' }"
+      title="Bundle size analysis"
+      lead="Measure the actual file size of each component (Vue and React versions) including dependencies. Identify which components are largest and find opportunities to reduce bundle size."
+      spot="admin/performance-analysis"
+      size="tool"
     >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Bundle Size Analysis
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Measure the actual file size of each component (Vue and React versions) including dependencies. Identify which components are largest and find opportunities to reduce bundle size.
-                </p>
-              </div>
-              <button
-                @click="loadAnalysis"
-                class="px-6 py-3 bg-white text-slate-800 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center gap-2"
-              >
-                <span class="material-symbols-outlined">refresh</span>
-                Refresh Analysis
-              </button>
-            </div>
-          </div>
-        </div>
+      <template #actions>
+        <UiButton variant="primary" icon="refresh" :loading="loading" @click="loadAnalysis">Refresh analysis</UiButton>
+      </template>
+    </PageHero>
 
-        <!-- Summary Cards -->
-        <div v-if="analysis" class="max-w-7xl mx-auto mb-8">
-          <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Total Components
-              </div>
-              <div class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                {{ analysis.summary.totalComponents }}
-              </div>
-            </div>
-            
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Total Size
-              </div>
-              <div class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                {{ formatSize(analysis.summary.totalSize) }}
-              </div>
-            </div>
-            
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Average Size
-              </div>
-              <div class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                {{ formatSize(analysis.summary.averageSize) }}
-              </div>
-            </div>
-            
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Largest Component
-              </div>
-              <div class="text-lg font-semibold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                {{ analysis.summary.largestComponent?.componentName }}
-              </div>
-              <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                {{ formatSize(analysis.summary.largestComponent?.totalSize) }}
-              </div>
-            </div>
-          </div>
-        </div>
+    <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
 
-        <!-- Components Table -->
-        <div v-if="analysis" class="max-w-7xl mx-auto">
-          <div 
-            class="rounded-lg shadow-sm border overflow-hidden"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h2 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Component Analysis
-              </h2>
-            </div>
-            
-            <div class="overflow-x-auto">
-              <table class="w-full">
-                <thead>
-                  <tr class="border-b" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Component
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Vue Size
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      React Size
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Total Size
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Gzipped
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Status
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y" :class="isDarkMode ? 'divide-gray-700' : 'divide-gray-200'">
-                  <tr 
-                    v-for="component in analysis.components"
-                    :key="component.componentId"
-                    class="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-                  >
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ component.componentName }}
-                      </div>
-                      <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                        {{ component.componentId }}
-                      </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      {{ formatSize(component.vueSize) }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      {{ formatSize(component.reactSize) }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ formatSize(component.totalSize) }}
-                      </div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                        + {{ formatSize(component.dependenciesSize) }} deps
-                      </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      {{ formatSize(component.gzippedSize) }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <span 
-                        class="px-2 py-1 text-xs rounded-full font-medium"
-                        :class="getStatusClass(component.status)"
-                      >
-                        {{ component.status }}
-                      </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <button
-                        @click="analyzeComponent(component.componentId)"
-                        class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm font-medium"
-                      >
-                        Analyze
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+    <UiSpinner v-if="loading" label="Analyzing bundle sizes…" />
 
-        <!-- Loading State -->
-        <div v-if="loading" class="max-w-7xl mx-auto">
-          <div 
-            class="rounded-lg shadow-sm border p-12 text-center"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="flex justify-center mb-4">
-              <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-            <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-              Analyzing bundle sizes...
-            </p>
-          </div>
+    <template v-if="analysis">
+      <PageSection title="Summary">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <UiStat label="Total components" :value="analysis.summary.totalComponents" />
+          <UiStat label="Total size" :value="formatSize(analysis.summary.totalSize)" />
+          <UiStat label="Average size" :value="formatSize(analysis.summary.averageSize)" />
+          <UiStat
+            label="Largest component"
+            :value="analysis.summary.largestComponent?.componentName"
+            :hint="formatSize(analysis.summary.largestComponent?.totalSize)"
+          />
         </div>
-        </div>
-      </div>
-    </div>
-  </div>
+      </PageSection>
+
+      <PageSection title="Component analysis" divided>
+        <UiPanel flush>
+          <UiTable caption="Bundle size per component">
+            <thead>
+              <tr>
+                <th scope="col">Component</th>
+                <th scope="col">Vue size</th>
+                <th scope="col">React size</th>
+                <th scope="col">Total size</th>
+                <th scope="col">Gzipped</th>
+                <th scope="col">Status</th>
+                <th scope="col"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="component in analysis.components" :key="component.componentId">
+                <td class="whitespace-nowrap">
+                  <div class="font-medium text-ink-strong">{{ component.componentName }}</div>
+                  <div class="text-sm text-ink-muted">{{ component.componentId }}</div>
+                </td>
+                <td class="whitespace-nowrap">{{ formatSize(component.vueSize) }}</td>
+                <td class="whitespace-nowrap">{{ formatSize(component.reactSize) }}</td>
+                <td class="whitespace-nowrap">
+                  <div class="font-semibold text-ink-strong">{{ formatSize(component.totalSize) }}</div>
+                  <div class="text-xs text-ink-muted">+ {{ formatSize(component.dependenciesSize) }} deps</div>
+                </td>
+                <td class="whitespace-nowrap">{{ formatSize(component.gzippedSize) }}</td>
+                <td class="whitespace-nowrap">
+                  <UiChip :tone="statusTone(component.status)">{{ component.status }}</UiChip>
+                </td>
+                <td class="whitespace-nowrap">
+                  <UiButton variant="ghost" size="sm" @click="analyzeComponent(component.componentId)">Analyze</UiButton>
+                </td>
+              </tr>
+            </tbody>
+          </UiTable>
+        </UiPanel>
+      </PageSection>
+    </template>
+
+    <UiDialog v-model:open="detailsOpen" :title="details ? details.componentName : 'Component'">
+      <dl v-if="details" class="grid grid-cols-aside-content gap-x-6 gap-y-2 text-sm">
+        <dt class="text-ink-muted">Total size</dt>
+        <dd class="text-ink">{{ formatSize(details.totalSize) }}</dd>
+        <dt class="text-ink-muted">With dependencies</dt>
+        <dd class="text-ink">{{ formatSize(details.totalWithDeps) }}</dd>
+        <dt class="text-ink-muted">Gzipped</dt>
+        <dd class="text-ink">{{ formatSize(details.gzippedSize) }}</dd>
+        <dt class="text-ink-muted">Dependencies</dt>
+        <dd class="text-ink">{{ details.dependencies?.join(', ') || 'None' }}</dd>
+      </dl>
+    </UiDialog>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDrawer } from '../composables/useDrawer.js';
+import { ref, onMounted } from 'vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { PageHero, PageSection, PageShell, UiButton, UiChip, UiDialog, UiPanel, UiSpinner, UiStat, UiTable } from '../components/ui';
+import { useNotice } from '../composables/useNotice.js';
 import apiClient from '../services/api.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const analysis = ref(null);
 const loading = ref(false);
+const details = ref(null);
+const detailsOpen = ref(false);
+const { notice, showNotice, clearNotice } = useNotice();
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-
-
-
-
 
 const formatSize = (bytes) => {
   if (!bytes) return '0 B';
@@ -244,10 +107,10 @@ const formatSize = (bytes) => {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 };
 
-const getStatusClass = (status) => {
-  if (status === 'error') return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
-  if (status === 'warning') return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
-  return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+const statusTone = (status) => {
+  if (status === 'error') return 'danger';
+  if (status === 'warning') return 'warning';
+  return 'success';
 };
 
 const loadAnalysis = async () => {
@@ -257,7 +120,7 @@ const loadAnalysis = async () => {
     analysis.value = response.data;
   } catch (error) {
     console.error('Error loading analysis:', error);
-    alert('Error loading bundle analysis. Please try again.');
+    showNotice('Error loading bundle analysis. Please try again.', 'error');
   } finally {
     loading.value = false;
   }
@@ -265,33 +128,17 @@ const loadAnalysis = async () => {
 
 const analyzeComponent = async (componentId) => {
   try {
-    const response = await apiClient.post(
-      `${API_BASE_URL}/performance/bundle-analysis/analyze`,
-      { componentId, includeDependencies: true }
-    );
-    
-    const details = response.data;
-    alert(
-      `Component: ${details.componentName}\n` +
-      `Total Size: ${formatSize(details.totalSize)}\n` +
-      `With Dependencies: ${formatSize(details.totalWithDeps)}\n` +
-      `Gzipped: ${formatSize(details.gzippedSize)}\n` +
-      `Dependencies: ${details.dependencies.join(', ') || 'None'}`
-    );
+    const response = await apiClient.post(`${API_BASE_URL}/performance/bundle-analysis/analyze`, {
+      componentId,
+      includeDependencies: true,
+    });
+    details.value = response.data;
+    detailsOpen.value = true;
   } catch (error) {
     console.error('Error analyzing component:', error);
-    alert('Error analyzing component. Please try again.');
+    showNotice('Error analyzing component. Please try again.', 'error');
   }
 };
 
-onMounted(() => {
-  loadAnalysis();
-  
-  // Watch for dark mode changes
-  const observer = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-});
+onMounted(loadAnalysis);
 </script>
-
