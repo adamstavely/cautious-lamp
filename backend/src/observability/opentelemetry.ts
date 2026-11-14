@@ -54,11 +54,13 @@ export async function initializeOpenTelemetry() {
   const sdk = new NodeSDK({
     resource,
     traceExporter,
-    metricReader: new PeriodicExportingMetricReader({
-      exporter: metricExporter,
-      exportIntervalMillis: 10000, // Export every 10 seconds
-    }),
-    logRecordProcessor: new BatchLogRecordProcessor(logExporter),
+    metricReaders: [
+      new PeriodicExportingMetricReader({
+        exporter: metricExporter,
+        exportIntervalMillis: 10000, // Export every 10 seconds
+      }),
+    ],
+    logRecordProcessors: [new BatchLogRecordProcessor(logExporter)],
     instrumentations: [
       getNodeAutoInstrumentations({
         // Disable fs instrumentation to reduce noise
