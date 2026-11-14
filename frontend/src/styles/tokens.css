@@ -24,8 +24,12 @@
   color-scheme: inherit;
 }
 
-:root {
-  /* Accent: the illustrations' ink */
+/* Accent: the illustrations' ink. Trench Coat elements given look="clean" (Eero's
+   widget) re-declare the clean look's cobalt on themselves, so the override
+   follows the look attribute as well as :root. */
+:root,
+[data-tc-look='clean'],
+[data-look='clean'] {
   --tc-accent: light-dark(#2f5ea8, #9dbcf0);
   --tc-accent-hover: light-dark(#264d8b, #b8cff5);
   --tc-accent-text: light-dark(#2f5ea8, #9dbcf0);
@@ -37,7 +41,9 @@
   --tc-status-info-fg: var(--tc-accent-text);
   --tc-status-info-bg: var(--tc-accent-subtle);
   --tc-status-info-solid: var(--tc-accent);
+}
 
+:root {
   /* App tokens Trench Coat doesn't have */
   /* Text on an accent fill (primary buttons, step numbers) */
   --app-text-on-accent: light-dark(#ffffff, #0b1220);
