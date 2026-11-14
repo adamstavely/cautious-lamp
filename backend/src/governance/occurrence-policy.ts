@@ -39,3 +39,14 @@ export function leaseUntil(policy: OccurrencePolicy, now: Date): Date {
 
 /** Dead letters kept per schedule (newest first) */
 export const MAX_DEAD_LETTERS = 10;
+
+/** What a scheduler pass is run at: a fixed time (tests), or a clock */
+export type ClockInput = Date | (() => Date);
+
+/**
+ * The clock a pass reads at each claim and each completion, so a lease or
+ * retry time is measured from when that job is claimed or finishes, not from
+ * when a long pass started. A fixed Date reads as itself; the default is the real time.
+ */
+export const clockOf = (at?: ClockInput): (() => Date) =>
+  at instanceof Date ? () => at : (at ?? (() => new Date()));

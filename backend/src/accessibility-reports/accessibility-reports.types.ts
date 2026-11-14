@@ -155,6 +155,9 @@ export interface PendingRun {
   lastError?: string;
 }
 
+/** A schedule as clients see it: the scheduler's claim token and lease expiry are left out */
+export type PublicReportSchedule = Omit<ReportSchedule, 'pending'> & { pending?: Omit<PendingRun, 'token' | 'leaseUntil'> };
+
 export interface DeadLetter {
   occurrence: string;
   attempts: number;

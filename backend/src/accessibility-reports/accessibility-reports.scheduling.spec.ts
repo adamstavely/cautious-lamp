@@ -89,8 +89,34 @@ describe('Scheduled accessibility reports: leases, retries and dead letters', ()
     const schedule = await instance().createSchedule({ applicationId: 'app-1', frequency: 'daily', time: '09:00' }, { type: 'service', id: 'admin', name: 'admin', email: null, roles: [], permissions: new Set(), mustChangePassword: false }, t0);
     expect(schedule.nextRun).toBe(occurrence);
     const stored = () => schedules.docs.get(schedule.id)!.doc;
-    return { reports, schedules, apps, control, instance, schedule, stored };
+    return { reports, schedules, slas, apps, control, instance, schedule, stored };
   }
+
+  it('measures each lease from its own claim, not from the start of a long pass', async () => {
+    const { reports, schedules, slas, apps, instance, schedule } = await setup();
+    const other = await instance().createSchedule({ applicationId: 'app-1', frequency: 'daily', time: '09:00' }, { type: 'service', id: 'admin', name: 'admin', email: null, roles: [], permissions: new Set(), mustChangePassword: false }, t0);
+    // The first scan takes 11 minutes, longer than the 10-minute lease; the second hangs
+    let now = due;
+    let scans = 0;
+    let releaseSecond!: () => void;
+    const scanner: A11yScanner = {
+      scanHtml: runAxeOnHtml,
+      async scanUrl(url: string) {
+        if (++scans === 1) now = minutes(now, 11);
+        else await new Promise<void>((resolve) => (releaseSecond = resolve));
+        return { ...(await runAxeOnHtml(CLEAN)), engine: 'playwright', url };
+      },
+    };
+    const pass = new AccessibilityReportsService(reports, schedules, slas, apps, scanner, allScope).runDueSchedules(() => now);
+    const claimed = () => [schedule.id, other.id].map((id) => schedules.docs.get(id)!.doc).find((s) => s.pending?.state === 'claimed' && scans === 2);
+    for (let i = 0; i < 200 && !claimed(); i++) await new Promise((resolve) => setTimeout(resolve, 5));
+
+    expect(claimed()?.pending?.leaseUntil).toBe(minutes(due, 21).toISOString());
+    // Another instance a minute later leaves the second schedule alone: its lease is live
+    expect(await instance().runDueSchedules(minutes(due, 12))).toBe(0);
+    releaseSecond();
+    expect(await pass).toBe(2);
+  }, 30000);
 
   it('takes over a claim after its lease expires, and the late run adds no second report', async () => {
     const { reports, control, instance, schedule, stored } = await setup();

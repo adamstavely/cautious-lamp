@@ -31,6 +31,30 @@ function setup(apps = new FakeApplications([
 }
 
 describe('GovernanceScanScheduler', () => {
+  it('measures each lease from its own claim, not from the start of a long pass', async () => {
+    const { meta, scan, scheduler } = setup();
+    const start = at('2026-11-13T09:00:00Z');
+    let now = start;
+    let releaseSecond!: () => void;
+    // The first scan takes 11 minutes, longer than the 10-minute lease; the second hangs
+    scan
+      .mockImplementationOnce(async (request) => {
+        now = minutes(now, 11);
+        return { id: `scan-${request.applicationId}` };
+      })
+      .mockImplementationOnce((request) => new Promise((resolve) => (releaseSecond = () => resolve({ id: `scan-${request.applicationId}` }))));
+    const pass = scheduler().runDueScans(() => now);
+    for (let i = 0; i < 20 && meta.docs.get('scheduled-scan:weekly')?.doc.state !== 'claimed'; i++) await new Promise((resolve) => setImmediate(resolve));
+
+    expect(meta.docs.get('scheduled-scan:daily')?.doc).toMatchObject({ state: 'completed', updatedAt: minutes(start, 11).toISOString() });
+    expect(meta.docs.get('scheduled-scan:weekly')?.doc).toMatchObject({ state: 'claimed', leaseUntil: minutes(start, 21).toISOString() });
+    // Another instance a minute later leaves the second job alone: its lease is live
+    expect(await scheduler().runDueScans(minutes(start, 12))).toBe(0);
+    releaseSecond();
+    expect(await pass).toBe(2);
+    expect(scan).toHaveBeenCalledTimes(2);
+  });
+
   it('works out the UTC day and the week starting Monday', () => {
     expect(periodStart('daily', at('2026-11-13T17:45:00Z')).toISOString()).toBe('2026-11-13T00:00:00.000Z');
     // 13 Nov 2026 is a Friday; 15 Nov a Sunday
@@ -96,6 +120,49 @@ describe('GovernanceScanScheduler', () => {
     expect(meta.docs.get('scheduled-scan:daily')?.doc.lastError).toBeUndefined();
     expect(await scheduler().runDueScans(minutes(t0, 60))).toBe(0);
     expect(scan).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([
+    ['daily', '2026-11-13T23:59:00Z', 'daily:2026-11-13T00:00:00.000Z', 'daily:2026-11-14T00:00:00.000Z'],
+    // 15 Nov 2026 is a Sunday; the next week starts Monday the 16th
+    ['weekly', '2026-11-15T23:59:00Z', 'weekly:2026-11-09T00:00:00.000Z', 'weekly:2026-11-16T00:00:00.000Z'],
+  ] as const)('records a %s retry left over when the period changes as superseded, and runs the new period', async (frequency, failedAt, oldPeriod, newPeriod) => {
+    const { scheduler, scan, meta } = setup(new FakeApplications([
+      { id: 'app', name: 'App', applicationUrl: 'https://app.example/', governanceEnabled: true, scanSchedule: frequency },
+    ]));
+    const t0 = at(failedAt);
+    scan.mockRejectedValueOnce(new Error('Fetching app.example returned HTTP 503'));
+    expect(await scheduler().runDueScans(t0)).toBe(1);
+    expect(meta.docs.get('scheduled-scan:app')?.doc).toMatchObject({ state: 'retry', value: oldPeriod, retryAt: minutes(t0, 5).toISOString() });
+
+    // Its retry falls in the next period: that period's scan runs instead, and the old occurrence is dead-lettered, not lost
+    expect(await scheduler().runDueScans(minutes(t0, 5))).toBe(1);
+    const marker = meta.docs.get('scheduled-scan:app')!.doc;
+    expect(marker).toMatchObject({ state: 'completed', value: newPeriod, attempts: 1, lastStatus: 'success' });
+    expect(marker.deadLetters).toEqual([
+      { period: oldPeriod, attempts: 1, error: expect.stringMatching(/^Superseded by the next period's scan before its retry .*HTTP 503/), at: minutes(t0, 5).toISOString() },
+    ]);
+    expect(scan).toHaveBeenCalledTimes(2);
+  });
+
+  it("lets the previous period's run finish while its lease holds, then starts the new period", async () => {
+    const { scheduler, scan, meta } = setup(new FakeApplications([
+      { id: 'app', name: 'App', applicationUrl: 'https://app.example/', governanceEnabled: true, scanSchedule: 'daily' },
+    ]));
+    const t0 = at('2026-11-13T23:58:00Z');
+    let release!: () => void;
+    scan.mockImplementationOnce((request) => new Promise((resolve) => (release = () => resolve({ id: `scan-${request.applicationId}` }))));
+    const first = scheduler().runDueScans(t0);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    // Just after midnight the old run still holds its lease: nothing starts
+    expect(await scheduler().runDueScans(minutes(t0, 3))).toBe(0);
+    release();
+    expect(await first).toBe(1);
+    expect(meta.docs.get('scheduled-scan:app')?.doc).toMatchObject({ state: 'completed', value: 'daily:2026-11-13T00:00:00.000Z' });
+    expect(await scheduler().runDueScans(minutes(t0, 4))).toBe(1);
+    expect(meta.docs.get('scheduled-scan:app')?.doc).toMatchObject({ state: 'completed', value: 'daily:2026-11-14T00:00:00.000Z' });
+    expect(meta.docs.get('scheduled-scan:app')?.doc.deadLetters).toBeUndefined();
   });
 
   it('dead-letters an occurrence after the last attempt, and runs the next period as usual', async () => {

@@ -13,7 +13,7 @@ import { randomUUID } from 'crypto';
 import { AuthPrincipal } from '../auth/principal';
 import { assertPublicHttpUrl } from '../common/security/url-safety';
 import { READ_SCOPE, ReadScopeResolver, canReadApplicationEvidence } from '../governance/evidence-access';
-import { MAX_DEAD_LETTERS, OccurrencePolicy, leaseUntil, occurrencePolicy, retryAt } from '../governance/occurrence-policy';
+import { ClockInput, MAX_DEAD_LETTERS, OccurrencePolicy, clockOf, leaseUntil, occurrencePolicy, retryAt } from '../governance/occurrence-policy';
 import { APPLICATION_DIRECTORY, ApplicationDirectory, GovernanceApplication } from '../governance/sources';
 import { DocVersion, DocumentStore, DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
 import {
@@ -22,6 +22,7 @@ import {
   ComplianceSLA,
   MultiApplicationComplianceSummary,
   PendingRun,
+  PublicReportSchedule,
   ReportSchedule,
 } from './accessibility-reports.types';
 import { AxeOutcome, runAxeOnHtml, runAxeOnUrl } from './axe-engine';
@@ -256,15 +257,23 @@ export class AccessibilityReportsService implements OnModuleInit {
 
   // ------------------------------------------------------------ schedules
 
-  async getSchedules(applicationId?: string): Promise<ReportSchedule[]> {
-    const all = await this.schedules.list();
-    return all.filter((s) => !applicationId || s.applicationId === applicationId).sort((a, b) => a.nextRun.localeCompare(b.nextRun));
+  /**
+   * Schedules of the applications the principal may read (by the
+   * application's current workspace, as for reports), without the claim's
+   * lease token and expiry. A schedule the principal may not read is a 404.
+   */
+  async getSchedules(principal: AuthPrincipal, applicationId?: string): Promise<PublicReportSchedule[]> {
+    const [all, canRead] = await Promise.all([this.schedules.list(), this.applicationReader(principal)]);
+    return all
+      .filter((s) => (!applicationId || s.applicationId === applicationId) && canRead(s.applicationId))
+      .sort((a, b) => a.nextRun.localeCompare(b.nextRun))
+      .map(publicSchedule);
   }
 
-  async getSchedule(id: string): Promise<ReportSchedule> {
+  async getSchedule(principal: AuthPrincipal, id: string): Promise<PublicReportSchedule> {
     const found = await this.schedules.get(id);
-    if (!found) throw new NotFoundException(`Schedule ${id} not found`);
-    return found.doc;
+    if (!found || !(await this.applicationReader(principal))(found.doc.applicationId)) throw new NotFoundException(`Schedule ${id} not found`);
+    return publicSchedule(found.doc);
   }
 
   async createSchedule(
@@ -357,11 +366,12 @@ export class AccessibilityReportsService implements OnModuleInit {
    * has a fixed id per occurrence, so a takeover after it was stored
    * completes the occurrence without a second report.
    */
-  async runDueSchedules(now = new Date()): Promise<number> {
+  async runDueSchedules(at?: ClockInput): Promise<number> {
+    const clock = clockOf(at);
     let ran = 0;
     for (const schedule of await this.schedules.list()) {
-      if (!schedule.enabled || !this.attemptDue(schedule, now)) continue;
-      const claim = await this.claimAttempt(schedule.id, now);
+      if (!schedule.enabled || !this.attemptDue(schedule, clock())) continue;
+      const claim = await this.claimAttempt(schedule.id, clock());
       if (!claim) continue;
       ran++;
       const { occurrence } = claim.pending;
@@ -374,11 +384,11 @@ export class AccessibilityReportsService implements OnModuleInit {
           occurrence,
           id: scheduledReportId(current.id, occurrence),
         });
-        await this.finishAttempt(claim, { reportId: report.id }, now);
+        await this.finishAttempt(claim, { reportId: report.id }, clock());
       } catch (error) {
         const message = (error as Error).message.slice(0, 500);
         this.logger.warn(`Scheduled report ${claim.scheduleId} failed (attempt ${claim.pending.attempts} of ${this.policy.maxAttempts}): ${message}`);
-        await this.finishAttempt(claim, { error: message }, now).catch(() => undefined);
+        await this.finishAttempt(claim, { error: message }, clock()).catch(() => undefined);
       }
     }
     return ran;
@@ -473,15 +483,23 @@ export class AccessibilityReportsService implements OnModuleInit {
 
   // ------------------------------------------------------------------ SLAs
 
-  async getSLAs(applicationId?: string): Promise<ComplianceSLA[]> {
-    const all = await this.slas.list();
-    return all.filter((sla) => !applicationId || sla.applicationId === applicationId);
+  /** SLAs of the applications the principal may read; one it may not read is a 404 */
+  async getSLAs(principal: AuthPrincipal, applicationId?: string): Promise<ComplianceSLA[]> {
+    const [all, canRead] = await Promise.all([this.slas.list(), this.applicationReader(principal)]);
+    return all.filter((sla) => (!applicationId || sla.applicationId === applicationId) && canRead(sla.applicationId));
   }
 
-  async getSLA(id: string): Promise<ComplianceSLA> {
+  async getSLA(principal: AuthPrincipal, id: string): Promise<ComplianceSLA> {
     const found = await this.slas.get(id);
-    if (!found) throw new NotFoundException(`SLA ${id} not found`);
+    if (!found || !(await this.applicationReader(principal))(found.doc.applicationId)) throw new NotFoundException(`SLA ${id} not found`);
     return found.doc;
+  }
+
+  /** Whether the principal may read an application's evidence, by the application's current workspace */
+  private async applicationReader(principal: AuthPrincipal): Promise<(applicationId: string) => boolean> {
+    const [scope, applications] = await Promise.all([this.readScope.scopeFor(principal), this.applications.list()]);
+    const workspaceOf = new Map(applications.map((app) => [app.id, app.workspaceId ?? null]));
+    return (applicationId) => canReadApplicationEvidence(principal, scope, { workspaceId: workspaceOf.get(applicationId) ?? null });
   }
 
   /** One SLA per application: the id is derived from the application, so a second create is a 409 */
@@ -577,4 +595,15 @@ export class AccessibilityReportsService implements OnModuleInit {
     for (const report of reports) if (!latest.has(report.applicationId)) latest.set(report.applicationId, report);
     this.cache = { applications, latest, slas };
   }
+}
+
+/**
+ * A schedule as clients see it: the pending occurrence's state, attempts and
+ * retry time, without the claim token or lease expiry, which only the
+ * scheduler uses.
+ */
+export function publicSchedule(schedule: ReportSchedule): PublicReportSchedule {
+  if (!schedule.pending) return schedule;
+  const { token: _token, leaseUntil: _leaseUntil, ...pending } = schedule.pending;
+  return { ...schedule, pending };
 }

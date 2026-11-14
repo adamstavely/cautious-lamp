@@ -115,4 +115,31 @@ describe('AdmissionPool', () => {
     await Promise.all(runs);
     expect(order).toEqual([0, 1, 2, 3]);
   });
+  it('a ticket cancelled after it is handed a slot, before its run resumes, gives the slot back once', async () => {
+    const pool = new AdmissionPool({ maxRunning: 1, maxQueued: 2, maxPerCaller: 10 });
+    const g = gate();
+    const first = pool.admit('a');
+    const second = pool.admit('b');
+    const firstRun = first.run(() => g.opened);
+    let secondStarted = false;
+    const secondRun = second.run(async () => {
+      secondStarted = true;
+    });
+    await tick();
+
+    // Cancel the second ticket in the same turn the first one's slot passes to it
+    const finish = pool.finish.bind(pool);
+    jest.spyOn(pool, 'finish').mockImplementation((ticket, ran) => {
+      finish(ticket, ran);
+      if (ticket === first) second.cancel();
+    });
+    g.finish();
+    await firstRun;
+    await expect(secondRun).rejects.toBeInstanceOf(AdmissionCancelledError);
+    expect(secondStarted).toBe(false);
+    expect(pool.stats()).toEqual({ running: 0, queued: 0, admitted: 0 });
+
+    // The slot is free: the next job starts at once
+    await expect(pool.admit('c').run(async () => 'ran')).resolves.toBe('ran');
+  });
 });

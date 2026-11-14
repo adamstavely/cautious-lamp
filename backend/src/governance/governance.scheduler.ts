@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { ServicePrincipal } from '../auth/principal';
 import { DocumentStore, DuplicateDocumentError, StoredDoc, VersionConflictError } from '../reviews/document-store';
 import { META_STORE, MetaDoc } from './governance-stores';
-import { MAX_DEAD_LETTERS, OccurrencePolicy, leaseUntil, occurrencePolicy, retryAt } from './occurrence-policy';
+import { ClockInput, MAX_DEAD_LETTERS, OccurrencePolicy, clockOf, leaseUntil, occurrencePolicy, retryAt } from './occurrence-policy';
 import { ScansService } from './scans.service';
 import { APPLICATION_DIRECTORY, ApplicationDirectory, GovernanceApplication } from './sources';
 
@@ -57,6 +57,9 @@ const isScheduled = (app: GovernanceApplication): app is GovernanceApplication &
  * attempt is retried with backoff up to the attempt limit, then
  * dead-lettered. The stored scan has a fixed id per occurrence, so a
  * takeover after the scan was stored completes it without scanning again.
+ * An occurrence still waiting for a retry (or whose run died) when the next
+ * period starts is superseded by that period's scan and dead-lettered, so
+ * it isn't lost without a trace; one still running is left to finish first.
  * Disable with GOVERNANCE_SCHEDULER_ENABLED=false; it never starts under NODE_ENV=test.
  */
 @Injectable()
@@ -85,11 +88,11 @@ export class GovernanceScanScheduler implements OnModuleInit, OnModuleDestroy {
   }
 
   /** One pass; skipped if the previous pass is still running */
-  async tick(now = new Date()): Promise<void> {
+  async tick(at?: ClockInput): Promise<void> {
     if (this.running) return;
     this.running = true;
     try {
-      const ran = await this.runDueScans(now);
+      const ran = await this.runDueScans(at);
       if (ran) this.logger.log(`Ran ${ran} scheduled governance scan(s)`);
     } catch (error) {
       this.logger.warn(`Scheduled governance scans skipped: ${(error as Error).message}`);
@@ -99,10 +102,12 @@ export class GovernanceScanScheduler implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Runs every attempt that is due; returns how many this instance ran */
-  async runDueScans(now = new Date()): Promise<number> {
+  async runDueScans(at?: ClockInput): Promise<number> {
+    const clock = clockOf(at);
     let ran = 0;
     for (const app of await this.applications.list()) {
       if (!isScheduled(app)) continue;
+      const now = clock();
       const start = periodStart(app.scanSchedule, now);
       const claim = await this.claim(app, `${app.scanSchedule}:${start.toISOString()}`, start, now);
       if (!claim) continue;
@@ -111,11 +116,11 @@ export class GovernanceScanScheduler implements OnModuleInit, OnModuleDestroy {
         const scan = await this.scans.scan({ scope: 'application', applicationId: app.id, url: app.applicationUrl }, SCHEDULER, {
           id: scheduledScanId(app.id, app.scanSchedule, start),
         });
-        await this.finish(claim, { scanId: scan.id }, now);
+        await this.finish(claim, { scanId: scan.id }, clock());
       } catch (error) {
         const message = (error as Error).message.slice(0, 500);
         this.logger.warn(`Scheduled governance scan of ${app.id} failed (attempt ${claim.attempts} of ${this.policy.maxAttempts}): ${message}`);
-        await this.finish(claim, { error: message }, now).catch(() => undefined);
+        await this.finish(claim, { error: message }, clock()).catch(() => undefined);
       }
     }
     return ran;
@@ -136,7 +141,20 @@ export class GovernanceScanScheduler implements OnModuleInit, OnModuleDestroy {
    */
   private async claim(app: GovernanceApplication, period: string, start: Date, now: Date): Promise<Claim | null> {
     const id = claimId(app.id);
-    const found = await this.meta.get(id);
+    let found = await this.meta.get(id);
+    if (found && found.doc.value !== period) {
+      // The previous period's occurrence is still outstanding: let a live run
+      // finish; otherwise this period's scan supersedes it, recorded as a dead letter
+      const previous = normalize(found.doc, this.policy);
+      if (previous.state === 'claimed' && new Date(previous.leaseUntil!) > now) return null;
+      if (previous.state === 'claimed' || previous.state === 'retry') {
+        const reason = previous.state === 'retry'
+          ? `Superseded by the next period's scan before its retry (last error: ${previous.lastError ?? 'unknown'})`
+          : `Superseded by the next period's scan after its run was interrupted (its lease expired)`;
+        if (!(await this.deadLetter(found, previous, reason, now))) return null;
+        found = await this.meta.get(id);
+      }
+    }
     const current = found?.doc.value === period ? normalize(found.doc, this.policy) : null;
     let attempts = 1;
     if (current) {
