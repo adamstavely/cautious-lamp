@@ -1,5 +1,5 @@
 import { ref, computed, watch, reactive } from 'vue';
-import OpenFeature from '../services/featureFlagsService';
+import OpenFeature, { evaluateFlag } from '../services/featureFlagsService';
 import { authState, authHeaders, getToken, isMockAuth } from '../services/auth.js';
 
 // Cache for feature flag states - load from localStorage on initialization
@@ -42,65 +42,12 @@ const preloadAllFlags = async () => {
       const flags = await response.json();
       // Populate flagCache with all flags
       flags.forEach(flag => {
-        // Check if flag is enabled and respects targeting
-        if (!flag.enabled) {
-          flagCache[flag.key] = false;
-          return;
-        }
-        
-        // Check targeting rules
-        let enabled = flag.enabled;
-        if (flag.targeting) {
-          const userId = context.userId;
-          const userGroups = context.userGroups || [];
-          
-          // User targeting
-          if (flag.targeting.users && userId) {
-            enabled = flag.targeting.users.includes(userId);
-            if (enabled) {
-              flagCache[flag.key] = true;
-              return;
-            }
-          }
-          
-          // Group targeting
-          if (flag.targeting.groups && userGroups.length > 0) {
-            enabled = flag.targeting.groups.some(group => userGroups.includes(group));
-            if (enabled) {
-              flagCache[flag.key] = true;
-              return;
-            }
-          }
-          
-          // Percentage rollout
-          if (flag.targeting.percentage !== undefined) {
-            if (userId) {
-              const hash = hashString(userId);
-              const percentage = (hash % 100) + 1;
-              enabled = percentage <= flag.targeting.percentage;
-            } else {
-              enabled = Math.random() * 100 <= flag.targeting.percentage;
-            }
-          }
-        }
-        
-        flagCache[flag.key] = enabled;
+        flagCache[flag.key] = evaluateFlag(flag, context);
       });
     }
   } catch (error) {
     console.warn('Failed to preload feature flags:', error);
   }
-};
-
-// Hash function for percentage rollout
-const hashString = (str) => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  return Math.abs(hash);
 };
 
 // Preload flags once someone is signed in (and again for each new sign-in)
@@ -121,6 +68,13 @@ watch(flagCache, (newCache) => {
     console.warn('Failed to persist feature flags cache to localStorage:', error);
   }
 }, { deep: true });
+
+// Flags read while signed out fell back to their defaults, and targeting
+// depends on who is signed in, so re-read every active flag when the user changes
+watch(
+  () => authState.user?.id ?? null,
+  () => activeFlagRefreshers.forEach((refresh) => refresh()),
+);
 
 // Single global listener for flag updates
 if (typeof window !== 'undefined') {

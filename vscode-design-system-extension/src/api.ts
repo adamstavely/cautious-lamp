@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import * as vscode from 'vscode';
+import { TtlCache } from './ttlCache';
 
 export interface Component {
   id: string;
@@ -32,10 +33,10 @@ export class DesignSystemAPI {
   private apiUrl: string;
   private apiKey: string;
   private outputChannel: vscode.OutputChannel;
-  private componentsCache: Component[] | null = null;
-  private tokensCache: Token[] | null = null;
-  private cacheTimestamp: number = 0;
   private cacheTimeout: number = 5 * 60 * 1000; // 5 minutes
+  // Separate freshness per data set: loading tokens must not make stale components look fresh
+  private componentsCache = new TtlCache<Component[]>(this.cacheTimeout);
+  private tokensCache = new TtlCache<Token[]>(this.cacheTimeout);
   private requestTimeout: number = 10000; // 10 seconds
 
   constructor(apiUrl: string, apiKey: string, outputChannel: vscode.OutputChannel) {
@@ -52,9 +53,8 @@ export class DesignSystemAPI {
   }
 
   private clearCache() {
-    this.componentsCache = null;
-    this.tokensCache = null;
-    this.cacheTimestamp = 0;
+    this.componentsCache.clear();
+    this.tokensCache.clear();
   }
 
   async refreshCache() {
@@ -123,8 +123,9 @@ export class DesignSystemAPI {
   }
 
   async getComponents(): Promise<Component[]> {
-    if (this.componentsCache && Date.now() - this.cacheTimestamp < this.cacheTimeout) {
-      return this.componentsCache;
+    const fresh = this.componentsCache.getFresh();
+    if (fresh) {
+      return fresh;
     }
 
     try {
@@ -133,27 +134,28 @@ export class DesignSystemAPI {
       
       if (!Array.isArray(components)) {
         this.outputChannel.appendLine('Warning: API returned invalid components format');
-        return this.componentsCache || [];
+        return this.componentsCache.getStale() || [];
       }
 
-      this.componentsCache = components;
-      this.cacheTimestamp = Date.now();
+      this.componentsCache.set(components);
       this.outputChannel.appendLine(`Loaded ${components.length} components`);
-      return this.componentsCache;
+      return components;
     } catch (error: any) {
       this.outputChannel.appendLine(`Error fetching components: ${error.message}`);
       // Return cached data if available, otherwise empty array
-      if (this.componentsCache) {
+      const stale = this.componentsCache.getStale();
+      if (stale) {
         this.outputChannel.appendLine('Using cached components');
-        return this.componentsCache;
+        return stale;
       }
       return [];
     }
   }
 
   async getTokens(): Promise<Token[]> {
-    if (this.tokensCache && Date.now() - this.cacheTimestamp < this.cacheTimeout) {
-      return this.tokensCache;
+    const fresh = this.tokensCache.getFresh();
+    if (fresh) {
+      return fresh;
     }
 
     try {
@@ -162,19 +164,19 @@ export class DesignSystemAPI {
       
       if (!Array.isArray(tokens)) {
         this.outputChannel.appendLine('Warning: API returned invalid tokens format');
-        return this.tokensCache || [];
+        return this.tokensCache.getStale() || [];
       }
 
-      this.tokensCache = tokens;
-      this.cacheTimestamp = Date.now();
+      this.tokensCache.set(tokens);
       this.outputChannel.appendLine(`Loaded ${tokens.length} tokens`);
-      return this.tokensCache;
+      return tokens;
     } catch (error: any) {
       this.outputChannel.appendLine(`Error fetching tokens: ${error.message}`);
       // Return cached data if available, otherwise empty array
-      if (this.tokensCache) {
+      const stale = this.tokensCache.getStale();
+      if (stale) {
         this.outputChannel.appendLine('Using cached tokens');
-        return this.tokensCache;
+        return stale;
       }
       return [];
     }

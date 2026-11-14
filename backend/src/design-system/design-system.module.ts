@@ -5,16 +5,19 @@ import { ComponentRequestService } from './component-request.service';
 import { NotificationService } from './notification.service';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { SecurityModule } from '../common/security/security.module';
+import { WorkspaceCoreModule } from '../workspaces/workspace-core.module';
+import { ComponentAccessService } from './component-access.service';
 
 @Module({
-  imports: [forwardRef(() => AnalyticsModule), SecurityModule],
+  imports: [forwardRef(() => AnalyticsModule), SecurityModule, WorkspaceCoreModule],
   controllers: [DesignSystemController],
   providers: [
     DesignSystemService,
     ComponentRequestService,
     NotificationService,
+    ComponentAccessService,
   ],
-  exports: [DesignSystemService, ComponentRequestService, NotificationService],
+  exports: [DesignSystemService, ComponentRequestService, NotificationService, ComponentAccessService],
 })
 export class DesignSystemModule {
   constructor(

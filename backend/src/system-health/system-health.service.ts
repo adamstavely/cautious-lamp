@@ -1,18 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { DesignSystemService } from '../design-system/design-system.service';
 import { AccessibilityReportsService } from '../accessibility-reports/accessibility-reports.service';
+import { AnalyticsService } from '../analytics/analytics.service';
+import { DesignSystemService } from '../design-system/design-system.service';
 
+/**
+ * Each factor is 0-100, or null when there is no data to measure it from
+ * ("not collected"). Nothing is estimated or made up.
+ */
 export interface HealthScoreFactors {
-  componentCoverage: number; // 0-100: % of components in production
-  adoptionRate: number; // 0-100: % of components being used across applications
-  compliance: number; // 0-100: Average compliance score across applications
-  maintenance: number; // 0-100: Based on deprecated components, technical debt
-  accessibility: number; // 0-100: Average accessibility score
+  componentCoverage: number | null; // % of components in production
+  adoptionRate: number | null; // % of components used by at least one scanned application
+  compliance: number | null; // Average compliance score of applications with an accessibility report
+  maintenance: number | null; // From deprecated and in-progress components
+  accessibility: number | null; // Same reports as compliance (the only accessibility data there is)
 }
 
+export type HealthFactor = keyof HealthScoreFactors;
+
 export interface HealthScore {
-  score: number; // 0-100 overall score
+  /** Weighted over the measured factors only; null when none could be measured */
+  score: number | null;
   factors: HealthScoreFactors;
+  /** Factors that had no data and were left out of the score */
+  notCollected: HealthFactor[];
   timestamp: Date;
   trend?: {
     previousScore: number;
@@ -21,11 +31,25 @@ export interface HealthScore {
   };
 }
 
+/** A score this server measured (kept in memory since it started; nothing older exists) */
 export interface HealthScoreTrend {
   date: string;
   score: number;
   factors: HealthScoreFactors;
 }
+
+const WEIGHTS: Record<HealthFactor, number> = {
+  componentCoverage: 0.25,
+  adoptionRate: 0.25,
+  compliance: 0.2,
+  maintenance: 0.15,
+  accessibility: 0.15,
+};
+
+/** At most one history point per this interval: the latest measurement replaces the previous one */
+const HISTORY_INTERVAL_MS = 60 * 60 * 1000;
+
+const round1 = (n: number | null) => (n === null ? null : Math.round(n * 10) / 10);
 
 export interface HealthRecommendation {
   id: string;
@@ -39,207 +63,158 @@ export interface HealthRecommendation {
 
 @Injectable()
 export class SystemHealthService {
+  /** Measured scores only, recorded when a score is calculated. Starts empty. */
   private healthScoreHistory: HealthScoreTrend[] = [];
-  private readonly MAX_HISTORY_DAYS = 90; // Keep 90 days of history
+  private readonly MAX_HISTORY_DAYS = 90;
 
   constructor(
     private readonly designSystemService: DesignSystemService,
     private readonly accessibilityReportsService: AccessibilityReportsService,
-  ) {
-    // Initialize with some mock historical data for demonstration
-    this.initializeMockHistory();
-  }
+    private readonly analyticsService: AnalyticsService,
+  ) {}
 
-  /**
-   * Calculate comprehensive health score
-   */
+  /** Calculates the health score from current data and records it in the history */
   calculateHealthScore(): HealthScore {
     const factors = this.calculateFactors();
     const score = this.calculateOverallScore(factors);
-    
-    // Get previous score for trend
-    const previousScore = this.getPreviousScore();
-    const change = score - previousScore;
-    const direction = change > 2 ? 'up' : change < -2 ? 'down' : 'stable';
+    const previousScore = this.latestRecordedScore();
+    const notCollected = (Object.keys(factors) as HealthFactor[]).filter((key) => factors[key] === null);
 
     const healthScore: HealthScore = {
-      score: Math.round(score * 10) / 10, // Round to 1 decimal
+      score: round1(score),
       factors,
+      notCollected,
       timestamp: new Date(),
-      trend: previousScore !== null ? {
+    };
+    if (score !== null && previousScore !== null) {
+      const change = score - previousScore;
+      healthScore.trend = {
         previousScore,
         change: Math.round(change * 10) / 10,
-        direction,
-      } : undefined,
-    };
-
-    // Store in history
+        direction: change > 2 ? 'up' : change < -2 ? 'down' : 'stable',
+      };
+    }
     this.addToHistory(healthScore);
-
     return healthScore;
   }
 
-  /**
-   * Calculate individual health score factors
-   */
   private calculateFactors(): HealthScoreFactors {
-    // Component Coverage: % of components in production
     const components = this.designSystemService.getAllComponents();
-    const totalComponents = components.length;
-    const productionComponents = components.filter(c => c.status === 'production').length;
-    const componentCoverage = totalComponents > 0 
-      ? (productionComponents / totalComponents) * 100 
-      : 0;
-
-    // Adoption Rate: Estimate based on component usage (mock for now, would need real usage data)
-    // In a real system, this would track actual component usage across applications
-    const adoptionRate = this.calculateAdoptionRate(components);
-
-    // Compliance: Average compliance score from accessibility reports
-    const compliance = this.calculateComplianceScore();
-
-    // Maintenance: Based on deprecated components and technical debt indicators
-    const maintenance = this.calculateMaintenanceScore(components);
-
-    // Accessibility: Average accessibility score
-    const accessibility = this.calculateAccessibilityScore();
-
+    const total = components.length;
+    const production = components.filter((c) => c.status === 'production').length;
+    const compliance = this.complianceAverage();
     return {
-      componentCoverage: Math.round(componentCoverage * 10) / 10,
-      adoptionRate: Math.round(adoptionRate * 10) / 10,
-      compliance: Math.round(compliance * 10) / 10,
-      maintenance: Math.round(maintenance * 10) / 10,
-      accessibility: Math.round(accessibility * 10) / 10,
+      componentCoverage: total > 0 ? round1((production / total) * 100) : null,
+      adoptionRate: round1(this.calculateAdoptionRate(components)),
+      compliance: round1(compliance),
+      maintenance: round1(this.calculateMaintenanceScore(components)),
+      accessibility: round1(compliance),
     };
   }
 
-  /**
-   * Calculate adoption rate (mock implementation - would need real usage tracking)
-   */
-  private calculateAdoptionRate(components: any[]): number {
-    // Mock: Assume 70-90% adoption for production components, 30-50% for in-progress
-    const productionComponents = components.filter(c => c.status === 'production');
-    const inProgressComponents = components.filter(c => c.status === 'in-progress');
-    
-    if (components.length === 0) return 0;
-
-    const productionAdoption = productionComponents.length * 0.8; // 80% average
-    const inProgressAdoption = inProgressComponents.length * 0.4; // 40% average
-    
-    return ((productionAdoption + inProgressAdoption) / components.length) * 100;
+  /** Components with recorded usage in at least one application, from governance scans. Null before any scan. */
+  private calculateAdoptionRate(components: any[]): number | null {
+    if (components.length === 0) return null;
+    const used = components.filter((c) => this.analyticsService.getComponentUsage(c.id).length > 0).length;
+    const anyUsageRecorded = used > 0 || this.analyticsService.getUsageTrends(this.MAX_HISTORY_DAYS).length > 0;
+    return anyUsageRecorded ? (used / components.length) * 100 : null;
   }
 
-  /**
-   * Calculate compliance score from accessibility reports
-   */
-  private calculateComplianceScore(): number {
+  /** Average score of applications with an accessibility report; null when there are none */
+  private complianceAverage(): number | null {
     try {
       const summary = this.accessibilityReportsService.getMultiApplicationComplianceSummary();
-      if (summary.applications.length === 0) return 100; // No apps = perfect (no issues)
-      return summary.averageScore;
-    } catch (error) {
-      // If no reports exist, return a default score
-      return 85; // Default compliance score
+      return summary.reportedApplications > 0 ? summary.averageScore : null;
+    } catch {
+      return null;
     }
   }
 
-  /**
-   * Calculate maintenance score
-   */
-  private calculateMaintenanceScore(components: any[]): number {
-    if (components.length === 0) return 100;
-
-    const deprecated = components.filter(c => c.status === 'deprecated').length;
-    const inProgress = components.filter(c => c.status === 'in-progress').length;
-    
-    // Penalize deprecated components heavily, in-progress moderately
-    const deprecatedPenalty = (deprecated / components.length) * 50; // Up to 50 point penalty
-    const inProgressPenalty = (inProgress / components.length) * 10; // Up to 10 point penalty
-    
-    return Math.max(0, 100 - deprecatedPenalty - inProgressPenalty);
+  private calculateMaintenanceScore(components: any[]): number | null {
+    if (components.length === 0) return null;
+    const deprecated = components.filter((c) => c.status === 'deprecated').length;
+    const inProgress = components.filter((c) => c.status === 'in-progress').length;
+    // Deprecated components cost up to 50 points, in-progress ones up to 10
+    return Math.max(0, 100 - (deprecated / components.length) * 50 - (inProgress / components.length) * 10);
   }
 
-  /**
-   * Calculate accessibility score
-   */
-  private calculateAccessibilityScore(): number {
-    try {
-      const summary = this.accessibilityReportsService.getMultiApplicationComplianceSummary();
-      if (summary.applications.length === 0) return 100;
-      return summary.averageScore;
-    } catch (error) {
-      return 95; // Default accessibility score
+  /** Weighted average over the measured factors (weights rescaled to the ones present) */
+  private calculateOverallScore(factors: HealthScoreFactors): number | null {
+    let weighted = 0;
+    let weights = 0;
+    for (const key of Object.keys(WEIGHTS) as HealthFactor[]) {
+      const value = factors[key];
+      if (value === null) continue;
+      weighted += value * WEIGHTS[key];
+      weights += WEIGHTS[key];
     }
+    if (weights === 0) return null;
+    return Math.max(0, Math.min(100, weighted / weights));
   }
 
-  /**
-   * Calculate overall health score from factors
-   */
-  private calculateOverallScore(factors: HealthScoreFactors): number {
-    // Weighted average:
-    // Component Coverage: 25%
-    // Adoption Rate: 25%
-    // Compliance: 20%
-    // Maintenance: 15%
-    // Accessibility: 15%
-    
-    const weightedScore = 
-      (factors.componentCoverage * 0.25) +
-      (factors.adoptionRate * 0.25) +
-      (factors.compliance * 0.20) +
-      (factors.maintenance * 0.15) +
-      (factors.accessibility * 0.15);
-
-    return Math.max(0, Math.min(100, weightedScore));
+  /** The last recorded score from before the current hour's slot */
+  private latestRecordedScore(): number | null {
+    const last = this.healthScoreHistory[this.healthScoreHistory.length - 1];
+    if (!last) return null;
+    if (Date.now() - new Date(last.date).getTime() < HISTORY_INTERVAL_MS) {
+      return this.healthScoreHistory[this.healthScoreHistory.length - 2]?.score ?? null;
+    }
+    return last.score;
   }
 
-  /**
-   * Get previous health score for trend calculation
-   */
-  private getPreviousScore(): number | null {
-    if (this.healthScoreHistory.length < 2) return null;
-    return this.healthScoreHistory[this.healthScoreHistory.length - 2].score;
-  }
-
-  /**
-   * Add health score to history
-   */
   private addToHistory(healthScore: HealthScore): void {
-    const trend: HealthScoreTrend = {
+    if (healthScore.score === null) return;
+    const entry: HealthScoreTrend = {
       date: healthScore.timestamp.toISOString(),
       score: healthScore.score,
       factors: healthScore.factors,
     };
-
-    this.healthScoreHistory.push(trend);
-
-    // Keep only last 90 days
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - this.MAX_HISTORY_DAYS);
-    
-    this.healthScoreHistory = this.healthScoreHistory.filter(
-      entry => new Date(entry.date) >= cutoffDate
-    );
+    const last = this.healthScoreHistory[this.healthScoreHistory.length - 1];
+    if (last && healthScore.timestamp.getTime() - new Date(last.date).getTime() < HISTORY_INTERVAL_MS) {
+      this.healthScoreHistory[this.healthScoreHistory.length - 1] = entry;
+    } else {
+      this.healthScoreHistory.push(entry);
+    }
+    const cutoff = Date.now() - this.MAX_HISTORY_DAYS * 24 * 60 * 60 * 1000;
+    this.healthScoreHistory = this.healthScoreHistory.filter((e) => new Date(e.date).getTime() >= cutoff);
   }
 
-  /**
-   * Get health score trends
-   */
+  /** Current component and token counts, for the dashboard's overview cards */
+  getInventory() {
+    const components = this.designSystemService.getAllComponents();
+    const tokens = this.designSystemService.getAllTokens();
+    const byCategory = new Map<string, number>();
+    for (const token of tokens) byCategory.set(token.category, (byCategory.get(token.category) ?? 0) + 1);
+    const status = (s: string) => components.filter((c) => c.status === s).length;
+    return {
+      components: {
+        total: components.length,
+        production: status('production'),
+        inProgress: status('in-progress'),
+        planned: status('planned'),
+        deprecated: status('deprecated'),
+      },
+      tokens: {
+        total: tokens.length,
+        categories: [...byCategory.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+      },
+    };
+  }
+
+  /** Measured scores from the last `days` days (empty until scores have been calculated) */
   getHealthScoreTrends(days: number = 30): HealthScoreTrend[] {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    
-    return this.healthScoreHistory.filter(
-      entry => new Date(entry.date) >= cutoffDate
-    );
+    const span = Number.isFinite(days) && days > 0 ? Math.min(days, this.MAX_HISTORY_DAYS) : 30;
+    const cutoff = Date.now() - span * 24 * 60 * 60 * 1000;
+    return this.healthScoreHistory.filter((entry) => new Date(entry.date).getTime() >= cutoff);
   }
 
   /**
    * Check if health score has dropped significantly
    */
-  checkHealthScoreAlerts(currentScore: number): Array<{ severity: 'high' | 'medium' | 'low'; message: string }> {
+  checkHealthScoreAlerts(currentScore: number | null): Array<{ severity: 'high' | 'medium' | 'low'; message: string }> {
     const alerts: Array<{ severity: 'high' | 'medium' | 'low'; message: string }> = [];
-    
+    if (currentScore === null) return alerts;
+
     if (currentScore < 50) {
       alerts.push({
         severity: 'high',
@@ -253,8 +228,8 @@ export class SystemHealthService {
     }
 
     // Check for significant drop
-    if (this.healthScoreHistory.length >= 2) {
-      const previousScore = this.healthScoreHistory[this.healthScoreHistory.length - 2].score;
+    const previousScore = this.latestRecordedScore();
+    if (previousScore !== null) {
       const drop = previousScore - currentScore;
       
       if (drop > 10) {
@@ -278,7 +253,15 @@ export class SystemHealthService {
    */
   generateRecommendations(healthScore: HealthScore): HealthRecommendation[] {
     const recommendations: HealthRecommendation[] = [];
-    const factors = healthScore.factors;
+    // Unmeasured factors read as 100 here, so they never produce a recommendation
+    const f = healthScore.factors;
+    const factors = {
+      componentCoverage: f.componentCoverage ?? 100,
+      adoptionRate: f.adoptionRate ?? 100,
+      compliance: f.compliance ?? 100,
+      maintenance: f.maintenance ?? 100,
+      accessibility: f.accessibility ?? 100,
+    };
 
     // Component Coverage recommendations
     if (factors.componentCoverage < 80) {
@@ -353,34 +336,6 @@ export class SystemHealthService {
   }
 
   /**
-   * Initialize mock history for demonstration
-   */
-  private initializeMockHistory(): void {
-    const today = new Date();
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      
-      // Generate mock scores with slight variation
-      const baseScore = 82;
-      const variation = Math.sin(i / 5) * 3 + (Math.random() - 0.5) * 2;
-      const score = Math.max(70, Math.min(95, baseScore + variation));
-
-      this.healthScoreHistory.push({
-        date: date.toISOString(),
-        score: Math.round(score * 10) / 10,
-        factors: {
-          componentCoverage: score + (Math.random() - 0.5) * 5,
-          adoptionRate: score - 5 + (Math.random() - 0.5) * 5,
-          compliance: score + 3 + (Math.random() - 0.5) * 3,
-          maintenance: score - 2 + (Math.random() - 0.5) * 4,
-          accessibility: score + 5 + (Math.random() - 0.5) * 3,
-        },
-      });
-    }
-  }
-
-  /**
    * Generate comprehensive audit report
    */
   generateAuditReport(): any {
@@ -393,8 +348,8 @@ export class SystemHealthService {
     // Calculate detailed metrics
     const componentMetrics = this.calculateComponentMetrics(components);
     const tokenMetrics = this.calculateTokenMetrics();
-    const complianceMetrics = this.calculateComplianceMetrics();
-    const adoptionMetrics = this.calculateAdoptionMetrics(components);
+    const complianceMetrics = this.calculateComplianceMetrics(healthScore.factors.compliance);
+    const adoptionMetrics = this.calculateAdoptionMetrics(components, healthScore.factors.adoptionRate);
 
     return {
       reportId: `audit-${Date.now()}`,
@@ -421,6 +376,8 @@ export class SystemHealthService {
         current: healthScore,
         historical: trends,
         period: '90 days',
+        // History is what this server measured since it started; it is empty until then
+        collectedSince: trends[0]?.date ?? null,
       },
       alerts: alerts,
       recommendations: recommendations,
@@ -455,28 +412,18 @@ export class SystemHealthService {
     };
   }
 
-  /**
-   * Calculate token metrics
-   */
+  /** Token counts from the design system. Usage per token is not tracked, so it is null. */
   private calculateTokenMetrics(): any {
-    // Mock implementation - would integrate with actual token service
+    const tokens = this.designSystemService.getAllTokens();
     return {
-      total: 156,
-      categories: 8,
-      usage: {
-        high: 45,
-        medium: 67,
-        low: 32,
-        unused: 12,
-      },
+      total: tokens.length,
+      categories: new Set(tokens.map((t) => t.category)).size,
+      usage: null,
     };
   }
 
-  /**
-   * Calculate compliance metrics
-   */
-  private calculateComplianceMetrics(): any {
-    const compliance = this.calculateComplianceScore();
+  private calculateComplianceMetrics(compliance: number | null): any {
+    if (compliance === null) return { score: null, level: 'not-collected', wcagCompliance: null };
     return {
       score: compliance,
       level: compliance >= 95 ? 'excellent' : compliance >= 85 ? 'good' : compliance >= 70 ? 'fair' : 'needs-improvement',
@@ -484,22 +431,17 @@ export class SystemHealthService {
     };
   }
 
-  /**
-   * Calculate adoption metrics
-   */
-  private calculateAdoptionMetrics(components: any[]): any {
-    const adoptionRate = this.calculateAdoptionRate(components);
+  private calculateAdoptionMetrics(components: any[], overallRate: number | null): any {
     return {
-      overallRate: adoptionRate,
-      byComponent: this.getComponentAdoptionRates(components),
-      trend: 'stable', // Would calculate from historical data
+      overallRate,
+      byComponent: overallRate === null ? [] : this.getComponentAdoptionRates(components),
+      // Usage history isn't kept per component, so there is no trend to report
+      trend: null,
     };
   }
 
-  /**
-   * Get health grade from score
-   */
-  private getHealthGrade(score: number): string {
+  private getHealthGrade(score: number | null): string | null {
+    if (score === null) return null;
     if (score >= 90) return 'A';
     if (score >= 80) return 'B';
     if (score >= 70) return 'C';
@@ -507,10 +449,8 @@ export class SystemHealthService {
     return 'F';
   }
 
-  /**
-   * Get WCAG level from accessibility score
-   */
-  private getWCAGLevel(score: number): string {
+  private getWCAGLevel(score: number | null): string | null {
+    if (score === null) return null;
     if (score >= 95) return 'AAA';
     if (score >= 90) return 'AA';
     if (score >= 80) return 'A';
@@ -523,7 +463,9 @@ export class SystemHealthService {
   private generateKeyFindings(healthScore: HealthScore, components: any[], alerts: any[]): string[] {
     const findings: string[] = [];
 
-    if (healthScore.score >= 85) {
+    if (healthScore.score === null) {
+      findings.push('There is not enough data to calculate a health score yet.');
+    } else if (healthScore.score >= 85) {
       findings.push('Design system is in excellent health with strong adoption and compliance.');
     } else if (healthScore.score >= 70) {
       findings.push('Design system is in good health with room for improvement in specific areas.');
@@ -531,12 +473,17 @@ export class SystemHealthService {
       findings.push('Design system requires attention to improve overall health score.');
     }
 
-    if (healthScore.factors.componentCoverage < 80) {
-      findings.push(`${(100 - healthScore.factors.componentCoverage).toFixed(1)}% of components are not production-ready.`);
+    const { componentCoverage, adoptionRate } = healthScore.factors;
+    if (componentCoverage !== null && componentCoverage < 80) {
+      findings.push(`${(100 - componentCoverage).toFixed(1)}% of components are not production-ready.`);
     }
 
-    if (healthScore.factors.adoptionRate < 70) {
-      findings.push(`Component adoption rate is ${healthScore.factors.adoptionRate.toFixed(1)}%, below optimal levels.`);
+    if (adoptionRate !== null && adoptionRate < 70) {
+      findings.push(`Component adoption rate is ${adoptionRate.toFixed(1)}%, below optimal levels.`);
+    }
+
+    if (healthScore.notCollected.length > 0) {
+      findings.push(`Not collected (no data yet): ${healthScore.notCollected.join(', ')}.`);
     }
 
     if (alerts.length > 0) {
@@ -563,30 +510,27 @@ export class SystemHealthService {
     };
   }
 
-  /**
-   * Get top used components (mock - would need real usage data)
-   */
-  private getTopUsedComponents(components: any[]): any[] {
+  /** Components by recorded usage across scanned applications (empty before any scan) */
+  private getTopUsedComponents(components: any[]): Array<{ name: string; usage: number; applications: number }> {
     return components
-      .filter(c => c.status === 'production')
-      .slice(0, 10)
-      .map(c => ({
-        name: c.name,
-        usage: Math.floor(Math.random() * 1000) + 100, // Mock usage
-      }))
-      .sort((a, b) => b.usage - a.usage);
+      .map((c) => {
+        const usage = this.analyticsService.getComponentUsage(c.id);
+        return { name: c.name, usage: usage.reduce((sum, u) => sum + u.usageCount, 0), applications: usage.length };
+      })
+      .filter((c) => c.usage > 0)
+      .sort((a, b) => b.usage - a.usage)
+      .slice(0, 10);
   }
 
-  /**
-   * Get component adoption rates (mock)
-   */
-  private getComponentAdoptionRates(components: any[]): any[] {
-    return components
-      .filter(c => c.status === 'production')
-      .map(c => ({
-        name: c.name,
-        adoptionRate: Math.random() * 30 + 60, // Mock 60-90%
-      }));
+  /** Share of scanned applications using each component */
+  private getComponentAdoptionRates(components: any[]): Array<{ name: string; adoptionRate: number }> {
+    const usageByComponent = components.map((c) => ({ c, usage: this.analyticsService.getComponentUsage(c.id) }));
+    const scannedApps = new Set(usageByComponent.flatMap(({ usage }) => usage.map((u) => u.applicationId)));
+    if (scannedApps.size === 0) return [];
+    return usageByComponent.map(({ c, usage }) => ({
+      name: c.name,
+      adoptionRate: Math.round((new Set(usage.map((u) => u.applicationId)).size / scannedApps.size) * 1000) / 10,
+    }));
   }
 
   /**

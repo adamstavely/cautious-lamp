@@ -4,6 +4,7 @@ import { AuditModule } from '../audit/audit.module';
 import { EsIndexService } from '../common/elasticsearch/es-index.service';
 import { RbacModule } from '../rbac/rbac.module';
 import { EsDocumentStore } from '../reviews/document-store';
+import { ApiKeysController } from './api-keys.controller';
 import { AuthController } from './auth.controller';
 import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
@@ -20,7 +21,7 @@ import { UsersService } from './users.service';
 @Global()
 @Module({
   imports: [RbacModule, AuditModule],
-  controllers: [AuthController, UsersController],
+  controllers: [AuthController, UsersController, ApiKeysController],
   providers: [
     AuthService,
     AuthGuard,

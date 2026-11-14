@@ -1,4 +1,12 @@
-import { DocVersion, DocumentStore, DuplicateDocumentError, StoredDoc, VersionConflictError } from '../document-store';
+import {
+  DocVersion,
+  DocumentStore,
+  DuplicateDocumentError,
+  ListOptions,
+  StoredDoc,
+  VersionConflictError,
+  matchesListOptions,
+} from '../document-store';
 
 /** In-memory DocumentStore with the same compare-and-swap semantics as Elasticsearch, for tests */
 export class InMemoryStore<T extends { id: string }> implements DocumentStore<T> {
@@ -29,8 +37,18 @@ export class InMemoryStore<T extends { id: string }> implements DocumentStore<T>
     return this.docs.delete(id);
   }
 
-  async list(): Promise<T[]> {
-    return [...this.docs.values()].map((entry) => structuredClone(entry.doc));
+  /** Same filters and order (newest `createdAt` first) as EsDocumentStore; `excludes` is honoured too */
+  async list(options: ListOptions = {}): Promise<T[]> {
+    const time = (doc: T) => new Date(String((doc as Record<string, unknown>).createdAt ?? 0)).getTime() || 0;
+    return [...this.docs.values()]
+      .map((entry) => entry.doc)
+      .filter((doc) => matchesListOptions(doc, options))
+      .sort((a, b) => time(b) - time(a))
+      .map((doc) => {
+        const copy = structuredClone(doc) as Record<string, unknown>;
+        for (const field of options.excludes ?? []) delete copy[field];
+        return copy as T;
+      });
   }
 
   /** Writes directly, bumping the sequence number like another writer would */

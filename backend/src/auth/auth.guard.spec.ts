@@ -87,13 +87,13 @@ describe('AuthGuard', () => {
   });
 
   it('limits a scoped API key to its scopes', async () => {
-    const { key } = h.keys.createKey('tokens-bot', { scopes: [Permission.TOKEN_VIEW, Permission.TOKEN_EDIT] });
+    const { key } = await h.keys.createKey('tokens-bot', { scopes: [Permission.TOKEN_VIEW, Permission.TOKEN_EDIT] });
     await run('tokens', `Bearer ${key}`);
     await expect(run('admin', `Bearer ${key}`)).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('merges class and route permissions', async () => {
-    const { key } = h.keys.createKey('rbac-only', { scopes: [Permission.ADMIN_RBAC] });
+    const { key } = await h.keys.createKey('rbac-only', { scopes: [Permission.ADMIN_RBAC] });
     await expect(run('both', `Bearer ${key}`)).rejects.toBeInstanceOf(ForbiddenException);
   });
 

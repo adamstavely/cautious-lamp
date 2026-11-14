@@ -2,12 +2,10 @@ import {
   Controller,
   Post,
   Body,
-  Headers,
   UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
 import { DesignExtractionService } from './design-extraction.service';
-import { KeyManagementService } from '../common/security/key-management.service';
 
 export interface ExtractRequestDto {
   url: string;
@@ -22,21 +20,12 @@ export interface ExtractRequestDto {
 export class DesignExtractionController {
   constructor(
     private readonly extractionService: DesignExtractionService,
-    private readonly keyManagementService: KeyManagementService,
   ) {}
-
-  /**
-   * No-op: the global AuthGuard has already authenticated the caller (a user
-   * token or an API key, docs/AUTH.md). Kept so the call sites stay as they were.
-   */
-  private validateRequest(_authHeader?: string): void {}
 
   @Post('extract')
   async extract(
     @Body() body: ExtractRequestDto,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
 
     // Validate request body
     if (!body || typeof body !== 'object') {
@@ -72,4 +61,3 @@ export class DesignExtractionController {
     };
   }
 }
-

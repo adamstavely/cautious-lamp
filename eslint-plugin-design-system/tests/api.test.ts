@@ -2,7 +2,7 @@ import http from 'http';
 import type { AddressInfo } from 'net';
 import { Linter } from 'eslint';
 import plugin = require('../src/index');
-import { clearRulesCache, convertToESLintRule, fetchRules, toRuleId } from '../src/rule-converter';
+import { clearRulesCache, convertToESLintRule, DesignSystemRule, fetchRules, toRuleId, unsupportedReason } from '../src/rule-converter';
 import { processor, initializePlugin } from '../src/processor';
 
 type Handler = (req: http.IncomingMessage, res: http.ServerResponse) => void;
@@ -46,8 +46,8 @@ afterEach(() => warn.mockRestore());
 describe('fetchRules / loadRulesFromAPI', () => {
   it('does nothing without an apiUrl', async () => {
     await expect(fetchRules({})).resolves.toEqual([]);
-    await expect(plugin.loadRulesFromAPI()).resolves.toEqual({ loaded: [], skipped: [] });
-    await expect(plugin.loadRulesFromAPI(undefined as never)).resolves.toEqual({ loaded: [], skipped: [] });
+    await expect(plugin.loadRulesFromAPI()).resolves.toEqual({ loaded: [], skipped: [], warnings: [] });
+    await expect(plugin.loadRulesFromAPI(undefined as never)).resolves.toEqual({ loaded: [], skipped: [], warnings: [] });
     expect(warn).not.toHaveBeenCalled();
   });
 
@@ -82,7 +82,7 @@ describe('fetchRules / loadRulesFromAPI', () => {
           res.end(body);
         },
         async url => {
-          await expect(plugin.loadRulesFromAPI({ apiUrl: url, timeout: 1000 })).resolves.toEqual({ loaded: [], skipped: [] });
+          await expect(plugin.loadRulesFromAPI({ apiUrl: url, timeout: 1000 })).resolves.toEqual({ loaded: [], skipped: [], warnings: [] });
         }
       );
     }
@@ -95,7 +95,7 @@ describe('fetchRules / loadRulesFromAPI', () => {
         res.end('boom');
       },
       async url => {
-        await expect(plugin.loadRulesFromAPI({ apiUrl: url, timeout: 1000 })).resolves.toEqual({ loaded: [], skipped: [] });
+        await expect(plugin.loadRulesFromAPI({ apiUrl: url, timeout: 1000 })).resolves.toEqual({ loaded: [], skipped: [], warnings: [] });
         expect(warn).toHaveBeenCalledTimes(1);
       }
     );
@@ -109,10 +109,23 @@ describe('fetchRules / loadRulesFromAPI', () => {
         res.setHeader('content-type', 'application/json');
         res.end(
           JSON.stringify({
+            format: 'cautious-lamp-governance-rules',
+            formatVersion: 1,
             rules: [
-              { name: 'No Brand Colors!', category: 'Color', enabled: true, severity: 'error', description: 'd', scannerCode: 'hardcoded color' },
-              { name: 'Disabled Rule', category: 'x', enabled: false, severity: 'error', description: '' },
-              { name: 'Component Naming', category: 'x', enabled: true, severity: 'warning', description: '' },
+              {
+                name: 'No Brand Colors!',
+                category: 'design-system',
+                enabled: true,
+                severity: 'error',
+                description: 'd',
+                type: 'regex-absent',
+                target: 'javascript',
+                pattern: '#[0-9a-f]{6}',
+                flags: 'i',
+                message: 'Use a brand token'
+              },
+              { name: 'Disabled Rule', category: 'x', enabled: false, severity: 'error', description: '', type: 'regex-absent', target: 'javascript', pattern: 'x' },
+              { name: 'Component Naming', category: 'x', enabled: true, severity: 'warning', description: '', type: 'builtin', target: 'html', builtin: 'component-naming' },
               { name: '!!!', category: 'x', enabled: true, severity: 'info', description: '' }
             ]
           })
@@ -122,7 +135,7 @@ describe('fetchRules / loadRulesFromAPI', () => {
         const result = await plugin.loadRulesFromAPI({ apiUrl: url, apiKey: 'k', timeout: 1000 });
         expect(result.loaded).toEqual(['no-brand-colors']);
         expect(result.skipped).toEqual(['Disabled Rule', 'Component Naming', '!!!']);
-        expect(seen?.url).toBe('/api/v1/rules/export?format=eslint');
+        expect(seen?.url).toBe('/api/v1/governance/rules/export');
         expect(seen?.headers.authorization).toBe('Bearer k');
       }
     );
@@ -132,15 +145,47 @@ describe('fetchRules / loadRulesFromAPI', () => {
     expect(plugin.rules['component-naming'].meta?.messages).toHaveProperty('invalidNaming');
 
     const messages = lint("const c = '#123456';", { 'design-system/no-brand-colors': 'error' });
-    expect(messages.map(m => m.ruleId)).toEqual(['design-system/no-brand-colors']);
+    expect(messages.map(m => [m.ruleId, m.message, m.column])).toEqual([['design-system/no-brand-colors', 'Use a brand token', 12]]);
   });
 
   it('accepts static rules via config.rules without network', async () => {
     const result = await plugin.loadRulesFromAPI({
-      rules: [{ name: 'Static Spacing', category: 's', enabled: true, severity: 'warning', description: '', scannerCode: 'spacing' }]
+      rules: [
+        {
+          name: 'Static Spacing',
+          category: 's',
+          enabled: true,
+          severity: 'warning',
+          description: '',
+          type: 'token-usage',
+          target: 'css',
+          properties: ['margin*']
+        }
+      ]
     });
-    expect(result.loaded).toEqual(['static-spacing']);
+    expect(result).toEqual({ loaded: ['static-spacing'], skipped: [], warnings: [] });
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('skips rules ESLint cannot check, with a warning instead of a stand-in check', async () => {
+    const base = { category: 'c', enabled: true, severity: 'error' as const, description: '' };
+    const result = await plugin.loadRulesFromAPI({
+      rules: [
+        { ...base, name: 'Old Scanner', scannerCode: 'hardcoded color' } as never,
+        { ...base, name: 'One H1', type: 'selector-count', target: 'html', selector: 'h1', min: 1, max: 1 },
+        { ...base, name: 'Axe', type: 'builtin', target: 'html', builtin: 'axe' },
+        { ...base, name: 'Html Regex', type: 'regex-absent', target: 'html', pattern: '<font' },
+        { ...base, name: 'Complex Selector', type: 'selector-attribute', target: 'html', selector: 'input:not([type=hidden])', attribute: 'id' }
+      ]
+    });
+    expect(result.loaded).toEqual([]);
+    expect(result.skipped).toEqual(['Old Scanner', 'One H1', 'Axe', 'Html Regex', 'Complex Selector']);
+    expect(result.warnings).toHaveLength(5);
+    expect(result.warnings[0]).toMatch(/Old Scanner.*no declarative rule type/);
+    expect(result.warnings[1]).toMatch(/selector-count/);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0][0])).toMatch(/Skipped 5 rule\(s\) ESLint can't check/);
+    expect(plugin.rules['old-scanner']).toBeUndefined();
   });
 
   it('initializePlugin returns the plugin and never rejects', async () => {
@@ -150,8 +195,8 @@ describe('fetchRules / loadRulesFromAPI', () => {
 });
 
 describe('convertToESLintRule', () => {
-  const run = (scannerCode: string | undefined, code: string) => {
-    const rule = convertToESLintRule({ name: 't', category: 'c', enabled: true, severity: 'error', description: '', scannerCode });
+  const run = (def: Partial<DesignSystemRule>, code: string) => {
+    const rule = convertToESLintRule({ name: 't', category: 'c', enabled: true, severity: 'error', description: '', message: 'bad', ...def });
     plugin.rules['converter-test'] = rule;
     try {
       return lint(code, { 'design-system/converter-test': 'error' });
@@ -160,30 +205,71 @@ describe('convertToESLintRule', () => {
     }
   };
 
-  it('runs every matched pattern (handlers on the same node type are merged)', () => {
-    const messages = run('check hardcoded color and spacing', "const a = '#ffffff'; const b = '16px';");
-    expect(messages.map(m => m.message)).toEqual([
-      'Found hardcoded color: #ffffff. Use design token instead.',
-      'Found hardcoded spacing: 16px. Use design token instead.'
+  it('regex-absent reports each match with its location', () => {
+    const messages = run({ type: 'regex-absent', target: 'javascript', pattern: 'console\\.log', message: 'No console.log' }, 'a();\nconsole.log(1);\nconsole.log(2);');
+    expect(messages.map(m => [m.message, m.line, m.column])).toEqual([
+      ['No console.log', 2, 1],
+      ['No console.log', 3, 1]
     ]);
   });
 
-  it('naming pattern ignores private/constant names', () => {
-    const messages = run('naming', 'const _x = 1; const $y = 2; const MAX_SIZE = 3; const Bad_Name = 4;');
-    expect(messages).toHaveLength(1);
-    expect(messages[0].message).toBe('Component "Bad_Name" should follow PascalCase convention');
+  it('regex-present reports a file without a match, and skips empty files', () => {
+    const def = { type: 'regex-present' as const, target: 'javascript' as const, pattern: 'use strict', message: 'Missing use strict' };
+    expect(run(def, 'const a = 1;').map(m => m.message)).toEqual(['Missing use strict']);
+    expect(run(def, "'use strict'; const a = 1;")).toHaveLength(0);
+    expect(run(def, '')).toHaveLength(0);
   });
 
-  it('aria pattern handles JSX edge cases without crashing', () => {
-    const messages = run('aria', '<><svg:button /><ui.button /><button>ok</button><button /></>');
-    expect(messages).toHaveLength(1);
-    expect(messages[0].message).toBe('Missing required attribute: aria-label or aria-labelledby');
+  it('token-usage checks CSS-in-JS objects and template literals', () => {
+    const def = { type: 'token-usage' as const, target: 'css' as const, properties: ['color', 'margin*'], allowedValues: ['4px'], message: 'Use a token' };
+    const code = [
+      "const a = { color: '#fff', marginTop: '8px', padding: '3px' };",
+      "const b = { color: 'var(--brand)', margin: '4px auto', marginLeft: 0, backgroundColor: 'red' };",
+      'const c = css`color: red; margin-bottom: ${space.md};`;',
+      'const d = <div style={{ marginRight: 12 }} />;',
+      "import x from 'color: red';"
+    ].join('\n');
+    expect(run(def, code).map(m => m.message)).toEqual([
+      'Use a token (color: #fff)',
+      'Use a token (margintop: 8px)',
+      'Use a token (color: red)',
+      'Use a token (marginright: 12)'
+    ]);
   });
 
-  it('token pattern checks template literals; default pattern checks literals', () => {
-    expect(run('token', 'const c = `color: #abcdef`;')).toHaveLength(1);
-    expect(run(undefined, "const c = '#abc'; const t = '';")).toHaveLength(1);
-    expect(run('', '')).toHaveLength(0);
+  it('token-usage accepts configured design token values', () => {
+    const rule = convertToESLintRule(
+      { name: 't', category: 'c', enabled: true, severity: 'error', description: '', type: 'token-usage', target: 'css', properties: ['color'], message: 'm' },
+      { tokenValues: ['#0055FF'] }
+    );
+    plugin.rules['converter-test'] = rule;
+    try {
+      expect(lint("const a = { color: '#0055ff' };", { 'design-system/converter-test': 'error' })).toHaveLength(0);
+    } finally {
+      delete plugin.rules['converter-test'];
+    }
+  });
+
+  it('selector-attribute checks native JSX elements for any of the attributes', () => {
+    const def = { type: 'selector-attribute' as const, target: 'html' as const, selector: 'img, area', attribute: 'alt|aria-label', message: 'Needs alt' };
+    const code = '<><img src="a" /><img alt="x" /><img aria-label="y" /><Img /><img {...props} /><area /></>';
+    expect(run(def, code).map(m => m.message)).toEqual(['Needs alt', 'Needs alt']);
+  });
+
+  it('selector-attribute with a pattern checks literal values only', () => {
+    const def = { type: 'selector-attribute' as const, target: 'html' as const, selector: 'a', attribute: 'rel', pattern: 'noopener', message: 'rel=noopener' };
+    expect(run(def, '<><a rel="nofollow" /><a rel="noopener" /><a rel={r} /><a /></>')).toHaveLength(2);
+  });
+
+  it('builtin component-naming flags non-PascalCase components', () => {
+    const messages = run({ type: 'builtin', target: 'html', builtin: 'component-naming' }, 'const _x = 1; const MAX_SIZE = 3; const Bad_Name = 4;');
+    expect(messages.map(m => m.message)).toEqual(['Component "Bad_Name" should follow PascalCase convention']);
+  });
+
+  it('refuses unsupported rules instead of guessing a check', () => {
+    expect(() => run({ type: 'selector-count', target: 'html', selector: 'h1', min: 1 }, '')).toThrow(/whole page/);
+    expect(() => run({}, '')).toThrow(/no declarative rule type/);
+    expect(unsupportedReason({ name: 'r', category: 'c', enabled: true, severity: 'error', description: '', type: 'regex-absent', target: 'javascript', pattern: 'a', flags: 'g' })).toMatch(/flags/);
   });
 
   it('toRuleId sanitizes names', () => {

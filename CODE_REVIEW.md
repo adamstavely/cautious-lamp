@@ -52,6 +52,68 @@ Phase 2 covered governance, accessibility reports and scanning, team workspaces,
   - `docs/RULES_ENGINE_GUIDE.md` and `docs/AUTOMATED_ACCESSIBILITY_REPORTS.md` describe the old scanners.
   - Registering an application from the CLI or SDK needs an API key with the `admin:governance` scope.
 
+## Status after Phase 3
+
+A second, external review of `main` at `d5528ed` (13 November 2026) reported 39 findings, R01–R39: 13 P1 and 26 P2. Each was checked against the code and all 39 were real. All are fixed in adamstavely/cautious-lamp#22, with tests.
+
+| Finding | Fix |
+| --- | --- |
+| **P1** | |
+| R01 API-key privilege escalation | Key routes moved to `auth/api-keys.controller.ts`; a caller can only grant scopes it holds |
+| R02 Review sharing/password changes unchecked | One access policy (`reviews/review-access.ts`); only the owner or a review admin can change sharing or the password |
+| R03 Review list leaks metadata | The list is filtered by the same policy; `approvedEmails` is hidden from callers who can't manage sharing |
+| R04 API keys impersonate reviewers | `x-user-email` from an API key is a display label only; keys need `review:admin` |
+| R05 Workspace components via global routes | `design-system/component-access.service.ts` covers list, detail, search, metadata, AI chat and analytics |
+| R06 Projects without ownership checks | `visual-regression/project-access.ts` on every route and WebSocket subscription, by workspace role |
+| R07 Admin mutations without permissions | Banners, feature flags, budgets, roadmap, triage, components, patterns and contribution routes need permissions |
+| R08 Sync APIs expose credentials | Connections are owner-scoped, credentials encrypted and never returned |
+| R09 DNS rebinding in browser scans | Chromium goes through a per-scan egress proxy that checks the resolved IP on each connection |
+| R10 Partial rule seed is permanent | Seeding is resumable, with a marker per rule and completion recorded last |
+| R11 Unbounded browser evaluation | A total deadline closes the browser and frees the slot (504) |
+| R12 Projects lost on restart | Visual regression and session replay projects and runs are stored in Elasticsearch; missing links are recreated or removed |
+| R13 Client approval unreachable | The server returns `allowedActions`; a `client` role exists; the UI uses `allowedActions` |
+| **P2** | |
+| R14 Runtime API keys lost | Hashed keys in Elasticsearch, shared by every replica |
+| R15 Passphrase encryption keys unrecoverable | Stable PBKDF2 derivation; hex or base64 keys used as-is |
+| R16 Counts truncated at 50 nodes | Full counts are kept; examples are sampled and the report says so |
+| R17 Selector cap turns failures into passes | Every element is checked; untested values give `incomplete`, never a pass |
+| R18 Schedules never run | `governance.scheduler.ts` runs daily and weekly scans; `on-commit` is refused (CI calls the scan API) |
+| R19 Listing stops at 10,000 | Point-in-time paging with `search_after`, also used by the workspace store |
+| R20 Error pages become reports | A non-2xx/3xx target fails the scan (422) and keeps the previous report |
+| R21 Concurrent enables leak projects | Fixed project ids per application; the loser reuses the winner's project |
+| R22 Tool accessibility scans throw | Shared `utils/axeScan.js` with real axe rules and tags |
+| R23, R24 Generated React table | Stable default data, rows keyed by id, page reset and clamped |
+| R25 Generated Vue exports break | `utils/scriptSafeJson.js` escapes embedded data |
+| R26 MCP asset tools call old routes | `/workspaces/:id/resources/:kind`, plus a contract test against the backend controllers |
+| R27 ESLint dynamic rules lose meaning | Declarative rule types mapped explicitly; unsupported rules skipped with a warning |
+| R28 Standalone package entry points | Manifests match the build output; types; `npm pack` check |
+| R29, R30 VS Code quick fix and cache | Syntax-aware token edits with imports; separate cache ages |
+| R31, R32 Loupe geometry and metadata | Viewport coordinates (also in the app's Loupe); real endpoint with `response.ok` fallback |
+| R33 Workspace admins blocked from applications | Route allows workspace owners and admins |
+| R34 Session expiry strands the UI | Expiry is handled before the cached user is returned, and redirects to sign-in |
+| R35 Late workspace responses | Request generations guard every assignment |
+| R36 Disabled flags forced on | Stored values win on both sides; defaults only for missing flags; flags are re-read after sign-in |
+| R37 Sync reports success without syncing | Unsupported provider operations return 501 and the UI says sync isn't available |
+| R38 Random health history | Measured data only; unmeasured factors are "Not collected" |
+| R39 Placeholder PDF and rollback | 501 instead of fake success |
+
+Found while fixing these: pattern and contribution bodies weren't validated, so one empty write broke the list for everyone. Both now return 400.
+
+**Dependencies.** `npm audit --omit=dev` went from 81 findings (2 critical, 32 high) to 12 (10 moderate, 2 low):
+- **Fixed or upgraded:** `npm audit fix`, jsPDF 4, zod 4, OpenTelemetry 3 on the backend (0.223 line in the browser), `@nestjs/common` 10.4.22 (Content-Type RCE), and csv-parse 7.
+- **Overrides:** `body-parser`, `multer`, `qs`, `image-size` and `gcp-metadata`, in the root `package.json`.
+- **Removed:** the unused `@adobe/leonardo-contrast-colors`, which took its whole vulnerable chain with it.
+
+What's left needs NestJS 11 (`@nestjs/core` injection, `file-type`) or has no upstream fix yet (`style-dictionary`'s bundled glob and deepmerge).
+
+**Known gaps:**
+- **Design and token sync connections:** still kept in memory, so they're lost on restart.
+- **Session replay:** still shows mock sessions when no OpenReplay key is set.
+- **Migration:**
+  - Clusters seeded partially by the old code keep a v1 seed marker, which a deliberate deletion can't be told apart from.
+  - Values encrypted under a passphrase key before R15 must be re-entered.
+  - API keys created at runtime before R14 must be created again.
+
 Findings are grouped by area below: Critical (C), Security (H, F, M, L), Data and correctness (D), Frontend quality (B, F), Packages (P) and Dependencies (S).
 
 ## Fix first

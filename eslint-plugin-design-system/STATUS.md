@@ -26,16 +26,15 @@ The ESLint plugin is now **fully implemented** and ready for use.
 
 ### 3. API Integration
 
-- ✅ Fetches rules from `/api/v1/rules/export?format=eslint`
-- ✅ Converts scanner code to ESLint AST visitors
+- ✅ Fetches declarative rules from `/api/v1/governance/rules/export`
+- ✅ Maps the rule types ESLint can check (regex on JavaScript, token-usage on CSS-in-JS, selector-attribute on JSX, builtin component-naming); skips the rest with a warning (see README)
 - ✅ Caches rules for performance (5-minute default)
 - Loaded by awaiting `loadRulesFromAPI(config)` before linting (see README); `settings` are not read
 
 ### 4. Backend Integration
 
-- ✅ Backend endpoint: `GET /api/v1/rules/export`
-- ✅ Returns rules with `scannerCode` for conversion
-- ✅ Supports `eslint`, `prettier`, and `json` formats
+- ✅ Backend endpoint: `GET /api/v1/governance/rules/export`
+- ✅ Returns declarative rule definitions (no code; docs/GOVERNANCE.md)
 
 ## How to Use
 
@@ -94,9 +93,9 @@ npx eslint . --plugin design-system --fix
 
 ```
 Rules Engine (Backend)
-  ↓ GET /api/v1/rules/export?format=eslint
+  ↓ GET /api/v1/governance/rules/export
 ESLint Plugin
-  ↓ Converts scannerCode to AST visitors
+  ↓ Maps declarative rule types to AST visitors
 ESLint
   ↓ Runs in IDE/CLI
 Developer sees real-time violations

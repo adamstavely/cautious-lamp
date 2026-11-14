@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SearchService } from './search.service';
 import { DesignSystemService } from '../design-system/design-system.service';
 import { WorkspacesService } from '../workspaces/workspaces.service';
+import { WorkspaceAccessService } from '../workspaces/workspace-access.service';
+import { ComponentAccessService } from '../design-system/component-access.service';
 import { AuthPrincipal } from '../auth/principal';
 
 describe('SearchService', () => {
@@ -13,7 +15,8 @@ describe('SearchService', () => {
     getAllTokens: jest.fn(),
   };
   const mockWorkspacesService = { list: jest.fn() };
-  const principal = { type: 'user', id: 'u1' } as unknown as AuthPrincipal;
+  const mockWorkspaceAccess = { memberWorkspaceIds: jest.fn(async () => new Set<string>()) };
+  const principal = { type: 'user', id: 'u1', permissions: new Set<string>() } as unknown as AuthPrincipal;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -24,6 +27,8 @@ describe('SearchService', () => {
           useValue: mockDesignSystemService,
         },
         { provide: WorkspacesService, useValue: mockWorkspacesService },
+        { provide: WorkspaceAccessService, useValue: mockWorkspaceAccess },
+        ComponentAccessService,
       ],
     }).compile();
 
@@ -123,8 +128,36 @@ describe('SearchService', () => {
     });
   });
 
+  describe('workspace components', () => {
+    const components = [
+      { id: 'lib', name: 'Button', description: 'library', props: [] },
+      { id: 'mine', name: 'Button Mine', description: 'mine', props: [], workspaceId: 'ws_mine' },
+      { id: 'secret', name: 'Button Secret', description: 'other team', props: [], workspaceId: 'ws_other' },
+      { id: 'shared', name: 'Button Shared', description: 'shared', props: [], workspaceId: 'ws_other', sharedWith: ['ws_mine'] },
+      { id: 'global', name: 'Button Global', description: 'global', props: [], workspaceId: 'ws_other', isGlobal: true },
+    ];
+
+    beforeEach(() => {
+      mockDesignSystemService.getAllComponents.mockReturnValue(components);
+      mockDesignSystemService.getAllTokens.mockReturnValue([]);
+      mockWorkspacesService.list.mockResolvedValue([]);
+    });
+
+    it('only finds components from workspaces the caller belongs to', async () => {
+      mockWorkspaceAccess.memberWorkspaceIds.mockResolvedValueOnce(new Set(['ws_mine']));
+      const ids = (await service.search('Button', undefined, principal)).map((r) => r.id).sort();
+      expect(ids).toEqual(['global', 'lib', 'mine', 'shared']);
+    });
+
+    it('hides workspace components from suggestions and filter counts, and without a principal', async () => {
+      expect(await service.getSuggestions('Secret', 5, principal)).toEqual([]);
+      expect((await service.getAvailableFilters(principal)).types.find((t) => t.value === 'component')?.count).toBe(2);
+      expect((await service.search('Button')).map((r) => r.id)).not.toContain('secret');
+    });
+  });
+
   describe('getSuggestions', () => {
-    it('should return suggestions based on query', () => {
+    it('should return suggestions based on query', async () => {
       mockDesignSystemService.getAllComponents.mockReturnValue([
         {
           id: '1',
@@ -141,13 +174,13 @@ describe('SearchService', () => {
       ]);
       mockDesignSystemService.getAllTokens.mockReturnValue([]);
 
-      const suggestions = service.getSuggestions('But', 5);
+      const suggestions = await service.getSuggestions('But', 5);
 
       expect(suggestions.length).toBeGreaterThan(0);
       expect(suggestions).toContain('Button');
     });
 
-    it('should respect limit parameter', () => {
+    it('should respect limit parameter', async () => {
       mockDesignSystemService.getAllComponents.mockReturnValue(
         Array.from({ length: 10 }, (_, i) => ({
           id: `${i}`,
@@ -158,7 +191,7 @@ describe('SearchService', () => {
       );
       mockDesignSystemService.getAllTokens.mockReturnValue([]);
 
-      const suggestions = service.getSuggestions('Component', 3);
+      const suggestions = await service.getSuggestions('Component', 3);
 
       expect(suggestions.length).toBeLessThanOrEqual(3);
     });

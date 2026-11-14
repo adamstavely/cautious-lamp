@@ -44,7 +44,7 @@ A rule is data. One interpreter runs every rule (`backend/src/governance/rule-in
 
 **Regular expressions.** Patterns are checked before they're saved. A pattern is rejected if it has a syntax error or uses a flag other than `i`, `m` or `s`. Backreferences and lookbehind are also rejected, and so is any repeated group that contains a quantifier or an alternation (`(a+)+`, `(a|ab)*`). These shapes cause most catastrophic backtracking. Matching runs in a worker thread with a time budget for each call (`GOVERNANCE_REGEX_BUDGET_MS`, 500 ms by default). If a pattern runs over the budget, the thread is terminated and the rule is reported as `error`, never as a pass.
 
-**Seeding.** The built-in rules (`builtin-rules.ts`) are seeded once per cluster. A marker document in `design-system-governance-meta` is created with `op_type=create`, so only one instance seeds. Built-in rules you delete stay deleted. Some old scanners were not carried over because they always passed or relied on guesses: the design-system version check, "has error handling", "has loading states", "has empty states", destructive-action confirmation and touch target size.
+**Seeding.** The built-in rules (`builtin-rules.ts`) are seeded once per cluster, and seeding can resume. Each rule is created first, then recorded with its own marker (`builtin-rule-seeded:<id>`) in `design-system-governance-meta`. The completion marker (`builtin-rules-seeded-v1`) is written last, and only once every built-in has a marker. If seeding stops part way (Elasticsearch goes away, say), the next start or request continues with the rules that have no marker yet. Writes ignore duplicates, so instances seeding at the same time don't conflict. Built-in rules you delete stay deleted: the rule's marker remains, so seeding doesn't recreate it. Clusters seeded before per-rule markers existed already have the completion marker and are left as they are. Some old scanners were not carried over because they always passed or relied on guesses: the design-system version check, "has error handling", "has loading states", "has empty states", destructive-action confirmation and touch target size.
 
 ## Scans
 
@@ -56,8 +56,19 @@ A scan runs the selected rules and stores the result, including the version of e
   - `url`: the server fetches this public http(s) page and checks its HTML and its inline styles and scripts. Scripts are read, never run. The URL must pass `assertPublicHttpUrl`, and so must every redirect (at most 5). Private addresses are refused again when the connection is made, which stops DNS rebinding. The fetch has a 10 s timeout and a 2 MB size cap.
   - If both are sent, or neither, the scan returns `400`. It doesn't return a pass when there was nothing to check.
 - `ruleIds` runs those rules, enabled or not. Otherwise every enabled rule runs. `categories` filters either set.
-- **Results.** A rule that finds nothing adds one `pass` check. Each violation adds one check whose `status` is the rule's severity (`error`, `warning` or `info`). A rule that couldn't run adds an `error` check with the reason. `ruleResults` lists each rule's outcome: `pass`, `fail`, `skipped` (with a reason, e.g. "No CSS to check") or `error`. The `summary` counts `{ passed, warnings, errors, info, total }` always equal the checks by status. Up to 2,000 checks are stored, and `truncated` is set if there were more.
+- **Results.** A rule that finds nothing adds one `pass` check. Each violation adds one check whose `status` is the rule's severity (`error`, `warning` or `info`). A rule that couldn't run adds an `error` check with the reason. A rule that found nothing but couldn't check all of its input is `incomplete`, never a pass, and adds a `warning` check ("Not fully checked: …"). `ruleResults` lists each rule's outcome: `pass`, `fail`, `skipped` (with a reason, e.g. "No CSS to check"), `error` or `incomplete` (with a reason). The `summary` counts `{ passed, warnings, errors, info, total }` always equal the checks by status. Up to 2,000 checks are stored, and `truncated` is set if there were more.
+- **Selector limits.** `selector-attribute` checks every matching element for the attribute. With a `pattern`, at most 10,000 attribute values are tested (1,000 per regex call). If more values match and none of the tested ones fail, the rule is `incomplete`.
 - After an application scan, `lastScanned` is set on the application (through `ApplicationsService.markScanned`).
+
+### Scheduled scans
+
+An application's `capabilities.governance.scanSchedule` decides whether it's scanned automatically:
+
+- `manual` (the default): only when someone asks.
+- `daily` and `weekly`: `GovernanceScanScheduler` scans the application's `applicationUrl` once per UTC day, or once per UTC week starting Monday. It runs the rules the application picked, as a `url` scan, and the result appears in scan history like any other scan, created by `service:governance-scheduler`. An application already scanned in the current day or week (by hand, say) isn't scanned again. Governance must be enabled and the application must have a URL, otherwise there's nothing to scan and the schedule is ignored.
+- Each run is claimed with a compare-and-swap write to `scheduled-scan:<applicationId>` in `design-system-governance-meta`, so only one instance runs each occurrence. That document also records `lastStatus` (`success` or `failed`), `lastError` and `lastScanId`. A failed run is logged and retried in the next period.
+- The scheduler polls every minute (`GOVERNANCE_SCHEDULER_INTERVAL_MS`). It doesn't run when `GOVERNANCE_SCHEDULER_ENABLED=false` or `NODE_ENV=test`.
+- `on-commit` isn't supported. The server has no repository integration that would tell it about a commit. To scan on every commit, have CI call `POST /api/v1/governance/scans` with an API key that has `admin:governance` after each push, sending either the built code (`codebase`) or the deployed preview URL (`url`). Applications that still have `on-commit` stored are treated as `manual`.
 
 ## Routes (`/api/v1`)
 
@@ -77,7 +88,7 @@ A scan runs the selected rules and stores the result, including the version of e
 | `GET /governance/scans/:id` | signed in | The full scan |
 | `POST /compliance/scan` | as `POST /governance/scans` | For the CLI and MCP server. Same body and response; `scope: "applications"` is accepted. |
 | `POST /compliance/scan-application` | `admin:governance` | For the CLI: `{ applicationId, codebase?, url?, … }` |
-| `GET /rules/export?format=json\|eslint\|prettier` | signed in | Rule list for the ESLint plugin and MCP server. Contains no code. |
+| `GET /rules/export?format=json\|eslint\|prettier` | signed in | Rule summaries for the MCP server. Contains no code. The `eslint` format leaves out each rule's type and pattern, so the ESLint plugin reads `GET /governance/rules/export` instead. |
 
 Scan responses are the stored scan record plus `passed`, `warnings`, `failed` (errors) and `info`, which older clients read.
 
@@ -86,7 +97,9 @@ Scan responses are the stored scan record plus `passed`, `warnings`, `failed` (e
 A report is generated by `POST /accessibility-reports/generate/:applicationId` with `{ url? , html? }`:
 
 - `html`: axe-core runs in jsdom. The document's scripts never run and no resources are loaded. There's no layout, so colour contrast comes back as "needs review".
-- `url`, or neither (then the application's `applicationUrl` is used): the page is loaded in headless Chromium (Playwright) and axe-core runs on the rendered page. The URL, every redirect and every subrequest must pass `assertPublicHttpUrl`. The page has 30 s to load, and at most 2 URL scans run at a time (`A11Y_URL_SCAN_CONCURRENCY`). Further callers queue, up to 10, then get `503`. If Chromium isn't installed (`npx playwright install chromium`), URL scans return `503`.
+- `url`, or neither (then the application's `applicationUrl` is used): the page is loaded in headless Chromium (Playwright) and axe-core runs on the rendered page. The URL must pass `assertPublicHttpUrl` first. After that, all of Chromium's traffic goes through a local egress proxy (`common/security/egress-proxy.ts`): the page, every redirect, every subresource, fetch/XHR and WebSockets (https and wss through `CONNECT` tunnels, so TLS stays end to end). For each connection the proxy resolves the host itself, checks every address, and connects to the address it checked. A host that answers with a public address first and an internal one later (DNS rebinding) is refused on the later request. QUIC and non-proxied WebRTC UDP are switched off. Design token extraction (`design-extraction`) uses the same proxy.
+- The page has 30 s to load. The whole scan (starting the browser, loading the page and running axe) has a deadline (`A11Y_URL_SCAN_DEADLINE_MS`, 90 s by default). When it passes, the browser is closed, the scan slot is freed and the request returns `504`. A scheduled run records that as a failure and the scheduler moves on. At most 2 URL scans run at a time (`A11Y_URL_SCAN_CONCURRENCY`). Further callers queue, up to 10, then get `503`. If Chromium isn't installed (`npx playwright install chromium`), URL scans return `503`.
+- A page whose final response is an HTTP error (status 400 or higher, e.g. 404 or 500) means the target is unavailable. It isn't audited: the request returns `422` ("Target unavailable: … answered HTTP 404 …"), no report is stored, and the application's latest report stays the latest. A scheduled run records `lastStatus: failed` with that message and keeps the previous `lastReportId`.
 - If there's no HTML and no URL, the request returns `400`. A page that fails to load returns `422`.
 
 What's in a report:
@@ -94,7 +107,7 @@ What's in a report:
 - **WCAG criteria** come from axe's tags (for example `wcag143` maps to 1.4.3). Each criterion is `fail` if any of its rules has violations, `review` if axe couldn't decide, and otherwise `pass`.
 - **Score** starts at 100, loses 15 per failing level A criterion and 10 per failing AA criterion, and stops at 0.
 - **Level** is `Non-Compliant` if any A criterion fails, `A` if only AA criteria fail, and `AA` otherwise. Only A and AA rules run. Automated checks can't prove conformance.
-- **Issues** are counted per failing element, by impact: critical, high (axe "serious"), moderate and low.
+- **Issues** are counted per failing element, by impact: critical, high (axe "serious"), moderate and low. Counts, a criterion's `issues` and a fix's `affectedElements` include every element axe found. A report lists at most 50 example elements per rule (in `checks` and `failingElements`). When a rule had more, the report has `sampling: { examplesPerRule: 50, rules: [{ ruleId, shown, total }] }`, so `totalIssues` can be larger than `checks.length`.
 - **Fixes** are grouped by axe rule, with a link to axe's help page.
 - **Trend** compares the report with the application's previous one, matching issues by rule and selector.
 

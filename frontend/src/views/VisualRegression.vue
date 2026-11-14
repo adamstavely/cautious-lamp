@@ -229,14 +229,19 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Team ID</label>
-            <input
-              v-model="newProject.teamId"
-              type="text"
+            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'" for="project-workspace">Workspace</label>
+            <select
+              id="project-workspace"
+              v-model="newProject.workspaceId"
               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               :class="isDarkMode ? 'bg-slate-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'"
-              placeholder="default-team"
-            />
+            >
+              <option value="">Only me (no workspace)</option>
+              <option v-for="ws in editableWorkspaces" :key="ws.id" :value="ws.id">{{ ws.name }}</option>
+            </select>
+            <p class="mt-1 text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
+              Workspace members can see the project (viewers), run it (editors) and change it. Without a workspace only you can.
+            </p>
           </div>
 
           <div>
@@ -342,7 +347,7 @@ const defaultArgosUrl = 'https://app.argos-ci.com';
 const emptyProject = () => ({
   name: '',
   description: '',
-  teamId: 'default-team',
+  workspaceId: '',
   argosBaseUrl: defaultArgosUrl,
   argosProjectId: '',
   argosToken: '',
@@ -353,11 +358,24 @@ const newProject = ref(emptyProject());
 
 const API_PATH = '/api/v1/visual-regression';
 
+// Workspaces the caller can create projects in (editor or above)
+const editableWorkspaces = ref([]);
+const loadWorkspaces = async () => {
+  try {
+    const list = (await apiClient.get('/api/v1/workspaces')).data ?? [];
+    editableWorkspaces.value = list.filter((ws) => ['owner', 'admin', 'editor'].includes(ws.effectiveRole));
+  } catch (error) {
+    console.error('Failed to load workspaces:', error);
+    editableWorkspaces.value = [];
+  }
+};
+
+
 // The server's message (e.g. the 400 for an Argos URL that isn't allow-listed)
 // or a readable fallback.
 const apiErrorMessage = (error, fallback) => {
   const status = error?.response?.status;
-  if (status === 401 || status === 403) return 'Your API key was rejected or is missing. Check your API key.';
+  if (status === 401) return 'You are not signed in, or your API key was rejected.';
   const message = error?.response?.data?.message;
   if (Array.isArray(message)) return message.join(' ');
   if (typeof message === 'string' && message) return message;
@@ -412,6 +430,7 @@ const createProject = async () => {
   try {
     const payload = {
       ...newProject.value,
+      workspaceId: newProject.value.workspaceId || null,
       name: newProject.value.name.trim(),
       argosProjectId: newProject.value.argosProjectId.trim(),
       argosBaseUrl: newProject.value.argosBaseUrl.trim() || defaultArgosUrl,
@@ -493,6 +512,7 @@ const pendingDiffs = computed(() =>
 );
 
 onMounted(() => {
+  loadWorkspaces();
   loadProjects();
 });
 </script>

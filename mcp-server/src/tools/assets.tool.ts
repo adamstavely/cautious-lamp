@@ -4,6 +4,16 @@ import { apiClient } from '../api-client';
 
 const assetTypeSchema = z.enum(['image', 'icon', 'illustration', 'logo', 'other']);
 
+/**
+ * Workspace items live under the generic resource API
+ * (`GET /workspaces/:id/resources/:kind?filter=`, docs/WORKSPACES.md). `filter`
+ * matches the kind's category field: `type` for assets, `iconSet` for icons.
+ */
+export function resourcesPath(workspaceId: string, kind: 'assets' | 'icons', resourceId?: string): string {
+  const base = `/workspaces/${encodeURIComponent(workspaceId)}/resources/${kind}`;
+  return resourceId === undefined ? base : `${base}/${encodeURIComponent(resourceId)}`;
+}
+
 export interface WorkspaceAsset {
   id: string;
   name: string;
@@ -17,8 +27,11 @@ export interface WorkspaceAsset {
   isGlobal?: boolean;
   tags?: string[];
   description?: string;
+  kind?: 'assets';
   createdAt: string;
+  updatedAt?: string;
   createdBy: string;
+  updatedBy?: string;
 }
 
 export interface WorkspaceIcon {
@@ -32,14 +45,16 @@ export interface WorkspaceIcon {
   workspaceId: string;
   sharedWith?: string[];
   isGlobal?: boolean;
+  kind?: 'icons';
   createdAt: string;
+  updatedAt?: string;
   createdBy: string;
+  updatedBy?: string;
 }
 
 export const getAssetsSchema = z.object({
   workspaceId: z.string().min(1),
   type: assetTypeSchema.optional(),
-  userId: z.string().optional(),
 });
 
 export const getAssetsTool: Tool = {
@@ -57,27 +72,19 @@ export const getAssetsTool: Tool = {
         enum: ['image', 'icon', 'illustration', 'logo', 'other'],
         description: 'Filter assets by type',
       },
-      userId: {
-        type: 'string',
-        description: 'Optional user ID for filtering',
-      },
     },
     required: ['workspaceId'],
   },
 };
 
-export async function getAssets(args: { workspaceId: string; type?: string; userId?: string }): Promise<WorkspaceAsset[]> {
-  const params: Record<string, string> = { workspaceId: args.workspaceId };
-  if (args.type) params.type = args.type;
-  if (args.userId) params.userId = args.userId;
-
-  return await apiClient.get<WorkspaceAsset[]>(`/workspaces/${encodeURIComponent(args.workspaceId)}/assets`, params, 'assets');
+export async function getAssets(args: { workspaceId: string; type?: string }): Promise<WorkspaceAsset[]> {
+  const params = args.type ? { filter: args.type } : undefined;
+  return await apiClient.get<WorkspaceAsset[]>(resourcesPath(args.workspaceId, 'assets'), params, 'assets');
 }
 
 export const getIconsSchema = z.object({
   workspaceId: z.string().min(1),
   iconSet: z.string().optional(),
-  userId: z.string().optional(),
 });
 
 export const getIconsTool: Tool = {
@@ -94,21 +101,14 @@ export const getIconsTool: Tool = {
         type: 'string',
         description: 'Filter icons by icon set',
       },
-      userId: {
-        type: 'string',
-        description: 'Optional user ID for filtering',
-      },
     },
     required: ['workspaceId'],
   },
 };
 
-export async function getIcons(args: { workspaceId: string; iconSet?: string; userId?: string }): Promise<WorkspaceIcon[]> {
-  const params: Record<string, string> = { workspaceId: args.workspaceId };
-  if (args.iconSet) params.iconSet = args.iconSet;
-  if (args.userId) params.userId = args.userId;
-
-  return await apiClient.get<WorkspaceIcon[]>(`/workspaces/${encodeURIComponent(args.workspaceId)}/icons`, params, 'assets');
+export async function getIcons(args: { workspaceId: string; iconSet?: string }): Promise<WorkspaceIcon[]> {
+  const params = args.iconSet ? { filter: args.iconSet } : undefined;
+  return await apiClient.get<WorkspaceIcon[]>(resourcesPath(args.workspaceId, 'icons'), params, 'assets');
 }
 
 export const getAssetByIdSchema = z.object({
@@ -136,16 +136,8 @@ export const getAssetByIdTool: Tool = {
 };
 
 export async function getAssetById(args: { workspaceId: string; assetId: string }): Promise<WorkspaceAsset> {
-  // First get all assets, then find the one we need
-  // (Backend might not have a direct GET by ID endpoint)
-  const assets = await getAssets({ workspaceId: args.workspaceId });
-  const asset = assets.find((a) => a.id === args.assetId);
-  
-  if (!asset) {
-    throw new Error(`Asset with ID ${args.assetId} not found in workspace ${args.workspaceId}`);
-  }
-  
-  return asset;
+  // The backend answers 404 for an unknown id; the API client turns that into an error
+  return await apiClient.get<WorkspaceAsset>(resourcesPath(args.workspaceId, 'assets', args.assetId), undefined, 'assets');
 }
 
 export const searchAssetsSchema = z.object({

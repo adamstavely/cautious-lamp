@@ -75,6 +75,12 @@ export class WorkspaceAccessService {
     return access;
   }
 
+  /** Ids of the workspaces the principal is a member of (none for API keys, which can't be members) */
+  async memberWorkspaceIds(principal: AuthPrincipal): Promise<Set<string>> {
+    if (principal.type !== 'user') return new Set();
+    return new Set((await this.store.findAny([{ memberIds: principal.id }])).map((ws) => ws.id));
+  }
+
   /** Whether the principal has at least `required` in the workspace (false if it doesn't exist) */
   async has(principal: AuthPrincipal, workspaceId: string, required: WorkspaceRole): Promise<boolean> {
     const workspace = await this.find(workspaceId);

@@ -1,5 +1,4 @@
-import { EncryptionService } from '../../common/security/encryption.service';
-import { KeyManagementService } from '../../common/security/key-management.service';
+import { ApiKeyDoc, KeyManagementService } from '../../common/security/key-management.service';
 import { SecurityAuditService } from '../../common/security/security-audit.service';
 import { RbacService, Role } from '../../rbac/rbac.service';
 import { InMemoryRbacStore } from '../../rbac/testing/in-memory-rbac-store';
@@ -48,7 +47,8 @@ export async function createAuthHarness(options: { bootstrap?: boolean } = {}) {
   const rbac = new RbacService(rbacStore);
   const users = new UsersService(userStore, rbac, audit as unknown as SecurityAuditService);
   const tokens = new TokenService();
-  const keys = new KeyManagementService(new EncryptionService());
+  const keyStore = new InMemoryStore<ApiKeyDoc>();
+  const keys = new KeyManagementService(keyStore);
   const auth = new AuthService(users, tokens, keys, audit as unknown as SecurityAuditService);
   await rbac.onModuleInit();
   await users.onModuleInit();
@@ -75,6 +75,7 @@ export async function createAuthHarness(options: { bootstrap?: boolean } = {}) {
     rbac,
     users,
     tokens,
+    keyStore,
     keys,
     auth,
     principalFor,

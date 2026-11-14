@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { resolveOpenReplayBaseUrl } from './openreplay-url';
-import { SessionReplayService } from './session-replay.service';
+import { SYSTEM_CREATOR, createProjectServices } from '../visual-regression/testing/services';
 
 describe('OpenReplay base URL (SSRF guard)', () => {
   const saved = { ...process.env };
@@ -46,17 +46,17 @@ describe('OpenReplay base URL (SSRF guard)', () => {
   });
 
   it('is checked when a project is saved and again before each request', async () => {
-    const service = new SessionReplayService();
-    await expect(service.createProject('team', { name: 'x', openreplayProjectKey: '1', openreplayBaseUrl: 'http://169.254.169.254' })).rejects.toBeInstanceOf(
+    const { sessionReplay: service, srProjects } = createProjectServices();
+    const owner = { workspaceId: null, createdBy: SYSTEM_CREATOR };
+    await expect(service.createProject('team', { name: 'x', openreplayProjectKey: '1', openreplayBaseUrl: 'http://169.254.169.254' }, owner)).rejects.toBeInstanceOf(
       BadRequestException,
     );
-    const project = await service.createProject('team', { name: 'ok', openreplayProjectKey: '1' });
+    const project = await service.createProject('team', { name: 'ok', openreplayProjectKey: '1' }, owner);
     await expect(service.updateProject(project.id, { openreplayBaseUrl: 'http://127.0.0.1' })).rejects.toBeInstanceOf(BadRequestException);
 
     // A URL that got into storage some other way is still refused before the request is made
-    const stored = (service as unknown as { projects: Map<string, any> }).projects.get(project.id);
-    stored.openreplayBaseUrl = 'http://127.0.0.1:9200';
-    stored.openreplayApiKey = 'plain-key';
+    const stored = (await srProjects.get(project.id))!.doc;
+    srProjects.forceWrite({ ...stored, openreplayBaseUrl: 'http://127.0.0.1:9200', openreplayApiKey: 'plain-key' });
     await expect(service.searchSessions(project.id, {})).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.getSession(project.id, 's-1')).rejects.toBeInstanceOf(BadRequestException);
   });

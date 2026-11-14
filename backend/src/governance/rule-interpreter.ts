@@ -21,7 +21,8 @@ export interface Violation {
 }
 
 export interface RuleEvaluation {
-  outcome: 'pass' | 'fail' | 'skipped' | 'error';
+  /** `incomplete`: nothing was found, but not everything could be checked, so it isn't a pass */
+  outcome: 'pass' | 'fail' | 'skipped' | 'error' | 'incomplete';
   violations: Violation[];
   reason?: string;
 }
@@ -145,8 +146,12 @@ async function evaluateTokenUsage(rule: GovernanceRule, input: ScanInput, ctx: I
   return { outcome: violations.length ? 'fail' : 'pass', violations };
 }
 
+/** Attribute values sent to the regex thread per call, so each call stays inside the time budget */
+const VALUES_PER_REGEX_CALL = 1000;
+
 async function evaluateSelectorAttribute(rule: GovernanceRule, parsed: ParsedInput, ctx: InterpreterContext): Promise<RuleEvaluation> {
-  const elements = Array.from(parsed.document.querySelectorAll(rule.selector!)).slice(0, 1000);
+  // Every match is checked for the attribute (cheap); only pattern tests are capped
+  const elements = Array.from(parsed.document.querySelectorAll(rule.selector!));
   const names = rule.attribute!.split('|').map((n) => n.trim()).filter(Boolean);
   const missing: Element[] = [];
   const withValue: Array<{ el: Element; value: string }> = [];
@@ -156,13 +161,23 @@ async function evaluateSelectorAttribute(rule: GovernanceRule, parsed: ParsedInp
     else if (rule.pattern) withValue.push({ el, value: el.getAttribute(name) ?? '' });
   }
   const violations: Violation[] = missing.map((el) => ({ message: rule.message, element: snippet(el), line: parsed.lineOf(el) }));
-  if (rule.pattern && withValue.length) {
-    const results = await ctx.runner.testEach(rule.pattern, rule.flags ?? '', withValue.map((w) => w.value));
-    withValue.forEach((w, i) => {
+  const tested = withValue.slice(0, LIMITS.selectorPatternValues);
+  for (let start = 0; rule.pattern && start < tested.length; start += VALUES_PER_REGEX_CALL) {
+    const batch = tested.slice(start, start + VALUES_PER_REGEX_CALL);
+    const results = await ctx.runner.testEach(rule.pattern, rule.flags ?? '', batch.map((w) => w.value));
+    batch.forEach((w, i) => {
       if (!results[i]) violations.push({ message: rule.message, element: snippet(w.el), line: parsed.lineOf(w.el) });
     });
   }
-  return { outcome: violations.length ? 'fail' : 'pass', violations: violations.slice(0, LIMITS.matchesPerRule) };
+  if (violations.length) return { outcome: 'fail', violations: violations.slice(0, LIMITS.matchesPerRule) };
+  if (tested.length < withValue.length) {
+    return {
+      outcome: 'incomplete',
+      violations: [],
+      reason: `Only the first ${tested.length} of ${withValue.length} "${rule.selector}" values were checked against the pattern`,
+    };
+  }
+  return { outcome: 'pass', violations: [] };
 }
 
 function evaluateSelectorCount(rule: GovernanceRule, parsed: ParsedInput): RuleEvaluation {
@@ -284,7 +299,9 @@ export interface RunResult {
  * Runs every rule over every input. Each rule contributes one `pass` check if
  * it found nothing anywhere it applied, otherwise one check per violation. A
  * rule that couldn't run is reported in `ruleResults` with its reason and as
- * an `error` check, so a broken rule never looks like a pass.
+ * an `error` check, so a broken rule never looks like a pass. Likewise a rule
+ * that found nothing but couldn't check everything is `incomplete`, with a
+ * `warning` check, never a pass.
  */
 export async function runRules(
   rules: GovernanceRule[],
@@ -307,6 +324,7 @@ export async function runRules(
       let applied = false;
       let errorReason: string | undefined;
       let skipReason: string | undefined;
+      let incompleteReason: string | undefined;
       for (const parsed of parsedInputs) {
         const evaluation = await evaluateRule(rule, parsed.input, ctx, parsed);
         if (evaluation.outcome === 'skipped') {
@@ -318,6 +336,7 @@ export async function runRules(
           continue;
         }
         applied = true;
+        if (evaluation.outcome === 'incomplete') incompleteReason ??= evaluation.reason;
         evaluation.violations.forEach((violation, index) => {
           violations++;
           push({
@@ -344,6 +363,10 @@ export async function runRules(
         ruleResults.push({ ...base, outcome: 'skipped', violations: 0, reason: skipReason });
       } else if (violations > 0) {
         ruleResults.push({ ...base, outcome: 'fail', violations });
+      } else if (incompleteReason) {
+        // Not a pass: part of the input was never checked
+        ruleResults.push({ ...base, outcome: 'incomplete', violations: 0, reason: incompleteReason });
+        push({ id: `${rule.id}:incomplete`, ruleId: rule.id, rule: rule.name, status: 'warning', message: `Not fully checked: ${incompleteReason}`, application: meta.application });
       } else {
         ruleResults.push({ ...base, outcome: 'pass', violations: 0 });
         push({ id: `${rule.id}:pass`, ruleId: rule.id, rule: rule.name, status: 'pass', message: `No violations of "${rule.name}"`, application: meta.application });

@@ -18,6 +18,7 @@ export class SystemHealthController {
       timestamp: healthScore.timestamp instanceof Date ? healthScore.timestamp.toISOString() : healthScore.timestamp,
       alerts,
       recommendations,
+      inventory: this.systemHealthService.getInventory(),
     };
   }
 

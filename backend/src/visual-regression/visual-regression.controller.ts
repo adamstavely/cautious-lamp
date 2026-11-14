@@ -1,79 +1,95 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request, HttpCode, Headers, BadRequestException } from '@nestjs/common';
-import { VisualRegressionService } from './visual-regression.service';
-import { CreateProjectDto } from './dto/create-project.dto';
-import { UpdateProjectDto } from './dto/update-project.dto';
-import { TriggerTestDto } from './dto/trigger-test.dto';
+import { Body, Controller, Delete, Get, Headers, HttpCode, NotImplementedException, Param, Post, Put, Query, Request, UseGuards } from '@nestjs/common';
+import { AuthPrincipal, Principal, Public } from '../auth/principal';
 import { parsePaginationParams } from '../common/pagination/pagination.types';
 import { ApiKeyGuard } from '../common/security/api-key.guard';
-import { AuthPrincipal, Principal, Public } from '../auth/principal';
+import { NotificationConfig } from '../common/types/common.types';
+import { CreateProjectDto } from './dto/create-project.dto';
+import { TriggerTestDto } from './dto/trigger-test.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
+import { creatorOf } from './project-access';
+import { VisualRegressionService } from './visual-regression.service';
 
+/**
+ * Every route checks the caller's access to the project (docs/WORKSPACES.md,
+ * "Visual regression and session replay projects"): members of the owning
+ * workspace by role, the creator of a project without one, admin:users holders
+ * everywhere, and admin:governance holders for application-linked projects.
+ */
 @Controller('api/v1/visual-regression')
 @UseGuards(ApiKeyGuard)
 export class VisualRegressionController {
   constructor(private readonly visualRegressionService: VisualRegressionService) {}
 
   @Get('projects')
-  async getProjects(@Query('teamId') teamId?: string) {
-    return this.visualRegressionService.getProjects(teamId);
+  async getProjects(
+    @Principal() principal: AuthPrincipal,
+    @Query('teamId') teamId?: string,
+    @Query('workspaceId') workspaceId?: string,
+  ) {
+    return this.visualRegressionService.listProjects(principal, { teamId: teamId || undefined, workspaceId: workspaceId || undefined });
   }
 
   @Post('projects')
-  async createProject(@Body() dto: CreateProjectDto) {
-    const teamId = dto.teamId || 'default-team';
-    return this.visualRegressionService.createProject(teamId, dto);
+  async createProject(@Principal() principal: AuthPrincipal, @Body() dto: CreateProjectDto) {
+    const workspaceId = dto.workspaceId || null;
+    await this.visualRegressionService.assertCanCreate(principal, workspaceId);
+    const teamId = dto.teamId || workspaceId || 'default-team';
+    return this.visualRegressionService.createProject(teamId, dto, { workspaceId, createdBy: creatorOf(principal) });
   }
 
   @Get('projects/:id')
-  async getProject(@Param('id') id: string) {
-    return this.visualRegressionService.getProject(id);
+  async getProject(@Principal() principal: AuthPrincipal, @Param('id') id: string) {
+    return this.visualRegressionService.authorizeProject(principal, id, 'read');
   }
 
   @Put('projects/:id')
-  async updateProject(@Param('id') id: string, @Body() dto: UpdateProjectDto) {
+  async updateProject(@Principal() principal: AuthPrincipal, @Param('id') id: string, @Body() dto: UpdateProjectDto) {
+    await this.visualRegressionService.authorizeProject(principal, id, 'manage');
     return this.visualRegressionService.updateProject(id, dto);
   }
 
   @Delete('projects/:id')
-  async deleteProject(@Param('id') id: string) {
+  async deleteProject(@Principal() principal: AuthPrincipal, @Param('id') id: string) {
+    await this.visualRegressionService.authorizeProject(principal, id, 'manage');
     await this.visualRegressionService.deleteProject(id);
     return { message: 'Project deleted successfully' };
   }
 
   @Post('projects/:id/runs')
-  async triggerTest(
-    @Param('id') projectId: string,
-    @Body() dto: TriggerTestDto,
-    @Principal() principal: AuthPrincipal,
-  ) {
+  async triggerTest(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @Body() dto: TriggerTestDto) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'run');
     return this.visualRegressionService.triggerTest(projectId, principal.id, dto);
   }
 
   @Get('projects/:id/runs')
   async getTestRuns(
+    @Principal() principal: AuthPrincipal,
     @Param('id') projectId: string,
     @Query() query: { page?: string; limit?: string; offset?: string },
   ) {
-    const pagination = parsePaginationParams(query);
-    return this.visualRegressionService.getTestRuns(projectId, pagination);
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'read');
+    return this.visualRegressionService.getTestRuns(projectId, parsePaginationParams(query));
   }
 
   @Get('runs/:id')
-  async getTestRun(@Param('id') runId: string) {
-    return this.visualRegressionService.getTestRun(runId);
+  async getTestRun(@Principal() principal: AuthPrincipal, @Param('id') runId: string) {
+    return this.visualRegressionService.authorizeRun(principal, runId, 'read');
   }
 
   @Get('runs/:id/results')
   async getTestResults(
+    @Principal() principal: AuthPrincipal,
     @Param('id') runId: string,
     @Query() query: { page?: string; limit?: string; offset?: string },
   ) {
-    const pagination = parsePaginationParams(query);
-    return this.visualRegressionService.getTestResults(runId, pagination);
+    await this.visualRegressionService.authorizeRun(principal, runId, 'read');
+    return this.visualRegressionService.getTestResults(runId, parsePaginationParams(query));
   }
 
   @Post('results/:id/approve')
   @HttpCode(200)
   async approveDiff(@Param('id') resultId: string, @Principal() principal: AuthPrincipal) {
+    await this.visualRegressionService.authorizeResult(principal, resultId, 'run');
     await this.visualRegressionService.approveDiff(resultId, principal.id);
     return { message: 'Diff approved successfully' };
   }
@@ -81,6 +97,7 @@ export class VisualRegressionController {
   @Post('results/:id/reject')
   @HttpCode(200)
   async rejectDiff(@Param('id') resultId: string, @Principal() principal: AuthPrincipal) {
+    await this.visualRegressionService.authorizeResult(principal, resultId, 'run');
     await this.visualRegressionService.rejectDiff(resultId, principal.id);
     return { message: 'Diff rejected successfully' };
   }
@@ -88,65 +105,79 @@ export class VisualRegressionController {
   // Analytics & Reporting
   @Get('projects/:id/analytics')
   async getProjectAnalytics(
+    @Principal() principal: AuthPrincipal,
     @Param('id') projectId: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'read');
     return this.visualRegressionService.getProjectAnalytics(projectId, startDate, endDate);
   }
 
+  /** 501: there is no PDF renderer */
   @Get('projects/:id/reports/pdf')
-  async generatePDFReport(@Param('id') projectId: string) {
+  async generatePDFReport(@Principal() principal: AuthPrincipal, @Param('id') projectId: string) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'read');
     return this.visualRegressionService.generatePDFReport(projectId);
   }
 
-  // Team Management
+  /** 501: projects are shared by adding people to their workspace */
   @Post('projects/:id/share')
-  async shareProject(
-    @Param('id') projectId: string,
-    @Body() dto: { teamId: string; role: 'viewer' | 'tester' | 'admin' },
-  ) {
-    return this.visualRegressionService.shareProject(projectId, dto.teamId, dto.role);
+  async shareProject(@Principal() principal: AuthPrincipal, @Param('id') projectId: string) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'manage');
+    throw new NotImplementedException("Projects are shared through their workspace. Add people to the project's workspace instead.");
   }
 
+  /** Who the project belongs to (its workspace, application and creator) */
   @Get('projects/:id/teams')
-  async getProjectTeams(@Param('id') projectId: string) {
+  async getProjectTeams(@Principal() principal: AuthPrincipal, @Param('id') projectId: string) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'read');
     return this.visualRegressionService.getProjectTeams(projectId);
   }
 
   // Baseline Management
   @Post('projects/:id/baselines')
   async createBaseline(
+    @Principal() principal: AuthPrincipal,
     @Param('id') projectId: string,
     @Body() dto: { name: string; description?: string; runId: string },
   ) {
-    return this.visualRegressionService.createBaseline(projectId, dto);
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'run');
+    return this.visualRegressionService.createBaseline(projectId, dto, principal.id);
   }
 
   @Get('projects/:id/baselines')
-  async getBaselines(@Param('id') projectId: string) {
+  async getBaselines(@Principal() principal: AuthPrincipal, @Param('id') projectId: string) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'read');
     return this.visualRegressionService.getBaselines(projectId);
   }
 
+  /** 501: Argos baselines change only by approving builds in Argos */
   @Post('projects/:id/baselines/:baselineId/rollback')
   async rollbackBaseline(
+    @Principal() principal: AuthPrincipal,
     @Param('id') projectId: string,
     @Param('baselineId') baselineId: string,
   ) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'run');
     return this.visualRegressionService.rollbackBaseline(projectId, baselineId);
   }
 
   // Notifications
   @Post('projects/:id/notifications')
   async configureNotifications(
+    @Principal() principal: AuthPrincipal,
     @Param('id') projectId: string,
-    @Body() dto: { type: 'email' | 'slack' | 'teams' | 'webhook'; config: Record<string, unknown> },
+    @Body() dto: { type: 'email' | 'slack' | 'teams' | 'webhook'; config: NotificationConfig },
   ) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'manage');
     return this.visualRegressionService.configureNotifications(projectId, dto);
   }
 
+  /** Needs manage: notification settings can hold webhook URLs */
   @Get('projects/:id/notifications')
-  async getNotificationConfig(@Param('id') projectId: string) {
+  async getNotificationConfig(@Principal() principal: AuthPrincipal, @Param('id') projectId: string) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'manage');
     return this.visualRegressionService.getNotificationConfig(projectId);
   }
 }

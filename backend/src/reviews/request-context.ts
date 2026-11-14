@@ -25,16 +25,27 @@ function header(req: Request, name: string, max: number): string | null {
 }
 
 /**
- * Who is acting: the signed-in user, or for a service principal (an API key)
- * the person it says it acts for in `x-user-email` / `x-user-name`, which is
- * recorded for display only (docs/AUTH.md).
+ * Who is acting. A signed-in user is identified by their verified email and
+ * carries their roles and permissions. A service principal (an API key) has no
+ * reviewer identity: `x-user-name` (else `x-user-email`) only labels what it
+ * records, so the header can't satisfy an approved-email list or make it a
+ * review's owner (docs/AUTH.md). It acts as a review admin only with `review:admin`.
  */
 export function actingUserFrom(req: Request): ActingUser {
   const principal = (req as AuthedRequest).principal;
-  if (principal?.type === 'user') return { email: principal.email, name: principal.name };
+  if (principal?.type === 'user') {
+    return {
+      email: principal.email.trim().toLowerCase(),
+      name: principal.name,
+      roles: principal.roles,
+      permissions: principal.permissions,
+    };
+  }
   return {
-    email: header(req, 'x-user-email', 254)?.toLowerCase() ?? null,
-    name: header(req, 'x-user-name', 200),
+    email: null,
+    name: header(req, 'x-user-name', 200) ?? header(req, 'x-user-email', 254),
+    roles: [],
+    permissions: principal?.permissions ?? new Set(),
   };
 }
 

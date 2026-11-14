@@ -139,7 +139,7 @@ export class GovernanceController {
     return this.scans.scan({ ...body, scope: 'application' }, principal);
   }
 
-  /** Rules for the ESLint plugin and MCP server (`?format=json|eslint|prettier`) */
+  /** Rule summaries (`?format=json|eslint|prettier`). The ESLint plugin uses /governance/rules/export, which has the full definitions */
   @Get('rules/export')
   async exportRulesForLinter(@Query('format') format: string = 'json') {
     const rules = await this.rules.list();

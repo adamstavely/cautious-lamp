@@ -240,6 +240,7 @@
                   · {{ formatDate(scanResult.createdAt) }}
                   <span v-if="scanResult.url"> · {{ scanResult.url }}</span>
                   <span v-if="skippedRules.length"> · {{ skippedRules.length }} rule(s) skipped: {{ skippedRules.map((r) => `${r.name} (${r.reason})`).join('; ') }}</span>
+                  <span v-if="incompleteRules.length"> · {{ incompleteRules.length }} rule(s) not fully checked (not a pass): {{ incompleteRules.map((r) => `${r.name} (${r.reason})`).join('; ') }}</span>
                   <span v-if="scanResult.truncated"> · Only the first {{ scanResult.checks.length }} results were kept.</span>
                 </p>
                 <ul class="space-y-2 max-h-96 overflow-y-auto">
@@ -528,7 +529,7 @@ const CODE_FIELDS = [
   { key: 'css', label: 'CSS' },
   { key: 'javascript', label: 'JavaScript' },
 ];
-const OUTCOME_LABELS = { pass: 'Pass', fail: 'Violations found', skipped: 'Skipped', error: 'Could not run' };
+const OUTCOME_LABELS = { pass: 'Pass', fail: 'Violations found', skipped: 'Skipped', error: 'Could not run', incomplete: 'Not fully checked' };
 const SOURCE_LABELS = { 'design-system': 'components', codebase: 'pasted code', url: 'URL' };
 
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -603,6 +604,7 @@ const selectedApplication = computed(() => applications.value.find((a) => a.id =
 const usesSelector = computed(() => ['selector-attribute', 'selector-count'].includes(editingRule.value?.type));
 const usesPattern = computed(() => ['regex-present', 'regex-absent', 'selector-attribute'].includes(editingRule.value?.type));
 const skippedRules = computed(() => (scanResult.value?.ruleResults ?? []).filter((r) => r.outcome === 'skipped'));
+const incompleteRules = computed(() => (scanResult.value?.ruleResults ?? []).filter((r) => r.outcome === 'incomplete'));
 const summaryTiles = computed(() => {
   const s = scanResult.value?.summary ?? {};
   return [

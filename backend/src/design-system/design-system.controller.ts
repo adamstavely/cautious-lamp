@@ -1,11 +1,11 @@
-import { Controller, Get, Post, Put, Delete, Query, Param, Headers, Body, BadRequestException, NotFoundException, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Query, Param, Body, BadRequestException } from '@nestjs/common';
 import { DesignSystemService } from './design-system.service';
 import { ComponentRequestService } from './component-request.service';
 import { NotificationService } from './notification.service';
-import { TokenRotationService } from '../common/security/token-rotation.service';
-import { KeyManagementService } from '../common/security/key-management.service';
+import { ComponentAccessService } from './component-access.service';
 import { AuthPrincipal, Principal, Public, RequirePermission } from '../auth/principal';
 import { Permission } from '../rbac/rbac.service';
+import { WorkspaceAccessService } from '../workspaces/workspace-access.service';
 
 @Controller('api/v1')
 export class DesignSystemController {
@@ -22,115 +22,16 @@ export class DesignSystemController {
     private readonly designSystemService: DesignSystemService,
     private readonly componentRequestService: ComponentRequestService,
     private readonly notificationService: NotificationService,
-    private readonly tokenRotationService: TokenRotationService,
-    private readonly keyManagementService: KeyManagementService,
+    private readonly componentAccess: ComponentAccessService,
+    private readonly workspaceAccess: WorkspaceAccessService,
   ) {}
-
-  /**
-   * No-op: the global AuthGuard has already authenticated the caller (a user
-   * token or an API key, docs/AUTH.md). Kept so the call sites stay as they were.
-   */
-  private validateRequest(_authHeader?: string): void {}
-
-  // API key management needs admin:users (the admin key has it)
-
-  @RequirePermission(Permission.ADMIN_USERS)
-  @Post('auth/api-keys')
-  createApiKey(
-    @Body() body: { name: string; expiresInDays?: number; scopes?: string[] },
-    @Headers('authorization') authHeader?: string,
-  ) {
-    if (!body.name) {
-      throw new BadRequestException('API key name is required');
-    }
-    const { key, metadata } = this.keyManagementService.createKey(body.name, {
-      expiresInDays: body.expiresInDays,
-      scopes: body.scopes,
-    });
-    return { apiKey: key, metadata: this.withoutSecrets(metadata) };
-  }
-
-  @RequirePermission(Permission.ADMIN_USERS)
-  @Get('auth/api-keys')
-  getApiKeys(@Headers('authorization') authHeader?: string) {
-    return this.keyManagementService.getAllKeys().map((metadata) => this.withoutSecrets(metadata));
-  }
-
-  // Declared before 'auth/api-keys/:id' so ':id' doesn't capture it
-  @RequirePermission(Permission.ADMIN_USERS)
-  @Get('auth/api-keys/needing-rotation')
-  getTokensNeedingRotation(@Headers('authorization') authHeader?: string) {
-    return this.tokenRotationService.getTokensNeedingRotation();
-  }
-
-  @RequirePermission(Permission.ADMIN_USERS)
-  @Get('auth/api-keys/:id')
-  getApiKey(@Param('id') id: string, @Headers('authorization') authHeader?: string) {
-    const metadata = this.keyManagementService.getKeyMetadata(id);
-    if (!metadata) {
-      throw new NotFoundException(`API key with ID ${id} not found`);
-    }
-    return this.withoutSecrets(metadata);
-  }
-
-  @RequirePermission(Permission.ADMIN_USERS)
-  @Post('auth/api-keys/:id/rotate')
-  async rotateApiKey(
-    @Param('id') id: string,
-    @Body() body: { revokeOld?: boolean; reason?: 'manual' | 'automatic' | 'expired' | 'compromised' },
-    @Request() req: any,
-    @Principal() principal: AuthPrincipal,
-  ) {
-    const userId = principal.id;
-    const ipAddress = req.ip;
-    const userAgent = req.headers['user-agent'];
-
-    const result = await this.tokenRotationService.rotateToken(
-      id,
-      userId,
-      body.reason || 'manual',
-      body.revokeOld !== false,
-      ipAddress,
-      userAgent,
-    );
-
-    return {
-      message: 'Token rotated successfully',
-      newApiKey: result.newKey,
-      newMetadata: this.withoutSecrets(result.newMetadata),
-    };
-  }
-
-  @RequirePermission(Permission.ADMIN_USERS)
-  @Post('auth/api-keys/:id/revoke')
-  revokeApiKey(@Param('id') id: string, @Headers('authorization') authHeader?: string) {
-    const success = this.keyManagementService.revokeKey(id);
-    if (!success) {
-      throw new NotFoundException(`API key with ID ${id} not found`);
-    }
-    return { message: 'API key revoked successfully' };
-  }
-
-  @RequirePermission(Permission.ADMIN_USERS)
-  @Get('auth/api-keys/:id/rotation-history')
-  getRotationHistory(@Param('id') id: string, @Headers('authorization') authHeader?: string) {
-    return this.tokenRotationService.getRotationHistory(id);
-  }
-
-  /** Key metadata without the hash or the encrypted key */
-  private withoutSecrets<T extends { keyHash?: string; encryptedKey?: string }>(metadata: T) {
-    const { keyHash, encryptedKey, ...rest } = metadata;
-    return rest;
-  }
 
   @Get('tokens')
   getTokens(
     @Query('category') category?: string,
     @Query('type') type?: string,
     @Query('tag') tag?: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const tokens = this.designSystemService.getAllTokens(category, type, tag);
     return { 
       tokens,
@@ -142,9 +43,7 @@ export class DesignSystemController {
   @Get('tokens/:name')
   getToken(
     @Param('name') name: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const token = this.designSystemService.getTokenByName(name);
     if (!token) {
       throw new BadRequestException(`Token '${name}' not found`);
@@ -155,9 +54,7 @@ export class DesignSystemController {
   @Get('tokens/category/:category')
   getTokensByCategory(
     @Param('category') category: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const tokens = this.designSystemService.getTokensByCategory(category);
     return { 
       tokens,
@@ -169,24 +66,23 @@ export class DesignSystemController {
   // Component metadata for Loupe Tool
   // Using a different path to avoid conflict with components/:id route
   @Get('component-metadata')
-  getComponentMetadata() {
-    // Make this endpoint public for the Loupe Tool to work
-    // In production, you may want to add rate limiting instead
+  async getComponentMetadata(@Principal() principal: AuthPrincipal) {
+    const components = await this.componentAccess.list(principal);
     try {
-      return this.designSystemService.getComponentMetadata();
+      return this.designSystemService.getComponentMetadata(components);
     } catch (error) {
       console.error('Error getting component metadata:', error);
       throw new BadRequestException('Failed to retrieve component metadata');
     }
   }
 
+  // Component reads go through ComponentAccessService, which hides other workspaces' components
   @Get('components')
-  getComponents(
+  async getComponents(
+    @Principal() principal: AuthPrincipal,
     @Query('status') status?: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
-    const components = this.designSystemService.getAllComponents(status);
+    const components = await this.componentAccess.list(principal, status);
     return { 
       components,
       count: components.length,
@@ -195,34 +91,28 @@ export class DesignSystemController {
   }
 
   @Get('components/:id/test-coverage')
-  getComponentTestCoverage(
+  async getComponentTestCoverage(
     @Param('id') id: string,
-    @Headers('authorization') authHeader?: string,
+    @Principal() principal: AuthPrincipal,
   ) {
-    this.validateRequest(authHeader);
+    await this.componentAccess.get(principal, id);
     return this.designSystemService.calculateTestCoverage(id);
   }
 
   @Get('components/:id')
   getComponent(
     @Param('id') id: string,
-    @Headers('authorization') authHeader?: string,
+    @Principal() principal: AuthPrincipal,
   ) {
-    this.validateRequest(authHeader);
-    const component = this.designSystemService.getComponentById(id);
-    if (!component) {
-      throw new BadRequestException(`Component '${id}' not found`);
-    }
-    return component;
+    return this.componentAccess.get(principal, id);
   }
 
   @Get('components/status/:status')
-  getComponentsByStatus(
+  async getComponentsByStatus(
     @Param('status') status: string,
-    @Headers('authorization') authHeader?: string,
+    @Principal() principal: AuthPrincipal,
   ) {
-    this.validateRequest(authHeader);
-    const components = this.designSystemService.getComponentsByStatus(status);
+    const components = await this.componentAccess.list(principal, status);
     return { 
       components,
       status,
@@ -243,86 +133,77 @@ export class DesignSystemController {
   @Post('ai/chat')
   async chatWithAI(
     @Body() body: { message: string; conversationHistory?: Array<{ role: string; content: string }> },
-    @Headers('authorization') authHeader?: string,
+    @Principal() principal: AuthPrincipal,
   ) {
-    this.validateRequest(authHeader);
-    return await this.designSystemService.chatWithAI(body.message, body.conversationHistory);
+    const components = await this.componentAccess.list(principal);
+    return await this.designSystemService.chatWithAI(body.message, body.conversationHistory, components);
   }
 
   @Get('performance/budgets')
-  getPerformanceBudgets(@Headers('authorization') authHeader?: string) {
-    this.validateRequest(authHeader);
+  getPerformanceBudgets() {
     return this.designSystemService.getPerformanceBudgets();
   }
 
+  @RequirePermission(Permission.ADMIN_PERFORMANCE_ANALYSIS)
   @Post('performance/budgets')
   createPerformanceBudget(
     @Body() body: { name: string; metric: string; threshold: number; unit: string; alertThreshold?: number },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.designSystemService.createPerformanceBudget(body.name, body.metric, body.threshold, body.unit, body.alertThreshold);
   }
 
+  @RequirePermission(Permission.ADMIN_PERFORMANCE_ANALYSIS)
   @Put('performance/budgets/:id')
   updatePerformanceBudget(
     @Param('id') id: string,
     @Body() body: { name?: string; threshold?: number; alertThreshold?: number; enabled?: boolean },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.designSystemService.updatePerformanceBudget(id, body);
   }
 
+  @RequirePermission(Permission.ADMIN_PERFORMANCE_ANALYSIS)
   @Delete('performance/budgets/:id')
-  deletePerformanceBudget(@Param('id') id: string, @Headers('authorization') authHeader?: string) {
-    this.validateRequest(authHeader);
+  deletePerformanceBudget(@Param('id') id: string) {
     return this.designSystemService.deletePerformanceBudget(id);
   }
 
   @Get('performance/bundle-analysis')
-  getBundleAnalysis(@Headers('authorization') authHeader?: string) {
-    this.validateRequest(authHeader);
+  getBundleAnalysis() {
     return this.designSystemService.getBundleAnalysis();
   }
 
   @Post('performance/bundle-analysis/analyze')
   analyzeBundle(
     @Body() body: { componentId?: string; includeDependencies?: boolean },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.designSystemService.analyzeBundle(body.componentId, body.includeDependencies);
   }
 
   @Get('roadmap')
-  getRoadmap(@Headers('authorization') authHeader?: string) {
-    this.validateRequest(authHeader);
+  getRoadmap() {
     return this.designSystemService.getRoadmap();
   }
 
+  @RequirePermission(Permission.ROADMAP_EDIT)
   @Post('roadmap/items')
   createRoadmapItem(
     @Body() body: { title: string; description: string; category: string; priority: string; targetDate?: string; status?: string },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.designSystemService.createRoadmapItem(body);
   }
 
+  @RequirePermission(Permission.ROADMAP_EDIT)
   @Put('roadmap/items/:id')
   updateRoadmapItem(
     @Param('id') id: string,
     @Body() body: { title?: string; description?: string; category?: string; priority?: string; targetDate?: string; status?: string },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.designSystemService.updateRoadmapItem(id, body);
   }
 
+  @RequirePermission(Permission.ROADMAP_EDIT)
   @Delete('roadmap/items/:id')
-  deleteRoadmapItem(@Param('id') id: string, @Headers('authorization') authHeader?: string) {
-    this.validateRequest(authHeader);
+  deleteRoadmapItem(@Param('id') id: string) {
     return this.designSystemService.deleteRoadmapItem(id);
   }
 
@@ -339,31 +220,28 @@ export class DesignSystemController {
     return this.designSystemService.getBanner(id);
   }
 
+  @RequirePermission(Permission.ADMIN_BANNERS)
   @Post('banners')
   createBanner(
     @Body() body: { title: string; message: string; type: 'info' | 'warning' | 'error' | 'success'; expiresAt?: string },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.designSystemService.createBanner(body);
   }
 
+  @RequirePermission(Permission.ADMIN_BANNERS)
   @Put('banners/:id')
   updateBanner(
     @Param('id') id: string,
     @Body() body: { title?: string; message?: string; type?: 'info' | 'warning' | 'error' | 'success'; isActive?: boolean; expiresAt?: string },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.designSystemService.updateBanner(id, body);
   }
 
+  @RequirePermission(Permission.ADMIN_BANNERS)
   @Delete('banners/:id')
   deleteBanner(
     @Param('id') id: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     this.designSystemService.deleteBanner(id);
     return { success: true };
   }
@@ -375,18 +253,14 @@ export class DesignSystemController {
     @Query('category') category?: string,
     @Query('assignedTo') assignedTo?: string,
     @Query('priority') priority?: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.componentRequestService.getAllRequests({ status, category, assignedTo, priority });
   }
 
   @Get('requests/:id')
   getRequest(
     @Param('id') id: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const request = this.componentRequestService.getRequest(id);
     if (!request) {
       throw new BadRequestException(`Request ${id} not found`);
@@ -404,9 +278,7 @@ export class DesignSystemController {
       category: string;
       priority?: 'low' | 'medium' | 'high' | 'critical';
     },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.componentRequestService.createRequest(body);
   }
 
@@ -420,9 +292,7 @@ export class DesignSystemController {
       priority: 'low' | 'medium' | 'high' | 'critical';
       assignedTo: string;
     }>,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const request = this.componentRequestService.updateRequest(id, body);
     if (!request) {
       throw new BadRequestException(`Request ${id} not found`);
@@ -433,9 +303,7 @@ export class DesignSystemController {
   @Delete('requests/:id')
   deleteRequest(
     @Param('id') id: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const deleted = this.componentRequestService.deleteRequest(id);
     if (!deleted) {
       throw new BadRequestException(`Request ${id} not found`);
@@ -447,9 +315,7 @@ export class DesignSystemController {
   voteRequest(
     @Param('id') id: string,
     @Principal() principal: AuthPrincipal,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const request = this.componentRequestService.voteRequest(id, principal.id);
     if (!request) {
       throw new BadRequestException(`Request ${id} not found`);
@@ -457,14 +323,13 @@ export class DesignSystemController {
     return request;
   }
 
+  @RequirePermission(Permission.ROADMAP_EDIT)
   @Put('requests/:id/status')
   updateRequestStatus(
     @Param('id') id: string,
     @Body() body: { status: string },
     @Principal() principal: AuthPrincipal,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     try {
       const request = this.componentRequestService.transitionStatus(id, body.status as any, principal.id);
       if (!request) {
@@ -476,13 +341,12 @@ export class DesignSystemController {
     }
   }
 
+  @RequirePermission(Permission.ROADMAP_EDIT)
   @Put('requests/:id/assign')
   assignRequest(
     @Param('id') id: string,
     @Body() body: { userId: string },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const request = this.componentRequestService.assignRequest(id, body.userId);
     if (!request) {
       throw new BadRequestException(`Request ${id} not found`);
@@ -499,18 +363,14 @@ export class DesignSystemController {
       mentions?: string[];
       attachments?: string[];
     },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.componentRequestService.addComment(id, body);
   }
 
   @Get('requests/:id/comments')
   getComments(
     @Param('id') id: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.componentRequestService.getComments(id);
   }
 
@@ -518,9 +378,7 @@ export class DesignSystemController {
   linkToComponent(
     @Param('id') id: string,
     @Body() body: { componentId: string },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const request = this.componentRequestService.linkToComponent(id, body.componentId);
     if (!request) {
       throw new BadRequestException(`Request ${id} not found`);
@@ -534,18 +392,14 @@ export class DesignSystemController {
     @Query('status') status?: string,
     @Query('severity') severity?: string,
     @Query('componentId') componentId?: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.componentRequestService.getAllIssues({ status, severity, componentId });
   }
 
   @Get('issues/:id')
   getIssue(
     @Param('id') id: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const issue = this.componentRequestService.getIssue(id);
     if (!issue) {
       throw new BadRequestException(`Issue ${id} not found`);
@@ -563,9 +417,7 @@ export class DesignSystemController {
       reportedBy: string;
       componentId?: string;
     },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.componentRequestService.createIssue(body);
   }
 
@@ -579,9 +431,7 @@ export class DesignSystemController {
       severity: 'low' | 'medium' | 'high' | 'critical';
       assignedTo: string;
     }>,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const issue = this.componentRequestService.updateIssue(id, body);
     if (!issue) {
       throw new BadRequestException(`Issue ${id} not found`);
@@ -591,24 +441,20 @@ export class DesignSystemController {
 
   // Analytics
   @Get('requests/analytics')
-  getRequestAnalytics(@Headers('authorization') authHeader?: string) {
-    this.validateRequest(authHeader);
+  getRequestAnalytics() {
     return this.componentRequestService.getRequestAnalytics();
   }
 
   // Request Templates
   @Get('requests/templates')
-  getRequestTemplates(@Headers('authorization') authHeader?: string) {
-    this.validateRequest(authHeader);
+  getRequestTemplates() {
     return this.componentRequestService.getRequestTemplates();
   }
 
   @Get('requests/templates/:id')
   getRequestTemplate(
     @Param('id') id: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const template = this.componentRequestService.getRequestTemplate(id);
     if (!template) {
       throw new BadRequestException(`Template ${id} not found`);
@@ -621,14 +467,13 @@ export class DesignSystemController {
   findDuplicateRequests(
     @Param('id') id: string,
     @Query('threshold') threshold?: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const thresholdValue = threshold ? parseFloat(threshold) : 0.7;
     return this.componentRequestService.findDuplicateRequests(id, thresholdValue);
   }
 
   // Merge Requests
+  @RequirePermission(Permission.ROADMAP_EDIT)
   @Post('requests/:id/merge')
   mergeRequests(
     @Param('id') sourceRequestId: string,
@@ -642,9 +487,7 @@ export class DesignSystemController {
         keepStatus?: 'source' | 'target' | 'highest';
       };
     },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const mergedRequest = this.componentRequestService.mergeRequests(
       sourceRequestId,
       body.targetRequestId,
@@ -661,18 +504,14 @@ export class DesignSystemController {
   getNotifications(
     @Principal() principal: AuthPrincipal,
     @Query('unreadOnly') unreadOnly?: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.notificationService.getNotifications(principal.id, unreadOnly === 'true');
   }
 
   @Put('notifications/:id/read')
   markNotificationAsRead(
     @Param('id') id: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const success = this.notificationService.markAsRead(id);
     if (!success) {
       throw new BadRequestException(`Notification ${id} not found`);
@@ -683,9 +522,7 @@ export class DesignSystemController {
   @Put('notifications/read-all')
   markAllNotificationsAsRead(
     @Principal() principal: AuthPrincipal,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const count = this.notificationService.markAllAsRead(principal.id);
     return { success: true, count };
   }
@@ -693,9 +530,7 @@ export class DesignSystemController {
   @Get('notifications/unread-count')
   getUnreadCount(
     @Principal() principal: AuthPrincipal,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return { count: this.notificationService.getUnreadCount(principal.id) };
   }
 
@@ -713,9 +548,7 @@ export class DesignSystemController {
       frustration: number;
       user: string;
     },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.designSystemService.submitNASATLX(body);
   }
 
@@ -736,9 +569,7 @@ export class DesignSystemController {
       q10: number;
       user: string;
     },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.designSystemService.submitSUS(body);
   }
 
@@ -752,9 +583,7 @@ export class DesignSystemController {
       overallAssessment: string;
       timestamp: string;
     },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.designSystemService.submitHeuristicEvaluation(body);
   }
 
@@ -762,50 +591,48 @@ export class DesignSystemController {
   @Get('tokens/relationships')
   getTokenRelationships(
     @Query('token') tokenName?: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.designSystemService.getTokenRelationships(tokenName);
   }
 
   @Get('tokens/:name/impact')
   getTokenImpactAnalysis(
     @Param('name') tokenName: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.designSystemService.getTokenImpactAnalysis(tokenName);
   }
 
   // Component Variant Builder endpoints
   @Get('components/:id/variants')
-  getComponentVariants(
+  async getComponentVariants(
     @Param('id') componentId: string,
-    @Headers('authorization') authHeader?: string,
+    @Principal() principal: AuthPrincipal,
   ) {
-    this.validateRequest(authHeader);
+    await this.componentAccess.get(principal, componentId);
     return {
       variants: this.designSystemService.getComponentVariants(componentId),
     };
   }
 
+  @RequirePermission(Permission.COMPONENT_EDIT)
   @Post('components/:id/variants')
-  saveComponentVariant(
+  async saveComponentVariant(
     @Param('id') componentId: string,
     @Body() variant: any,
-    @Headers('authorization') authHeader?: string,
+    @Principal() principal: AuthPrincipal,
   ) {
-    this.validateRequest(authHeader);
+    await this.componentAccess.get(principal, componentId);
     return this.designSystemService.saveComponentVariant(componentId, variant);
   }
 
+  @RequirePermission(Permission.COMPONENT_EDIT)
   @Delete('components/:id/variants/:variantName')
-  deleteComponentVariant(
+  async deleteComponentVariant(
     @Param('id') componentId: string,
     @Param('variantName') variantName: string,
-    @Headers('authorization') authHeader?: string,
+    @Principal() principal: AuthPrincipal,
   ) {
-    this.validateRequest(authHeader);
+    await this.componentAccess.get(principal, componentId);
     const deleted = this.designSystemService.deleteComponentVariant(componentId, variantName);
     if (!deleted) {
       throw new BadRequestException(`Variant '${variantName}' not found for component '${componentId}'`);
@@ -814,8 +641,9 @@ export class DesignSystemController {
   }
 
   // Component creation with auto-linking
+  @RequirePermission(Permission.COMPONENT_CREATE)
   @Post('components')
-  createComponent(
+  async createComponent(
     @Body() data: {
       id: string;
       name: string;
@@ -827,20 +655,24 @@ export class DesignSystemController {
       examples?: string[];
       accessibility?: { wcag: string; notes?: string };
       linkedRequestId?: string;
+      workspaceId?: string;
     },
-    @Headers('authorization') authHeader?: string,
+    @Principal() principal: AuthPrincipal,
   ) {
-    this.validateRequest(authHeader);
-    return this.designSystemService.createComponent(data);
+    // Only a workspace's editors add components to it; sharing is set through the workspace routes
+    if (data.workspaceId !== undefined) {
+      await this.workspaceAccess.require(principal, data.workspaceId, 'editor');
+    }
+    return this.designSystemService.createComponent({ ...data, isGlobal: false });
   }
 
   // Get linked requests for a component
   @Get('components/:id/linked-requests')
-  getLinkedRequests(
+  async getLinkedRequests(
     @Param('id') componentId: string,
-    @Headers('authorization') authHeader?: string,
+    @Principal() principal: AuthPrincipal,
   ) {
-    this.validateRequest(authHeader);
+    await this.componentAccess.get(principal, componentId);
     // This would need to query ComponentRequestsService
     // For now, return empty array - this can be enhanced later
     return { requests: [] };

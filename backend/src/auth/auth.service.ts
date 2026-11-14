@@ -160,7 +160,7 @@ export class AuthService {
     if (this.keys.isAdminKey(credential)) {
       return this.service('admin-key', 'Admin API key', ALL_PERMISSIONS);
     }
-    const key = this.keys.resolveApiKey(credential);
+    const key = await this.keys.resolveApiKey(credential);
     if (key) {
       const scoped = (key.scopes ?? []).filter(isPermission);
       return this.service(key.id, key.name, key.scopes?.length ? scoped : DEFAULT_SERVICE_PERMISSIONS);

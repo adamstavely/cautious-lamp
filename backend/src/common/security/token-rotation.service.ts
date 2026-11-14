@@ -1,15 +1,29 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { KeyManagementService, ApiKeyMetadata } from './key-management.service';
+import { KeyManagementService, ApiKeyMetadata, RotationReason } from './key-management.service';
 import { SecurityAuditService } from './security-audit.service';
 import { TokenRotationPolicy, TokenRotationHistory, DEFAULT_TOKEN_POLICY } from './token-policy.interface';
 
+/** The rotation that produced a key, from the stored key record */
+function historyOf(metadata: ApiKeyMetadata, keys: ApiKeyMetadata[]): TokenRotationHistory | null {
+  if (!metadata.rotatedFrom) return null;
+  const old = keys.find((key) => key.id === metadata.rotatedFrom!.keyId);
+  return {
+    tokenId: metadata.rotatedFrom.keyId,
+    rotatedAt: metadata.rotatedFrom.at,
+    rotatedBy: metadata.rotatedFrom.by,
+    reason: metadata.rotatedFrom.reason,
+    oldTokenHash: old?.keyHash ?? '',
+    newTokenId: metadata.id,
+  };
+}
+
 /**
- * Service for managing token rotation
+ * Service for managing token rotation. History is read from the key records
+ * (each rotated key remembers its predecessor), so it is shared and durable.
  */
 @Injectable()
 export class TokenRotationService {
   private readonly logger = new Logger(TokenRotationService.name);
-  private readonly rotationHistory: TokenRotationHistory[] = [];
   private readonly policies = new Map<string, TokenRotationPolicy>();
 
   constructor(
@@ -45,12 +59,12 @@ export class TokenRotationService {
   async rotateToken(
     tokenId: string,
     userId: string,
-    reason: 'manual' | 'automatic' | 'expired' | 'compromised' = 'manual',
+    reason: RotationReason = 'manual',
     revokeOld: boolean = true,
     ipAddress?: string,
     userAgent?: string,
   ): Promise<{ newKey: string; newMetadata: ApiKeyMetadata }> {
-    const oldMetadata = this.keyManagementService.getKeyMetadata(tokenId);
+    const oldMetadata = await this.keyManagementService.getKeyMetadata(tokenId);
     if (!oldMetadata) {
       throw new NotFoundException(`Token with ID ${tokenId} not found`);
     }
@@ -62,21 +76,10 @@ export class TokenRotationService {
     }
 
     // Rotate the token
-    const result = this.keyManagementService.rotateKey(tokenId, revokeOld);
+    const result = await this.keyManagementService.rotateKey(tokenId, revokeOld, { by: userId, reason });
     if (!result) {
       throw new BadRequestException('Failed to rotate token');
     }
-
-    // Record rotation history
-    const history: TokenRotationHistory = {
-      tokenId,
-      rotatedAt: new Date(),
-      rotatedBy: userId,
-      reason,
-      oldTokenHash: oldMetadata.keyHash,
-      newTokenId: result.newMetadata.id,
-    };
-    this.rotationHistory.push(history);
 
     // Log security event
     await this.securityAuditService.logTokenRotation(
@@ -94,12 +97,15 @@ export class TokenRotationService {
   /**
    * Check if a token needs rotation
    */
-  needsRotation(tokenId: string): { needsRotation: boolean; reason?: string } {
-    const metadata = this.keyManagementService.getKeyMetadata(tokenId);
+  async needsRotation(tokenId: string): Promise<{ needsRotation: boolean; reason?: string }> {
+    const metadata = await this.keyManagementService.getKeyMetadata(tokenId);
     if (!metadata) {
       return { needsRotation: false };
     }
+    return this.checkRotation(metadata);
+  }
 
+  private checkRotation(metadata: ApiKeyMetadata): { needsRotation: boolean; reason?: string } {
     const policy = this.getPolicy();
     const now = Date.now();
     const createdAt = metadata.createdAt.getTime();
@@ -138,8 +144,8 @@ export class TokenRotationService {
   /**
    * Get tokens that need rotation
    */
-  getTokensNeedingRotation(): Array<{ tokenId: string; metadata: ApiKeyMetadata; reason: string }> {
-    const allKeys = this.keyManagementService.getAllKeys();
+  async getTokensNeedingRotation(): Promise<Array<{ tokenId: string; metadata: ApiKeyMetadata; reason: string }>> {
+    const allKeys = await this.keyManagementService.getAllKeys();
     const tokensNeedingRotation: Array<{ tokenId: string; metadata: ApiKeyMetadata; reason: string }> = [];
 
     for (const metadata of allKeys) {
@@ -147,7 +153,7 @@ export class TokenRotationService {
         continue;
       }
 
-      const check = this.needsRotation(metadata.id);
+      const check = this.checkRotation(metadata);
       if (check.needsRotation && check.reason) {
         tokensNeedingRotation.push({
           tokenId: metadata.id,
@@ -170,7 +176,7 @@ export class TokenRotationService {
       return 0;
     }
 
-    const tokensNeedingRotation = this.getTokensNeedingRotation();
+    const tokensNeedingRotation = await this.getTokensNeedingRotation();
     let rotated = 0;
 
     for (const { tokenId, reason } of tokensNeedingRotation) {
@@ -193,15 +199,18 @@ export class TokenRotationService {
   /**
    * Get rotation history for a token
    */
-  getRotationHistory(tokenId: string): TokenRotationHistory[] {
-    return this.rotationHistory.filter(h => h.tokenId === tokenId || h.newTokenId === tokenId);
+  async getRotationHistory(tokenId: string): Promise<TokenRotationHistory[]> {
+    return (await this.getAllRotationHistory(Infinity)).filter(h => h.tokenId === tokenId || h.newTokenId === tokenId);
   }
 
   /**
    * Get all rotation history
    */
-  getAllRotationHistory(limit: number = 100): TokenRotationHistory[] {
-    return this.rotationHistory
+  async getAllRotationHistory(limit: number = 100): Promise<TokenRotationHistory[]> {
+    const keys = await this.keyManagementService.getAllKeys();
+    return keys
+      .map((key) => historyOf(key, keys))
+      .filter((entry): entry is TokenRotationHistory => entry !== null)
       .sort((a, b) => b.rotatedAt.getTime() - a.rotatedAt.getTime())
       .slice(0, limit);
   }

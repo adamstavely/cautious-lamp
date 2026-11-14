@@ -49,6 +49,22 @@
           </div>
         </div>
 
+        <!-- What works today -->
+        <div class="max-w-7xl mx-auto mb-8">
+          <div
+            class="rounded-2xl p-4 border flex items-start gap-3"
+            role="status"
+            :class="isDarkMode ? 'border-amber-700 bg-amber-900/20 text-amber-200' : 'border-amber-300 bg-amber-50 text-amber-900'"
+          >
+            <span class="material-symbols-outlined">info</span>
+            <p class="text-sm">
+              Token sync is not available yet: this server has no Figma, Penpot or Adobe XD integration to read tokens from.
+              You can save connections (their access tokens are stored encrypted and never shown again), but Sync is turned off until an integration exists.
+            </p>
+          </div>
+          <p v-if="loadError" class="mt-4 text-sm text-red-600 dark:text-red-400" role="alert">{{ loadError }}</p>
+        </div>
+
         <!-- Connections Section -->
         <div class="max-w-7xl mx-auto mb-16">
           <div class="flex items-center justify-between mb-8">
@@ -138,9 +154,10 @@
               >
                 <button 
                   @click="syncConnection(connection.id)"
-                  :disabled="syncingConnections.has(connection.id)"
+                  :disabled="!SYNC_AVAILABLE || syncingConnections.has(connection.id)"
+                  title="Not available: no design tool integration on this server"
                   class="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  :class="syncingConnections.has(connection.id)
+                  :class="!SYNC_AVAILABLE || syncingConnections.has(connection.id)
                     ? (isDarkMode ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed')
                     : (isDarkMode ? 'bg-indigo-900/50 text-indigo-400 hover:bg-indigo-800/50' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200')"
                 >
@@ -368,7 +385,8 @@
                   :class="isDarkMode 
                     ? 'border-gray-700 bg-slate-900 text-white focus:border-indigo-500' 
                     : 'border-gray-300 bg-white text-gray-900 focus:border-indigo-500'"
-                  placeholder="Enter your API key or access token"
+                  autocomplete="off"
+                  :placeholder="editingConnection?.hasApiKey ? 'Saved (leave blank to keep it)' : 'Enter your API key or access token'"
                 />
               </div>
 
@@ -398,33 +416,10 @@
                     Enable Connection
                   </span>
                 </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    v-model="connectionForm.autoSync"
-                    type="checkbox"
-                    class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Auto Sync
-                  </span>
-                </label>
               </div>
-
-              <div v-if="connectionForm.autoSync">
-                <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Sync Interval (minutes)
-                </label>
-                <input 
-                  v-model.number="connectionForm.syncInterval"
-                  type="number"
-                  min="1"
-                  class="w-full px-4 py-2 rounded-lg border transition-colors"
-                  :class="isDarkMode 
-                    ? 'border-gray-700 bg-slate-900 text-white focus:border-indigo-500' 
-                    : 'border-gray-300 bg-white text-gray-900 focus:border-indigo-500'"
-                  placeholder="e.g., 60"
-                />
-              </div>
+              <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
+                Automatic sync is not available yet (no design tool integration or scheduler on this server).
+              </p>
 
               <div class="flex items-center gap-3 pt-4">
                 <button 
@@ -462,6 +457,13 @@ import { useDrawer } from '../composables/useDrawer.js';
 import Dropdown from '../components/Dropdown.vue';
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
+// The server has no design tool integration: sync answers 501
+const SYNC_AVAILABLE = false;
+const loadError = ref('');
+const errorMessage = (error, fallback) => {
+  const message = error?.response?.data?.message;
+  return Array.isArray(message) ? message.join(', ') : message || fallback;
+};
 
 const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
@@ -477,8 +479,6 @@ const connectionForm = reactive({
   apiKey: '',
   fileId: '',
   enabled: true,
-  autoSync: false,
-  syncInterval: 60,
 });
 
 const toolOptions = [
@@ -510,28 +510,11 @@ const loadConnections = async () => {
   try {
     const response = await apiClient.get(`${API_BASE_URL}/token-sync/connections`);
     connections.value = response.data || [];
+    loadError.value = '';
   } catch (error) {
     console.error('Error loading connections:', error);
-    // Use mock data if API fails
-    connections.value = [
-      {
-        id: 'conn-1',
-        name: 'Figma Design System',
-        tool: 'figma',
-        fileId: 'figma-file-123',
-        enabled: true,
-        autoSync: false,
-        lastSync: new Date('2024-01-20'),
-      },
-      {
-        id: 'conn-2',
-        name: 'Penpot Tokens',
-        tool: 'penpot',
-        fileId: 'penpot-file-456',
-        enabled: false,
-        autoSync: false,
-      },
-    ];
+    connections.value = [];
+    loadError.value = errorMessage(error, 'Failed to load connections.');
   }
 };
 
@@ -546,7 +529,7 @@ const syncConnection = async (connectionId) => {
     await loadConnections();
   } catch (error) {
     console.error('Error syncing connection:', error);
-    alert('Failed to sync tokens. Please try again.');
+    alert(errorMessage(error, 'Failed to sync tokens. Please try again.'));
   } finally {
     syncingConnections.value.delete(connectionId);
   }
@@ -557,11 +540,10 @@ const editConnection = (connection) => {
   Object.assign(connectionForm, {
     name: connection.name,
     tool: connection.tool,
-    apiKey: connection.apiKey || '',
+    // The saved token is never sent back; leaving this blank keeps it
+    apiKey: '',
     fileId: connection.fileId || '',
     enabled: connection.enabled,
-    autoSync: connection.autoSync,
-    syncInterval: connection.syncInterval || 60,
   });
   showCreateModal.value = true;
 };
@@ -574,7 +556,7 @@ const deleteConnection = async (connectionId) => {
     await loadConnections();
   } catch (error) {
     console.error('Error deleting connection:', error);
-    alert('Failed to delete connection. Please try again.');
+    alert(errorMessage(error, 'Failed to delete connection. Please try again.'));
   }
 };
 
@@ -583,13 +565,12 @@ const saveConnection = async () => {
     const connectionData = {
       name: connectionForm.name,
       tool: connectionForm.tool,
-      apiKey: connectionForm.apiKey,
-      fileId: connectionForm.fileId,
+      fileId: connectionForm.fileId || null,
       enabled: connectionForm.enabled,
-      autoSync: connectionForm.autoSync,
-      syncInterval: connectionForm.autoSync ? connectionForm.syncInterval : undefined,
-      mappings: [],
     };
+    // Blank keeps the saved token
+    if (connectionForm.apiKey) connectionData.apiKey = connectionForm.apiKey;
+    if (!editingConnection.value) connectionData.mappings = [];
 
     if (editingConnection.value) {
       await apiClient.put(
@@ -607,7 +588,7 @@ const saveConnection = async () => {
     await loadConnections();
   } catch (error) {
     console.error('Error saving connection:', error);
-    alert('Failed to save connection. Please try again.');
+    alert(errorMessage(error, 'Failed to save connection. Please try again.'));
   }
 };
 
@@ -620,8 +601,6 @@ const closeModal = () => {
     apiKey: '',
     fileId: '',
     enabled: true,
-    autoSync: false,
-    syncInterval: 60,
   });
 };
 
@@ -639,7 +618,7 @@ const resolveConflict = async (conflict, resolution) => {
     }
   } catch (error) {
     console.error('Error resolving conflict:', error);
-    alert('Failed to resolve conflict. Please try again.');
+    alert(errorMessage(error, 'Failed to resolve conflict. Please try again.'));
   }
 };
 

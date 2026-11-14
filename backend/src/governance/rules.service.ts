@@ -7,7 +7,10 @@ import { META_STORE, MetaDoc, RULE_STORE } from './governance-stores';
 import { GovernanceRule, RuleCategory, RuleDefinition, RuleSeverity } from './governance.types';
 import { normalizeRuleDefinition } from './rule-validation';
 
+/** Written once every built-in rule has been seeded */
 const SEED_MARKER = 'builtin-rules-seeded-v1';
+/** Written after one built-in rule is created; kept when an admin deletes the rule, so it stays deleted */
+const seededMarker = (ruleId: string) => `builtin-rule-seeded:${ruleId}`;
 
 export const RULES_EXPORT_FORMAT = 'cautious-lamp-governance-rules';
 
@@ -30,9 +33,15 @@ export class RulesService implements OnModuleInit {
   }
 
   /**
-   * Seeds the built-in rules once per cluster. The marker is created first
-   * with op_type=create, so only one instance seeds, and rules an admin later
-   * deletes stay deleted.
+   * Seeds the built-in rules, resumably. Each rule is created and then
+   * recorded with its own marker in the meta index; the completion marker is
+   * written only after every built-in has one. A run that fails part way
+   * leaves the rules it didn't reach without markers, so the next start (or
+   * the next request) carries on from there. A built-in that has a marker but
+   * no rule was deleted on purpose and is not recreated.
+   *
+   * Clusters seeded before per-rule markers existed have the completion
+   * marker already and are left as they are.
    */
   ensureSeeded(): Promise<void> {
     if (!this.seeded) {
@@ -45,14 +54,11 @@ export class RulesService implements OnModuleInit {
   }
 
   private async seed(): Promise<void> {
+    if (await this.meta.get(SEED_MARKER)) return;
     const now = new Date().toISOString();
-    try {
-      await this.meta.create({ id: SEED_MARKER, createdAt: now });
-    } catch (error) {
-      if (error instanceof DuplicateDocumentError) return;
-      throw error;
-    }
+    let created = 0;
     for (const { id, ...definition } of BUILTIN_RULES) {
+      if (await this.meta.get(seededMarker(id))) continue;
       const rule: GovernanceRule = {
         ...normalizeRuleDefinition(definition),
         id,
@@ -63,13 +69,29 @@ export class RulesService implements OnModuleInit {
         createdBy: 'system',
         updatedBy: 'system',
       };
+      // Rule first, then its marker: a failure in between recreates nothing
+      // (the rule exists) and a marker never stands for a rule that wasn't written
       try {
         await this.store.create(rule);
+        created++;
       } catch (error) {
         if (!(error instanceof DuplicateDocumentError)) throw error;
       }
+      await this.createMeta({ id: seededMarker(id), createdAt: now });
     }
-    this.logger.log(`Seeded ${BUILTIN_RULES.length} built-in governance rules`);
+    for (const { id } of BUILTIN_RULES) {
+      if (!(await this.meta.get(seededMarker(id)))) throw new Error(`Built-in rule ${id} was not recorded as seeded`);
+    }
+    await this.createMeta({ id: SEED_MARKER, createdAt: now });
+    if (created) this.logger.log(`Seeded ${created} built-in governance rule(s)`);
+  }
+
+  private async createMeta(doc: MetaDoc): Promise<void> {
+    try {
+      await this.meta.create(doc);
+    } catch (error) {
+      if (!(error instanceof DuplicateDocumentError)) throw error;
+    }
   }
 
   async list(filter: { category?: RuleCategory; enabledOnly?: boolean } = {}): Promise<GovernanceRule[]> {

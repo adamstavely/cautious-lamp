@@ -6,6 +6,32 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 // Flags are read with the signed-in user's token; signed out, there is nothing to read.
 const signedOutError = () => Object.assign(new Error('Not signed in'), { code: 'SIGNED_OUT' });
 
+const hashString = (str) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+};
+
+/**
+ * Whether a flag is on for a user, the same rule as evaluateFlag in the
+ * backend's feature-flags.service.ts: off when disabled; with targeting, on
+ * only for listed users, listed groups, or users inside the percentage rollout.
+ */
+export function evaluateFlag(flag, context = {}) {
+  if (!flag?.enabled) return false;
+  const { users, groups, percentage } = flag.targeting ?? {};
+  if (!users?.length && !groups?.length && percentage === undefined) return true;
+  const { userId, userGroups } = context;
+  if (userId && users?.includes(userId)) return true;
+  if (userGroups?.some((group) => groups?.includes(group))) return true;
+  if (percentage !== undefined) return userId ? (hashString(userId) % 100) + 1 <= percentage : percentage >= 100;
+  return false;
+}
+
 // Simple OpenFeature-compatible provider
 class DesignSystemFeatureFlagProvider {
   constructor() {
@@ -14,19 +40,16 @@ class DesignSystemFeatureFlagProvider {
     this.lastFetch = 0;
   }
 
+  // A stored flag decides; the caller's default applies only when the flag
+  // doesn't exist or can't be loaded
   async getBooleanValue(flagKey, defaultValue = false, context = {}) {
     try {
       const flag = await this.getFlag(flagKey);
-      if (!flag) {
-        // Fail open - if flag doesn't exist, return true (all features enabled)
-        return true;
-      }
-
-      // Always return true (all features enabled by default)
-      // The flag.enabled check is bypassed to ensure all features are accessible
-      return true;
+      if (!flag) return defaultValue;
+      return evaluateFlag(flag, context);
     } catch (error) {
-      console.error(`Error getting feature flag ${flagKey}:`, error);
+      // Signed out is expected (the sign-in page); flags are read again after sign-in
+      if (error?.code !== 'SIGNED_OUT') console.error(`Error getting feature flag ${flagKey}:`, error);
       return defaultValue;
     }
   }
@@ -64,22 +87,9 @@ class DesignSystemFeatureFlagProvider {
       return flag;
     } catch (error) {
       if (error.response?.status === 404) {
-        // Flag doesn't exist - return a default enabled flag
-        const defaultFlag = {
-          id: flagKey,
-          key: flagKey,
-          name: flagKey,
-          enabled: true, // Default to enabled (fail open)
-          defaultValue: true,
-        };
-        
-        // Cache the default flag
-        this.flagsCache.set(flagKey, {
-          flag: defaultFlag,
-          timestamp: Date.now(),
-        });
-        
-        return defaultFlag;
+        // No such flag: remembered as missing, so callers use their default
+        this.flagsCache.set(flagKey, { flag: null, timestamp: Date.now() });
+        return null;
       }
       throw error;
     }
@@ -94,27 +104,16 @@ class DesignSystemFeatureFlagProvider {
       // Update cache
       flags.forEach(flag => {
         this.flagsCache.set(flag.key, {
-          flag: { ...flag, enabled: true }, // Force enabled
+          flag,
           timestamp: Date.now(),
         });
       });
 
       this.lastFetch = Date.now();
     } catch (error) {
-      // If API is not available, assume all features are enabled (fail open)
-      console.warn('Error refreshing feature flags cache, assuming all features enabled:', error);
-      // Don't throw - fail open approach
+      // Keep what is cached; flags that can't be loaded fall back to each caller's default
+      console.warn('Error refreshing feature flags cache:', error);
     }
-  }
-
-  hashString(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash);
   }
 
   clearCache() {

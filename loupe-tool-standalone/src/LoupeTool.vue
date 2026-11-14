@@ -112,6 +112,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { ScanEye } from 'lucide-vue-next';
+import { fetchComponentMetadata, highlightStyle } from './loupe-core.mjs';
 
 const props = defineProps({
   apiUrl: {
@@ -131,35 +132,8 @@ const infoPosition = ref(null);
 const componentMetadata = ref({});
 
 const loadComponentMetadata = async () => {
-  try {
-    const response = await fetch(`${props.apiUrl}/components/metadata`, {
-      headers: {
-        'Authorization': `Bearer ${props.apiKey || localStorage.getItem('apiKey') || 'dev-key'}`,
-      },
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      componentMetadata.value = data;
-      console.log('Component metadata loaded:', Object.keys(data).length, 'components');
-    }
-  } catch (error) {
-    console.warn('Failed to load component metadata from API:', error);
-    // Fallback to local metadata
-    componentMetadata.value = getDefaultMetadata();
-  }
-};
-
-const getDefaultMetadata = () => {
-  return {
-    'button': { name: 'Button', path: '@design-system/components/button', icon: 'smart_button', links: { docs: '/components/buttons', github: '', figma: '' } },
-    'card': { name: 'Card', path: '@design-system/components/card', icon: 'view_module', links: { docs: '/components/cards', github: '', figma: '' } },
-    'input': { name: 'Input', path: '@design-system/components/input', icon: 'input', links: { docs: '/components/forms', github: '', figma: '' } },
-    'dropdown': { name: 'Dropdown', path: '@design-system/components/dropdown', icon: 'arrow_drop_down', links: { docs: '/components/forms', github: '', figma: '' } },
-    'sidebar': { name: 'Sidebar', path: '@design-system/components/sidebar', icon: 'menu', links: { docs: '/components/navigation', github: '', figma: '' } },
-    'topnav': { name: 'Top Navigation', path: '@design-system/components/topnav', icon: 'menu', links: { docs: '/components/navigation', github: '', figma: '' } },
-    'breadcrumbs': { name: 'Breadcrumbs', path: '@design-system/components/breadcrumbs', icon: 'navigate_next', links: { docs: '/components/navigation', github: '', figma: '' } },
-  };
+  const apiKey = props.apiKey || localStorage.getItem('apiKey') || 'dev-key';
+  componentMetadata.value = await fetchComponentMetadata(props.apiUrl, apiKey);
 };
 
 const scanForComponents = () => {
@@ -195,16 +169,16 @@ const scanForComponents = () => {
   });
 };
 
+// Bumped on scroll and resize so highlights follow their elements between scans
+const layoutVersion = ref(0);
+const onLayoutChange = () => {
+  layoutVersion.value++;
+};
+
 const getHighlightStyle = (element) => {
-  const rect = element.getBoundingClientRect();
-  return {
-    position: 'fixed',
-    left: `${rect.left + window.scrollX}px`,
-    top: `${rect.top + window.scrollY}px`,
-    width: `${rect.width}px`,
-    height: `${rect.height}px`,
-    zIndex: 9998,
-  };
+  // Read layoutVersion so Vue re-renders the highlights when it changes
+  void layoutVersion.value;
+  return highlightStyle(element.getBoundingClientRect());
 };
 
 const showInfo = (component, event) => {
@@ -274,6 +248,9 @@ const activateLoupe = () => {
   console.log('Activating Loupe Tool...');
   isActive.value = true;
   document.body.style.overflow = 'hidden';
+  // Capture: scrolling inside any scroll container moves elements too
+  window.addEventListener('scroll', onLayoutChange, true);
+  window.addEventListener('resize', onLayoutChange);
   scanForComponents();
   
   console.log(`Found ${detectedComponents.value.length} components`);
@@ -293,6 +270,8 @@ const closeLoupe = () => {
   infoPosition.value = null;
   detectedComponents.value = [];
   document.body.style.overflow = '';
+  window.removeEventListener('scroll', onLayoutChange, true);
+  window.removeEventListener('resize', onLayoutChange);
 };
 
 const handleKeyDown = (event) => {

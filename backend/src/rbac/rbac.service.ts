@@ -72,6 +72,8 @@ export enum Role {
   DEVELOPER = 'developer',
   SYSTEM_OWNER = 'system_owner',
   ACCESSIBILITY_AUDITOR = 'accessibility_auditor',
+  /** Approves or rejects reviews at the client review stage (docs/REVIEW_API.md) */
+  CLIENT = 'client',
 }
 
 export interface RoleDefinition {
@@ -311,6 +313,7 @@ export class RbacService implements OnModuleInit {
       Permission.FEEDBACK_CREATE,
       Permission.FEEDBACK_VOTE,
     ],
+    [Role.CLIENT]: [Permission.REVIEW_VIEW, Permission.REVIEW_APPROVE, Permission.REVIEW_REJECT],
   };
 
   constructor(@Inject(RBAC_STORE) private readonly store: RbacStore) {}
@@ -408,6 +411,7 @@ export class RbacService implements OnModuleInit {
       [Role.DEVELOPER]: 'Develop and maintain components, tokens, and patterns. Access code quality and performance tools.',
       [Role.SYSTEM_OWNER]: 'Own and manage system-wide operations, governance, and technical infrastructure.',
       [Role.ACCESSIBILITY_AUDITOR]: 'Audit and ensure accessibility compliance across components and patterns.',
+      [Role.CLIENT]: 'View design reviews shared with them, comment, and approve or reject at the client review stage.',
     };
     return descriptions[role] || '';
   }

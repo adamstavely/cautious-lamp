@@ -6,7 +6,7 @@ import * as path from 'path';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService, DEFAULT_SERVICE_PERMISSIONS } from '../auth/auth.service';
 import { SecurityAuditService } from '../common/security/security-audit.service';
-import { ALL_PERMISSIONS } from '../rbac/rbac.service';
+import { ALL_PERMISSIONS, Permission } from '../rbac/rbac.service';
 import { AdminReviewsController } from './admin-reviews.controller';
 import { REVIEW_STORE, TEAM_STORE } from './document-store';
 import { ReviewFilesController } from './review-files.controller';
@@ -20,9 +20,26 @@ import { SAMPLE_FILES, createHarness } from './testing/harness';
 const API_KEY = 'test-key';
 const ADMIN_KEY = 'admin-key';
 
-/** Stands in for AuthService: the two keys resolve like API_KEYS and ADMIN_API_KEY do */
+const DESIGNER_PERMISSIONS = [Permission.REVIEW_VIEW, Permission.REVIEW_CREATE];
+const DECIDER_PERMISSIONS = [...DESIGNER_PERMISSIONS, Permission.REVIEW_APPROVE, Permission.REVIEW_REJECT];
+/** Signed-in users, by bearer token: [email, name, roles, permissions] */
+const USERS: Record<string, [string, string, string[], string[]]> = {
+  'sarah-token': ['sarah@example.com', 'Sarah Johnson', ['designer'], DESIGNER_PERMISSIONS],
+  'other-token': ['other@example.com', 'Olly Other', ['designer'], DESIGNER_PERMISSIONS],
+  'client-token': ['client@example.com', 'Carla Client', ['client'], DECIDER_PERMISSIONS],
+  'ad-token': ['ad@example.com', 'Art Director', ['art_director'], DECIDER_PERMISSIONS],
+  'manager-token': ['manager@example.com', 'Review Manager', ['review_manager'], [...DECIDER_PERMISSIONS, Permission.REVIEW_ADMIN]],
+};
+const as = (token: keyof typeof USERS | typeof API_KEY | typeof ADMIN_KEY) => ({ Authorization: `Bearer ${token}` });
+
+/** Stands in for AuthService: the two keys resolve like API_KEYS and ADMIN_API_KEY do, and USERS like signed-in users */
 const auth = {
   async resolve(credential?: string) {
+    const user = credential ? USERS[credential] : undefined;
+    if (user) {
+      const [email, name, roles, permissions] = user;
+      return { type: 'user' as const, id: email, email, name, roles, permissions: new Set(permissions), mustChangePassword: false };
+    }
     const service = (id: string, permissions: readonly string[]) => ({
       type: 'service' as const,
       id,
@@ -45,11 +62,10 @@ describe('Reviews HTTP API', () => {
   let app: INestApplication;
   let base: string;
 
+  // Sarah, signed in, unless a test says otherwise
   const headers = (extra: Record<string, string> = {}) => ({
-    Authorization: `Bearer ${API_KEY}`,
+    ...as('sarah-token'),
     'Content-Type': 'application/json',
-    'x-user-email': 'sarah@example.com',
-    'x-user-name': 'Sarah Johnson',
     ...extra,
   });
   const call = (method: string, route: string, body?: unknown, extra: Record<string, string> = {}) =>
@@ -158,7 +174,7 @@ describe('Reviews HTTP API', () => {
     form.append('file', new Blob([SAMPLE_FILES.png], { type: 'image/png' }), 'round2.png');
     const res = await fetch(`${base}/api/v1/review/${reviewId}/versions`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${API_KEY}` },
+      headers: as('sarah-token'),
       body: form,
     });
     expect(res.status).toBe(201);
@@ -169,7 +185,7 @@ describe('Reviews HTTP API', () => {
     bad.append('file', new Blob(['<html>'], { type: 'text/html' }), 'x.html');
     const rejected = await fetch(`${base}/api/v1/review/${reviewId}/versions`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${API_KEY}` },
+      headers: as('sarah-token'),
       body: bad,
     });
     expect(rejected.status).toBe(415);
@@ -178,7 +194,7 @@ describe('Reviews HTTP API', () => {
     noLabel.append('file', new Blob([SAMPLE_FILES.png], { type: 'image/png' }), 'x.png');
     const invalid = await fetch(`${base}/api/v1/review/${reviewId}/versions`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${API_KEY}` },
+      headers: as('sarah-token'),
       body: noLabel,
     });
     expect(invalid.status).toBe(400);
@@ -192,7 +208,7 @@ describe('Reviews HTTP API', () => {
     huge.append('file', new Blob([hugeBytes], { type: 'application/pdf' }), 'huge.pdf');
     const tooBig = await fetch(`${base}/api/v1/review/${reviewId}/versions`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${API_KEY}` },
+      headers: as('sarah-token'),
       body: huge,
     });
     expect(tooBig.status).toBe(413);
@@ -208,24 +224,31 @@ describe('Reviews HTTP API', () => {
     const { reviewId, review } = await created.json();
     expect(review.hasPassword).toBe(true);
     expect(review).not.toHaveProperty('passwordHash');
-    const denied = await call('GET', `/review/${reviewId}`);
+    const other = as('other-token');
+    const denied = await call('GET', `/review/${reviewId}`, undefined, other);
     expect(denied.status).toBe(401);
     expect(await denied.json()).toMatchObject({ passwordRequired: true });
-    expect((await call('GET', `/review/${reviewId}?password=hunter2`)).status).toBe(401);
-    expect((await call('GET', `/review/${reviewId}`, undefined, { 'x-review-password': 'hunter2' })).status).toBe(200);
+    expect((await call('GET', `/review/${reviewId}?password=hunter2`, undefined, other)).status).toBe(401);
+    expect((await call('GET', `/review/${reviewId}`, undefined, { ...other, 'x-review-password': 'hunter2' })).status).toBe(200);
+    // Writes need it too
+    expect((await call('POST', `/review/${reviewId}/comments`, { text: 'x' }, other)).status).toBe(401);
+    // The designer doesn't
+    expect((await call('GET', `/review/${reviewId}`)).status).toBe(200);
   });
 
   it('accepts URL-encoded non-ASCII passwords and names in headers', async () => {
     const password = 'pässwörd ✓ 100%';
     const created = await call('POST', '/review/create-from-url', { url: 'https://example.com/a.png', password });
     const { reviewId } = await created.json();
+    // An API key's x-user-name labels what it writes
     const headers = {
+      ...as(API_KEY),
       'x-review-password': encodeURIComponent(password),
       'x-user-email': 'jose@example.com',
       'x-user-name': encodeURIComponent('José Núñez'),
     };
     expect((await call('GET', `/review/${reviewId}`, undefined, headers)).status).toBe(200);
-    expect((await call('GET', `/review/${reviewId}`, undefined, { 'x-review-password': 'pässwörd' })).status).toBe(401);
+    expect((await call('GET', `/review/${reviewId}`, undefined, { ...as(API_KEY), 'x-review-password': 'pässwörd' })).status).toBe(401);
     const comment = await call('POST', `/review/${reviewId}/comments`, { text: 'Hola' }, headers);
     expect(await comment.json()).toMatchObject({ author: 'José Núñez' });
   });
@@ -238,11 +261,12 @@ describe('Reviews HTTP API', () => {
         approvedEmails: ['Client@Example.com'],
       })
     ).json();
-    expect((await call('POST', `/review/${reviewId}/workflow/approve`, { stage: 'client_review' })).status).toBe(409);
+    const manager = as('manager-token');
+    expect((await call('POST', `/review/${reviewId}/workflow/approve`, { stage: 'client_review' }, manager)).status).toBe(409);
     expect((await call('POST', `/review/${reviewId}/workflow/approve`, { stage: 'nope' })).status).toBe(400);
     expect((await call('POST', `/review/${reviewId}/workflow/move-to-client-review`)).status).toBe(200);
-    expect((await call('GET', `/review/${reviewId}`, undefined, { 'x-user-email': 'other@example.com' })).status).toBe(403);
-    expect((await call('GET', `/review/${reviewId}`, undefined, { 'x-user-email': 'client@example.com' })).status).toBe(200);
+    expect((await call('GET', `/review/${reviewId}`, undefined, as('other-token'))).status).toBe(403);
+    expect((await call('GET', `/review/${reviewId}`, undefined, as('client-token'))).status).toBe(200);
   });
 
   it('runs comments, admin and team routes', async () => {
@@ -261,17 +285,170 @@ describe('Reviews HTTP API', () => {
     expect((await call('DELETE', `/admin/reviews/${reviewId}`, undefined, admin)).status).toBe(204);
     expect((await call('GET', `/review/${reviewId}`)).status).toBe(404);
 
-    const team = await (await call('POST', '/teams', { name: 'Alpha' })).json();
+    // Team membership grants review access, so only review admins change teams
+    expect((await call('POST', '/teams', { name: 'Nope' })).status).toBe(403);
+    const manager = as('manager-token');
+    const team = await (await call('POST', '/teams', { name: 'Alpha' }, manager)).json();
     expect(team).toMatchObject({ name: 'Alpha', description: '', members: [] });
     const withMember = await (
-      await call('POST', `/teams/${team.id}/members`, { email: 'Mike@Example.com', name: 'Mike', role: 'Designer' })
+      await call('POST', `/teams/${team.id}/members`, { email: 'Mike@Example.com', name: 'Mike', role: 'Designer' }, manager)
     ).json();
     expect(withMember.members).toEqual([{ email: 'mike@example.com', name: 'Mike', role: 'Designer' }]);
-    expect((await call('POST', `/teams/${team.id}/members`, { email: 'mike@example.com', name: 'M', role: 'x' })).status).toBe(409);
-    const promoted = await (await call('PATCH', `/teams/${team.id}/members/mike@example.com`, { role: 'Art Director' })).json();
+    expect((await call('POST', `/teams/${team.id}/members`, { email: 'mike@example.com', name: 'M', role: 'x' }, manager)).status).toBe(409);
+    const promoted = await (await call('PATCH', `/teams/${team.id}/members/mike@example.com`, { role: 'Art Director' }, manager)).json();
     expect(promoted.members[0].role).toBe('Art Director');
-    expect((await (await call('DELETE', `/teams/${team.id}/members/mike@example.com`)).json()).members).toEqual([]);
-    expect((await call('DELETE', `/teams/${team.id}`)).status).toBe(204);
+    expect((await (await call('DELETE', `/teams/${team.id}/members/mike@example.com`, undefined, manager)).json()).members).toEqual([]);
+    expect((await call('DELETE', `/teams/${team.id}`)).status).toBe(403);
+    expect((await call('DELETE', `/teams/${team.id}`, undefined, manager)).status).toBe(204);
     expect((await call('GET', `/teams/${team.id}`)).status).toBe(404);
+  });
+
+  // ------------------------------------------------------------ access control
+
+  const createAs = async (token: Parameters<typeof as>[0], body: Record<string, unknown> = {}) => {
+    const res = await call('POST', '/review/create-from-url', { url: 'https://example.com/private.png', ...body }, as(token));
+    expect(res.status).toBe(201);
+    return (await res.json()).reviewId as string;
+  };
+  const get = async (id: string, token: Parameters<typeof as>[0], extra: Record<string, string> = {}) =>
+    call('GET', `/review/${id}`, undefined, { ...as(token), ...extra });
+
+  it('lets only the designer or a review admin change sharing or the password, without leaking the review', async () => {
+    const id = await createAs('sarah-token');
+    await call('POST', `/review/${id}/comments`, { text: 'Secret note' });
+
+    // Other can read an "anyone" review, but not lock everyone else out of it or take it over
+    expect((await get(id, 'other-token')).status).toBe(200);
+    for (const [route, body] of [
+      ['sharing', { sharingMode: 'approved_emails', approvedEmails: ['other@example.com'] }],
+      ['password', { password: 'mine-now' }],
+    ] as const) {
+      for (const token of ['other-token', 'client-token', API_KEY] as const) {
+        const res = await call('POST', `/review/${id}/${route}`, body, as(token));
+        expect(res.status).toBe(403);
+        expect(JSON.stringify(await res.json())).not.toContain('Secret note');
+      }
+    }
+    const stored = h.store.docs.get(id)!.doc;
+    expect(stored).toMatchObject({ sharingMode: 'anyone', passwordHash: null });
+
+    // A caller who can't read the review can't change it either
+    const restricted = await createAs('sarah-token', { sharingMode: 'approved_emails', approvedEmails: ['client@example.com'] });
+    expect((await call('POST', `/review/${restricted}/password`, { password: '' }, as('other-token'))).status).toBe(403);
+    expect((await call('POST', `/review/${restricted}/comments`, { text: 'hi' }, as('other-token'))).status).toBe(403);
+
+    // The designer and a review admin can
+    const shared = await call('POST', `/review/${id}/sharing`, { sharingMode: 'approved_emails', approvedEmails: ['client@example.com'] });
+    expect(shared.status).toBe(200);
+    expect(await shared.json()).toMatchObject({ sharingMode: 'approved_emails', approvedEmails: ['client@example.com'] });
+    expect((await call('POST', `/review/${id}/password`, { password: 'pw' }, as('manager-token'))).status).toBe(200);
+    expect((await call('POST', `/review/${id}/password`, { password: '' })).status).toBe(200);
+  });
+
+  it('lists only what the caller could open, and hides approved emails from viewers', async () => {
+    const open = await createAs('sarah-token', { filename: 'list-open' });
+    const restricted = await createAs('sarah-token', {
+      filename: 'list-restricted',
+      sharingMode: 'approved_emails',
+      approvedEmails: ['client@example.com'],
+    });
+    const locked = await createAs('sarah-token', { filename: 'list-locked', password: 'pw' });
+    const expired = await createAs('sarah-token', { filename: 'list-expired' });
+    const entry = h.store.docs.get(expired)!;
+    h.store.forceWrite({ ...entry.doc, expiresAt: new Date(Date.now() - 1000).toISOString() });
+
+    const listed = async (token: Parameters<typeof as>[0], extra: Record<string, string> = {}, query = '') => {
+      const res = await call('GET', `/reviews?q=list-${query}`, undefined, { ...as(token), ...extra });
+      expect(res.status).toBe(200);
+      return (await res.json()).reviews as Array<{ id: string; approvedEmails: string[]; allowedActions: string[] }>;
+    };
+    const ids = (reviews: Array<{ id: string }>) => reviews.map((r) => r.id).sort();
+
+    expect(ids(await listed('sarah-token'))).toEqual([open, restricted, locked].sort());
+    expect(ids(await listed('sarah-token', {}, '&showExpired=true'))).toEqual([open, restricted, locked, expired].sort());
+    expect(ids(await listed('manager-token', {}, '&showExpired=true'))).toEqual([open, restricted, locked, expired].sort());
+    // Others: no password-protected, restricted or (even with showExpired) expired reviews
+    expect(ids(await listed('other-token', {}, '&showExpired=true'))).toEqual([open]);
+    const forClient = await listed('client-token');
+    expect(ids(forClient)).toEqual([open, restricted].sort());
+    expect(forClient.find((r) => r.id === restricted)!.approvedEmails).toEqual([]);
+    expect((await listed('sarah-token')).find((r) => r.id === restricted)!.approvedEmails).toEqual(['client@example.com']);
+    // An API key naming an approved reviewer is still nobody
+    expect(ids(await listed(API_KEY, { 'x-user-email': 'client@example.com' }))).toEqual([open]);
+  });
+
+  it("doesn't let an API key act as a reviewer through x-user-email", async () => {
+    const id = await createAs('sarah-token', { sharingMode: 'approved_emails', approvedEmails: ['client@example.com'] });
+    const impersonating = { 'x-user-email': 'client@example.com', 'x-user-name': 'Carla Client' };
+    expect((await get(id, API_KEY, impersonating)).status).toBe(403);
+    expect((await call('GET', `/review/${id}/comments`, undefined, { ...as(API_KEY), ...impersonating })).status).toBe(403);
+    expect((await call('POST', `/review/${id}/comments`, { text: 'x' }, { ...as(API_KEY), ...impersonating })).status).toBe(403);
+    expect((await get(id, API_KEY, { 'x-user-email': 'sarah@example.com' })).status).toBe(403);
+    // The signed-in client and a key with review:admin can
+    expect((await get(id, 'client-token')).status).toBe(200);
+    expect((await get(id, ADMIN_KEY)).status).toBe(200);
+
+    // A review an API key creates has no owner; the header only labels it
+    const created = await (
+      await call('POST', '/review/create-from-url', { url: 'https://example.com/k.png' }, { ...as(API_KEY), ...impersonating })
+    ).json();
+    expect(created.review).toMatchObject({ designer: 'Carla Client', designerEmail: null });
+    expect((await call('POST', `/review/${created.reviewId}/password`, { password: 'x' }, as('client-token'))).status).toBe(403);
+  });
+
+  it('enforces workflow roles and reports them as allowedActions', async () => {
+    const id = await createAs('sarah-token');
+    const actions = async (token: Parameters<typeof as>[0]) => (await (await get(id, token)).json()).allowedActions as string[];
+    const step = (token: Parameters<typeof as>[0], route: string, body?: unknown) =>
+      call('POST', `/review/${id}/workflow/${route}`, body, as(token));
+
+    expect(await actions('sarah-token')).toEqual(
+      expect.arrayContaining(['move-to-client-review', 'resubmit', 'manage-sharing', 'manage-password']),
+    );
+    expect(await actions('other-token')).toEqual([]);
+    expect((await step('other-token', 'move-to-client-review')).status).toBe(403);
+    expect((await step('client-token', 'move-to-client-review')).status).toBe(403);
+    expect((await step('sarah-token', 'move-to-client-review')).status).toBe(200);
+
+    // client_review: only the client role (or a review admin)
+    expect(await actions('client-token')).toEqual(['approve', 'reject']);
+    expect(await actions('sarah-token')).not.toContain('approve');
+    expect(await actions('ad-token')).toEqual([]);
+    for (const token of ['sarah-token', 'other-token', 'ad-token', API_KEY] as const) {
+      expect((await step(token, 'approve', { stage: 'client_review' })).status).toBe(403);
+    }
+    expect((await step('client-token', 'approve', { stage: 'client_review' })).status).toBe(200);
+
+    expect((await step('client-token', 'move-to-art-director-review')).status).toBe(403);
+    expect((await step('sarah-token', 'move-to-art-director-review')).status).toBe(200);
+
+    // art_director_review: the art director; the client can't
+    expect(await actions('ad-token')).toEqual(['approve', 'reject']);
+    expect((await step('client-token', 'reject', { stage: 'art_director_review' })).status).toBe(403);
+    const afterAd = await step('ad-token', 'approve', { stage: 'art_director_review' });
+    expect(afterAd.status).toBe(200);
+    expect((await afterAd.json()).allowedActions).toEqual([]);
+
+    // creative_director_review: nobody here has the role, so a review admin decides
+    expect((await step('ad-token', 'approve', { stage: 'creative_director_review' })).status).toBe(403);
+    expect(await actions('manager-token')).toEqual(expect.arrayContaining(['approve', 'reject', 'manage-sharing']));
+    const done = await step('manager-token', 'approve', { stage: 'creative_director_review' });
+    expect(await done.json()).toMatchObject({ workflowState: 'approved' });
+  });
+
+  it("gives the review's team access, and team roles count for their stage", async () => {
+    const manager = as('manager-token');
+    const team = await (await call('POST', '/teams', { name: 'Access team' }, manager)).json();
+    await call('POST', `/teams/${team.id}/members`, { email: 'other@example.com', name: 'Olly', role: 'Designer' }, manager);
+    await call('POST', `/teams/${team.id}/members`, { email: 'ad@example.com', name: 'AD', role: 'Client' }, manager);
+    const id = await createAs('sarah-token', { teamId: team.id, sharingMode: 'approved_emails', approvedEmails: [], password: 'pw' });
+
+    // A team member needs neither the approved list nor the password, and can drive the workflow
+    expect((await get(id, 'other-token')).status).toBe(200);
+    expect((await call('POST', `/review/${id}/workflow/move-to-client-review`, undefined, as('other-token'))).status).toBe(200);
+    // ...but can't change sharing or the password
+    expect((await call('POST', `/review/${id}/password`, { password: '' }, as('other-token'))).status).toBe(403);
+    // Someone whose team role is Client approves the client stage
+    expect((await call('POST', `/review/${id}/workflow/approve`, { stage: 'client_review' }, as('ad-token'))).status).toBe(200);
   });
 });

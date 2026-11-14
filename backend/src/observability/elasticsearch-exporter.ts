@@ -1,4 +1,4 @@
-import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-base';
+import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace';
 import { ExportResult, ExportResultCode } from '@opentelemetry/core';
 import { PushMetricExporter, ResourceMetrics, MetricData } from '@opentelemetry/sdk-metrics';
 import { LogRecordExporter } from '@opentelemetry/sdk-logs';
@@ -306,6 +306,10 @@ export class ElasticsearchLogExporter extends BaseElasticsearchExporter implemen
         error: error instanceof Error ? error : new Error(String(error)),
       });
     }
+  }
+
+  async forceFlush(): Promise<void> {
+    await this.flush();
   }
 
   protected transformData(data: ReadableLogRecord[]): any[] {

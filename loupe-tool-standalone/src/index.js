@@ -53,5 +53,6 @@ if (typeof window !== 'undefined') {
   }
 }
 
+export { LoupeTool };
 export default LoupeTool;
 

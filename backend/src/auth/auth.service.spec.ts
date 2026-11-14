@@ -156,7 +156,7 @@ describe('AuthService', () => {
     });
 
     it('gives scoped keys only their scopes', async () => {
-      const { key, metadata } = h.keys.createKey('ci', { scopes: [Permission.TOKEN_VIEW, 'not:a-permission'] });
+      const { key, metadata } = await h.keys.createKey('ci', { scopes: [Permission.TOKEN_VIEW, 'not:a-permission'] });
       const principal = await h.principalFor(key);
       expect(principal.id).toBe(metadata.id);
       expect([...principal.permissions]).toEqual([Permission.TOKEN_VIEW]);

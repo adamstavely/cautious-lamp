@@ -46,11 +46,52 @@ export interface DocumentStore<T extends { id: string }> {
   replace(doc: T, version: DocVersion): Promise<void>;
   /** Returns false when there was nothing to delete */
   delete(id: string): Promise<boolean>;
-  /** Every document; `excludes` drops large fields the caller won't use */
-  list(options?: { excludes?: string[] }): Promise<T[]>;
+  /** Every matching document, newest first, however many there are */
+  list(options?: ListOptions): Promise<T[]>;
 }
 
-const LIST_LIMIT = 10000;
+/** Term values `ListOptions.where` can match on (keyword or boolean fields) */
+export type ListTermValue = string | boolean;
+
+/**
+ * Narrows a `list`. Filters run in the query, so they only apply to mapped
+ * fields (the index has `dynamic: false`); filter anything else in memory.
+ */
+export interface ListOptions {
+  /** Large fields the caller won't use */
+  excludes?: string[];
+  /** Every field must equal its value; a field holding an array matches when any element does */
+  where?: Record<string, ListTermValue>;
+  /** Every (date) field must be strictly later than its ISO timestamp */
+  after?: Record<string, string>;
+}
+
+/** Hits per page while listing; `list` keeps paging until the index is exhausted */
+export const LIST_PAGE_SIZE = 1000;
+const PIT_KEEP_ALIVE = '1m';
+
+/** The Elasticsearch query for `ListOptions` */
+export function listQuery(options: ListOptions = {}): Record<string, unknown> {
+  const filter = [
+    ...Object.entries(options.where ?? {}).map(([field, value]) => ({ term: { [field]: value } })),
+    ...Object.entries(options.after ?? {}).map(([field, value]) => ({ range: { [field]: { gt: value } } })),
+  ];
+  return filter.length ? { bool: { filter } } : { match_all: {} };
+}
+
+/** `ListOptions` applied to a document in memory, matching `listQuery` (for test doubles) */
+export function matchesListOptions(doc: object, options: ListOptions = {}): boolean {
+  const record = doc as Record<string, unknown>;
+  const termOk = Object.entries(options.where ?? {}).every(([field, value]) => {
+    const actual = record[field];
+    return Array.isArray(actual) ? actual.includes(value) : actual === value;
+  });
+  const rangeOk = Object.entries(options.after ?? {}).every(([field, value]) => {
+    const actual = record[field];
+    return typeof actual === 'string' && new Date(actual).getTime() > new Date(value).getTime();
+  });
+  return termOk && rangeOk;
+}
 
 /**
  * Elasticsearch-backed store. The index is created with `dynamic: false` so
@@ -115,19 +156,52 @@ export class EsDocumentStore<T extends { id: string }> implements DocumentStore<
     }
   }
 
-  async list(options: { excludes?: string[] } = {}): Promise<T[]> {
+  /**
+   * Pages through a point-in-time snapshot with `search_after`, so the result
+   * is complete and consistent however large the index is.
+   */
+  async list(options: ListOptions = {}): Promise<T[]> {
+    return this.search(listQuery(options), options.excludes);
+  }
+
+  /**
+   * Every document matching an Elasticsearch query, newest first, paged through
+   * a point in time so nothing is cut off. A missing index is an empty result.
+   */
+  async search(query: Record<string, unknown>, excludes?: string[]): Promise<T[]> {
+    let pitId: string;
     try {
-      const res = await this.es.search<T>({
-        index: this.index,
-        size: LIST_LIMIT,
-        query: { match_all: {} },
-        sort: [{ createdAt: { order: 'desc', unmapped_type: 'date' } }],
-        _source_excludes: options.excludes,
-      });
-      return res.hits.hits.map((hit) => hit._source as T);
+      pitId = (await this.es.openPointInTime({ index: this.index, keep_alive: PIT_KEEP_ALIVE })).id;
     } catch (error) {
       if (isEsNotFound(error)) return [];
       throw this.mapError(error, 'list');
+    }
+    try {
+      const docs: T[] = [];
+      let searchAfter: unknown[] | undefined;
+      for (;;) {
+        const res = await this.es.search<T>({
+          pit: { id: pitId, keep_alive: PIT_KEEP_ALIVE },
+          size: LIST_PAGE_SIZE,
+          query: query as any,
+          // _shard_doc breaks ties, so a page boundary never skips or repeats a document
+          sort: [{ createdAt: { order: 'desc', unmapped_type: 'date' } }, { _shard_doc: 'asc' }] as any,
+          ...(searchAfter ? { search_after: searchAfter as any } : {}),
+          _source_excludes: excludes,
+          track_total_hits: false,
+        });
+        if (res.pit_id) pitId = res.pit_id;
+        const hits = res.hits.hits;
+        for (const hit of hits) docs.push(hit._source as T);
+        if (hits.length < LIST_PAGE_SIZE) return docs;
+        searchAfter = hits[hits.length - 1].sort as unknown[];
+      }
+    } catch (error) {
+      // Even a 404 here (an expired point in time) is a failure: an empty or partial list would be wrong
+      throw this.mapError(error, 'list');
+    } finally {
+      // Best effort: an unclosed PIT expires after PIT_KEEP_ALIVE anyway
+      await this.es.closePointInTime({ id: pitId }).catch(() => undefined);
     }
   }
 

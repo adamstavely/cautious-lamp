@@ -44,6 +44,7 @@
           <span :class="isDarkMode ? 'text-gray-100' : 'text-gray-900'" class="text-sm font-semibold text-center">{{ getWorkflowActionText() }}</span>
           <div class="flex items-center justify-center flex-wrap gap-2">
             <button
+              v-if="can('approve')"
               @click="handleApprove"
               class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-2"
               :class="isDarkMode 
@@ -54,6 +55,7 @@
               Approve
             </button>
             <button
+              v-if="can('reject')"
               @click="handleReject"
               class="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 border"
               :class="isDarkMode 
@@ -67,10 +69,10 @@
         </div>
       </div>
       
-      <!-- Designer Actions -->
-      <div v-else-if="isDesigner" class="mb-0">
+      <!-- Designer / team actions -->
+      <div v-else-if="canDriveWorkflow" class="mb-0">
         <!-- Mark as Completed (only after approved) -->
-        <div v-if="workflowState === 'approved' && !reviewCompleted" class="flex justify-center">
+        <div v-if="workflowState === 'approved' && !reviewCompleted && can('complete')" class="flex justify-center">
           <button
             @click="handleMarkCompleted"
             class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-2"
@@ -84,7 +86,7 @@
         </div>
         
         <!-- Draft after a rejection: resubmit to the stage that asked for changes -->
-        <div v-else-if="workflowState === 'draft' && resubmitTarget">
+        <div v-else-if="workflowState === 'draft' && resubmitTarget && can('resubmit')">
           <button
             @click="handleResubmitForReview"
             class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-2"
@@ -99,8 +101,8 @@
           </button>
         </div>
 
-        <!-- Move to Client Review -->
-        <div v-else-if="workflowState === 'draft'">
+        <!-- Move to Client Review (or straight to the Art Director when the review bypasses the client) -->
+        <div v-else-if="workflowState === 'draft' && (can('move-to-client-review') || (bypassClientReview && can('move-to-art-director-review')))">
           <button
             @click="handleMoveToClientReview"
             class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-2"
@@ -116,7 +118,7 @@
         </div>
         
         <!-- Request Art Director Review -->
-        <div v-else-if="workflowState === 'client_approved'">
+        <div v-else-if="workflowState === 'client_approved' && can('move-to-art-director-review')">
           <button
             @click="handleMoveToArtDirectorReview"
             class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-2"
@@ -132,7 +134,7 @@
         </div>
         
         <!-- Resubmit for Review -->
-        <div v-else-if="workflowState === 'ad_changes_requested' || workflowState === 'cd_changes_requested'">
+        <div v-else-if="(workflowState === 'ad_changes_requested' || workflowState === 'cd_changes_requested') && can('resubmit')">
           <button
             @click="handleResubmitForReview"
             class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center gap-2"
@@ -279,9 +281,10 @@ const props = defineProps({
     type: String,
     default: 'draft'
   },
-  currentUserRole: {
-    type: String,
-    default: 'client'
+  // What the caller may do, from the server (review.allowedActions, docs/REVIEW_API.md)
+  allowedActions: {
+    type: Array,
+    default: () => []
   },
   designer: {
     type: String,
@@ -349,20 +352,13 @@ const getWorkflowColor = (state) => {
   return colors[state] || 'grey';
 };
 
-const isDesigner = computed(() => {
-  return props.currentUserRole === 'designer';
-});
+// The server decides who may do what; the card only shows those controls
+const can = (action) => props.allowedActions.includes(action);
 
-const canApproveWorkflow = computed(() => {
-  const state = props.workflowState;
-  const role = props.currentUserRole;
-  
-  if (state === 'client_review' && role === 'client') return true;
-  if (state === 'art_director_review' && role === 'art_director') return true;
-  if (state === 'creative_director_review' && role === 'creative_director') return true;
-  
-  return false;
-});
+const DRIVE_ACTIONS = ['move-to-client-review', 'move-to-art-director-review', 'resubmit', 'complete'];
+const canDriveWorkflow = computed(() => DRIVE_ACTIONS.some(can));
+
+const canApproveWorkflow = computed(() => can('approve') || can('reject'));
 
 const getWorkflowActionText = () => {
   const state = props.workflowState;

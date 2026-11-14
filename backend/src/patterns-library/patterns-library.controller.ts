@@ -1,28 +1,35 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, Headers, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, BadRequestException } from '@nestjs/common';
 import { PatternsLibraryService, ComponentPattern } from './patterns-library.service';
-import { KeyManagementService } from '../common/security/key-management.service';
+import { RequirePermission } from '../auth/principal';
+import { Permission } from '../rbac/rbac.service';
+
+const PATTERN_CATEGORIES: ReadonlyArray<ComponentPattern['category']> = ['common', 'anti-pattern', 'best-practice', 'accessibility', 'performance', 'composition'];
+
+/** name, description and category are what lists sort and search on, so a pattern can't be stored without them */
+function assertPatternFields(data: Partial<ComponentPattern> | undefined, creating: boolean): void {
+  if (!data || typeof data !== 'object') throw new BadRequestException('A pattern body is required');
+  for (const field of ['name', 'description'] as const) {
+    const value = data[field];
+    if (value === undefined && !creating) continue;
+    if (typeof value !== 'string' || !value.trim()) throw new BadRequestException(`${field} is required`);
+  }
+  if ((creating || data.category !== undefined) && !PATTERN_CATEGORIES.includes(data.category as ComponentPattern['category'])) {
+    throw new BadRequestException(`category must be one of ${PATTERN_CATEGORIES.join(', ')}`);
+  }
+}
 
 @Controller('patterns-library')
 export class PatternsLibraryController {
   constructor(
     private readonly patternsService: PatternsLibraryService,
-    private readonly keyManagementService: KeyManagementService,
   ) {}
-
-  /**
-   * No-op: the global AuthGuard has already authenticated the caller (a user
-   * token or an API key, docs/AUTH.md). Kept so the call sites stay as they were.
-   */
-  private validateRequest(_authHeader?: string): void {}
 
   @Get('patterns')
   getAllPatterns(
     @Query('category') category?: string,
     @Query('tags') tags?: string,
     @Query('search') search?: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const filters: any = {};
     if (category) filters.category = category as ComponentPattern['category'];
     if (tags) filters.tags = tags.split(',');
@@ -33,9 +40,7 @@ export class PatternsLibraryController {
   @Get('patterns/:id')
   getPattern(
     @Param('id') patternId: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const pattern = this.patternsService.getPattern(patternId);
     if (!pattern) {
       throw new BadRequestException(`Pattern '${patternId}' not found`);
@@ -46,22 +51,19 @@ export class PatternsLibraryController {
   @Get('patterns/component/:componentId')
   getPatternsByComponent(
     @Param('componentId') componentId: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.patternsService.getPatternsByComponent(componentId);
   }
 
   @Get('patterns/:id/related')
   getRelatedPatterns(
     @Param('id') patternId: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     return this.patternsService.getRelatedPatterns(patternId);
   }
 
   @Post('patterns')
+  @RequirePermission(Permission.PATTERN_CREATE)
   createPattern(
     @Body() data: {
       name: string;
@@ -75,19 +77,18 @@ export class PatternsLibraryController {
       relatedPatterns?: string[];
       tags?: string[];
     },
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
+    assertPatternFields(data, true);
     return this.patternsService.createPattern(data);
   }
 
   @Put('patterns/:id')
+  @RequirePermission(Permission.PATTERN_EDIT)
   updatePattern(
     @Param('id') patternId: string,
     @Body() updates: Partial<Omit<ComponentPattern, 'id' | 'createdAt'>>,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
+    assertPatternFields(updates, false);
     const pattern = this.patternsService.updatePattern(patternId, updates);
     if (!pattern) {
       throw new BadRequestException(`Pattern '${patternId}' not found`);
@@ -96,11 +97,10 @@ export class PatternsLibraryController {
   }
 
   @Delete('patterns/:id')
+  @RequirePermission(Permission.PATTERN_DELETE)
   deletePattern(
     @Param('id') patternId: string,
-    @Headers('authorization') authHeader?: string,
   ) {
-    this.validateRequest(authHeader);
     const deleted = this.patternsService.deletePattern(patternId);
     if (!deleted) {
       throw new BadRequestException(`Pattern '${patternId}' not found`);
@@ -108,8 +108,3 @@ export class PatternsLibraryController {
     return { message: 'Pattern deleted successfully' };
   }
 }
-
-
-
-
-

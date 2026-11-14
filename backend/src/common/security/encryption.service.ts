@@ -1,5 +1,36 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import * as crypto from 'crypto';
+
+/**
+ * Salt for deriving a key from a passphrase ENCRYPTION_KEY. It must never
+ * change: every replica and every restart has to derive the same key, or data
+ * encrypted earlier can't be decrypted. Secrecy comes from the passphrase.
+ */
+const PASSPHRASE_SALT = 'cautious-lamp/encryption-key/v1';
+const PBKDF2_ITERATIONS = 100000;
+
+/** Environments where a missing ENCRYPTION_KEY is replaced by a random one */
+function isDevelopment(): boolean {
+  return process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+}
+
+/**
+ * The 32-byte key for an ENCRYPTION_KEY value: 64 hex characters or 44
+ * base64 characters are used as they are; anything else is a passphrase,
+ * stretched with PBKDF2 and a fixed salt so the result is the same everywhere.
+ */
+export function deriveEncryptionKey(value: string): { key: Buffer; format: 'hex' | 'base64' | 'passphrase' } {
+  if (/^[0-9a-fA-F]{64}$/.test(value)) {
+    return { key: Buffer.from(value, 'hex'), format: 'hex' };
+  }
+  if (/^[A-Za-z0-9+/]{43}=$/.test(value)) {
+    return { key: Buffer.from(value, 'base64'), format: 'base64' };
+  }
+  return {
+    key: crypto.pbkdf2Sync(value, PASSPHRASE_SALT, PBKDF2_ITERATIONS, 32, 'sha256'),
+    format: 'passphrase',
+  };
+}
 
 /**
  * Encryption service for sensitive data at rest
@@ -11,42 +42,40 @@ export class EncryptionService {
   private readonly algorithm = 'aes-256-gcm';
   private readonly keyLength = 32; // 256 bits
   private readonly ivLength = 16; // 128 bits
-  private readonly saltLength = 64; // 512 bits
-  private readonly tagLength = 16; // 128 bits
-  private readonly encryptionKey: Buffer;
+  /** Null outside development when ENCRYPTION_KEY is missing: encrypting and decrypting then fail */
+  private readonly encryptionKey: Buffer | null;
 
   constructor() {
-    const keyFromEnv = process.env.ENCRYPTION_KEY;
+    const keyFromEnv = process.env.ENCRYPTION_KEY?.trim();
     if (!keyFromEnv) {
-      this.logger.warn(
-        'ENCRYPTION_KEY not set in environment. Using default key (NOT SECURE FOR PRODUCTION). ' +
-        'Set ENCRYPTION_KEY environment variable with a 32-byte hex string or 64-character hex string.'
-      );
-      // Generate a default key for development (NOT SECURE)
-      this.encryptionKey = crypto.randomBytes(this.keyLength);
-    } else {
-      // Support both hex string and base64 encoded keys
-      try {
-        if (keyFromEnv.length === 64) {
-          // Hex string (64 chars = 32 bytes)
-          this.encryptionKey = Buffer.from(keyFromEnv, 'hex');
-        } else if (keyFromEnv.length === 44) {
-          // Base64 string
-          this.encryptionKey = Buffer.from(keyFromEnv, 'base64');
-        } else {
-          // Derive key from password using PBKDF2
-          const salt = crypto.randomBytes(this.saltLength);
-          this.encryptionKey = crypto.pbkdf2Sync(keyFromEnv, salt, 100000, this.keyLength, 'sha256');
-        }
-      } catch (error) {
-        this.logger.error('Failed to parse encryption key from environment', error);
-        throw new Error('Invalid ENCRYPTION_KEY format');
+      if (isDevelopment()) {
+        this.logger.warn(
+          'ENCRYPTION_KEY is not set: using a random key, so anything encrypted is unreadable after a restart. ' +
+            'Generate one with: openssl rand -hex 32',
+        );
+        this.encryptionKey = crypto.randomBytes(this.keyLength);
+      } else {
+        this.logger.error('ENCRYPTION_KEY is not set: storing or reading encrypted credentials will fail');
+        this.encryptionKey = null;
       }
+      return;
     }
 
-    if (this.encryptionKey.length !== this.keyLength) {
+    const { key, format } = deriveEncryptionKey(keyFromEnv);
+    if (format === 'passphrase') {
+      this.logger.warn('ENCRYPTION_KEY is a passphrase; a random 32-byte key (openssl rand -hex 32) is stronger');
+    }
+    if (key.length !== this.keyLength) {
       throw new Error(`Encryption key must be ${this.keyLength} bytes`);
     }
+    this.encryptionKey = key;
+  }
+
+  private requireKey(): Buffer {
+    if (!this.encryptionKey) {
+      throw new ServiceUnavailableException('Encryption is not configured on this server (ENCRYPTION_KEY)');
+    }
+    return this.encryptionKey;
   }
 
   /**
@@ -58,13 +87,14 @@ export class EncryptionService {
     if (!plaintext) {
       return plaintext;
     }
+    const key = this.requireKey();
 
     try {
       // Generate random IV for each encryption
       const iv = crypto.randomBytes(this.ivLength);
       
       // Create cipher
-      const cipher = crypto.createCipheriv(this.algorithm, this.encryptionKey, iv);
+      const cipher = crypto.createCipheriv(this.algorithm, key, iv);
       
       // Encrypt
       let encrypted = cipher.update(plaintext, 'utf8', 'base64');
@@ -90,6 +120,7 @@ export class EncryptionService {
     if (!encryptedData) {
       return encryptedData;
     }
+    const key = this.requireKey();
 
     try {
       // Parse the encrypted data format: iv:tag:encrypted
@@ -103,7 +134,7 @@ export class EncryptionService {
       const tag = Buffer.from(tagBase64, 'base64');
       
       // Create decipher
-      const decipher = crypto.createDecipheriv(this.algorithm, this.encryptionKey, iv);
+      const decipher = crypto.createDecipheriv(this.algorithm, key, iv);
       decipher.setAuthTag(tag);
       
       // Decrypt

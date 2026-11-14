@@ -91,13 +91,13 @@
                 </div>
               </div>
               <div class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                {{ overallHealth.toFixed(1) }}%
+                {{ formatPercent(overallHealth) }}
               </div>
               <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
                 <div 
                   class="h-2 rounded-full transition-all"
                   :class="overallHealth >= 80 ? 'bg-green-500' : overallHealth >= 60 ? 'bg-yellow-500' : 'bg-red-500'"
-                  :style="{ width: `${Math.min(100, overallHealth)}%` }"
+                  :style="{ width: `${Math.min(100, overallHealth ?? 0)}%` }"
                 ></div>
               </div>
             </div>
@@ -116,10 +116,10 @@
                 </h3>
               </div>
               <div class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                {{ metrics.components.total }}
+                {{ metrics.components.total ?? '–' }}
               </div>
               <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                {{ metrics.components.productionReady }} production ready
+                {{ metrics.components.productionReady ?? '–' }} production ready
               </div>
             </div>
 
@@ -137,10 +137,10 @@
                 </h3>
               </div>
               <div class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                {{ metrics.tokens.total }}
+                {{ metrics.tokens.total ?? '–' }}
               </div>
               <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                {{ metrics.tokens.categories }} categories
+                {{ metrics.tokens.categories ?? '–' }} categories
               </div>
             </div>
 
@@ -158,10 +158,10 @@
                 </h3>
               </div>
               <div class="text-4xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                {{ metrics.accessibility.score }}%
+                {{ formatPercent(metrics.accessibility.score) }}
               </div>
               <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                WCAG 2.1 AA compliant
+                {{ metrics.accessibility.score === null ? 'No accessibility reports yet' : 'Average of the latest accessibility reports' }}
               </div>
             </div>
           </div>
@@ -261,7 +261,7 @@
                 Health Score Factors
               </h3>
               <p class="text-sm mt-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Weighted factors contributing to overall health score
+                Weighted factors contributing to overall health score. Factors marked "Not collected" have no data yet and are left out of the score.
               </p>
             </div>
             <div class="p-6">
@@ -269,35 +269,35 @@
                 <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
                   <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Component Coverage</div>
                   <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ healthScore.factors.componentCoverage.toFixed(1) }}%
+                    {{ formatPercent(healthScore.factors.componentCoverage) }}
                   </div>
                   <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 25%</div>
                 </div>
                 <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
                   <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Adoption Rate</div>
                   <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ healthScore.factors.adoptionRate.toFixed(1) }}%
+                    {{ formatPercent(healthScore.factors.adoptionRate) }}
                   </div>
                   <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 25%</div>
                 </div>
                 <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
                   <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Compliance</div>
                   <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ healthScore.factors.compliance.toFixed(1) }}%
+                    {{ formatPercent(healthScore.factors.compliance) }}
                   </div>
                   <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 20%</div>
                 </div>
                 <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
                   <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Maintenance</div>
                   <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ healthScore.factors.maintenance.toFixed(1) }}%
+                    {{ formatPercent(healthScore.factors.maintenance) }}
                   </div>
                   <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 15%</div>
                 </div>
                 <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
                   <div class="text-xs mb-2 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Accessibility</div>
                   <div class="text-2xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ healthScore.factors.accessibility.toFixed(1) }}%
+                    {{ formatPercent(healthScore.factors.accessibility) }}
                   </div>
                   <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">Weight: 15%</div>
                 </div>
@@ -307,7 +307,16 @@
         </div>
 
         <!-- Health Score Trends -->
-        <div v-if="healthScoreTrends.length > 0" class="max-w-7xl mx-auto mb-8">
+        <div v-if="healthScoreTrends.length === 0" class="max-w-7xl mx-auto mb-8">
+          <div
+            class="rounded-lg shadow-sm border p-6 text-sm"
+            :class="isDarkMode ? 'bg-slate-900 border-gray-700 text-gray-400' : 'bg-white border-gray-200 text-gray-600'"
+            role="status"
+          >
+            No health score history yet. Scores are recorded (at most hourly) as they are measured, starting when the server starts.
+          </div>
+        </div>
+        <div v-else class="max-w-7xl mx-auto mb-8">
           <div 
             class="rounded-lg shadow-sm border"
             :class="isDarkMode 
@@ -317,7 +326,7 @@
             <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
               <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                 <span class="material-symbols-outlined text-indigo-600">show_chart</span>
-                Health Score Trends (Last 30 Days)
+                Health Score Trends (measured, last 30 days)
               </h3>
             </div>
             <div class="p-6">
@@ -616,28 +625,9 @@
                     <span class="material-symbols-outlined text-base text-indigo-600">pattern</span>
                     Token Usage Patterns
                   </h4>
-                  <div class="space-y-3">
-                    <div
-                      v-for="pattern in tokenUsagePatterns"
-                      :key="pattern.category"
-                      class="flex items-center justify-between"
-                    >
-                      <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        {{ pattern.category }}
-                      </span>
-                      <div class="flex items-center gap-2">
-                        <div class="w-20 bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                          <div 
-                            class="bg-purple-500 h-2 rounded-full"
-                            :style="{ width: `${pattern.percentage}%` }"
-                          ></div>
-                        </div>
-                        <span class="text-sm font-semibold w-8 text-right" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          {{ pattern.count }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    Not collected: token usage is not tracked yet.
+                  </p>
                 </div>
 
                 <!-- Performance Metrics -->
@@ -646,56 +636,9 @@
                     <span class="material-symbols-outlined text-base text-indigo-600">speed</span>
                     Performance Metrics
                   </h4>
-                  <div class="space-y-4">
-                    <div>
-                      <div class="flex items-center justify-between mb-1">
-                        <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                          Avg Load Time
-                        </span>
-                        <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          {{ performanceMetrics.avgLoadTime }}ms
-                        </span>
-                      </div>
-                      <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                        <div 
-                          class="bg-green-500 h-2 rounded-full"
-                          :style="{ width: `${100 - (performanceMetrics.avgLoadTime / 10)}%` }"
-                        ></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div class="flex items-center justify-between mb-1">
-                        <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                          Bundle Size
-                        </span>
-                        <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          {{ performanceMetrics.bundleSize }}KB
-                        </span>
-                      </div>
-                      <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                        <div 
-                          class="bg-blue-500 h-2 rounded-full"
-                          :style="{ width: `${100 - (performanceMetrics.bundleSize / 20)}%` }"
-                        ></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div class="flex items-center justify-between mb-1">
-                        <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                          Accessibility Score
-                        </span>
-                        <span class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                          {{ performanceMetrics.accessibilityScore }}%
-                        </span>
-                      </div>
-                      <div class="w-full bg-gray-200 rounded-full h-2" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                        <div 
-                          class="bg-indigo-500 h-2 rounded-full"
-                          :style="{ width: `${performanceMetrics.accessibilityScore}%` }"
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
+                  <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+                    Not collected: load time and bundle size are not measured yet.
+                  </p>
                 </div>
               </div>
 
@@ -908,10 +851,10 @@
                 <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
                   <div class="text-xs mb-1 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Overall Health Score</div>
                   <div class="text-3xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ auditReport.executiveSummary.overallHealthScore.toFixed(1) }}%
+                    {{ formatPercent(auditReport.executiveSummary.overallHealthScore) }}
                   </div>
                   <div class="text-sm font-semibold" :class="getHealthGradeColor(auditReport.executiveSummary.healthGrade)">
-                    Grade: {{ auditReport.executiveSummary.healthGrade }}
+                    Grade: {{ auditReport.executiveSummary.healthGrade ?? 'n/a' }}
                   </div>
                 </div>
                 <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
@@ -926,10 +869,10 @@
                 <div class="p-4 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
                   <div class="text-xs mb-1 font-medium" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Accessibility</div>
                   <div class="text-3xl font-bold mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ auditReport.detailedMetrics.accessibility.score.toFixed(1) }}%
+                    {{ formatPercent(auditReport.detailedMetrics.accessibility.score) }}
                   </div>
                   <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    WCAG {{ auditReport.detailedMetrics.accessibility.wcagLevel }}
+                    {{ auditReport.detailedMetrics.accessibility.wcagLevel ? `WCAG ${auditReport.detailedMetrics.accessibility.wcagLevel}` : 'No reports yet' }}
                   </div>
                 </div>
               </div>
@@ -1008,7 +951,7 @@
                     <div class="space-y-2 text-sm">
                       <div class="flex justify-between">
                         <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Compliance Score:</span>
-                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ auditReport.detailedMetrics.compliance.score.toFixed(1) }}%</span>
+                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ formatPercent(auditReport.detailedMetrics.compliance.score) }}</span>
                       </div>
                       <div class="flex justify-between">
                         <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Level:</span>
@@ -1016,7 +959,7 @@
                       </div>
                       <div class="flex justify-between">
                         <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">WCAG Compliant:</span>
-                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ auditReport.detailedMetrics.compliance.wcagCompliance ? 'Yes' : 'No' }}</span>
+                        <span :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ auditReport.detailedMetrics.compliance.wcagCompliance === null ? 'Not collected' : auditReport.detailedMetrics.compliance.wcagCompliance ? 'Yes' : 'No' }}</span>
                       </div>
                     </div>
                   </div>
@@ -1085,27 +1028,33 @@ const isDarkMode = ref(document.documentElement.classList.contains('dark'));
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const adoptionTimeframe = ref('30d');
 
-// Sample metrics data - in a real app, this would come from an API
-const metrics = ref({
-  components: {
-    total: 24,
-    productionReady: 18,
-    inProgress: 4,
-    planned: 2,
-    deprecated: 0,
-  },
-  tokens: {
-    total: 156,
-    categories: 8,
-  },
-  accessibility: {
-    score: 95,
-    wcagCompliant: true,
-  },
+/** "Not collected" when the server had no data to measure a value from */
+const formatPercent = (value) => (value === null || value === undefined ? 'Not collected' : `${Number(value).toFixed(1)}%`);
+
+// Counts measured by the server (GET /system-health/score); empty until it answers
+const metrics = computed(() => {
+  const inventory = healthScore.value?.inventory;
+  return {
+    components: {
+      total: inventory?.components.total ?? null,
+      productionReady: inventory?.components.production ?? null,
+      inProgress: inventory?.components.inProgress ?? null,
+      planned: inventory?.components.planned ?? null,
+      deprecated: inventory?.components.deprecated ?? null,
+    },
+    tokens: {
+      total: inventory?.tokens.total ?? null,
+      categories: inventory ? inventory.tokens.categories.length : null,
+      byCategory: inventory?.tokens.categories ?? [],
+    },
+    accessibility: {
+      score: healthScore.value?.factors?.accessibility ?? null,
+    },
+  };
 });
 
 const componentStatuses = computed(() => {
-  const total = metrics.value.components.total;
+  const total = metrics.value.components.total || 1;
   return [
     {
       type: 'production',
@@ -1139,16 +1088,8 @@ const componentStatuses = computed(() => {
 });
 
 const tokenCategories = computed(() => {
-  const total = metrics.value.tokens.total;
-  const categories = [
-    { name: 'Colors', count: 48 },
-    { name: 'Spacing', count: 24 },
-    { name: 'Typography', count: 32 },
-    { name: 'Shadows', count: 16 },
-    { name: 'Borders', count: 12 },
-    { name: 'Other', count: 24 },
-  ];
-  return categories.map(cat => ({
+  const total = metrics.value.tokens.total || 1;
+  return metrics.value.tokens.byCategory.map((cat) => ({
     ...cat,
     percentage: (cat.count / total) * 100,
   }));
@@ -1192,31 +1133,24 @@ const loadHealthScoreTrends = async (days = 30) => {
   }
 };
 
-// Computed overall health - use API data if available, otherwise fallback
-const overallHealth = computed(() => {
-  if (healthScore.value) {
-    return healthScore.value.score;
-  }
-  // Fallback calculation
-  const componentScore = (metrics.value.components.productionReady / metrics.value.components.total) * 100;
-  const accessibilityScore = metrics.value.accessibility.score;
-  const deprecatedPenalty = (metrics.value.components.deprecated / metrics.value.components.total) * 20;
-  
-  return Math.round((componentScore + accessibilityScore) / 2 - deprecatedPenalty);
-});
+// Overall health from the server; null (shown as "Not collected") until it answers or when nothing could be measured
+const overallHealth = computed(() => healthScore.value?.score ?? null);
 
 // Combined alerts - merge API alerts with static alerts
 const alerts = computed(() => {
-  const staticAlerts = [
-    {
-      id: 'static-1',
-      severity: 'medium',
-      title: '4 Components In Progress',
-      message: 'Some components are still in development and may have breaking changes.',
-      action: 'View Components',
-      actionPath: '/components/status',
-    },
-  ];
+  const inProgress = metrics.value.components.inProgress;
+  const staticAlerts = inProgress
+    ? [
+        {
+          id: 'components-in-progress',
+          severity: 'medium',
+          title: `${inProgress} Component${inProgress === 1 ? '' : 's'} In Progress`,
+          message: 'Some components are still in development and may have breaking changes.',
+          action: 'View Components',
+          actionPath: '/components/status',
+        },
+      ]
+    : [];
   
   // Add health score alerts from API
   const healthAlerts = healthScoreAlerts.value.map((alert, index) => ({
@@ -1237,20 +1171,6 @@ const applicationAdoption = ref([]);
 const designDebtMetrics = ref(null);
 const crossApplicationComparison = ref([]);
 const loadingAnalytics = ref(false);
-
-const tokenUsagePatterns = ref([
-  { category: 'Colors', count: 48, percentage: 85 },
-  { category: 'Spacing', count: 24, percentage: 72 },
-  { category: 'Typography', count: 32, percentage: 68 },
-  { category: 'Shadows', count: 16, percentage: 45 },
-  { category: 'Borders', count: 12, percentage: 38 },
-]);
-
-const performanceMetrics = ref({
-  avgLoadTime: 45,
-  bundleSize: 125,
-  accessibilityScore: 95,
-});
 
 const usageTrends = ref([]);
 
@@ -1409,16 +1329,16 @@ const exportReport = (format) => {
     // Convert key metrics to CSV
     const csvRows = [
       ['Metric', 'Value'],
-      ['Overall Health Score', auditReport.value.executiveSummary.overallHealthScore.toFixed(1) + '%'],
-      ['Health Grade', auditReport.value.executiveSummary.healthGrade],
+      ['Overall Health Score', formatPercent(auditReport.value.executiveSummary.overallHealthScore)],
+      ['Health Grade', auditReport.value.executiveSummary.healthGrade ?? 'n/a'],
       ['Total Components', auditReport.value.components.total],
       ['Production Ready', auditReport.value.components.byStatus.production.length],
       ['In Progress', auditReport.value.components.byStatus.inProgress.length],
       ['Deprecated', auditReport.value.components.byStatus.deprecated.length],
-      ['Accessibility Score', auditReport.value.detailedMetrics.accessibility.score.toFixed(1) + '%'],
+      ['Accessibility Score', formatPercent(auditReport.value.detailedMetrics.accessibility.score)],
       ['WCAG Level', auditReport.value.detailedMetrics.accessibility.wcagLevel],
-      ['Compliance Score', auditReport.value.detailedMetrics.compliance.score.toFixed(1) + '%'],
-      ['Adoption Rate', auditReport.value.detailedMetrics.adoption.overallRate.toFixed(1) + '%'],
+      ['Compliance Score', formatPercent(auditReport.value.detailedMetrics.compliance.score)],
+      ['Adoption Rate', formatPercent(auditReport.value.detailedMetrics.adoption.overallRate)],
     ];
     const csvContent = csvRows.map(row => row.join(',')).join('\n');
     const dataBlob = new Blob([csvContent], { type: 'text/csv' });

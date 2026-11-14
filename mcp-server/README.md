@@ -196,18 +196,21 @@ The MCP server connects to the following backend API endpoints:
 - `GET /patterns-library/patterns` - Pattern retrieval
 - `GET /api/v1/rules/export` - Compliance rules export
 - `POST /api/v1/compliance/scan` - Compliance scanning
-- `GET /api/v1/workspaces/:id/assets` - Asset retrieval
-- `GET /api/v1/workspaces/:id/icons` - Icon retrieval
-- `GET /admin/reviews` - Review list
-- `GET /review/:id` - Review retrieval
-- `POST /review/create-from-url` - Create review
-- `POST /review/:id/workflow/{approve,reject,move-to-client-review,move-to-art-director-review,resubmit}` - Workflow changes
-- `POST /review/:id/complete`, `POST /review/:id/sharing` - Complete review, update sharing
-- `GET /review/:id/comments`, `POST /review/:id/comments` - Review comments
+- `GET /api/v1/workspaces/:id/resources/assets?filter=<type>` - Asset retrieval
+- `GET /api/v1/workspaces/:id/resources/assets/:assetId` - One asset
+- `GET /api/v1/workspaces/:id/resources/icons?filter=<iconSet>` - Icon retrieval
+- `GET /api/v1/reviews` - Review list
+- `GET /api/v1/review/:id` - Review retrieval
+- `POST /api/v1/review/create-from-url` - Create review
+- `POST /api/v1/review/:id/workflow/{approve,reject,move-to-client-review,move-to-art-director-review,resubmit}` - Workflow changes
+- `POST /api/v1/review/:id/complete`, `POST /api/v1/review/:id/sharing` - Complete review, update sharing
+- `GET /api/v1/review/:id/comments`, `POST /api/v1/review/:id/comments` - Review comments
 
-The patterns library and review routes are mounted at the server root, so the server derives
-their URL from `MCP_API_BASE_URL` by dropping the trailing `/api/vN`. The review routes are the
-same ones the frontend calls (`frontend/src/services/api.js`).
+The patterns library is mounted at the server root, so the server derives its URL from
+`MCP_API_BASE_URL` by dropping the trailing `/api/vN`.
+
+`test/unit/backend-contract.test.ts` checks every tool's requests against the routes declared in
+`backend/src/**/*.controller.ts`, so a tool that drifts from the backend fails the tests.
 
 Only `GET` requests are retried (on timeouts, network errors and 408/429/5xx). `POST`, `PUT` and
 `DELETE` are sent once, so a timed-out create is never duplicated.

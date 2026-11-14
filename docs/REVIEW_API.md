@@ -7,20 +7,51 @@ The response bodies match what the browser-only mock returns for the same operat
 ## Conventions
 
 - **Base path:** `/api/v1`.
-- **Auth:** every route requires `Authorization: Bearer <key>`, where the key is in `API_KEYS` or was created at runtime. Admin routes (`/admin/...`) require `ADMIN_API_KEY` instead.
+- **Auth:** every route requires `Authorization: Bearer <token>`: a signed-in user's token, or an API key (docs/AUTH.md). Admin routes (`/admin/...`) require `admin:users` (the admin key has it). What a caller may do with a particular review is decided by the access rules below.
 - **Header encoding:** `x-review-password` and `x-user-name` carry free text, so clients send them URL-encoded with `encodeURIComponent`; the server decodes them. HTTP headers can only carry ASCII, so a raw non-ASCII value would be mangled.
-- **Acting user:** until real user accounts exist (Phase 2), the frontend sends `x-user-email` and `x-user-name`. They are recorded on comments and workflow history. They're self-asserted, so they're display information, not authorization.
+- **Acting user:** the signed-in user. An API key has no reviewer identity: its `x-user-name` (else `x-user-email`) is recorded on comments and history as a label, and never counts as the designer, an approved email or a team member.
 - **Review passwords:**
-  - Sent as an `x-review-password` header, never in the URL, on every read of review content: `GET /review/:id`, `GET /review/:id/version/:versionId` and `GET /review/:id/comments`.
+  - Sent as an `x-review-password` header, never in the URL, on every request about a review (reads, comments and workflow changes) by someone who isn't the designer, on the review's team or a review admin.
   - Stored as bcrypt hashes and never returned; responses include `hasPassword: boolean` instead.
   - A protected review requested without the right password returns `401 { "passwordRequired": true }`.
-- **Sharing:** with `sharingMode: "approved_emails"`, the same three reads return `403` unless `x-user-email` is the designer's or in `approvedEmails` (case-insensitive). It's self-asserted until Phase 2. Sharing is checked before the password.
-- **Expiry:** reviews expire 30 days after creation unless extended. Expired reviews return `410` to non-admin routes and are hidden from lists unless `showExpired=true`. Completing a review expires it immediately; an admin can reactivate it.
+- **Sharing:** with `sharingMode: "approved_emails"`, requests about the review return `403` unless the signed-in user's email is the designer's or in `approvedEmails` (case-insensitive), or they're on the review's team or a review admin. Sharing is checked before the password.
+- **Expiry:** reviews expire 30 days after creation unless extended. Expired reviews return `410` to non-admin routes and are hidden from lists unless `showExpired=true` (which only shows the expired reviews the caller could otherwise open). Completing a review expires it immediately; an admin can reactivate it.
 - **Errors:** standard Nest errors, `{ statusCode, message }`. A storage outage is `503`; nothing reports success it didn't achieve. Request bodies with unknown fields are rejected with `400`.
 - **Storage:** Elasticsearch.
   - Index `reviews` holds one document per review, with its versions, comments and workflow history.
   - Index `reviews-teams` holds teams.
   - Writes use optimistic concurrency (`if_seq_no`/`if_primary_term`) and retry on conflict, so concurrent comments aren't lost.
+
+## Access
+
+One policy (`backend/src/reviews/review-access.ts`) decides every route and the list:
+
+| Who | Sees the review | Comments | Versions, extend, complete, move/resubmit workflow | Sharing and password | Approve / reject |
+| --- | --- | --- | --- | --- | --- |
+| Review admin (`review:admin`: `review_manager`, `design_system_manager`, the admin key) | always | yes | yes | yes | any stage |
+| The designer (signed in with `designerEmail`) | always | yes | yes | yes | only with the stage's role |
+| A member of the review's team | always | yes | yes, unless their team role is Client | no | only with the stage's role |
+| Anyone else signed in | if sharing allows them, with the password | if they can see it | no | no | only with the stage's role |
+| An API key without `review:admin` | `anyone` reviews only, with the password | if it can see it | no | no | no |
+
+- **Stage roles:** `client_review` needs the `client` role, `art_director_review` `art_director` and `creative_director_review` `creative_director`, from the user's RBAC roles or their role on the review's team (team roles are free text, so "Art Director" counts as `art_director`), plus `review:approve` to approve or `review:reject` to reject. Review admins may decide any stage.
+- **Comments:** anyone who can see the review can comment, reply and react. Editing or deleting a comment is for its author (by signed-in email), the designer, the team and review admins.
+- **Teams:** membership grants access, so creating and changing teams needs `review:admin`. Reading them doesn't.
+- Forbidden requests return `403` and nothing about the review.
+
+### allowedActions
+
+Reviews and list summaries carry `allowedActions`: what the caller may do now, given the review's state, its expiry and the rules above. The UI shows controls from it rather than guessing from roles; the routes enforce the same rules.
+
+| Action | Route |
+| --- | --- |
+| `approve`, `reject` | `POST /review/:id/workflow/approve` / `reject` with the current `stage` |
+| `move-to-client-review`, `move-to-art-director-review`, `resubmit` | the workflow route of that name |
+| `upload-version` | `POST /review/:id/versions` |
+| `extend`, `complete` | `POST /review/:id/extend` / `complete` |
+| `manage-sharing`, `manage-password` | `POST /review/:id/sharing` / `password` |
+
+An expired or completed review has none.
 
 ## Review object
 
@@ -39,10 +70,11 @@ The response bodies match what the browser-only mock returns for the same operat
   "workflowHistory": [{ "stage", "action", "user", "timestamp", "reason?", "versionLabel?" }],
   "bypassClientReview": false,
   "sharingMode": "anyone" | "approved_emails",
-  "approvedEmails": [],
+  "approvedEmails": [],          // only to those who may change sharing; [] for everyone else
   "versions": [{ "id", "label", "notes", "type", "filename", "contentType", "size", "uploadedAt", "uploadedBy", "url?" }], // "url" only on a url review's version
   "comments": [ /* see Comments */ ],
-  "createdAt", "updatedAt", "expiresAt", "extended": false
+  "createdAt", "updatedAt", "expiresAt", "extended": false,
+  "allowedActions": ["approve", "reject"] // see Access
 }
 ```
 
@@ -52,12 +84,12 @@ The response bodies match what the browser-only mock returns for the same operat
 
 | Method and path | Body or query | Returns |
 | --- | --- | --- |
-| `GET /reviews` | `?workflowState=&q=&showExpired=` | `{ reviews: ReviewSummary[], total }`. A summary is the review without `comments` and `workflowHistory`. |
+| `GET /reviews` | `?workflowState=&q=&showExpired=` | `{ reviews: ReviewSummary[], total }`: the reviews the caller could open without a password (see Access); every review for a review admin. A summary is the review without `comments` and `workflowHistory`. The whole index is read (Elasticsearch point-in-time paging), so the list is never cut short. |
 | `GET /review/:id` | header `x-review-password` | Review |
 | `GET /review/:id/version/:versionId` | header `x-review-password` | `{ url }`: an absolute signed URL for the file, valid 10 minutes. For a url review, the external link. |
 | `POST /review/:id/complete` | | Review |
-| `POST /review/:id/sharing` | `{ sharingMode, approvedEmails }` | Review |
-| `POST /review/:id/password` | `{ password }` (empty clears it) | `{ hasPassword }` |
+| `POST /review/:id/sharing` | `{ sharingMode, approvedEmails }` | Review. Designer or review admin only. |
+| `POST /review/:id/password` | `{ password }` (empty clears it) | `{ hasPassword }`. Designer or review admin only. |
 | `POST /review/:id/extend` | `{ days }` (1–90) | Review |
 
 ### Creating reviews
@@ -79,7 +111,7 @@ Files are stored under `REVIEW_UPLOAD_DIR/<reviewId>/` with random names (never 
 
 ### Workflow
 
-All return the updated review. Invalid transitions return `409`.
+All return the updated review. Invalid transitions return `409`; a caller without the right (see Access) gets `403`.
 
 | Method and path | Body |
 | --- | --- |
@@ -97,7 +129,7 @@ Allowed transitions (`approve` and `reject` need `stage` to equal the current st
 - Reject at any review stage → `draft`
 - Resubmit from `draft` → the given `targetStage` (`client_review`, `art_director_review` or `creative_director_review`)
 
-Each transition appends a `workflowHistory` entry; `user` is `x-user-name`, else `x-user-email`.
+Each transition appends a `workflowHistory` entry; `user` is the signed-in user's name (for an API key, `x-user-name`, else `x-user-email`).
 
 ### Comments
 
@@ -108,12 +140,12 @@ Each transition appends a `workflowHistory` entry; `user` is `x-user-name`, else
 | `PATCH /review/:id/comments/:commentId` | `{ text?, resolved?, annotationData? }` | Comment |
 | `DELETE /review/:id/comments/:commentId` | | `204` |
 | `POST /review/:id/comments/:commentId/replies` | `{ text }` | Reply |
-| `POST /review/:id/comments/:commentId/reactions` | `{ emoji }` (toggles for the acting user, keyed by `x-user-email`; `400` without it) | Comment |
+| `POST /review/:id/comments/:commentId/reactions` | `{ emoji }` (toggles for the acting user, keyed by their email; for an API key, by its `x-user-name` / `x-user-email` label, `400` without one) | Comment |
 | `POST /review/:id/comments/:commentId/replies/:replyId/reactions` | `{ emoji }` | Comment |
 
 `Comment` is `{ id, text, author, authorEmail, version, type, resolved, annotationId?, annotationData?, replies: [{ id, text, author, authorEmail, timestamp, reactions }], reactions: { [emoji]: [email] }, timestamp }`.
 
-### Admin (`ADMIN_API_KEY`)
+### Admin (`admin:users`, e.g. `ADMIN_API_KEY`)
 
 | Method and path | Body or query | Returns |
 | --- | --- | --- |
@@ -130,14 +162,14 @@ Each transition appends a `workflowHistory` entry; `user` is `x-user-name`, else
 | --- | --- | --- |
 | `GET /teams` | | `Team[]` |
 | `GET /teams/:id` | | Team |
-| `POST /teams` | `{ name, description? }` | Team |
+| `POST /teams` | `{ name, description? }` | Team. This and the other team writes need `review:admin`. |
 | `PATCH /teams/:id` | `{ name?, description? }` | Team |
 | `DELETE /teams/:id` | | `204` |
 | `POST /teams/:id/members` | `{ email, name, role }` | Team |
 | `PATCH /teams/:id/members/:email` | `{ role }` | Team |
 | `DELETE /teams/:id/members/:email` | | Team |
 
-`Team` is `{ id, name, description, members: [{ email, name, role }], createdAt, updatedAt }`.
+`Team` is `{ id, name, description, members: [{ email, name, role }], createdAt, updatedAt }`. A member's `role` (Designer, Art Director, Creative Director, Client) counts as the matching stage role on the team's reviews.
 
 ## Configuration
 

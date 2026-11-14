@@ -15,7 +15,6 @@
               { value: 'manual', label: 'Manual' },
               { value: 'daily', label: 'Daily' },
               { value: 'weekly', label: 'Weekly' },
-              { value: 'on-commit', label: 'On Commit' },
             ]"
             :is-dark-mode="isDarkMode"
           />

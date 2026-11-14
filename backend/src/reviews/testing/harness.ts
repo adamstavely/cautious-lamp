@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import * as path from 'path';
+import { Permission } from '../../rbac/rbac.service';
 import { ReviewFilesService } from '../review-files.service';
 import { ActingUser, ReviewDoc, Team } from '../review.types';
 import { ReviewsService } from '../reviews.service';
@@ -41,6 +42,18 @@ export function createHarness() {
 export const designer: ActingUser = { email: 'sarah@example.com', name: 'Sarah Johnson' };
 export const reviewer: ActingUser = { email: 'client@example.com', name: 'Client' };
 export const anonymous: ActingUser = { email: null, name: null };
+
+const decide = new Set<string>([Permission.REVIEW_VIEW, Permission.REVIEW_APPROVE, Permission.REVIEW_REJECT]);
+/** Signed-in users holding each stage's role (review-access.ts STAGE_ROLES) */
+export const client: ActingUser = { email: 'client@example.com', name: 'Client', roles: ['client'], permissions: decide };
+export const artDirector: ActingUser = { email: 'ad@x.com', name: 'AD', roles: ['art_director'], permissions: decide };
+export const creativeDirector: ActingUser = { email: 'cd@x.com', name: 'CD', roles: ['creative_director'], permissions: decide };
+export const reviewAdmin: ActingUser = {
+  email: 'manager@x.com',
+  name: 'Manager',
+  roles: ['review_manager'],
+  permissions: new Set<string>([...decide, Permission.REVIEW_ADMIN]),
+};
 
 /** Smallest valid file bodies for each accepted type */
 export const SAMPLE_FILES = {

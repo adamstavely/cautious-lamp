@@ -38,3 +38,28 @@ export class Semaphore {
     this.waiting.shift()?.();
   }
 }
+
+/**
+ * Runs `work` with a total time limit. When the limit passes, `onTimeout`
+ * runs (it should stop the work, e.g. close the browser) and the call rejects
+ * with `timeoutError()` straight away, without waiting for the work to
+ * notice. Whatever the abandoned work does later is ignored.
+ */
+export async function withDeadline<T>(ms: number, work: () => Promise<T>, onTimeout: () => Promise<unknown> | void, timeoutError: () => Error): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const running = work();
+  running.catch(() => undefined);
+  const expired = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      Promise.resolve()
+        .then(onTimeout)
+        .catch(() => undefined);
+      reject(timeoutError());
+    }, ms);
+  });
+  try {
+    return await Promise.race([running, expired]);
+  } finally {
+    clearTimeout(timer);
+  }
+}

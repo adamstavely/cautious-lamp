@@ -17,6 +17,7 @@ export interface WcagCriterionResult {
   level: 'A' | 'AA' | 'AAA';
   /** review: axe could not decide (e.g. contrast without layout) */
   status: 'pass' | 'fail' | 'review';
+  /** Every failing element (failingElements lists at most a sample of them) */
   issues: number;
   description: string;
   failingElements: FailingElement[];
@@ -80,6 +81,12 @@ export interface AccessibilityReport {
   infoIssues: number;
   /** axe rules that need a manual check */
   needsReview: number;
+  /**
+   * Present when some rules failed on more elements than are kept as
+   * examples. Counts, score and fixes use the full totals; `checks` and
+   * `failingElements` only list the examples.
+   */
+  sampling?: { examplesPerRule: number; rules: Array<{ ruleId: string; shown: number; total: number }> };
   wcagCriteria: Record<string, WcagCriterionResult>;
   issuesByCategory: IssuesByCategory;
   prioritizedFixes: PrioritizedFix[];

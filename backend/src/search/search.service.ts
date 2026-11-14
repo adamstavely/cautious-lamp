@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DesignSystemService } from '../design-system/design-system.service';
+import { ComponentAccessService } from '../design-system/component-access.service';
 import { WorkspacesService } from '../workspaces/workspaces.service';
 import { AuthPrincipal } from '../auth/principal';
 
@@ -29,6 +30,7 @@ export class SearchService {
   constructor(
     private readonly designSystemService: DesignSystemService,
     private readonly workspacesService: WorkspacesService,
+    private readonly componentAccess: ComponentAccessService,
   ) {}
 
   /**
@@ -44,7 +46,8 @@ export class SearchService {
 
     // Search components
     if (!filters?.type || filters.type.includes('component')) {
-      const components = this.designSystemService.getAllComponents();
+      // Only components the caller may read (other workspaces' are hidden)
+      const components = await this.componentAccess.list(principal);
       components.forEach(component => {
         const score = this.calculateRelevanceScore(query, {
           title: component.name,
@@ -196,12 +199,12 @@ export class SearchService {
   /**
    * Get search suggestions based on query
    */
-  getSuggestions(query: string, limit: number = 5): string[] {
+  async getSuggestions(query: string, limit: number = 5, principal?: AuthPrincipal): Promise<string[]> {
     const suggestions: Set<string> = new Set();
     const queryLower = query.toLowerCase();
 
     // Get component names
-    const components = this.designSystemService.getAllComponents();
+    const components = await this.componentAccess.list(principal);
     components.forEach(comp => {
       if (comp.name.toLowerCase().includes(queryLower)) {
         suggestions.add(comp.name);
@@ -227,7 +230,7 @@ export class SearchService {
     categories: Array<{ value: string; label: string; count: number }>;
     commonProps: Array<{ value: string; label: string; count: number }>;
   }> {
-    const components = this.designSystemService.getAllComponents();
+    const components = await this.componentAccess.list(principal);
     const tokens = this.designSystemService.getAllTokens();
 
     // Count by type

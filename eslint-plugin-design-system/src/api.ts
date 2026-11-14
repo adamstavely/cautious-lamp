@@ -5,35 +5,52 @@ import {
   DesignSystemRule,
   fetchRules,
   sanitizeRules,
-  toRuleId
+  toRuleId,
+  unsupportedReason
 } from './rule-converter';
 
 export interface LoadRulesResult {
   /** Rule ids (without the `design-system/` prefix) that are now registered. */
   loaded: string[];
-  /** Rule names that were skipped (disabled, unnamed, or clashing with a built-in rule). */
+  /** Rule names that were skipped (disabled, unnamed, clashing with a built-in rule, or not checkable by ESLint). */
   skipped: string[];
+  /** Why enabled rules were skipped, e.g. a rule type ESLint can't check. Also logged once per load. */
+  warnings: string[];
 }
 
 /**
- * Converts Rules Engine rules and registers them on `plugin.rules`. Disabled
+ * Converts governance rules and registers them on `plugin.rules`. Disabled
  * rules, rules whose name sanitizes to nothing and rules that would replace a
- * built-in rule are skipped. Never throws.
+ * built-in rule are skipped. So are rules ESLint can't check (see
+ * `unsupportedReason`): those get a warning instead of a stand-in check.
+ * Never throws.
  */
 export function registerRules(defs: unknown, config: DesignSystemConfig = {}): LoadRulesResult {
-  const result: LoadRulesResult = { loaded: [], skipped: [] };
+  const result: LoadRulesResult = { loaded: [], skipped: [], warnings: [] };
   for (const def of sanitizeRules(defs)) {
     const id = toRuleId(def.name);
     if (!def.enabled || !id || Object.prototype.hasOwnProperty.call(builtInRules, id)) {
       result.skipped.push(def.name);
       continue;
     }
+    const reason = unsupportedReason(def);
+    if (reason) {
+      result.skipped.push(def.name);
+      result.warnings.push(`"${def.name}": ${reason}`);
+      continue;
+    }
     try {
       rules[id] = convertToESLintRule(def as DesignSystemRule, config);
       result.loaded.push(id);
-    } catch {
+    } catch (error: unknown) {
       result.skipped.push(def.name);
+      result.warnings.push(`"${def.name}": ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+  if (result.warnings.length > 0) {
+    console.warn(
+      `[eslint-plugin-design-system] Skipped ${result.warnings.length} rule(s) ESLint can't check:\n  ${result.warnings.join('\n  ')}`
+    );
   }
   return result;
 }
@@ -57,17 +74,18 @@ export async function loadRulesFromAPI(config: DesignSystemConfig = {}): Promise
     if (!pending) {
       pending = fetchRules(config)
         .then(fetched => registerRules(fetched, config))
-        .catch(() => ({ loaded: [], skipped: [] }))
+        .catch((): LoadRulesResult => ({ loaded: [], skipped: [], warnings: [] }))
         .finally(() => inflight.delete(config.apiUrl as string));
       inflight.set(config.apiUrl, pending);
     }
     const fromApi = await pending;
     return {
       loaded: [...result.loaded, ...fromApi.loaded],
-      skipped: [...result.skipped, ...fromApi.skipped]
+      skipped: [...result.skipped, ...fromApi.skipped],
+      warnings: [...result.warnings, ...fromApi.warnings]
     };
   } catch (error: unknown) {
     console.warn('[eslint-plugin-design-system] Failed to load rules:', error);
-    return { loaded: [], skipped: [] };
+    return { loaded: [], skipped: [], warnings: [] };
   }
 }

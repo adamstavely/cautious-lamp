@@ -1,5 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotImplementedException } from '@nestjs/common';
+import { AuthPrincipal } from '../auth/principal';
+import { EncryptionService } from '../common/security/encryption.service';
 import { DesignSystemService, Token } from '../design-system/design-system.service';
+import { AUTO_SYNC_UNSUPPORTED, ConnectionRegistry, PublicConnection, StoredConnection, bool, httpUrl, oneOf, text } from './connection-registry';
 
 export interface DesignToolToken {
   id: string;
@@ -20,20 +23,37 @@ export interface TokenMapping {
   autoMap?: boolean; // If true, automatically map tokens with matching names
 }
 
-export interface TokenSyncConnection {
-  id: string;
+export const TOKEN_SYNC_TOOLS = ['figma', 'penpot', 'adobe-xd'] as const;
+
+/** As stored (in memory); `apiKey` is encrypted */
+export interface TokenSyncConnection extends StoredConnection {
   name: string;
-  tool: 'figma' | 'penpot' | 'adobe-xd';
-  apiKey?: string;
+  tool: (typeof TOKEN_SYNC_TOOLS)[number];
   fileId?: string;
   fileUrl?: string;
   enabled: boolean;
-  autoSync: boolean;
-  syncInterval?: number; // in minutes
-  lastSync?: Date;
+  lastSync?: string;
   mappings: TokenMapping[];
-  createdAt: Date;
-  updatedAt: Date;
+}
+
+/** As returned by the API: never the credential */
+export type TokenSyncConnectionView = PublicConnection<TokenSyncConnection>;
+
+/** Why sync can't run: the server has no Figma, Penpot or Adobe XD client */
+export const TOKEN_SYNC_UNSUPPORTED =
+  'Token sync is not implemented: this server has no Figma, Penpot or Adobe XD integration to read tokens from. Nothing was changed.';
+
+function parseMappings(value: unknown): TokenMapping[] {
+  if (!Array.isArray(value) || value.length > 1000) {
+    throw new BadRequestException('mappings must be an array of at most 1000 mappings');
+  }
+  return value.map((m) => {
+    const { designToolTokenId, designSystemTokenName, autoMap } = (m ?? {}) as Record<string, unknown>;
+    if (typeof designToolTokenId !== 'string' || typeof designSystemTokenName !== 'string' || !designToolTokenId || !designSystemTokenName) {
+      throw new BadRequestException('Each mapping needs designToolTokenId and designSystemTokenName');
+    }
+    return { designToolTokenId, designSystemTokenName, ...(typeof autoMap === 'boolean' ? { autoMap } : {}) };
+  });
 }
 
 export interface TokenConflict {
@@ -59,163 +79,76 @@ export interface SyncResult {
   validationResults: TokenValidationResult[];
 }
 
+/**
+ * Token sync connections, and the token checks (validation, mapping, conflict
+ * detection) a sync would use. Reading tokens from a design tool is not
+ * implemented, so sync, conflict resolution and auto-sync answer 501 instead
+ * of reporting work that didn't happen.
+ */
 @Injectable()
 export class TokenSyncService {
-  private connections = new Map<string, TokenSyncConnection>();
-  private designToolTokens = new Map<string, DesignToolToken[]>();
+  private readonly registry: ConnectionRegistry<TokenSyncConnection>;
 
-  constructor(private readonly designSystemService: DesignSystemService) {
-    // Initialize with sample connections
-    this.connections.set('conn-1', {
-      id: 'conn-1',
-      name: 'Figma Design System',
-      tool: 'figma',
-      fileId: 'figma-file-123',
-      fileUrl: 'https://www.figma.com/file/123',
-      enabled: true,
-      autoSync: false,
-      mappings: [],
-      createdAt: new Date('2024-01-15'),
-      updatedAt: new Date('2024-01-20'),
-    });
-
-    this.connections.set('conn-2', {
-      id: 'conn-2',
-      name: 'Penpot Tokens',
-      tool: 'penpot',
-      fileId: 'penpot-file-456',
-      fileUrl: 'https://penpot.app/file/456',
-      enabled: false,
-      autoSync: false,
-      mappings: [],
-      createdAt: new Date('2024-01-10'),
-      updatedAt: new Date('2024-01-10'),
-    });
+  constructor(
+    private readonly designSystemService: DesignSystemService,
+    encryption: EncryptionService,
+  ) {
+    this.registry = new ConnectionRegistry<TokenSyncConnection>(
+      encryption,
+      'conn',
+      {
+        name: text('name', 200),
+        tool: oneOf('tool', TOKEN_SYNC_TOOLS),
+        fileId: text('fileId', 300, true),
+        fileUrl: httpUrl('fileUrl'),
+        enabled: bool('enabled'),
+        mappings: parseMappings,
+      },
+      ['name', 'tool'],
+      () => ({ enabled: true, mappings: [] }),
+    );
   }
 
   // Connection Management
-  getAllConnections(): TokenSyncConnection[] {
-    return Array.from(this.connections.values());
+  getAllConnections(principal: AuthPrincipal): TokenSyncConnectionView[] {
+    return this.registry.list(principal);
   }
 
-  getConnection(id: string): TokenSyncConnection | null {
-    return this.connections.get(id) || null;
+  getConnection(principal: AuthPrincipal, id: string): TokenSyncConnectionView {
+    return this.registry.get(principal, id);
   }
 
-  createConnection(connection: Omit<TokenSyncConnection, 'id' | 'createdAt' | 'updatedAt'>): TokenSyncConnection {
-    const id = `conn-${Date.now()}`;
-    const newConnection: TokenSyncConnection = {
-      ...connection,
-      id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.connections.set(id, newConnection);
-    return newConnection;
+  createConnection(principal: AuthPrincipal, body: unknown): TokenSyncConnectionView {
+    return this.registry.create(principal, body);
   }
 
-  updateConnection(id: string, updates: Partial<TokenSyncConnection>): TokenSyncConnection | null {
-    const connection = this.connections.get(id);
-    if (!connection) return null;
-
-    const updated = {
-      ...connection,
-      ...updates,
-      updatedAt: new Date(),
-    };
-    this.connections.set(id, updated);
-    return updated;
+  updateConnection(principal: AuthPrincipal, id: string, body: unknown): TokenSyncConnectionView {
+    return this.registry.update(principal, id, body);
   }
 
-  deleteConnection(id: string): boolean {
-    return this.connections.delete(id);
+  deleteConnection(principal: AuthPrincipal, id: string): void {
+    this.registry.delete(principal, id);
   }
 
-  // Token Sync Operations
-  async syncTokens(connectionId: string): Promise<SyncResult> {
-    const connection = this.connections.get(connectionId);
-    if (!connection) {
-      return {
-        success: false,
-        tokensAdded: 0,
-        tokensUpdated: 0,
-        tokensSkipped: 0,
-        conflicts: [],
-        errors: ['Connection not found'],
-        validationResults: [],
-      };
-    }
-
-    // Fetch tokens from design tool (mock implementation)
-    const designToolTokens = await this.fetchTokensFromDesignTool(connection);
-    
-    // Validate tokens
-    const validationResults = designToolTokens.map(token => this.validateToken(token));
-    
-    // Map tokens to design system tokens
-    const mappedTokens = this.mapTokens(designToolTokens, connection.mappings);
-    
-    // Check for conflicts
-    const conflicts = this.detectConflicts(mappedTokens);
-    
-    // Apply mappings and sync
-    const syncResult = await this.applySync(mappedTokens, conflicts);
-    
-    // Update last sync time
-    this.updateConnection(connectionId, { lastSync: new Date() });
-
-    return {
-      success: conflicts.length === 0,
-      tokensAdded: syncResult.added,
-      tokensUpdated: syncResult.updated,
-      tokensSkipped: syncResult.skipped,
-      conflicts,
-      errors: syncResult.errors,
-      validationResults,
-    };
+  /** 501: there is no design tool client to read tokens from */
+  syncTokens(principal: AuthPrincipal, connectionId: string): never {
+    this.registry.require(principal, connectionId);
+    throw new NotImplementedException(TOKEN_SYNC_UNSUPPORTED);
   }
 
-  private async fetchTokensFromDesignTool(connection: TokenSyncConnection): Promise<DesignToolToken[]> {
-    // Mock implementation - in real scenario, this would call the design tool API
-    const mockTokens: DesignToolToken[] = [
-      {
-        id: 'figma-token-1',
-        name: 'Primary',
-        value: '#4f46e5',
-        type: 'color',
-        category: 'colors',
-        description: 'Primary brand color',
-        source: connection.tool,
-        fileId: connection.fileId,
-        lastModified: new Date(),
-      },
-      {
-        id: 'figma-token-2',
-        name: 'Spacing/Medium',
-        value: '16px',
-        type: 'dimension',
-        category: 'spacing',
-        description: 'Medium spacing',
-        source: connection.tool,
-        fileId: connection.fileId,
-        lastModified: new Date(),
-      },
-      {
-        id: 'figma-token-3',
-        name: 'Typography/Heading/Large',
-        value: '2rem',
-        type: 'fontSize',
-        category: 'typography',
-        description: 'Large heading font size',
-        source: connection.tool,
-        fileId: connection.fileId,
-        lastModified: new Date(),
-      },
-    ];
+  /** 501: conflicts come from a sync, which can't run (nothing is stored to resolve) */
+  resolveConflict(_conflictId: string, _resolution: 'use-design-tool' | 'use-system' | 'merge'): never {
+    throw new NotImplementedException(`Conflict resolution is not implemented. ${TOKEN_SYNC_UNSUPPORTED}`);
+  }
 
-    // Store tokens for this connection
-    this.designToolTokens.set(connection.id, mockTokens);
-    return mockTokens;
+  /** 501: there is no scheduler, and nothing to schedule */
+  enableAutoSync(principal: AuthPrincipal, connectionId: string): never {
+    this.registry.require(principal, connectionId);
+    throw new NotImplementedException(AUTO_SYNC_UNSUPPORTED);
+  }
+
+  disableAutoSync(principal: AuthPrincipal, connectionId: string): TokenSyncConnectionView {
+    return this.registry.disableAutoSync(principal, connectionId);
   }
 
   validateToken(token: DesignToolToken): TokenValidationResult {
@@ -363,72 +296,4 @@ export class TokenSyncService {
 
     return conflicts;
   }
-
-  async applySync(
-    mappedTokens: Array<{ designToolToken: DesignToolToken; designSystemTokenName: string }>,
-    conflicts: TokenConflict[],
-  ): Promise<{ added: number; updated: number; skipped: number; errors: string[] }> {
-    let added = 0;
-    let updated = 0;
-    let skipped = 0;
-    const errors: string[] = [];
-
-    const conflictTokenNames = new Set(conflicts.map(c => c.designSystemToken.name));
-    const systemTokens = this.designSystemService.getAllTokens();
-
-    for (const mapped of mappedTokens) {
-      // Skip tokens with conflicts
-      if (conflictTokenNames.has(mapped.designSystemTokenName)) {
-        skipped++;
-        continue;
-      }
-
-      const existingToken = systemTokens.find(t => t.name === mapped.designSystemTokenName);
-
-      if (existingToken) {
-        // Update existing token
-        // In a real implementation, this would update the token in the design system service
-        updated++;
-      } else {
-        // Add new token
-        // In a real implementation, this would add the token to the design system service
-        added++;
-      }
-    }
-
-    return { added, updated, skipped, errors };
-  }
-
-  // Conflict Resolution
-  resolveConflict(conflictId: string, resolution: 'use-design-tool' | 'use-system' | 'merge'): boolean {
-    // In a real implementation, this would resolve the conflict
-    return true;
-  }
-
-  // Auto-sync management
-  enableAutoSync(connectionId: string, intervalMinutes: number): boolean {
-    const connection = this.connections.get(connectionId);
-    if (!connection) return false;
-
-    this.updateConnection(connectionId, {
-      autoSync: true,
-      syncInterval: intervalMinutes,
-    });
-
-    // In a real implementation, this would set up a scheduled job
-    return true;
-  }
-
-  disableAutoSync(connectionId: string): boolean {
-    const connection = this.connections.get(connectionId);
-    if (!connection) return false;
-
-    this.updateConnection(connectionId, {
-      autoSync: false,
-      syncInterval: undefined,
-    });
-
-    return true;
-  }
 }
-

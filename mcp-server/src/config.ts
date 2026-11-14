@@ -19,7 +19,7 @@ export function loadConfig(): Config {
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new Error(
-        `Configuration error: ${error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')}`
+        `Configuration error: ${error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')}`
       );
     }
     throw error;

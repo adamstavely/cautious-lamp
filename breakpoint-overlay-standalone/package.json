@@ -2,16 +2,28 @@
   "name": "@designsystem/breakpoint-overlay",
   "version": "1.0.0",
   "description": "Standalone Breakpoint Overlay for visualizing active breakpoints and viewport metrics in any application",
-  "main": "dist/breakpoint-overlay.js",
-  "module": "dist/breakpoint-overlay.esm.js",
-  "types": "dist/breakpoint-overlay.d.ts",
+  "main": "dist/breakpoint-overlay.umd.js",
+  "module": "dist/breakpoint-overlay.es.mjs",
+  "unpkg": "dist/breakpoint-overlay.umd.js",
+  "types": "types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/breakpoint-overlay.es.mjs",
+      "require": "./dist/breakpoint-overlay.umd.js"
+    },
+    "./style.css": "./dist/style.css",
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist",
+    "types",
     "README.md"
   ],
   "scripts": {
     "build": "vite build",
-    "prepublishOnly": "npm run build"
+    "test:pack": "npm run build && node scripts/check-pack.mjs",
+    "prepublishOnly": "npm run build && node scripts/check-pack.mjs"
   },
   "keywords": [
     "design-system",
@@ -33,4 +45,3 @@
     "vue": "^3.3.4"
   }
 }
-

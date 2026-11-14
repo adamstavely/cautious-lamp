@@ -13,6 +13,11 @@ export interface MetaDoc {
   id: string;
   createdAt: string;
   value?: string;
+  /** Scheduled-scan claims: how the claimed run went */
+  lastStatus?: 'running' | 'success' | 'failed';
+  lastError?: string;
+  lastScanId?: string;
+  updatedAt?: string;
 }
 
 const keyword = { type: 'keyword' };

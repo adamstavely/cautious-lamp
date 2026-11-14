@@ -364,7 +364,7 @@ const MAX_PAGES = 50;
 // The server's message or a readable fallback.
 const apiErrorMessage = (err, fallback) => {
   const status = err?.response?.status;
-  if (status === 401 || status === 403) return 'Your API key was rejected or is missing. Check your API key.';
+  if (status === 401) return 'You are not signed in, or your API key was rejected.';
   if (status === 404) return 'This test run does not exist.';
   const message = err?.response?.data?.message;
   if (Array.isArray(message)) return message.join(' ');

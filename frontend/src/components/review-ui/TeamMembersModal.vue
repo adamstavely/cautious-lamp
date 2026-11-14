@@ -139,7 +139,8 @@ const dialog = ref(false);
 const newMemberEmail = ref('');
 const newMemberName = ref('');
 const newMemberRole = ref('Designer');
-const roleOptions = ['Designer', 'Art Director'];
+// A member's role counts as the matching workflow stage role on the team's reviews (docs/REVIEW_API.md)
+const roleOptions = ['Designer', 'Art Director', 'Creative Director', 'Client'];
 const busy = ref(false);
 // Local copy of the team, replaced by each API response (never mutate the prop)
 const currentTeam = ref(null);

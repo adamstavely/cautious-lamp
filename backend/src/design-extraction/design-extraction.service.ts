@@ -1,7 +1,9 @@
-import { Injectable, Logger, BadRequestException, HttpException, ServiceUnavailableException } from '@nestjs/common';
-import { chromium, Browser, Page } from 'playwright';
+import { Injectable, Logger, BadRequestException, GatewayTimeoutException, HttpException, ServiceUnavailableException } from '@nestjs/common';
+import { chromium, Browser, LaunchOptions, Page } from 'playwright';
 import { transformToDTCG, DembrandtOutput } from './dembrandt-to-dtcg.transformer';
-import { assertPublicHttpUrl } from '../common/security/url-safety';
+import { EgressProxy, chromiumEgressOptions, startEgressProxy } from '../common/security/egress-proxy';
+import { DestinationPolicy, assertPublicHttpUrl } from '../common/security/url-safety';
+import { withDeadline } from '../governance/semaphore';
 
 /** Each extraction runs a full Chromium; more than this at once exhausts the server */
 const MAX_CONCURRENT_EXTRACTIONS = 2;
@@ -12,11 +14,22 @@ export interface ExtractionOptions {
   slow?: boolean;
 }
 
+interface BrowserSession {
+  browser: Browser | null;
+  proxy: EgressProxy | null;
+  stopped: boolean;
+}
+
 @Injectable()
 export class DesignExtractionService {
   private readonly logger = new Logger(DesignExtractionService.name);
   private running = 0;
   private readonly waiting: Array<() => void> = [];
+
+  /** Tests only: stand-ins for chromium.launch and the egress resolver, and a shorter deadline */
+  launchBrowser: (options: LaunchOptions) => Promise<Browser> = (options) => chromium.launch(options);
+  egressPolicy?: DestinationPolicy;
+  totalTimeoutMs?: number;
 
   /** Waits for a free extraction slot */
   private async acquireSlot(): Promise<void> {
@@ -52,148 +65,155 @@ export class DesignExtractionService {
     }
     
     // Ensure URL has protocol, and that it points at the public internet
-    const normalizedUrl = (await assertPublicHttpUrl(this.normalizeUrl(url))).toString();
+    const normalizedUrl = (await assertPublicHttpUrl(this.normalizeUrl(url), this.egressPolicy)).toString();
 
     await this.acquireSlot();
-    let browser: Browser | null = null;
+    const session: BrowserSession = { browser: null, proxy: null, stopped: false };
+    const stop = async () => {
+      // Runs at the deadline and again when the call ends; closes each thing once
+      session.stopped = true;
+      const { browser, proxy } = session;
+      session.browser = null;
+      session.proxy = null;
+      await browser?.close().catch(() => undefined);
+      await proxy?.close().catch(() => undefined);
+    };
+    // Navigation and settle time, plus room for the in-page extraction
+    const deadlineMs = this.totalTimeoutMs ?? (options.slow ? 60000 + 12000 : 30000 + 8000) + 60000;
     try {
-      // Launch browser
-      browser = await chromium.launch({
-        headless: true,
-      });
-
-      const context = await browser.newContext({
-        viewport: options.mobile
-          ? { width: 375, height: 667 }
-          : { width: 1920, height: 1080 },
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        colorScheme: options.darkMode ? 'dark' : 'light',
-      });
-
-      // Check every request the page makes, so redirects and subresources
-      // can't reach internal addresses either
-      const checkedHosts = new Map<string, boolean>();
-      await context.route('**/*', async (route) => {
-        const requestUrl = route.request().url();
-        if (requestUrl.startsWith('data:') || requestUrl.startsWith('blob:')) {
-          return route.continue();
-        }
-        let host: string;
-        try {
-          host = new URL(requestUrl).host;
-        } catch {
-          return route.abort('blockedbyclient');
-        }
-        if (!checkedHosts.has(host)) {
-          const allowed = await assertPublicHttpUrl(requestUrl).then(() => true, () => false);
-          checkedHosts.set(host, allowed);
-        }
-        return checkedHosts.get(host) ? route.continue() : route.abort('blockedbyclient');
-      });
-
-      const page = await context.newPage();
-
-      // Navigate to URL first
-      this.logger.log(`Navigating to ${normalizedUrl}`);
-      await page.goto(normalizedUrl, {
-        waitUntil: 'networkidle',
-        timeout: options.slow ? 60000 : 30000,
-      });
-
-      // Wait for page to stabilize
-      await page.waitForTimeout(options.slow ? 12000 : 8000);
-
-      // Inject helper functions into the page context
-      await page.evaluate(() => {
-        (window as any).rgbToHex = function(rgb: string) {
-          if (!rgb || typeof rgb !== 'string') return null;
-          if (rgb.startsWith('#')) return rgb;
-          const match = rgb.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-          if (!match) return null;
-          const r = parseInt(match[1]);
-          const g = parseInt(match[2]);
-          const b = parseInt(match[3]);
-          return '#' + [r, g, b].map(x => {
-            const hex = x.toString(16);
-            return hex.length === 1 ? '0' + hex : hex;
-          }).join('');
-        };
-
-        (window as any).isColorValue = function(value: string) {
-          if (!value || typeof value !== 'string') return false;
-          const trimmed = value.trim();
-          
-          // Must be a direct color value, not a CSS variable reference
-          if (trimmed.startsWith('var(') || trimmed.startsWith('calc(') || trimmed.startsWith('url(')) {
-            return false;
-          }
-          
-          // Check for valid color formats
-          if (trimmed.startsWith('#')) {
-            // Hex color: #RGB, #RRGGBB, #RRGGBBAA
-            const hexMatch = trimmed.match(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/);
-            return hexMatch !== null;
-          }
-          
-          if (trimmed.startsWith('rgb') || trimmed.startsWith('rgba')) {
-            // RGB/RGBA color
-            const rgbMatch = trimmed.match(/^rgba?\s*\(\s*\d+\s*,\s*\d+\s*,\s*\d+/);
-            return rgbMatch !== null;
-          }
-          
-          if (trimmed.startsWith('hsl') || trimmed.startsWith('hsla')) {
-            // HSL/HSLA color
-            const hslMatch = trimmed.match(/^hsla?\s*\(\s*\d+/);
-            return hslMatch !== null;
-          }
-          
-          // Named colors (basic set)
-          const namedColors = ['transparent', 'currentcolor', 'inherit', 'initial', 'unset'];
-          if (namedColors.includes(trimmed.toLowerCase())) {
-            return false; // Don't include these
-          }
-          
-          return false;
-        };
-
-        (window as any).pxToRem = function(px: string) {
-          if (!px || typeof px !== 'string') return px;
-          const num = parseFloat(px.replace('px', ''));
-          if (isNaN(num)) return px;
-          const baseFontSize = 16;
-          return (num / baseFontSize).toFixed(2) + 'rem';
-        };
-
-        (window as any).detectScaleType = function(values: any[]) {
-          if (!Array.isArray(values)) return 'unknown';
-          const nums = values.map(v => parseFloat(String(v).replace('px', ''))).filter(n => !isNaN(n));
-          if (nums.length === 0) return 'unknown';
-          const mod4 = nums.filter(n => n % 4 === 0).length;
-          const mod8 = nums.filter(n => n % 8 === 0).length;
-          if (mod8 / nums.length > 0.7) return '8px';
-          if (mod4 / nums.length > 0.7) return '4px';
-          return 'mixed';
-        };
-      });
-
-      // Extract design tokens
-      const extractedData = await this.extractTokens(page);
-
-      // Add metadata
-      extractedData.url = normalizedUrl;
-      extractedData.extractedAt = new Date().toISOString();
-
-      return extractedData;
+      return await withDeadline(
+        deadlineMs,
+        () => this.extractInBrowser(normalizedUrl, options, session),
+        stop,
+        () => new GatewayTimeoutException(`Extraction took longer than ${Math.round(deadlineMs / 1000)}s and was stopped`),
+      );
     } catch (error) {
       this.logger.error(`Error extracting design tokens: ${error.message}`, error.stack);
       if (error instanceof HttpException) throw error;
       throw new BadRequestException('Could not load that page to extract design tokens');
     } finally {
-      if (browser) {
-        await browser.close();
-      }
+      await stop();
       this.releaseSlot();
     }
+  }
+
+  /** Starts Chromium behind the egress proxy, loads the page and extracts tokens */
+  private async extractInBrowser(normalizedUrl: string, options: ExtractionOptions, session: BrowserSession): Promise<DembrandtOutput> {
+    // All of Chromium's traffic goes through a local proxy that resolves
+    // each host itself and only connects to the public address it checked,
+    // so redirects, subresources and DNS rebinding can't reach internal
+    // addresses
+    session.proxy = await startEgressProxy(this.egressPolicy);
+    const launched = await this.launchBrowser({ headless: true, ...chromiumEgressOptions(session.proxy) });
+    session.browser = launched;
+    if (session.stopped) {
+      // The deadline passed while starting up; the caller has already cleaned up
+      await launched.close().catch(() => undefined);
+      await session.proxy?.close().catch(() => undefined);
+      throw new GatewayTimeoutException('The extraction was stopped');
+    }
+
+    const context = await launched.newContext({
+      viewport: options.mobile
+        ? { width: 375, height: 667 }
+        : { width: 1920, height: 1080 },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      colorScheme: options.darkMode ? 'dark' : 'light',
+    });
+
+    const page = await context.newPage();
+
+    // Navigate to URL first
+    this.logger.log(`Navigating to ${normalizedUrl}`);
+    await page.goto(normalizedUrl, {
+      waitUntil: 'networkidle',
+      timeout: options.slow ? 60000 : 30000,
+    });
+
+    // Wait for page to stabilize
+    await page.waitForTimeout(options.slow ? 12000 : 8000);
+
+    // Inject helper functions into the page context
+    await page.evaluate(() => {
+      (window as any).rgbToHex = function(rgb: string) {
+        if (!rgb || typeof rgb !== 'string') return null;
+        if (rgb.startsWith('#')) return rgb;
+        const match = rgb.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+        if (!match) return null;
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        return '#' + [r, g, b].map(x => {
+          const hex = x.toString(16);
+          return hex.length === 1 ? '0' + hex : hex;
+        }).join('');
+      };
+
+      (window as any).isColorValue = function(value: string) {
+        if (!value || typeof value !== 'string') return false;
+        const trimmed = value.trim();
+        
+        // Must be a direct color value, not a CSS variable reference
+        if (trimmed.startsWith('var(') || trimmed.startsWith('calc(') || trimmed.startsWith('url(')) {
+          return false;
+        }
+        
+        // Check for valid color formats
+        if (trimmed.startsWith('#')) {
+          // Hex color: #RGB, #RRGGBB, #RRGGBBAA
+          const hexMatch = trimmed.match(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/);
+          return hexMatch !== null;
+        }
+        
+        if (trimmed.startsWith('rgb') || trimmed.startsWith('rgba')) {
+          // RGB/RGBA color
+          const rgbMatch = trimmed.match(/^rgba?\s*\(\s*\d+\s*,\s*\d+\s*,\s*\d+/);
+          return rgbMatch !== null;
+        }
+        
+        if (trimmed.startsWith('hsl') || trimmed.startsWith('hsla')) {
+          // HSL/HSLA color
+          const hslMatch = trimmed.match(/^hsla?\s*\(\s*\d+/);
+          return hslMatch !== null;
+        }
+        
+        // Named colors (basic set)
+        const namedColors = ['transparent', 'currentcolor', 'inherit', 'initial', 'unset'];
+        if (namedColors.includes(trimmed.toLowerCase())) {
+          return false; // Don't include these
+        }
+        
+        return false;
+      };
+
+      (window as any).pxToRem = function(px: string) {
+        if (!px || typeof px !== 'string') return px;
+        const num = parseFloat(px.replace('px', ''));
+        if (isNaN(num)) return px;
+        const baseFontSize = 16;
+        return (num / baseFontSize).toFixed(2) + 'rem';
+      };
+
+      (window as any).detectScaleType = function(values: any[]) {
+        if (!Array.isArray(values)) return 'unknown';
+        const nums = values.map(v => parseFloat(String(v).replace('px', ''))).filter(n => !isNaN(n));
+        if (nums.length === 0) return 'unknown';
+        const mod4 = nums.filter(n => n % 4 === 0).length;
+        const mod8 = nums.filter(n => n % 8 === 0).length;
+        if (mod8 / nums.length > 0.7) return '8px';
+        if (mod4 / nums.length > 0.7) return '4px';
+        return 'mixed';
+      };
+    });
+
+    // Extract design tokens
+    const extractedData = await this.extractTokens(page);
+
+    // Add metadata
+    extractedData.url = normalizedUrl;
+    extractedData.extractedAt = new Date().toISOString();
+
+    return extractedData;
   }
 
   /**

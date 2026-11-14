@@ -172,7 +172,7 @@
                 :workspace="workspace"
                 :current-user-id="user?.id ?? null"
                 :is-dark-mode="isDarkMode"
-                @updated="workspace = $event"
+                @updated="onSaved"
                 @left="router.push('/admin/workspaces')"
               />
             </div>
@@ -255,7 +255,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import DocumentationDrawer from '../components/DocumentationDrawer.vue';
 import Breadcrumbs from '../components/Breadcrumbs.vue';
@@ -362,45 +362,68 @@ const componentBadgeClass = (component) =>
 
 const id = () => encodeURIComponent(workspace.value?.id ?? route.params.id);
 
+// Responses can arrive after the user has moved to another workspace (or
+// reloaded this one, or asked again). Each load takes a ticket and only
+// applies its result while the ticket is current: same workspace load
+// (generation) and the latest request for that slot.
+let generation = 0;
+const latestRequest = {};
+const ticket = (slot) => {
+  const gen = generation;
+  const n = (latestRequest[slot] = (latestRequest[slot] ?? 0) + 1);
+  return () => gen === generation && latestRequest[slot] === n;
+};
+
 const loadAnalytics = async () => {
+  const current = ticket('analytics');
   analyticsError.value = null;
   try {
-    analytics.value = (await apiClient.get(`/api/v1/workspaces/${id()}/analytics`)).data;
+    const data = (await apiClient.get(`/api/v1/workspaces/${id()}/analytics`)).data;
+    if (current()) analytics.value = data;
   } catch (error) {
+    if (!current()) return;
     analytics.value = null;
     analyticsError.value = apiErrorMessage(error, 'Analytics could not be loaded.');
   }
 };
 
 const loadComponents = async () => {
+  const current = ticket('components');
   componentsError.value = null;
   try {
-    components.value = (await apiClient.get(`/api/v1/workspaces/${id()}/components`)).data.components ?? [];
+    const data = (await apiClient.get(`/api/v1/workspaces/${id()}/components`)).data.components ?? [];
+    if (current()) components.value = data;
   } catch (error) {
+    if (!current()) return;
     components.value = [];
     componentsError.value = apiErrorMessage(error, 'Components could not be loaded.');
   }
 };
 
 const loadApplications = async () => {
+  const current = ticket('applications');
   try {
-    applications.value = (await apiClient.get('/api/v1/applications', { params: { workspaceId: workspace.value.id } })).data.applications ?? [];
+    const data = (await apiClient.get('/api/v1/applications', { params: { workspaceId: workspace.value.id } })).data.applications ?? [];
+    if (current()) applications.value = data;
   } catch {
-    applications.value = [];
+    if (current()) applications.value = [];
   }
 };
 
 /** Workspaces the user can see: share targets, and names for shared items */
 const loadAllWorkspaces = async () => {
+  const current = ticket('allWorkspaces');
   try {
-    allWorkspaces.value = (await apiClient.get('/api/v1/workspaces')).data.map((ws) => ({ id: ws.id, name: ws.name }));
+    const data = (await apiClient.get('/api/v1/workspaces')).data.map((ws) => ({ id: ws.id, name: ws.name }));
+    if (current()) allWorkspaces.value = data;
   } catch {
-    allWorkspaces.value = [];
+    if (current()) allWorkspaces.value = [];
   }
 };
 
 const loadWorkspace = async () => {
   const workspaceId = route.params.id;
+  const gen = ++generation;
   loading.value = true;
   loadError.value = null;
   workspace.value = null;
@@ -411,25 +434,31 @@ const loadWorkspace = async () => {
   try {
     const response = await apiClient.get(`/api/v1/workspaces/${encodeURIComponent(workspaceId)}`);
     // The route may have moved on while this was in flight
-    if (route.params.id !== workspaceId) return;
+    if (gen !== generation) return;
     workspace.value = response.data;
   } catch (error) {
-    if (route.params.id !== workspaceId) return;
+    if (gen !== generation) return;
     loadError.value = { status: error?.response?.status, message: apiErrorMessage(error, 'The workspace could not be loaded.') };
     return;
   } finally {
-    if (route.params.id === workspaceId) loading.value = false;
+    if (gen === generation) loading.value = false;
   }
   await Promise.all([loadAnalytics(), loadComponents(), loadApplications(), loadAllWorkspaces()]);
 };
 
 watch(() => route.params.id, (next) => next && loadWorkspace(), { immediate: true });
+// Nothing in flight may write to this page once it's gone
+onBeforeUnmount(() => {
+  generation += 1;
+});
 watch(activeTab, (tab) => {
   if (tab === 'analytics' && workspace.value) loadAnalytics();
 });
 
+// Members and settings save the workspace they were given; ignore a save
+// that finishes after the page has moved to another workspace.
 const onSaved = (updated) => {
-  workspace.value = updated;
+  if (updated?.id && updated.id === workspace.value?.id) workspace.value = updated;
 };
 
 // ---------- Component sharing ----------
@@ -437,14 +466,18 @@ const componentShare = reactive({ open: false, component: null, saving: false, e
 const openComponentShare = (component) => Object.assign(componentShare, { open: true, component, saving: false, error: null });
 
 const saveComponentShare = async (sharing) => {
+  const gen = generation;
   componentShare.saving = true;
   componentShare.error = null;
   try {
     await apiClient.put(`/api/v1/workspaces/${id()}/components/${encodeURIComponent(componentShare.component.id)}/sharing`, sharing);
+    // Saved, but the user has since opened another workspace: don't report it there
+    if (gen !== generation) return;
     componentShare.open = false;
     showNotice('Component sharing updated.', 'success');
     await loadComponents();
   } catch (error) {
+    if (gen !== generation) return;
     componentShare.error = apiErrorMessage(error, 'Could not change sharing.');
   } finally {
     componentShare.saving = false;
