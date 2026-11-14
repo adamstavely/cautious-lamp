@@ -17,7 +17,7 @@
     "tc:vendor": "scripts/vendor-trenchcoat.sh"
   },
   "dependencies": {
-    "@adamstavely/trenchcoat": "file:vendor/adamstavely-trenchcoat-0.28.3.tgz",
+    "@adamstavely/trenchcoat": "file:vendor/adamstavely-trenchcoat-0.28.5.tgz",
     "@evilmartians/harmony": "^1.4.0",
     "@mdi/font": "^7.4.47",
     "@openfeature/js-sdk": "^1.6.1",
