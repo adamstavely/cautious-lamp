@@ -131,6 +131,7 @@ export default {
           'stroke-width': strokeWidth,
           tabindex: countryId ? 0 : undefined,
           role: countryId ? 'button' : undefined,
+          'data-country': countryId || undefined,
           'aria-label': countryId ? `${title}. Activate to show its regions.` : undefined,
           onClick: countryId ? open : undefined,
           onKeydown: countryId ? (e) => {

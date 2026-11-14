@@ -85,7 +85,7 @@
         <div class="lg:col-span-2">
           <UiPanel title="Preview">
             <template #actions>
-              <UiButton v-if="country" icon="arrow_back" size="sm" @click="closeCountry">Back to {{ areaLabel }}</UiButton>
+              <UiButton v-if="country" ref="backButton" icon="arrow_back" size="sm" @click="backFromCountry">Back to {{ areaLabel }}</UiButton>
               <UiButton
                 v-for="format in ['png', 'svg']"
                 :key="format"
@@ -125,7 +125,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { useNotice } from '../composables/useNotice.js';
 import InlineNotice from '../components/InlineNotice.vue';
 import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiChoiceCards, UiInput, UiPanel, UiSegmented, UiSelect, UiTabs } from '../components/ui';
@@ -201,6 +201,32 @@ const openCountry = (id) => {
 const closeCountry = () => openCountry(null);
 
 const { geo, loading, error } = useGeography(() => ({ area: area.value, country: country.value, includeRemote: includeRemote.value }));
+
+// Keyboard focus follows the drill-down: opening a country from the map moves
+// to Back, and Back returns to that country on the redrawn map, so focus is
+// never dropped on the page when the clicked or focused control disappears.
+const backButton = ref(null);
+const refocusCountry = ref(null);
+
+const openFromMap = async (id) => {
+  openCountry(id);
+  await nextTick();
+  backButton.value?.$el?.focus();
+};
+
+const backFromCountry = () => {
+  refocusCountry.value = country.value;
+  closeCountry();
+};
+
+watch(loading, async (isLoading) => {
+  if (isLoading || !refocusCountry.value) return;
+  const id = refocusCountry.value;
+  refocusCountry.value = null;
+  await nextTick();
+  const region = [...(mapWellRef.value?.querySelectorAll('[data-country]') || [])].find((el) => el.dataset.country === String(id));
+  region?.focus();
+});
 const palette = useMapPalette();
 
 // Countries on the world or continent map that have regions to show; kept
@@ -573,7 +599,7 @@ const mapProps = computed(() => {
     loading: loading.value,
     error: error.value,
     projectionType: worldProjection.value,
-    onOpen: openCountry,
+    onOpen: openFromMap,
     label: mapLabel.value,
   };
   if (mapType.value === 'choropleth') {
