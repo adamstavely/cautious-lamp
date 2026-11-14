@@ -41,8 +41,9 @@ onMounted(() => sync(props.open));
 </script>
 
 <style scoped>
+/* m-auto: a global reset zeroes the margin the browser uses to centre a modal dialog */
 .ui-dialog {
-  @apply w-full p-0 rounded-card border border-line bg-surface-overlay text-ink shadow-overlay;
+  @apply m-auto w-full p-0 rounded-card border border-line bg-surface-overlay text-ink shadow-overlay;
 }
 .ui-dialog::backdrop {
   @apply bg-surface-inverse opacity-40;
