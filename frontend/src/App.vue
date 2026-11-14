@@ -21,9 +21,8 @@
         </div>
       </div>
       
-      <!-- Floating Action Button and Chatbot -->
-      <FloatingActionButton v-if="aiAssistantEnabled" :isChatOpen="chatOpen" @toggle-chat="handleToggleChat" />
-      <EeroChatbot v-if="aiAssistantEnabled" :isOpen="chatOpen" @close="handleCloseChat" />
+      <!-- Eero, the AI assistant: a chat panel with its own corner launcher -->
+      <EeroChatbot v-if="aiAssistantEnabled" v-model:open="chatOpen" />
       
       <!-- Loupe Tool (now includes breakpoint overlay features) -->
       <LoupeTool v-if="loupeToolEnabled" />
@@ -40,7 +39,6 @@ import { useRoute, useRouter } from 'vue-router';
 import Sidebar from './components/Sidebar.vue';
 import TopNav from './components/TopNav.vue';
 import InfoBanner from './components/InfoBanner.vue';
-import FloatingActionButton from './components/FloatingActionButton.vue';
 import EeroChatbot from './components/EeroChatbot.vue';
 import LoupeTool from './components/LoupeTool.vue';
 import Toast from './components/Toast.vue';
@@ -96,14 +94,6 @@ watch(() => route.query.featureDisabled, (featureKey) => {
     }
   }
 }, { immediate: true });
-
-const handleToggleChat = () => {
-  chatOpen.value = !chatOpen.value;
-};
-
-const handleCloseChat = () => {
-  chatOpen.value = false;
-};
 
 // Listen for custom event from TopNav to open chat
 const handleOpenChatEvent = () => {

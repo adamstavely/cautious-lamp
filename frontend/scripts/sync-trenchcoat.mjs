@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 // Copies Trench Coat's design tokens and spot illustrations into the app.
-//   node scripts/sync-trenchcoat.mjs <path to an unpacked @adamstavely/trenchcoat package>
-// Trench Coat is a private package, so the app keeps copies instead of installing it.
+//   npm run tc:sync                (the installed package, vendor/*.tgz)
+//   npm run tc:sync -- <path to an unpacked @adamstavely/trenchcoat package>
+// The tokens and illustrations are copied so the styles never depend on node_modules;
+// the web components (Eero's chat) are imported from the installed package.
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
-const source = process.argv[2];
+const source = process.argv[2] ?? path.dirname(createRequire(import.meta.url).resolve('@adamstavely/trenchcoat/package.json'));
 if (!source || !existsSync(path.join(source, 'package.json'))) {
   console.error('Usage: node scripts/sync-trenchcoat.mjs <path to the @adamstavely/trenchcoat package>');
   process.exit(1);

@@ -13,9 +13,11 @@
     "check:sfc": "node scripts/check-sfc.mjs",
     "test": "vitest run",
     "check:styles": "node scripts/check-styles.mjs",
-    "tc:sync": "node scripts/sync-trenchcoat.mjs"
+    "tc:sync": "node scripts/sync-trenchcoat.mjs",
+    "tc:vendor": "scripts/vendor-trenchcoat.sh"
   },
   "dependencies": {
+    "@adamstavely/trenchcoat": "file:vendor/adamstavely-trenchcoat-0.28.3.tgz",
     "@evilmartians/harmony": "^1.4.0",
     "@mdi/font": "^7.4.47",
     "@openfeature/js-sdk": "^1.6.1",
