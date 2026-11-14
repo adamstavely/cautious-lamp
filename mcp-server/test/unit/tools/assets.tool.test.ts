@@ -28,7 +28,15 @@ describe('Assets Tool', () => {
       const result = await getAssets({ workspaceId: 'ws1' });
 
       expect(result).toEqual(mockAssets);
-      expect(mockApiClient.get).toHaveBeenCalledWith('/workspaces/ws1/assets', { workspaceId: 'ws1' }, 'assets');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/workspaces/ws1/resources/assets', undefined, 'assets');
+    });
+
+    it('sends the type as the resource API `filter`', async () => {
+      mockApiClient.get.mockResolvedValue([]);
+
+      await getAssets({ workspaceId: 'ws 1', type: 'logo' });
+
+      expect(mockApiClient.get).toHaveBeenCalledWith('/workspaces/ws%201/resources/assets', { filter: 'logo' }, 'assets');
     });
   });
 
@@ -43,24 +51,32 @@ describe('Assets Tool', () => {
       const result = await getIcons({ workspaceId: 'ws1' });
 
       expect(result).toEqual(mockIcons);
+      expect(mockApiClient.get).toHaveBeenCalledWith('/workspaces/ws1/resources/icons', undefined, 'assets');
+    });
+
+    it('sends the iconSet as the resource API `filter`', async () => {
+      mockApiClient.get.mockResolvedValue([]);
+
+      await getIcons({ workspaceId: 'ws1', iconSet: 'material' });
+
+      expect(mockApiClient.get).toHaveBeenCalledWith('/workspaces/ws1/resources/icons', { filter: 'material' }, 'assets');
     });
   });
 
   describe('getAssetById', () => {
-    it('should retrieve a specific asset', async () => {
-      const mockAssets = [
-        { id: 'asset1', name: 'Asset 1', type: 'image' as const, url: 'http://example.com/asset1.jpg', workspaceId: 'ws1', createdAt: '2024-01-01', createdBy: 'user1' },
-      ];
+    it('fetches the asset by id from the resource API', async () => {
+      const mockAsset = { id: 'asset1', name: 'Asset 1', type: 'image' as const, url: 'http://example.com/asset1.jpg', workspaceId: 'ws1', createdAt: '2024-01-01', createdBy: 'user1' };
 
-      mockApiClient.get.mockResolvedValue(mockAssets);
+      mockApiClient.get.mockResolvedValue(mockAsset);
 
       const result = await getAssetById({ workspaceId: 'ws1', assetId: 'asset1' });
 
-      expect(result).toEqual(mockAssets[0]);
+      expect(result).toEqual(mockAsset);
+      expect(mockApiClient.get).toHaveBeenCalledWith('/workspaces/ws1/resources/assets/asset1', undefined, 'assets');
     });
 
     it('should throw error if asset not found', async () => {
-      mockApiClient.get.mockResolvedValue([]);
+      mockApiClient.get.mockRejectedValue(new Error('API Error 404: Not Found'));
 
       await expect(getAssetById({ workspaceId: 'ws1', assetId: 'nonexistent' })).rejects.toThrow();
     });

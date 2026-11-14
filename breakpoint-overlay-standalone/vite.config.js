@@ -7,12 +7,15 @@ export default defineConfig({
     lib: {
       entry: 'src/index.js',
       name: 'BreakpointOverlay',
-      fileName: (format) => `breakpoint-overlay.${format}.js`,
+      // ESM gets .mjs so Node treats it as a module (the package is CommonJS by default)
+      fileName: (format) => (format === 'es' ? 'breakpoint-overlay.es.mjs' : 'breakpoint-overlay.umd.js'),
       formats: ['es', 'umd']
     },
     rollupOptions: {
       external: ['vue'],
       output: {
+        // initX() and the component are named exports; the component is also the default
+        exports: 'named',
         globals: {
           vue: 'Vue'
         }

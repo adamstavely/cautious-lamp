@@ -66,7 +66,7 @@ Vue: the rules check `<script>` code when using `vue-eslint-parser`; `accessibil
 
 ## API rules
 
-ESLint rules run synchronously, so rules from the Rules Engine have to be loaded **before** linting. Nothing is fetched when the plugin is required, and ESLint `settings` are not read.
+ESLint rules run synchronously, so rules from the governance API have to be loaded **before** linting. Nothing is fetched when the plugin is required, and ESLint `settings` are not read.
 
 ```javascript
 // eslint.config.mjs
@@ -85,7 +85,19 @@ export default [
 ];
 ```
 
-- Fetches `GET {apiUrl}/rules/export?format=eslint` and expects `{ rules: [...] }`.
+- Fetches `GET {apiUrl}/governance/rules/export` (the declarative governance rules, docs/GOVERNANCE.md) and expects `{ rules: [...] }`.
+- Rule types are mapped explicitly; nothing is inferred from names or code:
+
+  | Rule | ESLint check |
+  | --- | --- |
+  | `regex-absent`, target `javascript` | Each match in the file's source, with its location (at most 100). |
+  | `regex-present`, target `javascript` | A non-empty file with no match. |
+  | `token-usage`, target `css` | CSS-in-JS: style object properties (`{ marginTop: '8px' }`, `style={{ … }}`) and `prop: value` declarations in string/template literals (styled-components, `css\`…\``). Accepts `var(--…)`, keywords, `allowedValues`, `config.tokenValues` and template interpolations. Property names compare ignoring case, `-` and `_`. |
+  | `selector-attribute`, target `html`, selector a plain tag list (`img`, `img, area`) | Native JSX elements with none of the attributes (`class`/`for` match `className`/`htmlFor`); with `pattern`, literal values must match. Elements with `{...spread}` are skipped. |
+  | `builtin` `component-naming` | Same as the `component-naming` rule. |
+
+  Everything else (`selector-count`, other builtins, `regex-*` on `html`/`css`, complex selectors, rules without a `type`) is skipped: it's listed in `skipped`, the reason is in `warnings`, and one warning is logged per load.
+- `config.tokenValues` lists design token values that `token-usage` rules accept as raw values, as the server does.
 - Rule ids are the rule name lowercased and hyphenated (`"No Brand Colors"` becomes `design-system/no-brand-colors`). Disabled rules, rules whose name sanitizes to nothing, and rules that would replace a built-in rule are skipped and listed in `skipped`.
 - It never rejects: if the API is down, slow (times out) or returns bad data, it logs one warning and resolves with whatever loaded (cached rules for that URL, if any).
 - `config.rules` registers rule definitions directly without a request.

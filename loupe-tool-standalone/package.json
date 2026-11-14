@@ -2,16 +2,29 @@
   "name": "@designsystem/loupe-tool",
   "version": "1.0.0",
   "description": "Standalone Loupe Tool for inspecting design system components in any application",
-  "main": "dist/loupe-tool.js",
-  "module": "dist/loupe-tool.esm.js",
-  "types": "dist/loupe-tool.d.ts",
+  "main": "dist/loupe-tool.umd.js",
+  "module": "dist/loupe-tool.es.mjs",
+  "unpkg": "dist/loupe-tool.umd.js",
+  "types": "types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/loupe-tool.es.mjs",
+      "require": "./dist/loupe-tool.umd.js"
+    },
+    "./style.css": "./dist/style.css",
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist",
+    "types",
     "README.md"
   ],
   "scripts": {
     "build": "vite build",
-    "prepublishOnly": "npm run build"
+    "test": "node --test \"test/**/*.test.mjs\"",
+    "test:pack": "npm run build && node scripts/check-pack.mjs",
+    "prepublishOnly": "npm run build && node scripts/check-pack.mjs"
   },
   "keywords": [
     "design-system",
@@ -34,4 +47,3 @@
     "vue": "^3.3.4"
   }
 }
-

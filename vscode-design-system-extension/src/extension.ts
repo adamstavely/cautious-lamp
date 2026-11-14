@@ -3,7 +3,7 @@ import { DesignSystemAPI } from './api';
 import { CompletionProvider } from './completion';
 import { HoverProvider } from './hover';
 import { ColorDecorationProvider } from './colorDecoration';
-import { CodeActionsProvider } from './codeActions';
+import { CodeActionsProvider, buildTokenEdit, findTokenForValue } from './codeActions';
 
 let api: DesignSystemAPI;
 let outputChannel: vscode.OutputChannel;
@@ -102,7 +102,11 @@ export function activate(context: vscode.ExtensionContext) {
           { scheme: 'file', language: 'typescript' },
           { scheme: 'file', language: 'vue' },
           { scheme: 'file', language: 'javascriptreact' },
-          { scheme: 'file', language: 'typescriptreact' }
+          { scheme: 'file', language: 'typescriptreact' },
+          { scheme: 'file', language: 'css' },
+          { scheme: 'file', language: 'scss' },
+          { scheme: 'file', language: 'less' },
+          { scheme: 'file', language: 'html' }
         ],
         codeActionsProvider,
         {
@@ -251,20 +255,15 @@ function registerCommands(context: vscode.ExtensionContext) {
         }
 
         const tokens = await api.getTokens();
-        const matchingToken = tokens.find(t => {
-          if (t.type === 'color' && selectedText.toLowerCase() === t.value.toLowerCase()) {
-            return true;
-          }
-          if (t.type === 'spacing' && selectedText === t.value) {
-            return true;
-          }
-          return false;
-        });
+        const matchingToken = findTokenForValue(tokens, selectedText);
 
         if (matchingToken) {
-          const success = await editor.edit(editBuilder => {
-            editBuilder.replace(selection, `tokens.${matchingToken.name}`);
-          });
+          const edit = buildTokenEdit(editor.document, selection, matchingToken);
+          if (!edit) {
+            vscode.window.showWarningMessage('The selected value is not in a string, template or stylesheet that can take a token');
+            return;
+          }
+          const success = await vscode.workspace.applyEdit(edit);
           if (success) {
             vscode.window.showInformationMessage(`Replaced with token: ${matchingToken.name}`);
           }

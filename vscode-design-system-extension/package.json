@@ -49,6 +49,11 @@
           "type": "boolean",
           "default": true,
           "description": "Enable code snippets"
+        },
+        "designSystem.tokenImportPath": {
+          "type": "string",
+          "default": "@design-system/tokens",
+          "description": "Module that exports `tokens`. Quick fixes in JavaScript/TypeScript add `import { tokens } from '<this>'` when the file doesn't import tokens yet. In CSS, quick fixes write `var(--token-name)` instead."
         }
       }
     },
@@ -146,7 +151,8 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "package": "vsce package"
+    "package": "vsce package",
+    "test": "tsc -p tsconfig.test.json && node --test \"out-test/test/**/*.test.js\""
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -157,4 +163,3 @@
     "axios": "^1.6.0"
   }
 }
-

@@ -8,6 +8,17 @@ A standalone breakpoint overlay tool for visualizing active breakpoints and view
 npm install --save-dev @designsystem/breakpoint-overlay
 ```
 
+## Package contents
+
+| File | Use |
+| --- | --- |
+| `dist/breakpoint-overlay.es.mjs` | ES module (`import`); Vue is a peer dependency |
+| `dist/breakpoint-overlay.umd.js` | UMD (`require`, `<script>`); expects the `Vue` global in browsers |
+| `dist/style.css` | The overlay's styles, exported as `@designsystem/breakpoint-overlay/style.css`. Import it once; the JS doesn't inject CSS. |
+| `types/index.d.ts` | TypeScript declarations |
+
+`npm run test:pack` builds and checks that every file `package.json` advertises is in `npm pack`.
+
 ## Usage
 
 ### Vue 3 Application
@@ -26,6 +37,7 @@ npm install --save-dev @designsystem/breakpoint-overlay
 
 <script setup>
 import { BreakpointOverlay } from '@designsystem/breakpoint-overlay';
+import '@designsystem/breakpoint-overlay/style.css';
 
 const breakpoints = [
   { id: 'sm', label: 'Small', minWidth: 640 },
@@ -41,35 +53,25 @@ const hotkey = 'alt+shift+o';
 
 ### Vanilla JavaScript / React / Other Frameworks
 
-```html
-<!-- Include the script -->
-<script type="module" src="https://unpkg.com/@designsystem/breakpoint-overlay/dist/breakpoint-overlay.esm.js"></script>
+The UMD build needs Vue as a global. With `data-auto-init` it mounts itself and sets `window.breakpointOverlay`:
 
-<!-- Auto-initialize on page load -->
-<script 
-  type="module" 
-  data-auto-init 
+```html
+<link rel="stylesheet" href="https://unpkg.com/@designsystem/breakpoint-overlay/dist/style.css">
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script
+  src="https://unpkg.com/@designsystem/breakpoint-overlay/dist/breakpoint-overlay.umd.js"
+  data-auto-init
   data-hotkey="alt+shift+o"
   data-debounce-ms="150"
->
-  import { initBreakpointOverlay } from 'https://unpkg.com/@designsystem/breakpoint-overlay/dist/breakpoint-overlay.esm.js';
-  
-  initBreakpointOverlay({
-    breakpoints: [
-      { id: 'mobile', label: 'Mobile', maxWidth: 767 },
-      { id: 'tablet', label: 'Tablet', minWidth: 768, maxWidth: 1023 },
-      { id: 'desktop', label: 'Desktop', minWidth: 1024 },
-    ],
-    hotkey: 'alt+shift+o',
-    debounceMs: 150,
-  });
-</script>
+  data-breakpoints='[{"id":"mobile","label":"Mobile","maxWidth":767},{"id":"desktop","label":"Desktop","minWidth":768}]'
+></script>
 ```
 
 ### Programmatic Initialization
 
 ```javascript
 import { initBreakpointOverlay } from '@designsystem/breakpoint-overlay';
+import '@designsystem/breakpoint-overlay/style.css';
 
 const overlay = initBreakpointOverlay({
   breakpoints: [

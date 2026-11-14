@@ -66,7 +66,7 @@ module.exports = {
 
 ### Integration Points
 
-- ✅ Backend API: `/api/v1/rules/export?format=eslint`
+- ✅ Backend API: `/api/v1/governance/rules/export`
 - ✅ Rules Engine: Fetches rules from Governance UI
 - ✅ ESLint: Works with ESLint 8+
 - ✅ VS Code: Works via ESLint extension

@@ -8,6 +8,17 @@ A standalone component inspector tool for design system components. Works in any
 npm install @designsystem/loupe-tool
 ```
 
+## Package contents
+
+| File | Use |
+| --- | --- |
+| `dist/loupe-tool.es.mjs` | ES module (`import`); Vue is a peer dependency |
+| `dist/loupe-tool.umd.js` | UMD (`require`, `<script>`); expects the `Vue` global in browsers |
+| `dist/style.css` | The tool's styles, exported as `@designsystem/loupe-tool/style.css`. Import it once; the JS doesn't inject CSS. |
+| `types/index.d.ts` | TypeScript declarations |
+
+`npm run test:pack` builds and checks that every file `package.json` advertises is in `npm pack`.
+
 ## Usage
 
 ### Vue 3 Application
@@ -22,6 +33,7 @@ npm install @designsystem/loupe-tool
 
 <script setup>
 import { LoupeTool } from '@designsystem/loupe-tool';
+import '@designsystem/loupe-tool/style.css';
 
 const apiUrl = 'https://your-design-system-api.com/api/v1';
 const apiKey = 'your-api-key';
@@ -30,25 +42,24 @@ const apiKey = 'your-api-key';
 
 ### Vanilla JavaScript / React / Other Frameworks
 
-```html
-<!-- Include the script -->
-<script type="module" src="https://unpkg.com/@designsystem/loupe-tool/dist/loupe-tool.esm.js"></script>
+The UMD build needs Vue as a global. With `data-auto-init` it mounts itself and sets `window.loupeTool`:
 
-<!-- Auto-initialize on page load -->
-<script type="module" data-auto-init data-api-url="https://your-api.com/api/v1" data-api-key="your-key">
-  import { initLoupeTool } from 'https://unpkg.com/@designsystem/loupe-tool/dist/loupe-tool.esm.js';
-  
-  initLoupeTool({
-    apiUrl: 'https://your-design-system-api.com/api/v1',
-    apiKey: 'your-api-key',
-  });
-</script>
+```html
+<link rel="stylesheet" href="https://unpkg.com/@designsystem/loupe-tool/dist/style.css">
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script
+  src="https://unpkg.com/@designsystem/loupe-tool/dist/loupe-tool.umd.js"
+  data-auto-init
+  data-api-url="https://your-api.com/api/v1"
+  data-api-key="your-key"
+></script>
 ```
 
 ### Programmatic Initialization
 
 ```javascript
 import { initLoupeTool } from '@designsystem/loupe-tool';
+import '@designsystem/loupe-tool/style.css';
 
 const loupe = initLoupeTool({
   apiUrl: 'https://your-design-system-api.com/api/v1',

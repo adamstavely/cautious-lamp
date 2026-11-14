@@ -85,5 +85,6 @@ if (typeof window !== 'undefined') {
   }
 }
 
+export { BreakpointOverlay };
 export default BreakpointOverlay;
 
