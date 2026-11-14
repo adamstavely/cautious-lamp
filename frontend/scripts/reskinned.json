@@ -140,6 +140,7 @@
     "src/views/TokenSync.vue",
     "src/views/Tools.vue",
     "src/views/UserManagement.vue",
+    "src/views/UserPersonaGenerator.vue",
     "src/views/VisualRegression.vue",
     "src/views/VisualRegressionProject.vue",
     "src/views/VisualRegressionResults.vue",

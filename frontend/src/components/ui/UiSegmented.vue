@@ -72,7 +72,7 @@ const onKey = async (event, index) => {
 
 <style scoped>
 .ui-segmented {
-  @apply inline-flex flex-wrap gap-1 p-1 rounded-pill bg-fill;
+  @apply inline-flex flex-wrap gap-1 p-1 rounded-segmented bg-fill;
 }
 .ui-segment {
   @apply inline-flex items-center gap-1.5 h-8 px-3.5 rounded-pill text-sm font-medium text-ink-secondary transition-colors hover:text-ink;

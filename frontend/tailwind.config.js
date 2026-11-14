@@ -89,6 +89,8 @@ export default {
         tile: tc('radius-xl'),
         card: tc('radius-2xl'),
         pill: tc('radius-full'),
+        // Half a segmented control's 40px track: a pill on one line, a rounded box once it wraps
+        segmented: tc('radius-3xl'),
       },
       boxShadow: {
         control: tc('shadow-control'),
