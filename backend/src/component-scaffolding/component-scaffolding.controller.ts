@@ -7,6 +7,8 @@ import {
   CreatedComponentResult,
 } from './component-scaffolding.service';
 import { ApiKeyGuard } from '../common/security/api-key.guard';
+import { RequirePermission } from '../auth/principal';
+import { Permission } from '../rbac/rbac.service';
 
 @Controller('api/v1/component-scaffolding')
 @UseGuards(ApiKeyGuard)
@@ -32,6 +34,8 @@ export class ComponentScaffoldingController {
     return this.scaffoldingService.scaffoldComponent(input);
   }
 
+  // Registers a design-system component, so it needs the same permission as POST /components
+  @RequirePermission(Permission.COMPONENT_CREATE)
   @Post('create')
   async createComponent(@Body() input: ComponentScaffoldInput): Promise<CreatedComponentResult> {
     return this.scaffoldingService.createComponentFromScaffold(input);

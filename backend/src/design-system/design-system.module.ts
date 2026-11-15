@@ -7,6 +7,7 @@ import { AnalyticsModule } from '../analytics/analytics.module';
 import { SecurityModule } from '../common/security/security.module';
 import { WorkspaceCoreModule } from '../workspaces/workspace-core.module';
 import { ComponentAccessService } from './component-access.service';
+import { DESIGN_SYSTEM_STORE_PROVIDERS } from './design-system-stores';
 
 @Module({
   imports: [forwardRef(() => AnalyticsModule), SecurityModule, WorkspaceCoreModule, NotificationsCoreModule],
@@ -15,6 +16,7 @@ import { ComponentAccessService } from './component-access.service';
     DesignSystemService,
     ComponentIssueService,
     ComponentAccessService,
+    ...DESIGN_SYSTEM_STORE_PROVIDERS,
   ],
   exports: [DesignSystemService, ComponentIssueService, ComponentAccessService],
 })

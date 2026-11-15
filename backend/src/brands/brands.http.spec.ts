@@ -11,6 +11,7 @@ import { InMemoryStore } from '../reviews/testing/in-memory-store';
 import { BrandsController } from './brands.controller';
 import { BrandsService } from './brands.service';
 import { BRAND_STORE, BrandDoc } from './brands.types';
+import { designSystemStoreProviders } from '../design-system/testing/in-memory-stores';
 
 const PEOPLE: Record<string, string[]> = {
   viewer: [Permission.COMPONENT_VIEW],
@@ -50,6 +51,7 @@ describe('Brands HTTP API', () => {
       providers: [
         BrandsService,
         DesignSystemService,
+        ...designSystemStoreProviders(),
         { provide: BRAND_STORE, useValue: store },
         { provide: AuthService, useValue: authStub },
         { provide: SecurityAuditService, useValue: { logPermissionDenied: jest.fn(async () => undefined) } },

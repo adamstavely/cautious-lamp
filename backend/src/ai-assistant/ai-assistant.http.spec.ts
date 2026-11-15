@@ -24,6 +24,7 @@ import { AI_LIMITS } from './ai-assistant.dto';
 import { AiAssistantController } from './ai-assistant.controller';
 import { AI_MODEL, AiAssistantService } from './ai-assistant.service';
 import { AI_REQUESTS_PER_MINUTE, AiRateLimitGuard } from './ai-rate-limit.guard';
+import { designSystemStoreProviders } from '../design-system/testing/in-memory-stores';
 
 const authStub = {
   async resolve(credential?: string): Promise<AuthPrincipal | null> {
@@ -70,6 +71,7 @@ describe('AI assistant HTTP API', () => {
         AiAssistantService,
         AiRateLimitGuard,
         DesignSystemService,
+        ...designSystemStoreProviders(),
         ComponentAccessService,
         PatternsLibraryService,
         { provide: PATTERN_STORE, useValue: new InMemoryStore() },
@@ -85,7 +87,7 @@ describe('AI assistant HTTP API', () => {
     await app.listen(0, '127.0.0.1');
     base = (await app.getUrl()).replace('[::1]', '127.0.0.1');
 
-    moduleRef.get(DesignSystemService).createComponent({ id: 'alpha-secret', name: 'AlphaSecret', description: 'Alpha only', workspaceId: 'ws_alpha' });
+    await moduleRef.get(DesignSystemService).createComponent({ id: 'alpha-secret', name: 'AlphaSecret', description: 'Alpha only', workspaceId: 'ws_alpha' });
   });
 
   beforeEach(() => {

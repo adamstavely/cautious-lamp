@@ -40,6 +40,7 @@ export class ComponentAccessService {
 
   /** The components the principal may read, optionally by status */
   async list(principal: AuthPrincipal | undefined, status?: string): Promise<Component[]> {
+    await this.designSystem.ready();
     return this.filter(principal, this.designSystem.getAllComponents(status));
   }
 
@@ -53,6 +54,7 @@ export class ComponentAccessService {
    * same error as a missing one, so ids can't be probed.
    */
   async get(principal: AuthPrincipal, id: string): Promise<Component> {
+    await this.designSystem.ready();
     const component = this.designSystem.getComponentById(id);
     if (!component || !canReadComponent(await this.scopeFor(principal), component)) {
       throw new BadRequestException(`Component '${id}' not found`);

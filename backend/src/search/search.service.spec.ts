@@ -11,6 +11,7 @@ describe('SearchService', () => {
   let designSystemService: DesignSystemService;
 
   const mockDesignSystemService = {
+    ready: jest.fn(async () => undefined),
     getAllComponents: jest.fn(),
     getAllTokens: jest.fn(),
   };

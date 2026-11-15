@@ -41,11 +41,12 @@ export class DesignSystemController {
   ) {}
 
   @Get('tokens')
-  getTokens(
+  async getTokens(
     @Query('category') category?: string,
     @Query('type') type?: string,
     @Query('tag') tag?: string,
   ) {
+    await this.designSystemService.ready();
     const tokens = this.designSystemService.getAllTokens(category, type, tag);
     return { 
       tokens,
@@ -55,9 +56,10 @@ export class DesignSystemController {
   }
 
   @Get('tokens/category/:category')
-  getTokensByCategory(
+  async getTokensByCategory(
     @Param('category') category: string,
   ) {
+    await this.designSystemService.ready();
     const tokens = this.designSystemService.getTokensByCategory(category);
     return { 
       tokens,
@@ -162,14 +164,16 @@ export class DesignSystemController {
   }
 
   @Get('performance/bundle-analysis')
-  getBundleAnalysis() {
+  async getBundleAnalysis() {
+    await this.designSystemService.ready();
     return this.designSystemService.getBundleAnalysis();
   }
 
   @Post('performance/bundle-analysis/analyze')
-  analyzeBundle(
+  async analyzeBundle(
     @Body() body: { componentId?: string; includeDependencies?: boolean },
   ) {
+    await this.designSystemService.ready();
     return this.designSystemService.analyzeBundle(body.componentId, body.includeDependencies);
   }
 
@@ -233,34 +237,36 @@ export class DesignSystemController {
 
   @RequirePermission(Permission.ADMIN_BANNERS)
   @Delete('banners/:id')
-  deleteBanner(
+  async deleteBanner(
     @Param('id') id: string,
   ) {
-    this.designSystemService.deleteBanner(id);
+    await this.designSystemService.deleteBanner(id);
     return { success: true };
   }
 
-  // Issue endpoints
+  // Issue endpoints. Reporting an issue is feedback (feedback:create);
+  // triaging one changes how a component is tracked (component:edit).
   @Get('issues')
   getIssues(
     @Query('status') status?: string,
     @Query('severity') severity?: string,
     @Query('componentId') componentId?: string,
   ) {
-    return this.componentIssueService.getAllIssues({ status, severity, componentId });
+    return this.componentIssueService.list({ status, severity, componentId });
   }
 
   @Get('issues/:id')
-  getIssue(
+  async getIssue(
     @Param('id') id: string,
   ) {
-    const issue = this.componentIssueService.getIssue(id);
+    const issue = await this.componentIssueService.get(id);
     if (!issue) {
       throw new BadRequestException(`Issue ${id} not found`);
     }
     return issue;
   }
 
+  @RequirePermission(Permission.FEEDBACK_CREATE)
   @Post('issues')
   createIssue(
     @Body() body: {
@@ -271,12 +277,14 @@ export class DesignSystemController {
       reportedBy: string;
       componentId?: string;
     },
+    @Principal() principal: AuthPrincipal,
   ) {
-    return this.componentIssueService.createIssue(body);
+    return this.componentIssueService.create({ ...body, reportedBy: body.reportedBy || principal.id });
   }
 
+  @RequirePermission(Permission.COMPONENT_EDIT)
   @Put('issues/:id')
-  updateIssue(
+  async updateIssue(
     @Param('id') id: string,
     @Body() body: Partial<{
       title: string;
@@ -286,7 +294,7 @@ export class DesignSystemController {
       assignedTo: string;
     }>,
   ) {
-    const issue = this.componentIssueService.updateIssue(id, body);
+    const issue = await this.componentIssueService.update(id, body);
     if (!issue) {
       throw new BadRequestException(`Issue ${id} not found`);
     }
@@ -348,16 +356,18 @@ export class DesignSystemController {
 
   // Token Relationship Mapping endpoints
   @Get('tokens/relationships')
-  getTokenRelationships(
+  async getTokenRelationships(
     @Query('token') tokenName?: string,
   ) {
+    await this.designSystemService.ready();
     return this.designSystemService.getTokenRelationships(tokenName);
   }
 
   @Get('tokens/:name/impact')
-  getTokenImpactAnalysis(
+  async getTokenImpactAnalysis(
     @Param('name') tokenName: string,
   ) {
+    await this.designSystemService.ready();
     return this.designSystemService.getTokenImpactAnalysis(tokenName);
   }
 
@@ -382,7 +392,7 @@ export class DesignSystemController {
     @Principal() principal: AuthPrincipal,
   ) {
     const component = await this.componentAccess.getForWrite(principal, componentId);
-    const saved = this.designSystemService.saveComponentVariant(componentId, variant);
+    const saved = await this.designSystemService.saveComponentVariant(componentId, variant);
     await this.changes.record(
       {
         ...componentChange(component),
@@ -402,7 +412,7 @@ export class DesignSystemController {
     @Principal() principal: AuthPrincipal,
   ) {
     const component = await this.componentAccess.getForWrite(principal, componentId);
-    const deleted = this.designSystemService.deleteComponentVariant(componentId, variantName);
+    const deleted = await this.designSystemService.deleteComponentVariant(componentId, variantName);
     if (!deleted) {
       throw new BadRequestException(`Variant '${variantName}' not found for component '${componentId}'`);
     }
@@ -429,7 +439,7 @@ export class DesignSystemController {
     @Principal() principal: AuthPrincipal,
   ) {
     const previous = (await this.componentAccess.getForWrite(principal, componentId)).status;
-    const component = this.designSystemService.setComponentStatus(componentId, body.status, principal.id);
+    const component = await this.designSystemService.setComponentStatus(componentId, body.status, principal.id);
     if (component.status !== previous) {
       await this.changes.record(
         {
@@ -451,7 +461,7 @@ export class DesignSystemController {
     @Principal() principal: AuthPrincipal,
   ) {
     const wasDeprecated = (await this.componentAccess.getForWrite(principal, componentId)).status === 'deprecated';
-    const component = this.designSystemService.deprecateComponent(componentId, body, await this.visibleComponentIds(principal), principal.id);
+    const component = await this.designSystemService.deprecateComponent(componentId, body, await this.visibleComponentIds(principal), principal.id);
     const details = [
       body.replacement && `Use ${body.replacement} instead`,
       body.sunsetDate && `Sunset on ${body.sunsetDate}`,
@@ -476,7 +486,7 @@ export class DesignSystemController {
     @Principal() principal: AuthPrincipal,
   ) {
     await this.componentAccess.getForWrite(principal, componentId);
-    const component = this.designSystemService.setComponentDependencies(componentId, body.dependencies, await this.visibleComponentIds(principal), principal.id);
+    const component = await this.designSystemService.setComponentDependencies(componentId, body.dependencies, await this.visibleComponentIds(principal), principal.id);
     await this.changes.record(
       {
         ...componentChange(component),
@@ -521,6 +531,7 @@ export class DesignSystemController {
       throw new BadRequestException(`status must be one of ${COMPONENT_STATUSES.join(', ')}`);
     }
     // Ids are global, so a clash with a component the caller can't see still conflicts
+    await this.designSystemService.ready();
     if (this.designSystemService.getComponentById(data.id)) {
       throw new ConflictException(`A component with id '${data.id}' already exists`);
     }
@@ -528,7 +539,7 @@ export class DesignSystemController {
     if (data.workspaceId !== undefined) {
       await this.workspaceAccess.require(principal, data.workspaceId, 'editor');
     }
-    const component = this.designSystemService.createComponent({ ...data, isGlobal: false });
+    const component = await this.designSystemService.createComponent({ ...data, isGlobal: false });
     await this.changes.record(
       {
         ...componentChange(component),
@@ -540,24 +551,13 @@ export class DesignSystemController {
     return component;
   }
 
-  // Get linked requests for a component
-  @Get('components/:id/linked-requests')
-  async getLinkedRequests(
-    @Param('id') componentId: string,
-    @Principal() principal: AuthPrincipal,
-  ) {
-    await this.componentAccess.get(principal, componentId);
-    // This would need to query ComponentRequestsService
-    // For now, return empty array - this can be enhanced later
-    return { requests: [] };
-  }
-
   // Catch-all routes last: Nest matches in declaration order, so these
   // would otherwise swallow tokens/relationships.
   @Get('tokens/:name')
-  getToken(
+  async getToken(
     @Param('name') name: string,
   ) {
+    await this.designSystemService.ready();
     const token = this.designSystemService.getTokenByName(name);
     if (!token) {
       throw new BadRequestException(`Token '${name}' not found`);

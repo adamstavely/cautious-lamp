@@ -18,6 +18,7 @@ import { WorkspaceAccessService } from '../workspaces/workspace-access.service';
 import { WORKSPACE_STORE, WorkspaceDoc } from '../workspaces/workspace.types';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
+import { designSystemStoreProviders } from '../design-system/testing/in-memory-stores';
 
 /** Who the tests sign in as: the token is `tok-<name>` */
 const PEOPLE: Record<string, string[]> = {
@@ -94,6 +95,7 @@ describe('Analytics HTTP API: application scope', () => {
         AnalyticsService,
         ApplicationsService,
         DesignSystemService,
+        ...designSystemStoreProviders(),
         ComponentAccessService,
         WorkspaceAccessService,
         { provide: WORKSPACE_STORE, useValue: workspaces },
@@ -114,7 +116,7 @@ describe('Analytics HTTP API: application scope', () => {
     // component; only Alpha's application still uses a deprecated one
     const designSystem = moduleRef.get(DesignSystemService);
     shared = designSystem.getAllComponents().find((c) => !c.workspaceId && c.status === 'production')!.id;
-    deprecated = designSystem.createComponent({ id: 'old-thing', name: 'OldThing', description: 'x', status: 'deprecated' }).id;
+    deprecated = (await designSystem.createComponent({ id: 'old-thing', name: 'OldThing', description: 'x', status: 'deprecated' })).id;
     const analytics = moduleRef.get(AnalyticsService);
     analytics.trackComponentUsage('app_alpha', 'Alpha Secret App', [
       { componentId: shared, componentName: 'Shared', files: ['a.vue', 'b.vue', 'c.vue'] },

@@ -8,6 +8,7 @@ import { UsersService } from '../auth/users.service';
 import { SecurityAuditService } from '../common/security/security-audit.service';
 import { ComponentAccessService } from '../design-system/component-access.service';
 import { DesignSystemService } from '../design-system/design-system.service';
+import { DesignSystemStores, createDesignSystemStores, designSystemStoreProviders } from '../design-system/testing/in-memory-stores';
 import { NotificationService } from '../notifications/notification.service';
 import { NOTIFICATION_STORE, Notification } from '../notifications/notification.types';
 import { Permission } from '../rbac/rbac.service';
@@ -63,6 +64,7 @@ describe('Component requests HTTP API', () => {
   let commentStore: InMemoryStore<RequestComment>;
   let notificationStore: InMemoryStore<Notification>;
   let designSystem: DesignSystemService;
+  let designSystemStores: DesignSystemStores;
   let registrations: jest.SpyInstance;
 
   const call = async (as: string | null, method: string, route: string, body?: unknown) => {
@@ -84,6 +86,7 @@ describe('Component requests HTTP API', () => {
       providers: [
         ComponentRequestsService,
         DesignSystemService,
+        ...designSystemStoreProviders(designSystemStores),
         ComponentAccessService,
         WorkspaceAccessService,
         NotificationService,
@@ -104,6 +107,7 @@ describe('Component requests HTTP API', () => {
   };
 
   beforeEach(async () => {
+    designSystemStores = createDesignSystemStores();
     requestStore = new InMemoryQueryableStore<ComponentRequest>();
     commentStore = new InMemoryStore<RequestComment>();
     notificationStore = new InMemoryStore<Notification>();
@@ -313,7 +317,7 @@ describe('Component requests HTTP API', () => {
       const approved = await call('rita', 'POST', `/${request.id}/approve`, { stage: 'final' });
       expect(approved.body.status).toBe('approved');
       expect(approved.body.metadata.roadmapItemId).toEqual(expect.any(String));
-      expect(designSystem.getRoadmap().some((item: { title: string }) => item.title === 'Data table')).toBe(true);
+      expect((await designSystem.getRoadmap()).some((item: { title: string }) => item.title === 'Data table')).toBe(true);
       expect(await notificationsFor('usr_bob')).toEqual(['Request "Data table" approved']);
       expect(await notificationsFor('usr_alice')).toContain('Request "Data table" updated');
     });
@@ -342,7 +346,7 @@ describe('Component requests HTTP API', () => {
     });
 
     it('promotes approved requests and links components that exist', async () => {
-      designSystem.createComponent({ id: 'data-grid', name: 'Grid', description: 'x' });
+      await designSystem.createComponent({ id: 'data-grid', name: 'Grid', description: 'x' });
       const request = await submit();
       expect((await call('rita', 'POST', `/${request.id}/promote`, { componentId: 'data-grid' })).status).toBe(400);
       await approve(request.id);
@@ -376,7 +380,7 @@ describe('Component requests HTTP API', () => {
       await approve(request.id);
       const other = await submit('bob', { ...NEW_REQUEST, title: 'Toast notification' });
 
-      designSystem.createComponent({ id: 'data-table', name: 'Data Table', description: 'Tables' });
+      await designSystem.createComponent({ id: 'data-table', name: 'Data Table', description: 'Tables' });
       await settle();
       await settle();
       expect(await stored(request.id)).toMatchObject({ componentId: 'data-table', status: 'in-progress' });
@@ -388,7 +392,7 @@ describe('Component requests HTTP API', () => {
       const request = await submit();
       await approve(request.id);
       await call('rita', 'PATCH', `/${request.id}/status`, { status: 'in-progress' });
-      designSystem.createComponent({ id: 'unrelated', name: 'Unrelated', description: 'x', linkedRequestId: request.id });
+      await designSystem.createComponent({ id: 'unrelated', name: 'Unrelated', description: 'x', linkedRequestId: request.id });
       await settle();
       await settle();
       expect(await stored(request.id)).toMatchObject({ componentId: 'unrelated', status: 'completed' });

@@ -14,6 +14,7 @@ import { ComponentIssueService } from './component-issue.service';
 import { DesignSystemController } from './design-system.controller';
 import { DesignSystemService } from './design-system.service';
 import { CHANGE_RECORDER, ChangeActor, ChangeInput } from '../notifications/notification.types';
+import { designSystemStoreProviders } from './testing/in-memory-stores';
 
 const MEMBER_PERMISSIONS = [Permission.COMPONENT_VIEW, Permission.COMPONENT_CREATE, Permission.COMPONENT_EDIT, Permission.FEEDBACK_CREATE];
 
@@ -26,6 +27,7 @@ const PEOPLE: Record<string, string[]> = {
   banners: [Permission.ADMIN_BANNERS],
   perf: [Permission.ADMIN_PERFORMANCE_ANALYSIS],
   roadmap: [Permission.ROADMAP_EDIT],
+  viewer: [Permission.COMPONENT_VIEW],
   superuser: [Permission.ADMIN_USERS],
 };
 
@@ -83,6 +85,7 @@ describe('Design system HTTP API', () => {
       controllers: [DesignSystemController],
       providers: [
         DesignSystemService,
+        ...designSystemStoreProviders(),
         ComponentIssueService,
         { provide: CHANGE_RECORDER, useValue: { record: async (change: ChangeInput, actor?: ChangeActor) => void recorded.push({ change, actor }) } },
         ComponentAccessService,
@@ -98,10 +101,10 @@ describe('Design system HTTP API', () => {
     base = (await app.getUrl()).replace('[::1]', '127.0.0.1');
 
     designSystem = moduleRef.get(DesignSystemService);
-    designSystem.createComponent({ id: 'alpha-secret', name: 'AlphaSecret', description: 'Alpha only', workspaceId: 'ws_alpha' });
-    const shared = designSystem.createComponent({ id: 'alpha-shared', name: 'AlphaShared', description: 'Shared with beta', workspaceId: 'ws_alpha' });
-    shared.sharedWith = ['ws_beta'];
-    designSystem.createComponent({ id: 'alpha-global', name: 'AlphaGlobal', description: 'Everyone', workspaceId: 'ws_alpha', isGlobal: true });
+    await designSystem.createComponent({ id: 'alpha-secret', name: 'AlphaSecret', description: 'Alpha only', workspaceId: 'ws_alpha' });
+    await designSystem.createComponent({ id: 'alpha-shared', name: 'AlphaShared', description: 'Shared with beta', workspaceId: 'ws_alpha' });
+    await designSystem.setComponentSharing('alpha-shared', { sharedWith: ['ws_beta'], isGlobal: false });
+    await designSystem.createComponent({ id: 'alpha-global', name: 'AlphaGlobal', description: 'Everyone', workspaceId: 'ws_alpha', isGlobal: true });
   });
 
   afterAll(async () => {
@@ -139,7 +142,7 @@ describe('Design system HTTP API', () => {
       expect((await call('GET', '/components/alpha-secret', { as: 'alice' })).status).toBe(200);
       expect((await call('GET', '/components/alpha-shared', { as: 'bob' })).status).toBe(200);
 
-      for (const route of ['/components/alpha-secret/variants', '/components/alpha-secret/test-coverage', '/components/alpha-secret/linked-requests']) {
+      for (const route of ['/components/alpha-secret/variants', '/components/alpha-secret/test-coverage']) {
         expect((await call('GET', route, { as: 'bob' })).status).toBe(400);
       }
       expect((await call('POST', '/components/alpha-secret/variants', { as: 'bob', body: { name: 'x' } })).status).toBe(400);
@@ -246,9 +249,9 @@ describe('Design system HTTP API', () => {
   });
 
   describe('component lifecycle (status, deprecation, dependencies)', () => {
-    beforeAll(() => {
+    beforeAll(async () => {
       for (const id of ['life-base', 'life-mid', 'life-top', 'life-old']) {
-        designSystem.createComponent({ id, name: id, description: 'Lifecycle test', status: 'production' });
+        await designSystem.createComponent({ id, name: id, description: 'Lifecycle test', status: 'production' });
       }
     });
 
@@ -360,6 +363,34 @@ describe('Design system HTTP API', () => {
       const item = { title: 'Dark mode', description: 'x', category: 'feature', priority: 'high' };
       expect((await call('POST', '/roadmap/items', { as: 'bob', body: item })).status).toBe(403);
       expect((await call('POST', '/roadmap/items', { as: 'roadmap', body: item })).status).toBe(201);
+    });
+
+    it('starts with an empty roadmap: only items people add are listed', async () => {
+      const items = (await call('GET', '/roadmap', { as: 'bob' })).body as Array<{ title: string; votes: number }>;
+      expect(items.map((i) => i.title)).toEqual(['Dark mode']);
+      expect(items[0].votes).toBe(0);
+    });
+
+    it('needs feedback:create to report an issue and component:edit to triage one', async () => {
+      // No example issues: the list starts empty
+      expect((await call('GET', '/issues', { as: 'viewer' })).body).toEqual([]);
+      const issue = { title: 'Focus ring missing', description: 'x', category: 'bug', severity: 'medium', componentId: 'button' };
+      expect((await call('POST', '/issues', { as: 'viewer', body: issue })).status).toBe(403);
+      expect((await call('POST', '/issues', { as: 'banners', body: issue })).status).toBe(403);
+      const created = await call('POST', '/issues', { as: 'bob', body: issue });
+      expect(created.status).toBe(201);
+      expect(created.body).toMatchObject({ ...issue, status: 'open', reportedBy: 'usr_bob' });
+
+      const id = created.body.id;
+      expect((await call('PUT', `/issues/${id}`, { as: 'viewer', body: { status: 'resolved' } })).status).toBe(403);
+      expect((await call('PUT', `/issues/${id}`, { as: 'roadmap', body: { status: 'resolved' } })).status).toBe(403);
+      const triaged = await call('PUT', `/issues/${id}`, { as: 'ed', body: { status: 'investigating', assignedTo: 'usr_ed', id: 'other' } });
+      expect(triaged.status).toBe(200);
+      expect(triaged.body).toMatchObject({ id, status: 'investigating', assignedTo: 'usr_ed' });
+      expect((await call('PUT', '/issues/issue-missing', { as: 'ed', body: { status: 'closed' } })).status).toBe(400);
+
+      expect((await call('GET', '/issues?componentId=button', { as: 'viewer' })).body.map((i: { id: string }) => i.id)).toEqual([id]);
+      expect((await call('GET', `/issues/${id}`, { as: 'viewer' })).body.status).toBe('investigating');
     });
   });
 });

@@ -202,7 +202,7 @@ export class WorkspacesService {
       // Turning external sharing off withdraws what was already shared
       await this.resources.revokeExternalSharing(id);
       for (const component of this.components.listComponents().filter((c) => c.workspaceId === id)) {
-        if (component.isGlobal || component.sharedWith?.length) this.components.setSharing(component.id, { sharedWith: [], isGlobal: false });
+        if (component.isGlobal || component.sharedWith?.length) await this.components.setSharing(component.id, { sharedWith: [], isGlobal: false });
       }
     }
     return toView(this.access.accessTo(doc, principal));
@@ -225,7 +225,7 @@ export class WorkspacesService {
     }
     const { deleted } = await this.resources.removeWorkspace(id);
     for (const component of this.components.listComponents().filter((c) => (c.sharedWith ?? []).includes(id))) {
-      this.components.setSharing(component.id, {
+      await this.components.setSharing(component.id, {
         sharedWith: component.sharedWith.filter((wsId) => wsId !== id),
         isGlobal: component.isGlobal === true,
       });
