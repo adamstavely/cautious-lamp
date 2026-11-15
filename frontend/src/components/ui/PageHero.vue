@@ -40,7 +40,25 @@ defineProps({
   @apply grid md:grid-cols-content-aside items-center gap-10 border-b border-line;
 }
 .page-hero-page {
-  @apply pb-14 md:pb-16;
+  @apply relative isolate pb-14 md:pb-16;
+}
+/* Index pages sit on graph paper: a blueprint grid that fades out at the edges */
+.page-hero-page::before {
+  @apply absolute inset-x-0 -top-10 bottom-0 -z-10 pointer-events-none;
+  content: '';
+  --major: calc(var(--app-hero-grid-cell) * 5);
+  background-image:
+    linear-gradient(to right, var(--app-hero-grid-major) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--app-hero-grid-major) 1px, transparent 1px),
+    linear-gradient(to right, var(--app-hero-grid-minor) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--app-hero-grid-minor) 1px, transparent 1px);
+  background-size:
+    var(--major) var(--major),
+    var(--major) var(--major),
+    var(--app-hero-grid-cell) var(--app-hero-grid-cell),
+    var(--app-hero-grid-cell) var(--app-hero-grid-cell);
+  background-repeat: repeat;
+  mask-image: radial-gradient(ellipse 80% 90% at 70% 40%, black 30%, transparent 85%);
 }
 .page-hero-tool {
   @apply pb-10 md:pb-12;
