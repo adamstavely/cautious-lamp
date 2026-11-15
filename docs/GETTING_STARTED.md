@@ -94,7 +94,7 @@ cd frontend
 npm run dev
 ```
 
-Open http://localhost:5174. With `VITE_API_BASE_URL` empty, the Vite dev server forwards `/api` to the backend on port 3000.
+Open http://localhost:5174. With `VITE_API_BASE_URL` empty, the Vite dev server forwards API calls to the backend on port 3000 (`VITE_API_PROXY_TARGET` changes that).
 
 ### 6. Sign in as the bootstrap admin
 
@@ -175,6 +175,6 @@ Integrations (Argos, OpenReplay, Figma, GitHub, email) are set up later, in the 
 - **Signed out after restarting the backend:** set `AUTH_JWT_SECRET` in `backend/.env`.
 - **`401` with `TOKEN_EXPIRED` or `TOKEN_REVOKED`:** sign in again, or use a new API key ([API_ERROR_CODES.md](./API_ERROR_CODES.md)).
 - **`404` from a workspace route with an API key:** use a person's token.
-- **Ports in use:** the backend uses `PORT` (3000) and the frontend 5174 (`npm run dev -- --port <port>`; then add the origin to `CORS_ORIGINS`).
+- **Ports in use:** the backend uses `PORT` (3000) and the frontend 5174 (`npm run dev -- --port <port>`; then add the origin to `CORS_ORIGINS`). With the backend on another port, set `VITE_API_PROXY_TARGET` in `frontend/.env` so the dev proxy finds it.
 
 See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for more.
