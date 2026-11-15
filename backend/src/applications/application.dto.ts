@@ -12,6 +12,8 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
+import { PrivacySettingsDto } from '../session-replay/dto/capture-settings.dto';
+import { IsOpenReplayProjectId, IsOpenReplayProjectKey } from '../session-replay/dto/project-keys';
 import { HttpUrl } from '../workspaces/resource-kinds';
 import { trim } from '../workspaces/workspace.dto';
 import { ENVIRONMENTS, SCAN_SCHEDULES } from './application.types';
@@ -66,21 +68,20 @@ class VisualRegressionCapabilityDto {
   argosToken?: string;
 }
 
-class PrivacySettingsDto {
-  @IsOptional() @IsBoolean() maskAllInputs?: boolean;
-  @IsOptional() @IsBoolean() maskAllText?: boolean;
-  @IsOptional() @IsBoolean() respectDoNotTrack?: boolean;
-}
-
 class SessionReplayCapabilityDto {
   @IsBoolean()
   enabled: boolean;
 
   @ValidateIf((o) => o.enabled === true || o.openreplayProjectKey !== undefined)
-  @IsString()
   @IsNotEmpty({ message: 'openreplayProjectKey is required to enable session replay' })
-  @MaxLength(200)
+  @IsOpenReplayProjectKey()
   openreplayProjectKey?: string;
+
+  /** The numeric project id from OpenReplay, for links to its player; null clears it */
+  @IsOptional()
+  @ValidateIf((o) => o.openreplayProjectId !== null)
+  @IsOpenReplayProjectId()
+  openreplayProjectId?: number | null;
 
   /** Must be on the public internet or in OPENREPLAY_ALLOWED_BASE_URLS (checked by the session-replay service) */
   @IsOptional()
@@ -93,6 +94,7 @@ class SessionReplayCapabilityDto {
   @MaxLength(500)
   openreplayApiKey?: string;
 
+  /** The session-replay project's privacy settings; the older maskAllInputs/maskAllText are still accepted */
   @IsOptional()
   @ValidateNested()
   @Type(() => PrivacySettingsDto)

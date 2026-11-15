@@ -48,7 +48,24 @@
       <UiCheckbox v-model="model.sessionReplay.enabled"><span class="capability-title">Session replay</span></UiCheckbox>
       <div v-if="model.sessionReplay.enabled" class="flex flex-col gap-5">
         <div class="grid md:grid-cols-2 gap-5">
-          <UiInput v-model="model.sessionReplay.openreplayProjectKey" label="OpenReplay project key" required maxlength="200" />
+          <UiInput
+            v-model="model.sessionReplay.openreplayProjectKey"
+            id="app-openreplay-project-key"
+            label="OpenReplay project key"
+            required
+            mono
+            maxlength="100"
+            hint="In OpenReplay's project settings. The tracker uses it."
+          />
+          <UiInput
+            v-model="model.sessionReplay.openreplayProjectId"
+            id="app-openreplay-project-id"
+            label="OpenReplay project ID (optional)"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            placeholder="e.g. 42"
+            hint="The number in OpenReplay's address bar, for links to replays. Filled in for you when you add an API key."
+          />
           <UiInput
             v-model="model.sessionReplay.openreplayBaseUrl"
             type="url"
@@ -64,9 +81,25 @@
             :placeholder="model.sessionReplay.linked ? 'Unchanged' : 'Optional'"
           />
         </div>
-        <fieldset class="flex flex-col gap-2">
+        <fieldset class="flex flex-col gap-4">
           <legend class="mb-1 text-sm font-medium text-ink-strong">Privacy settings</legend>
-          <UiCheckbox v-for="option in privacyOptions" :key="option.key" v-model="model.sessionReplay.privacySettings[option.key]" :label="option.label" />
+          <UiSelect
+            v-model="model.sessionReplay.privacySettings.defaultInputMode"
+            id="app-replay-input-mode"
+            label="Form inputs"
+            :options="INPUT_MODE_OPTIONS"
+            hint="What the recording keeps of what people type."
+          />
+          <div class="grid sm:grid-cols-2 gap-2">
+            <UiCheckbox
+              v-for="option in privacyOptions"
+              :key="option.key"
+              v-model="model.sessionReplay.privacySettings[option.key]"
+              :label="option.label"
+              :hint="option.hint"
+            />
+          </div>
+          <p class="text-xs text-ink-muted">Elements to obscure or leave out are set on the session replay project.</p>
         </fieldset>
       </div>
     </section>
@@ -77,6 +110,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { UiCallout, UiCheckbox, UiInput, UiSelect } from '../ui';
 import apiClient, { apiErrorMessage } from '../../services/api.js';
+import { INPUT_MODE_OPTIONS } from '../session-replay/captureSettings.js';
 
 /** Edits the object from capabilitiesForm() in place (v-model) */
 const model = defineModel({ type: Object, required: true });
@@ -87,9 +121,12 @@ const scheduleOptions = [
   { value: 'weekly', label: 'Weekly' },
 ];
 const privacyOptions = [
-  { key: 'maskAllInputs', label: 'Mask all inputs' },
-  { key: 'maskAllText', label: 'Mask all text' },
-  { key: 'respectDoNotTrack', label: 'Respect Do Not Track' },
+  { key: 'privateMode', label: 'Mask all text', hint: 'Only elements marked data-openreplay-unmask stay readable.' },
+  { key: 'respectDoNotTrack', label: 'Respect Do Not Track', hint: "Don't record browsers that ask not to be tracked." },
+  { key: 'obscureTextEmails', label: 'Obscure emails in text' },
+  { key: 'obscureTextNumbers', label: 'Obscure numbers in text' },
+  { key: 'obscureInputEmails', label: 'Obscure emails in inputs' },
+  { key: 'obscureInputNumbers', label: 'Obscure numbers in inputs' },
 ];
 
 const rules = ref([]);

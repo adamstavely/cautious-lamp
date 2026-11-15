@@ -1,3 +1,4 @@
+import { PrivacySettings } from '../session-replay/capture-settings';
 import { Actor } from '../workspaces/workspace.types';
 
 export const APPLICATIONS_INDEX = 'design-system-applications';
@@ -34,12 +35,15 @@ export interface ApplicationCapabilities {
     /** Our session-replay project, created by the server */
     projectId?: string;
     openreplayProjectKey?: string;
+    /** The numeric project id that OpenReplay's dashboard links use */
+    openreplayProjectId?: number;
     openreplayBaseUrl?: string;
-    privacySettings?: {
-      maskAllInputs?: boolean;
-      maskAllText?: boolean;
-      respectDoNotTrack?: boolean;
-    };
+    /**
+     * What the tracker may record (session-replay/capture-settings.ts).
+     * Applications saved before these settings may still hold the older
+     * `maskAllInputs` / `maskAllText`; they are translated on the next save.
+     */
+    privacySettings?: Partial<PrivacySettings> & { maskAllInputs?: boolean; maskAllText?: boolean };
   };
 }
 
