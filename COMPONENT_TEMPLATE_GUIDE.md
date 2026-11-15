@@ -16,7 +16,7 @@ How to build a documentation page for a component in the app. The template is `f
 | Usage examples | `UiPanel`s with `UiCodeBlock`s |
 | Accessibility | A `UiCallout` with the component's accessibility notes |
 | Performance metrics | Measured bundle size from the API, as `UiStat`s |
-| Version history | Versions from the component library, or an empty state |
+| Version history | `ComponentVersionHistory`, from the design-system changelog (`useComponentChangelog`, `GET /api/v1/changelog/components/:id`) |
 | Dependencies | `ComponentDependencyGraphCard` |
 | Best practices and anti-patterns | `UiPanel`s marked with a "Do" (`tone="success"`) or "Avoid" (`tone="danger"`) `UiChip` |
 | Related components | `UiCard` links |

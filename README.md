@@ -17,7 +17,7 @@ The platform combines design guidelines, a component library, developer tools, g
 - **Design tokens**: token studio, library, playground, relationships, migration, extraction and sync with Figma and Penpot
 - **Patterns library**: patterns and their status, stored in Elasticsearch
 - **Typography**: font library, scale, stack and subsetting tools
-- **Design assets**: icon library (browse Lucide or upload Material and custom sets), flags, seals, illustrations and logos
+- **Design assets**: icon library (the Lucide icons the app ships with, plus SVG icon sets that workspaces upload), flags, seals, illustrations and logos
 
 ### Developer experience
 
