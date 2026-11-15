@@ -2,7 +2,7 @@ import { Controller, Get, Post, Put, Delete, Query, Param, Body, BadRequestExcep
 import { COMPONENT_STATUSES, Component, DesignSystemService } from './design-system.service';
 import { COMPONENT_ID_PATTERN, ComponentDependenciesDto, DeprecateComponentDto, UpdateComponentStatusDto } from './design-system.dto';
 import { strictBody } from '../auth/auth.dto';
-import { ComponentRequestService } from './component-request.service';
+import { ComponentIssueService } from './component-issue.service';
 import { ComponentAccessService } from './component-access.service';
 import { AuthPrincipal, Principal, Public, RequirePermission } from '../auth/principal';
 import { Permission } from '../rbac/rbac.service';
@@ -34,7 +34,7 @@ export class DesignSystemController {
   }
   constructor(
     private readonly designSystemService: DesignSystemService,
-    private readonly componentRequestService: ComponentRequestService,
+    private readonly componentIssueService: ComponentIssueService,
     private readonly componentAccess: ComponentAccessService,
     private readonly workspaceAccess: WorkspaceAccessService,
     @Inject(CHANGE_RECORDER) private readonly changes: ChangeRecorder,
@@ -240,135 +240,6 @@ export class DesignSystemController {
     return { success: true };
   }
 
-  // Component Request endpoints
-  @Get('requests')
-  getRequests(
-    @Query('status') status?: string,
-    @Query('category') category?: string,
-    @Query('assignedTo') assignedTo?: string,
-    @Query('priority') priority?: string,
-  ) {
-    return this.componentRequestService.getAllRequests({ status, category, assignedTo, priority });
-  }
-
-  @Post('requests')
-  createRequest(
-    @Body() body: {
-      title: string;
-      description: string;
-      useCase?: string;
-      requestedBy: string;
-      category: string;
-      priority?: 'low' | 'medium' | 'high' | 'critical';
-    },
-  ) {
-    return this.componentRequestService.createRequest(body);
-  }
-
-  @Put('requests/:id')
-  updateRequest(
-    @Param('id') id: string,
-    @Body() body: Partial<{
-      title: string;
-      description: string;
-      status: 'submitted' | 'under-review' | 'approved' | 'rejected' | 'needs-more-info' | 'in-progress' | 'completed' | 'released';
-      priority: 'low' | 'medium' | 'high' | 'critical';
-      assignedTo: string;
-    }>,
-  ) {
-    const request = this.componentRequestService.updateRequest(id, body);
-    if (!request) {
-      throw new BadRequestException(`Request ${id} not found`);
-    }
-    return request;
-  }
-
-  @Delete('requests/:id')
-  deleteRequest(
-    @Param('id') id: string,
-  ) {
-    const deleted = this.componentRequestService.deleteRequest(id);
-    if (!deleted) {
-      throw new BadRequestException(`Request ${id} not found`);
-    }
-    return { success: true };
-  }
-
-  @Post('requests/:id/vote')
-  voteRequest(
-    @Param('id') id: string,
-    @Principal() principal: AuthPrincipal,
-  ) {
-    const request = this.componentRequestService.voteRequest(id, principal.id);
-    if (!request) {
-      throw new BadRequestException(`Request ${id} not found`);
-    }
-    return request;
-  }
-
-  @RequirePermission(Permission.ROADMAP_EDIT)
-  @Put('requests/:id/status')
-  updateRequestStatus(
-    @Param('id') id: string,
-    @Body() body: { status: string },
-    @Principal() principal: AuthPrincipal,
-  ) {
-    try {
-      const request = this.componentRequestService.transitionStatus(id, body.status as any, principal.id);
-      if (!request) {
-        throw new BadRequestException(`Request ${id} not found`);
-      }
-      return request;
-    } catch (error: any) {
-      throw new BadRequestException(error.message);
-    }
-  }
-
-  @RequirePermission(Permission.ROADMAP_EDIT)
-  @Put('requests/:id/assign')
-  assignRequest(
-    @Param('id') id: string,
-    @Body() body: { userId: string },
-  ) {
-    const request = this.componentRequestService.assignRequest(id, body.userId);
-    if (!request) {
-      throw new BadRequestException(`Request ${id} not found`);
-    }
-    return request;
-  }
-
-  @Post('requests/:id/comments')
-  addComment(
-    @Param('id') id: string,
-    @Body() body: {
-      author: string;
-      content: string;
-      mentions?: string[];
-      attachments?: string[];
-    },
-  ) {
-    return this.componentRequestService.addComment(id, body);
-  }
-
-  @Get('requests/:id/comments')
-  getComments(
-    @Param('id') id: string,
-  ) {
-    return this.componentRequestService.getComments(id);
-  }
-
-  @Put('requests/:id/link-component')
-  linkToComponent(
-    @Param('id') id: string,
-    @Body() body: { componentId: string },
-  ) {
-    const request = this.componentRequestService.linkToComponent(id, body.componentId);
-    if (!request) {
-      throw new BadRequestException(`Request ${id} not found`);
-    }
-    return request;
-  }
-
   // Issue endpoints
   @Get('issues')
   getIssues(
@@ -376,14 +247,14 @@ export class DesignSystemController {
     @Query('severity') severity?: string,
     @Query('componentId') componentId?: string,
   ) {
-    return this.componentRequestService.getAllIssues({ status, severity, componentId });
+    return this.componentIssueService.getAllIssues({ status, severity, componentId });
   }
 
   @Get('issues/:id')
   getIssue(
     @Param('id') id: string,
   ) {
-    const issue = this.componentRequestService.getIssue(id);
+    const issue = this.componentIssueService.getIssue(id);
     if (!issue) {
       throw new BadRequestException(`Issue ${id} not found`);
     }
@@ -401,7 +272,7 @@ export class DesignSystemController {
       componentId?: string;
     },
   ) {
-    return this.componentRequestService.createIssue(body);
+    return this.componentIssueService.createIssue(body);
   }
 
   @Put('issues/:id')
@@ -415,71 +286,11 @@ export class DesignSystemController {
       assignedTo: string;
     }>,
   ) {
-    const issue = this.componentRequestService.updateIssue(id, body);
+    const issue = this.componentIssueService.updateIssue(id, body);
     if (!issue) {
       throw new BadRequestException(`Issue ${id} not found`);
     }
     return issue;
-  }
-
-  // Analytics
-  @Get('requests/analytics')
-  getRequestAnalytics() {
-    return this.componentRequestService.getRequestAnalytics();
-  }
-
-  // Request Templates
-  @Get('requests/templates')
-  getRequestTemplates() {
-    return this.componentRequestService.getRequestTemplates();
-  }
-
-  @Get('requests/templates/:id')
-  getRequestTemplate(
-    @Param('id') id: string,
-  ) {
-    const template = this.componentRequestService.getRequestTemplate(id);
-    if (!template) {
-      throw new BadRequestException(`Template ${id} not found`);
-    }
-    return template;
-  }
-
-  // Duplicate Detection
-  @Get('requests/:id/duplicates')
-  findDuplicateRequests(
-    @Param('id') id: string,
-    @Query('threshold') threshold?: string,
-  ) {
-    const thresholdValue = threshold ? parseFloat(threshold) : 0.7;
-    return this.componentRequestService.findDuplicateRequests(id, thresholdValue);
-  }
-
-  // Merge Requests
-  @RequirePermission(Permission.ROADMAP_EDIT)
-  @Post('requests/:id/merge')
-  mergeRequests(
-    @Param('id') sourceRequestId: string,
-    @Body() body: {
-      targetRequestId: string;
-      mergeOptions?: {
-        keepTitle?: 'source' | 'target';
-        keepDescription?: 'source' | 'target' | 'merge';
-        keepVotes?: 'source' | 'target' | 'combine';
-        keepComments?: 'source' | 'target' | 'combine';
-        keepStatus?: 'source' | 'target' | 'highest';
-      };
-    },
-  ) {
-    const mergedRequest = this.componentRequestService.mergeRequests(
-      sourceRequestId,
-      body.targetRequestId,
-      body.mergeOptions,
-    );
-    if (!mergedRequest) {
-      throw new BadRequestException('Failed to merge requests. One or both requests not found.');
-    }
-    return mergedRequest;
   }
 
   // NASA-TLX endpoint
@@ -742,8 +553,7 @@ export class DesignSystemController {
   }
 
   // Catch-all routes last: Nest matches in declaration order, so these
-  // would otherwise swallow tokens/relationships, requests/analytics and
-  // requests/templates.
+  // would otherwise swallow tokens/relationships.
   @Get('tokens/:name')
   getToken(
     @Param('name') name: string,
@@ -755,14 +565,4 @@ export class DesignSystemController {
     return token;
   }
 
-  @Get('requests/:id')
-  getRequest(
-    @Param('id') id: string,
-  ) {
-    const request = this.componentRequestService.getRequest(id);
-    if (!request) {
-      throw new BadRequestException(`Request ${id} not found`);
-    }
-    return request;
-  }
 }

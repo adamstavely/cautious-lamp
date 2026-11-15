@@ -10,7 +10,7 @@ import { InMemoryQueryableStore } from '../workspaces/testing/in-memory-queryabl
 import { WorkspaceAccessService } from '../workspaces/workspace-access.service';
 import { WORKSPACE_STORE, WorkspaceDoc } from '../workspaces/workspace.types';
 import { ComponentAccessService } from './component-access.service';
-import { ComponentRequestService } from './component-request.service';
+import { ComponentIssueService } from './component-issue.service';
 import { DesignSystemController } from './design-system.controller';
 import { DesignSystemService } from './design-system.service';
 import { CHANGE_RECORDER, ChangeActor, ChangeInput } from '../notifications/notification.types';
@@ -83,7 +83,7 @@ describe('Design system HTTP API', () => {
       controllers: [DesignSystemController],
       providers: [
         DesignSystemService,
-        ComponentRequestService,
+        ComponentIssueService,
         { provide: CHANGE_RECORDER, useValue: { record: async (change: ChangeInput, actor?: ChangeActor) => void recorded.push({ change, actor }) } },
         ComponentAccessService,
         WorkspaceAccessService,
@@ -356,13 +356,10 @@ describe('Design system HTTP API', () => {
       expect((await call('GET', '/performance/budgets', { as: 'bob' })).status).toBe(200);
     });
 
-    it('needs roadmap:edit to change the roadmap or triage requests', async () => {
+    it('needs roadmap:edit to change the roadmap', async () => {
       const item = { title: 'Dark mode', description: 'x', category: 'feature', priority: 'high' };
       expect((await call('POST', '/roadmap/items', { as: 'bob', body: item })).status).toBe(403);
       expect((await call('POST', '/roadmap/items', { as: 'roadmap', body: item })).status).toBe(201);
-      expect((await call('PUT', '/requests/any/status', { as: 'bob', body: { status: 'approved' } })).status).toBe(403);
-      expect((await call('PUT', '/requests/any/assign', { as: 'bob', body: { userId: 'x' } })).status).toBe(403);
-      expect((await call('POST', '/requests/any/merge', { as: 'bob', body: { targetRequestId: 'y' } })).status).toBe(403);
     });
   });
 });
