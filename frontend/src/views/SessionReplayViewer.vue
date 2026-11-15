@@ -1,122 +1,137 @@
 <template>
   <PageShell width="wide">
-    <UiSpinner v-if="loading" label="Loading session…" class="py-12" />
+    <PageHero :back="backLink" title="Session" spot="site/session-replay" size="tool">
+      <template #lead>
+        <span class="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span>Session ID: <span class="font-code">{{ sessionId }}</span></span>
+          <span v-if="route.query.userId">User: {{ route.query.userId }}</span>
+          <span v-if="route.query.start">{{ formatDate(route.query.start) }}</span>
+        </span>
+      </template>
+      <template v-if="replayUrl" #actions>
+        <UiButton variant="primary" icon="external-link" :href="replayUrl" target="_blank" rel="noopener noreferrer">Watch in OpenReplay</UiButton>
+      </template>
+    </PageHero>
 
-    <template v-else-if="session">
-      <PageHero :back="backLink" title="Session replay" spot="site/session-replay" size="tool">
-        <template #lead>
-          <span class="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <span>Session ID: <span class="font-code">{{ session.sessionId }}</span></span>
-            <span v-if="session.userEmail">User: {{ session.userEmail }}</span>
-            <span>{{ formatDate(session.startTime) }}</span>
-            <UiChip v-if="session.live" tone="info">Live</UiChip>
-          </span>
-        </template>
-        <template #actions>
-          <UiButton variant="primary" icon="external-link" :href="session.replayUrl" target="_blank" rel="noopener noreferrer">Open in OpenReplay</UiButton>
-        </template>
-      </PageHero>
+    <div class="space-y-6">
+      <UiCallout v-if="linkProblem" tone="warning" title="No link to the replay">{{ linkProblem.message }}</UiCallout>
+      <p v-else-if="replayUrl" class="text-sm text-ink-secondary">
+        The replay plays in OpenReplay, where you sign in with your OpenReplay account. OpenReplay doesn't allow its player inside other sites.
+      </p>
 
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-        <UiStat label="Duration" :value="formatDuration(session.duration)" />
-        <UiStat label="Pages" :value="session.pagesCount" />
-        <UiStat label="Events" :value="session.eventsCount" />
-        <UiStat label="Errors" :tone="session.errorsCount > 0 ? 'danger' : 'neutral'" :value="session.errorsCount" />
-        <UiStat label="Issue score" :tone="session.issueScore > 50 ? 'danger' : 'neutral'" :value="session.issueScore" />
-      </div>
-
-      <div class="space-y-6">
-        <UiPanel title="Session replay">
-          <template #actions>
-            <UiLink :href="session.replayUrl" external>Open full screen</UiLink>
-          </template>
-          <iframe
-            :src="session.replayUrl"
-            class="w-full h-embed rounded-tile border border-line"
-            allow="fullscreen"
-            title="OpenReplay session replay"
-          ></iframe>
-          <p class="mt-2 text-center text-xs text-ink-muted">
-            If the replay doesn't load, click "Open in OpenReplay" to view in a new window
-          </p>
-        </UiPanel>
-
-        <UiPanel v-if="session.issueTypes && session.issueTypes.length > 0" title="Issue types">
-          <div class="flex flex-wrap gap-2">
-            <UiChip v-for="issueType in session.issueTypes" :key="issueType" tone="danger">{{ issueType }}</UiChip>
-          </div>
-        </UiPanel>
-
-        <UiPanel v-if="session.metadata && Object.keys(session.metadata).length > 0" title="Session metadata">
-          <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div v-for="(value, key) in session.metadata" :key="key">
-              <dt class="mb-1 font-medium text-ink-secondary">{{ key }}</dt>
-              <dd class="break-all text-ink">{{ value }}</dd>
+      <UiPanel title="Events" heading-tag="h2" :description="eventsDescription">
+        <UiSpinner v-if="eventsLoading" label="Loading events…" />
+        <UiEmptyState
+          v-else-if="eventsProblem"
+          :title="eventsProblem.code === 'OPENREPLAY_NOT_CONFIGURED' ? 'OpenReplay isn\'t connected' : 'Events could not be loaded'"
+          :body="eventsProblem.message"
+          :spot="eventsProblem.code === 'OPENREPLAY_NOT_CONFIGURED' ? 'site/session-replay' : 'patterns/error-handling'"
+        />
+        <UiEmptyState
+          v-else-if="events && events.items.length === 0"
+          title="No events in this window"
+          body="OpenReplay returned no events for this session in the time shown."
+          spot="patterns/empty-loading-states"
+        />
+        <template v-else-if="events">
+          <UiTable caption="Session events" compact>
+            <thead>
+              <tr>
+                <th scope="col">Time</th>
+                <th scope="col">Event</th>
+                <th scope="col">Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="event in events.items" :key="event.id">
+                <td class="whitespace-nowrap">{{ formatTime(event.time) }}</td>
+                <td>
+                  <span class="flex items-center gap-2">
+                    {{ event.name }}
+                    <UiChip v-if="!event.autoCaptured" tone="info">Custom</UiChip>
+                  </span>
+                </td>
+                <td class="break-all font-code text-xs text-ink-secondary">{{ summarize(event.properties) }}</td>
+              </tr>
+            </tbody>
+          </UiTable>
+          <nav class="mt-4 flex flex-wrap items-center justify-between gap-3" aria-label="Event pages">
+            <p class="text-sm text-ink-secondary" aria-live="polite">{{ pageSummary }}</p>
+            <div class="flex gap-2">
+              <UiButton size="sm" icon="chevron-left" :disabled="events.page <= 1" @click="loadEvents(events.page - 1)">Previous</UiButton>
+              <UiButton size="sm" trailing-icon="chevron-right" :disabled="!hasNextPage" @click="loadEvents(events.page + 1)">Next</UiButton>
             </div>
-          </dl>
-        </UiPanel>
-      </div>
-    </template>
-
-    <template v-else-if="loadProblem">
-      <PageHero :back="backLink" title="Session replay" size="tool" />
-      <UiEmptyState
-        :title="loadProblem.notConfigured ? 'OpenReplay isn\'t connected' : 'This session could not be loaded'"
-        :body="loadProblem.message"
-        :spot="loadProblem.notConfigured ? 'site/session-replay' : 'patterns/error-handling'"
-      />
-    </template>
+          </nav>
+        </template>
+      </UiPanel>
+    </div>
   </PageShell>
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { PageHero, PageShell, UiButton, UiChip, UiEmptyState, UiLink, UiPanel, UiSpinner, UiStat } from '../components/ui';
+import { PageHero, PageShell, UiButton, UiCallout, UiChip, UiEmptyState, UiPanel, UiSpinner, UiTable } from '../components/ui';
+import { REPLAY_API, replayProblem } from '../components/session-replay/replayApi.js';
 import apiClient from '../services/api.js';
 
 const route = useRoute();
-const session = ref(null);
-const loading = ref(false);
-const loadProblem = ref(null);
-
+const sessionId = computed(() => String(route.params.sessionId));
+const sessionPath = () => `${REPLAY_API}/projects/${encodeURIComponent(route.params.id)}/sessions/${encodeURIComponent(sessionId.value)}`;
 const backLink = computed(() => ({ to: `/hcd/session-replay/${route.params.id}/sessions`, label: 'Sessions' }));
 
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
+const replayUrl = ref('');
+const linkProblem = ref(null);
+const events = ref(null);
+const eventsLoading = ref(false);
+const eventsProblem = ref(null);
+const PAGE_SIZE = 50;
 
-const loadSession = async () => {
-  loading.value = true;
+const eventsDescription = computed(() =>
+  route.query.start ? 'What OpenReplay recorded during the session.' : 'What OpenReplay recorded in this session over the last 30 days.',
+);
+const hasNextPage = computed(() => !!events.value && events.value.page * events.value.limit < events.value.total);
+const pageSummary = computed(() => {
+  const p = events.value;
+  if (!p || !p.items.length) return '';
+  const first = (p.page - 1) * p.limit + 1;
+  return `Events ${first}–${first + p.items.length - 1} of ${p.total}`;
+});
+
+const loadReplayUrl = async () => {
   try {
-    const response = await apiClient.get(
-      `${API_BASE_URL}/session-replay/projects/${route.params.id}/sessions/${route.params.sessionId}`
-    );
-    session.value = response.data;
-    loadProblem.value = null;
+    replayUrl.value = (await apiClient.get(`${sessionPath()}/replay-url`)).data.url;
   } catch (error) {
-    const data = error.response?.data;
-    loadProblem.value = {
-      notConfigured: data?.code === 'OPENREPLAY_NOT_CONFIGURED',
-      message: data?.message || 'Try again later.',
-    };
-  } finally {
-    loading.value = false;
+    linkProblem.value = replayProblem(error, 'The link to OpenReplay could not be made.');
   }
 };
 
-const formatDate = (dateString) => {
-  if (!dateString) return 'Never';
-  const date = new Date(dateString);
-  return date.toLocaleString();
+const loadEvents = async (page = 1) => {
+  eventsLoading.value = true;
+  eventsProblem.value = null;
+  // The session list passes the session's own time window; without it the server searches the last 30 days
+  const params = { page, limit: PAGE_SIZE };
+  if (route.query.start) params.startDate = String(route.query.start);
+  if (route.query.end) params.endDate = String(route.query.end);
+  try {
+    events.value = (await apiClient.get(`${sessionPath()}/events`, { params })).data;
+  } catch (error) {
+    events.value = null;
+    eventsProblem.value = replayProblem(error, 'Try again later.');
+  } finally {
+    eventsLoading.value = false;
+  }
 };
 
-const formatDuration = (seconds) => {
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${minutes}m ${secs}s`;
+const summarize = (properties) => {
+  const entries = Object.entries(properties ?? {}).slice(0, 4);
+  return entries.length ? entries.map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' · ') : '—';
 };
+const formatDate = (value) => new Date(String(value)).toLocaleString();
+const formatTime = (value) => new Date(value).toLocaleTimeString();
 
 onMounted(() => {
-  loadSession();
+  loadReplayUrl();
+  loadEvents();
 });
 </script>

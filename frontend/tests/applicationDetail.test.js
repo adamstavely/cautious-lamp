@@ -83,7 +83,7 @@ beforeEach(() => {
       data: [{ id: 'run_1', projectId: 'vr_1', status: 'completed', startedAt: '2026-03-03T09:00:00.000Z', resultsSummary: { total: 5, passed: 4, failed: 1, new: 0, removed: 0 } }],
       pagination: { page: 1, limit: 1, total: 12, totalPages: 12, hasNext: true, hasPrevious: false },
     },
-    'GET /api/v1/session-replay/projects/sr_1/sessions': { sessions: [{ sessionId: 's1' }], total: 34 },
+    'GET /api/v1/session-replay/projects/sr_1': { id: 'sr_1', openreplayProjectKey: 'abc123', openreplayProjectId: 34, hasApiKey: true },
     'POST /api/v1/governance/scans': (config) => {
       const body = JSON.parse(config.data);
       return { id: 'scan_3', scope: 'application', applicationId: body.applicationId, createdAt: '2026-04-01T09:00:00.000Z', source: 'url', summary: { passed: 5, warnings: 1, errors: 3, info: 0, total: 9 } };
@@ -141,12 +141,12 @@ describe('Application detail', () => {
     // Visual regression and session replay
     expect(body).toContain('12');
     expect(body).toContain('Completed');
-    expect(body).toContain('34');
+    expect(body).toContain('Connected');
+    expect(body).toContain('OpenReplay project 34');
 
     const scanCall = calls.find((c) => c.key === 'GET /api/v1/governance/scans');
     expect(scanCall.params).toEqual({ applicationId: 'app_1', limit: 5 });
     expect(calls.find((c) => c.key === 'GET /api/v1/accessibility-reports/reports').params).toEqual({ applicationId: 'app_1' });
-    expect(calls.find((c) => c.key === 'GET /api/v1/session-replay/projects/sr_1/sessions').params).toMatchObject({ startDate: expect.any(String), endDate: expect.any(String) });
 
     const hrefs = [...document.querySelectorAll('a')].map((a) => a.getAttribute('href'));
     expect(hrefs).toContain('/tools/visual-regression/vr_1');
@@ -192,14 +192,14 @@ describe('Application detail', () => {
   });
 
   it('keeps a failing status inline without breaking the others', async () => {
-    responses['GET /api/v1/session-replay/projects/sr_1/sessions'] = fail(500, 'OpenReplay is not configured');
+    responses['GET /api/v1/session-replay/projects/sr_1'] = fail(500, 'Elasticsearch is down');
     responses['GET /api/v1/accessibility-reports/reports'] = fail(403);
     await open();
-    await vi.waitFor(() => expect(page.state.sessions.error).toBeTruthy());
+    await vi.waitFor(() => expect(page.state.replayProject.error).toBeTruthy());
     await vi.waitFor(() => expect(page.state.reports.error).toBeTruthy());
     await flush();
     const body = text();
-    expect(body).toContain('Sessions could not be loaded. OpenReplay is not configured');
+    expect(body).toContain('The session replay project could not be loaded. Elasticsearch is down');
     expect(body).toContain("You don't have access to this.");
     expect(body).toContain('Checkout');
     expect(body).toContain('7 passed, 2 warnings, 1 errors');

@@ -14,37 +14,43 @@
       <UiTabs :model-value="activeTab" :tabs="tabs" label="Project views" @update:model-value="selectTab">
         <template #overview>
           <div class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <UiStat label="Total sessions" :value="sessions.length" />
-              <UiStat label="Sessions with errors" :value="sessionsWithErrors" />
-              <UiStat label="Live sessions" :value="liveSessions" />
-            </div>
+            <UiCallout v-if="setupGaps.length" tone="warning" title="Finish setting up this project">
+              <ul class="list-disc space-y-1 pl-5">
+                <li v-for="gap in setupGaps" :key="gap">{{ gap }}</li>
+              </ul>
+              <div class="mt-3">
+                <UiButton size="sm" icon="settings" @click="selectTab('settings')">Open settings</UiButton>
+              </div>
+            </UiCallout>
 
-            <UiPanel title="Integration code" heading-tag="h3" description="Add this code to your application's HTML to start recording sessions.">
-              <UiCodeBlock :code="integrationCode" label="HTML" @copied="onIntegrationCodeCopied" @copy-failed="onIntegrationCodeCopyFailed" />
+            <UiPanel
+              title="Install the tracker"
+              heading-tag="h3"
+              description="Add OpenReplay's tracker to your application. The code carries this project's privacy and capture settings."
+            >
+              <UiSpinner v-if="integrationLoading" label="Loading integration code…" />
+              <UiCallout v-else-if="integrationProblem" tone="warning">{{ integrationProblem.message }}</UiCallout>
+              <div v-else-if="integration" class="space-y-4">
+                <UiSegmented v-model="installMethod" :options="installOptions" label="Install with" />
+                <template v-if="installMethod === 'script'">
+                  <p class="text-sm text-ink-secondary">Paste this into the &lt;head&gt; of every page. It loads openreplay.js from OpenReplay's CDN.</p>
+                  <UiCodeBlock :code="integration.script" label="HTML" @copied="onCopied" @copy-failed="onCopyFailed" />
+                </template>
+                <template v-else>
+                  <UiCodeBlock :code="integration.npmInstall" label="Terminal" @copied="onCopied" @copy-failed="onCopyFailed" />
+                  <UiCodeBlock :code="integration.npm" label="JavaScript" @copied="onCopied" @copy-failed="onCopyFailed" />
+                </template>
+                <p class="text-sm text-ink-secondary">
+                  Sessions are listed here by user, so give the tracker the signed-in user's ID (setUserID) once you know it.
+                </p>
+              </div>
             </UiPanel>
 
             <UiPanel title="Project configuration" heading-tag="h3">
               <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <dt class="font-medium mb-1 text-ink-secondary">OpenReplay project key</dt>
-                  <dd class="font-code text-ink">{{ project.openreplayProjectKey }}</dd>
-                </div>
-                <div>
-                  <dt class="font-medium mb-1 text-ink-secondary">OpenReplay base URL</dt>
-                  <dd class="break-all text-ink">{{ project.openreplayBaseUrl }}</dd>
-                </div>
-                <div v-if="project.applicationUrl">
-                  <dt class="font-medium mb-1 text-ink-secondary">Application URL</dt>
-                  <dd class="break-all text-ink">{{ project.applicationUrl }}</dd>
-                </div>
-                <div>
-                  <dt class="font-medium mb-1 text-ink-secondary">Team</dt>
-                  <dd class="text-ink">{{ project.teamId }}</dd>
-                </div>
-                <div>
-                  <dt class="font-medium mb-1 text-ink-secondary">Created</dt>
-                  <dd class="text-ink">{{ formatDate(project.createdAt) }}</dd>
+                <div v-for="item in configuration" :key="item.label">
+                  <dt class="mb-1 font-medium text-ink-secondary">{{ item.label }}</dt>
+                  <dd class="break-all text-ink" :class="{ 'font-code': item.mono }">{{ item.value }}</dd>
                 </div>
               </dl>
             </UiPanel>
@@ -52,144 +58,162 @@
         </template>
 
         <template #sessions>
-          <div class="mb-6 flex flex-wrap items-end gap-4">
-            <div class="flex-1 min-w-0">
-              <UiInput v-model="searchQuery" type="search" label="Search sessions" icon="search" placeholder="Search sessions…" />
-            </div>
-            <UiButton icon="refresh-cw" @click="loadSessions">Refresh</UiButton>
-          </div>
-
-          <UiSpinner v-if="sessionsLoading" label="Loading sessions…" class="py-12" />
-
-          <UiEmptyState
-            v-else-if="sessionsProblem"
-            :title="sessionsProblem.notConfigured ? 'OpenReplay isn\'t connected' : 'Sessions could not be loaded'"
-            :body="sessionsProblem.message"
-            :spot="sessionsProblem.notConfigured ? 'site/session-replay' : 'patterns/error-handling'"
+          <UiPanel
+            title="Find sessions"
+            heading-tag="h3"
+            description="OpenReplay's API lists sessions one user at a time: enter the ID your app gives the tracker with setUserID."
           >
-            <template v-if="sessionsProblem.notConfigured" #actions>
-              <UiButton variant="primary" icon="settings" @click="selectTab('settings')">Open settings</UiButton>
-            </template>
-          </UiEmptyState>
-
-          <UiEmptyState
-            v-else-if="filteredSessions.length === 0"
-            title="No sessions found"
-            body="Sessions will appear here once your application starts recording"
-            spot="patterns/empty-loading-states"
-          />
-
-          <UiPanel v-else flush>
-            <UiTable caption="Recorded sessions">
-              <thead>
-                <tr>
-                  <th scope="col">Session</th>
-                  <th scope="col">Started</th>
-                  <th scope="col">Errors</th>
-                  <th scope="col">Duration</th>
-                  <th scope="col">Pages</th>
-                  <th scope="col">Events</th>
-                  <th scope="col">Issue score</th>
-                  <th scope="col">User</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="session in filteredSessions" :key="session.sessionId">
-                  <td>
-                    <span class="flex items-center gap-2">
-                      <UiLink :to="sessionLink(session.sessionId)" class="font-code">
-                        {{ session.sessionId.substring(0, 8) }}<span class="sr-only"> (open replay)</span>
-                      </UiLink>
-                      <UiChip v-if="session.live" tone="info">Live</UiChip>
-                    </span>
-                  </td>
-                  <td class="whitespace-nowrap">{{ formatDate(session.startTime) }}</td>
-                  <td>
-                    <UiChip :tone="session.errorsCount > 0 ? 'danger' : 'success'">
-                      {{ session.errorsCount > 0 ? `${session.errorsCount} errors` : 'No errors' }}
-                    </UiChip>
-                  </td>
-                  <td>{{ formatDuration(session.duration) }}</td>
-                  <td>{{ session.pagesCount }}</td>
-                  <td>{{ session.eventsCount }}</td>
-                  <td :class="{ 'text-danger font-semibold': session.issueScore > 50 }">{{ session.issueScore }}</td>
-                  <td class="text-ink-secondary">{{ session.userEmail || '—' }}</td>
-                </tr>
-              </tbody>
-            </UiTable>
+            <form class="grid gap-4 md:grid-cols-6 md:items-end" @submit.prevent="searchSessions(1)">
+              <div class="md:col-span-2">
+                <UiInput v-model="filters.userId" id="session-user-id" label="User ID" required icon="search" placeholder="e.g. user-1234" />
+              </div>
+              <UiInput v-model="filters.startDate" id="session-start-date" type="date" label="From" />
+              <UiInput v-model="filters.endDate" id="session-end-date" type="date" label="To" />
+              <div class="md:col-span-2">
+                <UiSelect v-model="filters.sortOrder" id="session-sort" label="Order" :options="sortOptions" />
+              </div>
+              <div class="flex gap-3 md:col-span-6">
+                <UiButton variant="primary" type="submit" icon="search" :loading="sessionsLoading">Find sessions</UiButton>
+                <UiButton v-if="sessionsPage" icon="refresh-cw" @click="searchSessions(sessionsPage.page)">Refresh</UiButton>
+              </div>
+            </form>
           </UiPanel>
+
+          <div class="mt-6">
+            <UiSpinner v-if="sessionsLoading" label="Loading sessions…" class="py-12" />
+
+            <UiEmptyState
+              v-else-if="sessionsProblem"
+              :title="problemTitle(sessionsProblem)"
+              :body="sessionsProblem.message"
+              :spot="sessionsProblem.code === 'OPENREPLAY_ERROR' || !sessionsProblem.code ? 'patterns/error-handling' : 'site/session-replay'"
+            >
+              <template v-if="needsSettings(sessionsProblem)" #actions>
+                <UiButton variant="primary" icon="settings" @click="selectTab('settings')">Open settings</UiButton>
+              </template>
+            </UiEmptyState>
+
+            <UiEmptyState
+              v-else-if="!sessionsPage"
+              title="Search for a user's sessions"
+              body="Enter a user ID to see that user's recorded sessions. Without dates, the last 7 days are searched."
+              spot="patterns/empty-loading-states"
+            />
+
+            <UiEmptyState
+              v-else-if="sessionsPage.items.length === 0"
+              title="No sessions found"
+              :body="`OpenReplay has no sessions for ${sessionsPage.userId} between ${formatDay(sessionsPage.startDate)} and ${formatDay(sessionsPage.endDate)}.`"
+              spot="patterns/empty-loading-states"
+            />
+
+            <UiPanel v-else flush>
+              <UiTable :caption="`Sessions for ${sessionsPage.userId}`">
+                <thead>
+                  <tr>
+                    <th scope="col">Session</th>
+                    <th scope="col">Started</th>
+                    <th scope="col">Duration</th>
+                    <th scope="col">Events</th>
+                    <th scope="col">Replay</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="session in sessionsPage.items" :key="session.sessionId">
+                    <td>
+                      <UiLink :to="sessionLink(session)" class="font-code">
+                        {{ session.sessionId }}<span class="sr-only"> (details)</span>
+                      </UiLink>
+                    </td>
+                    <td class="whitespace-nowrap">{{ formatDate(session.startTime) }}</td>
+                    <td>{{ formatDuration(session.duration) }}</td>
+                    <td>{{ session.eventsCount ?? '—' }}</td>
+                    <td>
+                      <UiLink v-if="session.replayUrl" :href="session.replayUrl" external>
+                        Watch<span class="sr-only"> session {{ session.sessionId }} in OpenReplay</span>
+                      </UiLink>
+                      <span v-else class="text-ink-muted">Needs project ID</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </UiTable>
+              <nav class="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3" aria-label="Session pages">
+                <p class="text-sm text-ink-secondary" aria-live="polite">{{ pageSummary }}</p>
+                <div class="flex gap-2">
+                  <UiButton size="sm" icon="chevron-left" :disabled="sessionsPage.page <= 1" @click="searchSessions(sessionsPage.page - 1)">Previous</UiButton>
+                  <UiButton size="sm" trailing-icon="chevron-right" :disabled="!hasNextPage" @click="searchSessions(sessionsPage.page + 1)">Next</UiButton>
+                </div>
+              </nav>
+            </UiPanel>
+          </div>
         </template>
 
         <template #heatmaps>
-          <UiSpinner v-if="heatmapsUrlLoading" label="Loading heatmaps…" class="py-12" />
-
-          <div v-else-if="heatmapsUrl" class="space-y-6">
-            <UiPanel
-              title="Heatmaps"
-              heading-tag="h3"
-              description="Visualize user interactions across your application. Heatmaps show where users click, scroll, and move their mouse, helping you identify engagement hotspots and areas that need optimization."
-            >
-              <div class="flex flex-wrap items-center gap-3">
-                <UiButton variant="primary" icon="external-link" :href="heatmapsUrl" target="_blank" rel="noopener noreferrer">Open in OpenReplay</UiButton>
-                <UiButton icon="copy" @click="copyHeatmapsUrl">Copy link</UiButton>
+          <UiPanel
+            title="Heatmaps"
+            heading-tag="h3"
+            description="OpenReplay keeps heatmaps as cards in its dashboard. They open there, where you're signed in to OpenReplay."
+          >
+            <UiSpinner v-if="heatmapsLoading" label="Loading the heatmaps link…" />
+            <UiCallout v-else-if="heatmapsProblem" tone="warning">
+              {{ heatmapsProblem.message }}
+              <div v-if="needsSettings(heatmapsProblem)" class="mt-3">
+                <UiButton size="sm" icon="settings" @click="selectTab('settings')">Open settings</UiButton>
               </div>
-            </UiPanel>
-
-            <UiPanel title="Heatmap viewer" heading-tag="h3">
-              <template #actions>
-                <UiLink :href="heatmapsUrl" external>Open full screen</UiLink>
-              </template>
-              <iframe
-                :src="heatmapsUrl"
-                class="w-full h-embed rounded-tile border border-line"
-                allow="fullscreen"
-                title="OpenReplay Heatmaps"
-              ></iframe>
-              <p class="mt-2 text-center text-xs text-ink-muted">
-                If the heatmap viewer doesn't load, click "Open in OpenReplay" to view in a new window. Make sure you're authenticated in OpenReplay.
-              </p>
-            </UiPanel>
-
-            <UiPanel title="How to use heatmaps" heading-tag="h3">
-              <ol class="space-y-4">
-                <li v-for="(step, index) in heatmapSteps" :key="step.title">
-                  <h4 class="mb-1 font-medium text-ink-strong">{{ index + 1 }}. {{ step.title }}</h4>
-                  <p class="text-sm text-ink-secondary">{{ step.body }}</p>
-                </li>
-              </ol>
-            </UiPanel>
-          </div>
-
-          <UiEmptyState
-            v-else
-            title="Unable to load heatmaps"
-            body="Make sure your OpenReplay instance is configured correctly and accessible."
-            spot="foundations/data-viz"
-          />
+            </UiCallout>
+            <div v-else-if="heatmapsUrl" class="flex flex-wrap items-center gap-3">
+              <UiButton variant="primary" icon="external-link" :href="heatmapsUrl" target="_blank" rel="noopener noreferrer">Open heatmaps in OpenReplay</UiButton>
+              <UiButton icon="copy" @click="copyHeatmapsUrl">Copy link</UiButton>
+            </div>
+          </UiPanel>
         </template>
 
         <template #settings>
           <UiPanel title="Project settings" heading-tag="h3">
-            <form id="replay-project-settings" class="space-y-5" @submit.prevent="updateProject">
-              <UiInput v-model="projectForm.name" label="Project name" />
-              <UiTextarea v-model="projectForm.description" label="Description" :rows="3" />
-              <UiInput v-model="projectForm.applicationUrl" type="url" label="Application URL" />
-              <UiInput
-                id="openreplay-project-id"
-                v-model="projectForm.openreplayProjectKey"
-                label="OpenReplay project ID"
-                inputmode="numeric"
-                hint="The numeric ID from the project's settings in OpenReplay."
-              />
-              <UiInput
-                id="openreplay-api-key"
-                v-model="projectForm.openreplayApiKey"
-                type="password"
-                autocomplete="off"
-                label="OpenReplay API key"
-                :placeholder="project?.hasApiKey ? 'Saved. Leave blank to keep it' : 'Not set: sessions can\'t be shown'"
-                hint="Used to list sessions. It's checked against OpenReplay when you save, stored encrypted, and never shown again."
-              />
+            <form id="replay-project-settings" class="space-y-6" @submit.prevent="updateProject">
+              <UiInput v-model="projectForm.name" id="settings-name" label="Project name" required />
+              <UiTextarea v-model="projectForm.description" id="settings-description" label="Description" :rows="3" />
+              <UiInput v-model="projectForm.applicationUrl" id="settings-application-url" type="url" label="Application URL" />
+
+              <fieldset class="flex flex-col gap-5">
+                <legend class="mb-1 text-sm font-medium text-ink-strong">OpenReplay connection</legend>
+                <UiInput
+                  v-model="projectForm.openreplayBaseUrl"
+                  id="openreplay-base-url"
+                  type="url"
+                  label="OpenReplay base URL"
+                  placeholder="https://api.openreplay.com"
+                  hint="OpenReplay Cloud, or your self-hosted instance."
+                />
+                <div class="grid md:grid-cols-2 gap-5">
+                  <UiInput
+                    v-model="projectForm.openreplayProjectKey"
+                    id="openreplay-project-key"
+                    label="OpenReplay project key"
+                    required
+                    mono
+                    hint="In OpenReplay's project settings. The tracker and the API use it."
+                  />
+                  <UiInput
+                    v-model="projectForm.openreplayProjectId"
+                    id="openreplay-project-id"
+                    label="OpenReplay project ID"
+                    inputmode="numeric"
+                    hint="The number in OpenReplay's address bar, for links to replays and heatmaps. Filled in when an API key is saved."
+                  />
+                </div>
+                <UiInput
+                  v-model="projectForm.openreplayApiKey"
+                  id="openreplay-api-key"
+                  type="password"
+                  autocomplete="off"
+                  label="OpenReplay API key"
+                  :placeholder="project.hasApiKey ? 'Saved. Leave blank to keep it' : 'Not set: sessions can\'t be listed'"
+                  hint="The organization API key. Checked against OpenReplay when you save, stored encrypted, and never shown again."
+                />
+              </fieldset>
+
+              <CaptureSettingsFields v-model="captureSettings" id-prefix="settings" />
             </form>
             <template #footer>
               <div class="flex justify-end gap-3">
@@ -203,34 +227,41 @@
         </template>
       </UiTabs>
     </template>
+
+    <UiEmptyState v-else-if="loadProblem" title="This project could not be loaded" :body="loadProblem.message" spot="patterns/error-handling" />
   </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   PageHero,
   PageShell,
   UiButton,
-  UiChip,
+  UiCallout,
   UiCodeBlock,
   UiEmptyState,
   UiInput,
   UiLink,
   UiPanel,
+  UiSegmented,
+  UiSelect,
   UiSpinner,
-  UiStat,
   UiTable,
   UiTabs,
   UiTextarea,
 } from '../components/ui';
+import CaptureSettingsFields from '../components/session-replay/CaptureSettingsFields.vue';
+import { captureForm, capturePayload } from '../components/session-replay/captureSettings.js';
+import { REPLAY_API, replayProblem } from '../components/session-replay/replayApi.js';
 import apiClient from '../services/api.js';
 
 const route = useRoute();
 const router = useRouter();
 const project = ref(null);
 const loading = ref(false);
+const loadProblem = ref(null);
 const activeTab = ref('overview');
 const tabs = [
   { value: 'overview', label: 'Overview' },
@@ -238,217 +269,260 @@ const tabs = [
   { value: 'heatmaps', label: 'Heatmaps' },
   { value: 'settings', label: 'Settings' },
 ];
-const sessions = ref([]);
-const sessionsLoading = ref(false);
-/** Why sessions can't be shown: OpenReplay not connected (503 OPENREPLAY_NOT_CONFIGURED) or another error */
-const sessionsProblem = ref(null);
-const searchQuery = ref('');
-const saving = ref(false);
-const integrationCode = ref('');
-const heatmapsUrl = ref('');
-const heatmapsUrlLoading = ref(false);
 
-const projectForm = ref({
-  name: '',
-  description: '',
-  applicationUrl: '',
-  openreplayProjectKey: '',
-  // Write-only: blank keeps the saved key
-  openreplayApiKey: '',
+const projectPath = () => `${REPLAY_API}/projects/${encodeURIComponent(route.params.id)}`;
+
+// ---------- Overview ----------
+
+const integration = ref(null);
+const integrationLoading = ref(false);
+const integrationProblem = ref(null);
+const installMethod = ref('script');
+const installOptions = [
+  { value: 'script', label: 'Script tag' },
+  { value: 'npm', label: 'npm package' },
+];
+
+const setupGaps = computed(() => {
+  const p = project.value;
+  if (!p) return [];
+  return [
+    !p.openreplayProjectKey && 'Add the OpenReplay project key: the tracker needs it to record sessions.',
+    !p.hasApiKey && 'Add an OpenReplay API key to list sessions here.',
+    !p.openreplayProjectId && 'Add the OpenReplay project ID to link to replays and heatmaps.',
+  ].filter(Boolean);
 });
 
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
-
-const loadProject = async () => {
-  loading.value = true;
-  try {
-    const response = await apiClient.get(`${API_BASE_URL}/session-replay/projects/${route.params.id}`);
-    project.value = response.data;
-    projectForm.value = {
-      name: project.value.name,
-      description: project.value.description || '',
-      applicationUrl: project.value.applicationUrl || '',
-      openreplayProjectKey: project.value.openreplayProjectKey || '',
-      openreplayApiKey: '',
-    };
-    await loadIntegrationCode();
-    if (activeTab.value === 'sessions') {
-      await loadSessions();
-    }
-  } catch (error) {
-    console.error('Failed to load project:', error);
-    window.showToast?.('Failed to load project', 'error');
-  } finally {
-    loading.value = false;
-  }
-};
+const configuration = computed(() => {
+  const p = project.value;
+  return [
+    { label: 'OpenReplay project key', value: p.openreplayProjectKey || 'Not set', mono: !!p.openreplayProjectKey },
+    { label: 'OpenReplay project ID', value: p.openreplayProjectId ?? 'Not set', mono: !!p.openreplayProjectId },
+    { label: 'OpenReplay base URL', value: p.openreplayBaseUrl || 'OpenReplay Cloud' },
+    { label: 'API key', value: p.hasApiKey ? 'Saved (encrypted)' : 'Not set' },
+    { label: 'Application URL', value: p.applicationUrl || 'Not set' },
+    { label: 'Team', value: p.teamId },
+    { label: 'Created', value: formatDate(p.createdAt) },
+  ];
+});
 
 const loadIntegrationCode = async () => {
+  integrationLoading.value = true;
+  integrationProblem.value = null;
   try {
-    const response = await apiClient.get(`${API_BASE_URL}/session-replay/projects/${route.params.id}/integration-code`);
-    integrationCode.value = response.data.code;
+    integration.value = (await apiClient.get(`${projectPath()}/integration-code`)).data;
   } catch (error) {
-    console.error('Failed to load integration code:', error);
-    window.showToast?.('Failed to load integration code', 'error');
+    integration.value = null;
+    integrationProblem.value = replayProblem(error, 'The integration code could not be loaded. Try again later.');
+  } finally {
+    integrationLoading.value = false;
   }
 };
 
 // UiCodeBlock copies the code; these report how it went
-const onIntegrationCodeCopied = () => window.showToast?.('Integration code copied to clipboard', 'success');
-const onIntegrationCodeCopyFailed = () => window.showToast?.('Failed to copy code', 'error');
+const onCopied = () => window.showToast?.('Copied to clipboard', 'success');
+const onCopyFailed = () => window.showToast?.('Failed to copy code', 'error');
 
-const loadSessions = async () => {
+// ---------- Sessions ----------
+
+const sortOptions = [
+  { value: 'desc', label: 'Newest first' },
+  { value: 'asc', label: 'Oldest first' },
+];
+const filters = reactive({ userId: '', startDate: '', endDate: '', sortOrder: 'desc' });
+const sessionsPage = ref(null);
+const sessionsLoading = ref(false);
+/** Why sessions can't be shown, with the server's code (OPENREPLAY_NOT_CONFIGURED and the like) */
+const sessionsProblem = ref(null);
+const PAGE_SIZE = 20;
+
+const hasNextPage = computed(() => !!sessionsPage.value && sessionsPage.value.page * sessionsPage.value.limit < sessionsPage.value.total);
+const pageSummary = computed(() => {
+  const p = sessionsPage.value;
+  if (!p || !p.items.length) return '';
+  const first = (p.page - 1) * p.limit + 1;
+  return `Sessions ${first}–${first + p.items.length - 1} of ${p.total}`;
+});
+
+/** The filters as query parameters: blank ones are left out, so the server's defaults apply */
+const sessionParams = (page) => {
+  const params = { userId: filters.userId.trim(), page, limit: PAGE_SIZE, sortOrder: filters.sortOrder };
+  if (filters.startDate) params.startDate = filters.startDate;
+  if (filters.endDate) params.endDate = filters.endDate;
+  return params;
+};
+
+const searchSessions = async (page = 1) => {
+  if (!filters.userId.trim()) return;
+  const params = sessionParams(page);
+  // The search is part of the address, so it can be shared and survives a reload
+  const { limit, ...query } = params;
+  router.replace({ query: Object.fromEntries(Object.entries(query).map(([k, v]) => [k, String(v)])) });
   sessionsLoading.value = true;
+  sessionsProblem.value = null;
   try {
-    sessionsProblem.value = null;
-    const response = await apiClient.get(`${API_BASE_URL}/session-replay/projects/${route.params.id}/sessions`);
-    sessions.value = response.data.sessions || [];
+    const data = (await apiClient.get(`${projectPath()}/sessions`, { params })).data;
+    sessionsPage.value = { ...data, userId: params.userId };
   } catch (error) {
-    const data = error.response?.data;
-    sessionsProblem.value = {
-      notConfigured: data?.code === 'OPENREPLAY_NOT_CONFIGURED',
-      message: data?.message || 'The sessions could not be loaded. Try again later.',
-    };
-    sessions.value = [];
+    sessionsPage.value = null;
+    sessionsProblem.value = replayProblem(error, 'The sessions could not be loaded. Try again later.');
   } finally {
     sessionsLoading.value = false;
   }
 };
 
-const updateProject = async () => {
-  saving.value = true;
-  try {
-    // The server re-checks the OpenReplay connection when these are sent, so only send changes
-    const { openreplayApiKey, openreplayProjectKey, ...payload } = projectForm.value;
-    if (openreplayProjectKey.trim() !== (project.value.openreplayProjectKey || '')) payload.openreplayProjectKey = openreplayProjectKey.trim();
-    if (openreplayApiKey.trim()) payload.openreplayApiKey = openreplayApiKey.trim();
-    await apiClient.put(`${API_BASE_URL}/session-replay/projects/${route.params.id}`, payload);
-    window.showToast?.('Project updated successfully', 'success');
-    await loadProject();
-  } catch (error) {
-    const errorMsg = error.response?.data?.message || error.message || 'Failed to update project';
-    window.showToast?.(errorMsg, 'error');
-    console.error('Failed to update project:', error);
-  } finally {
-    saving.value = false;
-  }
+const problemTitle = (problem) =>
+  ({
+    OPENREPLAY_NOT_CONFIGURED: "OpenReplay isn't connected",
+    OPENREPLAY_PROJECT_KEY_MISSING: 'This project needs its OpenReplay project key',
+    OPENREPLAY_ERROR: 'OpenReplay returned an error',
+  })[problem.code] ?? 'Sessions could not be loaded';
+const needsSettings = (problem) => ['OPENREPLAY_NOT_CONFIGURED', 'OPENREPLAY_PROJECT_KEY_MISSING', 'OPENREPLAY_PROJECT_ID_MISSING'].includes(problem?.code);
+
+/** The session page, with the time window to fetch its events in */
+const sessionLink = (session) => {
+  const start = new Date(session.startTime).getTime();
+  const end = session.endTime ? new Date(session.endTime).getTime() : start + 24 * 60 * 60 * 1000;
+  return {
+    path: `/hcd/session-replay/${route.params.id}/sessions/${encodeURIComponent(session.sessionId)}`,
+    query: { userId: session.userId, start: new Date(start).toISOString(), end: new Date(Math.max(end, start + 1000)).toISOString() },
+  };
 };
 
-const resetForm = () => {
-  if (project.value) {
-    projectForm.value = {
-      name: project.value.name,
-      description: project.value.description || '',
-      applicationUrl: project.value.applicationUrl || '',
-      openreplayProjectKey: project.value.openreplayProjectKey || '',
-      openreplayApiKey: '',
-    };
-  }
-};
+// ---------- Heatmaps ----------
 
-const navigateToSessionsTab = () => {
-  router.push(`/hcd/session-replay/${route.params.id}/sessions`);
-};
-
-const sessionLink = (sessionId) => `/hcd/session-replay/${route.params.id}/sessions/${sessionId}`;
-
-// The Sessions tab has its own address; the other tabs switch in place
-const selectTab = (tab) => {
-  activeTab.value = tab;
-  if (tab === 'sessions') navigateToSessionsTab();
-};
-
-const formatDate = (dateString) => {
-  if (!dateString) return 'Never';
-  const date = new Date(dateString);
-  return date.toLocaleString();
-};
-
-const formatDuration = (seconds) => {
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${minutes}m ${secs}s`;
-};
-
-const filteredSessions = computed(() => {
-  if (!searchQuery.value.trim()) {
-    return sessions.value;
-  }
-  const query = searchQuery.value.toLowerCase();
-  return sessions.value.filter(s => 
-    s.sessionId.toLowerCase().includes(query) ||
-    (s.userEmail && s.userEmail.toLowerCase().includes(query)) ||
-    (s.userDisplayName && s.userDisplayName.toLowerCase().includes(query))
-  );
-});
-
-const sessionsWithErrors = computed(() => {
-  return sessions.value.filter(s => s.errorsCount > 0).length;
-});
-
-const liveSessions = computed(() => {
-  return sessions.value.filter(s => s.live).length;
-});
+const heatmapsUrl = ref('');
+const heatmapsLoading = ref(false);
+const heatmapsProblem = ref(null);
 
 const loadHeatmapsUrl = async () => {
-  heatmapsUrlLoading.value = true;
+  heatmapsLoading.value = true;
+  heatmapsProblem.value = null;
   try {
-    const response = await apiClient.get(`${API_BASE_URL}/session-replay/projects/${route.params.id}/heatmaps-url`);
-    heatmapsUrl.value = response.data.url;
+    heatmapsUrl.value = (await apiClient.get(`${projectPath()}/heatmaps-url`)).data.url;
   } catch (error) {
-    console.error('Failed to load heatmaps URL:', error);
-    window.showToast?.('Failed to load heatmaps URL', 'error');
     heatmapsUrl.value = '';
+    heatmapsProblem.value = replayProblem(error, 'The heatmaps link could not be made. Try again later.');
   } finally {
-    heatmapsUrlLoading.value = false;
+    heatmapsLoading.value = false;
   }
 };
 
 const copyHeatmapsUrl = async () => {
   try {
     await navigator.clipboard.writeText(heatmapsUrl.value);
-    window.showToast?.('Heatmaps URL copied to clipboard', 'success');
+    window.showToast?.('Heatmaps link copied to clipboard', 'success');
   } catch (error) {
     console.error('Failed to copy:', error);
-    window.showToast?.('Failed to copy URL', 'error');
+    window.showToast?.('Failed to copy the link', 'error');
   }
 };
 
-watch(activeTab, (newTab) => {
-  if (newTab === 'sessions' && sessions.value.length === 0) {
-    loadSessions();
+// ---------- Settings ----------
+
+const saving = ref(false);
+const projectForm = ref({});
+const captureSettings = ref(captureForm());
+
+const resetForm = () => {
+  const p = project.value;
+  if (!p) return;
+  projectForm.value = {
+    name: p.name,
+    description: p.description || '',
+    applicationUrl: p.applicationUrl || '',
+    openreplayBaseUrl: p.openreplayBaseUrl || '',
+    openreplayProjectKey: p.openreplayProjectKey || '',
+    openreplayProjectId: p.openreplayProjectId ? String(p.openreplayProjectId) : '',
+    // Write-only: blank keeps the saved key
+    openreplayApiKey: '',
+  };
+  captureSettings.value = captureForm(p);
+};
+
+/** The update request. Connection fields go only when changed, since the server re-checks them with OpenReplay. */
+const updatePayload = () => {
+  const p = project.value;
+  const form = projectForm.value;
+  const payload = {
+    name: form.name.trim(),
+    description: form.description,
+    applicationUrl: form.applicationUrl.trim(),
+    ...capturePayload(captureSettings.value),
+  };
+  const key = form.openreplayProjectKey.trim();
+  if (key !== (p.openreplayProjectKey || '')) payload.openreplayProjectKey = key;
+  const id = String(form.openreplayProjectId).trim();
+  if (id !== (p.openreplayProjectId ? String(p.openreplayProjectId) : '')) payload.openreplayProjectId = id ? Number(id) : null;
+  const baseUrl = form.openreplayBaseUrl.trim();
+  if (baseUrl && baseUrl !== (p.openreplayBaseUrl || '')) payload.openreplayBaseUrl = baseUrl;
+  if (form.openreplayApiKey.trim()) payload.openreplayApiKey = form.openreplayApiKey.trim();
+  return payload;
+};
+
+const updateProject = async () => {
+  saving.value = true;
+  try {
+    project.value = (await apiClient.put(projectPath(), updatePayload())).data;
+    resetForm();
+    window.showToast?.('Project updated', 'success');
+    heatmapsUrl.value = '';
+    await loadIntegrationCode();
+  } catch (error) {
+    window.showToast?.(replayProblem(error, 'The project could not be updated.').message, 'error');
+    console.error('Failed to update project:', error);
+  } finally {
+    saving.value = false;
   }
-  if (newTab === 'heatmaps' && !heatmapsUrl.value) {
-    loadHeatmapsUrl();
+};
+
+// ---------- Page ----------
+
+const loadProject = async () => {
+  loading.value = true;
+  loadProblem.value = null;
+  try {
+    project.value = (await apiClient.get(projectPath())).data;
+    resetForm();
+    await loadIntegrationCode();
+  } catch (error) {
+    loadProblem.value = replayProblem(error, 'Try again later.');
+  } finally {
+    loading.value = false;
   }
+};
+
+// The Sessions tab has its own address; the other tabs switch in place
+const selectTab = (tab) => {
+  activeTab.value = tab;
+  if (tab === 'sessions' && !route.path.endsWith('/sessions')) router.push(`/hcd/session-replay/${route.params.id}/sessions`);
+};
+
+watch(activeTab, (tab) => {
+  if (tab === 'heatmaps' && !heatmapsUrl.value) loadHeatmapsUrl();
 });
 
-const heatmapSteps = [
-  {
-    title: 'Create a heatmap',
-    body: 'Click "Open in OpenReplay" to access the full heatmap interface. Create a new heatmap by specifying the URL pattern you want to analyze.',
-  },
-  {
-    title: 'Configure filters',
-    body: 'Apply filters to segment your data by user attributes, session characteristics, or specific issues like click rage.',
-  },
-  {
-    title: 'Analyze results',
-    body: 'View click, scroll, and mouse movement heatmaps to identify engagement hotspots and areas that need optimization.',
-  },
-];
+const formatDate = (value) => (value ? new Date(value).toLocaleString() : 'Never');
+const formatDay = (value) => new Date(value).toLocaleDateString();
+const formatDuration = (seconds) => {
+  if (seconds === null || seconds === undefined) return '—';
+  if (seconds < 60) return `${seconds}s`;
+  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+};
 
-onMounted(() => {
-  loadProject();
-
-  // Set active tab based on route
-  if (route.path.includes('/sessions') && !route.params.sessionId) {
-    activeTab.value = 'sessions';
-  } else if (route.path.includes('/heatmaps')) {
-    activeTab.value = 'heatmaps';
-  } else if (route.path.includes('/settings')) {
-    activeTab.value = 'settings';
+onMounted(async () => {
+  if (route.path.endsWith('/sessions')) activeTab.value = 'sessions';
+  await loadProject();
+  // A shared search address runs its search
+  const q = route.query;
+  if (activeTab.value === 'sessions' && q.userId) {
+    Object.assign(filters, {
+      userId: String(q.userId),
+      startDate: q.startDate ? String(q.startDate) : '',
+      endDate: q.endDate ? String(q.endDate) : '',
+      sortOrder: q.sortOrder === 'asc' ? 'asc' : 'desc',
+    });
+    await searchSessions(Number(q.page) > 0 ? Number(q.page) : 1);
   }
 });
 </script>

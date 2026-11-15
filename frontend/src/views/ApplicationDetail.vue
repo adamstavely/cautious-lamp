@@ -209,16 +209,23 @@
           </UiPanel>
 
           <!-- Session replay -->
-          <UiPanel title="Session replay" heading-tag="h3" description="Recorded user sessions from OpenReplay.">
+          <UiPanel title="Session replay" heading-tag="h3" description="Recorded user sessions from OpenReplay. Sessions are listed per user on the project's page.">
             <template v-if="srProjectId" #actions>
               <UiButton size="sm" icon="video" :to="`/hcd/session-replay/${encodeURIComponent(srProjectId)}/sessions`">View sessions</UiButton>
             </template>
             <p v-if="!srProjectId" class="text-sm text-ink-secondary">
               {{ app.capabilities?.sessionReplay?.enabled ? 'Enabled, but no project has been created yet.' : 'Not enabled for this application.' }}
             </p>
-            <UiSpinner v-else-if="sessions.loading" label="Loading sessions…" />
-            <UiCallout v-else-if="sessions.error" tone="warning">{{ sessions.error }}</UiCallout>
-            <UiStat v-else label="Sessions" icon="video" :value="sessions.data?.total ?? 0" :hint="`In the last ${SESSION_DAYS} days`" />
+            <UiSpinner v-else-if="replayProject.loading" label="Loading the session replay project…" />
+            <UiCallout v-else-if="replayProject.error" tone="warning">{{ replayProject.error }}</UiCallout>
+            <UiStat
+              v-else
+              label="OpenReplay"
+              icon="video"
+              :tone="replayProject.data?.ready ? 'success' : 'warning'"
+              :value="replayProject.data?.ready ? 'Connected' : 'Needs setup'"
+              :hint="replayProject.data?.hint"
+            />
           </UiPanel>
         </div>
       </PageSection>
@@ -258,7 +265,6 @@ const { notice, showNotice, clearNotice } = useNotice();
 const { confirmState, askConfirm } = useConfirmDialog();
 
 const backLink = { to: '/admin/applications', label: 'Applications' };
-const SESSION_DAYS = 30;
 const SOURCE_LABEL = { url: 'URL', codebase: 'Code', 'design-system': 'Design system' };
 const RUN_STATUS = { pending: 'Pending', running: 'Running', completed: 'Completed', failed: 'Failed' };
 const RUN_TONE = { completed: 'success', failed: 'danger', running: 'accent', pending: 'neutral' };
@@ -286,7 +292,7 @@ const statusState = () => reactive({ loading: false, error: null, data: null });
 const scans = statusState();
 const reports = statusState();
 const runs = statusState();
-const sessions = statusState();
+const replayProject = statusState();
 
 const applicationId = computed(() => String(route.params.id ?? ''));
 const base = computed(() => `/api/v1/applications/${encodeURIComponent(applicationId.value)}`);
@@ -380,18 +386,20 @@ const loadStatuses = (gen) => {
     );
   }
   if (srProjectId.value) {
-    const url = `/api/v1/session-replay/projects/${encodeURIComponent(srProjectId.value)}/sessions`;
-    const endDate = new Date();
-    const startDate = new Date(endDate.getTime() - SESSION_DAYS * 24 * 60 * 60 * 1000);
+    // OpenReplay's public API has no project-wide session count, so this shows whether the project can list sessions
+    const url = `/api/v1/session-replay/projects/${encodeURIComponent(srProjectId.value)}`;
     loadStatus(
-      sessions,
+      replayProject,
       gen,
       async () => {
-        const params = { startDate: startDate.toISOString(), endDate: endDate.toISOString(), limit: 1 };
-        const data = (await apiClient.get(url, { params })).data ?? {};
-        return { total: data.total ?? (data.sessions ?? []).length };
+        const project = (await apiClient.get(url)).data ?? {};
+        const missing = [!project.openreplayProjectKey && 'project key', !project.hasApiKey && 'API key'].filter(Boolean);
+        return {
+          ready: missing.length === 0,
+          hint: missing.length ? `Add the ${missing.join(' and ')} in the project's settings` : project.openreplayProjectId ? `OpenReplay project ${project.openreplayProjectId}` : '',
+        };
       },
-      'Sessions could not be loaded.',
+      'The session replay project could not be loaded.',
     );
   }
 };
@@ -422,7 +430,7 @@ const loadApplication = async () => {
   loadError.value = null;
   scanError.value = null;
   app.value = null;
-  for (const state of [scans, reports, runs, sessions]) Object.assign(state, { loading: false, error: null, data: null });
+  for (const state of [scans, reports, runs, replayProject]) Object.assign(state, { loading: false, error: null, data: null });
   loadWorkspaces(gen);
   loadCurrentVersion(gen);
   try {

@@ -1,5 +1,7 @@
 # OpenReplay Heatmaps Implementation Guide
 
+> **Status (built):** the session-replay project links out to OpenReplay's heatmaps with `GET /api/v1/session-replay/projects/:id/heatmaps-url`, which returns the project's heatmap cards in the OpenReplay dashboard (`<dashboard>/<projectId>/metrics`, or `/metrics/<heatmapId>` for one card). The link needs the project's numeric OpenReplay ID. **Not built, and not planned:** a heatmap UI here, or the heatmap API methods and endpoints sketched below. OpenReplay's public API documents no heatmap endpoints, and its dashboard can't be embedded (`X-Frame-Options: DENY`). The rest of this page is the original design exploration, kept for reference.
+
 ## Overview
 
 OpenReplay has built-in heatmap functionality in their "Product Analytics" section. Heatmaps visualize user interactions (clicks, scrolls, mouse movements) aggregated across multiple sessions to show engagement hotspots.

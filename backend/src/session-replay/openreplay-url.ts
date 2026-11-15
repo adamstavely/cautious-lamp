@@ -47,3 +47,53 @@ export async function resolveOpenReplayBaseUrl(candidate?: string | null): Promi
   await assertPublicHttpUrl(requested);
   return requested;
 }
+
+/** The OpenReplay cloud: its API and ingest live on api.openreplay.com, the dashboard on app.openreplay.com */
+const CLOUD_API_HOST = 'api.openreplay.com';
+const CLOUD_DASHBOARD_URL = 'https://app.openreplay.com';
+
+function isCloud(baseUrl: string): boolean {
+  try {
+    return new URL(baseUrl).hostname === CLOUD_API_HOST;
+  } catch {
+    return false;
+  }
+}
+
+function trimSlash(url: string): string {
+  return url.replace(/\/+$/, '');
+}
+
+/**
+ * Root of OpenReplay's public REST API (v2), where `/projects` and
+ * `/:projectKey/...` live: `https://api.openreplay.com/v2/public` on the
+ * cloud, `https://<instance>/v2/api/public` when self-hosted or dedicated.
+ */
+export function openReplayPublicApiRoot(baseUrl: string): string {
+  const base = trimSlash(baseUrl);
+  return isCloud(base) ? `${base}/v2/public` : `${base}/v2/api/public`;
+}
+
+/** Where people sign in to OpenReplay: app.openreplay.com on the cloud, the instance itself when self-hosted */
+export function openReplayDashboardUrl(baseUrl: string): string {
+  return isCloud(baseUrl) ? CLOUD_DASHBOARD_URL : trimSlash(baseUrl);
+}
+
+/** The tracker's ingest point, or undefined on the cloud (the tracker's default) */
+export function openReplayIngestPoint(baseUrl: string): string | undefined {
+  return isCloud(baseUrl) ? undefined : `${trimSlash(baseUrl)}/ingest`;
+}
+
+/** OpenReplay's player for one recorded session (the dashboard route `/:siteId/session/:sessionId`) */
+export function openReplaySessionUrl(baseUrl: string, projectId: number, sessionId: string): string {
+  return `${openReplayDashboardUrl(baseUrl)}/${projectId}/session/${encodeURIComponent(sessionId)}`;
+}
+
+/**
+ * OpenReplay keeps heatmaps as cards: the project's card list (`/:siteId/metrics`),
+ * or one heatmap card when its id is given.
+ */
+export function openReplayHeatmapsUrl(baseUrl: string, projectId: number, heatmapId?: string): string {
+  const cards = `${openReplayDashboardUrl(baseUrl)}/${projectId}/metrics`;
+  return heatmapId ? `${cards}/${encodeURIComponent(heatmapId)}` : cards;
+}

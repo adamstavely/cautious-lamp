@@ -1,5 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
-import { resolveOpenReplayBaseUrl } from './openreplay-url';
+import {
+  openReplayDashboardUrl,
+  openReplayHeatmapsUrl,
+  openReplayIngestPoint,
+  openReplayPublicApiRoot,
+  openReplaySessionUrl,
+  resolveOpenReplayBaseUrl,
+} from './openreplay-url';
 import { SYSTEM_CREATOR, createProjectServices } from '../visual-regression/testing/services';
 
 describe('OpenReplay base URL (SSRF guard)', () => {
@@ -48,16 +55,36 @@ describe('OpenReplay base URL (SSRF guard)', () => {
   it('is checked when a project is saved and again before each request', async () => {
     const { sessionReplay: service, srProjects } = createProjectServices();
     const owner = { workspaceId: null, createdBy: SYSTEM_CREATOR };
-    await expect(service.createProject('team', { name: 'x', openreplayProjectKey: '1', openreplayBaseUrl: 'http://169.254.169.254' }, owner)).rejects.toBeInstanceOf(
+    await expect(service.createProject('team', { name: 'x', openreplayProjectKey: 'abc123', openreplayBaseUrl: 'http://169.254.169.254' }, owner)).rejects.toBeInstanceOf(
       BadRequestException,
     );
-    const project = await service.createProject('team', { name: 'ok', openreplayProjectKey: '1' }, owner);
+    const project = await service.createProject('team', { name: 'ok', openreplayProjectKey: 'abc123' }, owner);
     await expect(service.updateProject(project.id, { openreplayBaseUrl: 'http://127.0.0.1' })).rejects.toBeInstanceOf(BadRequestException);
 
     // A URL that got into storage some other way is still refused before the request is made
     const stored = (await srProjects.get(project.id))!.doc;
     srProjects.forceWrite({ ...stored, openreplayBaseUrl: 'http://127.0.0.1:9200', openreplayApiKey: 'plain-key' });
-    await expect(service.searchSessions(project.id, {})).rejects.toBeInstanceOf(BadRequestException);
-    await expect(service.getSession(project.id, 's-1')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.searchSessions(project.id, { userId: 'u-1' })).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.listSessionEvents(project.id, 's-1', {})).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+describe('OpenReplay addresses', () => {
+  it('splits the cloud into api.openreplay.com and app.openreplay.com', () => {
+    const cloud = 'https://api.openreplay.com';
+    expect(openReplayPublicApiRoot(cloud)).toBe('https://api.openreplay.com/v2/public');
+    expect(openReplayDashboardUrl(cloud)).toBe('https://app.openreplay.com');
+    expect(openReplayIngestPoint(cloud)).toBeUndefined();
+    expect(openReplaySessionUrl(cloud, 42, 'abc')).toBe('https://app.openreplay.com/42/session/abc');
+    expect(openReplayHeatmapsUrl(cloud, 42)).toBe('https://app.openreplay.com/42/metrics');
+    expect(openReplayHeatmapsUrl(cloud, 42, '9')).toBe('https://app.openreplay.com/42/metrics/9');
+  });
+
+  it('keeps a self-hosted instance on one host', () => {
+    const own = 'https://replay.example.com/';
+    expect(openReplayPublicApiRoot(own)).toBe('https://replay.example.com/v2/api/public');
+    expect(openReplayDashboardUrl(own)).toBe('https://replay.example.com');
+    expect(openReplayIngestPoint(own)).toBe('https://replay.example.com/ingest');
+    expect(openReplaySessionUrl(own, 3, 'a/b')).toBe('https://replay.example.com/3/session/a%2Fb');
   });
 });

@@ -163,20 +163,14 @@ pipeline {
 
 ## Integration Code
 
-Add OpenReplay to your test application:
+Use the tracker code that the project generates, so the project's privacy settings apply:
 
-```html
-<script>
-  !function(e,t,s,n,a,o,i){e[a]=e[a]||function(){(e[a].q=e[a].q||[]).push(arguments)},n=t.createElement(s),o=t.getElementsByTagName(s)[0],n.async=1,n.src=i,o.parentNode.insertBefore(n,o)}(window,document,"script",0,"openReplay","https://static.openreplay.com/3.5.0/openreplay.js",{projectKey:"YOUR_PROJECT_KEY"});
-</script>
+```bash
+curl http://localhost:3456/api/v1/session-replay/projects/PROJECT_ID/integration-code \
+  -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
-Or via environment variable:
-
-```javascript
-// In your test setup
-process.env.OPENREPLAY_PROJECT_KEY = 'your-project-key';
-```
+`script` is OpenReplay's loader snippet for the page's `<head>`. `npmInstall` and `npm` are for the `@openreplay/tracker` package. In a test build, read the project key from the environment (`OPENREPLAY_PROJECT_KEY`) rather than committing it. Give the tracker a test user's ID with `setUserID`, so the run's sessions can be found under that user. See [GETTING_STARTED_SESSION_REPLAY.md](./GETTING_STARTED_SESSION_REPLAY.md#install-the-tracker).
 
 ## Configuration
 
