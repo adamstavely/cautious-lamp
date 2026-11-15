@@ -36,7 +36,7 @@
             <UiInput
               id="icon"
               v-model="newItem.icon"
-              label="Icon (Material Symbols name)"
+              label="Icon (Lucide icon name)"
               placeholder="A Lucide icon name, e.g. rectangle-horizontal"
               hint="Use Material Symbols icon names. Leave empty for default."
             />

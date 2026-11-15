@@ -55,7 +55,7 @@ const props = defineProps({
   error: { type: String, default: '' },
   prompt: { type: String, default: 'Drop a file here, or choose one.' },
   buttonLabel: { type: String, default: 'Choose file' },
-  /** Material Symbols name shown above the prompt */
+  /** Lucide icon name (components/ui/icons.js) shown above the prompt */
   icon: { type: String, default: 'cloud-upload' },
 });
 
