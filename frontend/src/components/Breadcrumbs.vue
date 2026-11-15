@@ -107,7 +107,7 @@ const crumbs = computed(() => {
     '/tools/font-stack': 'Font Stack & Subsetting',
     '/design-assets': 'Design Assets',
     '/review': 'Review',
-    '/research': 'HCD',
+    '/research': 'Research',
     '/hcd': 'HCD',
     '/hcd/session-replay': 'Session Replay',
     '/tools': 'Tools',
@@ -120,7 +120,7 @@ const crumbs = computed(() => {
     '/spacing': 'Spacing',
     '/shadows': 'Shadows',
     '/accessibility': 'Accessibility',
-    '/ai': 'AI Overview',
+    '/ai': 'AI',
     '/ai/patterns': 'AI Patterns',
     '/ai/components': 'AI Components',
     '/hcd/principles': 'HCD Principles',
@@ -166,9 +166,10 @@ const crumbs = computed(() => {
         label: 'Tools',
         path: '/tools'
       });
+      // References have no index page of their own: they open from the docs drawer
       breadcrumbs.push({
         label: 'References',
-        path: '/tools/references'
+        path: null
       });
       // Handle the reference page name
       if (index + 2 < parts.length) {

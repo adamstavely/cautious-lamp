@@ -1,193 +1,61 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-16">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <!-- Background texture/grain effect -->
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Artificial Intelligence
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Explore AI-powered design patterns, components, and tools that enhance user experiences and streamline design workflows.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-                    <defs>
-                      <linearGradient id="aiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Neural network representation -->
-                    <circle cx="50" cy="50" r="12" fill="url(#aiGradient)" opacity="0.6"/>
-                    <circle cx="100" cy="50" r="12" fill="url(#aiGradient)" opacity="0.6"/>
-                    <circle cx="150" cy="50" r="12" fill="url(#aiGradient)" opacity="0.6"/>
-                    <circle cx="50" cy="100" r="12" fill="url(#aiGradient)" opacity="0.7"/>
-                    <circle cx="100" cy="100" r="15" fill="url(#aiGradient)" opacity="0.8"/>
-                    <circle cx="150" cy="100" r="12" fill="url(#aiGradient)" opacity="0.7"/>
-                    <circle cx="50" cy="150" r="12" fill="url(#aiGradient)" opacity="0.6"/>
-                    <circle cx="100" cy="150" r="12" fill="url(#aiGradient)" opacity="0.6"/>
-                    <circle cx="150" cy="150" r="12" fill="url(#aiGradient)" opacity="0.6"/>
-                    <!-- Connecting lines -->
-                    <line x1="50" y1="50" x2="100" y2="100" stroke="url(#aiGradient)" stroke-width="2" opacity="0.3"/>
-                    <line x1="100" y1="50" x2="100" y2="100" stroke="url(#aiGradient)" stroke-width="2" opacity="0.3"/>
-                    <line x1="150" y1="50" x2="100" y2="100" stroke="url(#aiGradient)" stroke-width="2" opacity="0.3"/>
-                    <line x1="50" y1="100" x2="100" y2="100" stroke="url(#aiGradient)" stroke-width="2" opacity="0.3"/>
-                    <line x1="150" y1="100" x2="100" y2="100" stroke="url(#aiGradient)" stroke-width="2" opacity="0.3"/>
-                    <line x1="50" y1="150" x2="100" y2="100" stroke="url(#aiGradient)" stroke-width="2" opacity="0.3"/>
-                    <line x1="100" y1="150" x2="100" y2="100" stroke="url(#aiGradient)" stroke-width="2" opacity="0.3"/>
-                    <line x1="150" y1="150" x2="100" y2="100" stroke="url(#aiGradient)" stroke-width="2" opacity="0.3"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+  <PageShell>
+    <PageHero
+      eyebrow="Artificial intelligence"
+      title="AI"
+      lead="How to design AI features people can understand, check and control, and the AI tools built into this design system."
+      spot="ai/artificial-intelligence"
+    />
 
-        <!-- Browse AI Content Section -->
-        <div class="max-w-7xl mx-auto mb-16">
-          <div class="flex items-center justify-between mb-8">
-            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Browse AI Content
-            </h2>
-          </div>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- AI Overview Card -->
-            <router-link 
-              to="/ai" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="brain" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                AI Overview
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Introduction to AI-powered design capabilities and how they enhance the design system.
-              </p>
-            </router-link>
-
-            <!-- AI Patterns Card -->
-            <router-link 
-              to="/ai/patterns" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="sparkles" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                AI Patterns
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Design patterns that leverage AI to create intelligent and adaptive user experiences.
-              </p>
-            </router-link>
-
-            <!-- AI Components Card -->
-            <router-link 
-              to="/ai/components" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="bot" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                AI Components
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Reusable AI-powered components for chatbots, recommendations, and intelligent interfaces.
-              </p>
-            </router-link>
-          </div>
-        </div>
-        </div>
+    <PageSection title="Design for AI" description="Patterns, components and tokens for interfaces that include AI.">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <UiCard v-for="page in designFor" :key="page.to" :to="page.to" :title="page.title" :spot="page.spot" compact>{{ page.body }}</UiCard>
       </div>
-    </div>
-  </div>
+    </PageSection>
+
+    <PageSection title="AI guidelines" description="Guidance for specific parts of an AI experience." divided>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
+        <UiLinkRow v-for="guide in guidelines" :key="guide.to" :to="guide.to" :title="guide.title" :spot="guide.spot" />
+      </div>
+    </PageSection>
+
+    <PageSection title="AI in the design system" description="Tools here that use Claude through the API server." divided>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <UiCard v-for="tool in tools" :key="tool.to" :to="tool.to" :title="tool.title" :spot="tool.spot" compact>{{ tool.body }}</UiCard>
+      </div>
+      <UiCallout class="mt-6" title="Needs an Anthropic key on the server" icon="info">
+        These tools only work once the API server has an Anthropic API key. Until then they say they aren't set up rather than guess. The Eero
+        assistant also needs the ai-assistant feature flag turned on; it then opens from the button in the corner of every page.
+      </UiCallout>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDrawer } from '../composables/useDrawer.js';
+import { PageHero, PageSection, PageShell, UiCallout, UiCard, UiLinkRow } from '../components/ui';
 
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(false);
+const designFor = [
+  { title: 'AI patterns', to: '/ai/patterns', spot: 'ai/ai-patterns', body: 'Patterns that keep people informed, in control and able to check what the system tells them.' },
+  { title: 'AI components', to: '/ai/components', spot: 'ai/ai-components', body: 'The building blocks of an AI interface and how to build them from the design system.' },
+  { title: 'AI tokens', to: '/tokens/ai-builder', spot: 'ai/ai-token-builder', body: 'Tokens for agent identity, confidence, explainability and other AI states.' },
+];
 
+const guidelines = [
+  ['designing-for-generative-ai', 'Designing for generative AI'],
+  ['designing-for-agentic-experiences', 'Designing for agentic experiences'],
+  ['designing-for-mcp-ui', 'Designing for MCP UI'],
+  ['agent-roles-mental-models', 'Agent roles and mental models'],
+  ['human-machine-teaming', 'Human-machine teaming'],
+  ['identity-persona', 'Identity and persona'],
+  ['memory-personalization', 'Memory and personalization'],
+  ['content-microcopy', 'Content and microcopy'],
+  ['feedback-observability', 'Feedback and observability'],
+  ['fallback-error-states', 'Fallback and error states'],
+  ['safe-exploration', 'Safe exploration'],
+].map(([slug, title]) => ({ title, to: `/guidelines/ai/${slug}`, spot: `ai/${slug}` }));
 
-
-
-
-onMounted(() => {
-  // Auto-open drawer if navigating from sidebar
-  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-    drawerOpen.value = true;
-    sessionStorage.removeItem('openDrawerOnLoad');
-  }
-  
-  isDarkMode.value = document.documentElement.classList.contains('dark');
-  
-  // Watch for dark mode changes
-  const observer = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-});
+const tools = [
+  { title: 'AI suggestions', to: '/ai-suggestions', spot: 'ai/ai-components', body: 'Paste component code and Claude reviews it against this design system: components, tokens and accessibility.' },
+  { title: 'Alt text generator', to: '/tools/alt-text-generator', spot: 'tools/alt-text-generator', body: 'Upload an image and Claude suggests alt text you can edit before you use it.' },
+];
 </script>
-
-<style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-</style>
-

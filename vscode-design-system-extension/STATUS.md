@@ -1,132 +1,30 @@
-# VS Code Design System Extension - Implementation Status
+# VS Code Design System Extension: status
 
-## ✅ Fully Implemented
+Version 1.0.0 is not published to the Marketplace. Build it from source and install the `.vsix` (see the [README](./README.md)).
 
-The VS Code extension is now fully implemented with all core features.
+## Verified
 
-## Features
+CI (`vscode-extension` job) runs on every pull request, from a clean checkout:
 
-### 🎯 Autocomplete
-- ✅ Token autocomplete (`tokens.`)
-- ✅ Component autocomplete (JSX/Vue templates)
-- ✅ Category-based autocomplete (`color.`, `spacing.`, etc.)
+- `npm ci`, `npm run compile` and `npm run package`, which produces `design-system-extension.vsix` (kept as a build artifact).
+- `npm test`: unit tests (Node's test runner) for the logic behind each feature:
+  - Hover reads dotted and bracketed token names whole (`tokens.color.primary`, `tokens.spacing["2xl"]`, `var(--color-primary)`), resolves aliases, and shows a swatch that is a valid markdown image.
+  - Hard-coded colours are found with their `#`, and matched to tokens in any case or short form.
+  - Completions after `color.`, `spacing.` and `tokens.<path>.` match on token names, and write accessors that are valid JS.
+  - Spacing in px or rem matches the rem spacing tokens; font sizes aren't mistaken for spacing.
+  - Hard-coded value warnings: what is flagged, in CSS, JS/TS and Vue, and what isn't (comments, bare code, non-spacing properties).
+  - Replace-with-token edits for CSS, JS/TS, JSX, Vue and template literals, with and without `tokenImportPath`.
+  - The API client: 4xx answers aren't retried, timeouts and 5xx are retried twice, the timeout setting is used, and no `Authorization` header is sent without a key.
+  - Open Component Documentation URLs, snippet files, and that snippets follow `enableSnippets`.
 
-### 💡 Hover Information
-- ✅ Token details (value, category, description)
-- ✅ Component documentation (props, descriptions)
-- ✅ Color previews for color tokens
-- ✅ Hardcoded value warnings
+## Not verified
 
-### 🎨 Visual Features
-- ✅ Color decorations (inline color previews)
-- ✅ Color information provider
+- No integration tests run the extension inside VS Code (`@vscode/test-electron`). The providers and commands that wire the tested logic to the editor are checked by the compiler only.
+- It has not been tried against a deployed backend, only against the API's response shapes in `backend/src/design-system`.
 
-### ⚡ Code Snippets
-- ✅ Component snippets (`ds-button`, `ds-input`, `ds-card`)
-- ✅ Token snippets (`ds-color`, `ds-spacing`, `ds-typography`)
-- ✅ Framework support (Vue, React, JS, TS)
+## Known limits
 
-### 🔧 Quick Actions
-- ✅ Replace with token (right-click)
-- ✅ Insert component (command palette)
-- ✅ Insert token (command palette)
-- ✅ Open component docs
-- ✅ Refresh cache
-
-## Files Structure
-
-```
-vscode-design-system-extension/
-├── src/
-│   ├── extension.ts          # Main extension entry point
-│   ├── api.ts                # Design System API client
-│   ├── completion.ts         # Autocomplete provider
-│   ├── hover.ts             # Hover information provider
-│   ├── colorDecoration.ts   # Color preview provider
-│   └── codeActions.ts       # Quick fix actions
-├── snippets/
-│   ├── vue.json             # Vue snippets
-│   ├── react.json           # React snippets
-│   ├── javascript.json      # JavaScript snippets
-│   └── typescript.json      # TypeScript snippets
-├── package.json             # Extension manifest
-├── tsconfig.json            # TypeScript config
-└── README.md               # Documentation
-```
-
-## Installation
-
-### Development Setup
-
-```bash
-cd vscode-design-system-extension
-npm install
-npm run compile
-```
-
-### Package Extension
-
-```bash
-npm install -g @vscode/vsce
-vsce package
-```
-
-### Install in VS Code
-
-1. Open VS Code
-2. Extensions → "..." → "Install from VSIX..."
-3. Select the generated `.vsix` file
-
-## Configuration
-
-Add to VS Code `settings.json`:
-
-```json
-{
-  "designSystem.apiUrl": "http://localhost:3000/api/v1",
-  "designSystem.apiKey": "test-api-key-123",
-  "designSystem.enableAutocomplete": true,
-  "designSystem.enableHover": true,
-  "designSystem.enableColorPreview": true,
-  "designSystem.enableSnippets": true
-}
-```
-
-## Usage Examples
-
-### Autocomplete
-```javascript
-const color = tokens.color.primary; // ← Shows all color tokens
-const spacing = tokens.spacing.md;   // ← Shows all spacing tokens
-```
-
-### Hover
-```javascript
-tokens.color.primary // ← Hover to see value, category, description
-<Button />           // ← Hover to see component props
-```
-
-### Snippets
-- Type `ds-button` → Tab → Button component snippet
-- Type `ds-color` → Tab → Color token snippet
-
-### Quick Actions
-- Select `#3b82f6` → Right-click → "Replace with Design Token"
-
-## Next Steps
-
-1. ✅ Extension is ready to use
-2. ✅ Can be packaged and distributed
-3. ✅ Can be published to VS Code Marketplace (optional)
-
-## Integration
-
-Works seamlessly with:
-- ✅ ESLint Plugin (complements linting with productivity features)
-- ✅ Design System Backend API
-- ✅ VS Code ESLint Extension
-
----
-
-**Status**: ✅ **Fully Implemented and Ready for Use**
-
+- Colour decorations cover six-digit hex colours only.
+- Hard-coded value warnings cover hex colours and spacing lengths; other token types (font sizes, shadows) aren't flagged.
+- The app has a page for only a few components, so Open Component Documentation usually opens the component library.
+- The `enable*` switches other than `enableSnippets` apply after a window reload.

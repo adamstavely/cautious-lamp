@@ -16,7 +16,11 @@ export interface TokenReplacement {
 }
 
 export interface TokenEditOptions {
-  /** Module the `tokens` object is imported from when a JS/TS file has no `tokens` binding yet */
+  /**
+   * Module the `tokens` object is imported from when a JS/TS file has no
+   * `tokens` binding yet. Empty means don't add an import: such files get
+   * `var(--token)` inside the string instead.
+   */
   importPath: string;
 }
 
@@ -139,14 +143,19 @@ function isJsxAttributeValue(text: string, quoteIndex: number): boolean {
 const TOKENS_BINDING =
   /\bimport\s+(?:type\s+)?(?:tokens\b|\*\s+as\s+tokens\b|\{[^}]*\btokens\b[^}]*\}|[\w$]+\s*,\s*\{[^}]*\btokens\b[^}]*\})|\b(?:const|let|var)\s+(?:tokens\b|\{[^}]*\btokens\b[^}]*\})\s*=/;
 
-/** Edit that adds `import { tokens } from '…'` after the existing imports, or undefined if `tokens` is already bound */
-function importEdit(text: string, offset: number, languageId: string, importPath: string): TextEdit | undefined {
+/** The JS code around `offset`: the whole file, or its `<script>` block */
+function scriptCode(text: string, offset: number, languageId: string): { from: number; code: string } {
   const from = codeStart(text, offset, languageId);
   const end = JS_LANGUAGES.has(languageId) ? text.length : (() => {
     const close = text.slice(from).search(/<\/script>/i);
     return close === -1 ? text.length : from + close;
   })();
-  const code = text.slice(from, end);
+  return { from, code: text.slice(from, end) };
+}
+
+/** Edit that adds `import { tokens } from '…'` after the existing imports, or undefined if `tokens` is already bound */
+function importEdit(text: string, offset: number, languageId: string, importPath: string): TextEdit | undefined {
+  const { from, code } = scriptCode(text, offset, languageId);
   if (TOKENS_BINDING.test(code)) return undefined;
 
   const statement = `import { tokens } from ${JSON.stringify(importPath).replace(/^"|"$/g, "'")};`;
@@ -174,6 +183,8 @@ function importEdit(text: string, offset: number, languageId: string, importPath
  * - Part of a template literal: `${tokens.x}` (plus the import).
  * - Part of a longer '…' / "…" string (e.g. `'1px solid #fff'`): `var(--token)`,
  *   which stays valid CSS inside the string.
+ * - Any string when there's no `importPath` and the file doesn't bind `tokens`:
+ *   `var(--token)` inside the string.
  * Returns undefined where no edit makes sense (a comment, bare code).
  */
 export function computeTokenReplacement(
@@ -199,6 +210,10 @@ export function computeTokenReplacement(
   };
 
   if (state === "'" || state === '"' || state === '`') {
+    if (!options.importPath && !TOKENS_BINDING.test(scriptCode(text, start, languageId).code)) {
+      // No `tokens` to reference and none to import: keep the string, as a CSS variable
+      return { edits: [{ start, end, newText: cssReference }], reference: cssReference };
+    }
     const quote = state;
     const wholeLiteral = text[start - 1] === quote && text[end] === quote;
     if (wholeLiteral) {

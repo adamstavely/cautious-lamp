@@ -683,6 +683,10 @@ const router = createRouter({
       component: () => import('./views/ResearchInsights.vue'),
     },
     {
+      path: '/hcd',
+      component: () => import('./views/HcdHub.vue'),
+    },
+    {
       path: '/hcd/principles',
       component: () => import('./views/HcdPrinciples.vue'),
     },

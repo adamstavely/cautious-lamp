@@ -10,7 +10,12 @@
   },
   "include": [
     "src/tokenEdit.ts",
+    "src/tokenLookup.ts",
     "src/ttlCache.ts",
-    "test"
+    "src/api.ts",
+    "src/docsUrl.ts",
+    "src/snippetData.ts",
+    "test",
+    "package.json"
   ]
 }

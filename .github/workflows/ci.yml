@@ -36,6 +36,8 @@ jobs:
       - run: npm run check:icons --workspace frontend
       - run: npm test --workspace frontend
       - run: npm run build --workspace frontend
+      # The VitePress guidelines site: fails on dead links and missing images
+      - run: npm run docs:build --workspace frontend
 
   packages:
     runs-on: ubuntu-latest
@@ -66,8 +68,30 @@ jobs:
         working-directory: breakpoint-overlay-standalone
       - run: npm run build && npm run test:pack
         working-directory: breakpoint-overlay-standalone
-      - run: npm test
+
+  vscode-extension:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
         working-directory: vscode-design-system-extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vscode-design-system-extension/package-lock.json
+      # Not a workspace: it has its own lockfile and dependencies
+      - run: npm ci
+      - run: npm run compile
+      - run: npm test
+      - run: npm run package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: design-system-extension
+          path: vscode-design-system-extension/design-system-extension.vsix
+          if-no-files-found: error
+
   backend-image:
     runs-on: ubuntu-latest
     steps:
