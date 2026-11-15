@@ -56,6 +56,14 @@ const props = defineProps({
   }
 });
 
+// Title-case a URL slug, keeping short joining words lower case ("voice-and-tone" → "Voice and Tone")
+const MINOR_WORDS = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'vs', 'with']);
+const slugLabel = (slug) =>
+  slug
+    .split('-')
+    .map((word, i) => (i > 0 && MINOR_WORDS.has(word) ? word : word.charAt(0).toUpperCase() + word.slice(1)))
+    .join(' ');
+
 const route = useRoute();
 const router = useRouter();
 const crumbs = computed(() => {
@@ -161,7 +169,7 @@ const crumbs = computed(() => {
       // Handle the reference page name
       if (index + 2 < parts.length) {
         const refPage = parts[index + 2];
-        const refLabel = refPage.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        const refLabel = slugLabel(refPage);
         breadcrumbs.push({
           label: refLabel,
           path: null // Current page, not clickable
@@ -184,7 +192,7 @@ const crumbs = computed(() => {
       if (!docLabel) {
         // Capitalize each word (split by hyphens, capitalize first letter of each)
         const lastPart = parts[parts.length - 1];
-        docLabel = lastPart.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        docLabel = slugLabel(lastPart);
       }
       breadcrumbs.push({
         label: docLabel,
@@ -209,7 +217,7 @@ const crumbs = computed(() => {
         let docLabel = pathLabels[`/guidelines/patterns${docPath}`];
         if (!docLabel) {
           const lastPart = parts[parts.length - 1];
-          docLabel = lastPart.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+          docLabel = slugLabel(lastPart);
         }
         breadcrumbs.push({
           label: docLabel,
@@ -229,7 +237,7 @@ const crumbs = computed(() => {
       if (!docLabel) {
         // Capitalize each word (split by hyphens, capitalize first letter of each)
         const lastPart = parts[parts.length - 1];
-        docLabel = lastPart.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        docLabel = slugLabel(lastPart);
       }
       breadcrumbs.push({
         label: docLabel,
@@ -294,8 +302,7 @@ const crumbs = computed(() => {
     // Generate label - capitalize each word if not in pathLabels
     let label = pathLabels[currentPath];
     if (!label) {
-      // Capitalize each word (split by hyphens, capitalize first letter of each)
-      label = part.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      label = slugLabel(part);
     }
     
     breadcrumbs.push({

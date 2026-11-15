@@ -148,6 +148,7 @@
     "src/views/VisualRegression.vue",
     "src/views/VisualRegressionProject.vue",
     "src/views/VisualRegressionResults.vue",
+    "src/views/VoiceAndTone.vue",
     "src/views/Wizard.vue",
     "src/views/WorkspaceDetail.vue",
     "src/views/WorkspaceManagement.vue"
