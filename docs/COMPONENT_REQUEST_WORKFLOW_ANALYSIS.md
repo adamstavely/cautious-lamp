@@ -66,7 +66,7 @@ Approval has three stages. Without `stage`, the next missing one is approved: de
 ## Roadmap and components
 
 - **Roadmap.** When a request becomes `approved` it gets a roadmap item once: same title, the description (or use case), category `feature`, priority mapped (`critical` becomes `high`), status `planned`. The item id is stored in `metadata.roadmapItemId`. If creating the item fails, the approval stands and the failure is logged.
-- **Components.** Creating a component (`POST /api/v1/components`) links it to a request: the one named by `linkedRequestId`, or else the best title match among unlinked `approved` and `in-progress` requests (highest priority, then newest). An `approved` request moves to `in-progress`, an `in-progress` one to `completed`. Maintainers can also promote, link and unlink by hand.
+- **Components.** Creating a component (`POST /api/v1/components` or `POST /api/v1/component-scaffolding/create`) links it to a request as its creator: the one named by `linkedRequestId`, or else the best title match among unlinked `approved` and `in-progress` requests the creator may fulfil (highest priority, then newest). A creator with `roadmap:edit` may fulfil any such request; anyone else only one assigned to them. Naming a request you may not fulfil is refused with 403 and no component is created; a missing request is 404 and one not yet approved is 400. An `approved` request moves to `in-progress`, an `in-progress` one to `completed`, recorded under the creator. Maintainers can also promote, link and unlink by hand.
 
 ## Notifications
 

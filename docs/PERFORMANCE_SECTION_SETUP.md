@@ -4,7 +4,7 @@ Component pages show a performance section with the component's source sizes, an
 
 ## Where the numbers come from
 
-`POST /api/v1/performance/bundle-analysis/analyze` with `{ componentId?, includeDependencies? }` measures one component (`backend/src/design-system/bundle-analysis.service.ts`); without `componentId` it returns every component, as `GET /api/v1/performance/bundle-analysis` does. Both need a signed-in user or API key.
+`POST /api/v1/performance/bundle-analysis/analyze` with `{ componentId?, includeDependencies? }` measures one component (`backend/src/design-system/bundle-analysis.service.ts`); without `componentId` it returns every component, as `GET /api/v1/performance/bundle-analysis` does. Both need a signed-in user or API key, and only measure components the caller can read: a hidden workspace component is not listed, counted or measured as a dependency (it is reported under `missingDependencies`), and asking for one by id is a 404 like a missing one.
 
 The sizes are measured from the component code stored in Elasticsearch (`design-system-components`), not estimated and not from a production build (no minification or tree shaking):
 

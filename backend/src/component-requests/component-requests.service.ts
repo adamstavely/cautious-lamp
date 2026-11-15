@@ -32,9 +32,6 @@ import {
 
 const MAX_WRITE_ATTEMPTS = 5;
 
-/** The actor recorded for automatic transitions (a component was created or linked) */
-const SYSTEM: RequestActor = { id: 'system', name: 'the design system' };
-
 /** Which statuses each status may move to */
 const TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {
   submitted: ['under-review', 'rejected'],
@@ -99,12 +96,15 @@ export class ComponentRequestsService implements OnModuleInit {
     private readonly users: UsersService,
   ) {}
 
-  /** Links new components to the requests they fulfil. The only place this callback is registered. */
+  /** Links new components to the requests they fulfil. The only place the linker is registered. */
   onModuleInit(): void {
-    this.designSystem.setComponentCreatedCallback((componentId, componentName, linkedRequestId) => {
-      this.onComponentCreated(componentId, componentName, linkedRequestId).catch((error) => {
-        this.logger.warn(`Linking component ${componentId} to a request failed: ${(error as Error)?.message}`);
-      });
+    this.designSystem.setComponentRequestLinker({
+      authorize: (principal, requestId) => this.authorizeFulfilment(principal, requestId),
+      componentCreated: (principal, componentId, componentName, linkedRequestId) => {
+        this.onComponentCreated(principal, componentId, componentName, linkedRequestId).catch((error) => {
+          this.logger.warn(`Linking component ${componentId} to a request failed: ${(error as Error)?.message}`);
+        });
+      },
     });
   }
 
@@ -323,22 +323,54 @@ export class ComponentRequestsService implements OnModuleInit {
   // ---------- Automatic linking ----------
 
   /**
-   * Called when a component is created: links it to the request it names, or
-   * else to the best-matching unlinked approved or in-progress request. An
-   * approved request moves to in-progress, an in-progress one to completed.
+   * Whether creating a component may fulfil this request on the principal's
+   * behalf: triagers (`roadmap:edit`) may fulfil any approved or in-progress
+   * request, anyone else only one assigned to them.
    */
-  async onComponentCreated(componentId: string, componentName: string, linkedRequestId?: string): Promise<void> {
+  private mayFulfil(principal: AuthPrincipal, request: ComponentRequest): boolean {
+    if (request.status !== 'approved' && request.status !== 'in-progress') return false;
+    return hasPermission(principal, Permission.ROADMAP_EDIT) || request.assignedTo === principal.id;
+  }
+
+  /** Throws unless the principal may fulfil the request by creating a component for it */
+  async authorizeFulfilment(principal: AuthPrincipal, requestId: string): Promise<void> {
+    const request = (await this.store.get(requestId))?.doc;
+    if (!request) throw new NotFoundException(`Component request ${requestId} not found`);
+    if (request.status !== 'approved' && request.status !== 'in-progress') {
+      throw new BadRequestException(`A ${request.status} request can't be fulfilled; approve it first`);
+    }
+    if (!this.mayFulfil(principal, request)) {
+      throw new ForbiddenException('Only a triager or the assignee can fulfil this request');
+    }
+  }
+
+  /**
+   * Called when a component is created: links it to the request it names, or
+   * else to the best-matching unlinked request the creator may fulfil. An
+   * approved request moves to in-progress, an in-progress one to completed.
+   * The creator is recorded as the actor, and authority is checked again
+   * against the stored request.
+   */
+  async onComponentCreated(principal: AuthPrincipal, componentId: string, componentName: string, linkedRequestId?: string): Promise<void> {
     let target: ComponentRequest | undefined;
-    if (linkedRequestId) target = (await this.store.get(linkedRequestId))?.doc;
-    if (!target) target = this.bestMatch(componentName, await this.store.findAny([{ status: 'approved' }, { status: 'in-progress' }]));
+    if (linkedRequestId) {
+      target = (await this.store.get(linkedRequestId))?.doc;
+    } else {
+      const open = await this.store.findAny([{ status: 'approved' }, { status: 'in-progress' }]);
+      target = this.bestMatch(componentName, open.filter((request) => this.mayFulfil(principal, request)));
+    }
     if (!target) return;
 
-    await this.changeStatus(target.id, SYSTEM, (request) => {
+    const actor = actorOf(principal);
+    await this.changeStatus(target.id, actor, (request) => {
+      if (!this.mayFulfil(principal, request)) {
+        throw new ForbiddenException(`${actor.name} can no longer fulfil request ${request.id}`);
+      }
       request.componentId = componentId;
       if (request.status === 'approved') {
-        this.applyTransition(request, 'in-progress', SYSTEM.id, `Component created: ${componentId}`);
-      } else if (request.status === 'in-progress') {
-        this.applyTransition(request, 'completed', SYSTEM.id, `Component created: ${componentId}`);
+        this.applyTransition(request, 'in-progress', principal.id, `Component created: ${componentId}`);
+      } else {
+        this.applyTransition(request, 'completed', principal.id, `Component created: ${componentId}`);
       }
     });
   }

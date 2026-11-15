@@ -163,18 +163,19 @@ export class DesignSystemController {
     return this.designSystemService.deletePerformanceBudget(id);
   }
 
+  // Only the components the caller can read are measured, counted or followed as dependencies
   @Get('performance/bundle-analysis')
-  async getBundleAnalysis() {
-    await this.designSystemService.ready();
-    return this.designSystemService.getBundleAnalysis();
+  async getBundleAnalysis(@Principal() principal: AuthPrincipal) {
+    return this.designSystemService.getBundleAnalysis(await this.componentAccess.list(principal));
   }
 
   @Post('performance/bundle-analysis/analyze')
   async analyzeBundle(
+    @Principal() principal: AuthPrincipal,
     @Body(strictBody()) body: AnalyzeBundleDto,
   ) {
-    await this.designSystemService.ready();
-    return this.designSystemService.analyzeBundle(body.componentId, body.includeDependencies);
+    const visible = await this.componentAccess.list(principal);
+    return this.designSystemService.analyzeBundle(body.componentId, body.includeDependencies, visible);
   }
 
   @Get('roadmap')
@@ -480,7 +481,7 @@ export class DesignSystemController {
     if (data.workspaceId !== undefined) {
       await this.workspaceAccess.require(principal, data.workspaceId, 'editor');
     }
-    const component = await this.designSystemService.createComponent({ ...data, isGlobal: false });
+    const component = await this.designSystemService.createComponent({ ...data, isGlobal: false }, principal);
     await this.changes.record(
       {
         ...componentChange(component),
