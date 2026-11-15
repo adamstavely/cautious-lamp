@@ -1,207 +1,84 @@
 # VS Code Design System Extension
 
-VS Code extension for Design System integration - autocomplete, hover info, snippets, and more.
+Design tokens and components from the Design System API in VS Code: completions, hover details, hard-coded value warnings with a quick fix, snippets and colour previews.
 
 ## Features
 
-### 🎯 Autocomplete
-- **Token Autocomplete**: Type `tokens.` to see all design tokens
-- **Component Autocomplete**: Type component names in JSX/Vue templates
-- **Category-based**: Autocomplete for `color.`, `spacing.`, `typography.`, etc.
+### Completions
+- **Token paths**: after `tokens.` (or `tokens.color.`) you get every token under that path. A bare `color.`, `spacing.` or any other first segment of a token name works too.
+- Names that aren't JS identifiers are written as accessors, so `spacing.2xl` completes to `tokens.spacing["2xl"]`.
+- **Components**: after `components.` or `<` plus a capital letter in JSX/Vue templates.
 
-### 💡 Hover Information
-- **Token Details**: Hover over tokens to see values, categories, and descriptions
-- **Component Docs**: Hover over components to see props, descriptions, and usage
-- **Color Preview**: Visual color previews for color tokens
-- **Hardcoded Value Warnings**: Hover over hardcoded colors to see suggestions
+### Hover
+- **Tokens**: hover anywhere in `tokens.color.primary`, `tokens.color.primary["500"]` or `var(--color-primary)` for the value, what an alias resolves to, category, type, description and a colour swatch.
+- **Components**: props, types, defaults and description.
+- **Hard-coded colours**: hover a hex colour for a swatch and the token that has the same value, if there is one.
 
-### 🎨 Visual Features
-- **Color Decorations**: Inline color previews for hex colors
-- **Token Values**: See token values in hover tooltips
+### Hard-coded value warnings
+Colours (`#4f46e5`, `#FFF`) and spacing lengths (`16px`, `1rem` in `margin`, `padding`, `gap`, `inset` and `top`/`right`/`bottom`/`left`) that equal a token's value get a warning in the Problems panel. Spacing tokens are stored in rem, so `16px` matches the `1rem` token. Values in comments and bare code aren't flagged.
 
-### ⚡ Code Snippets
-- **Component Snippets**: `ds-button`, `ds-input`, `ds-card`, etc.
-- **Token Snippets**: `ds-color`, `ds-spacing`, `ds-typography`
-- **Framework Support**: Vue, React, JavaScript, TypeScript
+### Replace with token
+The quick fix on a warning (or "Replace with Design Token" on a selected value) rewrites it for the file type:
+- CSS, SCSS, Less, `<style>` blocks and markup: `var(--color-primary)`.
+- A whole JS/TS string literal: `tokens.color.primary` (with `import { tokens } from '<tokenImportPath>'` added when needed) if `designSystem.tokenImportPath` is set; otherwise `'var(--color-primary)'` inside the string.
 
-### 🔧 Quick Actions
-- **Replace with Token**: Right-click hardcoded values → Replace with token
-- **Insert Component**: Command palette → Insert Component
-- **Insert Token**: Command palette → Insert Token
-- **Open Component Docs**: Jump to component documentation
-- **Refresh Cache**: Manually refresh design system data
-- **Show Output**: View extension logs and debug information
+### Snippets
+Components (`ds-button`, `ds-input`, `ds-card`) in Vue and React files; tokens (`ds-color`, `ds-spacing`, `ds-typography`) in JavaScript and TypeScript. `designSystem.enableSnippets` turns them off without a reload.
 
-## Installation
+### Commands
+- `Design System: Insert Component`: inserts a component's code from the API.
+- `Design System: Insert Token`: inserts a token accessor.
+- `Design System: Open Component Documentation`: opens the component's page in the app (`/components/buttons`, `/components/color-picker`), or the component library (`/components`) for components without their own page.
+- `Design System: Replace with Design Token`
+- `Design System: Refresh Design System Cache`
+- `Design System: Show Output`: the extension's log.
 
-### From Source
-
-```bash
-cd vscode-design-system-extension
-npm install
-npm run compile
-```
-
-### Package Extension
-
-```bash
-npm install -g @vscode/vsce
-vsce package
-```
-
-Then install the `.vsix` file in VS Code:
-1. Open VS Code
-2. Go to Extensions
-3. Click "..." → "Install from VSIX..."
-4. Select the `.vsix` file
+### Colour decorations
+Inline swatches and a colour picker for six-digit hex colours.
 
 ## Configuration
 
-Add to your VS Code `settings.json`:
+| Setting | Default | |
+| --- | --- | --- |
+| `designSystem.apiUrl` | `http://localhost:3000/api/v1` | The backend's API base URL |
+| `designSystem.apiKey` | empty | Sent as `Authorization: Bearer <key>`. Every API route needs one; see [API authentication](../docs/API_AUTHENTICATION.md) |
+| `designSystem.requestTimeout` | `10000` | Milliseconds. Timeouts, dropped connections and 5xx answers are retried twice; 4xx answers (a bad key, a missing route) fail at once |
+| `designSystem.docsBaseUrl` | `http://localhost:5174` | The Design System app, for Open Component Documentation |
+| `designSystem.tokenImportPath` | empty | Module that exports `tokens`, for quick fixes in JS/TS strings (see above) |
+| `designSystem.enableAutocomplete` | `true` | |
+| `designSystem.enableHover` | `true` | |
+| `designSystem.enableColorPreview` | `true` | |
+| `designSystem.enableDiagnostics` | `true` | Hard-coded value warnings |
+| `designSystem.enableSnippets` | `true` | |
 
-```json
-{
-  "designSystem.apiUrl": "http://localhost:3000/api/v1",
-  "designSystem.apiKey": "test-api-key-123",
-  "designSystem.enableAutocomplete": true,
-  "designSystem.enableHover": true,
-  "designSystem.enableColorPreview": true,
-  "designSystem.enableSnippets": true
-}
+Changing the API URL, key or timeout applies at once. The `enable*` switches for completions, hover, colour previews and warnings apply after a window reload.
+
+## Build and install
+
+```bash
+cd vscode-design-system-extension
+npm ci
+npm run compile
+npm test
+npm run package   # writes design-system-extension.vsix
 ```
 
-## Usage
-
-### Autocomplete
-
-Type `tokens.` to see all available tokens:
-```javascript
-const color = tokens.color.primary; // ← Autocomplete shows all color tokens
-const spacing = tokens.spacing.md;   // ← Autocomplete shows all spacing tokens
-```
-
-### Hover Information
-
-Hover over tokens or components to see details:
-```javascript
-tokens.color.primary // ← Hover to see value, category, description
-<Button />           // ← Hover to see component props and docs
-```
-
-### Code Snippets
-
-Type snippet prefix and press Tab:
-- `ds-button` → Button component snippet
-- `ds-input` → Input component snippet
-- `ds-color` → Color token snippet
-- `ds-spacing` → Spacing token snippet
-
-### Quick Actions
-
-1. **Replace Hardcoded Values**:
-   - Select a hardcoded color: `#3b82f6`
-   - Right-click → "Replace with Design Token"
-   - Or use Command Palette: `Design System: Replace with Design Token`
-
-2. **Insert Component**:
-   - Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`)
-   - Type: "Design System: Insert Component"
-   - Select component from list
-
-3. **Insert Token**:
-   - Command Palette
-   - Type: "Design System: Insert Token"
-   - Select token from list
-
-4. **View Logs**:
-   - Command Palette
-   - Type: "Design System: Show Output"
-   - View extension logs and debug information
-
-## Commands
-
-- `designSystem.insertComponent` - Insert a component snippet
-- `designSystem.insertToken` - Insert a token reference
-- `designSystem.openComponentDocs` - Open component documentation
-- `designSystem.replaceWithToken` - Replace selected value with token
-- `designSystem.refreshCache` - Refresh design system cache
-- `designSystem.showOutput` - Show extension output channel
-
-## Supported Languages
-
-- JavaScript
-- TypeScript
-- Vue
-- React (JSX/TSX)
-- CSS/SCSS (for color previews)
+Install the `.vsix` from VS Code's Extensions view: "..." → "Install from VSIX...". CI builds the same `.vsix` on every pull request and keeps it as the `design-system-extension` artifact.
 
 ## Troubleshooting
 
-### Extension not working?
-1. Check output channel: `Design System: Show Output`
-2. Verify API URL is correct
-3. Check API key is valid
-4. Ensure backend is running
+Run `Design System: Show Output` first: every API call and error is logged there.
 
-### No autocomplete?
-1. Check `designSystem.enableAutocomplete` is true
-2. Verify API connection
-3. Check output channel for errors
+- **Nothing completes or hovers**: check `designSystem.apiKey` is set (the log says "Unauthorized" without one) and the backend is running at `designSystem.apiUrl`.
+- **Stale tokens**: data is cached for 5 minutes. Run `Design System: Refresh Design System Cache`. If the API is down, the last data loaded is kept.
 
-### API connection errors?
-1. Verify backend is running
-2. Check API URL format (no trailing slash)
-3. Verify API key is correct
-4. Check firewall/network settings
+## See also
 
-### See logs
-Use `Design System: Show Output` command to view detailed logs and error messages.
-
-## Architecture
-
-```
-VS Code Extension
-  ↓ API Calls (with retry & timeout)
-Design System Backend API
-  ↓ Returns Components/Tokens
-Extension Providers
-  ↓ Provides Features
-VS Code Editor
-```
-
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Compile TypeScript
-npm run compile
-
-# Watch for changes
-npm run watch
-
-# Package extension
-npm run package
-```
-
-## Production Features
-
-- ✅ Comprehensive error handling
-- ✅ Retry logic with exponential backoff
-- ✅ Request timeouts (10 seconds)
-- ✅ Caching with fallback
-- ✅ Detailed logging
-- ✅ User-friendly error messages
-- ✅ Graceful degradation
-
-## See Also
-
-- [ESLint Plugin](../eslint-plugin-design-system/README.md)
-- [Design System API](../../backend/src/design-system/design-system.controller.ts)
-- [Integration Guide](../docs/LINTER_INTEGRATION.md)
-- [Production Guide](./PRODUCTION.md)
+- [Status](./STATUS.md): what's tested and what isn't
+- [ESLint plugin](../eslint-plugin-design-system/README.md)
+- [Linter integration guide](../docs/LINTER_INTEGRATION.md)
+- [Design System API controller](../backend/src/design-system/design-system.controller.ts)
 
 ## License
 
-MIT License - see [LICENSE](./LICENSE) file for details.
+MIT: see [LICENSE](./LICENSE).

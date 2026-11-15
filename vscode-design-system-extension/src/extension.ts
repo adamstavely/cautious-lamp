@@ -1,12 +1,28 @@
 import * as vscode from 'vscode';
-import { DesignSystemAPI } from './api';
+import { DesignSystemAPI, DEFAULT_REQUEST_TIMEOUT_MS } from './api';
 import { CompletionProvider } from './completion';
 import { HoverProvider } from './hover';
 import { ColorDecorationProvider } from './colorDecoration';
-import { CodeActionsProvider, buildTokenEdit, findTokenForValue } from './codeActions';
+import { CodeActionsProvider, buildTokenEdit, findTokenForValue, tokenImportPath } from './codeActions';
+import { DIAGNOSTIC_LANGUAGES, HardcodedValueDiagnostics } from './diagnostics';
+import { componentDocsUrl } from './docsUrl';
+import { registerSnippets } from './snippets';
+import { jsAccessor } from './tokenEdit';
 
 let api: DesignSystemAPI;
 let outputChannel: vscode.OutputChannel;
+let diagnostics: HardcodedValueDiagnostics | undefined;
+
+const DEFAULT_API_URL = 'http://localhost:3000/api/v1';
+
+function apiSettings() {
+  const config = vscode.workspace.getConfiguration('designSystem');
+  return {
+    apiUrl: config.get<string>('apiUrl', DEFAULT_API_URL),
+    apiKey: config.get<string>('apiKey', '').trim(),
+    requestTimeout: config.get<number>('requestTimeout', DEFAULT_REQUEST_TIMEOUT_MS),
+  };
+}
 
 export function activate(context: vscode.ExtensionContext) {
   // Create output channel for logging
@@ -16,8 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
   try {
     // Initialize API
     const config = vscode.workspace.getConfiguration('designSystem');
-    const apiUrl = config.get<string>('apiUrl', 'http://localhost:3000/api/v1');
-    const apiKey = config.get<string>('apiKey', 'test-api-key-123');
+    const { apiUrl, apiKey, requestTimeout } = apiSettings();
 
     // Validate configuration
     if (!apiUrl || apiUrl.trim() === '') {
@@ -25,7 +40,13 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.window.showWarningMessage('Design System: API URL not configured. Please set designSystem.apiUrl in settings.');
     }
 
-    api = new DesignSystemAPI(apiUrl, apiKey, outputChannel);
+    if (!apiKey) {
+      // Every API route needs a key, so without one tokens and components stay empty
+      outputChannel.appendLine('Warning: designSystem.apiKey is not set. The API will answer 401 until it is.');
+      vscode.window.showWarningMessage('Design System: set designSystem.apiKey to load tokens and components.');
+    }
+
+    api = new DesignSystemAPI(apiUrl, apiKey, outputChannel, { requestTimeout });
 
     // Register completion provider
     if (config.get<boolean>('enableAutocomplete', true)) {
@@ -93,21 +114,19 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }
 
+    registerSnippets(context, outputChannel);
+
+    if (config.get<boolean>('enableDiagnostics', true)) {
+      diagnostics = new HardcodedValueDiagnostics(api, tokenImportPath, outputChannel);
+      context.subscriptions.push(diagnostics);
+      outputChannel.appendLine('Hard-coded value diagnostics registered');
+    }
+
     // Register code actions provider
     try {
       const codeActionsProvider = new CodeActionsProvider(api, outputChannel);
       const codeActionsDisposable = vscode.languages.registerCodeActionsProvider(
-        [
-          { scheme: 'file', language: 'javascript' },
-          { scheme: 'file', language: 'typescript' },
-          { scheme: 'file', language: 'vue' },
-          { scheme: 'file', language: 'javascriptreact' },
-          { scheme: 'file', language: 'typescriptreact' },
-          { scheme: 'file', language: 'css' },
-          { scheme: 'file', language: 'scss' },
-          { scheme: 'file', language: 'less' },
-          { scheme: 'file', language: 'html' }
-        ],
+        DIAGNOSTIC_LANGUAGES.map(language => ({ scheme: 'file', language })),
         codeActionsProvider,
         {
           providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
@@ -126,10 +145,9 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
       vscode.workspace.onDidChangeConfiguration(e => {
         if (e.affectsConfiguration('designSystem')) {
-          const config = vscode.workspace.getConfiguration('designSystem');
-          const apiUrl = config.get<string>('apiUrl', 'http://localhost:3000/api/v1');
-          const apiKey = config.get<string>('apiKey', 'test-api-key-123');
-          api.updateConfig(apiUrl, apiKey);
+          const { apiUrl, apiKey, requestTimeout } = apiSettings();
+          api.updateConfig(apiUrl, apiKey, requestTimeout);
+          diagnostics?.refreshAll();
           outputChannel.appendLine('Configuration updated');
           vscode.window.showInformationMessage('Design System configuration updated');
         }
@@ -140,7 +158,7 @@ export function activate(context: vscode.ExtensionContext) {
     api.getComponents().catch(err => {
       outputChannel.appendLine(`Warning: Failed to preload components: ${err.message}`);
     });
-    api.getTokens().catch(err => {
+    api.getTokens().then(() => diagnostics?.refreshAll()).catch(err => {
       outputChannel.appendLine(`Warning: Failed to preload tokens: ${err.message}`);
     });
 
@@ -200,7 +218,7 @@ function registerCommands(context: vscode.ExtensionContext) {
         if (token) {
           const editor = vscode.window.activeTextEditor;
           if (editor) {
-            editor.insertSnippet(new vscode.SnippetString(`tokens.${token.label}`));
+            editor.edit(edit => edit.replace(editor.selection, jsAccessor(token.label)));
           }
         }
       } catch (error: any) {
@@ -225,8 +243,8 @@ function registerCommands(context: vscode.ExtensionContext) {
           { placeHolder: 'Select a component to view documentation' }
         );
         if (component) {
-          const docsUrl = `http://localhost:5173/components/${component.label.toLowerCase()}`;
-          vscode.env.openExternal(vscode.Uri.parse(docsUrl));
+          const baseUrl = vscode.workspace.getConfiguration('designSystem').get<string>('docsBaseUrl', '');
+          vscode.env.openExternal(vscode.Uri.parse(componentDocsUrl(baseUrl, component.label)));
         }
       } catch (error: any) {
         outputChannel.appendLine(`Error opening docs: ${error.message}`);
@@ -283,6 +301,7 @@ function registerCommands(context: vscode.ExtensionContext) {
     async () => {
       try {
         await api.refreshCache();
+        diagnostics?.refreshAll();
         vscode.window.showInformationMessage('Design System cache refreshed');
       } catch (error: any) {
         outputChannel.appendLine(`Error refreshing cache: ${error.message}`);

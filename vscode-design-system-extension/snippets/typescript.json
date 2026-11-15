@@ -16,7 +16,7 @@
   "Design Token - Typography": {
     "prefix": "ds-typography",
     "body": [
-      "tokens.typography.${1:body}"
+      "tokens.typography.fontSize.${1|xs,sm,md,lg,xl|}"
     ],
     "description": "Design System Typography Token"
   }

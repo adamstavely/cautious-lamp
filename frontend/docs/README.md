@@ -10,7 +10,7 @@ To run the documentation in development mode:
 npm run docs:dev
 ```
 
-This will start the VitePress dev server on `http://localhost:5174/guidelines/`
+This will start the VitePress dev server on `http://localhost:5175/guidelines/`
 
 ## Building
 
@@ -41,12 +41,10 @@ npm run docs:preview
 
 ## Adding Content
 
-Simply add or edit markdown files in this directory. VitePress will automatically:
-- Generate navigation from the sidebar configuration
-- Create searchable content
-- Handle routing
+Add or edit markdown files in this directory, then add each new page to `sidebar` (and `nav` if it belongs there) in `.vitepress/config.js`: VitePress doesn't list pages on its own. Routing and local search pick new pages up automatically.
 
 ## Integration
 
-The Guidelines view in the main app (`src/views/Guidelines.vue`) embeds the VitePress documentation via iframe. In development, it connects to the VitePress dev server. In production, it should serve the built static files.
+This site is standalone: the main app doesn't embed it. The app's Guidelines pages render their own copies of these topics from `public/docs` with `MarkdownViewer`. The illustrations under `/svgs/` are shared: the site resolves them from the app's `public/svgs` (see the alias in `.vitepress/config.js`).
 
+CI runs `npm run docs:build`, which fails on dead links and missing images.

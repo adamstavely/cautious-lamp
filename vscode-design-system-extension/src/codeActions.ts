@@ -1,21 +1,14 @@
 import * as vscode from 'vscode';
 import { DesignSystemAPI, Token } from './api';
 import { computeTokenReplacement } from './tokenEdit';
+import { findTokenForValue } from './tokenLookup';
+import { DIAGNOSTIC_SOURCE } from './diagnostics';
 
-const DEFAULT_TOKEN_IMPORT_PATH = '@design-system/tokens';
+export { findTokenForValue };
 
-/** The token whose value is exactly `value` (a hex color, or spacing like `16px`) */
-export function findTokenForValue(tokens: Token[], value: string): Token | undefined {
-  const trimmed = value.trim();
-  if (/^#[0-9a-f]{3,8}$/i.test(trimmed)) {
-    return tokens.find(t => t.type === 'color' && String(t.value).toLowerCase() === trimmed.toLowerCase());
-  }
-  const spacing = /^(\d+(?:\.\d+)?)px$/.exec(trimmed);
-  if (spacing) {
-    // Spacing tokens are stored as "16px" or as a bare number "16"
-    return tokens.find(t => t.type === 'spacing' && (t.value === trimmed || t.value === spacing[1]));
-  }
-  return tokens.find(t => (t.type === 'color' || t.type === 'spacing') && String(t.value).toLowerCase() === trimmed.toLowerCase());
+/** The module quick fixes import `tokens` from; empty means they write `var(--token)` instead */
+export function tokenImportPath(): string {
+  return vscode.workspace.getConfiguration('designSystem').get<string>('tokenImportPath', '').trim();
 }
 
 /**
@@ -24,14 +17,13 @@ export function findTokenForValue(tokens: Token[], value: string): Token | undef
  * the value isn't somewhere a token reference can go.
  */
 export function buildTokenEdit(document: vscode.TextDocument, range: vscode.Range, token: Token): vscode.WorkspaceEdit | undefined {
-  const importPath = vscode.workspace.getConfiguration('designSystem').get<string>('tokenImportPath') || DEFAULT_TOKEN_IMPORT_PATH;
   const replacement = computeTokenReplacement(
     document.getText(),
     document.offsetAt(range.start),
     document.offsetAt(range.end),
     document.languageId,
     token.name,
-    { importPath }
+    { importPath: tokenImportPath() }
   );
   if (!replacement) return undefined;
   const edit = new vscode.WorkspaceEdit();
@@ -40,6 +32,8 @@ export function buildTokenEdit(document: vscode.TextDocument, range: vscode.Rang
   }
   return edit;
 }
+
+const REPLACEABLE_VALUE = /^(#[0-9a-f]{3,8}|(\d+(\.\d+)?|\.\d+)(px|rem))$/i;
 
 export class CodeActionsProvider implements vscode.CodeActionProvider {
   constructor(
@@ -54,28 +48,24 @@ export class CodeActionsProvider implements vscode.CodeActionProvider {
     _token: vscode.CancellationToken
   ): Promise<vscode.CodeAction[]> {
     try {
-      const selectedText = document.getText(range);
-      if (!/^(#[0-9a-f]{3,8}|\d+(\.\d+)?px)$/i.test(selectedText)) return [];
+      // A hard-coded-value warning under the cursor, else the selection
+      const diagnostic = context.diagnostics.find(d => d.source === DIAGNOSTIC_SOURCE);
+      const target = diagnostic?.range ?? range;
+      const selectedText = document.getText(target);
+      if (!REPLACEABLE_VALUE.test(selectedText)) return [];
 
       const tokens = await this.api.getTokens();
       const matchingToken = findTokenForValue(tokens, selectedText);
 
       if (matchingToken) {
-        const edit = buildTokenEdit(document, range, matchingToken);
+        const edit = buildTokenEdit(document, target, matchingToken);
         if (!edit) return [];
         const action = new vscode.CodeAction(`Replace with token: ${matchingToken.name}`, vscode.CodeActionKind.QuickFix);
         action.edit = edit;
-        action.diagnostics = context.diagnostics;
-        return [action];
-      }
-
-      if (selectedText.startsWith('#')) {
-        // Suggest finding a token
-        const action = new vscode.CodeAction('Find matching design token', vscode.CodeActionKind.QuickFix);
-        action.command = {
-          command: 'designSystem.replaceWithToken',
-          title: 'Find matching design token'
-        };
+        if (diagnostic) {
+          action.diagnostics = [diagnostic];
+          action.isPreferred = true;
+        }
         return [action];
       }
       return [];
