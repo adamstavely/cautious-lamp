@@ -15,7 +15,7 @@
       :divided="index > 0"
     >
       <div class="grid sm:grid-cols-2 gap-4">
-        <UiCard v-for="item in group.items" :key="item.title" :title="item.title" :spot="item.spot" :to="item.to" compact>
+        <UiCard v-for="item in group.items" :key="item.title" :title="item.title" :spot="item.spot" :to="item.to" :href="item.href" :external="!!item.href" compact>
           <p>{{ item.body }}</p>
           <UiCodeBlock v-if="item.command" :code="item.command" label="Terminal" class="mt-4" />
           <template v-if="item.pending" #footer>
@@ -47,8 +47,8 @@ const groups = [
     title: 'Development resources',
     description: 'Packages, tooling and APIs for building with the system.',
     items: [
-      { title: 'GitHub repository', spot: 'site/contribute', pending: true, body: 'Access the source code, file issues and contribute to the design system.' },
-      { title: 'npm package', spot: 'site/installation', command: 'npm install @design-system/core', body: 'Install the design system package from npm.' },
+      { title: 'GitHub repository', spot: 'site/contribute', href: 'https://github.com/adamstavely/cautious-lamp', body: 'Access the source code, file issues and contribute to the design system.' },
+      { title: 'SDK package', spot: 'site/installation', command: 'npm install @adamstavely/design-system-sdk', body: 'The JavaScript client for the design system API, from GitHub Packages (add @adamstavely:registry=https://npm.pkg.github.com to .npmrc).' },
       { title: 'CLI tool', spot: 'foundations/component-scaffolding-wizard', command: 'npm install -g @adamstavely/design-system-cli', body: 'Use our CLI tool to scaffold components, validate code and manage design tokens.' },
       { title: 'SDK and API', spot: 'site/design-system-api', to: '/api', body: 'Integrate with our REST API or use the JavaScript SDK for programmatic access.' },
       { title: 'VS Code extension', spot: 'foundations/pattern-code-snippet', pending: true, body: 'Enhance your development workflow with autocomplete, hover info and snippets.' },

@@ -107,7 +107,7 @@ export const apiErrorMessage = (error, fallback = 'Something went wrong. Please 
   const status = errorStatus(error);
   const serverMessage = error?.response?.data?.message;
   const detail = Array.isArray(serverMessage) ? serverMessage.join(', ') : serverMessage;
-  if (!error?.response) return `${fallback} The review service could not be reached.`;
+  if (!error?.response) return `${fallback} The server could not be reached.`;
   switch (status) {
     case 401:
       if (error.response.data?.passwordRequired) return 'This review is password protected.';
@@ -122,7 +122,7 @@ export const apiErrorMessage = (error, fallback = 'Something went wrong. Please 
     case 410:
       return 'This review link has expired.';
     case 503:
-      return 'The review service is temporarily unavailable. Please try again shortly.';
+      return detail || 'This service is temporarily unavailable. Please try again shortly.';
     default:
       return detail ? `${fallback} ${detail}` : fallback;
   }
