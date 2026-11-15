@@ -30,6 +30,10 @@ const PEOPLE = {
 type Person = keyof typeof PEOPLE;
 
 const auth = {
+  /** As AuthService.authenticate: these stand-ins never report an expired or revoked credential */
+  async authenticate(credential?: string) {
+    return { principal: await this.resolve(credential) };
+  },
   async resolve(credential?: string) {
     const key = credential?.startsWith('tok-') ? (credential.slice(4) as Person) : undefined;
     const person = key && PEOPLE[key];

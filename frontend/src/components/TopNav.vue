@@ -526,6 +526,7 @@ const searchIndex = [
   // Admin pages
   { id: 'admin-workspaces', title: 'Workspace Management', description: 'Manage workspaces and teams', category: 'Admin', path: '/admin/workspaces', icon: 'briefcase', tags: ['workspaces', 'teams', 'admin'] },
   { id: 'admin-users', title: 'User Management', description: 'Manage users and permissions', category: 'Admin', path: '/admin/users', icon: 'users', tags: ['users', 'permissions', 'admin'] },
+  { id: 'admin-api-keys', title: 'API Keys', description: 'Create and revoke API keys for machine clients', category: 'Admin', path: '/admin/api-keys', icon: 'key', tags: ['api', 'keys', 'tokens', 'ci', 'admin'] },
   { id: 'admin-accessibility-reports', title: 'Accessibility Reports', description: 'View and manage accessibility reports', category: 'Admin', path: '/admin/accessibility-reports', icon: 'accessibility', tags: ['accessibility', 'reports', 'admin', 'a11y'] },
   // Reference pages
   { id: 'jaws-commands', title: 'JAWS Commands', description: 'Reference guide for JAWS screen reader commands and keyboard shortcuts', category: 'Tools', path: '/tools/references/jaws-commands', icon: 'keyboard', tags: ['jaws', 'screen-reader', 'accessibility', 'keyboard', 'commands', 'reference', 'a11y'] },

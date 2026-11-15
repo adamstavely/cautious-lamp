@@ -68,6 +68,64 @@ describe('AuthGuard', () => {
     await expect(run('open', 'Bearer nonsense')).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
+  describe('a credential that was once good', () => {
+    /** The 401's code, or the error if the guard didn't 401 */
+    const codeFor = async (authorization: string) => {
+      const error = await run('open', authorization).catch((caught) => caught);
+      expect(error).toBeInstanceOf(UnauthorizedException);
+      return (error.getResponse() as { code?: string }).code;
+    };
+
+    it('says TOKEN_EXPIRED for an API key past its expiry', async () => {
+      const { key, metadata } = await h.keys.createKey('short-lived', { expiresInDays: 1 });
+      const stored = (await h.keyStore.get(metadata.id))!;
+      await h.keyStore.replace({ ...stored.doc, expiresAt: new Date(Date.now() - 1000).toISOString() }, stored.version);
+      expect(await codeFor(`Bearer ${key}`)).toBe('TOKEN_EXPIRED');
+    });
+
+    it('says TOKEN_REVOKED for a revoked or rotated API key', async () => {
+      const revoked = await h.keys.createKey('revoked');
+      await h.keys.revokeKey(revoked.metadata.id);
+      expect(await codeFor(`Bearer ${revoked.key}`)).toBe('TOKEN_REVOKED');
+
+      const rotated = await h.keys.createKey('rotated');
+      const { newKey } = (await h.keys.rotateKey(rotated.metadata.id))!;
+      expect(await codeFor(`Bearer ${rotated.key}`)).toBe('TOKEN_REVOKED');
+      await run('open', `Bearer ${newKey}`);
+    });
+
+    it('says TOKEN_EXPIRED for a sign-in past its 8 hours', async () => {
+      const { accessToken } = await h.createUser('late@example.com', [Role.DESIGNER]);
+      const now = Date.now();
+      jest.spyOn(Date, 'now').mockReturnValue(now + 9 * 60 * 60 * 1000);
+      try {
+        expect(await codeFor(`Bearer ${accessToken}`)).toBe('TOKEN_EXPIRED');
+      } finally {
+        jest.restoreAllMocks();
+      }
+    });
+
+    it('says TOKEN_REVOKED for a sign-in ended by signing out or a disabled account', async () => {
+      const signedOut = await h.createUser('out@example.com', [Role.DESIGNER]);
+      await h.auth.logout((await h.principalFor(signedOut.accessToken)) as any);
+      expect(await codeFor(`Bearer ${signedOut.accessToken}`)).toBe('TOKEN_REVOKED');
+
+      const disabled = await h.createUser('gone@example.com', [Role.DESIGNER]);
+      await h.users.mutate(disabled.user.id, (doc) => {
+        doc.status = 'disabled';
+      });
+      expect(await codeFor(`Bearer ${disabled.accessToken}`)).toBe('TOKEN_REVOKED');
+    });
+
+    it('gives no code for credentials that were never valid, so nothing is learned from them', async () => {
+      expect(await codeFor('Bearer nonsense')).toBeUndefined();
+      expect(await codeFor('Bearer dsk_' + 'a'.repeat(43))).toBeUndefined();
+      // A token signed with another secret is not reported as expired, whatever its exp
+      const forged = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfMSIsInR2IjowLCJleHAiOjF9.c2lnbmF0dXJl';
+      expect(await codeFor(`Bearer ${forged}`)).toBeUndefined();
+    });
+  });
+
   it('accepts a user token and sets the principal', async () => {
     const { user, accessToken } = await h.createUser('ivy@example.com', [Role.DESIGNER]);
     const req = await run('open', `Bearer ${accessToken}`);

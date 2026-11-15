@@ -19,7 +19,7 @@ Routes marked `@Public()` skip authentication. These are:
 - `PUT /upload/:reviewId/:token` (a one-time token)
 - `GET /review-files/...` (signed URLs)
 
-Every other route returns `401` without a valid credential. `@RequirePermission(Permission.X, ...)` returns `403` unless the principal has all the listed permissions (on a controller class it applies to every route, merged with any on the route).
+Every other route returns `401` without a valid credential, with `code` `TOKEN_EXPIRED` for an API key or token past its expiry, `TOKEN_REVOKED` for a revoked or rotated key or a token ended by sign-out, a password change or reset, or a disabled account, and `UNAUTHORIZED` otherwise ([API_ERROR_CODES.md](API_ERROR_CODES.md)). `@RequirePermission(Permission.X, ...)` returns `403` unless the principal has all the listed permissions (on a controller class it applies to every route, merged with any on the route).
 
 **Temporary passwords.** A user with `mustChangePassword` (a new account, the bootstrap admin, or after an admin reset the password) gets a full token, but it is a restricted session on the server: only `GET /auth/me`, `POST /auth/change-password` and `POST /auth/logout` work. Every other route returns `403` with `code: "PASSWORD_CHANGE_REQUIRED"`, whatever the user's roles, so a temporary password can't be used to create API keys, users or anything else. Changing the password revokes the token (see below); the next sign-in is unrestricted. Routes opt in with `@AllowPasswordChangePending()`; nothing else should.
 
@@ -67,7 +67,7 @@ All under `/api/v1`.
 
 | Method and path | Permission | Body | Returns |
 | --- | --- | --- | --- |
-| `POST /auth/login` | public | `{ email, password }` | `{ accessToken, expiresAt, user: Me }`. `401` on bad credentials or a disabled user (same message for an unknown email); `423` when locked. |
+| `POST /auth/login` | public | `{ email, password }` | `{ accessToken, expiresAt, user: Me }`. `401` on bad credentials or a disabled user (same message for an unknown email); `423` with `code: "ACCOUNT_LOCKED"` and `lockedUntil` when locked. |
 | `POST /auth/logout` | any user (also on a temporary password) | | `204`. Bumps `tokenVersion`, which signs out every session. `403` for an API key. |
 | `GET /auth/me` | any principal (also on a temporary password) | | `Me` |
 | `POST /auth/change-password` | any user (also on a temporary password) | `{ currentPassword, newPassword }` | `204`. Clears `mustChangePassword` and bumps `tokenVersion`, so the client must sign in again. A wrong current password returns `400` with the message "Current password is incorrect" (not `401`, which would sign the client out) and counts towards the lockout. The new password must differ from the current one. |
@@ -109,13 +109,13 @@ There is no hard delete: users are disabled. Disabling yourself, or disabling th
 
 ### API keys
 
-All need `admin:users`. A caller can only hand out permissions it has itself: creating a key, or rotating one (the new key keeps the old one's scopes), returns `403` naming the missing permissions if the key would have any the caller lacks. An unscoped key counts as having the default service permissions. So `admin:users` lets someone manage keys, but never gain anything through them; there is no separate key-management permission. The admin key can grant anything.
+All need `admin:users`. The **API keys** admin page (`/admin/api-keys`) lists keys, creates them (showing the key once) and revokes them. A caller can only hand out permissions it has itself: creating a key, or rotating one (the new key keeps the old one's scopes), returns `403` naming the missing permissions if the key would have any the caller lacks. An unscoped key counts as having the default service permissions. So `admin:users` lets someone manage keys, but never gain anything through them; there is no separate key-management permission. The admin key can grant anything.
 
 | Method and path | Body | Returns |
 | --- | --- | --- |
 | `POST /auth/api-keys` | `{ name, expiresInDays?, scopes? }` | `{ apiKey, metadata }`. The key (`dsk_` + 43 characters) is shown only here. `scopes` are permission names; unknown ones or an empty list return `400`. |
 | `GET /auth/api-keys`, `GET /auth/api-keys/:id` | | Metadata: `id`, `name`, `scopes`, `createdAt`, `createdBy`, `expiresAt`, `lastUsed`, `revoked`, `revokedAt`, `rotatedFrom` |
-| `GET /auth/api-keys/needing-rotation` | | Keys past the rotation policy's age limits |
+| `GET /auth/api-keys/needing-rotation` | | Active keys more than 30 days old (the rotation policy). Nothing rotates keys automatically: a rotated key's secret goes only to whoever rotated it. |
 | `POST /auth/api-keys/:id/rotate` | `{ revokeOld?, reason? }` | `{ newApiKey, newMetadata }`. Revokes the old key unless `revokeOld` is `false`. |
 | `POST /auth/api-keys/:id/revoke` | | `404` for an unknown key |
 | `GET /auth/api-keys/:id/rotation-history` | | Read from the key records (each rotated key names its predecessor) |
@@ -158,7 +158,7 @@ Reading a component is not enough to change it. Changing a workspace's component
 
 ## Encryption key
 
-`ENCRYPTION_KEY` encrypts stored third-party credentials (OAuth secrets, integration tokens). Use 32 random bytes as 64 hex characters (`openssl rand -hex 32`) or 44 base64 characters; any other value is treated as a passphrase and stretched with PBKDF2 and a fixed salt, so every replica and restart derives the same key. Outside development (`NODE_ENV` of `development` or `test`) it is required: without it, storing or reading encrypted values returns `503`. In development a random key is used, so encrypted values don't survive a restart.
+`ENCRYPTION_KEY` encrypts stored third-party credentials (integration tokens such as Argos, OpenReplay and Figma tokens). Use 32 random bytes as 64 hex characters (`openssl rand -hex 32`) or 44 base64 characters; any other value is treated as a passphrase and stretched with PBKDF2 and a fixed salt, so every replica and restart derives the same key. Outside development (`NODE_ENV` of `development` or `test`) it is required: without it, storing or reading encrypted values returns `503`. In development a random key is used, so encrypted values don't survive a restart.
 
 Earlier versions derived a passphrase key with a random salt on each start, so values encrypted under a passphrase could only be read by the process that wrote them; they can't be recovered and must be entered again (reconnect the integration). Values encrypted under a hex or base64 key are unaffected. To move to a raw key, set the new `ENCRYPTION_KEY` and re-enter the stored credentials.
 
@@ -174,7 +174,7 @@ Earlier versions derived a passphrase key with a random salt on each start, so v
 
   | Prefix | Permission |
   | --- | --- |
-  | `/admin/users` | `admin:users` |
+  | `/admin/users`, `/admin/api-keys` | `admin:users` |
   | `/admin/roles` | `admin:rbac` |
   | `/admin/audit` | `admin:audit` |
   | `/admin/governance` | `admin:governance` |

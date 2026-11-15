@@ -14,11 +14,13 @@ Design tokens are:
 
 ## Creating Tokens
 
+Tokens belong to a workspace and are workspace items: `/workspaces/:id/resources/tokens`. Creating, changing and deleting them needs the editor role in the workspace, and the workspace routes need a person's access token (`$TOKEN`, from `POST /auth/login`): API keys can't be workspace members. See [GETTING_STARTED.md](./GETTING_STARTED.md#7-create-an-api-key) for getting a token.
+
 ### Via API
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/tokens \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+curl -X POST http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/resources/tokens \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "color.primary",
@@ -112,12 +114,34 @@ Synchronize tokens with external tools:
 
 ### Style Dictionary
 
-Export tokens in Style Dictionary format:
+Export the tokens the workspace can read (its own, ones shared with it, and global ones) as a [Style Dictionary](https://styledictionary.com) source file:
 
 ```bash
-curl http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/tokens/export/style-dictionary \
-  -H "Authorization: Bearer YOUR_API_KEY"
+curl http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/resources/tokens/export/style-dictionary \
+  -H "Authorization: Bearer $TOKEN" > tokens/workspace.json
 ```
+
+Dotted names become nested groups, and a token's `description` becomes its `comment`:
+
+```json
+{
+  "color": {
+    "primary": {
+      "DEFAULT": { "value": "#0066CC", "type": "color" },
+      "hover": { "value": "#0055AA", "type": "color" }
+    }
+  },
+  "spacing": {
+    "small": { "value": "8px", "type": "spacing" }
+  }
+}
+```
+
+- A token whose name is also a group (`color.primary` next to `color.primary.hover`) goes under `DEFAULT` in that group.
+- If two tokens have the same name, the workspace's own wins over a shared or global one.
+- `?filter=colors` exports one category.
+
+Point Style Dictionary's `source` at the file and build your platforms from it.
 
 ### Figma and Penpot
 
@@ -131,23 +155,29 @@ Not supported: Adobe has discontinued the XD plugin and cloud document APIs a sy
 
 ### List Tokens
 
+Returns an array of the workspace's tokens, tokens shared with it, and global tokens:
+
 ```bash
-curl http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/tokens \
-  -H "Authorization: Bearer YOUR_API_KEY"
+curl http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/resources/tokens \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### Filter Tokens
 
+`?filter=` matches the token's `category`:
+
 ```bash
-curl "http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/tokens?category=colors&type=color" \
-  -H "Authorization: Bearer YOUR_API_KEY"
+curl "http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/resources/tokens?filter=colors" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### Update Token
 
+`PATCH` with only the fields to change:
+
 ```bash
-curl -X PUT http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/tokens/TOKEN_ID \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+curl -X PATCH http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/resources/tokens/TOKEN_ID \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "value": "#0077DD"

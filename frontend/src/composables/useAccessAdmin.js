@@ -1,5 +1,5 @@
 /**
- * API calls and helpers for the user and role admin pages (docs/AUTH.md).
+ * API calls and helpers for the user, role and API key admin pages (docs/AUTH.md).
  * Ids always go into paths through encodeURIComponent.
  */
 import apiClient, { apiErrorMessage, errorStatus } from '../services/api.js';
@@ -35,6 +35,15 @@ export const rbacApi = {
   userRoles: (userId) => apiClient.get(`/api/v1/rbac/users/${enc(userId)}/roles`).then(data),
   assign: (userId, roleId) => apiClient.post(`/api/v1/rbac/users/${enc(userId)}/roles`, { roleId }).then(data),
   remove: (userId, roleId) => apiClient.delete(`/api/v1/rbac/users/${enc(userId)}/roles/${enc(roleId)}`).then(data),
+};
+
+/** Managed API keys (needs admin:users). Keys come back without their secret, except once from create. */
+export const apiKeysApi = {
+  /** Every key's metadata: [{ id, name, createdAt, lastUsed, expiresAt, revoked, revokedAt, scopes }] */
+  list: () => apiClient.get('/api/v1/auth/api-keys').then(data),
+  /** { apiKey, metadata }; body is { name, expiresInDays?, scopes? } */
+  create: (body) => apiClient.post('/api/v1/auth/api-keys', body).then(data),
+  revoke: (id) => apiClient.post(`/api/v1/auth/api-keys/${enc(id)}/revoke`).then(data),
 };
 
 /** A message for a failed admin call. */

@@ -29,6 +29,15 @@ export interface RequestInfo {
   userAgent?: string;
 }
 
+/**
+ * The outcome of checking a bearer credential: the principal, or null with,
+ * for a credential that was once good, why it no longer is
+ */
+export type CredentialCheck =
+  | { principal: AuthPrincipal; problem?: undefined }
+  | { principal: null; problem?: undefined }
+  | { principal: null; problem: 'expired' | 'revoked'; credential: 'api-key' | 'token' };
+
 export interface LoginResult {
   accessToken: string;
   expiresAt: string;
@@ -157,20 +166,38 @@ export class AuthService {
    * mistaken for a token.
    */
   async resolve(credential: string | undefined): Promise<AuthPrincipal | null> {
-    if (!credential) return null;
+    return (await this.authenticate(credential)).principal;
+  }
+
+  /**
+   * Like resolve, but when a credential that was once good is refused, says
+   * why: an API key or token that expired, or one that was revoked (a revoked
+   * or rotated key; a token from before a sign-out, a password change or
+   * reset, or for a disabled account). The AuthGuard turns those into
+   * TOKEN_EXPIRED and TOKEN_REVOKED.
+   */
+  async authenticate(credential: string | undefined): Promise<CredentialCheck> {
+    if (!credential) return { principal: null };
     if (this.keys.isAdminKey(credential)) {
-      return this.service('admin-key', 'Admin API key', ALL_PERMISSIONS);
+      return { principal: this.service('admin-key', 'Admin API key', ALL_PERMISSIONS) };
     }
-    const key = await this.keys.resolveApiKey(credential);
-    if (key) {
+    const keyCheck = await this.keys.checkApiKey(credential);
+    if (keyCheck && 'problem' in keyCheck) return { principal: null, problem: keyCheck.problem, credential: 'api-key' };
+    if (keyCheck && 'key' in keyCheck) {
+      const { key } = keyCheck;
       const scoped = (key.scopes ?? []).filter(isPermission);
-      return this.service(key.id, key.name, key.scopes?.length ? scoped : DEFAULT_SERVICE_PERMISSIONS, key.expiresAt);
+      return { principal: this.service(key.id, key.name, key.scopes?.length ? scoped : DEFAULT_SERVICE_PERMISSIONS, key.expiresAt) };
     }
-    const claims = await this.tokens.verify(credential);
-    if (!claims) return null;
+    const tokenCheck = await this.tokens.check(credential);
+    if (!tokenCheck) return { principal: null };
+    if ('problem' in tokenCheck) return { principal: null, problem: tokenCheck.problem, credential: 'token' };
+    const { claims } = tokenCheck;
     const state = await this.users.getAuthState(claims.sub);
-    if (!state || state.user.status !== 'active' || state.user.tokenVersion !== claims.tv) return null;
-    return toUserPrincipal(state, claims.expiresAt);
+    if (!state) return { principal: null };
+    if (state.user.status !== 'active' || state.user.tokenVersion !== claims.tv) {
+      return { principal: null, problem: 'revoked', credential: 'token' };
+    }
+    return { principal: toUserPrincipal(state, claims.expiresAt) };
   }
 
   private service(id: string, name: string, permissions: readonly string[], expiresAt?: Date): ServicePrincipal {
@@ -180,7 +207,7 @@ export class AuthService {
   private lockedError(until: Date): HttpException {
     const minutes = Math.max(1, Math.ceil((until.getTime() - Date.now()) / 60000));
     return new HttpException(
-      { statusCode: HTTP_LOCKED, message: `Too many failed sign-ins. Try again in ${minutes} minutes.`, lockedUntil: until.toISOString() },
+      { statusCode: HTTP_LOCKED, code: 'ACCOUNT_LOCKED', message: `Too many failed sign-ins. Try again in ${minutes} minutes.`, lockedUntil: until.toISOString() },
       HTTP_LOCKED,
     );
   }

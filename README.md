@@ -167,54 +167,31 @@ This is a comprehensive, enterprise-grade design system platform that provides e
 
 ### Prerequisites
 
-- **Node.js** 18+ and npm
-- **Elasticsearch** 8+ (optional, but recommended for full functionality)
+- **Node.js** 22 and npm
+- **Docker**, for Elasticsearch 8 (required: users, API keys and everything else are stored there)
 - **Git**
 
 ### Installation
 
-1. **Clone the repository:**
+The full walkthrough, including your first API key, is in [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md). In short:
+
+1. **Clone and install** (one install from the root covers every package):
 ```bash
 git clone <repository-url>
 cd cautious-lamp
+npm ci
 ```
 
-2. **Install dependencies:**
+2. **Start Elasticsearch:**
 ```bash
-# Install root dependencies
-npm install
-
-# Install backend dependencies
-cd backend && npm install
-
-# Install frontend dependencies
-cd ../frontend && npm install
+docker compose up -d elasticsearch
 ```
 
-3. **Set up Elasticsearch (optional):**
+3. **Configure the backend:**
 ```bash
-# Using Docker
-docker run -d -p 9200:9200 -p 9300:9300 \
-  -e "discovery.type=single-node" \
-  -e "xpack.security.enabled=false" \
-  docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+cp backend/.env.example backend/.env
 ```
-
-Or use the provided `docker-compose.yml`:
-```bash
-docker-compose up -d elasticsearch
-```
-
-4. **Configure environment variables (optional):**
-```bash
-# Backend (.env in backend/)
-ELASTICSEARCH_NODE=http://localhost:9200
-OTEL_ENABLED=true
-
-# Frontend (.env in frontend/)
-VITE_API_BASE_URL=http://localhost:3000
-VITE_OTEL_ENABLED=true
-```
+Set `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` (12+ characters) for the first admin. Set `AUTH_JWT_SECRET`, `REVIEW_FILE_SECRET` and `ENCRYPTION_KEY` too (`openssl rand -hex 32` each): they're required outside development, and without them sign-ins and encrypted values don't survive a restart.
 
 ### Running the Application
 
@@ -237,10 +214,12 @@ cd frontend
 npm run dev
 ```
 
-5. **Open your browser:**
-- Frontend: http://localhost:5174 (or 5173)
+4. **Open your browser:**
+- Frontend: http://localhost:5174. Sign in as the bootstrap admin and choose a new password.
 - Backend API: http://localhost:3000
 - API Health: http://localhost:3000/api/v1/health
+
+5. **Create an API key** for the CLI, CI or the MCP server under **Admin → API keys**.
 
 ## 📖 Documentation
 

@@ -15,15 +15,24 @@ Complete REST API implementation for accessing design tokens and components.
 
 ### Backend API
 
-The backend API runs on `http://localhost:3000/api/v1` by default.
+The backend API runs on `http://localhost:3000/api/v1` by default. To run it, follow [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md): it needs Elasticsearch and a bootstrap admin.
 
 #### Create an API Key
 
+Creating keys needs the `admin:users` permission. Sign in as an admin and use **Admin → API keys** in the app, or create one with your access token:
+
 ```bash
+TOKEN=$(curl -s -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "you@example.com", "password": "your password"}' | jq -r .accessToken)
+
 curl -X POST http://localhost:3000/api/v1/auth/api-keys \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name": "My API Key"}'
 ```
+
+The response's `apiKey` is shown only once. See [docs/API_AUTHENTICATION.md](docs/API_AUTHENTICATION.md).
 
 #### Get Tokens
 
@@ -87,7 +96,7 @@ ds component button --code react
 - `GET /api/v1/components` - Get all components (supports ?status filter)
 - `GET /api/v1/components/:id` - Get a specific component
 - `GET /api/v1/components/status/:status` - Get components by status
-- `POST /api/v1/auth/api-keys` - Create a new API key
+- `POST /api/v1/auth/api-keys` - Create a new API key (needs `admin:users`)
 - `GET /api/v1/health` - Health check (no auth required)
 
 ## Development
@@ -95,9 +104,10 @@ ds component button --code react
 ### Backend
 
 ```bash
-cd backend
-npm install
-npm run start:dev
+npm ci                                  # from the repository root
+docker compose up -d elasticsearch
+cp backend/.env.example backend/.env    # set BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD
+cd backend && npm run start:dev
 ```
 
 ### SDK

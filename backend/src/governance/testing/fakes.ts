@@ -29,6 +29,10 @@ export const userKey = (name: string) => `user-${name}`;
 
 /** Stands in for AuthService: API_KEY gets the default API key permissions, ADMIN_KEY all of them, user-<name> a person */
 export const fakeAuth = {
+  /** As AuthService.authenticate: these stand-ins never report an expired or revoked credential */
+  async authenticate(credential?: string) {
+    return { principal: await this.resolve(credential) };
+  },
   async resolve(credential?: string) {
     if (credential?.startsWith('user-')) {
       const name = credential.slice(5);

@@ -63,32 +63,18 @@ curl -X POST http://localhost:3000/api/v1/visual-regression/projects \
 5. Configure test settings
 6. Save
 
-### 3. Using OAuth (Optional)
-
-Instead of API tokens, you can use OAuth:
-
-1. Configure OAuth in project settings
-2. Authorize the application
-3. Tokens will be automatically refreshed
-
 ## Running Visual Tests
 
-### Trigger Test Run
+### Run tests
 
-```bash
-curl -X POST http://localhost:3000/api/v1/visual-regression/projects/PROJECT_ID/runs \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "branch": "feature/new-component",
-    "commitSha": "abc123"
-  }'
-```
+Runs start in Argos, not here: upload screenshots from CI with the Argos CLI or SDK ([ARGOS_CI_CD_INTEGRATION.md](./ARGOS_CI_CD_INTEGRATION.md)). The platform records each build when Argos calls the webhook below.
 
 ### View Test Results
 
+Paged: `?page=` and `?limit=` (up to 100), answered as `{ data, pagination }`.
+
 ```bash
-curl http://localhost:3000/api/v1/visual-regression/projects/PROJECT_ID/runs \
+curl "http://localhost:3000/api/v1/visual-regression/projects/PROJECT_ID/runs?page=1&limit=20" \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 

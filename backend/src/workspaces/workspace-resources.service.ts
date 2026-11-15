@@ -11,6 +11,7 @@ import { CHANGE_RECORDER, ChangeAction, ChangeRecorder } from '../notifications/
 import { VersionConflictError } from '../reviews/document-store';
 import { QueryableStore } from './queryable-store';
 import { ResourceKindSpec, resourceKind, validateResourceFields } from './resource-kinds';
+import { StyleDictionaryTree, toStyleDictionary } from './style-dictionary';
 import { UpdateSharingDto } from './workspace.dto';
 import {
   WorkspaceAccess,
@@ -65,6 +66,19 @@ export class WorkspaceResourcesService {
     ]);
     if (filter && spec.filterField) docs = docs.filter((doc) => doc.fields[spec.filterField] === filter);
     return docs.map(toView);
+  }
+
+  /**
+   * The tokens the workspace can read (its own, shared with it and global) as
+   * a Style Dictionary source file, its own first so they win a name clash.
+   * `filter` is a category, as on the list.
+   */
+  async exportStyleDictionary(principal: AuthPrincipal, workspaceId: string, filter?: string): Promise<StyleDictionaryTree> {
+    const tokens = await this.list(principal, workspaceId, 'tokens', filter);
+    const own = (token: WorkspaceResource) => (token.workspaceId === workspaceId ? 0 : 1);
+    return toStyleDictionary(
+      [...tokens].sort((a, b) => own(a) - own(b) || String(a.name).localeCompare(String(b.name)) || a.createdAt.localeCompare(b.createdAt)),
+    );
   }
 
   /**

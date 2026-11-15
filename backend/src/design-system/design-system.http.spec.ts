@@ -32,6 +32,10 @@ const PEOPLE: Record<string, string[]> = {
 };
 
 const authStub = {
+  /** As AuthService.authenticate: these stand-ins never report an expired or revoked credential */
+  async authenticate(credential?: string) {
+    return { principal: await this.resolve(credential) };
+  },
   async resolve(credential?: string): Promise<AuthPrincipal | null> {
     if (credential === 'svc-key') {
       return { type: 'service', id: 'svc', name: 'Service', email: null, roles: [], permissions: new Set(DEFAULT_SERVICE_PERMISSIONS), mustChangePassword: false };
