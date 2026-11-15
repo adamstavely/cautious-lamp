@@ -1,6 +1,24 @@
 import { Controller, Get, Post, Put, Delete, Query, Param, Body, BadRequestException, ConflictException, Inject } from '@nestjs/common';
-import { COMPONENT_STATUSES, Component, DesignSystemService } from './design-system.service';
-import { COMPONENT_ID_PATTERN, ComponentDependenciesDto, DeprecateComponentDto, UpdateComponentStatusDto } from './design-system.dto';
+import { Component, DesignSystemService } from './design-system.service';
+import {
+  AnalyzeBundleDto,
+  ComponentDependenciesDto,
+  ComponentVariantDto,
+  CreateBannerDto,
+  CreateComponentDto,
+  CreateIssueDto,
+  CreatePerformanceBudgetDto,
+  CreateRoadmapItemDto,
+  DeprecateComponentDto,
+  HeuristicEvaluationDto,
+  NasaTlxDto,
+  SusDto,
+  UpdateBannerDto,
+  UpdateComponentStatusDto,
+  UpdateIssueDto,
+  UpdatePerformanceBudgetDto,
+  UpdateRoadmapItemDto,
+} from './design-system.dto';
 import { strictBody } from '../auth/auth.dto';
 import { ComponentIssueService } from './component-issue.service';
 import { ComponentAccessService } from './component-access.service';
@@ -143,7 +161,7 @@ export class DesignSystemController {
   @RequirePermission(Permission.ADMIN_PERFORMANCE_ANALYSIS)
   @Post('performance/budgets')
   createPerformanceBudget(
-    @Body() body: { name: string; metric: string; threshold: number; unit: string; alertThreshold?: number },
+    @Body(strictBody()) body: CreatePerformanceBudgetDto,
   ) {
     return this.designSystemService.createPerformanceBudget(body.name, body.metric, body.threshold, body.unit, body.alertThreshold);
   }
@@ -152,9 +170,10 @@ export class DesignSystemController {
   @Put('performance/budgets/:id')
   updatePerformanceBudget(
     @Param('id') id: string,
-    @Body() body: { name?: string; threshold?: number; alertThreshold?: number; enabled?: boolean },
+    @Body(strictBody()) body: UpdatePerformanceBudgetDto,
   ) {
-    return this.designSystemService.updatePerformanceBudget(id, body);
+    const { name, threshold, alertThreshold, enabled } = body;
+    return this.designSystemService.updatePerformanceBudget(id, { name, threshold, alertThreshold, enabled });
   }
 
   @RequirePermission(Permission.ADMIN_PERFORMANCE_ANALYSIS)
@@ -171,7 +190,7 @@ export class DesignSystemController {
 
   @Post('performance/bundle-analysis/analyze')
   async analyzeBundle(
-    @Body() body: { componentId?: string; includeDependencies?: boolean },
+    @Body(strictBody()) body: AnalyzeBundleDto,
   ) {
     await this.designSystemService.ready();
     return this.designSystemService.analyzeBundle(body.componentId, body.includeDependencies);
@@ -185,7 +204,7 @@ export class DesignSystemController {
   @RequirePermission(Permission.ROADMAP_EDIT)
   @Post('roadmap/items')
   createRoadmapItem(
-    @Body() body: { title: string; description: string; category: string; priority: string; targetDate?: string; status?: string },
+    @Body(strictBody()) body: CreateRoadmapItemDto,
   ) {
     return this.designSystemService.createRoadmapItem(body);
   }
@@ -194,7 +213,7 @@ export class DesignSystemController {
   @Put('roadmap/items/:id')
   updateRoadmapItem(
     @Param('id') id: string,
-    @Body() body: { title?: string; description?: string; category?: string; priority?: string; targetDate?: string; status?: string },
+    @Body(strictBody()) body: UpdateRoadmapItemDto,
   ) {
     return this.designSystemService.updateRoadmapItem(id, body);
   }
@@ -221,7 +240,7 @@ export class DesignSystemController {
   @RequirePermission(Permission.ADMIN_BANNERS)
   @Post('banners')
   createBanner(
-    @Body() body: { title: string; message: string; type: 'info' | 'warning' | 'error' | 'success'; expiresAt?: string },
+    @Body(strictBody()) body: CreateBannerDto,
   ) {
     return this.designSystemService.createBanner(body);
   }
@@ -230,7 +249,7 @@ export class DesignSystemController {
   @Put('banners/:id')
   updateBanner(
     @Param('id') id: string,
-    @Body() body: { title?: string; message?: string; type?: 'info' | 'warning' | 'error' | 'success'; isActive?: boolean; expiresAt?: string },
+    @Body(strictBody()) body: UpdateBannerDto,
   ) {
     return this.designSystemService.updateBanner(id, body);
   }
@@ -269,30 +288,18 @@ export class DesignSystemController {
   @RequirePermission(Permission.FEEDBACK_CREATE)
   @Post('issues')
   createIssue(
-    @Body() body: {
-      title: string;
-      description: string;
-      category: string;
-      severity: 'low' | 'medium' | 'high' | 'critical';
-      reportedBy: string;
-      componentId?: string;
-    },
+    @Body(strictBody()) body: CreateIssueDto,
     @Principal() principal: AuthPrincipal,
   ) {
-    return this.componentIssueService.create({ ...body, reportedBy: body.reportedBy || principal.id });
+    const { title, description, category, severity, componentId } = body;
+    return this.componentIssueService.create({ title, description, category, severity, componentId, reportedBy: principal.id });
   }
 
   @RequirePermission(Permission.COMPONENT_EDIT)
   @Put('issues/:id')
   async updateIssue(
     @Param('id') id: string,
-    @Body() body: Partial<{
-      title: string;
-      description: string;
-      status: 'open' | 'investigating' | 'in-progress' | 'resolved' | 'closed';
-      severity: 'low' | 'medium' | 'high' | 'critical';
-      assignedTo: string;
-    }>,
+    @Body(strictBody()) body: UpdateIssueDto,
   ) {
     const issue = await this.componentIssueService.update(id, body);
     if (!issue) {
@@ -304,17 +311,7 @@ export class DesignSystemController {
   // NASA-TLX endpoint
   @Post('nasa-tlx')
   submitNASATLX(
-    @Body() body: {
-      systemName: string;
-      task: string;
-      mentalDemand: number;
-      physicalDemand: number;
-      temporalDemand: number;
-      performance: number;
-      effort: number;
-      frustration: number;
-      user: string;
-    },
+    @Body(strictBody()) body: NasaTlxDto,
   ) {
     return this.designSystemService.submitNASATLX(body);
   }
@@ -322,20 +319,7 @@ export class DesignSystemController {
   // System Usability Scale endpoint
   @Post('sus')
   submitSUS(
-    @Body() body: {
-      systemName: string;
-      q1: number;
-      q2: number;
-      q3: number;
-      q4: number;
-      q5: number;
-      q6: number;
-      q7: number;
-      q8: number;
-      q9: number;
-      q10: number;
-      user: string;
-    },
+    @Body(strictBody()) body: SusDto,
   ) {
     return this.designSystemService.submitSUS(body);
   }
@@ -343,15 +327,10 @@ export class DesignSystemController {
   // Heuristic Evaluation endpoint
   @Post('heuristic-evaluation')
   submitHeuristicEvaluation(
-    @Body() body: {
-      systemName: string;
-      evaluator: string;
-      heuristics: Array<{ heuristic: string; issues: string; severity: number }>;
-      overallAssessment: string;
-      timestamp: string;
-    },
+    @Body(strictBody()) body: HeuristicEvaluationDto,
   ) {
-    return this.designSystemService.submitHeuristicEvaluation(body);
+    // Left out, the service stamps it with the time of submission
+    return this.designSystemService.submitHeuristicEvaluation({ ...body, timestamp: body.timestamp });
   }
 
   // Token Relationship Mapping endpoints
@@ -388,11 +367,13 @@ export class DesignSystemController {
   @Post('components/:id/variants')
   async saveComponentVariant(
     @Param('id') componentId: string,
-    @Body() variant: any,
+    @Body(strictBody()) body: ComponentVariantDto,
     @Principal() principal: AuthPrincipal,
   ) {
     const component = await this.componentAccess.getForWrite(principal, componentId);
-    const saved = await this.designSystemService.saveComponentVariant(componentId, variant);
+    // The stored code is generated from the properties, never taken from the body
+    const { name, description, properties } = body;
+    const saved = await this.designSystemService.saveComponentVariant(componentId, { name, description, properties });
     await this.changes.record(
       {
         ...componentChange(component),
@@ -506,30 +487,9 @@ export class DesignSystemController {
   @RequirePermission(Permission.COMPONENT_CREATE)
   @Post('components')
   async createComponent(
-    @Body() data: {
-      id: string;
-      name: string;
-      description: string;
-      status?: 'production' | 'in-progress' | 'planned' | 'deprecated';
-      props?: any[];
-      code?: { vue?: string; react?: string; html?: string };
-      dependencies?: string[];
-      examples?: string[];
-      accessibility?: { wcag: string; notes?: string };
-      linkedRequestId?: string;
-      workspaceId?: string;
-    },
+    @Body(strictBody()) data: CreateComponentDto,
     @Principal() principal: AuthPrincipal,
   ) {
-    if (typeof data?.id !== 'string' || !COMPONENT_ID_PATTERN.test(data.id)) {
-      throw new BadRequestException('id must be a kebab-case component id');
-    }
-    for (const field of ['name', 'description'] as const) {
-      if (typeof data[field] !== 'string' || !data[field].trim()) throw new BadRequestException(`${field} is required`);
-    }
-    if (data.status !== undefined && !(COMPONENT_STATUSES as readonly string[]).includes(data.status)) {
-      throw new BadRequestException(`status must be one of ${COMPONENT_STATUSES.join(', ')}`);
-    }
     // Ids are global, so a clash with a component the caller can't see still conflicts
     await this.designSystemService.ready();
     if (this.designSystemService.getComponentById(data.id)) {

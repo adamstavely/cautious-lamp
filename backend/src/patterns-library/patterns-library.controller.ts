@@ -1,26 +1,10 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, BadRequestException, Inject } from '@nestjs/common';
-import { PatternsLibraryService, ComponentPattern, PATTERN_STATUSES, PatternStatus } from './patterns-library.service';
+import { PatternsLibraryService, ComponentPattern } from './patterns-library.service';
+import { CreatePatternDto, UpdatePatternDto } from './patterns-library.dto';
+import { strictBody } from '../governance/governance.dto';
 import { AuthPrincipal, Principal, RequirePermission } from '../auth/principal';
 import { Permission } from '../rbac/rbac.service';
 import { CHANGE_RECORDER, ChangeRecorder } from '../notifications/notification.types';
-
-const PATTERN_CATEGORIES: ReadonlyArray<ComponentPattern['category']> = ['common', 'anti-pattern', 'best-practice', 'accessibility', 'performance', 'composition'];
-
-/** name, description and category are what lists sort and search on, so a pattern can't be stored without them */
-function assertPatternFields(data: Partial<ComponentPattern> | undefined, creating: boolean): void {
-  if (!data || typeof data !== 'object') throw new BadRequestException('A pattern body is required');
-  for (const field of ['name', 'description'] as const) {
-    const value = data[field];
-    if (value === undefined && !creating) continue;
-    if (typeof value !== 'string' || !value.trim()) throw new BadRequestException(`${field} is required`);
-  }
-  if ((creating || data.category !== undefined) && !PATTERN_CATEGORIES.includes(data.category as ComponentPattern['category'])) {
-    throw new BadRequestException(`category must be one of ${PATTERN_CATEGORIES.join(', ')}`);
-  }
-  if (data.status !== undefined && !PATTERN_STATUSES.includes(data.status as PatternStatus)) {
-    throw new BadRequestException(`status must be one of ${PATTERN_STATUSES.join(', ')}`);
-  }
-}
 
 /** A pattern is deprecated by its status, or by tagging it "deprecated" */
 const isDeprecated = (pattern?: Pick<ComponentPattern, 'status' | 'tags'> | null) =>
@@ -78,21 +62,8 @@ export class PatternsLibraryController {
   @RequirePermission(Permission.PATTERN_CREATE)
   async createPattern(
     @Principal() principal: AuthPrincipal,
-    @Body() data: {
-      name: string;
-      description: string;
-      category: ComponentPattern['category'];
-      status?: PatternStatus;
-      componentIds?: string[];
-      codeExample?: ComponentPattern['codeExample'];
-      useCases?: string[];
-      whenToUse?: string;
-      whenNotToUse?: string;
-      relatedPatterns?: string[];
-      tags?: string[];
-    },
+    @Body(strictBody()) data: CreatePatternDto,
   ) {
-    assertPatternFields(data, true);
     const pattern = await this.patternsService.createPattern(data);
     await this.changes.record(
       { type: 'pattern', entityId: pattern.id, entityName: pattern.name, action: 'created', changes: [{ description: pattern.description }], link: PATTERN_LINK },
@@ -106,9 +77,8 @@ export class PatternsLibraryController {
   async updatePattern(
     @Principal() principal: AuthPrincipal,
     @Param('id') patternId: string,
-    @Body() updates: Partial<Omit<ComponentPattern, 'id' | 'createdAt'>>,
+    @Body(strictBody()) updates: UpdatePatternDto,
   ) {
-    assertPatternFields(updates, false);
     const before = await this.patternsService.getPattern(patternId);
     const wasDeprecated = isDeprecated(before);
     const previousStatus = before?.status;

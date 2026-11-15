@@ -8,6 +8,10 @@ import { CreateProjectDto as CreateSessionReplayProjectDto } from '../../session
 import { CreateBaselineDto } from '../../visual-regression/dto/project-settings.dto';
 import { CreatePaletteDto } from '../../color-palette/dto/create-palette.dto';
 import { AnalyzeVideoDto } from '../../photosensitivity/photosensitivity.dto';
+import { ComponentVariantDto, CreateBannerDto, CreateComponentDto, HeuristicEvaluationDto, SusDto, UpdateIssueDto } from '../../design-system/design-system.dto';
+import { CreatePatternDto, UpdatePatternDto } from '../../patterns-library/patterns-library.dto';
+import { ComponentScaffoldDto } from '../../component-scaffolding/component-scaffolding.dto';
+import { ExtractRequestDto } from '../../design-extraction/design-extraction.dto';
 import { GLOBAL_VALIDATION_OPTIONS, globalValidationPipe } from './global-validation';
 
 /**
@@ -29,31 +33,10 @@ const FREE_FORM_BODIES: Record<string, string> = {
   'DesignSyncController.updateConnection': 'validated by the design-sync service per provider',
   // Multipart: validated in the handler against VersionDto, so a refused request can delete its staged upload
   'ReviewsController.addVersion': 'validated in the handler (VersionDto) after the upload is staged',
-  // Not converted yet: these belong to the design-system, contribution
-  // and scaffolding work, and are passed on without validation as before
-  'PatternsLibraryController.createPattern': 'not converted yet (patterns)',
-  'PatternsLibraryController.updatePattern': 'not converted yet (patterns)',
   'ContributionWorkflowController.createGuideline': 'not converted yet (contributions)',
   'ContributionWorkflowController.createTemplate': 'not converted yet (contributions)',
   'ContributionWorkflowController.generatePRTemplate': 'not converted yet (contributions)',
   'ContributionWorkflowController.createCheck': 'not converted yet (contributions)',
-  'ComponentScaffoldingController.scaffoldComponent': 'not converted yet (component scaffolding)',
-  'ComponentScaffoldingController.createComponent': 'not converted yet (component scaffolding)',
-  'DesignExtractionController.extract': 'not converted yet (design extraction)',
-  'DesignSystemController.createPerformanceBudget': 'not converted yet (design system)',
-  'DesignSystemController.updatePerformanceBudget': 'not converted yet (design system)',
-  'DesignSystemController.analyzeBundle': 'not converted yet (design system)',
-  'DesignSystemController.createRoadmapItem': 'not converted yet (design system)',
-  'DesignSystemController.updateRoadmapItem': 'not converted yet (design system)',
-  'DesignSystemController.createBanner': 'not converted yet (design system)',
-  'DesignSystemController.updateBanner': 'not converted yet (design system)',
-  'DesignSystemController.createIssue': 'not converted yet (design system)',
-  'DesignSystemController.updateIssue': 'not converted yet (design system)',
-  'DesignSystemController.submitNASATLX': 'not converted yet (design system)',
-  'DesignSystemController.submitSUS': 'not converted yet (design system)',
-  'DesignSystemController.submitHeuristicEvaluation': 'not converted yet (design system)',
-  'DesignSystemController.saveComponentVariant': 'not converted yet (design system)',
-  'DesignSystemController.createComponent': 'not converted yet (design system)',
 };
 
 /** Every controller class under src/, with the file it came from */
@@ -146,6 +129,40 @@ describe('Global validation (whitelist + forbidNonWhitelisted)', () => {
       expect(await refused({ ...project, createdBy: 'me' }, CreateSessionReplayProjectDto)).toEqual(['property createdBy should not exist']);
       expect(await refused({ name: 'Release', runId: 'run_1', approvedBy: 'me' }, CreateBaselineDto)).toEqual(['property approvedBy should not exist']);
       expect(await refused({ applicationName: 'Shop', owner: 'x' }, AnalyzeVideoDto)).toEqual(['property owner should not exist']);
+    });
+    it('design-system banners, issues, components and variants', async () => {
+      const banner = { title: 'Maintenance', message: 'Tonight', type: 'info' };
+      await expect(pipe.transform(banner, body(CreateBannerDto))).resolves.toEqual(banner);
+      expect(await refused({ ...banner, createdAt: '2020-01-01' }, CreateBannerDto)).toEqual(['property createdAt should not exist']);
+      expect(await refused({ ...banner, type: 'loud' }, CreateBannerDto)).toEqual([expect.stringContaining('type must be one of')]);
+      expect(await refused({ status: 'resolved', id: 'other' }, UpdateIssueDto)).toEqual(['property id should not exist']);
+      expect(await refused({ status: null }, UpdateIssueDto)).toEqual([expect.stringContaining('status must be one of')]);
+      expect(await refused({ id: 'card', name: 'Card', description: 'x', isGlobal: true }, CreateComponentDto)).toEqual(['property isGlobal should not exist']);
+      expect(await refused({ id: 'Not An Id', name: 'Card', description: 'x' }, CreateComponentDto)).toEqual(['id must be a kebab-case component id']);
+      expect(await refused({ name: 'compact', properties: { hover: { glow: 'x' } } }, ComponentVariantDto)).toEqual(['properties.hover.property glow should not exist']);
+    });
+
+    it('research forms: SUS answers 1-5, heuristic ratings 0-4', async () => {
+      const sus = { systemName: 'Shop', q1: 5, q2: 1, q3: 4, q4: 2, q5: 4, q6: 2, q7: 5, q8: 1, q9: 4, q10: 2, user: 'Ana' };
+      await expect(pipe.transform(sus, body(SusDto))).resolves.toEqual(sus);
+      expect(await refused({ ...sus, q3: 6 }, SusDto)).toEqual(['q3 must not be greater than 5']);
+      expect(await refused({ ...sus, score: 100 }, SusDto)).toEqual(['property score should not exist']);
+      const evaluation = { systemName: 'Shop', evaluator: 'Ana', heuristics: [{ heuristic: 'Visibility', issues: '', severity: 0 }], overallAssessment: 'Fine' };
+      await expect(pipe.transform(evaluation, body(HeuristicEvaluationDto))).resolves.toEqual(evaluation);
+      expect(await refused({ ...evaluation, heuristics: [{ heuristic: 'Visibility', issues: '', severity: 9 }] }, HeuristicEvaluationDto)).toEqual(['heuristics.0.severity must not be greater than 4']);
+      expect(await refused({ ...evaluation, heuristics: [] }, HeuristicEvaluationDto)).toEqual(['heuristics must contain at least 1 elements']);
+    });
+
+    it('patterns, scaffolding and design extraction', async () => {
+      expect(await refused({ name: 'Grid', description: 'Cards', category: 'common', id: 'mine' }, CreatePatternDto)).toEqual(['property id should not exist']);
+      expect(await refused({ name: null }, UpdatePatternDto)).toEqual(expect.arrayContaining(['name must be a string']));
+      await expect(pipe.transform({ description: 'Rows' }, body(UpdatePatternDto))).resolves.toEqual({ description: 'Rows' });
+      const scaffold = { name: 'Alert', description: '', category: '', props: [{ name: 'tone', type: 'enum', options: ['info'], defaultValue: 'info' }], styles: { colors: { background: '#eef' } } };
+      await expect(pipe.transform(scaffold, body(ComponentScaffoldDto))).resolves.toEqual(scaffold);
+      expect(await refused({ ...scaffold, styles: { colors: { glow: 'x' } } }, ComponentScaffoldDto)).toEqual(['styles.colors.property glow should not exist']);
+      expect(await refused({ ...scaffold, props: [{ name: 'tone', type: 'tuple' }] }, ComponentScaffoldDto)).toEqual([expect.stringContaining('props.0.type must be one of')]);
+      expect(await refused({ url: 'https://example.com', options: { headless: false } }, ExtractRequestDto)).toEqual(['options.property headless should not exist']);
+      expect(await refused({ url: '  ' }, ExtractRequestDto)).toEqual(['URL cannot be empty']);
     });
   });
 });

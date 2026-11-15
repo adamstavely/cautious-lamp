@@ -156,7 +156,9 @@ describe('Design system HTTP API', () => {
     });
 
     it('only lets a workspace editor add components to it, without sharing them', async () => {
-      const body = { id: 'beta-made', name: 'BetaMade', description: 'x', workspaceId: 'ws_alpha', isGlobal: true };
+      const body = { id: 'beta-made', name: 'BetaMade', description: 'x', workspaceId: 'ws_alpha' };
+      // Sharing is set through the workspace routes, so it can't be sent here
+      expect((await call('POST', '/components', { as: 'alice', body: { ...body, id: 'alpha-global-try', isGlobal: true } })).status).toBe(400);
       expect((await call('POST', '/components', { as: 'bob', body })).status).toBe(404);
       expect((await call('POST', '/components', { as: 'banners', body })).status).toBe(403); // no component:create
       const created = await call('POST', '/components', { as: 'alice', body: { ...body, id: 'alpha-made' } });
@@ -377,14 +379,16 @@ describe('Design system HTTP API', () => {
       const issue = { title: 'Focus ring missing', description: 'x', category: 'bug', severity: 'medium', componentId: 'button' };
       expect((await call('POST', '/issues', { as: 'viewer', body: issue })).status).toBe(403);
       expect((await call('POST', '/issues', { as: 'banners', body: issue })).status).toBe(403);
-      const created = await call('POST', '/issues', { as: 'bob', body: issue });
+      // The reporter is the caller, whatever the body says
+      const created = await call('POST', '/issues', { as: 'bob', body: { ...issue, reportedBy: 'usr_alice' } });
       expect(created.status).toBe(201);
       expect(created.body).toMatchObject({ ...issue, status: 'open', reportedBy: 'usr_bob' });
 
       const id = created.body.id;
       expect((await call('PUT', `/issues/${id}`, { as: 'viewer', body: { status: 'resolved' } })).status).toBe(403);
       expect((await call('PUT', `/issues/${id}`, { as: 'roadmap', body: { status: 'resolved' } })).status).toBe(403);
-      const triaged = await call('PUT', `/issues/${id}`, { as: 'ed', body: { status: 'investigating', assignedTo: 'usr_ed', id: 'other' } });
+      expect((await call('PUT', `/issues/${id}`, { as: 'ed', body: { status: 'investigating', id: 'other' } })).status).toBe(400);
+      const triaged = await call('PUT', `/issues/${id}`, { as: 'ed', body: { status: 'investigating', assignedTo: 'usr_ed' } });
       expect(triaged.status).toBe(200);
       expect(triaged.body).toMatchObject({ id, status: 'investigating', assignedTo: 'usr_ed' });
       expect((await call('PUT', '/issues/issue-missing', { as: 'ed', body: { status: 'closed' } })).status).toBe(400);
