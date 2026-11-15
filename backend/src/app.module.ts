@@ -10,6 +10,7 @@ import { PhotosensitivityModule } from './photosensitivity/photosensitivity.modu
 import { IntegrationsModule } from './integrations/integrations.module';
 import { AccessibilityReportsModule } from './accessibility-reports/accessibility-reports.module';
 import { GovernanceModule } from './governance/governance.module';
+import { HealthModule } from './health/health.module';
 import { SystemHealthModule } from './system-health/system-health.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { TokenSyncModule } from './token-sync/token-sync.module';
@@ -42,6 +43,7 @@ import { BrandsModule } from './brands/brands.module';
   imports: [
     ThrottlerModule.forRoot(rateLimitConfig),
     AppElasticsearchModule,
+    HealthModule,
     AltTextModule,
     AiAssistantModule,
     ColorPaletteModule,

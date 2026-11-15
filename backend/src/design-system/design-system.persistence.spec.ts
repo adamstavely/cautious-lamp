@@ -3,7 +3,7 @@ import { designSystemComponentSource } from '../workspaces/workspaces.module';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { ComponentIssueService } from './component-issue.service';
 import { SEED_COMPONENTS, SEED_TOKENS } from './design-system-seed';
-import { DesignSystemService } from './design-system.service';
+import { CONTENT_CHECK_INTERVAL_MS, DesignSystemService } from './design-system.service';
 import { DesignSystemStores, createDesignSystemService, createDesignSystemStores } from './testing/in-memory-stores';
 
 /**
@@ -133,6 +133,58 @@ describe('DesignSystemService storage', () => {
     const global = (await restart()).getComponentById('alpha-thing')!;
     expect(global.isGlobal).toBe(true);
     expect(global.sharedWith).toBeUndefined();
+  });
+
+  describe('several servers over the same indices', () => {
+    let now: number;
+    beforeEach(() => {
+      now = Date.now();
+      jest.spyOn(Date, 'now').mockImplementation(() => now);
+    });
+    afterEach(() => jest.restoreAllMocks());
+
+    it("sees another server's writes once its copy is due a check", async () => {
+      const other = await restart();
+      await first.createComponent({ id: 'status-pill', name: 'StatusPill', description: 'Shows a status' });
+      await first.setComponentStatus('input', 'deprecated', 'usr_ann');
+      // Still inside the interval: the other server answers from its copy
+      await other.ready();
+      expect(other.getComponentById('status-pill')).toBeUndefined();
+
+      now += CONTENT_CHECK_INTERVAL_MS;
+      await other.ready();
+      expect(other.getComponentById('status-pill')).toMatchObject({ name: 'StatusPill' });
+      expect(other.getComponentById('input')!.status).toBe('deprecated');
+    });
+
+    it('catches up from a synchronous read on the next request', async () => {
+      const other = await restart();
+      await first.saveComponentVariant('button', { name: 'ghost', properties: {} });
+      now += CONTENT_CHECK_INTERVAL_MS;
+      // This read answers from the copy and starts the check
+      expect(other.getComponentVariants('button').map((v) => v.name)).not.toContain('ghost');
+      await other.ready();
+      expect(other.getComponentVariants('button').map((v) => v.name)).toContain('ghost');
+    });
+
+    it("doesn't reload for its own writes, and keeps its copy when the check fails", async () => {
+      await first.setComponentStatus('input', 'in-progress', 'usr_ann');
+      const list = jest.spyOn(stores.components, 'list');
+      now += CONTENT_CHECK_INTERVAL_MS;
+      await first.ready();
+      expect(list).not.toHaveBeenCalled();
+
+      const other = await restart();
+      await other.setComponentStatus('card', 'planned', 'usr_bob');
+      const get = jest.spyOn(stores.meta, 'get').mockRejectedValueOnce(new ServiceUnavailableException('Storage is unavailable'));
+      now += CONTENT_CHECK_INTERVAL_MS;
+      await first.ready();
+      expect(first.getComponentById('card')!.status).not.toBe('planned');
+      get.mockRestore();
+      now += CONTENT_CHECK_INTERVAL_MS;
+      await first.ready();
+      expect(first.getComponentById('card')!.status).toBe('planned');
+    });
   });
 
   it('keeps roadmap items, banners and performance budgets across a restart', async () => {

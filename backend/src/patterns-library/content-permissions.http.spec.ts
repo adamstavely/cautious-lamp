@@ -78,11 +78,11 @@ describe('Pattern library and contribution workflow permissions', () => {
     ['POST', '/patterns-library/patterns'],
     ['PUT', '/patterns-library/patterns/p1'],
     ['DELETE', '/patterns-library/patterns/p1'],
-    ['POST', '/contribution-workflow/guidelines'],
-    ['POST', '/contribution-workflow/templates'],
-    ['POST', '/contribution-workflow/checks'],
-    ['POST', '/contribution-workflow/templates/t1/generate-pr'],
-    ['POST', '/contribution-workflow/checks/run'],
+    ['POST', '/api/v1/contribution-workflow/guidelines'],
+    ['POST', '/api/v1/contribution-workflow/templates'],
+    ['POST', '/api/v1/contribution-workflow/checks'],
+    ['POST', '/api/v1/contribution-workflow/templates/t1/generate-pr'],
+    ['POST', '/api/v1/contribution-workflow/checks/run'],
   ];
 
   it.each(writes)('%s %s is refused without the permission and allowed with it', async (method, route) => {
@@ -139,6 +139,7 @@ describe('Pattern library and contribution workflow permissions', () => {
 
   it('keeps reads open to anyone signed in', async () => {
     expect(await call('GET', '/patterns-library/patterns', 'viewer')).toBe(200);
-    expect(await call('GET', '/contribution-workflow/guidelines', 'viewer')).toBe(200);
+    expect(await call('GET', '/api/v1/contribution-workflow/guidelines', 'viewer')).toBe(200);
+    expect(await call('GET', '/api/v1/contribution-workflow/pull-requests/setup', 'viewer')).toBe(200);
   });
 });

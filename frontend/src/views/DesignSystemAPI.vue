@@ -1,389 +1,237 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Design System API
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Access design tokens and components programmatically via REST and GraphQL APIs.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-                    <defs>
-                      <linearGradient id="apiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- API representation - connected nodes and data flow -->
-                    <rect x="30" y="30" width="50" height="50" rx="4" fill="url(#apiGradient)" opacity="0.4"/>
-                    <rect x="120" y="30" width="50" height="50" rx="4" fill="url(#apiGradient)" opacity="0.5"/>
-                    <rect x="30" y="120" width="50" height="50" rx="4" fill="url(#apiGradient)" opacity="0.6"/>
-                    <rect x="120" y="120" width="50" height="50" rx="4" fill="url(#apiGradient)" opacity="0.4"/>
-                    <!-- Central API hub -->
-                    <circle cx="100" cy="100" r="25" fill="url(#apiGradient)" opacity="0.7"/>
-                    <circle cx="100" cy="100" r="15" fill="url(#apiGradient)" opacity="0.9"/>
-                    <!-- Connection lines representing API calls -->
-                    <line x1="55" y1="55" x2="100" y2="100" stroke="url(#apiGradient)" stroke-width="2" opacity="0.4"/>
-                    <line x1="145" y1="55" x2="100" y2="100" stroke="url(#apiGradient)" stroke-width="2" opacity="0.4"/>
-                    <line x1="55" y1="145" x2="100" y2="100" stroke="url(#apiGradient)" stroke-width="2" opacity="0.4"/>
-                    <line x1="145" y1="145" x2="100" y2="100" stroke="url(#apiGradient)" stroke-width="2" opacity="0.4"/>
-                    <!-- Data flow indicators -->
-                    <circle cx="100" cy="70" r="3" fill="white" opacity="0.8"/>
-                    <circle cx="100" cy="130" r="3" fill="white" opacity="0.8"/>
-                    <circle cx="70" cy="100" r="3" fill="white" opacity="0.8"/>
-                    <circle cx="130" cy="100" r="3" fill="white" opacity="0.8"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
+  <PageShell>
+    <PageHero
+      eyebrow="Getting started"
+      title="Design system API"
+      lead="Read design tokens and components from your own tools and pipelines over a REST API. Everything on this page comes from the server you're signed in to."
+      spot="site/design-system-api"
+    />
+
+    <PageSection title="Version and base URL" description="There is one API version. New routes are added to it; nothing is versioned separately yet.">
+      <UiCallout v-if="versionError" tone="warning" icon="circle-alert" role="alert">{{ versionError }}</UiCallout>
+      <div v-else-if="version" class="grid sm:grid-cols-3 gap-4">
+        <UiStat label="Version" :value="version.version" />
+        <UiStat label="Server release" :value="version.release" />
+        <UiStat label="Routes under the base path" :value="String(version.routeCount)" />
+      </div>
+      <UiSpinner v-else label="Loading the API version" />
+      <UiCodeBlock class="mt-4" :code="baseUrl" label="Base URL" />
+    </PageSection>
+
+    <PageSection title="Authentication" description="Every route needs a credential, except the health check." divided>
+      <div class="grid md:grid-cols-2 gap-4">
+        <UiPanel title="Scripts and pipelines" heading-tag="h3">
+          <p class="text-ink-secondary">
+            Send an API key as a bearer token. Administrators create keys with
+            <UiCode>POST /api/v1/auth/api-keys</UiCode> (needs the user management permission); a key can only do what its roles allow.
+          </p>
+          <UiCodeBlock code="Authorization: Bearer YOUR_API_KEY" label="Request header" />
+        </UiPanel>
+        <UiPanel title="In the browser" heading-tag="h3">
+          <p class="text-ink-secondary">
+            This app signs you in and sends your session with each request, so pages call the same routes with your own permissions.
+            A route that needs a permission you don't have answers 403.
+          </p>
+        </UiPanel>
+      </div>
+    </PageSection>
+
+    <PageSection title="Tokens and components" description="The routes most integrations use. All are GET requests under the base URL." divided>
+      <div class="flex flex-col gap-4">
+        <UiPanel v-for="endpoint in endpoints" :key="endpoint.path" heading-tag="h3" :title="endpoint.path">
+          <template #actions><UiChip tone="info">GET</UiChip></template>
+          <p class="text-ink-secondary">{{ endpoint.description }}</p>
+          <UiCodeBlock v-if="endpoint.example" :code="endpoint.example" :label="`Example response for ${endpoint.path}`" />
+        </UiPanel>
+      </div>
+    </PageSection>
+
+    <PageSection title="All routes" description="Every route the server registers, and who may call it. Routes outside /api/v1 predate it and work the same way." divided>
+      <UiCallout v-if="routesError" tone="warning" icon="circle-alert" role="alert">{{ routesError }}</UiCallout>
+      <UiSpinner v-else-if="!routes" label="Loading the routes" />
+      <template v-else>
+        <div class="route-filter">
+          <UiInput v-model="query" label="Filter routes" icon="search" hint="Matches the path, method or permission." />
         </div>
+        <UiPanel flush>
+          <UiTable :caption="`API routes (${filteredRoutes.length} of ${routes.length})`" compact>
+            <thead>
+              <tr>
+                <th scope="col">Method</th>
+                <th scope="col">Path</th>
+                <th scope="col">Who may call it</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="route in filteredRoutes" :key="`${route.method} ${route.path}`">
+                <td><UiChip :tone="methodTone(route.method)">{{ route.method }}</UiChip></td>
+                <td><UiCode>{{ route.path }}</UiCode></td>
+                <td>{{ access(route) }}</td>
+              </tr>
+            </tbody>
+          </UiTable>
+        </UiPanel>
+        <p v-if="!filteredRoutes.length" class="mt-3 text-ink-secondary">No routes match “{{ query }}”.</p>
+      </template>
+    </PageSection>
 
-        <!-- API Overview -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="flex items-start gap-4 mb-6">
-              <div class="p-3 rounded-lg" :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-50'">
-                <AppIcon name="code" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
-              </div>
-              <div class="flex-1">
-                <h2 class="text-2xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  API Endpoints
-                </h2>
-                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Base URL: <code class="px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-gray-100 text-indigo-600'">http://localhost:3000/api/v1</code>
-                </p>
-                <p class="text-xs mt-2" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                  Note: The API requires authentication via API key. Use the Authorization header with Bearer token.
-                </p>
-              </div>
-            </div>
+    <PageSection title="SDK and CLI" description="Both live in this repository and call the routes above." divided>
+      <div class="grid md:grid-cols-2 gap-4">
+        <UiPanel title="JavaScript SDK" description="@designsystem/api, in sdk/" heading-tag="h3">
+          <UiCodeBlock :code="sdkExample" label="JavaScript" />
+        </UiPanel>
+        <UiPanel title="Command line" description="@designsystem/cli (the ds command), in cli/" heading-tag="h3">
+          <UiCodeBlock :code="cliExample" label="Shell" />
+        </UiPanel>
+      </div>
+      <UiPanel class="mt-4" title="cURL" heading-tag="h3">
+        <UiCodeBlock :code="curlExample" label="Shell" />
+      </UiPanel>
+    </PageSection>
+  </PageShell>
+</template>
 
-            <!-- REST API -->
-            <div class="mb-8">
-              <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                REST API
-              </h3>
-              <div class="space-y-4">
-                <!-- Get All Tokens -->
-                <div class="border rounded-lg overflow-hidden" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                  <div class="flex items-center gap-3 p-4 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <span class="px-3 py-1 rounded text-sm font-medium bg-green-500 text-white">GET</span>
-                    <code class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">/tokens</code>
-                  </div>
-                  <div class="p-4">
-                    <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      Retrieve all design tokens
-                    </p>
-                    <div class="bg-slate-950 rounded p-4 overflow-x-auto">
-                      <pre class="text-xs text-gray-300"><code>{
+<script setup>
+import { computed, onMounted, ref } from 'vue';
+import {
+  PageHero,
+  PageSection,
+  PageShell,
+  UiCallout,
+  UiChip,
+  UiCode,
+  UiCodeBlock,
+  UiInput,
+  UiPanel,
+  UiSpinner,
+  UiStat,
+  UiTable,
+} from '../components/ui';
+import apiClient, { apiErrorMessage } from '../services/api.js';
+
+/*
+ * The version and the route list come from the server (GET /api/versions/current
+ * and /api/versions/current/routes), so they can't drift from what it serves.
+ */
+const version = ref(null);
+const versionError = ref('');
+const routes = ref(null);
+const routesError = ref('');
+const query = ref('');
+
+const apiOrigin = (import.meta.env.VITE_API_BASE_URL || window.location.origin).replace(/\/+$/, '');
+const baseUrl = computed(() => `${apiOrigin}${version.value?.basePath ?? '/api/v1'}`);
+
+onMounted(async () => {
+  const [versionResult, routesResult] = await Promise.allSettled([
+    apiClient.get('/api/versions/current'),
+    apiClient.get('/api/versions/current/routes'),
+  ]);
+  if (versionResult.status === 'fulfilled') version.value = versionResult.value.data;
+  else versionError.value = apiErrorMessage(versionResult.reason, 'The API version could not be loaded.');
+  if (routesResult.status === 'fulfilled') routes.value = routesResult.value.data;
+  else routesError.value = apiErrorMessage(routesResult.reason, 'The route list could not be loaded.');
+});
+
+const filteredRoutes = computed(() => {
+  const terms = query.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!routes.value) return [];
+  return routes.value.filter((route) => {
+    const haystack = `${route.method} ${route.path} ${route.permissions.join(' ')} ${route.public ? 'public' : ''}`.toLowerCase();
+    return terms.every((term) => haystack.includes(term));
+  });
+});
+
+const access = (route) => {
+  if (route.public) return 'Anyone, no credential';
+  if (route.permissions.length) return `Signed in, with ${route.permissions.join(' or ')}`;
+  return 'Anyone signed in';
+};
+
+const METHOD_TONES = { GET: 'info', POST: 'success', PUT: 'warning', PATCH: 'warning', DELETE: 'danger' };
+const methodTone = (method) => METHOD_TONES[method] ?? 'neutral';
+
+const endpoints = [
+  {
+    path: '/health',
+    description: "The server's release and whether Elasticsearch answers. Needs no credential; answers 503 while Elasticsearch is unreachable.",
+    example: `{
+  "status": "ok",
+  "version": "1.0.0",
+  "timestamp": "2026-11-15T10:00:00.000Z",
+  "elasticsearch": { "status": "up" }
+}`,
+  },
+  {
+    path: '/tokens',
+    description: 'Every design token. Narrow the list with the category, type and tag query parameters, e.g. /tokens?category=colors&tag=brand.',
+    example: `{
   "tokens": [
     {
       "name": "color.primary",
       "value": "#4f46e5",
       "type": "color",
-      "category": "colors"
+      "category": "colors",
+      "description": "Primary brand color",
+      "tags": ["brand", "primary"]
     }
-  ]
-}</code></pre>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Get Component -->
-                <div class="border rounded-lg overflow-hidden" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                  <div class="flex items-center gap-3 p-4 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <span class="px-3 py-1 rounded text-sm font-medium bg-green-500 text-white">GET</span>
-                    <code class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">/components/:id</code>
-                  </div>
-                  <div class="p-4">
-                    <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      Get component details and code
-                    </p>
-                    <div class="bg-slate-950 rounded p-4 overflow-x-auto">
-                      <pre class="text-xs text-gray-300"><code>{
+  ],
+  "count": 1,
+  "filters": { "category": "colors", "tag": "brand" }
+}`,
+  },
+  {
+    path: '/tokens/category/:category',
+    description: 'The tokens in one category, e.g. /tokens/category/spacing.',
+    example: `{ "tokens": [ … ], "category": "spacing", "count": 7 }`,
+  },
+  { path: '/tokens/:name', description: 'One token by name, e.g. /tokens/color.primary.' },
+  {
+    path: '/components',
+    description: 'The components you can see: the shared ones and those of your workspaces. Filter with ?status=production (or in-progress, planned, deprecated).',
+    example: `{ "components": [ … ], "count": 8, "filters": { "status": "production" } }`,
+  },
+  {
+    path: '/components/:id',
+    description: 'One component with its props, code (Vue, React, HTML), examples and accessibility notes.',
+    example: `{
   "id": "button",
   "name": "Button",
-  "description": "Primary action component",
-  "props": [...],
-  "code": {
-    "vue": "...",
-    "react": "..."
-  }
-}</code></pre>
-                    </div>
-                  </div>
-                </div>
+  "description": "…",
+  "status": "production",
+  "props": [ … ],
+  "code": { "vue": "…", "react": "…" }
+}`,
+  },
+  { path: '/components/status/:status', description: 'The components with one status, e.g. /components/status/deprecated.' },
+];
 
-                <!-- Get Token by Category -->
-                <div class="border rounded-lg overflow-hidden" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                  <div class="flex items-center gap-3 p-4 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <span class="px-3 py-1 rounded text-sm font-medium bg-green-500 text-white">GET</span>
-                    <code class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">/tokens?category=colors</code>
-                  </div>
-                  <div class="p-4">
-                    <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      Filter tokens by category
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+const sdkExample = computed(() => `import { DesignSystemAPI } from '@designsystem/api';
 
-            <!-- GraphQL API -->
-            <div class="mb-8">
-              <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                GraphQL API
-              </h3>
-              <div class="border rounded-lg overflow-hidden" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                <div class="flex items-center gap-3 p-4 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                  <span class="px-3 py-1 rounded text-sm font-medium bg-purple-500 text-white">POST</span>
-                  <code class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">/graphql</code>
-                </div>
-                <div class="p-4">
-                  <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Query design tokens and components
-                  </p>
-                  <div class="bg-slate-950 rounded p-4 overflow-x-auto">
-                    <pre class="text-xs text-gray-300"><code>query {
-  tokens(category: "colors") {
-    name
-    value
-    type
-  }
-  component(id: "button") {
-    name
-    props
-    code {
-      vue
-      react
-    }
-  }
-}</code></pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Authentication -->
-            <div class="mb-8">
-              <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Authentication
-              </h3>
-              <div class="border rounded-lg overflow-hidden" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                <div class="p-4">
-                  <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Include your API key in the Authorization header:
-                  </p>
-                  <div class="bg-slate-950 rounded p-4 overflow-x-auto">
-                    <pre class="text-xs text-gray-300"><code>Authorization: Bearer YOUR_API_KEY</code></pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- SDKs -->
-            <div>
-              <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                SDKs & Libraries
-              </h3>
-              <div class="grid md:grid-cols-2 gap-4">
-                <div class="border rounded-lg p-4" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                  <h4 class="font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">JavaScript</h4>
-                  <code class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">npm install @designsystem/api</code>
-                </div>
-                <div class="border rounded-lg p-4" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                  <h4 class="font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Python</h4>
-                  <code class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">pip install designsystem-api</code>
-                </div>
-                <div class="border rounded-lg p-4" :class="isDarkMode ? 'border-gray-700 bg-slate-800' : 'border-gray-200 bg-gray-50'">
-                  <h4 class="font-semibold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">CLI Tool</h4>
-                  <code class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">npm install -g @designsystem/cli</code>
-                  <p class="text-xs mt-2" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                    Command-line interface for accessing the API
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Code Examples -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div 
-            class="rounded-lg shadow-sm border"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-              <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Code Examples
-              </h3>
-            </div>
-            <div class="p-6">
-              <div class="space-y-6">
-                <!-- JavaScript Example -->
-                <div>
-                  <h4 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    JavaScript / Node.js
-                  </h4>
-                  <div class="bg-slate-950 rounded p-4 overflow-x-auto">
-                    <pre class="text-xs text-gray-300"><code>const api = new DesignSystemAPI({
-  apiKey: 'YOUR_API_KEY',
-  baseURL: 'http://localhost:3000/api/v1' // Optional
+const api = new DesignSystemAPI({
+  apiKey: process.env.DS_API_KEY,
+  baseURL: '${baseUrl.value}',
 });
 
-// Get all tokens
-const tokens = await api.tokens();
+const { tokens } = await api.tokens();
+const { tokens: colors } = await api.tokensByCategory('colors');
+const button = await api.component('button');`);
 
-// Get tokens by category
-const colors = await api.tokensByCategory('colors');
+const cliExample = computed(() => `export DS_API_KEY=YOUR_API_KEY
+export DS_API_URL=${baseUrl.value}
 
-// Get component
-const button = await api.component('button');</code></pre>
-                  </div>
-                </div>
-
-                <!-- Python Example -->
-                <div>
-                  <h4 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Python
-                  </h4>
-                  <div class="bg-slate-950 rounded p-4 overflow-x-auto">
-                    <pre class="text-xs text-gray-300"><code>from designsystem import API
-
-api = API(api_key='YOUR_API_KEY', base_url='http://localhost:3000/api/v1')
-
-# Get all tokens
-tokens = api.tokens.get_all()
-
-# Get tokens by category
-colors = api.tokens.get_by_category('colors')
-
-# Get component
-button = api.components.get('button')</code></pre>
-                  </div>
-                </div>
-
-                <!-- CLI Example -->
-                <div>
-                  <h4 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    CLI Tool
-                  </h4>
-                  <div class="bg-slate-950 rounded p-4 overflow-x-auto">
-                    <pre class="text-xs text-gray-300"><code># Set API key
-ds config set apiKey YOUR_API_KEY
-
-# List all tokens
+ds health
 ds tokens
-
-# Get a specific token
 ds token color.primary
-
-# List components
 ds components
+ds component button --code react`);
 
-# Get a component with code
-ds component button --code react</code></pre>
-                  </div>
-                </div>
-
-                <!-- cURL Example -->
-                <div>
-                  <h4 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    cURL
-                  </h4>
-                  <div class="bg-slate-950 rounded p-4 overflow-x-auto">
-                    <pre class="text-xs text-gray-300"><code>curl -X GET \
-  http://localhost:3000/api/v1/tokens \
-  -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-
-
-
-
-
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
+const curlExample = computed(() => `curl ${baseUrl.value}/tokens/category/colors \\
+  -H "Authorization: Bearer YOUR_API_KEY"`);
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.route-filter {
+  @apply mb-4 max-w-md;
 }
 </style>
-

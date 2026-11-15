@@ -120,6 +120,7 @@
     "src/views/DesignAssets.vue",
     "src/views/DesignExtractor.vue",
     "src/views/DesignPrinciples.vue",
+    "src/views/DesignSystemAPI.vue",
     "src/views/DesignSync.vue",
     "src/views/DesignThemes.vue",
     "src/views/DocumentationGenerator.vue",

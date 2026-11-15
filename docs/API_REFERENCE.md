@@ -312,9 +312,10 @@ See [API_ERROR_CODES.md](./API_ERROR_CODES.md) for complete error code reference
 
 ## Versioning
 
-API versioning is supported via URL path:
-- `/api/v1/...` - Version 1 (current)
-- `/api/v2/...` - Version 2 (future)
+There is one API version, v1, under `/api/v1/...`. `GET /api/versions` describes it,
+and `GET /api/versions/current/routes` lists every route the server registers.
+`GET /api/v1/health` (no credential needed) reports the server's release and whether
+Elasticsearch is reachable, and answers 503 when it isn't.
 
 ## Next Steps
 

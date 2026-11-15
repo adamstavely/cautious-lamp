@@ -165,8 +165,8 @@ export class DesignSystemAPI {
     return response.data;
   }
 
-  /** GET /health */
-  async health(): Promise<{ status: string; timestamp: string; version: string }> {
+  /** GET /health: the server's release and whether Elasticsearch answers (a 503 when it doesn't) */
+  async health(): Promise<{ status: 'ok' | 'unavailable'; timestamp: string; version: string; elasticsearch: { status: 'up' | 'down'; error?: string } }> {
     const response = await this.client.get('/health');
     return response.data;
   }
