@@ -36,20 +36,16 @@ export const registrationFields = (form) => {
 };
 
 /**
- * Body for PUT /applications/:id: changed fields only. Cleared text fields are
- * sent as '' (the server stores that as "not set"). URLs can't be '' on the
- * server, so a cleared URL is sent as '' only where allowed.
+ * Body for PUT /applications/:id: changed fields only. A cleared field, URLs
+ * included, is sent as '', which the server stores as "not set".
  */
 export const updateFields = (form, app) => {
   const body = {};
   if (form.name.trim() !== app.name) body.name = form.name.trim();
-  for (const key of ['description', 'version', 'teamId']) {
+  // An emptied field is sent as '', which clears it
+  for (const key of ['description', 'version', 'teamId', 'repository', 'applicationUrl']) {
     const value = form[key].trim();
     if (value !== (app[key] ?? '')) body[key] = value;
-  }
-  for (const key of ['repository', 'applicationUrl']) {
-    const value = form[key].trim();
-    if (value && value !== app[key]) body[key] = value;
   }
   const metadata = metadataOf(form);
   const before = app.metadata ?? {};

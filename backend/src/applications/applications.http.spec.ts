@@ -113,6 +113,16 @@ describe('Applications HTTP API', () => {
     expect((await h.call('admin', 'PATCH', `/applications/${app.id}/design-system-version`, { version: 'two' })).status).toBe(400);
   });
 
+  it('clears the repository and application URL with an empty string, and still rejects bad URLs', async () => {
+    const app = (await register('admin', { name: 'Clearable', workspaceId: ws, repository: 'https://example.com/repo', applicationUrl: 'https://example.com' })).body;
+    const cleared = await h.call('admin', 'PUT', `/applications/${app.id}`, { repository: '', applicationUrl: '' });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.repository).toBeUndefined();
+    expect(cleared.body.applicationUrl).toBeUndefined();
+    expect((await h.call('admin', 'PUT', `/applications/${app.id}`, { applicationUrl: 'javascript:alert(1)' })).status).toBe(400);
+    expect((await h.call('admin', 'PUT', `/applications/${app.id}`, { repository: 'not a url' })).status).toBe(400);
+  });
+
   it('creates linked projects, surfaces their errors, and deletes them with the application', async () => {
     const createdBefore = h.vr.created.length;
     h.vr.failVrCreate = true;

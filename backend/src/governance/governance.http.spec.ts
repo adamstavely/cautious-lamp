@@ -201,6 +201,13 @@ describe('Governance HTTP API', () => {
     expect(res.body.message).toMatch(/private or internal/);
   });
 
+  it("scans the application's own URL when nothing is sent, like the scheduler", async () => {
+    // app-2's URL is internal, so the fallback is visible as the same refusal (it was fetched, not skipped)
+    const res = await admin('POST', '/governance/scans', { scope: 'application', applicationId: 'app-2' });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/private or internal/);
+  });
+
   it('runs only the rules an application picked, skipping ones deleted since', async () => {
     const res = await admin('POST', '/governance/scans', { scope: 'application', applicationId: 'app-3', codebase: { html: '<img src="a.png">' } });
     expect(res.status).toBe(201);

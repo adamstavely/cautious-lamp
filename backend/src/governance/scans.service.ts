@@ -129,7 +129,10 @@ export class ScansService implements OnModuleDestroy {
       record.applicationId = application.id;
       record.applicationName = application.name;
       record.access = { workspaceId: application.workspaceId ?? null };
-      inputs = [await this.applicationInput(request, record)];
+      // Nothing sent: scan the application's own URL, as the scheduler does
+      const hasCode = !!(request.codebase?.html?.trim() || request.codebase?.css?.trim() || request.codebase?.javascript?.trim());
+      const withDefault = !hasCode && !request.url && application.applicationUrl ? { ...request, url: application.applicationUrl } : request;
+      inputs = [await this.applicationInput(withDefault, record)];
     }
 
     const result = await runRules(rules, inputs, { runner: this.runner, tokens }, { application: record.applicationName });
@@ -243,7 +246,7 @@ export class ScansService implements OnModuleDestroy {
       record.url = page.url;
       return { html: page.body, css: blocks(page.body, 'style'), javascript: blocks(page.body, 'script'), file: page.url };
     }
-    throw new BadRequestException('Nothing to scan: send codebase { html, css, javascript } or a public url');
+    throw new BadRequestException('Nothing to scan: send codebase { html, css, javascript } or a public url, or set the application URL');
   }
 
   private toResponse(record: ScanRecord): ScanResponse {

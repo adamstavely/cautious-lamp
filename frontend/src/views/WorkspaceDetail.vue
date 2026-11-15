@@ -73,7 +73,7 @@
 
             <UiPanel title="Applications">
               <template v-if="canAdmin" #actions>
-                <UiButton variant="primary" size="sm" icon="plus" to="/admin/applications/register">Register application</UiButton>
+                <UiButton variant="primary" size="sm" icon="plus" :to="{ path: '/admin/applications/register', query: { workspaceId: workspace.id } }">Register application</UiButton>
               </template>
               <p v-if="applications.length === 0" class="py-6 text-center text-sm text-ink-muted">No applications registered in this workspace</p>
               <ul v-else class="divide-y divide-line-faint">

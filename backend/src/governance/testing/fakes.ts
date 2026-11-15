@@ -81,6 +81,17 @@ export class FakeApplications implements ApplicationDirectory {
   async recordScan(id: string, at: Date, kind: ScanKind) {
     this.scans.push({ id, at, kind });
   }
+
+  readonly deletedListeners: Array<(id: string) => Promise<void>> = [];
+  onDeleted(listener: (id: string) => Promise<void>) {
+    this.deletedListeners.push(listener);
+  }
+
+  /** Deletes like the registry does: the application, then its dependants */
+  async deleteApp(id: string) {
+    this.apps.delete(id);
+    for (const listener of this.deletedListeners) await listener(id);
+  }
 }
 
 export class FakeDesignSystem implements DesignSystemSource {

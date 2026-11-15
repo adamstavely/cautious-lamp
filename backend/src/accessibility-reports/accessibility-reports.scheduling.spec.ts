@@ -1,4 +1,4 @@
-import { ApplicationDoc } from '../applications/application.types';
+import { ApplicationDoc, ApplicationNameClaim } from '../applications/application.types';
 import { ApplicationsService } from '../applications/applications.service';
 import { SYSTEM_SCOPE } from '../governance/evidence-access';
 import { GovernanceScanScheduler } from '../governance/governance.scheduler';
@@ -194,6 +194,14 @@ describe('Scheduled accessibility reports: leases, retries and dead letters', ()
     expect(control.calls).toEqual([]);
   });
 
+  it('removes the schedule and SLA as soon as the application is deleted', async () => {
+    const { apps, instance, schedules, slas, schedule } = await setup();
+    await instance().createSLA({ applicationId: 'app-1', targetScore: 90, targetLevel: 'AA', criticalIssuesThreshold: 0, highIssuesThreshold: 5 });
+    await apps.deleteApp('app-1');
+    expect(schedules.docs.has(schedule.id)).toBe(false);
+    expect(slas.docs.size).toBe(0);
+  });
+
   it('keeps the schedule when the application lookup fails, to try again next tick', async () => {
     const { apps, instance, schedules, schedule, control } = await setup();
     jest.spyOn(apps, 'get').mockRejectedValueOnce(new Error('Storage is unavailable'));
@@ -240,7 +248,7 @@ describe('Accessibility reports and scheduled governance scans', () => {
       },
       metadata: {},
     });
-    const registry = new ApplicationsService(store, new WorkspaceAccessService(new InMemoryQueryableStore<WorkspaceDoc>()), {} as never, {} as never);
+    const registry = new ApplicationsService(store, new InMemoryStore<ApplicationNameClaim>(), new WorkspaceAccessService(new InMemoryQueryableStore<WorkspaceDoc>()), {} as never, {} as never);
     const directory = new RegistryApplicationDirectory(registry);
     const meta = new InMemoryStore<MetaDoc>();
     const scans = new ScansService(new RulesService(new InMemoryStore<GovernanceRule>(), meta), new InMemoryStore<ScanRecord>(), directory, new FakeDesignSystem(), allScope);

@@ -9,9 +9,10 @@ import {
   Optional,
 } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
+import { createHash } from 'crypto';
 import { AuthPrincipal, hasPermission } from '../auth/principal';
 import { Permission } from '../rbac/rbac.service';
-import { VersionConflictError } from '../reviews/document-store';
+import { DocumentStore, DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
 import { ProjectExistsError as SrProjectExistsError, SessionReplayService } from '../session-replay/session-replay.service';
 import { ProjectCreator } from '../visual-regression/project-access';
 import { ProjectExistsError as VrProjectExistsError, VisualRegressionService } from '../visual-regression/visual-regression.service';
@@ -23,10 +24,23 @@ import {
   RegisterApplicationDto,
   UpdateApplicationDto,
 } from './application.dto';
-import { APPLICATION_STORE, ApplicationCapabilities, ApplicationDoc, CapabilityName } from './application.types';
+import {
+  APPLICATION_NAME_STORE,
+  APPLICATION_STORE,
+  ApplicationCapabilities,
+  ApplicationDoc,
+  ApplicationNameClaim,
+  CapabilityName,
+} from './application.types';
 import { DesignSystemVersionInfo, compareVersions, currentDesignSystemVersion, parseVersion } from './design-system-version';
 
 const MAX_WRITE_ATTEMPTS = 5;
+/** A claim whose application doesn't exist is only taken over once it's this old (its registration may still be finishing) */
+const STALE_CLAIM_MS = 60_000;
+
+const nameKey = (name: string) => name.trim().toLowerCase();
+const claimId = (name: string, workspaceId: string | null) =>
+  `name_${createHash('sha256').update(`${workspaceId ?? ''}\u0000${nameKey(name)}`).digest('hex').slice(0, 40)}`;
 
 /** Which kind of scan completed (see markScanned) */
 export type ScanKind = 'governance' | 'accessibility';
@@ -69,11 +83,23 @@ export class ApplicationsService {
 
   constructor(
     @Inject(APPLICATION_STORE) private readonly store: QueryableStore<ApplicationDoc>,
+    @Inject(APPLICATION_NAME_STORE) private readonly names: DocumentStore<ApplicationNameClaim>,
     private readonly workspaces: WorkspaceAccessService,
     private readonly visualRegression: VisualRegressionService,
     private readonly sessionReplay: SessionReplayService,
     @Optional() private readonly moduleRef?: ModuleRef,
   ) {}
+
+  private readonly deletedListeners: Array<(app: ApplicationDoc) => Promise<void>> = [];
+
+  /**
+   * Lets other modules remove what belongs to an application when it is
+   * deleted (accessibility schedules and SLAs). Listeners run after the
+   * application is gone; a failing one is logged, not thrown.
+   */
+  onDeleted(listener: (app: ApplicationDoc) => Promise<void>): void {
+    this.deletedListeners.push(listener);
+  }
 
   // ---------- Reads ----------
 
@@ -138,17 +164,19 @@ export class ApplicationsService {
       throw new BadRequestException('Unknown workspace');
     }
     await this.assertNameFree(dto.name, workspaceId);
+    const id = newId('app');
+    await this.claimName(dto.name, workspaceId, id);
 
     const now = new Date().toISOString();
     const actor = actorOf(principal);
     const app: ApplicationDoc = {
-      id: newId('app'),
+      id,
       name: dto.name,
       description: dto.description ?? '',
-      repository: dto.repository,
+      repository: dto.repository || undefined,
       version: dto.version,
       designSystemVersion: dto.designSystemVersion?.replace(/^v/, ''),
-      applicationUrl: dto.applicationUrl,
+      applicationUrl: dto.applicationUrl || undefined,
       teamId: dto.teamId,
       workspaceId,
       registeredAt: now,
@@ -169,24 +197,37 @@ export class ApplicationsService {
       await this.store.create(app);
     } catch (error) {
       await this.undoUnlinkedProjects(app.id, created);
+      await this.releaseName(app.name, workspaceId, app.id);
       throw error;
     }
     return app;
   }
 
-  update(principal: AuthPrincipal, id: string, dto: UpdateApplicationDto): Promise<ApplicationDoc> {
-    return this.mutate(principal, id, async (app) => {
-      if (dto.name !== undefined && dto.name !== app.name) {
-        await this.assertNameFree(dto.name, app.workspaceId, app.id);
-        app.name = dto.name;
-      }
-      if (dto.description !== undefined) app.description = dto.description;
-      if (dto.repository !== undefined) app.repository = dto.repository || undefined;
-      if (dto.version !== undefined) app.version = dto.version || undefined;
-      if (dto.applicationUrl !== undefined) app.applicationUrl = dto.applicationUrl || undefined;
-      if (dto.teamId !== undefined) app.teamId = dto.teamId || undefined;
-      if (dto.metadata !== undefined) app.metadata = { ...dto.metadata };
-    });
+  async update(principal: AuthPrincipal, id: string, dto: UpdateApplicationDto): Promise<ApplicationDoc> {
+    const before = await this.getFor(principal, id);
+    // A new name (not just new capitals) is claimed first, so a concurrent rename or registration can't take it too
+    const renaming = dto.name !== undefined && nameKey(dto.name) !== nameKey(before.name);
+    if (renaming) {
+      await this.assertCanWrite(principal, before.workspaceId);
+      await this.assertNameFree(dto.name!, before.workspaceId, id);
+      await this.claimName(dto.name!, before.workspaceId, id);
+    }
+    try {
+      const saved = await this.mutate(principal, id, async (app) => {
+        if (dto.name !== undefined) app.name = dto.name;
+        if (dto.description !== undefined) app.description = dto.description;
+        if (dto.repository !== undefined) app.repository = dto.repository || undefined;
+        if (dto.version !== undefined) app.version = dto.version || undefined;
+        if (dto.applicationUrl !== undefined) app.applicationUrl = dto.applicationUrl || undefined;
+        if (dto.teamId !== undefined) app.teamId = dto.teamId || undefined;
+        if (dto.metadata !== undefined) app.metadata = { ...dto.metadata };
+      });
+      if (renaming) await this.releaseName(before.name, before.workspaceId, id);
+      return saved;
+    } catch (error) {
+      if (renaming) await this.releaseName(dto.name!, before.workspaceId, id);
+      throw error;
+    }
   }
 
   async updateCapabilities(principal: AuthPrincipal, id: string, dto: CapabilitiesDto): Promise<ApplicationDoc> {
@@ -212,11 +253,20 @@ export class ApplicationsService {
     const target = dto.workspaceId;
     await this.assertCanWrite(principal, target);
     if (target && !(await this.workspaces.find(target))) throw new BadRequestException('Unknown workspace');
-    const moved = await this.mutate(principal, id, async (app) => {
-      if (app.workspaceId === target) return;
-      await this.assertNameFree(app.name, target, app.id);
-      app.workspaceId = target;
-    });
+    const before = await this.getFor(principal, id);
+    if ((before.workspaceId ?? null) === target) return before;
+    await this.assertNameFree(before.name, target, id);
+    await this.claimName(before.name, target, id);
+    let moved: ApplicationDoc;
+    try {
+      moved = await this.mutate(principal, id, async (app) => {
+        app.workspaceId = target;
+      });
+    } catch (error) {
+      await this.releaseName(before.name, target, id);
+      throw error;
+    }
+    await this.releaseName(before.name, before.workspaceId, id);
     await this.moveLinkedProjects(moved);
     return moved;
   }
@@ -238,15 +288,25 @@ export class ApplicationsService {
     });
   }
 
-  /** Deletes the application and its visual-regression and session-replay projects */
+  /**
+   * Deletes the application, then what belongs to it: its visual-regression
+   * and session-replay projects, its name, and (through onDeleted listeners)
+   * its accessibility schedules and SLAs. The application goes first, so a
+   * failure part-way never leaves it pointing at deleted projects; what
+   * couldn't be removed afterwards is logged.
+   */
   async delete(principal: AuthPrincipal, id: string): Promise<void> {
     const app = await this.getFor(principal, id);
     await this.assertCanWrite(principal, app.workspaceId);
+    if (!(await this.store.delete(id))) throw new NotFoundException('Application not found');
     await this.undoProjects({
       visualRegression: app.capabilities?.visualRegression?.projectId,
       sessionReplay: app.capabilities?.sessionReplay?.projectId,
-    });
-    if (!(await this.store.delete(id))) throw new NotFoundException('Application not found');
+    }).catch((error) => this.logger.warn(`Application ${id} deleted, but not all its projects: ${(error as Error).message}`));
+    await this.releaseName(app.name, app.workspaceId, id);
+    for (const listener of this.deletedListeners) {
+      await listener(app).catch((error) => this.logger.warn(`Application ${id} deleted; cleanup failed: ${(error as Error).message}`));
+    }
   }
 
   // ---------- Versions ----------
@@ -283,9 +343,10 @@ export class ApplicationsService {
       (applicationsByVersion[key] ??= []).push(app);
     }
     const behind = apps.filter((app) => compareVersions(app.designSystemVersion, currentVersion) < 0);
+    // A major behind needs a recorded version: one with none is counted on its own, not as a major upgrade
     const majorBehind = (app: ApplicationDoc) => {
       const parsed = parseVersion(app.designSystemVersion);
-      return !parsed || currentMajor - parsed[0] >= 1;
+      return !!parsed && currentMajor - parsed[0] >= 1;
     };
 
     const recommendedActions = behind
@@ -316,6 +377,7 @@ export class ApplicationsService {
         upToDate: apps.filter((app) => compareVersions(app.designSystemVersion, currentVersion) >= 0 && parseVersion(app.designSystemVersion)).length,
         needsUpgrade: behind.length,
         needsMajorUpgrade: behind.filter(majorBehind).length,
+        unknownVersion: apps.filter((app) => !parseVersion(app.designSystemVersion)).length,
       },
       recommendedActions,
     };
@@ -338,6 +400,52 @@ export class ApplicationsService {
     const peers = workspaceId ? await this.listByWorkspace(workspaceId) : (await this.list()).filter((a) => !a.workspaceId);
     const taken = peers.some((app) => app.id !== exceptId && app.name.trim().toLowerCase() === name.trim().toLowerCase());
     if (taken) throw new ConflictException(`An application named "${name}" is already registered${workspaceId ? ' in this workspace' : ''}`);
+  }
+
+  /**
+   * Takes the name in the workspace for this application, atomically: the
+   * claim document is created only if absent. A claim held by an application
+   * that no longer has that name there (renamed, moved, deleted, or a
+   * registration that never finished) is taken over.
+   */
+  private async claimName(name: string, workspaceId: string | null, applicationId: string): Promise<void> {
+    const claim: ApplicationNameClaim = { id: claimId(name, workspaceId), applicationId, name, workspaceId, claimedAt: new Date().toISOString() };
+    const taken = () => new ConflictException(`An application named "${name}" is already registered${workspaceId ? ' in this workspace' : ''}`);
+    for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt++) {
+      try {
+        await this.names.create(claim);
+        return;
+      } catch (error) {
+        if (!(error instanceof DuplicateDocumentError)) throw error;
+      }
+      const existing = await this.names.get(claim.id);
+      if (!existing) continue;
+      if (existing.doc.applicationId === applicationId) return;
+      const holder = await this.store.get(existing.doc.applicationId);
+      if (holder) {
+        if ((holder.doc.workspaceId ?? null) === workspaceId && nameKey(holder.doc.name) === nameKey(name)) throw taken();
+      } else if (Date.now() - new Date(existing.doc.claimedAt).getTime() < STALE_CLAIM_MS) {
+        // Its registration may still be finishing
+        throw taken();
+      }
+      try {
+        await this.names.replace(claim, existing.version);
+        return;
+      } catch (error) {
+        if (!(error instanceof VersionConflictError)) throw error;
+      }
+    }
+    throw taken();
+  }
+
+  /** Gives the name back, if this application still holds it */
+  private async releaseName(name: string, workspaceId: string | null, applicationId: string): Promise<void> {
+    try {
+      const existing = await this.names.get(claimId(name, workspaceId));
+      if (existing?.doc.applicationId === applicationId) await this.names.delete(existing.doc.id);
+    } catch (error) {
+      this.logger.warn(`Could not release the name "${name}" of application ${applicationId}: ${(error as Error).message}`);
+    }
   }
 
   /** Loads, checks write access against the stored workspace, applies `fn`, and saves with a retry on conflicts */
@@ -393,6 +501,7 @@ export class ApplicationsService {
     const owner = { workspaceId: app.workspaceId, applicationId: app.id, createdBy };
 
     if (dto.governance) {
+      if (dto.governance.rules?.length) await this.assertRulesExist(dto.governance.rules);
       caps.governance = {
         ...caps.governance,
         enabled: dto.governance.enabled,
@@ -589,6 +698,27 @@ export class ApplicationsService {
         throw error;
       }
     }
+  }
+
+  /**
+   * Rejects governance rule ids that don't exist, so an application can't
+   * silently end up running none of the rules it picked (unknown ids are
+   * skipped at scan time). Looked up lazily, like the changelog below: the
+   * governance module depends on this one. Without it (some tests) ids aren't checked.
+   */
+  private async assertRulesExist(ids: string[]): Promise<void> {
+    let rules: { list(): Promise<Array<{ id: string }>> } | undefined;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { RulesService } = require('../governance/rules.service');
+      rules = this.moduleRef?.get(RulesService, { strict: false });
+    } catch {
+      rules = undefined;
+    }
+    if (!rules) return;
+    const known = new Set((await rules.list()).map((rule) => rule.id));
+    const unknown = [...new Set(ids)].filter((id) => !known.has(id));
+    if (unknown.length) throw new BadRequestException(`Unknown governance rule${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}`);
   }
 
   /**
