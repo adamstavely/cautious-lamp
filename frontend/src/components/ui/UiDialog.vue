@@ -58,7 +58,11 @@ onMounted(() => sync(props.open));
   @apply max-w-3xl;
 }
 .ui-dialog-full {
-  @apply max-w-none w-screen h-screen max-h-screen m-0 rounded-none flex flex-col;
+  @apply max-w-none w-screen h-screen max-h-screen m-0 rounded-none;
+}
+/* Only while open: display on a closed <dialog> would show it */
+.ui-dialog-full[open] {
+  @apply flex flex-col;
 }
 .ui-dialog-full .ui-dialog-body {
   @apply flex-1 min-h-0;

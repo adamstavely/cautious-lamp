@@ -31,6 +31,7 @@ const SECRET = 'dsk_' + 'x'.repeat(43);
 let api;
 let page;
 let keys;
+let rotateBody;
 
 beforeEach(() => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -41,6 +42,13 @@ beforeEach(() => {
       const metadata = { id: 'key_' + 'e'.repeat(32), name: body.name, createdAt: '2026-11-15T10:00:00.000Z', revoked: false, scopes: body.scopes };
       keys.push(metadata);
       return { apiKey: SECRET, metadata };
+    },
+    [`POST /api/v1/auth/api-keys/key_${'b'.repeat(32)}/rotate`]: (body) => {
+      rotateBody = body;
+      keys[1].revoked = true;
+      const newMetadata = { id: 'key_' + 'f'.repeat(32), name: 'Token bot', createdAt: '2026-11-15T11:00:00.000Z', revoked: false, scopes: ['token:view'] };
+      keys.push(newMetadata);
+      return { message: 'Token rotated successfully', newApiKey: SECRET, newMetadata };
     },
     [`POST /api/v1/auth/api-keys/key_${'a'.repeat(32)}/revoke`]: () => {
       keys[0].revoked = true;
@@ -146,6 +154,22 @@ describe('API keys page', () => {
     expect(api.calls.map((c) => c.key)).toContain(`POST /api/v1/auth/api-keys/key_${'a'.repeat(32)}/revoke`);
     expect(page.state.revokeOpen).toBe(false);
     expect([...document.querySelectorAll('tbody tr')].map((row) => row.querySelector('td').textContent)).toEqual([expect.stringContaining('Token bot')]);
+  });
+
+  it('rotates a key after confirming and shows the replacement once', async () => {
+    await open();
+    page.state.askRotate(keys[1]);
+    await flush();
+    expect(text()).toContain('stops working now');
+    await page.state.rotate();
+    await flush();
+    expect(rotateBody).toEqual({ reason: 'manual' });
+    expect(page.state.created).toEqual({ apiKey: SECRET, rotated: true });
+    expect(text()).toContain('Key rotated');
+    page.state.createOpen = false;
+    await flush();
+    // The secret is forgotten once the dialog closes
+    expect(page.state.created).toBeNull();
   });
 
   it('says when the keys cannot be loaded', async () => {

@@ -44,6 +44,8 @@ export const apiKeysApi = {
   /** { apiKey, metadata }; body is { name, expiresInDays?, scopes? } */
   create: (body) => apiClient.post('/api/v1/auth/api-keys', body).then(data),
   revoke: (id) => apiClient.post(`/api/v1/auth/api-keys/${enc(id)}/revoke`).then(data),
+  /** { newApiKey, newMetadata }: a new key with the same scopes; the old one is revoked */
+  rotate: (id) => apiClient.post(`/api/v1/auth/api-keys/${enc(id)}/rotate`, { reason: 'manual' }).then(data),
 };
 
 /** A message for a failed admin call. */

@@ -1,4 +1,4 @@
-import { detectComponents } from './component-detection';
+import { componentImportPrefixes, detectComponents } from './component-detection';
 
 const components = [
   { id: 'button', name: 'Button' },
@@ -39,6 +39,38 @@ describe('detectComponents', () => {
       ['card', 1],
       ['date-picker', 1],
     ]);
+  });
+
+  it('counts imports from the packages set in COMPONENT_IMPORT_PACKAGES', () => {
+    const saved = process.env.COMPONENT_IMPORT_PACKAGES;
+    process.env.COMPONENT_IMPORT_PACKAGES = '@acme/ui, @acme/widgets/';
+    try {
+      const found = detectComponents(
+        [
+          input(
+            '',
+            [
+              "import { Card } from '@acme/ui';",
+              "import DatePicker from '@acme/ui/date-picker';",
+              "import { Button } from '@acme/widgets/forms';",
+              "import { DataTable } from '@acme/ui-extras';",
+              "import { Button as Old } from '@designsystem/components';",
+            ].join('\n'),
+          ),
+        ],
+        components,
+      );
+      // '@acme/ui-extras' isn't '@acme/ui', and the default prefix no longer applies
+      expect(found.map((d) => d.componentId).sort()).toEqual(['button', 'card', 'date-picker']);
+    } finally {
+      if (saved === undefined) delete process.env.COMPONENT_IMPORT_PACKAGES;
+      else process.env.COMPONENT_IMPORT_PACKAGES = saved;
+    }
+  });
+
+  it('defaults to @designsystem/ when COMPONENT_IMPORT_PACKAGES is unset or blank', () => {
+    expect(componentImportPrefixes({})).toEqual(['@designsystem/']);
+    expect(componentImportPrefixes({ COMPONENT_IMPORT_PACKAGES: ' , ' })).toEqual(['@designsystem/']);
   });
 
   it('ignores imports from other packages and tags that only start with a name', () => {

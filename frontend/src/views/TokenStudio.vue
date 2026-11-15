@@ -121,6 +121,7 @@
     </UiDialog>
 
     <SaveDictionaryDialog v-model:open="showSaveDialog" :tokens="tokens" :dictionary="loadedDictionary" :library="library" @saved="onSaved" />
+    <ConfirmDialog :state="confirmState" />
   </PageShell>
 </template>
 
@@ -128,11 +129,13 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import InlineNotice from '../components/InlineNotice.vue';
+import ConfirmDialog from '../components/workspaces/ConfirmDialog.vue';
 import SaveDictionaryDialog from '../components/tokens/SaveDictionaryDialog.vue';
 import TokenList from '../components/tokens/TokenList.vue';
 import {
   PageHero, PageShell, UiButton, UiCallout, UiCheckbox, UiDialog, UiEmptyState, UiInput, UiPanel, UiSelect, UiSpinner, UiTextarea,
 } from '../components/ui';
+import { useConfirmDialog } from '../composables/useConfirmDialog.js';
 import { useNotice } from '../composables/useNotice.js';
 import { useResourceLibrary } from '../composables/useResourceLibrary.js';
 import { categoryFromName, dictionaryTokens, dtcgToTokens, tokensToDtcg } from '../utils/styleDictionary.js';
@@ -276,8 +279,16 @@ const editToken = (token) => {
   showTokenDialog.value = true;
 };
 
-const deleteToken = (token) => {
-  if (!window.confirm(`Delete ${token.name}?`)) return;
+const { confirmState, askConfirm } = useConfirmDialog();
+
+const deleteToken = async (token) => {
+  const ok = await askConfirm({
+    title: `Delete ${token.name}?`,
+    message: 'The token is removed from this draft. Save the dictionary to keep the change.',
+    confirmText: 'Delete',
+    danger: true,
+  });
+  if (!ok) return;
   tokens.value = tokens.value.filter((t) => t.id !== token.id);
   saveDraft();
 };

@@ -65,16 +65,14 @@
                 <td class="whitespace-nowrap text-ink-secondary">{{ formatDateTime(key.lastUsed) }}</td>
                 <td class="whitespace-nowrap text-ink-secondary">{{ formatDateTime(key.expiresAt, 'Never') }}</td>
                 <td class="whitespace-nowrap text-right">
-                  <UiButton
-                    v-if="statusOf(key) === 'active'"
-                    variant="ghost"
-                    size="sm"
-                    icon="ban"
-                    :aria-label="`Revoke ${key.name}`"
-                    @click="askRevoke(key)"
-                  >
-                    Revoke
-                  </UiButton>
+                  <div v-if="statusOf(key) === 'active'" class="flex justify-end gap-1">
+                    <UiButton variant="ghost" size="sm" icon="refresh-cw" :aria-label="`Rotate ${key.name}`" @click="askRotate(key)">
+                      Rotate
+                    </UiButton>
+                    <UiButton variant="ghost" size="sm" icon="ban" :aria-label="`Revoke ${key.name}`" @click="askRevoke(key)">
+                      Revoke
+                    </UiButton>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -86,7 +84,7 @@
 
     <AdminDialog
       v-model="createOpen"
-      :title="created ? 'Key created' : 'Create API key'"
+      :title="created ? (created.rotated ? 'Key rotated' : 'Key created') : 'Create API key'"
       :persistent="saving"
       :max-width="620"
     >
@@ -158,6 +156,19 @@
       :error="revokeError"
       @confirm="revoke"
       @clear-error="revokeError = ''"
+    />
+
+    <ConfirmActionDialog
+      v-model="rotateOpen"
+      title="Rotate API key"
+      :message="rotating ? `A new key with the same permissions replaces “${rotating.name}”, which stops working now. Update every client that uses it.` : ''"
+      confirm-text="Rotate key"
+      busy-text="Rotating…"
+      danger
+      :busy="rotateBusy"
+      :error="rotateError"
+      @confirm="rotate"
+      @clear-error="rotateError = ''"
     />
   </PageShell>
 </template>
@@ -301,6 +312,40 @@ const copyKey = async () => {
   copyStatus.value = (await copyText(created.value?.apiKey ?? ''))
     ? 'Key copied to the clipboard.'
     : "Couldn't copy. Select the key and copy it yourself.";
+};
+
+// ---------- Rotate ----------
+
+const rotateOpen = ref(false);
+const rotating = ref(null);
+const rotateBusy = ref(false);
+const rotateError = ref('');
+
+const askRotate = (key) => {
+  rotating.value = key;
+  rotateError.value = '';
+  rotateOpen.value = true;
+};
+
+/** Revokes the key and shows its replacement once, in the same dialog as a new key */
+const rotate = async () => {
+  const key = rotating.value;
+  if (!key) return;
+  rotateBusy.value = true;
+  rotateError.value = '';
+  try {
+    const result = await apiKeysApi.rotate(key.id);
+    rotateOpen.value = false;
+    showNotice(`Rotated ${key.name}.`, 'success');
+    await loadKeys();
+    copyStatus.value = '';
+    created.value = { apiKey: result.newApiKey, rotated: true };
+    createOpen.value = true;
+  } catch (error) {
+    rotateError.value = keyErrorMessage(error, "Couldn't rotate the key.");
+  } finally {
+    rotateBusy.value = false;
+  }
 };
 
 // ---------- Revoke ----------
