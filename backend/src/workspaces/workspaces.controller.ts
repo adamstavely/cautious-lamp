@@ -158,6 +158,12 @@ export class WorkspacesController {
 
   // ---------- Items (generic over the kinds in resource-kinds.ts) ----------
 
+  /** One kind across every workspace the caller can read (the library pages); writes go through a workspace */
+  @Get('resources/:kind')
+  library(@Principal() principal: AuthPrincipal, @Param('kind') kind: string, @Query('filter') filter?: string) {
+    return this.resources.library(principal, kind, filter || undefined);
+  }
+
   @Get('workspaces/:id/resources/:kind')
   listResources(
     @Principal() principal: AuthPrincipal,

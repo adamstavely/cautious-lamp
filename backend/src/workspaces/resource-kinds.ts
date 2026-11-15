@@ -10,6 +10,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -207,6 +208,41 @@ export class CapabilityLogoDto extends Tagged {
   @ShortText(20) format?: string;
 }
 
+export class CompanyLogoDto extends Tagged {
+  @Name() name: string;
+  @Description() description?: string;
+  @ShortText(200) company?: string;
+  @HttpUrl() url: string;
+  @IsOptional() @HttpUrl() thumbnailUrl?: string;
+  @ShortText(20) format?: string;
+  /** Who may use the logo and how (trademark terms, partnership agreements) */
+  @ShortText(2000) usage?: string;
+}
+
+export class CountryFlagDto extends Tagged {
+  @Name() name: string;
+  @Description() description?: string;
+  /** ISO 3166-1 alpha-2 or alpha-3 code, upper case */
+  @IsOptional() @IsString() @Matches(/^[A-Z]{2,3}$/, { message: 'countryCode must be an ISO 3166-1 alpha-2 or alpha-3 code in upper case' }) countryCode?: string;
+  @ShortText(100) region?: string;
+  @HttpUrl() url: string;
+  @IsOptional() @HttpUrl() thumbnailUrl?: string;
+  @ShortText(20) format?: string;
+}
+
+/** Seals and emblems: US Government (`usg-seals`) and the agency's own (`internal-seals`) */
+export class SealDto extends Tagged {
+  @Name() name: string;
+  @Description() description?: string;
+  /** The organization the seal belongs to */
+  @ShortText(200) organization?: string;
+  @HttpUrl() url: string;
+  @IsOptional() @HttpUrl() thumbnailUrl?: string;
+  @ShortText(20) format?: string;
+  /** Who may use the seal and how (authorizations, legal restrictions) */
+  @ShortText(2000) usage?: string;
+}
+
 export class StyleDictionaryDto extends Tagged {
   @Name() name: string;
   @Description() description?: string;
@@ -252,6 +288,10 @@ export const RESOURCE_KINDS: readonly ResourceKindSpec[] = [
   { kind: 'stock-photos', dto: StockPhotoDto, titleField: 'name' },
   { kind: 'illustrations', dto: IllustrationDto, titleField: 'name', filterField: 'style' },
   { kind: 'capability-logos', dto: CapabilityLogoDto, titleField: 'name', filterField: 'capability' },
+  { kind: 'company-logos', dto: CompanyLogoDto, titleField: 'name', filterField: 'company' },
+  { kind: 'country-flags', dto: CountryFlagDto, titleField: 'name', filterField: 'region' },
+  { kind: 'usg-seals', dto: SealDto, titleField: 'name', filterField: 'organization' },
+  { kind: 'internal-seals', dto: SealDto, titleField: 'name', filterField: 'organization' },
   { kind: 'style-dictionaries', dto: StyleDictionaryDto, titleField: 'name', filterField: 'format' },
   { kind: 'guidelines', dto: GuidelineDto, titleField: 'title', filterField: 'category' },
 ];

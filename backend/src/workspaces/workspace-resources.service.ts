@@ -12,7 +12,15 @@ import { VersionConflictError } from '../reviews/document-store';
 import { QueryableStore } from './queryable-store';
 import { ResourceKindSpec, resourceKind, validateResourceFields } from './resource-kinds';
 import { UpdateSharingDto } from './workspace.dto';
-import { WorkspaceAccess, WorkspaceAccessService, actorOf, assertRole, isSafeId, newId } from './workspace-access.service';
+import {
+  WorkspaceAccess,
+  WorkspaceAccessService,
+  actorOf,
+  assertRole,
+  isSafeId,
+  isWorkspaceSuperuser,
+  newId,
+} from './workspace-access.service';
 import { WORKSPACE_RESOURCE_STORE, WorkspaceDoc, WorkspaceResource, WorkspaceResourceDoc } from './workspace.types';
 
 const MAX_WRITE_ATTEMPTS = 5;
@@ -25,7 +33,7 @@ const isDeprecated = (fields: Record<string, unknown>) =>
   Array.isArray(fields.tags) && fields.tags.some((tag) => String(tag).toLowerCase() === 'deprecated');
 
 /**
- * The 18 kinds of workspace items (fonts, tokens, guidelines, …) behind one
+ * The kinds of workspace items (fonts, tokens, guidelines, …) behind one
  * generic API: `/workspaces/:id/resources/:kind[/:rid]`. Every operation is
  * scoped by the workspace in the path:
  *
@@ -35,6 +43,9 @@ const isDeprecated = (fields: Record<string, unknown>) =>
  *   workspace owns (anything else is 404, so ids can't be probed across workspaces);
  * - sharing needs editor, or admin when the workspace requires approval for
  *   sharing or when making an item global (or not).
+ *
+ * `library` reads one kind across every workspace the caller can read, for
+ * the library pages (`/resources/:kind`); writes still go through a workspace.
  */
 @Injectable()
 export class WorkspaceResourcesService {
@@ -54,6 +65,31 @@ export class WorkspaceResourcesService {
     ]);
     if (filter && spec.filterField) docs = docs.filter((doc) => doc.fields[spec.filterField] === filter);
     return docs.map(toView);
+  }
+
+  /**
+   * One kind across the caller's workspaces: items in the workspaces they are a
+   * member of, items shared with those workspaces, and global items, newest
+   * first. admin:users holders read every workspace, as they do elsewhere.
+   * Callers who aren't members of anything (API keys) see global items only.
+   */
+  async library(principal: AuthPrincipal, kind: string, filter?: string): Promise<WorkspaceResource[]> {
+    const spec = this.spec(kind);
+    let docs: WorkspaceResourceDoc[];
+    if (isWorkspaceSuperuser(principal)) {
+      docs = await this.store.findAny([{ kind }]);
+    } else {
+      const ids = [...(await this.access.memberWorkspaceIds(principal))];
+      docs = await this.store.findAny([
+        { kind, isGlobal: true },
+        ...ids.flatMap((workspaceId) => [
+          { kind, workspaceId },
+          { kind, sharedWith: workspaceId },
+        ]),
+      ]);
+    }
+    if (filter && spec.filterField) docs = docs.filter((doc) => doc.fields[spec.filterField] === filter);
+    return docs.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).map(toView);
   }
 
   async get(principal: AuthPrincipal, workspaceId: string, kind: string, resourceId: string): Promise<WorkspaceResource> {

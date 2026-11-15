@@ -116,7 +116,7 @@
               </p>
             </router-link>
 
-            <!-- User Personas Card -->
+            <!-- User Studies Card -->
             <router-link 
               to="/research/user-studies"
               class="group rounded-2xl p-6 border transition-all"
@@ -133,7 +133,7 @@
                   ? 'text-white group-hover:text-indigo-400' 
                   : 'text-gray-900 group-hover:text-indigo-600'"
               >
-                User Personas
+                User studies
               </h3>
               <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Browse comprehensive user research studies, interviews, and observations.

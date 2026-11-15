@@ -28,6 +28,10 @@ export const RESOURCE_SAMPLES: Record<string, { create: Record<string, unknown>;
   'stock-photos': { create: { name: 'Team', url: 'https://photos.example.com/team.jpg', license: 'CC-BY' }, update: { photographer: 'Sam' } },
   illustrations: { create: { name: 'Empty inbox', url: 'https://cdn.example.com/inbox.svg', style: 'flat' }, update: { style: 'line' } },
   'capability-logos': { create: { name: 'Search', url: 'https://cdn.example.com/search.svg', capability: 'search' }, update: { format: 'svg' } },
+  'company-logos': { create: { name: 'Acme wordmark', company: 'Acme', url: 'https://cdn.example.com/acme.svg', format: 'svg' }, update: { usage: 'Partnership pages only' } },
+  'country-flags': { create: { name: 'France', countryCode: 'FR', region: 'Europe', url: 'https://cdn.example.com/flags/fr.svg' }, update: { countryCode: 'FRA' } },
+  'usg-seals': { create: { name: 'Great Seal', organization: 'Department of State', url: 'https://cdn.example.com/seals/great-seal.svg' }, update: { usage: 'Authorized use only' } },
+  'internal-seals': { create: { name: 'Agency seal', organization: 'Our agency', url: 'https://cdn.example.com/seals/agency.png', format: 'png' }, update: { format: 'svg' } },
   'style-dictionaries': { create: { name: 'Brand', format: 'json', tokens: { color: { primary: { $value: '#000' } } } }, update: { format: 'css' } },
   guidelines: { create: { title: 'Writing errors', category: 'content', content: '# Errors\n\nSay what happened.' }, update: { category: 'design' } },
 };
