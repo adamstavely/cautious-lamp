@@ -1,534 +1,381 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Theme Builder
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Visually customize your design system theme. Adjust colors, typography, spacing, and more in real-time.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                    <defs>
-                      <linearGradient id="themeBuilderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Palette representation -->
-                    <circle cx="50" cy="50" r="25" fill="url(#themeBuilderGradient)" opacity="0.6"/>
-                    <circle cx="150" cy="50" r="25" fill="url(#themeBuilderGradient)" opacity="0.5"/>
-                    <circle cx="50" cy="150" r="25" fill="url(#themeBuilderGradient)" opacity="0.4"/>
-                    <circle cx="150" cy="150" r="25" fill="url(#themeBuilderGradient)" opacity="0.5"/>
-                    <!-- Typography representation -->
-                    <rect x="80" y="80" width="40" height="8" rx="2" fill="white" opacity="0.7"/>
-                    <rect x="80" y="95" width="30" height="6" rx="1" fill="white" opacity="0.6"/>
-                    <rect x="80" y="105" width="35" height="6" rx="1" fill="white" opacity="0.6"/>
-                  </svg>
-                </div>
+  <PageShell width="wide">
+    <PageHero
+      size="tool"
+      :back="{ to: '/review', label: 'Review' }"
+      title="Theme builder"
+      lead="Set a theme's colours for light and dark, its type and spacing, check the contrast, then export it as CSS, SCSS or JSON."
+      spot="foundations/theme-builder"
+    />
+
+    <PageSection title="Build" description="Changes show in the preview and the code as you make them.">
+      <div class="grid lg:grid-cols-3 gap-6 items-start">
+        <div class="space-y-6">
+          <!-- style-check: allow the description shows the hex format the user types -->
+          <UiPanel title="Colours" description="Hex values, e.g. #2f5ea8 or #fff.">
+            <div class="space-y-4">
+              <UiSegmented v-model="editMode" label="Editing" :options="modeOptions" />
+              <div v-for="role in COLOR_ROLES" :key="role.name" class="grid grid-cols-content-aside items-start gap-2">
+                <UiInput
+                  v-model="colors[editMode][role.name]"
+                  :label="role.label"
+                  :hint="role.hint"
+                  :error="colorError(editMode, role.name)"
+                  mono
+                  spellcheck="false"
+                />
+                <UiInput
+                  :model-value="normalizeHex(colors[editMode][role.name]) || PICKER_FALLBACK"
+                  type="color"
+                  label="Picker"
+                  :aria-label="`${role.label} colour picker`"
+                  class="tb-picker"
+                  @update:model-value="colors[editMode][role.name] = $event"
+                />
               </div>
             </div>
+          </UiPanel>
+
+          <UiPanel title="Typography">
+            <div class="space-y-4">
+              <UiSelect v-model="typography.font" label="Font family" :options="FONT_OPTIONS" hint="The preview uses the font when it's installed here; the exported stack falls back to system fonts." />
+              <UiRange v-model="typography.baseSize" label="Base font size" :min="12" :max="20" unit="px" />
+            </div>
+          </UiPanel>
+
+          <UiPanel title="Spacing scale">
+            <div class="grid grid-cols-2 gap-3">
+              <UiInput
+                v-for="step in SPACING_STEPS"
+                :key="step"
+                v-model.number="spacing[step]"
+                type="number"
+                :label="step"
+                suffix="px"
+                min="0"
+                max="128"
+                :error="spacingError(step)"
+              />
+            </div>
+          </UiPanel>
+
+          <div class="flex flex-wrap gap-3">
+            <UiButton variant="primary" icon="download" :disabled="hasErrors" @click="exportTheme">Export {{ formatLabel }}</UiButton>
+            <UiButton icon="rotate-ccw" @click="resetTheme">Reset</UiButton>
           </div>
+          <UiCallout v-if="hasErrors" tone="warning" role="status">Fix the highlighted values to export. The preview and code keep the last valid values.</UiCallout>
         </div>
 
-        <div class="max-w-7xl mx-auto grid lg:grid-cols-3 gap-6">
-          <!-- Left Column: Theme Controls -->
-          <div class="lg:col-span-1 space-y-6">
-            <!-- Colors -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <AppIcon name="palette" class="text-indigo-600" />
-                Colors
-              </h3>
-              <div class="space-y-3">
-                <div v-for="color in themeColors" :key="color.name" class="relative">
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    {{ color.label }}
-                  </label>
-                  <div class="flex items-center gap-2">
-                    <button
-                      @click="openColorPicker(color.name, $event)"
-                      class="w-12 h-10 rounded border-2 cursor-pointer transition-colors flex-shrink-0"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 hover:border-indigo-400' 
-                        : 'border-gray-300 hover:border-indigo-500'"
-                      :style="{ backgroundColor: color.value }"
-                      :title="`Pick ${color.label.toLowerCase()} color`"
-                    ></button>
-                    <input
-                      v-model="color.value"
-                      type="text"
-                      class="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono text-sm"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
-                  </div>
-                </div>
+        <div class="lg:col-span-2 space-y-6">
+          <UiPanel title="Preview">
+            <template #actions>
+              <UiSegmented v-model="previewMode" aria-label="Preview mode" :options="modeOptions" />
+            </template>
+            <div class="tb-preview" :aria-label="`Theme preview, ${previewMode} mode`" role="group">
+              <p class="tb-heading">Heading example</p>
+              <p class="tb-text">This paragraph shows body text in your theme's font, size and text colour.</p>
+              <div class="tb-surface">
+                <p class="tb-text">A card on the surface colour, with a <span class="tb-accent">secondary accent</span>.</p>
+              </div>
+              <div class="tb-actions">
+                <span class="tb-button tb-button-primary">Primary button</span>
+                <span class="tb-button tb-button-secondary">Secondary button</span>
               </div>
             </div>
 
-            <!-- Typography -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <AppIcon name="type" class="text-indigo-600" />
-                Typography
-              </h3>
-              <div class="space-y-3">
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Font Family
-                  </label>
-                  <FontFamilyDropdown v-model="typography.fontFamily" />
-                </div>
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Base Font Size: {{ typography.baseSize }}px
-                  </label>
-                  <input
-                    v-model.number="typography.baseSize"
-                    type="range"
-                    min="12"
-                    max="20"
-                    class="w-full accent-indigo-600"
-                  />
-                </div>
-              </div>
-            </div>
+            <h3 class="tb-checks-title">Contrast in {{ previewMode }} mode</h3>
+            <ul class="tb-checks">
+              <li v-for="check in contrastChecks" :key="check.label" class="tb-check">
+                <span>{{ check.label }}</span>
+                <span class="tb-check-result">
+                  <span class="tabular-nums">{{ check.ratio.toFixed(2) }}:1</span>
+                  <UiChip :tone="check.tone" :icon="check.pass ? 'circle-check' : 'triangle-alert'">{{ check.verdict }}</UiChip>
+                </span>
+              </li>
+            </ul>
+          </UiPanel>
 
-            <!-- Spacing -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <AppIcon name="space" class="text-indigo-600" />
-                Spacing Scale
-              </h3>
-              <div class="space-y-2">
-                <div v-for="spacing in spacingScale" :key="spacing.name" class="flex items-center justify-between">
-                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ spacing.name }}</span>
-                  <input
-                    v-model.number="spacing.value"
-                    type="number"
-                    class="w-20 px-2 py-1 border rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Actions -->
-            <div class="flex gap-2">
-              <button
-                @click="exportTheme"
-                class="flex-1 px-4 py-2 rounded-lg font-medium transition-colors"
-                :class="isDarkMode 
-                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-              >
-                Export Theme
-              </button>
-              <button
-                @click="resetTheme"
-                class="flex-1 px-4 py-2 rounded-lg font-medium transition-colors"
-                :class="isDarkMode 
-                  ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-              >
-                Reset
-              </button>
-            </div>
-          </div>
-
-          <!-- Right Column: Live Preview -->
-          <div class="lg:col-span-2 space-y-6">
-            <!-- Live Preview -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <AppIcon name="eye" class="text-indigo-600" />
-                  Live Preview
-                </h3>
-                <button
-                  @click="previewDarkMode = !previewDarkMode"
-                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                  :class="previewDarkMode
-                    ? (isDarkMode 
-                      ? 'bg-indigo-600 text-white' 
-                      : 'bg-indigo-600 text-white')
-                    : (isDarkMode 
-                      ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                >
-                  <AppIcon :name="previewDarkMode ? 'moon' : 'sun'" class="text-base" />
-                  {{ previewDarkMode ? 'Dark' : 'Light' }}
-                </button>
-              </div>
-              <div 
-                class="rounded-lg p-8"
-                :class="previewDarkMode ? 'dark' : ''"
-                :style="getPreviewStyle()"
-              >
-                <h2 :style="{ fontFamily: typography.fontFamily, fontSize: `${typography.baseSize * 1.5}px`, color: previewDarkMode ? '#f1f5f9' : themeColors.find(c => c.name === 'text').value }">
-                  Heading Example
-                </h2>
-                <p :style="{ fontFamily: typography.fontFamily, fontSize: `${typography.baseSize}px`, color: previewDarkMode ? '#f1f5f9' : themeColors.find(c => c.name === 'text').value, marginTop: `${spacingScale.find(s => s.name === 'md').value}px` }">
-                  This is a paragraph example showing how your theme looks.
-                </p>
-                <div :style="{ marginTop: `${spacingScale.find(s => s.name === 'lg').value}px` }">
-                  <button 
-                    class="px-6 py-2 rounded-lg font-medium"
-                    :style="{ 
-                      backgroundColor: themeColors.find(c => c.name === 'primary').value,
-                      color: '#fff',
-                      marginRight: `${spacingScale.find(s => s.name === 'sm').value}px`
-                    }"
-                  >
-                    Primary Button
-                  </button>
-                  <button 
-                    class="px-6 py-2 rounded-lg font-medium border-2"
-                    :style="{ 
-                      borderColor: themeColors.find(c => c.name === 'primary').value,
-                      color: themeColors.find(c => c.name === 'primary').value,
-                      backgroundColor: 'transparent'
-                    }"
-                  >
-                    Secondary Button
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Theme Code -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <AppIcon name="code" class="text-indigo-600" />
-                  Theme Code
-                </h3>
-                <CodeFormatDropdown v-model="codeFormat" />
-              </div>
-              <div class="rounded-lg overflow-hidden" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                <div class="p-4 overflow-x-auto">
-                  <pre class="text-sm text-green-400 font-mono"><code>{{ getThemeCode() }}</code></pre>
-                </div>
-                <div class="p-3 border-t flex items-center justify-end gap-2" :class="isDarkMode ? 'border-gray-800' : 'border-gray-800'">
-                  <button
-                    @click="copyThemeCode"
-                    class="px-3 py-1 rounded text-sm font-medium transition-colors"
-                    :class="isDarkMode 
-                      ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          <UiPanel title="Theme code">
+            <template #actions>
+              <UiSegmented v-model="codeFormat" aria-label="Code format" :options="FORMAT_OPTIONS" />
+            </template>
+            <UiCodeBlock :code="themeCode" :label="formatLabel" />
+          </UiPanel>
         </div>
       </div>
-    </div>
-
-    <!-- Color Picker -->
-    <ColorPicker
-      :show="showColorPicker"
-      :initial-color="pickerColor"
-      :position="pickerPosition"
-      @update:show="showColorPicker = $event"
-      @apply="handleColorPickerApply"
-      @cancel="showColorPicker = false"
-    />
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import ColorPicker from '../components/ColorPicker.vue';
-import FontFamilyDropdown from '../components/FontFamilyDropdown.vue';
-import CodeFormatDropdown from '../components/CodeFormatDropdown.vue';
+import { computed, ref } from 'vue';
+import {
+  PageHero,
+  PageSection,
+  PageShell,
+  UiButton,
+  UiCallout,
+  UiChip,
+  UiCodeBlock,
+  UiInput,
+  UiPanel,
+  UiRange,
+  UiSegmented,
+  UiSelect,
+} from '../components/ui';
+import { contrastRatio, normalizeHex, readableOn, wcagLevel } from '../utils/contrast.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const COLOR_ROLES = [
+  { name: 'primary', label: 'Primary', hint: 'Primary buttons and links' },
+  { name: 'secondary', label: 'Secondary', hint: 'Accents and highlights' },
+  { name: 'background', label: 'Background', hint: 'The page' },
+  { name: 'surface', label: 'Surface', hint: 'Cards and panels' },
+  { name: 'text', label: 'Text', hint: 'Body text and headings' },
+];
+
+// The theme's own colours are data the user edits, not this page's styling
+const PICKER_FALLBACK = '#000000';
+const DEFAULT_COLORS = {
+  light: { primary: '#4f46e5', secondary: '#0e7490', background: '#ffffff', surface: '#f1f5f9', text: '#0f172a' },
+  // style-check: allow "dark" is the theme's dark-mode palette
+  dark: { primary: '#a5b4fc', secondary: '#67e8f9', background: '#0f172a', surface: '#1e293b', text: '#f1f5f9' },
+};
+
+const FONT_OPTIONS = [
+  { value: 'system', label: 'System UI', stack: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' },
+  { value: 'inter', label: 'Inter', stack: '"Inter", system-ui, sans-serif' },
+  { value: 'roboto', label: 'Roboto', stack: '"Roboto", system-ui, sans-serif' },
+  { value: 'source-sans', label: 'Source Sans 3', stack: '"Source Sans 3", system-ui, sans-serif' },
+  { value: 'georgia', label: 'Georgia (serif)', stack: 'Georgia, "Times New Roman", serif' },
+  { value: 'mono', label: 'Monospace', stack: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace' },
+];
+
+const SPACING_STEPS = ['xs', 'sm', 'md', 'lg', 'xl'];
+const DEFAULT_SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
+const DEFAULT_TYPOGRAPHY = { font: 'inter', baseSize: 16 };
+
+const FORMAT_OPTIONS = [
+  { value: 'css', label: 'CSS' },
+  { value: 'scss', label: 'SCSS' },
+  { value: 'json', label: 'JSON' },
+];
+const modeOptions = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
+
+const clone = (value) => JSON.parse(JSON.stringify(value));
+const colors = ref(clone(DEFAULT_COLORS));
+const typography = ref({ ...DEFAULT_TYPOGRAPHY });
+const spacing = ref({ ...DEFAULT_SPACING });
+const editMode = ref('light');
+const previewMode = ref('light');
 const codeFormat = ref('css');
-const showColorPicker = ref(false);
-const currentColorName = ref(null);
-const pickerColor = ref('#000000');
-const pickerPosition = ref({ left: 0, top: 0 });
-const previewDarkMode = ref(false);
 
-const themeColors = ref([
-  { name: 'primary', label: 'Primary', value: '#4f46e5' },
-  { name: 'secondary', label: 'Secondary', value: '#6366f1' },
-  { name: 'background', label: 'Background', value: '#ffffff' },
-  { name: 'surface', label: 'Surface', value: '#f9fafb' },
-  { name: 'text', label: 'Text', value: '#111827' }
-]);
+// Validation: invalid entries are flagged and replaced by the last valid value
+const lastValid = { colors: clone(DEFAULT_COLORS), spacing: { ...DEFAULT_SPACING } };
 
-const typography = ref({
-  fontFamily: 'Inter',
-  baseSize: 16
+const colorError = (mode, name) => (normalizeHex(colors.value[mode][name]) ? '' : 'Use a hex colour like #2f5ea8');
+const validSpacing = (value) => Number.isFinite(value) && value >= 0 && value <= 128;
+const spacingError = (step) => (validSpacing(spacing.value[step]) ? '' : '0 to 128');
+
+const resolvedColors = computed(() => {
+  // style-check: allow "dark" is the theme's dark-mode palette
+  const out = { light: {}, dark: {} };
+  for (const mode of ['light', 'dark']) {
+    for (const { name } of COLOR_ROLES) {
+      const hex = normalizeHex(colors.value[mode][name]);
+      if (hex) lastValid.colors[mode][name] = hex;
+      out[mode][name] = lastValid.colors[mode][name];
+    }
+    out[mode].onPrimary = readableOn(out[mode].primary);
+  }
+  return out;
 });
 
-const spacingScale = ref([
-  { name: 'xs', value: 4 },
-  { name: 'sm', value: 8 },
-  { name: 'md', value: 16 },
-  { name: 'lg', value: 24 },
-  { name: 'xl', value: 32 }
-]);
-
-const getPreviewStyle = () => {
-  const bgColor = themeColors.value.find(c => c.name === 'background').value;
-  const textColor = themeColors.value.find(c => c.name === 'text').value;
-  
-  // If preview is in dark mode, use darker background and lighter text
-  if (previewDarkMode.value) {
-    return {
-      backgroundColor: '#1e293b', // slate-800
-      color: '#f1f5f9' // slate-100
-    };
+const resolvedSpacing = computed(() => {
+  const out = {};
+  for (const step of SPACING_STEPS) {
+    if (validSpacing(spacing.value[step])) lastValid.spacing[step] = spacing.value[step];
+    out[step] = lastValid.spacing[step];
   }
-  
-  return {
-    backgroundColor: bgColor,
-    color: textColor
-  };
-};
+  return out;
+});
 
-const getThemeCode = () => {
+const hasErrors = computed(
+  () =>
+    ['light', 'dark'].some((mode) => COLOR_ROLES.some(({ name }) => colorError(mode, name))) ||
+    SPACING_STEPS.some((step) => spacingError(step)),
+);
+
+const fontStack = computed(() => (FONT_OPTIONS.find((f) => f.value === typography.value.font) ?? FONT_OPTIONS[0]).stack);
+const formatLabel = computed(() => FORMAT_OPTIONS.find((f) => f.value === codeFormat.value).label);
+
+// Preview values, passed to the stylesheet through v-bind()
+const preview = computed(() => resolvedColors.value[previewMode.value]);
+const px = (n) => `${n}px`;
+const previewVars = computed(() => ({
+  base: px(typography.value.baseSize),
+  heading: px(Math.round(typography.value.baseSize * 1.5)),
+  sm: px(resolvedSpacing.value.sm),
+  md: px(resolvedSpacing.value.md),
+  lg: px(resolvedSpacing.value.lg),
+  xl: px(resolvedSpacing.value.xl),
+}));
+
+const contrastChecks = computed(() => {
+  const c = preview.value;
+  const pairs = [
+    { label: 'Text on background', fg: c.text, bg: c.background, min: 4.5 },
+    { label: 'Text on surface', fg: c.text, bg: c.surface, min: 4.5 },
+    { label: 'Button text on primary', fg: c.onPrimary, bg: c.primary, min: 4.5 },
+    { label: 'Primary on background (links, outlines)', fg: c.primary, bg: c.background, min: 4.5 },
+    { label: 'Secondary on surface', fg: c.secondary, bg: c.surface, min: 3 },
+  ];
+  return pairs.map(({ label, fg, bg, min }) => {
+    const ratio = contrastRatio(fg, bg);
+    const pass = ratio >= min;
+    const level = wcagLevel(ratio);
+    const verdict = min === 3 ? (pass ? 'AA large / UI' : 'Below 3:1') : level === 'Fail' ? 'Below AA' : level;
+    return { label, ratio, pass, verdict, tone: pass ? 'success' : 'danger' };
+  });
+});
+
+const themeCode = computed(() => {
+  const { light, dark } = resolvedColors.value;
+  const s = resolvedSpacing.value;
+  const font = fontStack.value;
+  const base = `${typography.value.baseSize}px`;
+  const colorLines = (set, indent, fmt) =>
+    [...COLOR_ROLES.map(({ name }) => [name, set[name]]), ['on-primary', set.onPrimary]].map(([k, v]) => indent + fmt(k, v));
+
   if (codeFormat.value === 'css') {
-    return `:root {
-  --color-primary: ${themeColors.value.find(c => c.name === 'primary').value};
-  --color-secondary: ${themeColors.value.find(c => c.name === 'secondary').value};
-  --color-background: ${themeColors.value.find(c => c.name === 'background').value};
-  --color-surface: ${themeColors.value.find(c => c.name === 'surface').value};
-  --color-text: ${themeColors.value.find(c => c.name === 'text').value};
-  --font-family: ${typography.value.fontFamily};
-  --font-size-base: ${typography.value.baseSize}px;
-  --spacing-xs: ${spacingScale.value.find(s => s.name === 'xs').value}px;
-  --spacing-sm: ${spacingScale.value.find(s => s.name === 'sm').value}px;
-  --spacing-md: ${spacingScale.value.find(s => s.name === 'md').value}px;
-  --spacing-lg: ${spacingScale.value.find(s => s.name === 'lg').value}px;
-  --spacing-xl: ${spacingScale.value.find(s => s.name === 'xl').value}px;
-}`;
-  } else if (codeFormat.value === 'scss') {
-    return `$colors: (
-  primary: ${themeColors.value.find(c => c.name === 'primary').value},
-  secondary: ${themeColors.value.find(c => c.name === 'secondary').value},
-  background: ${themeColors.value.find(c => c.name === 'background').value},
-  surface: ${themeColors.value.find(c => c.name === 'surface').value},
-  text: ${themeColors.value.find(c => c.name === 'text').value}
-);
-
-$typography: (
-  font-family: ${typography.value.fontFamily},
-  base-size: ${typography.value.baseSize}px
-);
-
-$spacing: (
-  xs: ${spacingScale.value.find(s => s.name === 'xs').value}px,
-  sm: ${spacingScale.value.find(s => s.name === 'sm').value}px,
-  md: ${spacingScale.value.find(s => s.name === 'md').value}px,
-  lg: ${spacingScale.value.find(s => s.name === 'lg').value}px,
-  xl: ${spacingScale.value.find(s => s.name === 'xl').value}px
-);`;
-  } else {
-    return JSON.stringify({
-      colors: themeColors.value.reduce((acc, c) => {
-        acc[c.name] = c.value;
-        return acc;
-      }, {}),
-      typography: typography.value,
-      spacing: spacingScale.value.reduce((acc, s) => {
-        acc[s.name] = `${s.value}px`;
-        return acc;
-      }, {})
-    }, null, 2);
+    return [
+      ':root {',
+      ...colorLines(light, '  ', (k, v) => `--color-${k}: ${v};`),
+      `  --font-family: ${font};`,
+      `  --font-size-base: ${base};`,
+      ...SPACING_STEPS.map((step) => `  --spacing-${step}: ${s[step]}px;`),
+      '}',
+      '',
+      '@media (prefers-color-scheme: dark) {',
+      '  :root {',
+      ...colorLines(dark, '    ', (k, v) => `--color-${k}: ${v};`),
+      '  }',
+      '}',
+    ].join('\n');
   }
-};
-
-const copyThemeCode = async () => {
-  try {
-    await navigator.clipboard.writeText(getThemeCode());
-  } catch (err) {
-    console.error('Failed to copy:', err);
+  if (codeFormat.value === 'scss') {
+    const map = (name, set) => [`$colors-${name}: (`, ...colorLines(set, '  ', (k, v) => `${k}: ${v},`), ');'];
+    return [
+      ...map('light', light),
+      '',
+      ...map('dark', dark),
+      '',
+      `$font-family: ${font};`,
+      `$font-size-base: ${base};`,
+      '',
+      '$spacing: (',
+      ...SPACING_STEPS.map((step) => `  ${step}: ${s[step]}px,`),
+      ');',
+    ].join('\n');
   }
-};
+  const asObject = (set) => Object.fromEntries([...COLOR_ROLES.map(({ name }) => [name, set[name]]), ['onPrimary', set.onPrimary]]);
+  return JSON.stringify(
+    {
+      // style-check: allow "dark" is the theme's dark-mode palette
+      colors: { light: asObject(light), dark: asObject(dark) },
+      typography: { fontFamily: font, baseSize: base },
+      spacing: Object.fromEntries(SPACING_STEPS.map((step) => [step, `${s[step]}px`])),
+    },
+    null,
+    2,
+  );
+});
 
+const MIME = { css: 'text/css', scss: 'text/x-scss', json: 'application/json' };
 const exportTheme = () => {
-  const extension = codeFormat.value === 'json' ? 'json' : codeFormat.value === 'scss' ? 'scss' : 'css';
-  const filename = `theme.${extension}`;
-  
-  const blob = new Blob([getThemeCode()], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
+  if (hasErrors.value) return;
+  const url = URL.createObjectURL(new Blob([themeCode.value], { type: MIME[codeFormat.value] }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename;
+  link.download = `theme.${codeFormat.value}`;
   link.click();
-  URL.revokeObjectURL(url);
+  // Let the download start before the URL goes
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
 const resetTheme = () => {
-  themeColors.value = [
-    { name: 'primary', label: 'Primary', value: '#4f46e5' },
-    { name: 'secondary', label: 'Secondary', value: '#6366f1' },
-    { name: 'background', label: 'Background', value: '#ffffff' },
-    { name: 'surface', label: 'Surface', value: '#f9fafb' },
-    { name: 'text', label: 'Text', value: '#111827' }
-  ];
-  typography.value = { fontFamily: 'Inter', baseSize: 16 };
-  spacingScale.value = [
-    { name: 'xs', value: 4 },
-    { name: 'sm', value: 8 },
-    { name: 'md', value: 16 },
-    { name: 'lg', value: 24 },
-    { name: 'xl', value: 32 }
-  ];
+  colors.value = clone(DEFAULT_COLORS);
+  typography.value = { ...DEFAULT_TYPOGRAPHY };
+  spacing.value = { ...DEFAULT_SPACING };
 };
-
-const openColorPicker = (colorName, event) => {
-  event.stopPropagation();
-  currentColorName.value = colorName;
-  const color = themeColors.value.find(c => c.name === colorName);
-  pickerColor.value = color ? color.value : '#000000';
-  
-  // Calculate position near the color swatch button
-  const rect = event.target.getBoundingClientRect();
-  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-  
-  const pickerWidth = 280;
-  const pickerHeight = 400;
-  const padding = 10;
-  
-  let left = rect.left + scrollLeft + rect.width + padding;
-  let top = rect.top + scrollTop;
-  
-  // Adjust if picker would go off right edge
-  if (left + pickerWidth > window.innerWidth + scrollLeft) {
-    left = rect.left + scrollLeft - pickerWidth - padding;
-  }
-  
-  // Adjust if picker would go off bottom edge
-  if (top + pickerHeight > window.innerHeight + scrollTop) {
-    top = window.innerHeight + scrollTop - pickerHeight - padding;
-  }
-  
-  // Ensure picker doesn't go off top edge
-  if (top < scrollTop + padding) {
-    top = scrollTop + padding;
-  }
-  
-  // Ensure picker doesn't go off left edge
-  if (left < scrollLeft + padding) {
-    left = scrollLeft + padding;
-  }
-  
-  pickerPosition.value = { left: `${left}px`, top: `${top}px` };
-  showColorPicker.value = true;
-};
-
-const handleColorPickerApply = (color) => {
-  if (currentColorName.value) {
-    const colorObj = themeColors.value.find(c => c.name === currentColorName.value);
-    if (colorObj) {
-      colorObj.value = color;
-    }
-  }
-  showColorPicker.value = false;
-  currentColorName.value = null;
-};
-
-
-
-
-
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.tb-picker {
+  @apply w-16;
+}
+
+/* The preview shows the user's theme, so its colours and sizes come from v-bind() */
+.tb-preview {
+  @apply rounded-card border border-line;
+  background: v-bind('preview.background');
+  color: v-bind('preview.text');
+  font-family: v-bind(fontStack);
+  font-size: v-bind('previewVars.base');
+  padding: v-bind('previewVars.xl');
+}
+.tb-heading {
+  @apply font-semibold leading-tight;
+  font-size: v-bind('previewVars.heading');
+}
+.tb-text {
+  @apply leading-relaxed;
+  margin-top: v-bind('previewVars.md');
+}
+.tb-surface {
+  @apply rounded-card;
+  background: v-bind('preview.surface');
+  margin-top: v-bind('previewVars.lg');
+  padding: v-bind('previewVars.lg');
+}
+.tb-surface .tb-text {
+  @apply mt-0;
+}
+.tb-accent {
+  @apply font-semibold;
+  color: v-bind('preview.secondary');
+}
+.tb-actions {
+  @apply flex flex-wrap;
+  gap: v-bind('previewVars.sm');
+  margin-top: v-bind('previewVars.lg');
+}
+.tb-button {
+  @apply inline-flex items-center rounded-pill border-2 border-solid px-5 py-2 font-medium;
+}
+.tb-button-primary {
+  background: v-bind('preview.primary');
+  border-color: v-bind('preview.primary');
+  color: v-bind('preview.onPrimary');
+}
+.tb-button-secondary {
+  @apply bg-transparent;
+  border-color: v-bind('preview.primary');
+  color: v-bind('preview.primary');
+}
+
+.tb-checks-title {
+  @apply mt-6 mb-2 text-sm font-semibold text-ink;
+}
+.tb-checks {
+  @apply divide-y divide-line-faint;
+}
+.tb-check {
+  @apply flex flex-wrap items-center justify-between gap-2 py-2 text-sm text-ink-secondary;
+}
+.tb-check-result {
+  @apply flex items-center gap-2 text-ink;
 }
 </style>
-

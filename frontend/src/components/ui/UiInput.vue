@@ -37,7 +37,7 @@ const props = defineProps({
   error: { type: String, default: '' },
   required: { type: Boolean, default: false },
   id: { type: String, default: '' },
-  /** Material Symbols name shown inside the field, e.g. "search" */
+  /** Lucide icon name (components/ui/icons.js) shown inside the field, e.g. "search" */
   icon: { type: String, default: '' },
   /** A unit after the value, e.g. "px" */
   suffix: { type: String, default: '' },

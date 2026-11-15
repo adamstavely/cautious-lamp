@@ -27,7 +27,7 @@ import { computed } from 'vue';
 const props = defineProps({
   variant: { type: String, default: 'secondary', validator: (v) => ['primary', 'secondary', 'ghost', 'danger'].includes(v) },
   size: { type: String, default: 'md', validator: (v) => ['sm', 'md'].includes(v) },
-  /** Material Symbols name shown before the label */
+  /** Lucide icon name (components/ui/icons.js) shown before the label */
   icon: { type: String, default: '' },
   trailingIcon: { type: String, default: '' },
   /** Text when there's no slot; required with `iconOnly`, where it becomes the accessible name */

@@ -138,6 +138,7 @@
     "src/views/SystemHealth.vue",
     "src/views/SystemUsabilityScale.vue",
     "src/views/TableGenerator.vue",
+    "src/views/ThemeBuilder.vue",
     "src/views/TimelineGenerator.vue",
     "src/views/TokenRelationships.vue",
     "src/views/TokenSync.vue",
