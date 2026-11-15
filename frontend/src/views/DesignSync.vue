@@ -16,7 +16,7 @@
 
     <PageSection title="Connections">
       <template #actions>
-        <UiButton variant="primary" icon="add" @click="showCreateModal = true">New connection</UiButton>
+        <UiButton variant="primary" icon="plus" @click="showCreateModal = true">New connection</UiButton>
       </template>
 
       <div v-if="connections.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -60,15 +60,15 @@
               </UiButton>
               <UiButton
                 size="sm"
-                icon="sync"
+                icon="refresh-cw"
                 :disabled="!SYNC_AVAILABLE || syncingConnections.has(connection.id)"
                 title="Not available: no Figma or Penpot integration on this server"
                 @click="syncConnection(connection.id)"
               >
                 {{ syncingConnections.has(connection.id) ? 'Syncing…' : 'Sync now' }}
               </UiButton>
-              <UiButton size="sm" variant="ghost" icon="edit" @click="editConnection(connection)">Edit</UiButton>
-              <UiButton size="sm" variant="ghost" icon="delete" icon-only :label="`Delete ${connection.name}`" @click="deleteConnection(connection.id)" />
+              <UiButton size="sm" variant="ghost" icon="pencil" @click="editConnection(connection)">Edit</UiButton>
+              <UiButton size="sm" variant="ghost" icon="trash-2" icon-only :label="`Delete ${connection.name}`" @click="deleteConnection(connection.id)" />
             </div>
           </template>
         </UiPanel>

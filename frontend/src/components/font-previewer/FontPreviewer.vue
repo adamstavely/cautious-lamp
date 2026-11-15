@@ -81,7 +81,7 @@
       >
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <span class="material-symbols-outlined text-base text-indigo-600">history</span>
+            <AppIcon name="history" class="text-base text-indigo-600" />
             Recently Viewed
           </h2>
           <button @click="recentlyViewed = []; recentlyViewedStorage.set([])" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
@@ -164,7 +164,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200">
           <h3 class="text-xl font-bold text-gray-900">Export Fonts</h3>
           <button @click="showExportModal = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -175,7 +175,7 @@
               <span v-for="font in favorites" :key="font.name" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg">{{ font.name }}</span>
             </div>
             <button @click="exportFavorites" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-              <span class="material-symbols-outlined">download</span>
+              <AppIcon name="download" />
               Export Favorites
             </button>
           </div>
@@ -186,7 +186,7 @@
               <span v-for="font in comparisonFonts" :key="font.name" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg">{{ font.name }}</span>
             </div>
             <button @click="exportComparison" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-              <span class="material-symbols-outlined">compare</span>
+              <AppIcon name="git-compare" />
               Export Comparison
             </button>
           </div>
@@ -200,7 +200,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200">
           <h3 class="text-xl font-bold text-gray-900">Contrast Analyzer</h3>
           <button @click="showContrastModal = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -259,7 +259,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 class="text-xl font-bold text-gray-900">CSS Code Generator</h3>
           <button @click="showCSSGenerator = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -272,7 +272,7 @@
               <option value="embed">Google Fonts Embed</option>
             </select>
             <button @click="copyCSS" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-              <span class="material-symbols-outlined text-lg">content_copy</span> Copy
+              <AppIcon name="copy" class="text-lg" /> Copy
             </button>
           </div>
           
@@ -287,7 +287,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200">
           <h3 class="text-xl font-bold text-gray-900">{{ previewFont.name }}</h3>
           <button @click="showQuickPreview = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -301,11 +301,11 @@
           
           <div class="flex gap-3 pt-4 border-t border-gray-200">
             <button @click="toggleFavorite(previewFont)" class="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors" :class="{ 'bg-indigo-50 border-indigo-500 text-indigo-700': isFavorite(previewFont) }">
-              <span class="material-symbols-outlined">{{ isFavorite(previewFont) ? 'favorite' : 'favorite_border' }}</span>
+              <AppIcon name="heart" :class="{ 'fill-current': isFavorite(previewFont) }" />
               {{ isFavorite(previewFont) ? 'Remove from Favorites' : 'Add to Favorites' }}
             </button>
             <button @click="toggleCompare(previewFont)" class="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors" :class="{ 'bg-indigo-50 border-indigo-500 text-indigo-700': isInComparison(previewFont) }">
-              <span class="material-symbols-outlined">{{ isInComparison(previewFont) ? 'remove_circle' : 'compare' }}</span>
+              <AppIcon :name="isInComparison(previewFont) ? 'circle-minus' : 'git-compare'" />
               {{ isInComparison(previewFont) ? 'Remove from Comparison' : 'Add to Comparison' }}
             </button>
           </div>
@@ -319,7 +319,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 class="text-xl font-bold text-gray-900">Font Collections</h3>
           <button @click="showCollectionsModal = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -348,10 +348,10 @@
                   <h5 class="font-semibold text-gray-900">{{ collection.name }}</h5>
                   <div class="flex gap-2">
                     <button @click="shareCollection(collection)" class="text-indigo-600 hover:text-indigo-700" title="Share">
-                      <span class="material-symbols-outlined text-lg">share</span>
+                      <AppIcon name="share-2" class="text-lg" />
                     </button>
                     <button @click="deleteCollectionById(collection.id)" class="text-red-600 hover:text-red-700" title="Delete">
-                      <span class="material-symbols-outlined text-lg">delete</span>
+                      <AppIcon name="trash-2" class="text-lg" />
                     </button>
                   </div>
                 </div>
@@ -372,7 +372,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 class="text-xl font-bold text-gray-900">Typography Presets</h3>
           <button @click="showTypographyPresets = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -407,7 +407,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 class="text-xl font-bold text-gray-900">{{ fontInfo.name }}</h3>
           <button @click="showFontInfoModal = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -464,7 +464,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200">
           <h3 class="text-xl font-bold text-gray-900">Line Length Calculator</h3>
           <button @click="showLineLengthCalc = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -517,7 +517,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div class="flex-1">
             <div class="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0 items-start">
-              <span class="material-symbols-outlined text-indigo-600 row-span-2">compare</span>
+              <AppIcon name="git-compare" class="text-indigo-600 row-span-2" />
               <h3 class="text-xl font-bold text-gray-900">
                 A/B Font Testing
               </h3>
@@ -525,7 +525,7 @@
             </div>
           </div>
           <button @click="showABTesting = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -533,7 +533,7 @@
           <!-- Typography Controls -->
           <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <h4 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-              <span class="material-symbols-outlined text-base text-indigo-600">text_fields</span>
+              <AppIcon name="type" class="text-base text-indigo-600" />
               Typography Settings
             </h4>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -692,7 +692,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 class="text-xl font-bold text-gray-900">Typography Hierarchy Builder</h3>
           <button @click="showTypographyHierarchy = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -738,7 +738,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 class="text-xl font-bold text-gray-900">Responsive Preview</h3>
           <button @click="showResponsivePreview = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -801,7 +801,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200">
           <h3 class="text-xl font-bold text-gray-900">Upload Custom Font</h3>
           <button @click="showCustomFontUpload = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -822,7 +822,7 @@
               <div v-for="font in customFonts" :key="font.name" class="p-3 border border-gray-200 rounded-lg flex items-center justify-between">
                 <span class="font-medium text-gray-900">{{ font.name }}</span>
                 <button @click="customFonts = customFonts.filter(f => f.name !== font.name); fontData = fontData.filter(f => f.name !== font.name)" class="text-red-600 hover:text-red-700">
-                  <span class="material-symbols-outlined text-lg">delete</span>
+                  <AppIcon name="trash-2" class="text-lg" />
                 </button>
               </div>
             </div>
@@ -841,7 +841,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200">
           <h3 class="text-xl font-bold text-gray-900">Export Fonts</h3>
           <button @click="showExportModal = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -853,7 +853,7 @@
             </div>
             <div class="flex gap-2">
               <button @click="exportFavorites" class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                <span class="material-symbols-outlined">download</span>
+                <AppIcon name="download" />
                 Export JSON
               </button>
               <button @click="exportToDesignTool('figma')" class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
@@ -869,7 +869,7 @@
             </div>
             <div class="flex gap-2">
               <button @click="exportComparison" class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                <span class="material-symbols-outlined">compare</span>
+                <AppIcon name="git-compare" />
                 Export JSON
               </button>
               <button @click="exportToDesignTool('adobe')" class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
@@ -887,7 +887,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 class="text-xl font-bold text-gray-900">Font Playlists</h3>
           <button @click="showFontPlaylists = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -915,7 +915,7 @@
                 <div class="flex items-center justify-between mb-2">
                   <h5 class="font-semibold text-gray-900">{{ playlist.name }}</h5>
                   <button @click="deletePlaylist(playlist.id)" class="text-red-600 hover:text-red-700">
-                    <span class="material-symbols-outlined text-lg">delete</span>
+                    <AppIcon name="trash-2" class="text-lg" />
                   </button>
                 </div>
                 <div class="flex flex-wrap gap-2">
@@ -935,7 +935,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 class="text-xl font-bold text-gray-900">Custom Tags</h3>
           <button @click="showCustomTags = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -974,7 +974,7 @@
                 <span v-for="tag in customTags[selectedFontForTagging]" :key="tag" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg flex items-center gap-2">
                   {{ tag }}
                   <button @click="removeCustomTag(selectedFontForTagging, tag)" class="text-red-600 hover:text-red-700">
-                    <span class="material-symbols-outlined text-sm">close</span>
+                    <AppIcon name="x" class="text-sm" />
                   </button>
                 </span>
               </div>
@@ -990,7 +990,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 class="text-xl font-bold text-gray-900">Font Performance Metrics</h3>
           <button @click="showPerformanceMetrics = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -1046,7 +1046,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 class="text-xl font-bold text-gray-900">Variable Font Support</h3>
           <button @click="showVariableFont = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -1129,7 +1129,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 class="text-xl font-bold text-gray-900">Usage Examples</h3>
           <button @click="showUsageExamples = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -1163,7 +1163,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 class="text-xl font-bold text-gray-900">Font License Checker</h3>
           <button @click="showLicenseChecker = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         
@@ -1229,7 +1229,7 @@
         <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h3 class="text-xl font-bold text-gray-900">Font Analytics Dashboard</h3>
           <button @click="showAnalyticsDashboard = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <span class="material-symbols-outlined text-gray-600">close</span>
+            <AppIcon name="x" class="text-gray-600" />
           </button>
         </div>
         

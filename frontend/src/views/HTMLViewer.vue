@@ -13,7 +13,7 @@
         <UiPanel title="Input">
           <template #actions>
             <UiSwitch v-model="autoUpdate" label="Auto update" />
-            <UiButton v-if="!autoUpdate" variant="primary" size="sm" icon="play_arrow" @click="runPreview">Run</UiButton>
+            <UiButton v-if="!autoUpdate" variant="primary" size="sm" icon="play" @click="runPreview">Run</UiButton>
           </template>
 
           <UiTabs v-model="activeTab" :tabs="tabs" label="Code language">
@@ -270,11 +270,11 @@ const toggleFullscreen = () => {
 };
 
 const editorTools = [
-  { label: 'Format', icon: 'format_align_left', action: formatCode },
-  { label: 'Copy', icon: 'content_copy', action: copyCode },
-  { label: 'Reset', icon: 'refresh', action: resetCode },
+  { label: 'Format', icon: 'align-left', action: formatCode },
+  { label: 'Copy', icon: 'copy', action: copyCode },
+  { label: 'Reset', icon: 'refresh-cw', action: resetCode },
   { label: 'Download', icon: 'download', action: downloadCode },
-  { label: 'Fullscreen', icon: 'fullscreen', action: toggleFullscreen },
+  { label: 'Fullscreen', icon: 'maximize', action: toggleFullscreen },
 ];
 
 // Watch for auto-update changes

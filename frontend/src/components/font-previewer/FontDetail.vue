@@ -5,7 +5,7 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div class="flex items-center justify-between">
           <router-link to="/fonts" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <span class="material-symbols-outlined text-indigo-600">arrow_back</span>
+            <AppIcon name="arrow-left" class="text-indigo-600" />
             <h1 class="text-2xl font-bold text-gray-900">Fonts</h1>
           </router-link>
         </div>
@@ -34,13 +34,13 @@
           </div>
           <div class="flex items-center gap-2 ml-4">
             <button @click="toggleFavorite(font)" class="p-2 text-gray-400 hover:text-red-500 transition-colors" :class="{ 'text-red-500': isFavorite(font) }" title="Add to favorites">
-              <span class="material-symbols-outlined text-2xl">{{ isFavorite(font) ? 'favorite' : 'favorite_border' }}</span>
+              <AppIcon name="heart" class="text-2xl" :class="{ 'fill-current': isFavorite(font) }" />
             </button>
             <button @click="copyFont(font)" class="p-2 text-gray-400 hover:text-gray-600 transition-colors" title="Copy URL">
-              <span class="material-symbols-outlined text-xl">content_copy</span>
+              <AppIcon name="copy" class="text-xl" />
             </button>
             <a :href="font.url" :download="getCustomFilename(font)" class="p-2 text-gray-400 hover:text-gray-600 transition-colors" title="Download">
-              <span class="material-symbols-outlined text-xl">download</span>
+              <AppIcon name="download" class="text-xl" />
             </a>
           </div>
         </div>
@@ -49,7 +49,7 @@
       <!-- Main Preview -->
       <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-6">
         <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-indigo-600">preview</span>
+          <AppIcon name="eye" class="text-indigo-600" />
           Preview
         </h2>
         
@@ -178,7 +178,7 @@
       <!-- Performance Metrics -->
       <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-6">
         <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-indigo-600">speed</span>
+          <AppIcon name="gauge" class="text-indigo-600" />
           Performance Metrics
         </h2>
         <div v-if="getFontPerformanceMetrics(font)" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -224,7 +224,7 @@
       <!-- License Information -->
       <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-6">
         <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-indigo-600">gavel</span>
+          <AppIcon name="gavel" class="text-indigo-600" />
           License Information
         </h2>
         <div v-if="getFontLicense(font)" class="space-y-4">

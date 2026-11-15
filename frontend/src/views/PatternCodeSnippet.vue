@@ -36,11 +36,11 @@
                   </p>
                   <div class="flex flex-wrap items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">category</span>
+                      <AppIcon name="shapes" class="text-base" />
                       {{ getCategoryLabel(pattern.category) }}
                     </span>
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">code</span>
+                      <AppIcon name="code" class="text-base" />
                       {{ pattern.useCase }}
                     </span>
                   </div>
@@ -78,7 +78,7 @@
             >
               <div class="p-4 border-b flex items-center justify-between" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
                 <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">code</span>
+                  <AppIcon name="code" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                   Generated Code
                 </h3>
                 <div class="flex items-center gap-2">
@@ -86,7 +86,7 @@
                     @click="copyCode"
                     class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-xs font-medium flex items-center gap-1.5"
                   >
-                    <span class="material-symbols-outlined text-sm">content_copy</span>
+                    <AppIcon name="copy" class="text-sm" />
                     Copy
                   </button>
                   <button
@@ -142,7 +142,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h3 class="text-xl font-bold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined">info</span>
+                <AppIcon name="info" />
                 Usage Example
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
@@ -158,7 +158,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h3 class="text-xl font-bold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined">settings</span>
+                <AppIcon name="settings" />
                 Properties
               </h3>
               <div class="space-y-3">
@@ -229,7 +229,7 @@
                 : 'bg-blue-50 border-blue-200'"
             >
               <div class="flex items-start gap-4">
-                <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">accessibility</span>
+                <AppIcon name="accessibility" class="text-3xl flex-shrink-0" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'" />
                 <div>
                   <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Accessibility</h3>
                   <ul class="space-y-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -257,7 +257,7 @@
             >
               <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
                 <h2 class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">speed</span>
+                  <AppIcon name="gauge" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                   Pattern Performance
                 </h2>
               </div>
@@ -266,7 +266,7 @@
                 <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                   <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
                     <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">code</span>
+                      <AppIcon name="code" class="text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                       Code Size
                     </div>
                     <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -279,7 +279,7 @@
                   
                   <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
                     <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">psychology</span>
+                      <AppIcon name="brain" class="text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                       Complexity
                     </div>
                     <div class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -292,7 +292,7 @@
                   
                   <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
                     <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">category</span>
+                      <AppIcon name="shapes" class="text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                       Category
                     </div>
                     <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -305,7 +305,7 @@
                   
                   <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
                     <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">check_circle</span>
+                      <AppIcon name="circle-check" class="text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                       Status
                     </div>
                     <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -319,7 +319,7 @@
 
                 <div class="mt-6 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
                   <h3 class="text-lg font-semibold flex items-center gap-2 mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">info</span>
+                    <AppIcon name="info" class="text-xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     Pattern Information
                   </h3>
                   <div class="grid md:grid-cols-2 gap-4">
@@ -456,7 +456,7 @@
                     :class="isDarkMode ? 'bg-slate-800 border border-gray-700' : 'bg-yellow-50 border border-yellow-200'"
                   >
                     <div class="flex items-start gap-2 mb-2">
-                      <span class="material-symbols-outlined text-yellow-600 dark:text-yellow-400">warning</span>
+                      <AppIcon name="triangle-alert" class="text-yellow-600 dark:text-yellow-400" />
                       <h5 class="text-sm font-semibold" :class="isDarkMode ? 'text-yellow-300' : 'text-yellow-900'">
                         Migration Guide
                       </h5>
@@ -477,9 +477,7 @@
                 ? 'bg-slate-900 border-gray-700' 
                 : 'bg-white border-gray-200'"
             >
-              <span class="material-symbols-outlined text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-                history
-              </span>
+              <AppIcon name="history" class="text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'" />
               <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 No version history
               </p>
@@ -507,7 +505,7 @@
                   : 'bg-white border-gray-200 hover:border-indigo-500'"
               >
                 <div class="flex items-center gap-3 mb-3">
-                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">{{ related.icon }}</span>
+                  <AppIcon :name="related.icon" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                   <h3 
                     class="text-lg font-semibold transition-colors"
                     :class="isDarkMode 
@@ -1220,40 +1218,40 @@ const getRelatedItems = () => {
   const patternId = pattern.value?.id;
   const related = {
     'form-validation': [
-      { id: 'forms', title: 'Forms', description: 'Form components that work with validation patterns', path: '/components/forms', icon: 'description' },
-      { id: 'input', title: 'Input', description: 'Input components with built-in validation support', path: '/components/forms', icon: 'edit' },
-      { id: 'button', title: 'Button', description: 'Submit buttons for form actions', path: '/components/buttons', icon: 'smart_button' }
+      { id: 'forms', title: 'Forms', description: 'Form components that work with validation patterns', path: '/components/forms', icon: 'file-text' },
+      { id: 'input', title: 'Input', description: 'Input components with built-in validation support', path: '/components/forms', icon: 'pencil' },
+      { id: 'button', title: 'Button', description: 'Submit buttons for form actions', path: '/components/buttons', icon: 'rectangle-horizontal' }
     ],
     'modal-component': [
-      { id: 'dialog', title: 'Dialog', description: 'Dialog components for modal interactions', path: '/components/navigation', icon: 'open_in_new' },
+      { id: 'dialog', title: 'Dialog', description: 'Dialog components for modal interactions', path: '/components/navigation', icon: 'external-link' },
       { id: 'overlay', title: 'Overlay', description: 'Overlay components for modal backgrounds', path: '/components/navigation', icon: 'layers' },
-      { id: 'button', title: 'Button', description: 'Buttons for modal actions', path: '/components/buttons', icon: 'smart_button' }
+      { id: 'button', title: 'Button', description: 'Buttons for modal actions', path: '/components/buttons', icon: 'rectangle-horizontal' }
     ],
     'data-table': [
-      { id: 'table', title: 'Table', description: 'Table components for data display', path: '/components/data-display', icon: 'table_chart' },
-      { id: 'pagination', title: 'Pagination', description: 'Pagination for large datasets', path: '/components/data-display', icon: 'pagination' },
-      { id: 'sortable', title: 'Sortable', description: 'Sortable list components', path: '/components/data-display', icon: 'sort' }
+      { id: 'table', title: 'Table', description: 'Table components for data display', path: '/components/data-display', icon: 'table-2' },
+      { id: 'pagination', title: 'Pagination', description: 'Pagination for large datasets', path: '/components/data-display', icon: 'ellipsis' },
+      { id: 'sortable', title: 'Sortable', description: 'Sortable list components', path: '/components/data-display', icon: 'arrow-up-down' }
     ],
     'authentication-form': [
-      { id: 'forms', title: 'Forms', description: 'Form components for authentication', path: '/components/forms', icon: 'description' },
-      { id: 'input', title: 'Input', description: 'Input fields for credentials', path: '/components/forms', icon: 'edit' },
-      { id: 'button', title: 'Button', description: 'Login and submit buttons', path: '/components/buttons', icon: 'smart_button' }
+      { id: 'forms', title: 'Forms', description: 'Form components for authentication', path: '/components/forms', icon: 'file-text' },
+      { id: 'input', title: 'Input', description: 'Input fields for credentials', path: '/components/forms', icon: 'pencil' },
+      { id: 'button', title: 'Button', description: 'Login and submit buttons', path: '/components/buttons', icon: 'rectangle-horizontal' }
     ],
     'navigation-menu': [
       { id: 'navigation', title: 'Navigation', description: 'Navigation components', path: '/components/navigation', icon: 'navigation' },
       { id: 'menu', title: 'Menu', description: 'Menu components for navigation', path: '/components/navigation', icon: 'menu' },
-      { id: 'dropdown', title: 'Dropdown', description: 'Dropdown menus for navigation items', path: '/components/navigation', icon: 'arrow_drop_down' }
+      { id: 'dropdown', title: 'Dropdown', description: 'Dropdown menus for navigation items', path: '/components/navigation', icon: 'chevron-down' }
     ],
     'toast-notification': [
-      { id: 'notification', title: 'Notification', description: 'Notification components', path: '/components/feedback', icon: 'notifications' },
-      { id: 'alert', title: 'Alert', description: 'Alert components for messages', path: '/components/feedback', icon: 'warning' },
-      { id: 'snackbar', title: 'Snackbar', description: 'Snackbar components for brief messages', path: '/components/feedback', icon: 'message' }
+      { id: 'notification', title: 'Notification', description: 'Notification components', path: '/components/feedback', icon: 'bell' },
+      { id: 'alert', title: 'Alert', description: 'Alert components for messages', path: '/components/feedback', icon: 'triangle-alert' },
+      { id: 'snackbar', title: 'Snackbar', description: 'Snackbar components for brief messages', path: '/components/feedback', icon: 'message-square' }
     ]
   };
   
   return related[patternId] || [
-    { id: 'patterns', title: 'Patterns', description: 'Browse other patterns', path: '/patterns', icon: 'pattern' },
-    { id: 'components', title: 'Components', description: 'Browse components', path: '/components', icon: 'widgets' }
+    { id: 'patterns', title: 'Patterns', description: 'Browse other patterns', path: '/patterns', icon: 'layout-template' },
+    { id: 'components', title: 'Components', description: 'Browse components', path: '/components', icon: 'blocks' }
   ];
 };
 

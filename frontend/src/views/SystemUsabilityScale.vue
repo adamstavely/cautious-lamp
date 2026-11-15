@@ -27,7 +27,7 @@
           </ol>
         </UiPanel>
 
-        <UiCallout v-if="hasAllAnswers" tone="info" role="status" icon="analytics" :title="`Estimated SUS score: ${calculateScore()}`">
+        <UiCallout v-if="hasAllAnswers" tone="info" role="status" icon="chart-no-axes-combined" :title="`Estimated SUS score: ${calculateScore()}`">
           {{ getScoreInterpretation(calculateScore()) }}
         </UiCallout>
 

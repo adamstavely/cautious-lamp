@@ -1,7 +1,7 @@
 <template>
   <UiPanel :title="spec.label">
     <template v-if="canEdit" #actions>
-      <UiButton variant="primary" size="sm" icon="add" @click="openForm()">Add {{ spec.singular }}</UiButton>
+      <UiButton variant="primary" size="sm" icon="plus" @click="openForm()">Add {{ spec.singular }}</UiButton>
     </template>
 
     <InlineNotice :notice="notice" @dismiss="clearNotice" />

@@ -2,7 +2,7 @@
   <div>
     <!-- Palette quality score: opens the breakdown -->
     <button type="button" class="score-trigger" aria-haspopup="dialog" @click="showModal = true">
-      <span class="material-symbols-outlined text-base text-accent-text" aria-hidden="true">show_chart</span>
+      <AppIcon name="chart-line" class="text-base text-accent-text" />
       <span class="flex flex-col text-left">
         <span class="text-xs font-medium text-ink-secondary">Palette quality score</span>
         <span class="text-xs text-ink-muted">{{ metCriteria }}/{{ totalCriteria }} criteria met</span>
@@ -16,12 +16,7 @@
       </p>
       <ul class="flex flex-col gap-4">
         <li v-for="criterion in criteria" :key="criterion.title" class="flex items-start gap-3">
-          <span
-            class="material-symbols-outlined text-xl flex-shrink-0"
-            :class="criterion.met ? 'text-success' : 'text-danger'"
-            :aria-label="criterion.met ? 'Met' : 'Not met'"
-            role="img"
-          >{{ criterion.met ? 'check_circle' : 'cancel' }}</span>
+          <AppIcon :name="criterion.met ? 'circle-check' : 'circle-x'" class="text-xl flex-shrink-0" :class="criterion.met ? 'text-success' : 'text-danger'" :aria-label="criterion.met ? 'Met' : 'Not met'" role="img" />
           <div class="flex-1">
             <p class="font-semibold text-ink-strong">{{ criterion.title }}</p>
             <p class="text-sm mt-0.5 text-ink-secondary">{{ criterion.detail }}</p>

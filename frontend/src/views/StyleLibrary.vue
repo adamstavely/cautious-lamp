@@ -31,11 +31,11 @@
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">library_books</span>
+                      <AppIcon name="library" class="text-base" />
                       {{ activeDictionaries.length }} Active Dictionar{{ activeDictionaries.length !== 1 ? 'ies' : 'y' }}
                     </span>
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">style</span>
+                      <AppIcon name="swatch-book" class="text-base" />
                       {{ totalTokens }} Total Tokens
                     </span>
                   </div>
@@ -126,7 +126,7 @@
                       ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' 
                       : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
                   >
-                    <span class="material-symbols-outlined text-lg">close</span>
+                    <AppIcon name="x" class="text-lg" />
                   </button>
                 </div>
 
@@ -139,7 +139,7 @@
                       ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                   >
-                    <span class="material-symbols-outlined text-base">code</span>
+                    <AppIcon name="code" class="text-base" />
                     Export JSON
                   </button>
                   <button
@@ -149,7 +149,7 @@
                       ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                   >
-                    <span class="material-symbols-outlined text-base">css</span>
+                    <AppIcon name="file-code" class="text-base" />
                     Export CSS
                   </button>
                   <button
@@ -159,7 +159,7 @@
                       ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                   >
-                    <span class="material-symbols-outlined text-base">phone_iphone</span>
+                    <AppIcon name="smartphone" class="text-base" />
                     Export iOS
                   </button>
                   <button
@@ -169,7 +169,7 @@
                       ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                   >
-                    <span class="material-symbols-outlined text-base">phone_android</span>
+                    <AppIcon name="smartphone" class="text-base" />
                     Export Android
                   </button>
                   <router-link
@@ -179,7 +179,7 @@
                       ? 'bg-indigo-600 text-white hover:bg-indigo-500' 
                       : 'bg-indigo-600 text-white hover:bg-indigo-700'"
                   >
-                    <span class="material-symbols-outlined text-base">edit</span>
+                    <AppIcon name="pencil" class="text-base" />
                     Edit in Studio
                   </router-link>
                 </div>
@@ -230,7 +230,7 @@
                               : 'text-gray-400 hover:text-indigo-600 hover:bg-white'"
                             title="Copy value"
                           >
-                            <span class="material-symbols-outlined text-base">content_copy</span>
+                            <AppIcon name="copy" class="text-base" />
                           </button>
                         </div>
                         <div 
@@ -334,7 +334,7 @@
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                     title="Copy all tokens"
                   >
-                    <span class="material-symbols-outlined text-base">content_copy</span>
+                    <AppIcon name="copy" class="text-base" />
                   </button>
                 </div>
               </div>
@@ -342,9 +342,7 @@
 
             <!-- Empty State -->
             <div v-if="!selectedDictionary && filteredDictionaries.length === 0" class="text-center py-12">
-              <span class="material-symbols-outlined text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-                library_books
-              </span>
+              <AppIcon name="library" class="text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'" />
               <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 No {{ filter === 'retired' ? 'retired' : 'active' }} dictionaries
               </p>

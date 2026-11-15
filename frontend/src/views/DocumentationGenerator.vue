@@ -35,7 +35,7 @@
                   for="component-file"
                   class="flex w-full cursor-pointer flex-col items-center gap-1 rounded-field border-2 border-dashed border-line-control bg-surface-sunken px-4 py-4 text-center text-ink-secondary transition-colors hover:border-accent-border peer-focus-visible:outline peer-focus-visible:outline-2 outline-focus"
                 >
-                  <span class="material-symbols-outlined text-2xl" aria-hidden="true">upload</span>
+                  <AppIcon name="upload" class="text-2xl" />
                   <span class="text-sm">Click to upload component file</span>
                 </label>
                 <p id="component-file-hint" class="mt-1.5 text-xs text-ink-muted">.vue, .jsx, .tsx, .js or .ts</p>

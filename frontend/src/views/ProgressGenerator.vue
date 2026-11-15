@@ -110,7 +110,7 @@
                 >
                   <div v-for="(step, index) in STEP_COUNT" :key="index" class="flex items-center">
                     <div class="step-dot" :class="[`step-dot-${config.size}`, { 'is-complete': index < completedSteps }]">
-                      <span v-if="index < completedSteps" class="material-symbols-outlined text-sm" aria-hidden="true">check</span>
+                      <AppIcon name="check" v-if="index < completedSteps" class="text-sm" />
                       <span v-else class="text-xs">{{ index + 1 }}</span>
                     </div>
                     <div v-if="index < STEP_COUNT - 1" class="step-line" :class="{ 'is-complete': index < completedSteps }"></div>
@@ -157,9 +157,9 @@ const { notice, showNotice, clearNotice } = useNotice();
 const STEP_COUNT = 5;
 
 const progressTypes = [
-  { label: 'Linear Bar', value: 'linear', icon: 'linear_scale' },
-  { label: 'Circular', value: 'circular', icon: 'radio_button_checked' },
-  { label: 'Step Indicator', value: 'steps', icon: 'steps' }
+  { label: 'Linear Bar', value: 'linear', icon: 'git-commit-horizontal' },
+  { label: 'Circular', value: 'circular', icon: 'circle-dot' },
+  { label: 'Step Indicator', value: 'steps', icon: 'footprints' }
 ];
 
 const progressStates = [

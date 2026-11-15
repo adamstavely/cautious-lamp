@@ -61,7 +61,7 @@
         <div v-if="canManageUsers" class="mt-4 flex flex-wrap gap-3">
           <UiButton
             :variant="current.status === 'active' ? 'danger' : 'secondary'"
-            :icon="current.status === 'active' ? 'block' : 'check_circle'"
+            :icon="current.status === 'active' ? 'ban' : 'circle-check'"
             :disabled="isSelf && current.status === 'active'"
             :aria-describedby="isSelf ? `${uid}-self-hint` : undefined"
             @click="openStatusConfirm"
@@ -69,7 +69,7 @@
             {{ current.status === 'active' ? 'Disable user' : 'Enable user' }}
           </UiButton>
           <UiButton
-            icon="lock_reset"
+            icon="rotate-ccw-key"
             :disabled="isSelf"
             :aria-describedby="isSelf ? `${uid}-self-hint` : undefined"
             @click="resetOpen = true"
@@ -96,7 +96,7 @@
               v-if="canManageRoles"
               variant="ghost"
               size="sm"
-              icon="delete"
+              icon="trash-2"
               icon-only
               :label="`Remove role ${roleName(roleId)}`"
               @click="openRemoveRole(roleId)"
@@ -142,7 +142,7 @@
               class="detail-link"
               @click="close(false)"
             >
-              <span class="material-symbols-outlined text-base" aria-hidden="true">folder</span>
+              <AppIcon name="folder" class="text-base" />
               <span class="truncate">{{ ws.name }}</span>
             </router-link>
             <UiChip class="capitalize">{{ ws.role }}</UiChip>

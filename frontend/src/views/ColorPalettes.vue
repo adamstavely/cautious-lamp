@@ -83,7 +83,7 @@
                 <div class="flex-1">
                   <div class="flex items-center gap-3 mb-3">
                     <div class="w-12 h-12 mb-0" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                      <span class="material-symbols-outlined text-5xl">palette</span>
+                      <AppIcon name="palette" class="text-5xl" />
                     </div>
                     <h3 
                       class="font-semibold text-2xl transition-colors"
@@ -133,9 +133,7 @@
                     </code>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-xl transition-transform group-hover:translate-x-1 ml-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
-                  arrow_forward
-                </span>
+                <AppIcon name="arrow-right" class="text-xl transition-transform group-hover:translate-x-1 ml-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" />
               </div>
             </router-link>
 
@@ -151,7 +149,7 @@
                 <div class="flex-1">
                   <div class="flex items-center gap-3 mb-3">
                     <div class="w-12 h-12 mb-0" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                      <span class="material-symbols-outlined text-5xl">layers</span>
+                      <AppIcon name="layers" class="text-5xl" />
                     </div>
                     <h3 
                       class="font-semibold text-2xl transition-colors"
@@ -188,9 +186,7 @@
                     </span>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-xl transition-transform group-hover:translate-x-1 ml-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
-                  arrow_forward
-                </span>
+                <AppIcon name="arrow-right" class="text-xl transition-transform group-hover:translate-x-1 ml-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" />
               </div>
             </router-link>
           </div>

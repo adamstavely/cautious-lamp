@@ -66,7 +66,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-base text-indigo-600">folder</span>
+                <AppIcon name="folder" class="text-base text-indigo-600" />
                 Token Categories
               </h3>
               <div class="space-y-2">
@@ -92,7 +92,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-base text-indigo-600">check_circle</span>
+                <AppIcon name="circle-check" class="text-base text-indigo-600" />
                 Selected Tokens
               </h3>
               <div v-if="selectedTokens.length === 0" class="text-sm text-center py-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
@@ -118,7 +118,7 @@
                     class="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
                     aria-label="Remove token"
                   >
-                    <span class="material-symbols-outlined text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">close</span>
+                    <AppIcon name="x" class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'" />
                   </button>
                 </div>
               </div>
@@ -136,13 +136,11 @@
             >
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-base text-indigo-600">style</span>
+                  <AppIcon name="swatch-book" class="text-base text-indigo-600" />
                   Available Tokens
                 </h3>
                 <div class="relative">
-                  <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-base pointer-events-none">
-                    search
-                  </span>
+                  <AppIcon name="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-base pointer-events-none" />
                   <input
                     v-model="tokenSearch"
                     type="text"
@@ -195,7 +193,7 @@
             >
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-base text-indigo-600">preview</span>
+                  <AppIcon name="eye" class="text-base text-indigo-600" />
                   Live Preview
                 </h3>
                 <button
@@ -209,7 +207,7 @@
                       ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
                 >
-                  <span class="material-symbols-outlined text-base">{{ previewDarkMode ? 'dark_mode' : 'light_mode' }}</span>
+                  <AppIcon :name="previewDarkMode ? 'moon' : 'sun'" class="text-base" />
                   {{ previewDarkMode ? 'Dark' : 'Light' }}
                 </button>
               </div>
@@ -307,7 +305,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-base text-indigo-600">download</span>
+                <AppIcon name="download" class="text-base text-indigo-600" />
                 Export Token Combination
               </h3>
               <div class="flex flex-wrap gap-3">

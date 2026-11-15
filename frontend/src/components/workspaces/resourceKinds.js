@@ -11,7 +11,7 @@ const link = { key: 'url', label: 'Link', type: 'url', placeholder: 'https://…
 
 export const RESOURCE_KINDS = [
   {
-    kind: 'fonts', label: 'Fonts', singular: 'Font', icon: 'font_download', titleField: 'name',
+    kind: 'fonts', label: 'Fonts', singular: 'Font', icon: 'type', titleField: 'name',
     subtitle: (item) => [item.family, item.source].filter(Boolean).join(' · '),
     fields: [
       { key: 'name', label: 'Name', type: 'text', required: true, placeholder: 'e.g., Body' },
@@ -25,7 +25,7 @@ export const RESOURCE_KINDS = [
     ],
   },
   {
-    kind: 'assets', label: 'Assets', singular: 'Asset', icon: 'perm_media', titleField: 'name', image: 'url',
+    kind: 'assets', label: 'Assets', singular: 'Asset', icon: 'folder-open', titleField: 'name', image: 'url',
     subtitle: (item) => item.type,
     fields: [
       { key: 'name', label: 'Name', type: 'text', required: true },
@@ -38,7 +38,7 @@ export const RESOURCE_KINDS = [
     ],
   },
   {
-    kind: 'tokens', label: 'Tokens', singular: 'Token', icon: 'token', titleField: 'name',
+    kind: 'tokens', label: 'Tokens', singular: 'Token', icon: 'coins', titleField: 'name',
     subtitle: (item) => `${item.category} · ${item.value}`,
     fields: [
       { key: 'name', label: 'Name', type: 'text', required: true, placeholder: 'color.primary' },
@@ -50,7 +50,7 @@ export const RESOURCE_KINDS = [
     ],
   },
   {
-    kind: 'reviews', label: 'Reviews', singular: 'Review', icon: 'rate_review', titleField: 'title',
+    kind: 'reviews', label: 'Reviews', singular: 'Review', icon: 'message-square-text', titleField: 'title',
     subtitle: (item) => item.status,
     fields: [
       { key: 'title', label: 'Title', type: 'text', required: true },
@@ -59,7 +59,7 @@ export const RESOURCE_KINDS = [
     ],
   },
   {
-    kind: 'session-replays', label: 'Session Replays', singular: 'Session Replay', icon: 'replay', titleField: 'name',
+    kind: 'session-replays', label: 'Session Replays', singular: 'Session Replay', icon: 'rotate-ccw', titleField: 'name',
     subtitle: (item) => item.sessionId,
     fields: [
       { key: 'name', label: 'Name', type: 'text', required: true },
@@ -79,7 +79,7 @@ export const RESOURCE_KINDS = [
     ],
   },
   {
-    kind: 'hcd-reports', label: 'HCD Reports', singular: 'HCD Report', icon: 'summarize', titleField: 'title',
+    kind: 'hcd-reports', label: 'HCD Reports', singular: 'HCD Report', icon: 'clipboard-list', titleField: 'title',
     subtitle: (item) => item.reportType,
     fields: [
       { key: 'title', label: 'Title', type: 'text', required: true },
@@ -88,7 +88,7 @@ export const RESOURCE_KINDS = [
     ],
   },
   {
-    kind: 'user-personas', label: 'User Personas', singular: 'User Persona', icon: 'person', titleField: 'name',
+    kind: 'user-personas', label: 'User Personas', singular: 'User Persona', icon: 'user', titleField: 'name',
     subtitle: (item) => (item.goals || []).slice(0, 2).join(', '),
     fields: [
       { key: 'name', label: 'Name', type: 'text', required: true },
@@ -100,7 +100,7 @@ export const RESOURCE_KINDS = [
     ],
   },
   {
-    kind: 'research-artifacts', label: 'Research Artifacts', singular: 'Research Artifact', icon: 'science', titleField: 'title',
+    kind: 'research-artifacts', label: 'Research Artifacts', singular: 'Research Artifact', icon: 'flask-conical', titleField: 'title',
     subtitle: (item) => item.artifactType,
     fields: [
       { key: 'title', label: 'Title', type: 'text', required: true },
@@ -119,12 +119,12 @@ export const RESOURCE_KINDS = [
     ],
   },
   {
-    kind: 'patterns', label: 'Patterns', singular: 'Pattern', icon: 'pattern', titleField: 'name',
+    kind: 'patterns', label: 'Patterns', singular: 'Pattern', icon: 'layout-template', titleField: 'name',
     subtitle: (item) => item.category,
     fields: [{ key: 'name', label: 'Name', type: 'text', required: true }, { key: 'category', label: 'Category', type: 'text' }, description, link, tags],
   },
   {
-    kind: 'icons', label: 'Icons', singular: 'Icon', icon: 'interests', titleField: 'name', svg: 'svg',
+    kind: 'icons', label: 'Icons', singular: 'Icon', icon: 'shapes', titleField: 'name', svg: 'svg',
     subtitle: (item) => item.iconSet,
     fields: [
       { key: 'name', label: 'Name', type: 'text', required: true },
@@ -134,7 +134,7 @@ export const RESOURCE_KINDS = [
     ],
   },
   {
-    kind: 'interactives', label: 'Interactives', singular: 'Interactive', icon: 'touch_app', titleField: 'name',
+    kind: 'interactives', label: 'Interactives', singular: 'Interactive', icon: 'pointer', titleField: 'name',
     subtitle: (item) => item.type,
     fields: [
       { key: 'name', label: 'Name', type: 'text', required: true },
@@ -143,7 +143,7 @@ export const RESOURCE_KINDS = [
     ],
   },
   {
-    kind: 'stock-photos', label: 'Stock Photos', singular: 'Stock Photo', icon: 'photo_library', titleField: 'name', image: 'url',
+    kind: 'stock-photos', label: 'Stock Photos', singular: 'Stock Photo', icon: 'images', titleField: 'name', image: 'url',
     subtitle: (item) => [item.photographer, item.license].filter(Boolean).join(' · '),
     fields: [
       { key: 'name', label: 'Name', type: 'text', required: true },
@@ -166,7 +166,7 @@ export const RESOURCE_KINDS = [
     ],
   },
   {
-    kind: 'capability-logos', label: 'Capability Logos', singular: 'Capability Logo', icon: 'verified', titleField: 'name', image: 'url',
+    kind: 'capability-logos', label: 'Capability Logos', singular: 'Capability Logo', icon: 'badge-check', titleField: 'name', image: 'url',
     subtitle: (item) => item.capability,
     fields: [
       { key: 'name', label: 'Name', type: 'text', required: true },
@@ -178,7 +178,7 @@ export const RESOURCE_KINDS = [
     ],
   },
   {
-    kind: 'style-dictionaries', label: 'Style Dictionaries', singular: 'Style Dictionary', icon: 'data_object', titleField: 'name',
+    kind: 'style-dictionaries', label: 'Style Dictionaries', singular: 'Style Dictionary', icon: 'braces', titleField: 'name',
     subtitle: (item) => item.format,
     fields: [
       { key: 'name', label: 'Name', type: 'text', required: true },
@@ -188,7 +188,7 @@ export const RESOURCE_KINDS = [
     ],
   },
   {
-    kind: 'guidelines', label: 'Guidelines', singular: 'Guideline', icon: 'menu_book', titleField: 'title', markdown: 'content',
+    kind: 'guidelines', label: 'Guidelines', singular: 'Guideline', icon: 'book-open', titleField: 'title', markdown: 'content',
     subtitle: (item) => item.category,
     fields: [
       { key: 'title', label: 'Title', type: 'text', required: true },

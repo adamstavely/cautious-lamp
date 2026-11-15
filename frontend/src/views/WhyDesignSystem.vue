@@ -95,7 +95,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">speed</span>
+                  <AppIcon name="gauge" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Build Faster
@@ -113,7 +113,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">view_module</span>
+                  <AppIcon name="layout-grid" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Ensure Consistency
@@ -131,7 +131,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">verified</span>
+                  <AppIcon name="badge-check" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Maintain Quality
@@ -149,7 +149,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">groups</span>
+                  <AppIcon name="users-round" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Enable Collaboration
@@ -167,7 +167,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">trending_up</span>
+                  <AppIcon name="trending-up" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Scale with Confidence
@@ -185,7 +185,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">lightbulb</span>
+                  <AppIcon name="lightbulb" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Focus on Innovation
@@ -212,7 +212,7 @@
               >
                 <div class="flex-shrink-0">
                   <div class="w-12 h-12" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-5xl">person</span>
+                    <AppIcon name="user" class="text-5xl" />
                   </div>
                 </div>
                 <div class="flex-1">
@@ -234,7 +234,7 @@
               >
                 <div class="flex-shrink-0">
                   <div class="w-12 h-12" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-5xl">accessibility</span>
+                    <AppIcon name="accessibility" class="text-5xl" />
                   </div>
                 </div>
                 <div class="flex-1">
@@ -256,7 +256,7 @@
               >
                 <div class="flex-shrink-0">
                   <div class="w-12 h-12" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-5xl">autorenew</span>
+                    <AppIcon name="refresh-cw" class="text-5xl" />
                   </div>
                 </div>
                 <div class="flex-1">
@@ -278,7 +278,7 @@
               >
                 <div class="flex-shrink-0">
                   <div class="w-12 h-12" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-5xl">flag</span>
+                    <AppIcon name="flag" class="text-5xl" />
                   </div>
                 </div>
                 <div class="flex-1">

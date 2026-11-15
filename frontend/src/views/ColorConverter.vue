@@ -24,14 +24,14 @@
             <button type="button" class="picker-button" aria-label="Open color picker" title="Pick color" @click="openColorPicker($event)">
               <span class="color-preview" role="img" :aria-label="`Color preview: ${currentColor}`"></span>
               <span class="picker-button-label">
-                <span class="material-symbols-outlined text-base" aria-hidden="true">colorize</span>
+                <AppIcon name="pipette" class="text-base" />
                 Pick color
               </span>
             </button>
           </UiPanel>
 
           <UiPanel title="Have a lot to convert?" description="Use the bulk converter to convert all your colors in the formats you need.">
-            <UiButton icon="format_list_bulleted" @click="showBulkModal = true">Convert bulk</UiButton>
+            <UiButton icon="list" @click="showBulkModal = true">Convert bulk</UiButton>
           </UiPanel>
         </div>
 
@@ -55,7 +55,7 @@
                       <code class="font-code text-xs px-2 py-1 rounded-control bg-fill text-ink">{{ conversion.string }}</code>
                       <UiButton
                         icon-only
-                        icon="content_copy"
+                        icon="copy"
                         size="sm"
                         variant="ghost"
                         :label="`Copy ${conversion.name} value: ${conversion.string}`"

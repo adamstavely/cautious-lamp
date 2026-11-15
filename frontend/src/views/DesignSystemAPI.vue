@@ -71,9 +71,7 @@
           >
             <div class="flex items-start gap-4 mb-6">
               <div class="p-3 rounded-lg" :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-50'">
-                <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  code
-                </span>
+                <AppIcon name="code" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
               </div>
               <div class="flex-1">
                 <h2 class="text-2xl font-bold mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">

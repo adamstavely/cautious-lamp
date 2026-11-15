@@ -66,7 +66,7 @@
               : 'border-gray-300 bg-white hover:border-indigo-500 hover:bg-indigo-50'"
           >
             <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-              <span class="material-symbols-outlined text-5xl">home</span>
+              <AppIcon name="house" class="text-5xl" />
             </div>
             <h3 
               class="font-semibold text-lg transition-colors mb-2"
@@ -90,7 +90,7 @@
               : 'border-gray-300 bg-white hover:border-indigo-500 hover:bg-indigo-50'"
           >
             <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-              <span class="material-symbols-outlined text-5xl">widgets</span>
+              <AppIcon name="blocks" class="text-5xl" />
             </div>
             <h3 
               class="font-semibold text-lg transition-colors mb-2"
@@ -114,7 +114,7 @@
               : 'border-gray-300 bg-white hover:border-indigo-500 hover:bg-indigo-50'"
           >
             <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-              <span class="material-symbols-outlined text-5xl">search</span>
+              <AppIcon name="search" class="text-5xl" />
             </div>
             <h3 
               class="font-semibold text-lg transition-colors mb-2"

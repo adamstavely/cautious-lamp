@@ -6,7 +6,7 @@
       <PageHero :back="backLink" title="Test run results" size="tool" />
       <UiEmptyState title="Error loading results" :body="error" spot="patterns/error-handling">
         <template #actions>
-          <UiButton variant="primary" icon="refresh" @click="loadResults">Retry</UiButton>
+          <UiButton variant="primary" icon="refresh-cw" @click="loadResults">Retry</UiButton>
         </template>
       </UiEmptyState>
     </template>
@@ -26,7 +26,7 @@
           <UiButton
             v-if="testRun.status === 'running' || testRun.status === 'pending'"
             :variant="autoRefresh ? 'primary' : 'secondary'"
-            :icon="autoRefresh ? 'sync' : 'sync_disabled'"
+            :icon="autoRefresh ? 'refresh-cw' : 'refresh-cw-off'"
             :aria-pressed="autoRefresh"
             @click="toggleAutoRefresh"
           >
@@ -56,7 +56,7 @@
           <UiSelect v-model="sortBy" :options="sortOptions" label="Sort by" />
           <div>
             <UiButton
-              :icon="sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'"
+              :icon="sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'"
               @click="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'"
             >
               {{ sortOrder === 'asc' ? 'Ascending' : 'Descending' }}
@@ -67,7 +67,7 @@
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-sm text-ink-secondary" role="status">{{ selectedResults.length }} selected</span>
             <UiButton size="sm" variant="primary" icon="check" :disabled="processing" @click="bulkApprove">Approve all</UiButton>
-            <UiButton size="sm" variant="danger" icon="close" :disabled="processing" @click="bulkReject">Reject all</UiButton>
+            <UiButton size="sm" variant="danger" icon="x" :disabled="processing" @click="bulkReject">Reject all</UiButton>
             <UiButton size="sm" variant="ghost" @click="selectedResults = []">Clear</UiButton>
           </div>
         </template>
@@ -126,7 +126,7 @@
                 v-if="result.status === 'failed'"
                 size="sm"
                 variant="danger"
-                icon="close"
+                icon="x"
                 :disabled="processing"
                 @click="rejectDiff(result.id)"
               >

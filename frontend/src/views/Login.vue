@@ -44,7 +44,7 @@
               <UiButton
                 variant="ghost"
                 size="sm"
-                :icon="showPassword ? 'visibility_off' : 'visibility'"
+                :icon="showPassword ? 'eye-off' : 'eye'"
                 icon-only
                 label="Show password"
                 class="reveal"

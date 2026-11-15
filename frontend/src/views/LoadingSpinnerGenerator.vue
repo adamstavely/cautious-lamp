@@ -71,11 +71,11 @@ import { useNotice } from '../composables/useNotice.js';
 const { notice, showNotice, clearNotice } = useNotice();
 
 const spinnerStyles = [
-  { label: 'Spinner', value: 'spinner', icon: 'refresh' },
-  { label: 'Dots', value: 'dots', icon: 'more_horiz' },
-  { label: 'Bars', value: 'bars', icon: 'equalizer' },
-  { label: 'Skeleton', value: 'skeleton', icon: 'view_agenda' },
-  { label: 'Pulse', value: 'pulse', icon: 'radio_button_checked' }
+  { label: 'Spinner', value: 'spinner', icon: 'refresh-cw' },
+  { label: 'Dots', value: 'dots', icon: 'ellipsis' },
+  { label: 'Bars', value: 'bars', icon: 'audio-lines' },
+  { label: 'Skeleton', value: 'skeleton', icon: 'rows-2' },
+  { label: 'Pulse', value: 'pulse', icon: 'circle-dot' }
 ];
 
 const exportFormats = [

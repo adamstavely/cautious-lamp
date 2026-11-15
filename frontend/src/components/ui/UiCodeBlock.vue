@@ -2,7 +2,7 @@
   <div class="ui-codeblock">
     <div class="ui-codeblock-head">
       <span class="ui-codeblock-label">{{ label }}</span>
-      <UiButton size="sm" variant="ghost" :icon="copied ? 'check' : 'content_copy'" :label="copied ? 'Copied' : 'Copy'" @click="copy" />
+      <UiButton size="sm" variant="ghost" :icon="copied ? 'check' : 'copy'" :label="copied ? 'Copied' : 'Copy'" @click="copy" />
     </div>
     <pre class="ui-codeblock-pre" tabindex="0" :aria-label="label"><code>{{ code }}</code></pre>
     <p class="sr-only" aria-live="polite">{{ copied ? `${label} copied` : '' }}</p>

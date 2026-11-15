@@ -47,7 +47,7 @@
                 mono
                 @update:model-value="setField(item, $event)"
               />
-              <UiButton variant="ghost" icon="content_copy" icon-only :label="`Copy ${item.label} value`" @click="copyToClipboard(item.model.value + item.unit)" />
+              <UiButton variant="ghost" icon="copy" icon-only :label="`Copy ${item.label} value`" @click="copyToClipboard(item.model.value + item.unit)" />
             </div>
           </div>
 
@@ -55,11 +55,11 @@
           <div v-else-if="selectedMode === 'base-to-px'" class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="grid grid-cols-content-aside items-end gap-2">
               <UiInput :model-value="baseUnitValue" placeholder="1rem, 1em, or 100%" label="Base unit" mono @update:model-value="onBaseUnit" />
-              <UiButton variant="ghost" icon="content_copy" icon-only label="Copy base unit" @click="copyToClipboard(baseUnitValue)" />
+              <UiButton variant="ghost" icon="copy" icon-only label="Copy base unit" @click="copyToClipboard(baseUnitValue)" />
             </div>
             <div class="grid grid-cols-content-aside items-end gap-2">
               <UiInput :model-value="baseToPxResult" type="number" readonly label="Pixels" suffix="px" mono />
-              <UiButton variant="ghost" icon="content_copy" icon-only label="Copy pixels" @click="copyToClipboard(baseToPxResult + 'px')" />
+              <UiButton variant="ghost" icon="copy" icon-only label="Copy pixels" @click="copyToClipboard(baseToPxResult + 'px')" />
             </div>
           </div>
 
@@ -68,11 +68,11 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div class="grid grid-cols-content-aside items-end gap-2">
                 <UiInput :model-value="pxValue" type="number" step="0.1" placeholder="16" label="Pixels" suffix="px" mono @update:model-value="onPxForTailwind" />
-                <UiButton variant="ghost" icon="content_copy" icon-only label="Copy pixels" @click="copyToClipboard(pxValue + 'px')" />
+                <UiButton variant="ghost" icon="copy" icon-only label="Copy pixels" @click="copyToClipboard(pxValue + 'px')" />
               </div>
               <div class="grid grid-cols-content-aside items-end gap-2">
                 <UiInput :model-value="tailwindValue" readonly label="Tailwind value" mono />
-                <UiButton variant="ghost" icon="content_copy" icon-only label="Copy Tailwind value" @click="copyToClipboard(tailwindValue)" />
+                <UiButton variant="ghost" icon="copy" icon-only label="Copy Tailwind value" @click="copyToClipboard(tailwindValue)" />
               </div>
             </div>
             <div v-if="tailwindClass" class="p-4 rounded-tile bg-surface-sunken">
@@ -97,11 +97,11 @@
         <div v-for="bp in breakpointsTable" :key="bp.px" class="p-3 rounded-tile border border-line-faint bg-surface-raised space-y-1">
           <div class="flex items-center justify-between gap-2">
             <p class="text-sm font-code font-semibold text-ink">{{ bp.px }}px</p>
-            <UiButton size="sm" variant="ghost" icon="content_copy" icon-only :label="`Copy ${bp.px}px`" @click="copyToClipboard(bp.px + 'px')" />
+            <UiButton size="sm" variant="ghost" icon="copy" icon-only :label="`Copy ${bp.px}px`" @click="copyToClipboard(bp.px + 'px')" />
           </div>
           <div class="flex items-center justify-between gap-2">
             <p class="text-sm font-code font-semibold text-accent-text">{{ bp.vw }}vw</p>
-            <UiButton size="sm" variant="ghost" icon="content_copy" icon-only :label="`Copy ${bp.vw}vw`" @click="copyToClipboard(bp.vw + 'vw')" />
+            <UiButton size="sm" variant="ghost" icon="copy" icon-only :label="`Copy ${bp.vw}vw`" @click="copyToClipboard(bp.vw + 'vw')" />
           </div>
         </div>
       </div>

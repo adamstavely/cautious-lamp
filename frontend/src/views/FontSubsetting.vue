@@ -34,11 +34,11 @@
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">label</span>
+                      <AppIcon name="tag" class="text-base" />
                       Optimization Tool
                     </span>
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
+                      <AppIcon name="refresh-ccw" class="text-base" />
                       Updated Jan 15, 2024
                     </span>
                   </div>
@@ -87,7 +87,7 @@
               class="text-sm font-medium mb-2 block flex items-center gap-2" 
               :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
             >
-              <span class="material-symbols-outlined text-indigo-600">font_download</span>
+              <AppIcon name="type" class="text-indigo-600" />
               Select Font
             </label>
             <Dropdown
@@ -108,7 +108,7 @@
               class="text-sm font-medium mb-2 block flex items-center gap-2" 
               :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"
             >
-              <span class="material-symbols-outlined text-indigo-600">format_bold</span>
+              <AppIcon name="bold" class="text-indigo-600" />
               Select Weight
             </label>
             <Dropdown
@@ -129,7 +129,7 @@
                 class="font-semibold mb-2 flex items-center gap-2" 
                 :class="isDarkMode ? 'text-white' : 'text-gray-900'"
               >
-                <span class="material-symbols-outlined text-indigo-600">text_fields</span>
+                <AppIcon name="type" class="text-indigo-600" />
                 Select Character Sets to Include
               </h4>
               <p 

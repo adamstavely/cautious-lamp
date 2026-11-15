@@ -10,45 +10,45 @@ const STORAGE_KEY_PATTERNS = 'ds_patterns_status';
 
 // Default component data
 const defaultComponents = [
-  { name: 'Button', icon: 'smart_button', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-15' },
-  { name: 'Input', icon: 'input', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-10' },
-  { name: 'Card', icon: 'view_module', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-12' },
-  { name: 'Modal', icon: 'fullscreen', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-08' },
-  { name: 'Dropdown', icon: 'arrow_drop_down', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-05' },
-  { name: 'Checkbox', icon: 'check_box', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-03' },
-  { name: 'Radio', icon: 'radio_button_checked', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-02' },
-  { name: 'Switch', icon: 'toggle_on', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2023-12-28' },
+  { name: 'Button', icon: 'rectangle-horizontal', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-15' },
+  { name: 'Input', icon: 'text-cursor-input', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-10' },
+  { name: 'Card', icon: 'layout-grid', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-12' },
+  { name: 'Modal', icon: 'maximize', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-08' },
+  { name: 'Dropdown', icon: 'chevron-down', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-05' },
+  { name: 'Checkbox', icon: 'square-check', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-03' },
+  { name: 'Radio', icon: 'circle-dot', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-02' },
+  { name: 'Switch', icon: 'toggle-right', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2023-12-28' },
   { name: 'Color Picker', icon: 'pipette', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-15' },
-  { name: 'Tabs', icon: 'tab', status: 'In Progress', version: '0.9.0', documentation: 'Partial', lastUpdated: '2024-01-20' },
-  { name: 'Accordion', icon: 'expand_more', status: 'In Progress', version: '0.8.0', documentation: 'Partial', lastUpdated: '2024-01-18' },
+  { name: 'Tabs', icon: 'app-window', status: 'In Progress', version: '0.9.0', documentation: 'Partial', lastUpdated: '2024-01-20' },
+  { name: 'Accordion', icon: 'chevron-down', status: 'In Progress', version: '0.8.0', documentation: 'Partial', lastUpdated: '2024-01-18' },
   { name: 'Tooltip', icon: 'info', status: 'In Progress', version: '0.7.0', documentation: 'Partial', lastUpdated: '2024-01-16' },
-  { name: 'Popover', icon: 'open_in_new', status: 'In Progress', version: '0.6.0', documentation: 'Partial', lastUpdated: '2024-01-14' },
-  { name: 'Breadcrumbs', icon: 'navigate_next', status: 'Planned', version: '-', documentation: 'Not Started', lastUpdated: '-' },
-  { name: 'Pagination', icon: 'more_horiz', status: 'Planned', version: '-', documentation: 'Not Started', lastUpdated: '-' },
-  { name: 'Data Table', icon: 'table_chart', status: 'Planned', version: '-', documentation: 'Not Started', lastUpdated: '-' },
+  { name: 'Popover', icon: 'external-link', status: 'In Progress', version: '0.6.0', documentation: 'Partial', lastUpdated: '2024-01-14' },
+  { name: 'Breadcrumbs', icon: 'chevron-right', status: 'Planned', version: '-', documentation: 'Not Started', lastUpdated: '-' },
+  { name: 'Pagination', icon: 'ellipsis', status: 'Planned', version: '-', documentation: 'Not Started', lastUpdated: '-' },
+  { name: 'Data Table', icon: 'table-2', status: 'Planned', version: '-', documentation: 'Not Started', lastUpdated: '-' },
 ];
 
 // Default pattern data
 const defaultPatterns = [
   // Design Patterns
-  { name: 'Layout', icon: 'view_quilt', type: 'Design Pattern', status: 'Production Ready', category: 'Layout', documentation: 'Complete', lastUpdated: '2024-01-15', route: '/patterns/layout' },
+  { name: 'Layout', icon: 'layout-dashboard', type: 'Design Pattern', status: 'Production Ready', category: 'Layout', documentation: 'Complete', lastUpdated: '2024-01-15', route: '/patterns/layout' },
   { name: 'Navigation', icon: 'navigation', type: 'Design Pattern', status: 'Production Ready', category: 'Navigation', documentation: 'Complete', lastUpdated: '2024-01-12', route: '/patterns/navigation' },
-  { name: 'Data Display', icon: 'table_chart', type: 'Design Pattern', status: 'Production Ready', category: 'Data Display', documentation: 'Complete', lastUpdated: '2024-01-10', route: '/patterns/data-display' },
-  { name: 'Forms', icon: 'description', type: 'Design Pattern', status: 'Production Ready', category: 'Forms', documentation: 'Complete', lastUpdated: '2024-01-08', route: '/patterns/forms' },
-  { name: 'Feedback', icon: 'feedback', type: 'Design Pattern', status: 'Production Ready', category: 'Feedback', documentation: 'Complete', lastUpdated: '2024-01-05', route: '/patterns/feedback' },
+  { name: 'Data Display', icon: 'table-2', type: 'Design Pattern', status: 'Production Ready', category: 'Data Display', documentation: 'Complete', lastUpdated: '2024-01-10', route: '/patterns/data-display' },
+  { name: 'Forms', icon: 'file-text', type: 'Design Pattern', status: 'Production Ready', category: 'Forms', documentation: 'Complete', lastUpdated: '2024-01-08', route: '/patterns/forms' },
+  { name: 'Feedback', icon: 'message-square-warning', type: 'Design Pattern', status: 'Production Ready', category: 'Feedback', documentation: 'Complete', lastUpdated: '2024-01-05', route: '/patterns/feedback' },
   
   // Code Patterns
-  { name: 'Form Validation', icon: 'verified', type: 'Code Pattern', status: 'Production Ready', category: 'Forms', documentation: 'Complete', lastUpdated: '2024-01-20', route: '/patterns/form-validation' },
-  { name: 'Accessible Modal', icon: 'fullscreen', type: 'Code Pattern', status: 'Production Ready', category: 'Feedback', documentation: 'Complete', lastUpdated: '2024-01-18', route: '/patterns/accessible-modal' },
-  { name: 'Sortable Data Table', icon: 'sort', type: 'Code Pattern', status: 'Production Ready', category: 'Data Display', documentation: 'Complete', lastUpdated: '2024-01-16', route: '/patterns/sortable-data-table' },
+  { name: 'Form Validation', icon: 'badge-check', type: 'Code Pattern', status: 'Production Ready', category: 'Forms', documentation: 'Complete', lastUpdated: '2024-01-20', route: '/patterns/form-validation' },
+  { name: 'Accessible Modal', icon: 'maximize', type: 'Code Pattern', status: 'Production Ready', category: 'Feedback', documentation: 'Complete', lastUpdated: '2024-01-18', route: '/patterns/accessible-modal' },
+  { name: 'Sortable Data Table', icon: 'arrow-up-down', type: 'Code Pattern', status: 'Production Ready', category: 'Data Display', documentation: 'Complete', lastUpdated: '2024-01-16', route: '/patterns/sortable-data-table' },
   { name: 'Login Form', icon: 'lock', type: 'Code Pattern', status: 'Production Ready', category: 'Authentication', documentation: 'Complete', lastUpdated: '2024-01-14', route: '/patterns/login-form' },
   { name: 'Responsive Navigation', icon: 'menu', type: 'Code Pattern', status: 'In Progress', category: 'Navigation', documentation: 'Partial', lastUpdated: '2024-01-22', route: '/patterns/responsive-navigation' },
-  { name: 'Toast Notification', icon: 'notifications', type: 'Code Pattern', status: 'Production Ready', category: 'Feedback', documentation: 'Complete', lastUpdated: '2024-01-12', route: '/patterns/toast-notification' },
+  { name: 'Toast Notification', icon: 'bell', type: 'Code Pattern', status: 'Production Ready', category: 'Feedback', documentation: 'Complete', lastUpdated: '2024-01-12', route: '/patterns/toast-notification' },
   
   // Planned Patterns
-  { name: 'Dashboard Layout', icon: 'dashboard', type: 'Design Pattern', status: 'Planned', category: 'Layout', documentation: 'Not Started', lastUpdated: '-', route: '/patterns' },
+  { name: 'Dashboard Layout', icon: 'layout-dashboard', type: 'Design Pattern', status: 'Planned', category: 'Layout', documentation: 'Not Started', lastUpdated: '-', route: '/patterns' },
   { name: 'Search Interface', icon: 'search', type: 'Design Pattern', status: 'Planned', category: 'Navigation', documentation: 'Not Started', lastUpdated: '-', route: '/patterns' },
-  { name: 'Data Visualization', icon: 'bar_chart', type: 'Design Pattern', status: 'Planned', category: 'Data Display', documentation: 'Not Started', lastUpdated: '-', route: '/patterns' },
+  { name: 'Data Visualization', icon: 'chart-column', type: 'Design Pattern', status: 'Planned', category: 'Data Display', documentation: 'Not Started', lastUpdated: '-', route: '/patterns' },
 ];
 
 // Load from localStorage

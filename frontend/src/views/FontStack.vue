@@ -28,7 +28,7 @@
                   v-for="pair in getSelectedFontForStack().pairsWellWith"
                   :key="pair"
                   size="sm"
-                  icon="add"
+                  icon="plus"
                   @click="addToFontStack(pair)"
                 >
                   {{ pair }}
@@ -39,7 +39,7 @@
             <div>
               <div class="flex items-center justify-between gap-3 mb-2">
                 <h3 class="text-sm font-medium text-ink">Font stack</h3>
-                <UiButton size="sm" variant="ghost" icon="restart_alt" @click="resetFontStack">Reset to default</UiButton>
+                <UiButton size="sm" variant="ghost" icon="rotate-ccw" @click="resetFontStack">Reset to default</UiButton>
               </div>
               <ol class="flex flex-wrap items-center gap-2" aria-label="Fonts in the stack, in order">
                 <li v-for="(fontName, index) in fontStack" :key="`${fontName}-${index}`" class="stack-item">
@@ -47,7 +47,7 @@
                   <UiButton
                     v-if="index > 0"
                     icon-only
-                    icon="close"
+                    icon="x"
                     size="sm"
                     variant="ghost"
                     :label="`Remove ${fontName} from the stack`"
@@ -66,7 +66,7 @@
                   @keyup.enter="addToFontStack(newFontInStack)"
                 />
               </div>
-              <UiButton variant="primary" icon="add" @click="addToFontStack(newFontInStack)">Add</UiButton>
+              <UiButton variant="primary" icon="plus" @click="addToFontStack(newFontInStack)">Add</UiButton>
             </div>
 
             <div>

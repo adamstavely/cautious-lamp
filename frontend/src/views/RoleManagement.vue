@@ -27,7 +27,7 @@
             <template v-if="canManageRoles" #actions>
               <UiButton
                 size="sm"
-                icon="edit"
+                icon="pencil"
                 :disabled="!catalogue.length"
                 :aria-label="`Edit permissions of ${role.name}`"
                 @click="openEdit(role)"
@@ -67,7 +67,7 @@
                   v-if="canManageRoles"
                   variant="ghost"
                   size="sm"
-                  icon="person_add"
+                  icon="user-plus"
                   :aria-label="`Add a member to ${role.name}`"
                   @click="openAddMember(role)"
                 >
@@ -93,7 +93,7 @@
                     v-if="canManageRoles"
                     variant="ghost"
                     size="sm"
-                    icon="delete"
+                    icon="trash-2"
                     icon-only
                     :label="`Remove ${member.name} from ${role.name}`"
                     @click="confirmRemove(member, role)"
@@ -115,7 +115,7 @@
 
         <UiPanel v-if="lookup.user" :title="lookup.user.name + (lookup.user.id === currentUserId ? ' (you)' : '')" :description="lookup.user.email" heading-tag="h3">
           <template #actions>
-            <UiButton variant="ghost" size="sm" icon="close" icon-only label="Clear the selected user" @click="clearLookup" />
+            <UiButton variant="ghost" size="sm" icon="x" icon-only label="Clear the selected user" @click="clearLookup" />
           </template>
 
           <UiSpinner v-if="lookup.state === 'loading'" label="Loading roles…" />
@@ -132,7 +132,7 @@
                   v-if="canManageRoles"
                   variant="ghost"
                   size="sm"
-                  icon="delete"
+                  icon="trash-2"
                   icon-only
                   :label="`Remove ${role.name} from ${lookup.user.name}`"
                   @click="confirmRemove(lookup.user, role)"
@@ -189,7 +189,7 @@
           <span class="block text-xs text-ink-secondary">{{ add.user.email }}</span>
           <span v-if="add.user.status === 'disabled'" class="block text-xs text-warning">This user is disabled.</span>
         </div>
-        <UiButton variant="ghost" size="sm" icon="close" icon-only label="Clear the selected user" @click="add.user = null" />
+        <UiButton variant="ghost" size="sm" icon="x" icon-only label="Clear the selected user" @click="add.user = null" />
       </div>
       <template #actions>
         <UiButton :disabled="add.busy" @click="add.open = false">Cancel</UiButton>

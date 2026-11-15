@@ -1,6 +1,6 @@
 <template>
   <span class="ui-chip" :class="`ui-chip-${tone}`">
-    <span v-if="icon" class="material-symbols-outlined text-sm" aria-hidden="true">{{ icon }}</span>
+    <AppIcon :name="icon" v-if="icon" class="text-sm" />
     <slot />
   </span>
 </template>

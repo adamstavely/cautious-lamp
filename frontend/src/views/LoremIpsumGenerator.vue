@@ -14,7 +14,7 @@
           <UiSelect v-model="variant" label="Variant" :options="variantOptions" />
           <UiSelect v-model="type" label="Type" :options="typeOptions" />
           <UiInput v-model="count" type="number" label="Count" min="1" :max="MAX_COUNT" />
-          <UiButton variant="primary" icon="autorenew" class="w-full" @click="generate">Generate</UiButton>
+          <UiButton variant="primary" icon="refresh-cw" class="w-full" @click="generate">Generate</UiButton>
         </div>
 
         <fieldset class="mt-6">
@@ -28,7 +28,7 @@
 
     <PageSection title="Generated text" description="The HTML and how it renders." divided>
       <template #actions>
-        <UiButton variant="secondary" icon="content_copy" :disabled="!output" @click="copyToClipboard">Copy</UiButton>
+        <UiButton variant="secondary" icon="copy" :disabled="!output" @click="copyToClipboard">Copy</UiButton>
       </template>
       <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">

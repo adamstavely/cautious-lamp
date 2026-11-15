@@ -180,7 +180,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">first_page</span>
+                  <AppIcon name="chevrons-left" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Optimize First Impressions
@@ -198,7 +198,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">speed</span>
+                  <AppIcon name="gauge" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Reduce Friction
@@ -216,7 +216,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">devices</span>
+                  <AppIcon name="monitor-smartphone" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Ensure Cross-Platform Consistency
@@ -234,7 +234,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">psychology</span>
+                  <AppIcon name="brain" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Build Trust Through Quality
@@ -252,7 +252,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">insights</span>
+                  <AppIcon name="lightbulb" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Enable Rapid Iteration
@@ -270,7 +270,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">share</span>
+                  <AppIcon name="share-2" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Encourage Sharing
@@ -297,7 +297,7 @@
               >
                 <div class="flex-shrink-0">
                   <div class="w-12 h-12" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-5xl">track_changes</span>
+                    <AppIcon name="radar" class="text-5xl" />
                   </div>
                 </div>
                 <div class="flex-1">
@@ -319,7 +319,7 @@
               >
                 <div class="flex-shrink-0">
                   <div class="w-12 h-12" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-5xl">analytics</span>
+                    <AppIcon name="chart-no-axes-combined" class="text-5xl" />
                   </div>
                 </div>
                 <div class="flex-1">
@@ -341,7 +341,7 @@
               >
                 <div class="flex-shrink-0">
                   <div class="w-12 h-12" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-5xl">accessibility</span>
+                    <AppIcon name="accessibility" class="text-5xl" />
                   </div>
                 </div>
                 <div class="flex-1">
@@ -363,7 +363,7 @@
               >
                 <div class="flex-shrink-0">
                   <div class="w-12 h-12" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-5xl">auto_awesome</span>
+                    <AppIcon name="sparkles" class="text-5xl" />
                   </div>
                 </div>
                 <div class="flex-1">

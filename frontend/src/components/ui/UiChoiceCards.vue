@@ -22,7 +22,7 @@
         @keydown="onKey($event, index)"
       >
         <span class="ui-choice-card-head">
-          <span v-if="option.icon" class="material-symbols-outlined ui-choice-card-icon" aria-hidden="true">{{ option.icon }}</span>
+          <AppIcon :name="option.icon" v-if="option.icon" class="ui-choice-card-icon" />
           <span class="ui-choice-card-label">{{ option.label }}</span>
         </span>
         <span v-if="option.description" class="ui-choice-card-description">{{ option.description }}</span>

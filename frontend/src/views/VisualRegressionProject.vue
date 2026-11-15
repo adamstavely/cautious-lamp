@@ -20,7 +20,7 @@
         size="tool"
       >
         <template #actions>
-          <UiButton variant="primary" icon="play_arrow" :disabled="testRunning" @click="triggerTest">
+          <UiButton variant="primary" icon="play" :disabled="testRunning" @click="triggerTest">
             {{ testRunning ? 'Running…' : 'Run tests' }}
           </UiButton>
         </template>
@@ -68,7 +68,7 @@
             spot="admin/visual-regression"
           >
             <template #actions>
-              <UiButton variant="primary" icon="play_arrow" :disabled="testRunning" @click="triggerTest">Run tests</UiButton>
+              <UiButton variant="primary" icon="play" :disabled="testRunning" @click="triggerTest">Run tests</UiButton>
             </template>
           </UiEmptyState>
 
@@ -170,7 +170,7 @@
                     @focus="$event.target.select()"
                   />
                 </div>
-                <UiButton :icon="secretCopied ? 'check' : 'content_copy'" @click="copySecret">{{ secretCopied ? 'Copied' : 'Copy' }}</UiButton>
+                <UiButton :icon="secretCopied ? 'check' : 'copy'" @click="copySecret">{{ secretCopied ? 'Copied' : 'Copy' }}</UiButton>
               </div>
 
               <InlineNotice :notice="webhookNotice" class="mb-4" @dismiss="clearWebhookNotice" />

@@ -57,7 +57,7 @@
             <div class="mt-6 pt-6 border-t border-line">
               <div class="flex items-center justify-between mb-3">
                 <h3 class="text-sm font-semibold text-ink-strong">Columns ({{ columns.length }})</h3>
-                <UiButton variant="primary" size="sm" icon="add" @click="addColumn">Add column</UiButton>
+                <UiButton variant="primary" size="sm" icon="plus" @click="addColumn">Add column</UiButton>
               </div>
 
               <InlineNotice :notice="columnNotice" class="mb-3" @dismiss="clearColumnNotice" />
@@ -67,7 +67,7 @@
                   <legend class="sr-only">Column {{ index + 1 }}</legend>
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-medium text-ink-muted" aria-hidden="true">Column {{ index + 1 }}</span>
-                    <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove column ${index + 1}`" :disabled="columns.length <= 1" @click="removeColumn(index)" />
+                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove column ${index + 1}`" :disabled="columns.length <= 1" @click="removeColumn(index)" />
                   </div>
                   <UiInput :model-value="column.name" placeholder="Column name" :aria-label="`Column ${index + 1} name`" @change="renameColumn(index, $event)" />
                   <UiSelect v-model="column.type" :options="columnTypeOptions" :aria-label="`Column ${index + 1} type`" />
@@ -82,7 +82,7 @@
             <div class="mt-6 pt-6 border-t border-line">
               <div class="flex items-center justify-between mb-3">
                 <h3 class="text-sm font-semibold text-ink-strong">Rows ({{ rows.length }})</h3>
-                <UiButton variant="primary" size="sm" icon="add" @click="addRow">Add row</UiButton>
+                <UiButton variant="primary" size="sm" icon="plus" @click="addRow">Add row</UiButton>
               </div>
 
               <div class="flex flex-col gap-2 max-h-64 overflow-y-auto">
@@ -90,7 +90,7 @@
                   <legend class="sr-only">Row {{ rowIndex + 1 }}</legend>
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-medium text-ink-muted" aria-hidden="true">Row {{ rowIndex + 1 }}</span>
-                    <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove row ${rowIndex + 1}`" :disabled="rows.length <= 1" @click="removeRow(rowIndex)" />
+                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove row ${rowIndex + 1}`" :disabled="rows.length <= 1" @click="removeRow(rowIndex)" />
                   </div>
                   <div class="grid grid-cols-2 gap-2">
                     <UiInput
@@ -115,7 +115,7 @@
                   v-for="column in columns.filter(c => c.filterable)"
                   :key="column.name"
                   v-model="filters[column.name]"
-                  icon="filter_list"
+                  icon="list-filter"
                   :placeholder="`Filter ${column.name}...`"
                   :aria-label="`Filter ${column.name}`"
                 />
@@ -148,7 +148,7 @@
                       >
                         <button v-if="config.enableSorting && column.sortable" type="button" class="table-sort" @click="handleSort(column.name)">
                           {{ column.name }}
-                          <span class="material-symbols-outlined text-sm" aria-hidden="true">{{ getSortIcon(column.name) }}</span>
+                          <AppIcon :name="getSortIcon(column.name)" class="text-sm" />
                         </button>
                         <template v-else>{{ column.name }}</template>
                       </th>
@@ -188,8 +188,8 @@
                   Showing {{ (currentPage - 1) * config.rowsPerPage + 1 }} to {{ Math.min(currentPage * config.rowsPerPage, filteredRows.length) }} of {{ filteredRows.length }} entries
                 </p>
                 <div class="flex gap-2">
-                  <UiButton size="sm" icon="chevron_left" :disabled="currentPage === 1" @click="currentPage = Math.max(1, currentPage - 1)">Previous</UiButton>
-                  <UiButton size="sm" trailing-icon="chevron_right" :disabled="currentPage === totalPages" @click="currentPage = Math.min(totalPages, currentPage + 1)">Next</UiButton>
+                  <UiButton size="sm" icon="chevron-left" :disabled="currentPage === 1" @click="currentPage = Math.max(1, currentPage - 1)">Previous</UiButton>
+                  <UiButton size="sm" trailing-icon="chevron-right" :disabled="currentPage === totalPages" @click="currentPage = Math.min(totalPages, currentPage + 1)">Next</UiButton>
                 </div>
               </div>
             </UiPanel>
@@ -203,7 +203,7 @@
             <ul class="flex flex-col gap-2 text-sm">
               <li v-for="check in accessibilityChecks" :key="check.label" class="flex items-center justify-between">
                 <span class="text-ink-secondary">{{ check.label }}</span>
-                <span class="material-symbols-outlined text-base" :class="check.ok ? 'text-success' : 'text-danger'" aria-hidden="true">{{ check.ok ? 'check_circle' : 'error' }}</span>
+                <AppIcon :name="check.ok ? 'circle-check' : 'circle-alert'" class="text-base" :class="check.ok ? 'text-success' : 'text-danger'" />
                 <span class="sr-only">{{ check.ok ? 'Passes' : 'Needs work' }}</span>
               </li>
             </ul>
@@ -214,7 +214,7 @@
               </ul>
             </UiCallout>
 
-            <UiButton variant="primary" icon="bug_report" class="mt-4" :loading="axeScanRunning" @click="runAxeCoreScan">
+            <UiButton variant="primary" icon="bug" class="mt-4" :loading="axeScanRunning" @click="runAxeCoreScan">
               {{ axeScanRunning ? 'Scanning...' : 'Run accessibility check' }}
             </UiButton>
 
@@ -224,7 +224,7 @@
                 v-for="(violation, index) in axeScanResults.violations"
                 :key="index"
                 tone="danger"
-                :icon="violation.impact === 'critical' ? 'error' : 'warning'"
+                :icon="violation.impact === 'critical' ? 'circle-alert' : 'triangle-alert'"
                 :title="`${violation.id} (${violation.impact || 'moderate'})`"
               >
                 <p>{{ violation.description }}</p>
@@ -581,8 +581,8 @@ const handleSort = (columnName) => {
 };
 
 const getSortIcon = (columnName) => {
-  if (sortColumn.value !== columnName) return 'unfold_more';
-  return sortDirection.value === 'asc' ? 'arrow_upward' : 'arrow_downward';
+  if (sortColumn.value !== columnName) return 'chevrons-up-down';
+  return sortDirection.value === 'asc' ? 'arrow-up' : 'arrow-down';
 };
 
 const formatCellValue = (value, type) => {

@@ -50,7 +50,7 @@
                 hint="Checked without a browser, so colour contrast is listed as needing review rather than tested."
               />
               <div>
-                <UiButton variant="primary" icon="play_arrow" :loading="loading" :disabled="!canGenerate" @click="generateReport">
+                <UiButton variant="primary" icon="play" :loading="loading" :disabled="!canGenerate" @click="generateReport">
                   {{ loading ? 'Scanning…' : 'Generate report' }}
                 </UiButton>
               </div>
@@ -76,13 +76,13 @@
             <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               <UiStat
                 label="Automated score"
-                icon="check_circle"
+                icon="circle-check"
                 :value="`${currentReport.complianceScore}%`"
                 :tone="scoreTone(currentReport.complianceScore)"
                 :hint="levelLabel(currentReport.wcagLevel)"
               />
-              <UiStat label="Critical issues" icon="error" tone="danger" :value="currentReport.criticalIssues" hint="Blocking accessibility" />
-              <UiStat label="Total issues" icon="warning" :value="currentReport.totalIssues">
+              <UiStat label="Critical issues" icon="circle-alert" tone="danger" :value="currentReport.criticalIssues" hint="Blocking accessibility" />
+              <UiStat label="Total issues" icon="triangle-alert" :value="currentReport.totalIssues">
                 {{ currentReport.totalIssues }}
                 <span class="block text-sm font-normal tracking-normal text-ink-muted">
                   {{ currentReport.highIssues }} high, {{ currentReport.moderateIssues }} moderate, {{ currentReport.lowIssues }} low
@@ -95,12 +95,12 @@
               <UiStat
                 v-if="currentReport.previousReportId"
                 label="Trend"
-                :icon="currentReport.trend.scoreChange >= 0 ? 'trending_up' : 'trending_down'"
+                :icon="currentReport.trend.scoreChange >= 0 ? 'trending-up' : 'trending-down'"
                 :tone="currentReport.trend.scoreChange >= 0 ? 'success' : 'danger'"
                 :value="`${currentReport.trend.scoreChange >= 0 ? '+' : ''}${currentReport.trend.scoreChange.toFixed(1)}`"
                 :hint="`${currentReport.trend.fixedIssues} fixed, ${currentReport.trend.newIssues} new`"
               />
-              <UiStat v-else label="Trend" icon="trending_flat" value="–" hint="First report for this application." />
+              <UiStat v-else label="Trend" icon="move-right" value="–" hint="First report for this application." />
             </div>
 
             <!-- Issues by category -->
@@ -116,7 +116,7 @@
             <!-- Prioritized fixes -->
             <UiPanel title="Prioritized fixes">
               <template #actions>
-                <UiButton size="sm" icon="picture_as_pdf" @click="exportToPDF">Export PDF</UiButton>
+                <UiButton size="sm" icon="file-text" @click="exportToPDF">Export PDF</UiButton>
               </template>
               <p v-if="currentReport.prioritizedFixes.length === 0" class="text-sm text-ink-secondary">No automated violations found.</p>
               <ul v-else class="space-y-3">
@@ -224,7 +224,7 @@
               </div>
               <template v-if="canAdmin">
                 <UiButton v-if="confirmingDelete === `report:${report.id}`" size="sm" variant="danger" @click="deleteReport(report.id)">Confirm delete</UiButton>
-                <UiButton v-else size="sm" variant="ghost" icon="delete" @click="confirmingDelete = `report:${report.id}`">Delete</UiButton>
+                <UiButton v-else size="sm" variant="ghost" icon="trash-2" @click="confirmingDelete = `report:${report.id}`">Delete</UiButton>
               </template>
             </li>
           </ul>
@@ -294,7 +294,7 @@
           description="The backend checks for due schedules every minute and scans the page in a browser. Times are UTC. Reports appear in the history; nothing is emailed."
         >
           <template v-if="canAdmin" #actions>
-            <UiButton variant="primary" icon="add" @click="openScheduleModal()">Create schedule</UiButton>
+            <UiButton variant="primary" icon="plus" @click="openScheduleModal()">Create schedule</UiButton>
           </template>
           <p v-if="schedules.length === 0" class="text-sm text-ink-secondary">No schedules configured.</p>
           <ul v-else class="space-y-3">
@@ -318,9 +318,9 @@
                 <UiChip :tone="schedule.enabled ? 'success' : 'neutral'">{{ schedule.enabled ? 'Enabled' : 'Disabled' }}</UiChip>
                 <template v-if="canAdmin">
                   <UiButton size="sm" @click="toggleSchedule(schedule)">{{ schedule.enabled ? 'Disable' : 'Enable' }}</UiButton>
-                  <UiButton size="sm" icon="edit" @click="openScheduleModal(schedule)">Edit</UiButton>
+                  <UiButton size="sm" icon="pencil" @click="openScheduleModal(schedule)">Edit</UiButton>
                   <UiButton v-if="confirmingDelete === `schedule:${schedule.id}`" size="sm" variant="danger" @click="deleteSchedule(schedule.id)">Confirm delete</UiButton>
-                  <UiButton v-else size="sm" variant="ghost" icon="delete" @click="confirmingDelete = `schedule:${schedule.id}`">Delete</UiButton>
+                  <UiButton v-else size="sm" variant="ghost" icon="trash-2" @click="confirmingDelete = `schedule:${schedule.id}`">Delete</UiButton>
                 </template>
               </div>
             </li>
@@ -335,7 +335,7 @@
           description="One SLA per application. Non-compliant: below the target score, failures at or below the target level, or more critical issues than allowed. At risk: more high issues than allowed, at a limit, or within 5 points of the target score. Needs review: nothing failed, but the automated checks couldn't verify the target level (criteria need a manual check, or the scan was HTML-only)."
         >
           <template v-if="canAdmin" #actions>
-            <UiButton variant="primary" icon="add" @click="openSLAModal()">Create SLA</UiButton>
+            <UiButton variant="primary" icon="plus" @click="openSLAModal()">Create SLA</UiButton>
           </template>
           <p v-if="slas.length === 0" class="text-sm text-ink-secondary">No SLAs configured.</p>
           <ul v-else class="space-y-3">
@@ -350,9 +350,9 @@
                 </dl>
               </div>
               <div v-if="canAdmin" class="flex items-center gap-2">
-                <UiButton size="sm" icon="edit" @click="openSLAModal(sla)">Edit</UiButton>
+                <UiButton size="sm" icon="pencil" @click="openSLAModal(sla)">Edit</UiButton>
                 <UiButton v-if="confirmingDelete === `sla:${sla.id}`" size="sm" variant="danger" @click="deleteSLA(sla.id)">Confirm delete</UiButton>
-                <UiButton v-else size="sm" variant="ghost" icon="delete" @click="confirmingDelete = `sla:${sla.id}`">Delete</UiButton>
+                <UiButton v-else size="sm" variant="ghost" icon="trash-2" @click="confirmingDelete = `sla:${sla.id}`">Delete</UiButton>
               </div>
             </li>
           </ul>
@@ -479,10 +479,10 @@ import { useAuth } from '../composables/useAuth.js';
 import apiClient, { apiErrorMessage } from '../services/api.js';
 
 const TABS = [
-  { value: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { value: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
   { value: 'reports', label: 'Report history', icon: 'history' },
-  { value: 'multi-app', label: 'Multi-application', icon: 'apps' },
-  { value: 'schedules', label: 'Schedules', icon: 'schedule' },
+  { value: 'multi-app', label: 'Multi-application', icon: 'layout-grid' },
+  { value: 'schedules', label: 'Schedules', icon: 'clock' },
   { value: 'slas', label: 'SLA management', icon: 'gavel' },
 ];
 const GENERATE_SOURCES = [

@@ -13,7 +13,7 @@
         <!-- Color Swatches -->
         <section>
           <h3 class="text-xl font-semibold text-ink-strong mb-6 flex items-center gap-2">
-            <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">palette</span>
+            <AppIcon name="palette" class="text-xl text-accent-text" />
             Color swatches
           </h3>
           <ul class="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -29,7 +29,7 @@
         <!-- Usage Examples -->
         <section>
           <h3 class="text-lg font-semibold text-ink-strong mb-4 flex items-center gap-2">
-            <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">preview</span>
+            <AppIcon name="eye" class="text-xl text-accent-text" />
             Usage examples
           </h3>
           <p class="text-sm text-ink-secondary mb-4">
@@ -95,7 +95,7 @@
       <div class="lg:col-span-1">
         <section class="sticky top-8">
           <h3 class="text-2xl font-bold text-ink-strong mb-6 flex items-center gap-2">
-            <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">download</span>
+            <AppIcon name="download" class="text-xl text-accent-text" />
             Export options
           </h3>
           <ul class="space-y-3">
@@ -105,7 +105,7 @@
                   <span class="block font-semibold text-ink-strong mb-1">{{ option.title }}</span>
                   <span class="block text-sm text-ink-secondary">{{ option.body }}</span>
                 </span>
-                <span class="material-symbols-outlined text-xl text-ink-muted group-hover:text-accent-text transition-colors" aria-hidden="true">{{ option.icon }}</span>
+                <AppIcon :name="option.icon" class="text-xl text-ink-muted group-hover:text-accent-text transition-colors" />
               </button>
             </li>
           </ul>
@@ -115,7 +115,7 @@
 
     <!-- Navigation -->
     <div class="flex justify-between mt-8 pt-8 border-t border-line-faint">
-      <UiButton icon="arrow_back" @click="$emit('back')">Back</UiButton>
+      <UiButton icon="arrow-left" @click="$emit('back')">Back</UiButton>
       <UiButton variant="primary" icon="check" @click="complete">Save and complete</UiButton>
     </div>
   </div>
@@ -1536,7 +1536,7 @@ const exportOptions = [
   { title: 'Brand Guidelines PDF', body: 'Complete brand guidelines with usage rules, logo placement, and typography', icon: 'download', run: () => exportBrandGuidelines() },
   { title: 'SVG Export', body: 'Scalable vector graphic with palette details', icon: 'download', run: () => exportSVG() },
   { title: 'PNG Preview', body: 'Visual palette preview image', icon: 'download', run: () => exportPNG() },
-  { title: 'Copy Colors', body: 'All hex codes in a list', icon: 'content_copy', run: () => copyColors() },
+  { title: 'Copy Colors', body: 'All hex codes in a list', icon: 'copy', run: () => copyColors() },
   { title: 'JSON Export', body: 'Complete palette data in JSON format', icon: 'download', run: () => exportJSON() },
   { title: 'CSS Variables', body: 'CSS custom properties for web projects', icon: 'download', run: () => exportCSS() },
   { title: 'SCSS Variables', body: 'SCSS variables for Sass/SCSS projects', icon: 'download', run: () => exportSCSS() },

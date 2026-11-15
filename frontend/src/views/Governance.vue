@@ -51,7 +51,7 @@
 
         <template #footer>
           <div v-if="canAdmin" class="flex flex-wrap gap-2 w-full">
-            <UiButton size="sm" icon="add" @click="newRule">Add rule</UiButton>
+            <UiButton size="sm" icon="plus" @click="newRule">Add rule</UiButton>
             <UiButton size="sm" variant="ghost" icon="upload" @click="importInput?.click()">Import</UiButton>
             <input ref="importInput" type="file" accept="application/json,.json" class="sr-only" tabindex="-1" aria-hidden="true" @change="importRules" />
             <UiButton size="sm" variant="ghost" icon="download" @click="exportRules">Export</UiButton>
@@ -65,7 +65,7 @@
         <!-- Compliance checker -->
         <UiPanel title="Compliance checker">
           <template #actions>
-            <UiButton variant="primary" icon="play_arrow" :loading="scanning" :disabled="!canRunScan" @click="runScan">
+            <UiButton variant="primary" icon="play" :loading="scanning" :disabled="!canRunScan" @click="runScan">
               {{ scanning ? 'Scanning…' : 'Run check' }}
             </UiButton>
           </template>
@@ -137,7 +137,7 @@
             <ul class="space-y-2 max-h-96 overflow-y-auto">
               <li v-for="check in scanResult.checks" :key="check.id" class="check-card" :class="statusCard(check.status)">
                 <div class="flex items-center gap-2 mb-1">
-                  <span class="material-symbols-outlined text-sm" :class="statusIconClass(check.status)" aria-hidden="true">{{ statusIcon(check.status) }}</span>
+                  <AppIcon :name="statusIcon(check.status)" class="text-sm" :class="statusIconClass(check.status)" />
                   <span class="text-sm font-medium text-ink-strong">{{ check.rule }}</span>
                   <span class="sr-only">({{ check.status }})</span>
                 </div>
@@ -277,7 +277,7 @@
               <UiButton @click="closeEditor">{{ canAdmin ? 'Cancel' : 'Close' }}</UiButton>
               <template v-if="canAdmin && editingRule.id">
                 <UiButton v-if="confirmDelete" class="ml-auto" variant="danger" @click="deleteRule">Confirm delete</UiButton>
-                <UiButton v-else class="ml-auto" variant="ghost" icon="delete" @click="confirmDelete = true">Delete</UiButton>
+                <UiButton v-else class="ml-auto" variant="ghost" icon="trash-2" @click="confirmDelete = true">Delete</UiButton>
               </template>
             </div>
           </form>
@@ -292,7 +292,7 @@
           :description="scope === 'application' && selectedApplication ? selectedApplication.name : ''"
         >
           <template #actions>
-            <UiButton size="sm" variant="ghost" icon="refresh" @click="loadHistory">Refresh</UiButton>
+            <UiButton size="sm" variant="ghost" icon="refresh-cw" @click="loadHistory">Refresh</UiButton>
           </template>
           <UiSpinner v-if="historyLoading" />
           <p v-else-if="history.length === 0" class="text-sm text-ink-secondary">No scans yet.</p>
@@ -447,7 +447,7 @@ const statusCard = (status) =>
     error: 'border-danger-border bg-danger-bg',
     info: 'border-info-border bg-info-bg',
   })[status];
-const statusIcon = (status) => ({ pass: 'check_circle', warning: 'warning', error: 'error', info: 'info' })[status];
+const statusIcon = (status) => ({ pass: 'circle-check', warning: 'triangle-alert', error: 'circle-alert', info: 'info' })[status];
 const statusIconClass = (status) => ({ pass: 'text-success', warning: 'text-warning', error: 'text-danger', info: 'text-info' })[status];
 
 const formatDate = (value) => {

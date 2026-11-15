@@ -83,7 +83,7 @@
                     ? 'bg-slate-800 hover:bg-slate-700 text-white' 
                     : 'bg-gray-50 hover:bg-gray-100 text-gray-700'"
                 >
-                  <span class="material-symbols-outlined text-sm align-middle mr-2">accessibility</span>
+                  <AppIcon name="accessibility" class="text-sm align-middle mr-2" />
                   Accessibility Improvements
                 </button>
                 <button
@@ -93,7 +93,7 @@
                     ? 'bg-slate-800 hover:bg-slate-700 text-white' 
                     : 'bg-gray-50 hover:bg-gray-100 text-gray-700'"
                 >
-                  <span class="material-symbols-outlined text-sm align-middle mr-2">lightbulb</span>
+                  <AppIcon name="lightbulb" class="text-sm align-middle mr-2" />
                   Component Recommendations
                 </button>
                 <button
@@ -103,7 +103,7 @@
                     ? 'bg-slate-800 hover:bg-slate-700 text-white' 
                     : 'bg-gray-50 hover:bg-gray-100 text-gray-700'"
                 >
-                  <span class="material-symbols-outlined text-sm align-middle mr-2">pattern</span>
+                  <AppIcon name="layout-template" class="text-sm align-middle mr-2" />
                   Design Patterns
                 </button>
               </div>
@@ -147,9 +147,7 @@
                 >
                   <div class="flex items-start justify-between mb-2">
                     <div class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-sm" :class="suggestion.type === 'error' ? 'text-red-500' : suggestion.type === 'warning' ? 'text-yellow-500' : 'text-blue-500'">
-                        {{ suggestion.type === 'error' ? 'error' : suggestion.type === 'warning' ? 'warning' : 'info' }}
-                      </span>
+                      <AppIcon :name="suggestion.type === 'error' ? 'circle-alert' : suggestion.type === 'warning' ? 'triangle-alert' : 'info'" class="text-sm" :class="suggestion.type === 'error' ? 'text-red-500' : suggestion.type === 'warning' ? 'text-yellow-500' : 'text-blue-500'" />
                       <span class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                         {{ suggestion.title }}
                       </span>
@@ -224,9 +222,7 @@
 
             <!-- Empty State -->
             <div v-if="suggestions.length === 0 && recommendations.length === 0" class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-900' : 'border-gray-200 bg-white'">
-              <span class="material-symbols-outlined text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-                psychology
-              </span>
+              <AppIcon name="brain" class="text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'" />
               <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 No suggestions yet
               </p>

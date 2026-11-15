@@ -166,7 +166,7 @@
                   :class="isDarkMode ? 'bg-slate-800 border border-gray-700' : 'bg-yellow-50 border border-yellow-200'"
                 >
                   <div class="flex items-start gap-2 mb-2">
-                    <span class="material-symbols-outlined text-yellow-600 dark:text-yellow-400">warning</span>
+                    <AppIcon name="triangle-alert" class="text-yellow-600 dark:text-yellow-400" />
                     <h5 class="text-sm font-semibold" :class="isDarkMode ? 'text-yellow-300' : 'text-yellow-900'">
                       Migration Guide
                     </h5>
@@ -212,9 +212,7 @@
               ? 'bg-slate-900 border-gray-700' 
               : 'bg-white border-gray-200'"
           >
-            <span class="material-symbols-outlined text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-              history
-            </span>
+            <AppIcon name="history" class="text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'" />
             <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
               No version history found
             </p>

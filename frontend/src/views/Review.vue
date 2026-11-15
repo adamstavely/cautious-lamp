@@ -7,7 +7,7 @@
       spot="site/review"
     >
       <template #actions>
-        <UiButton variant="primary" icon="add_circle" @click="openRequestReviewModal">Request review</UiButton>
+        <UiButton variant="primary" icon="circle-plus" @click="openRequestReviewModal">Request review</UiButton>
       </template>
     </PageHero>
 

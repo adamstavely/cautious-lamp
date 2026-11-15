@@ -25,7 +25,7 @@
             <UiButton
               size="sm"
               :variant="previewDarkMode ? 'primary' : 'secondary'"
-              :icon="previewDarkMode ? 'dark_mode' : 'light_mode'"
+              :icon="previewDarkMode ? 'moon' : 'sun'"
               :label="previewDarkMode ? 'Dark' : 'Light'"
               :aria-pressed="previewDarkMode"
               @click="previewDarkMode = !previewDarkMode"
@@ -208,7 +208,7 @@
     <PageSection title="Performance metrics" divided>
       <UiPanel>
         <template v-if="performanceData" #actions>
-          <UiButton size="sm" variant="ghost" icon="refresh" label="Refresh" @click="loadPerformanceData" />
+          <UiButton size="sm" variant="ghost" icon="refresh-cw" label="Refresh" @click="loadPerformanceData" />
         </template>
 
         <div v-if="performanceLoading" class="py-12 flex justify-center">
@@ -219,8 +219,8 @@
           <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <UiStat label="Vue size" icon="code" :value="formatSize(performanceData.vueSize)" />
             <UiStat label="React size" icon="code" :value="formatSize(performanceData.reactSize)" />
-            <UiStat label="Total size" icon="storage" :value="formatSize(performanceData.totalSize)" :hint="`+ ${formatSize(performanceData.dependenciesSize)} deps`" />
-            <UiStat label="Gzipped" icon="compress" :value="formatSize(performanceData.gzippedSize)" :hint="gzipHint" />
+            <UiStat label="Total size" icon="hard-drive" :value="formatSize(performanceData.totalSize)" :hint="`+ ${formatSize(performanceData.dependenciesSize)} deps`" />
+            <UiStat label="Gzipped" icon="shrink" :value="formatSize(performanceData.gzippedSize)" :hint="gzipHint" />
           </div>
 
           <div class="mt-6 pt-6 border-t border-solid border-line">
@@ -258,7 +258,7 @@
 
         <UiCallout v-else-if="performanceError" tone="danger" role="alert">
           {{ performanceError }}
-          <template #actions><UiButton size="sm" icon="refresh" label="Retry" @click="loadPerformanceData" /></template>
+          <template #actions><UiButton size="sm" icon="refresh-cw" label="Retry" @click="loadPerformanceData" /></template>
         </UiCallout>
 
         <UiEmptyState

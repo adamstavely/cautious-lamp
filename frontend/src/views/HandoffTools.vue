@@ -46,11 +46,11 @@
                       <div class="flex-1">
                         <UiInput v-model="color.value" mono :aria-label="`Color ${index + 1} value`" />
                       </div>
-                      <UiButton icon-only icon="close" variant="ghost" size="sm" :label="`Remove color ${index + 1}`" @click="designSpecs.colors.splice(index, 1)" />
+                      <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove color ${index + 1}`" @click="designSpecs.colors.splice(index, 1)" />
                     </li>
                   </ul>
                   <div>
-                    <UiButton size="sm" variant="ghost" icon="add" @click="addColor">Add color</UiButton>
+                    <UiButton size="sm" variant="ghost" icon="plus" @click="addColor">Add color</UiButton>
                   </div>
                 </fieldset>
 
@@ -90,7 +90,7 @@
                 <div class="w-64">
                   <UiSelect v-model="handoffFormat" label="Format" :options="handoffFormats" />
                 </div>
-                <UiButton variant="primary" icon="description" @click="generateHandoff">Generate handoff</UiButton>
+                <UiButton variant="primary" icon="file-text" @click="generateHandoff">Generate handoff</UiButton>
               </div>
               <template v-if="generatedHandoff">
                 <UiCodeBlock :code="generatedHandoff" label="Handoff document" @copy-failed="showNotice('Could not copy to the clipboard.', 'error')" />
@@ -154,7 +154,7 @@
                     <p class="text-sm text-ink-secondary">Design value: <UiCode>{{ match.designValue }}</UiCode></p>
                     <p class="text-sm text-accent-text">Use token: <UiCode>{{ match.token }}</UiCode></p>
                   </div>
-                  <UiButton size="sm" icon="content_copy" @click="copyToken(match.token)">Copy<span class="sr-only"> {{ match.token }}</span></UiButton>
+                  <UiButton size="sm" icon="copy" @click="copyToken(match.token)">Copy<span class="sr-only"> {{ match.token }}</span></UiButton>
                 </li>
               </ul>
               <p v-else class="py-6 text-center text-sm text-ink-muted">
@@ -184,7 +184,7 @@
                     <p class="font-medium text-ink-strong">{{ component.name }}</p>
                     <p class="text-sm text-ink-secondary">{{ component.description }}</p>
                   </div>
-                  <UiButton size="sm" :href="component.link" trailing-icon="arrow_forward">View component</UiButton>
+                  <UiButton size="sm" :href="component.link" trailing-icon="arrow-right">View component</UiButton>
                 </li>
               </ul>
               <p v-else class="py-6 text-center text-sm text-ink-muted">

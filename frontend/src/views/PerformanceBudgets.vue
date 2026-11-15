@@ -8,7 +8,7 @@
       size="tool"
     >
       <template #actions>
-        <UiButton variant="primary" icon="add" @click="openCreate">Create budget</UiButton>
+        <UiButton variant="primary" icon="plus" @click="openCreate">Create budget</UiButton>
       </template>
     </PageHero>
 
@@ -19,8 +19,8 @@
         <UiPanel v-for="budget in budgets" :key="budget.id" :title="budget.name" heading-tag="h3">
           <template #actions>
             <UiChip :tone="budget.enabled ? 'success' : 'neutral'">{{ budget.enabled ? 'Active' : 'Disabled' }}</UiChip>
-            <UiButton variant="ghost" size="sm" icon="edit" icon-only :label="`Edit ${budget.name}`" @click="editBudget(budget)" />
-            <UiButton variant="ghost" size="sm" icon="delete" icon-only :label="`Delete ${budget.name}`" @click="deleteBudget(budget.id)" />
+            <UiButton variant="ghost" size="sm" icon="pencil" icon-only :label="`Edit ${budget.name}`" @click="editBudget(budget)" />
+            <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Delete ${budget.name}`" @click="deleteBudget(budget.id)" />
           </template>
 
           <p class="text-sm text-ink-secondary mb-4">

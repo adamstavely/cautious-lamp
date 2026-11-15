@@ -118,7 +118,7 @@
 
       <!-- Eyedropper -->
       <div class="flex flex-col gap-2">
-        <UiButton size="sm" icon="colorize" class="w-full" @click="toggleEyedropper">Use eyedropper</UiButton>
+        <UiButton size="sm" icon="pipette" class="w-full" @click="toggleEyedropper">Use eyedropper</UiButton>
         <p v-if="eyedropperMessage" class="text-xs text-danger" role="status">{{ eyedropperMessage }}</p>
       </div>
 

@@ -124,7 +124,7 @@
                             ? 'bg-gray-700 hover:bg-gray-600 text-white' 
                             : 'bg-gray-100 hover:bg-gray-200 text-gray-700')"
                       >
-                        <span class="material-symbols-outlined text-sm">{{ getPreviewDarkMode(exampleIndex) ? 'dark_mode' : 'light_mode' }}</span>
+                        <AppIcon :name="getPreviewDarkMode(exampleIndex) ? 'moon' : 'sun'" class="text-sm" />
                         {{ getPreviewDarkMode(exampleIndex) ? 'Dark' : 'Light' }}
                       </button>
                       <button
@@ -134,7 +134,7 @@
                           ? 'bg-gray-700 hover:bg-gray-600 text-white' 
                           : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
                       >
-                        <span class="material-symbols-outlined text-sm">content_copy</span>
+                        <AppIcon name="copy" class="text-sm" />
                         Copy Code
                       </button>
                     </div>

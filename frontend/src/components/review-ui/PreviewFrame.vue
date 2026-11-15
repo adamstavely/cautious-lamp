@@ -7,7 +7,7 @@
 
     <!-- Not an http(s) URL: never put it in an iframe -->
     <div v-else-if="mode === 'invalid'" class="preview-placeholder" role="alert">
-      <span class="material-symbols-outlined preview-placeholder-icon" aria-hidden="true">error</span>
+      <AppIcon name="circle-alert" class="preview-placeholder-icon" />
       <p class="font-medium text-ink-strong">This link can't be previewed</p>
       <p class="max-w-md text-center text-sm text-ink-secondary">Only http and https links can be shown here.</p>
     </div>
@@ -26,7 +26,7 @@
     <template v-else>
       <div v-show="!loadError" ref="viewer" class="webviewer"></div>
       <div v-if="loadError" class="preview-placeholder preview-placeholder-error" role="alert">
-        <span class="material-symbols-outlined preview-placeholder-icon" aria-hidden="true">error</span>
+        <AppIcon name="circle-alert" class="preview-placeholder-icon" />
         <p class="font-medium text-ink-strong">Unable to load document</p>
         <p class="max-w-md text-center text-sm text-ink-secondary">
           The document could not be opened in the viewer. It may have failed to download, or the link may have expired.

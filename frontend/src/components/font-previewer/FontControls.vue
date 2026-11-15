@@ -9,9 +9,7 @@
         <div class="flex flex-col lg:flex-row gap-4 items-center">
           <!-- Search Bar -->
           <div class="relative lg:w-80 flex-1">
-            <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-base pointer-events-none">
-              search
-            </span>
+            <AppIcon name="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-base pointer-events-none" />
             <input 
               type="text" 
               :value="search" 
@@ -75,7 +73,7 @@
           <div class="flex-1">
             <div class="mb-3">
               <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-                <span class="material-symbols-outlined text-base text-indigo-600">text_fields</span>
+                <AppIcon name="type" class="text-base text-indigo-600" />
                 Typography Controls
               </h3>
               <div class="grid grid-cols-3 gap-4">
@@ -225,7 +223,7 @@
             <div class="flex flex-col gap-2">
               <div class="flex items-center justify-between mb-1">
                 <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-base text-indigo-600">description</span>
+                  <AppIcon name="file-text" class="text-base text-indigo-600" />
                   Sample Text
                 </h3>
                 <div class="w-40">

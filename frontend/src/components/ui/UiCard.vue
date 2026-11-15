@@ -4,7 +4,7 @@
     <slot name="media" />
     <h3 v-if="title" class="ui-card-title">
       {{ title }}
-      <span v-if="isLink" class="material-symbols-outlined ui-card-arrow" aria-hidden="true">{{ external ? 'open_in_new' : 'arrow_forward' }}</span>
+      <AppIcon :name="external ? 'external-link' : 'arrow-right'" v-if="isLink" class="ui-card-arrow" />
     </h3>
     <div v-if="$slots.default" class="ui-card-body"><slot /></div>
     <div v-if="$slots.footer" class="ui-card-footer"><slot name="footer" /></div>

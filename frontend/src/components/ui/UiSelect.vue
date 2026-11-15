@@ -20,7 +20,7 @@
           <option v-else :value="entry.option.value" :disabled="entry.option.disabled">{{ entry.option.label }}</option>
         </template>
       </select>
-      <span class="material-symbols-outlined ui-select-chevron" aria-hidden="true">expand_more</span>
+      <AppIcon name="chevron-down" class="ui-select-chevron" />
     </div>
   </UiField>
 </template>

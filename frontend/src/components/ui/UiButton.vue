@@ -8,10 +8,10 @@
     :title="iconOnly ? label : undefined"
     :aria-busy="loading || undefined"
   >
-    <span v-if="loading" class="material-symbols-outlined ui-button-icon animate-spin" aria-hidden="true">progress_activity</span>
-    <span v-else-if="icon" class="material-symbols-outlined ui-button-icon" aria-hidden="true">{{ icon }}</span>
+    <AppIcon name="loader-circle" v-if="loading" class="ui-button-icon animate-spin" />
+    <AppIcon :name="icon" v-else-if="icon" class="ui-button-icon" />
     <span v-if="!iconOnly"><slot>{{ label }}</slot></span>
-    <span v-if="trailingIcon && !iconOnly" class="material-symbols-outlined ui-button-icon" aria-hidden="true">{{ trailingIcon }}</span>
+    <AppIcon :name="trailingIcon" v-if="trailingIcon && !iconOnly" class="ui-button-icon" />
   </component>
 </template>
 

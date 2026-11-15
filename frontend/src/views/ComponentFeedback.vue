@@ -41,7 +41,7 @@
                 ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
             >
-              <span class="material-symbols-outlined">add_circle</span>
+              <AppIcon name="circle-plus" />
               Request Feature
             </button>
             <button
@@ -51,7 +51,7 @@
                 ? 'border-gray-600 bg-slate-800 hover:bg-slate-700 text-gray-300' 
                 : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700'"
             >
-              <span class="material-symbols-outlined">bug_report</span>
+              <AppIcon name="bug" />
               Report Issue
             </button>
             <button
@@ -61,7 +61,7 @@
                 ? (isDarkMode ? 'border-indigo-500 bg-indigo-900/20 text-indigo-400' : 'border-indigo-500 bg-indigo-50 text-indigo-600')
                 : (isDarkMode ? 'border-gray-600 bg-slate-800 hover:bg-slate-700 text-gray-300' : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700')"
             >
-              <span class="material-symbols-outlined">lightbulb</span>
+              <AppIcon name="lightbulb" />
               View Requests
             </button>
             <button
@@ -71,7 +71,7 @@
                 ? (isDarkMode ? 'border-indigo-500 bg-indigo-900/20 text-indigo-400' : 'border-indigo-500 bg-indigo-50 text-indigo-600')
                 : (isDarkMode ? 'border-gray-600 bg-slate-800 hover:bg-slate-700 text-gray-300' : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700')"
             >
-              <span class="material-symbols-outlined">report</span>
+              <AppIcon name="octagon-alert" />
               View Issues
             </button>
           </div>
@@ -156,7 +156,7 @@
                           ? (isDarkMode ? 'border-indigo-500 bg-indigo-900/20 text-indigo-400' : 'border-indigo-500 bg-indigo-50 text-indigo-600')
                           : (isDarkMode ? 'border-gray-600 bg-slate-700 hover:bg-slate-600 text-gray-300' : 'border-gray-300 bg-white hover:bg-gray-50 text-gray-700')"
                       >
-                        <span class="material-symbols-outlined text-base">thumb_up</span>
+                        <AppIcon name="thumbs-up" class="text-base" />
                         {{ request.votes }}
                       </button>
                     </div>
@@ -245,7 +245,7 @@
                 :class="isDarkMode ? 'hover:bg-slate-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'"
                 aria-label="Close modal"
               >
-                <span class="material-symbols-outlined">close</span>
+                <AppIcon name="x" />
               </button>
             </div>
             <form @submit.prevent="submitRequest" class="space-y-4">
@@ -345,7 +345,7 @@
                 :class="isDarkMode ? 'hover:bg-slate-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'"
                 aria-label="Close modal"
               >
-                <span class="material-symbols-outlined">close</span>
+                <AppIcon name="x" />
               </button>
             </div>
             <form @submit.prevent="submitIssue" class="space-y-4">

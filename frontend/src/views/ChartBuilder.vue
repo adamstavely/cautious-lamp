@@ -13,7 +13,7 @@
         <UiButton
           variant="ghost"
           size="sm"
-          :trailing-icon="chartTypeSectionExpanded ? 'expand_less' : 'expand_more'"
+          :trailing-icon="chartTypeSectionExpanded ? 'chevron-up' : 'chevron-down'"
           :aria-expanded="chartTypeSectionExpanded"
           aria-controls="chart-type-options"
           @click="chartTypeSectionExpanded = !chartTypeSectionExpanded"
@@ -63,7 +63,7 @@
                   v-if="generatedInsights.primary"
                   variant="ghost"
                   size="sm"
-                  icon="auto_awesome"
+                  icon="sparkles"
                   class="self-start"
                   @click="chartConfig.keyInsight = generatedInsights.primary"
                 >
@@ -81,7 +81,7 @@
                     <div class="flex-1 min-w-0">
                       <UiInput v-model="dataset.label" placeholder="Dataset label" :aria-label="`Dataset ${datasetIndex + 1} label`" />
                     </div>
-                    <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove dataset ${datasetIndex + 1}`" :disabled="multiDatasetData.length <= 1" @click="removeDataset(datasetIndex)" />
+                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove dataset ${datasetIndex + 1}`" :disabled="multiDatasetData.length <= 1" @click="removeDataset(datasetIndex)" />
                   </div>
                   <div v-for="(item, itemIndex) in dataset.data" :key="itemIndex" class="flex items-center gap-2">
                     <div class="flex-1 min-w-0">
@@ -90,11 +90,11 @@
                     <div class="w-24">
                       <UiInput v-model.number="item.value" type="number" placeholder="Value" :aria-label="`Dataset ${datasetIndex + 1} point ${itemIndex + 1} value`" />
                     </div>
-                    <UiButton icon-only icon="close" variant="ghost" size="sm" :label="`Remove point ${itemIndex + 1}`" :disabled="dataset.data.length <= 1" @click="removeMultiDataItem(datasetIndex, itemIndex)" />
+                    <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove point ${itemIndex + 1}`" :disabled="dataset.data.length <= 1" @click="removeMultiDataItem(datasetIndex, itemIndex)" />
                   </div>
-                  <UiButton icon="add" size="sm" variant="ghost" class="self-start" @click="addMultiDataItem(datasetIndex)">Add point</UiButton>
+                  <UiButton icon="plus" size="sm" variant="ghost" class="self-start" @click="addMultiDataItem(datasetIndex)">Add point</UiButton>
                 </div>
-                <UiButton icon="add" size="sm" class="self-start" @click="addDataset">Add dataset</UiButton>
+                <UiButton icon="plus" size="sm" class="self-start" @click="addDataset">Add dataset</UiButton>
               </fieldset>
 
               <!-- Gauge -->
@@ -119,9 +119,9 @@
                   <div class="w-28">
                     <UiInput v-model.number="change.value" type="number" placeholder="Change" :aria-label="`Change ${index + 1} value`" />
                   </div>
-                  <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove change ${index + 1}`" :disabled="waterfallData.changes.length <= 1" @click="waterfallData.changes.splice(index, 1)" />
+                  <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove change ${index + 1}`" :disabled="waterfallData.changes.length <= 1" @click="waterfallData.changes.splice(index, 1)" />
                 </div>
-                <UiButton icon="add" size="sm" class="self-start" @click="waterfallData.changes.push({ label: `Change ${waterfallData.changes.length + 1}`, value: 0 })">Add change</UiButton>
+                <UiButton icon="plus" size="sm" class="self-start" @click="waterfallData.changes.push({ label: `Change ${waterfallData.changes.length + 1}`, value: 0 })">Add change</UiButton>
               </fieldset>
 
               <!-- Candlestick -->
@@ -137,10 +137,10 @@
                     <UiInput v-model.number="item.low" type="number" step="0.01" label="Low" />
                     <UiInput v-model.number="item.close" type="number" step="0.01" label="Close" />
                   </div>
-                  <UiButton icon="delete" variant="ghost" size="sm" class="self-end" :disabled="candlestickData.length <= 1" @click="candlestickData.splice(index, 1)">Remove row</UiButton>
+                  <UiButton icon="trash-2" variant="ghost" size="sm" class="self-end" :disabled="candlestickData.length <= 1" @click="candlestickData.splice(index, 1)">Remove row</UiButton>
                 </div>
                 <UiButton
-                  icon="add"
+                  icon="plus"
                   size="sm"
                   class="self-start"
                   @click="candlestickData.push({ date: new Date().toISOString().split('T')[0], open: 100, high: 110, low: 95, close: 105 })"
@@ -213,25 +213,25 @@
                     <div class="flex-1 min-w-0">
                       <UiInput v-model="node.label" placeholder="Label" :aria-label="`Node ${index + 1} label`" />
                     </div>
-                    <UiButton icon-only icon="close" variant="ghost" size="sm" :label="`Remove node ${index + 1}`" :disabled="sankeyData.nodes.length <= 2" @click="sankeyData.nodes.splice(index, 1)" />
+                    <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove node ${index + 1}`" :disabled="sankeyData.nodes.length <= 2" @click="sankeyData.nodes.splice(index, 1)" />
                   </div>
-                  <UiButton icon="add" size="sm" class="self-start" @click="sankeyData.nodes.push({ id: `Node${sankeyData.nodes.length + 1}`, label: `Node ${sankeyData.nodes.length + 1}` })">Add node</UiButton>
+                  <UiButton icon="plus" size="sm" class="self-start" @click="sankeyData.nodes.push({ id: `Node${sankeyData.nodes.length + 1}`, label: `Node ${sankeyData.nodes.length + 1}` })">Add node</UiButton>
                 </fieldset>
                 <fieldset class="flex flex-col gap-2">
                   <legend class="mb-2 text-sm font-semibold text-ink-strong">Links</legend>
                   <div v-for="(link, index) in sankeyData.links" :key="index" class="data-card">
                     <div class="flex items-center gap-2">
                       <div class="flex-1 min-w-0"><UiSelect v-model="link.source" :options="sankeyNodeOptions" :aria-label="`Link ${index + 1} from`" /></div>
-                      <span class="material-symbols-outlined text-base text-ink-muted" aria-hidden="true">arrow_forward</span>
+                      <AppIcon name="arrow-right" class="text-base text-ink-muted" />
                       <div class="flex-1 min-w-0"><UiSelect v-model="link.target" :options="sankeyNodeOptions" :aria-label="`Link ${index + 1} to`" /></div>
                     </div>
                     <div class="flex items-center gap-2">
                       <div class="flex-1 min-w-0"><UiInput v-model.number="link.value" type="number" placeholder="Value" :aria-label="`Link ${index + 1} value`" /></div>
-                      <UiButton icon-only icon="close" variant="ghost" size="sm" :label="`Remove link ${index + 1}`" @click="sankeyData.links.splice(index, 1)" />
+                      <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove link ${index + 1}`" @click="sankeyData.links.splice(index, 1)" />
                     </div>
                   </div>
                   <UiButton
-                    icon="add"
+                    icon="plus"
                     size="sm"
                     class="self-start"
                     @click="sankeyData.links.push({ source: sankeyData.nodes[0]?.id || '', target: sankeyData.nodes[1]?.id || '', value: 10 })"
@@ -251,9 +251,9 @@
                   <div class="w-28">
                     <UiInput v-model.number="item.value" type="number" placeholder="Value" :aria-label="`Stage ${index + 1} value`" />
                   </div>
-                  <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove stage ${index + 1}`" :disabled="funnelData.length <= 1" @click="funnelData.splice(index, 1)" />
+                  <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove stage ${index + 1}`" :disabled="funnelData.length <= 1" @click="funnelData.splice(index, 1)" />
                 </div>
-                <UiButton icon="add" size="sm" class="self-start" @click="funnelData.push({ label: `Stage ${funnelData.length + 1}`, value: 0 })">Add stage</UiButton>
+                <UiButton icon="plus" size="sm" class="self-start" @click="funnelData.push({ label: `Stage ${funnelData.length + 1}`, value: 0 })">Add stage</UiButton>
               </fieldset>
 
               <!-- Bullet graph -->
@@ -264,7 +264,7 @@
                     <div class="flex-1 min-w-0">
                       <UiInput v-model="item.label" placeholder="Item label" :aria-label="`Bullet item ${index + 1} label`" />
                     </div>
-                    <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove bullet item ${index + 1}`" :disabled="bulletGraphData.length <= 1" @click="bulletGraphData.splice(index, 1)" />
+                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove bullet item ${index + 1}`" :disabled="bulletGraphData.length <= 1" @click="bulletGraphData.splice(index, 1)" />
                   </div>
                   <div class="grid grid-cols-2 gap-2">
                     <UiInput v-model.number="item.value" type="number" label="Value" />
@@ -274,7 +274,7 @@
                   </div>
                 </div>
                 <UiButton
-                  icon="add"
+                  icon="plus"
                   size="sm"
                   class="self-start"
                   @click="bulletGraphData.push({ label: `Item ${bulletGraphData.length + 1}`, value: 50, target: 60, max: 100, ranges: { poor: 0, fair: 30, good: 60, excellent: 80 } })"
@@ -294,10 +294,10 @@
                     <div class="flex-1 min-w-0">
                       <UiInput v-model="node.label" placeholder="Entity name" :aria-label="`Entity ${index + 1} name`" />
                     </div>
-                    <UiButton icon-only icon="close" variant="ghost" size="sm" :label="`Remove entity ${index + 1}`" :disabled="chordDiagramData.nodes.length <= 2" @click="chordDiagramData.nodes.splice(index, 1)" />
+                    <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove entity ${index + 1}`" :disabled="chordDiagramData.nodes.length <= 2" @click="chordDiagramData.nodes.splice(index, 1)" />
                   </div>
                   <UiButton
-                    icon="add"
+                    icon="plus"
                     size="sm"
                     class="self-start"
                     @click="chordDiagramData.nodes.push({ id: `Entity${chordDiagramData.nodes.length + 1}`, label: `Entity ${chordDiagramData.nodes.length + 1}` })"
@@ -310,16 +310,16 @@
                   <div v-for="(link, index) in chordDiagramData.links" :key="index" class="data-card">
                     <div class="flex items-center gap-2">
                       <div class="flex-1 min-w-0"><UiSelect v-model="link.source" :options="chordNodeOptions" :aria-label="`Relationship ${index + 1} from`" /></div>
-                      <span class="material-symbols-outlined text-base text-ink-muted" aria-hidden="true">sync_alt</span>
+                      <AppIcon name="arrow-right-left" class="text-base text-ink-muted" />
                       <div class="flex-1 min-w-0"><UiSelect v-model="link.target" :options="chordNodeOptions" :aria-label="`Relationship ${index + 1} to`" /></div>
                     </div>
                     <div class="flex items-center gap-2">
                       <div class="flex-1 min-w-0"><UiInput v-model.number="link.value" type="number" placeholder="Value" :aria-label="`Relationship ${index + 1} value`" /></div>
-                      <UiButton icon-only icon="close" variant="ghost" size="sm" :label="`Remove relationship ${index + 1}`" @click="chordDiagramData.links.splice(index, 1)" />
+                      <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove relationship ${index + 1}`" @click="chordDiagramData.links.splice(index, 1)" />
                     </div>
                   </div>
                   <UiButton
-                    icon="add"
+                    icon="plus"
                     size="sm"
                     class="self-start"
                     @click="chordDiagramData.links.push({ source: chordDiagramData.nodes[0]?.id || '', target: chordDiagramData.nodes[1]?.id || '', value: 10 })"
@@ -339,9 +339,9 @@
                   <div class="w-24">
                     <UiInput v-model.number="item.value" type="number" placeholder="Value" :aria-label="`Point ${index + 1} value`" />
                   </div>
-                  <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove point ${index + 1}`" :disabled="chartData.length <= 1" @click="removeDataItem(index)" />
+                  <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove point ${index + 1}`" :disabled="chartData.length <= 1" @click="removeDataItem(index)" />
                 </div>
-                <UiButton icon="add" size="sm" class="self-start" @click="addDataItem">Add data point</UiButton>
+                <UiButton icon="plus" size="sm" class="self-start" @click="addDataItem">Add data point</UiButton>
               </fieldset>
             </div>
 
@@ -406,7 +406,7 @@
             <ul class="flex flex-col gap-2 text-sm">
               <li v-for="check in accessibilityChecks" :key="check.label" class="flex items-center justify-between">
                 <span class="text-ink-secondary">{{ check.label }}</span>
-                <span class="material-symbols-outlined text-base" :class="checkTone[check.state]" aria-hidden="true">{{ checkIcon[check.state] }}</span>
+                <AppIcon :name="checkIcon[check.state]" class="text-base" :class="checkTone[check.state]" />
                 <span class="sr-only">{{ checkText[check.state] }}</span>
               </li>
             </ul>
@@ -420,7 +420,7 @@
               </ul>
             </UiCallout>
 
-            <UiButton variant="primary" icon="bug_report" class="mt-4" :loading="axeScanRunning" @click="runAxeCoreScan">
+            <UiButton variant="primary" icon="bug" class="mt-4" :loading="axeScanRunning" @click="runAxeCoreScan">
               {{ axeScanRunning ? 'Scanning...' : 'Run accessibility check' }}
             </UiButton>
 
@@ -430,7 +430,7 @@
                 v-for="(violation, index) in axeScanResults.violations"
                 :key="index"
                 tone="danger"
-                :icon="violation.impact === 'critical' ? 'error' : 'warning'"
+                :icon="violation.impact === 'critical' ? 'circle-alert' : 'triangle-alert'"
                 :title="`${violation.id} (${violation.impact || 'moderate'})`"
               >
                 <p>{{ violation.description }}</p>
@@ -469,7 +469,7 @@
         <div ref="previewPanel" class="lg:col-span-2">
           <UiPanel title="Preview">
             <template #actions>
-              <UiButton size="sm" icon="dataset" @click="loadSampleData">Load sample data</UiButton>
+              <UiButton size="sm" icon="table" @click="loadSampleData">Load sample data</UiButton>
             </template>
 
             <div class="chart-stage">
@@ -583,7 +583,7 @@
                 <h3 class="text-sm font-semibold text-ink-strong">Data table</h3>
                 <UiButton
                   size="sm"
-                  :icon="dataTableVisible ? 'expand_less' : 'expand_more'"
+                  :icon="dataTableVisible ? 'chevron-up' : 'chevron-down'"
                   :aria-expanded="dataTableVisible"
                   :aria-controls="`chart-data-table-${chartKey}`"
                   @click="dataTableVisible = !dataTableVisible"
@@ -603,9 +603,7 @@
                       >
                         <button type="button" class="table-sort" @click="toggleDataTableSort(header.key)">
                           {{ header.label }}
-                          <span class="material-symbols-outlined text-sm" aria-hidden="true">
-                            {{ dataTableSortColumn === header.key ? (dataTableSortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more' }}
-                          </span>
+                          <AppIcon :name="dataTableSortColumn === header.key ? (dataTableSortDirection === 'asc' ? 'arrow-up' : 'arrow-down') : 'chevrons-up-down'" class="text-sm" />
                         </button>
                       </th>
                     </tr>
@@ -1467,7 +1465,7 @@ const accessibilityChecks = computed(() => [
   { label: 'Zoom integrity', state: zoomIssues.value.length === 0 ? 'ok' : 'warn' }
 ]);
 const checkTone = { ok: 'text-success', warn: 'text-warning', fail: 'text-danger' };
-const checkIcon = { ok: 'check_circle', warn: 'warning', fail: 'error' };
+const checkIcon = { ok: 'circle-check', warn: 'triangle-alert', fail: 'circle-alert' };
 const checkText = { ok: 'Passes', warn: 'Worth checking', fail: 'Needs work' };
 
 const canExport = computed(() => {
@@ -1556,28 +1554,28 @@ const runAxeCoreScan = async () => {
 };
 
 const chartTypes = [
-  { value: 'line', label: 'Line Graph', icon: 'show_chart', description: 'Display trends over time (supports multiple lines)' },
-  { value: 'area', label: 'Area Chart', icon: 'area_chart', description: 'Filled line chart showing cumulative values' },
-  { value: 'bar', label: 'Bar Graph', icon: 'bar_chart', description: 'Compare categories' },
-  { value: 'horizontalBar', label: 'Horizontal Bar', icon: 'horizontal_rule', description: 'Bar chart rotated horizontally' },
-  { value: 'stackedBar', label: 'Stacked Bar', icon: 'stacked_bar_chart', description: 'Multiple datasets stacked vertically' },
-  { value: 'groupedBar', label: 'Grouped Bar', icon: 'grouped_bar_chart', description: 'Multiple datasets side by side' },
-  { value: 'combo', label: 'Combo Chart', icon: 'multiline_chart', description: 'Mix of bar and line charts' },
-  { value: 'gauge', label: 'Gauge Chart', icon: 'speed', description: 'Single metric with min/max/target' },
-  { value: 'waterfall', label: 'Waterfall Chart', icon: 'waterfall_chart', description: 'Shows cumulative changes' },
-  { value: 'candlestick', label: 'Candlestick', icon: 'candlestick_chart', description: 'Financial OHLC data' },
-  { value: 'heatmap', label: 'Heatmap', icon: 'grid_on', description: 'Matrix visualization' },
-  { value: 'funnel', label: 'Funnel Chart', icon: 'filter_alt', description: 'Conversion funnel stages' },
-  { value: 'treemap', label: 'Treemap', icon: 'account_tree', description: 'Hierarchical data visualization' },
-  { value: 'sankey', label: 'Sankey Diagram', icon: 'timeline', description: 'Flow diagram showing connections' },
-  { value: 'pie', label: 'Pie Chart', icon: 'pie_chart', description: 'Show proportions' },
-  { value: 'doughnut', label: 'Doughnut Chart', icon: 'donut_large', description: 'Pie chart with center' },
-  { value: 'scatter', label: 'Scatter Plot', icon: 'scatter_plot', description: 'Correlation analysis' },
-  { value: 'radar', label: 'Radar Chart', icon: 'insights', description: 'Multi-dimensional data' },
-  { value: 'bubble', label: 'Bubble Chart', icon: 'bubble_chart', description: 'Three variables' },
-  { value: 'polar', label: 'Polar Area', icon: 'pie_chart', description: 'Circular segments' },
-  { value: 'bulletGraph', label: 'Bullet Graph', icon: 'track_changes', description: 'Horizontal bars with targets and ranges' },
-  { value: 'chordDiagram', label: 'Chord Diagram', icon: 'hub', description: 'Circular diagram showing relationships' }
+  { value: 'line', label: 'Line Graph', icon: 'chart-line', description: 'Display trends over time (supports multiple lines)' },
+  { value: 'area', label: 'Area Chart', icon: 'chart-area', description: 'Filled line chart showing cumulative values' },
+  { value: 'bar', label: 'Bar Graph', icon: 'chart-column', description: 'Compare categories' },
+  { value: 'horizontalBar', label: 'Horizontal Bar', icon: 'minus', description: 'Bar chart rotated horizontally' },
+  { value: 'stackedBar', label: 'Stacked Bar', icon: 'chart-bar-stacked', description: 'Multiple datasets stacked vertically' },
+  { value: 'groupedBar', label: 'Grouped Bar', icon: 'chart-column-big', description: 'Multiple datasets side by side' },
+  { value: 'combo', label: 'Combo Chart', icon: 'chart-spline', description: 'Mix of bar and line charts' },
+  { value: 'gauge', label: 'Gauge Chart', icon: 'gauge', description: 'Single metric with min/max/target' },
+  { value: 'waterfall', label: 'Waterfall Chart', icon: 'chart-column-decreasing', description: 'Shows cumulative changes' },
+  { value: 'candlestick', label: 'Candlestick', icon: 'chart-candlestick', description: 'Financial OHLC data' },
+  { value: 'heatmap', label: 'Heatmap', icon: 'grid-3x3', description: 'Matrix visualization' },
+  { value: 'funnel', label: 'Funnel Chart', icon: 'funnel', description: 'Conversion funnel stages' },
+  { value: 'treemap', label: 'Treemap', icon: 'network', description: 'Hierarchical data visualization' },
+  { value: 'sankey', label: 'Sankey Diagram', icon: 'chart-gantt', description: 'Flow diagram showing connections' },
+  { value: 'pie', label: 'Pie Chart', icon: 'chart-pie', description: 'Show proportions' },
+  { value: 'doughnut', label: 'Doughnut Chart', icon: 'chart-pie', description: 'Pie chart with center' },
+  { value: 'scatter', label: 'Scatter Plot', icon: 'chart-scatter', description: 'Correlation analysis' },
+  { value: 'radar', label: 'Radar Chart', icon: 'lightbulb', description: 'Multi-dimensional data' },
+  { value: 'bubble', label: 'Bubble Chart', icon: 'chart-scatter', description: 'Three variables' },
+  { value: 'polar', label: 'Polar Area', icon: 'chart-pie', description: 'Circular segments' },
+  { value: 'bulletGraph', label: 'Bullet Graph', icon: 'radar', description: 'Horizontal bars with targets and ranges' },
+  { value: 'chordDiagram', label: 'Chord Diagram', icon: 'waypoints', description: 'Circular diagram showing relationships' }
 ];
 
 const colorSchemes = {
@@ -1600,13 +1598,13 @@ const secondaryEncodingOptions = [
 ];
 
 const exportActions = [
-  { format: 'html', label: 'Export as HTML', icon: 'html', gated: true },
+  { format: 'html', label: 'Export as HTML', icon: 'file-code-2', gated: true },
   { format: 'png', label: 'Export as PNG', icon: 'download', gated: true },
   { format: 'caption', label: 'Export caption (TXT)', icon: 'subtitles', gated: false },
   { format: 'json', label: 'Export config (JSON)', icon: 'code', gated: false },
-  { format: 'pdf', label: 'Export as PDF', icon: 'picture_as_pdf', gated: true },
-  { format: 'ppt', label: 'Export as PPT', icon: 'slideshow', gated: true },
-  { format: 'word', label: 'Export as Word', icon: 'description', gated: true }
+  { format: 'pdf', label: 'Export as PDF', icon: 'file-text', gated: true },
+  { format: 'ppt', label: 'Export as PPT', icon: 'presentation', gated: true },
+  { format: 'word', label: 'Export as Word', icon: 'file-text', gated: true }
 ];
 
 const sankeyNodeOptions = computed(() => sankeyData.value.nodes.map((node) => ({ value: node.id, label: node.label })));

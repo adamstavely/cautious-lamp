@@ -2,7 +2,7 @@
   <section class="page-hero" :class="`page-hero-${size}`">
     <div class="min-w-0">
       <router-link v-if="back" :to="back.to" class="page-hero-eyebrow page-hero-back">
-        <span class="material-symbols-outlined text-base" aria-hidden="true">arrow_back</span>
+        <AppIcon name="arrow-left" class="text-base" />
         {{ back.label }}
       </router-link>
       <p v-else-if="eyebrow" class="page-hero-eyebrow">{{ eyebrow }}</p>

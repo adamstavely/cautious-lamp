@@ -3,7 +3,7 @@
     <UiButton
       ref="trigger"
       icon-only
-      icon="add_reaction"
+      icon="smile-plus"
       variant="ghost"
       size="sm"
       :label="label"

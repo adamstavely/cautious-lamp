@@ -12,7 +12,7 @@
       <UiSpinner v-if="dataLoading" label="Loading components and tokens…" />
       <UiCallout v-else-if="dataError" tone="danger" role="alert">
         {{ dataError }}
-        <template #actions><UiButton size="sm" icon="refresh" label="Retry" @click="loadData" /></template>
+        <template #actions><UiButton size="sm" icon="refresh-cw" label="Retry" @click="loadData" /></template>
       </UiCallout>
       <UiCallout v-else tone="success" icon="database" role="status">
         Exports are built from the live design system: {{ components.length }} components and {{ tokens.length }} tokens.
@@ -30,7 +30,7 @@
           @click="exportFormat = format.value"
         >
           <div class="flex items-center gap-3">
-            <span class="export-card-icon material-symbols-outlined" aria-hidden="true">{{ format.icon }}</span>
+            <AppIcon :name="format.icon" class="export-card-icon" />
             <h3 class="text-lg font-semibold text-ink-strong">{{ format.title }}</h3>
           </div>
           <p class="text-sm text-ink-secondary flex-1">{{ format.body }}</p>
@@ -60,7 +60,7 @@
       <UiCallout v-if="exportStatus === 'success'" tone="success" title="Export completed successfully!" role="status">
         Your export is ready for download.
       </UiCallout>
-      <UiCallout v-else tone="info" icon="hourglass_empty" role="status">Exporting…</UiCallout>
+      <UiCallout v-else tone="info" icon="hourglass" role="status">Exporting…</UiCallout>
     </div>
   </PageShell>
 </template>
@@ -869,13 +869,13 @@ ${readmeComponentList(comps)}
 });
 
 const formats = [
-  { value: 'storybook', title: 'Storybook', icon: 'library_books', action: 'Export Storybook', run: exportStorybook, body: 'Generate a Storybook project with a story for every component that has Vue source, plus your tokens.' },
-  { value: 'pdf', title: 'PDF documentation', icon: 'description', action: 'Export PDF', run: exportPDF, body: 'Generate a comprehensive PDF document with all components and guidelines.' },
-  { value: 'markdown', title: 'Markdown', icon: 'article', action: 'Export Markdown', run: exportMarkdown, body: 'Export components, props and tokens as a Markdown file for version control.' },
-  { value: 'npm', title: 'NPM package', icon: 'package_2', action: 'Export NPM', run: exportNPM, body: 'Generate an NPM package with your Vue components and tokens as CSS, SCSS, JS and JSON.' },
-  { value: 'static', title: 'Static site', icon: 'public', action: 'Export Static', run: exportStatic, body: 'Export as a static HTML site for hosting anywhere.' },
-  { value: 'figma', title: 'Figma plugin', icon: 'extension', action: 'Export Plugin', run: exportFigma, body: 'Generate a Figma plugin that creates color styles from your color tokens.' },
-  { value: 'penpot', title: 'PenPot', icon: 'draw', action: 'Export PenPot', run: exportPenPot, body: 'Export components and tokens for PenPot design tool.' },
+  { value: 'storybook', title: 'Storybook', icon: 'library', action: 'Export Storybook', run: exportStorybook, body: 'Generate a Storybook project with a story for every component that has Vue source, plus your tokens.' },
+  { value: 'pdf', title: 'PDF documentation', icon: 'file-text', action: 'Export PDF', run: exportPDF, body: 'Generate a comprehensive PDF document with all components and guidelines.' },
+  { value: 'markdown', title: 'Markdown', icon: 'newspaper', action: 'Export Markdown', run: exportMarkdown, body: 'Export components, props and tokens as a Markdown file for version control.' },
+  { value: 'npm', title: 'NPM package', icon: 'package', action: 'Export NPM', run: exportNPM, body: 'Generate an NPM package with your Vue components and tokens as CSS, SCSS, JS and JSON.' },
+  { value: 'static', title: 'Static site', icon: 'globe', action: 'Export Static', run: exportStatic, body: 'Export as a static HTML site for hosting anywhere.' },
+  { value: 'figma', title: 'Figma plugin', icon: 'puzzle', action: 'Export Plugin', run: exportFigma, body: 'Generate a Figma plugin that creates color styles from your color tokens.' },
+  { value: 'penpot', title: 'PenPot', icon: 'pencil-line', action: 'Export PenPot', run: exportPenPot, body: 'Export components and tokens for PenPot design tool.' },
   { value: 'adobe-xd', title: 'Adobe XD', icon: 'palette', action: 'Export Adobe XD', run: exportAdobeXD, body: 'Export design tokens and component specifications for Adobe XD.' },
 ];
 

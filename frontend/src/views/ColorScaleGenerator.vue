@@ -45,14 +45,14 @@
                   <UiButton
                     v-if="(scaleType === 'sequential' ? sequentialColors : divergingColors).length > 1"
                     icon-only
-                    icon="delete"
+                    icon="trash-2"
                     variant="ghost"
                     :label="`Remove color ${index + 1}`"
                     @click="scaleType === 'sequential' ? removeSequentialColor(index) : removeDivergingColor(index)"
                   />
                 </div>
                 <div>
-                  <UiButton icon="add" @click="scaleType === 'sequential' ? addSequentialColor() : addDivergingColor()">Add color</UiButton>
+                  <UiButton icon="plus" @click="scaleType === 'sequential' ? addSequentialColor() : addDivergingColor()">Add color</UiButton>
                 </div>
               </template>
 
@@ -124,7 +124,7 @@
                   <p class="font-code text-sm text-ink">{{ color }}</p>
                   <p class="text-xs text-ink-muted">Step {{ index + 1 }}</p>
                 </div>
-                <UiButton icon-only size="sm" variant="ghost" icon="content_copy" :label="`Copy ${color}`" @click.stop="copyColor(color)" />
+                <UiButton icon-only size="sm" variant="ghost" icon="copy" :label="`Copy ${color}`" @click.stop="copyColor(color)" />
               </li>
             </ul>
           </UiPanel>
@@ -424,8 +424,8 @@ const pickerTarget = ref(null);
 const previewBackdrops = { light: '#ffffff', night: '#1e293b' };
 const previewBackdrop = computed(() => (previewDarkMode.value ? previewBackdrops.night : previewBackdrops.light));
 const previewModeOptions = [
-  { value: false, label: 'Light', icon: 'light_mode' },
-  { value: true, label: 'Dark', icon: 'dark_mode' },
+  { value: false, label: 'Light', icon: 'sun' },
+  { value: true, label: 'Dark', icon: 'moon' },
 ];
 
 const simulationTypes = [

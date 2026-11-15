@@ -1,7 +1,7 @@
 <template>
   <UiField :label="label" :hint="hint" :error="error" :required="required" :id="id" :hide-label="hideLabel" v-slot="{ id: controlId, describedBy, invalid }">
     <div class="ui-input-wrap">
-      <span v-if="icon" class="material-symbols-outlined ui-input-icon" aria-hidden="true">{{ icon }}</span>
+      <AppIcon :name="icon" v-if="icon" class="ui-input-icon" />
       <input
         ref="input"
         :id="controlId"

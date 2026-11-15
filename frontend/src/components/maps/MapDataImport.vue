@@ -20,7 +20,7 @@
     />
     <div class="flex flex-wrap gap-2">
       <UiButton variant="primary" icon="upload" :disabled="!text.trim()" @click="$emit('import', text)">Import</UiButton>
-      <UiButton icon="science" @click="$emit('sample')">Load sample data</UiButton>
+      <UiButton icon="flask-conical" @click="$emit('sample')">Load sample data</UiButton>
     </div>
   </div>
 </template>

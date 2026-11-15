@@ -17,9 +17,9 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <UiPanel title="Input">
             <template #actions>
-              <UiButton size="sm" variant="ghost" icon="swap_horiz" label="Swap" title="Swap input and output" @click="swapInputs" />
+              <UiButton size="sm" variant="ghost" icon="arrow-left-right" label="Swap" title="Swap input and output" @click="swapInputs" />
               <UiButton size="sm" variant="ghost" label="Clear" @click="clearInput" />
-              <UiButton size="sm" variant="ghost" icon="content_copy" icon-only :label="`Copy ${inputLabel}`" @click="copyToClipboard(cssInput)" />
+              <UiButton size="sm" variant="ghost" icon="copy" icon-only :label="`Copy ${inputLabel}`" @click="copyToClipboard(cssInput)" />
             </template>
             <UiTextarea
               v-model="cssInput"

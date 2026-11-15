@@ -82,12 +82,7 @@
       <div class="info-header">
         <div class="flex-1">
           <h3 class="component-name flex items-center gap-2">
-            <span 
-              v-if="activeComponent.icon" 
-              class="material-symbols-outlined component-name-icon"
-            >
-              {{ activeComponent.icon }}
-            </span>
+            <AppIcon :name="activeComponent.icon" v-if="activeComponent.icon" class="component-name-icon" />
             {{ activeComponent.name }}
           </h3>
           <p class="component-path">{{ activeComponent.path }}</p>
@@ -97,7 +92,7 @@
           class="close-button"
           aria-label="Close Loupe"
         >
-          <span class="material-symbols-outlined">close</span>
+          <AppIcon name="x" />
         </button>
       </div>
       
@@ -109,9 +104,9 @@
           rel="noopener noreferrer"
           class="info-link"
         >
-          <span class="material-symbols-outlined">menu_book</span>
+          <AppIcon name="book-open" />
           <span>View in Style Guide</span>
-          <span class="material-symbols-outlined open-icon">open_in_new</span>
+          <AppIcon name="external-link" class="open-icon" />
         </a>
         <a
           v-if="activeComponent.links.github"
@@ -124,7 +119,7 @@
             <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
           </svg>
           <span>View in GitHub</span>
-          <span class="material-symbols-outlined open-icon">open_in_new</span>
+          <AppIcon name="external-link" class="open-icon" />
         </a>
         <a
           v-if="activeComponent.links.figma"
@@ -137,7 +132,7 @@
             <path d="M15.852 8.981h-4.588V0h4.588c2.476 0 4.375 1.717 4.375 4.49 0 2.775-1.899 4.491-4.375 4.491zM12.264 7.51h3.588c1.665 0 2.811-1.135 2.811-2.98 0-1.846-1.146-2.98-2.811-2.98H12.264V7.51zm0 1.471H8.26c-2.476 0-4.375-1.716-4.375-4.49C3.885 1.717 5.784 0 8.26 0h4.004v8.981zm-4.004-7.51c-1.665 0-2.811 1.134-2.811 2.98 0 1.845 1.146 2.98 2.811 2.98h4.004V1.471zm4.004 15.019H8.26c-2.476 0-4.375-1.716-4.375-4.49 0-2.774 1.899-4.49 4.375-4.49h4.004v8.98zm-4.004-7.509c-1.665 0-2.811 1.135-2.811 2.98 0 1.846 1.146 2.981 2.811 2.981h4.004v-5.961H8.26zm8.519 7.509c-2.476 0-4.375-1.716-4.375-4.49 0-2.774 1.899-4.49 4.375-4.49h4.588v8.98h-4.588zm-1.471-7.509c-1.665 0-2.811 1.135-2.811 2.98 0 1.846 1.146 2.981 2.811 2.981h3.117V9.45h-3.117z"/>
           </svg>
           <span>View in Figma</span>
-          <span class="material-symbols-outlined open-icon">open_in_new</span>
+          <AppIcon name="external-link" class="open-icon" />
         </a>
       </div>
     </div>
@@ -157,7 +152,7 @@
           class="close-button"
           aria-label="Close Loupe"
         >
-          <span class="material-symbols-outlined">close</span>
+          <AppIcon name="x" />
         </button>
       </div>
 
@@ -364,7 +359,7 @@ const scanForComponents = () => {
         element,
         name: componentName,
         path: componentPath,
-        icon: 'widgets',
+        icon: 'blocks',
         links: {},
       });
     }
@@ -1056,7 +1051,7 @@ onBeforeUnmount(() => {
   color: #f1f5f9;
 }
 
-.info-link .material-symbols-outlined {
+.info-link .app-icon {
   font-size: 20px;
   width: 20px;
   height: 20px;

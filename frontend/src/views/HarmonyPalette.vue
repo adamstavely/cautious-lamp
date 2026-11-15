@@ -56,7 +56,7 @@
                     {{ getUsageGuidelineIcon(shade) }}
                   </span>
                   <span class="palette-cell-copy" aria-hidden="true">
-                    <span class="material-symbols-outlined text-xl">{{ copiedColor === `${familyName}-${shade}` ? 'check' : 'content_copy' }}</span>
+                    <AppIcon :name="copiedColor === `${familyName}-${shade}` ? 'check' : 'copy'" class="text-xl" />
                   </span>
                 </UiColorSample>
                 <div v-else class="palette-cell bg-surface-sunken">

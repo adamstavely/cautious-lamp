@@ -56,7 +56,7 @@
             <div class="flex-1 min-w-0">
               <UiInput v-model="searchQuery" type="search" label="Search sessions" icon="search" placeholder="Search sessions…" />
             </div>
-            <UiButton icon="refresh" @click="loadSessions">Refresh</UiButton>
+            <UiButton icon="refresh-cw" @click="loadSessions">Refresh</UiButton>
           </div>
 
           <UiSpinner v-if="sessionsLoading" label="Loading sessions…" class="py-12" />
@@ -130,8 +130,8 @@
               description="Visualize user interactions across your application. Heatmaps show where users click, scroll, and move their mouse, helping you identify engagement hotspots and areas that need optimization."
             >
               <div class="flex flex-wrap items-center gap-3">
-                <UiButton variant="primary" icon="open_in_new" :href="heatmapsUrl" target="_blank" rel="noopener noreferrer">Open in OpenReplay</UiButton>
-                <UiButton icon="content_copy" @click="copyHeatmapsUrl">Copy link</UiButton>
+                <UiButton variant="primary" icon="external-link" :href="heatmapsUrl" target="_blank" rel="noopener noreferrer">Open in OpenReplay</UiButton>
+                <UiButton icon="copy" @click="copyHeatmapsUrl">Copy link</UiButton>
               </div>
             </UiPanel>
 

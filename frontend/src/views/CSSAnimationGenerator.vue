@@ -40,7 +40,7 @@
                   v-if="keyframes.length > 2"
                   variant="ghost"
                   size="sm"
-                  icon="delete"
+                  icon="trash-2"
                   icon-only
                   :label="`Remove ${keyframeTitle(keyframe, index).toLowerCase()}`"
                   @click="removeKeyframe(index)"
@@ -67,7 +67,7 @@
                 </div>
               </div>
             </div>
-            <UiButton icon="add" label="Add keyframe" @click="addKeyframe" />
+            <UiButton icon="plus" label="Add keyframe" @click="addKeyframe" />
           </div>
         </UiPanel>
       </div>
@@ -76,7 +76,7 @@
     <PageSection title="Preview" divided>
       <UiPanel title="Live preview">
         <template #actions>
-          <UiButton size="sm" icon="replay" label="Replay" @click="replayPreview" />
+          <UiButton size="sm" icon="rotate-ccw" label="Replay" @click="replayPreview" />
         </template>
         <div class="w-full h-64 rounded-tile flex items-center justify-center bg-surface-sunken">
           <div :key="previewKey" class="anim-preview flex items-center justify-center font-medium">Preview</div>
@@ -323,7 +323,7 @@ const keyframeTitle = (keyframe, index) => {
 const exportButtons = [
   { format: 'css', icon: 'code', label: 'Export CSS' },
   { format: 'tailwind', icon: 'settings', label: 'Export Tailwind' },
-  { format: 'json', icon: 'data_object', label: 'Export JSON' },
+  { format: 'json', icon: 'braces', label: 'Export JSON' },
 ];
 
 const previewKey = ref(0);

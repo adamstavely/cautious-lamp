@@ -11,7 +11,7 @@
       title="Open drawer"
       aria-label="Open drawer"
     >
-      <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+      <AppIcon name="menu" />
     </button>
   </div>
   
@@ -32,7 +32,7 @@
             title="Close drawer"
             aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
+            <AppIcon name="panel-left-close" />
           </button>
         </div>
         <nav class="space-y-1">
@@ -42,7 +42,7 @@
             @click="navigateToDoc(item.link)"
             class="drawer-item"
           >
-            <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+            <AppIcon :name="item.icon" class="text-lg" />
             <span class="font-medium">{{ item.text }}</span>
           </button>
         </nav>
@@ -58,7 +58,7 @@
             title="Close drawer"
             aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
+            <AppIcon name="panel-left-close" />
           </button>
         </div>
         <nav class="space-y-6">
@@ -69,7 +69,7 @@
               class="drawer-item"
               :class="{ 'drawer-item-on': isActive('/patterns') && route.path === '/patterns' }"
             >
-              <span class="material-symbols-outlined text-lg" aria-hidden="true">view_quilt</span>
+              <AppIcon name="layout-dashboard" class="text-lg" />
               <span class="font-medium">Overview</span>
             </router-link>
           </div>
@@ -81,7 +81,7 @@
               class="drawer-item"
               :class="{ 'drawer-item-on': isActive('/patterns/status') }"
             >
-              <span class="material-symbols-outlined text-lg" aria-hidden="true">check_circle</span>
+              <AppIcon name="circle-check" class="text-lg" />
               <span class="font-medium">Pattern Status</span>
             </router-link>
           </div>
@@ -97,7 +97,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -115,7 +115,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </a>
             </div>
@@ -132,7 +132,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -150,7 +150,7 @@
             title="Close drawer"
             aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
+            <AppIcon name="panel-left-close" />
           </button>
         </div>
         <nav class="space-y-6">
@@ -161,7 +161,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive('/components') }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">widgets</span>
+                <AppIcon name="blocks" class="text-lg" />
                 <span class="font-medium">Overview</span>
               </router-link>
           </div>
@@ -178,7 +178,7 @@
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
                 <ScanEye v-if="item.icon === 'scan-eye'" :size="20" :stroke-width="2" />
-                <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" v-else class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -197,7 +197,7 @@
               >
                 <Pipette v-if="item.icon === 'pipette'" :size="20" :stroke-width="2" />
                 <Captions v-else-if="item.icon === 'captions'" :size="20" :stroke-width="2" />
-                <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" v-else class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -215,7 +215,7 @@
             title="Close drawer"
             aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
+            <AppIcon name="panel-left-close" />
           </button>
         </div>
         <nav class="space-y-6">
@@ -228,7 +228,7 @@
               class="drawer-item"
               :class="{ 'drawer-item-on': isActive(item.link) }"
             >
-              <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+              <AppIcon :name="item.icon" class="text-lg" />
               <span class="font-medium">{{ item.text }}</span>
             </router-link>
           </div>
@@ -244,7 +244,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -261,7 +261,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -278,7 +278,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -295,7 +295,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -312,7 +312,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -330,7 +330,7 @@
             title="Close drawer"
             aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
+            <AppIcon name="panel-left-close" />
           </button>
         </div>
         <nav class="space-y-6">
@@ -343,7 +343,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
           </div>
@@ -360,7 +360,7 @@
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
                 <SwatchBook v-if="item.icon === 'swatch-book'" :size="20" :stroke-width="2" />
-                <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" v-else class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -379,7 +379,7 @@
               >
                 <TextInitial v-if="item.icon === 'text-initial'" :size="20" :stroke-width="2" />
                 <Tag v-else-if="item.icon === 'tag'" :size="20" :stroke-width="2" />
-                <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" v-else class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -396,7 +396,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -414,7 +414,7 @@
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
                 <Captions v-if="item.icon === 'captions'" :size="20" :stroke-width="2" />
-                <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" v-else class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -432,7 +432,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </a>
             </div>
@@ -450,7 +450,7 @@
             title="Close drawer"
             aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
+            <AppIcon name="panel-left-close" />
           </button>
         </div>
         <nav class="space-y-6">
@@ -461,7 +461,7 @@
               class="drawer-item"
               :class="{ 'drawer-item-on': isActive('/data-viz') && route.path === '/data-viz' }"
             >
-              <span class="material-symbols-outlined text-lg" aria-hidden="true">bar_chart</span>
+              <AppIcon name="chart-column" class="text-lg" />
               <span class="font-medium">Overview</span>
             </router-link>
           </div>
@@ -477,7 +477,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -494,7 +494,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -511,7 +511,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -529,7 +529,7 @@
             title="Close drawer"
             aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
+            <AppIcon name="panel-left-close" />
           </button>
         </div>
         <nav class="space-y-1">
@@ -541,7 +541,7 @@
             :class="{ 'drawer-item-on': isActive(item.link) }"
           >
             <FolderKanban v-if="item.icon === 'folder-kanban'" :size="20" :stroke-width="2" />
-            <span v-else class="material-symbols-outlined text-lg">{{ item.icon }}</span>
+            <AppIcon :name="item.icon" v-else class="text-lg" />
             <span class="font-medium">{{ item.text }}</span>
           </router-link>
         </nav>
@@ -557,7 +557,7 @@
               class="drawer-item"
               :class="{ 'drawer-item-on': isActive(item.link) }"
             >
-              <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+              <AppIcon :name="item.icon" class="text-lg" />
               <span class="font-medium">{{ item.text }}</span>
             </router-link>
           </nav>
@@ -574,7 +574,7 @@
             title="Close drawer"
             aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
+            <AppIcon name="panel-left-close" />
           </button>
         </div>
         <nav class="space-y-6">
@@ -585,7 +585,7 @@
               class="drawer-item"
               :class="{ 'drawer-item-on': isActive('/research') }"
             >
-              <span class="material-symbols-outlined text-lg" aria-hidden="true">note_stack</span>
+              <AppIcon name="notebook-tabs" class="text-lg" />
               <span class="font-medium">Overview</span>
             </router-link>
           </div>
@@ -601,7 +601,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -618,7 +618,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -635,7 +635,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -653,7 +653,7 @@
             title="Close drawer"
             aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
+            <AppIcon name="panel-left-close" />
           </button>
         </div>
         <nav class="space-y-6">
@@ -664,7 +664,7 @@
               class="drawer-item"
               :class="{ 'drawer-item-on': isActive('/guidelines') && route.path === '/guidelines' }"
             >
-              <span class="material-symbols-outlined text-lg" aria-hidden="true">menu_book</span>
+              <AppIcon name="book-open" class="text-lg" />
               <span class="font-medium">Overview</span>
             </router-link>
           </div>
@@ -681,7 +681,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </a>
               <a
@@ -701,7 +701,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </a>
             </div>
@@ -719,7 +719,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </a>
             </div>
@@ -737,7 +737,7 @@
             title="Close drawer"
             aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
+            <AppIcon name="panel-left-close" />
           </button>
         </div>
         <nav class="space-y-6">
@@ -750,7 +750,7 @@
               class="drawer-item"
               :class="{ 'drawer-item-on': isActive(item.link) }"
             >
-              <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+              <AppIcon :name="item.icon" class="text-lg" />
               <span class="font-medium">{{ item.text }}</span>
             </router-link>
           </div>
@@ -766,7 +766,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -783,7 +783,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -800,7 +800,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -818,7 +818,7 @@
             title="Close drawer"
             aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
+            <AppIcon name="panel-left-close" />
           </button>
         </div>
         <nav class="space-y-1">
@@ -829,7 +829,7 @@
             class="drawer-item"
             :class="{ 'drawer-item-on': isActive(item.link) }"
           >
-            <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+            <AppIcon :name="item.icon" class="text-lg" />
             <span class="font-medium">{{ item.text }}</span>
           </router-link>
         </nav>
@@ -845,7 +845,7 @@
             title="Close drawer"
             aria-label="Close drawer"
           >
-            <span class="material-symbols-outlined" aria-hidden="true">left_panel_close</span>
+            <AppIcon name="panel-left-close" />
           </button>
         </div>
         <nav class="space-y-6">
@@ -858,7 +858,7 @@
               class="drawer-item"
               :class="{ 'drawer-item-on': isActive(item.link) }"
             >
-              <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+              <AppIcon :name="item.icon" class="text-lg" />
               <span class="font-medium">{{ item.text }}</span>
             </router-link>
           </div>
@@ -874,7 +874,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -891,7 +891,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </div>
@@ -908,7 +908,7 @@
                 class="drawer-item"
                 :class="{ 'drawer-item-on': isActive(item.link) }"
               >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ item.icon }}</span>
+                <AppIcon :name="item.icon" class="text-lg" />
                 <span class="font-medium">{{ item.text }}</span>
               </router-link>
             </nav>
@@ -991,217 +991,217 @@ const getDocUrl = (link) => {
 
 const foundations = [
   { text: 'Colors', link: '/colors', icon: 'palette' },
-  { text: 'Typography', link: '/typography', icon: 'text_fields' },
-  { text: 'Spacing', link: '/spacing', icon: 'space_dashboard' },
+  { text: 'Typography', link: '/typography', icon: 'type' },
+  { text: 'Spacing', link: '/spacing', icon: 'layout-panel-left' },
   { text: 'Shadows', link: '/shadows', icon: 'layers' },
   { text: 'Accessibility', link: '/accessibility', icon: 'accessibility' }
 ];
 
 const artificialIntelligence = [
-  { text: 'AI Patterns', link: '/ai/patterns', icon: 'auto_awesome' },
-  { text: 'AI Components', link: '/ai/components', icon: 'smart_toy' },
-  { text: 'Agent Roles Mental Models', link: '/guidelines/ai/agent-roles-mental-models', icon: 'psychology' },
-  { text: 'Content Microcopy', link: '/guidelines/ai/content-microcopy', icon: 'text_fields' },
-  { text: 'Designing for Agentic Experiences', link: '/guidelines/ai/designing-for-agentic-experiences', icon: 'auto_awesome' },
-  { text: 'Designing for Generative AI', link: '/guidelines/ai/designing-for-generative-ai', icon: 'smart_toy' },
+  { text: 'AI Patterns', link: '/ai/patterns', icon: 'sparkles' },
+  { text: 'AI Components', link: '/ai/components', icon: 'bot' },
+  { text: 'Agent Roles Mental Models', link: '/guidelines/ai/agent-roles-mental-models', icon: 'brain' },
+  { text: 'Content Microcopy', link: '/guidelines/ai/content-microcopy', icon: 'type' },
+  { text: 'Designing for Agentic Experiences', link: '/guidelines/ai/designing-for-agentic-experiences', icon: 'sparkles' },
+  { text: 'Designing for Generative AI', link: '/guidelines/ai/designing-for-generative-ai', icon: 'bot' },
   { text: 'Designing for MCP UI', link: '/guidelines/ai/designing-for-mcp-ui', icon: 'settings' },
-  { text: 'Fallback Error States', link: '/guidelines/ai/fallback-error-states', icon: 'error' },
-  { text: 'Feedback Observability', link: '/guidelines/ai/feedback-observability', icon: 'visibility' },
+  { text: 'Fallback Error States', link: '/guidelines/ai/fallback-error-states', icon: 'circle-alert' },
+  { text: 'Feedback Observability', link: '/guidelines/ai/feedback-observability', icon: 'eye' },
   { text: 'Human Machine Teaming', link: '/guidelines/ai/human-machine-teaming', icon: 'handshake' },
-  { text: 'Identity Persona', link: '/guidelines/ai/identity-persona', icon: 'person' },
-  { text: 'Memory Personalization', link: '/guidelines/ai/memory-personalization', icon: 'memory' },
-  { text: 'Safe Exploration', link: '/guidelines/ai/safe-exploration', icon: 'explore' }
+  { text: 'Identity Persona', link: '/guidelines/ai/identity-persona', icon: 'user' },
+  { text: 'Memory Personalization', link: '/guidelines/ai/memory-personalization', icon: 'cpu' },
+  { text: 'Safe Exploration', link: '/guidelines/ai/safe-exploration', icon: 'compass' }
 ];
 
 const humanCenteredDesign = [
-  { text: 'HCD Principles', link: '/hcd/principles', icon: 'people' },
-  { text: 'HCD Process', link: '/hcd/process', icon: 'timeline' },
-  { text: 'HCD Council', link: '/hcd/council', icon: 'groups' },
-  { text: 'Research Methods', link: '/hcd/research-methods', icon: 'science' },
-  { text: 'Recruiting Users', link: '/hcd/recruiting-users', icon: 'group_add' },
-  { text: 'Conducting Interviews', link: '/hcd/conducting-interviews', icon: 'record_voice_over' },
-  { text: 'Laws of UX', link: '/hcd/laws-of-ux', icon: 'rule' }
+  { text: 'HCD Principles', link: '/hcd/principles', icon: 'users' },
+  { text: 'HCD Process', link: '/hcd/process', icon: 'chart-gantt' },
+  { text: 'HCD Council', link: '/hcd/council', icon: 'users-round' },
+  { text: 'Research Methods', link: '/hcd/research-methods', icon: 'flask-conical' },
+  { text: 'Recruiting Users', link: '/hcd/recruiting-users', icon: 'user-plus' },
+  { text: 'Conducting Interviews', link: '/hcd/conducting-interviews', icon: 'speech' },
+  { text: 'Laws of UX', link: '/hcd/laws-of-ux', icon: 'list-checks' }
 ];
 
 const guidelines = [
   { text: 'Colors', link: '/colors', icon: 'palette' },
-  { text: 'Typography', link: '/typography', icon: 'text_fields' },
-  { text: 'Spacing', link: '/spacing', icon: 'space_dashboard' },
+  { text: 'Typography', link: '/typography', icon: 'type' },
+  { text: 'Spacing', link: '/spacing', icon: 'layout-panel-left' },
   { text: 'Shadows', link: '/shadows', icon: 'layers' },
   { text: 'Accessibility', link: '/accessibility', icon: 'accessibility' },
   { text: 'Voice and Tone', link: '/guidelines/voice-and-tone', icon: 'mic' },
   { text: 'Terminal UI (TUI) Guidance', link: '/guidelines/tui-guidance', icon: 'terminal' },
   { text: 'Color Contrast', link: '/guidelines/color-contrast', icon: 'contrast' },
   { text: 'Content Organization Navigation', link: '/guidelines/content-organization-navigation', icon: 'navigation' },
-  { text: 'CSS Grid Layout', link: '/guidelines/css-grid-layout', icon: 'grid_view' },
-  { text: 'Flashing', link: '/guidelines/flashing', icon: 'flash_on' },
-  { text: 'Focus', link: '/guidelines/focus', icon: 'center_focus_strong' },
+  { text: 'CSS Grid Layout', link: '/guidelines/css-grid-layout', icon: 'layout-grid' },
+  { text: 'Flashing', link: '/guidelines/flashing', icon: 'zap' },
+  { text: 'Focus', link: '/guidelines/focus', icon: 'focus' },
   { text: 'Iconography', link: '/guidelines/iconography', icon: 'image' },
-  { text: 'Information Architecture', link: '/guidelines/information-architecture', icon: 'account_tree' },
+  { text: 'Information Architecture', link: '/guidelines/information-architecture', icon: 'network' },
   { text: 'Keyboard Gestures', link: '/guidelines/keyboard-gestures', icon: 'keyboard' },
   { text: 'Metadata SEO', link: '/guidelines/metadata-seo', icon: 'search' },
-  { text: 'Multimedia Animation', link: '/guidelines/multimedia-animation', icon: 'animation' },
-  { text: 'Text Graphics', link: '/guidelines/text-graphics', icon: 'text_fields' },
-  { text: 'Time', link: '/guidelines/time', icon: 'schedule' },
-  { text: 'Typography Guidelines', link: '/guidelines/typography', icon: 'text_fields' }
+  { text: 'Multimedia Animation', link: '/guidelines/multimedia-animation', icon: 'wand-sparkles' },
+  { text: 'Text Graphics', link: '/guidelines/text-graphics', icon: 'type' },
+  { text: 'Time', link: '/guidelines/time', icon: 'clock' },
+  { text: 'Typography Guidelines', link: '/guidelines/typography', icon: 'type' }
 ];
 
 // Design Patterns - core UI patterns
 const designPatterns = [
-  { text: 'Layout Patterns', link: '/patterns/layout', icon: 'view_quilt' },
+  { text: 'Layout Patterns', link: '/patterns/layout', icon: 'layout-dashboard' },
   { text: 'Navigation', link: '/patterns/navigation', icon: 'navigation' },
-  { text: 'Data Display', link: '/patterns/data-display', icon: 'table_chart' },
-  { text: 'Forms', link: '/patterns/forms', icon: 'description' },
-  { text: 'Feedback', link: '/patterns/feedback', icon: 'feedback' },
-  { text: 'Empty Loading States', link: '/guidelines/patterns/empty-loading-states', icon: 'hourglass_empty' },
-  { text: 'Error Handling', link: '/guidelines/patterns/error-handling', icon: 'error' },
-  { text: 'New Features Experiences', link: '/guidelines/patterns/new-features-experiences', icon: 'new_releases' }
+  { text: 'Data Display', link: '/patterns/data-display', icon: 'table-2' },
+  { text: 'Forms', link: '/patterns/forms', icon: 'file-text' },
+  { text: 'Feedback', link: '/patterns/feedback', icon: 'message-square-warning' },
+  { text: 'Empty Loading States', link: '/guidelines/patterns/empty-loading-states', icon: 'hourglass' },
+  { text: 'Error Handling', link: '/guidelines/patterns/error-handling', icon: 'circle-alert' },
+  { text: 'New Features Experiences', link: '/guidelines/patterns/new-features-experiences', icon: 'badge-alert' }
 ];
 
 // Interaction Patterns - AI and interaction-focused patterns
 const interactionPatterns = [
-  { text: 'Agent-Oriented Onboarding', link: '/guidelines/patterns/agent-oriented-onboarding', icon: 'rocket_launch' },
-  { text: 'AI Disengagement Timeout Error', link: '/guidelines/patterns/ai-disengagement-timeout-error', icon: 'timer_off' },
-  { text: 'AI Thinking States', link: '/guidelines/patterns/ai-thinking-states', icon: 'psychology' },
-  { text: 'Multi-Agent Orchestration', link: '/guidelines/patterns/multi-agent-orchestration', icon: 'account_tree' }
+  { text: 'Agent-Oriented Onboarding', link: '/guidelines/patterns/agent-oriented-onboarding', icon: 'rocket' },
+  { text: 'AI Disengagement Timeout Error', link: '/guidelines/patterns/ai-disengagement-timeout-error', icon: 'timer-off' },
+  { text: 'AI Thinking States', link: '/guidelines/patterns/ai-thinking-states', icon: 'brain' },
+  { text: 'Multi-Agent Orchestration', link: '/guidelines/patterns/multi-agent-orchestration', icon: 'network' }
 ];
 
 const codePatterns = [
-  { text: 'Form Validation', link: '/patterns/form-validation', icon: 'description' },
-  { text: 'Accessible Modal', link: '/patterns/accessible-modal', icon: 'fullscreen' },
-  { text: 'Sortable Data Table', link: '/patterns/sortable-data-table', icon: 'table_chart' },
+  { text: 'Form Validation', link: '/patterns/form-validation', icon: 'file-text' },
+  { text: 'Accessible Modal', link: '/patterns/accessible-modal', icon: 'maximize' },
+  { text: 'Sortable Data Table', link: '/patterns/sortable-data-table', icon: 'table-2' },
   { text: 'Login Form', link: '/patterns/login-form', icon: 'lock' },
   { text: 'Responsive Navigation', link: '/patterns/responsive-navigation', icon: 'menu' },
-  { text: 'Toast Notification', link: '/patterns/toast-notification', icon: 'notifications' }
+  { text: 'Toast Notification', link: '/patterns/toast-notification', icon: 'bell' }
 ];
 
 
 const reviewItems = [
-  { text: 'Overview', link: '/review', icon: 'rate_review' },
-  { text: 'My Requested Reviews', link: '/review/my-requests', icon: 'view_module' },
+  { text: 'Overview', link: '/review', icon: 'message-square-text' },
+  { text: 'My Requested Reviews', link: '/review/my-requests', icon: 'layout-grid' },
   { text: 'Review Management', link: '/review/management', icon: 'folder-kanban' }
 ];
 
 const reviewUtilities = [
-  { text: 'Handoff Tools', link: '/review/handoff', icon: 'swap_horiz' },
-  { text: 'Design-to-Code Sync', link: '/design-sync', icon: 'sync' },
-  { text: 'Visual Regression Testing', link: '/tools/visual-regression', icon: 'compare' },
-  { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' }
+  { text: 'Handoff Tools', link: '/review/handoff', icon: 'arrow-left-right' },
+  { text: 'Design-to-Code Sync', link: '/design-sync', icon: 'refresh-cw' },
+  { text: 'Visual Regression Testing', link: '/tools/visual-regression', icon: 'git-compare' },
+  { text: 'Theme Builder', link: '/theme-builder', icon: 'sliders-horizontal' }
 ];
 
 const tools = [
-  { text: 'Overview', link: '/tools', icon: 'build' },
-  { text: 'Gradient Generator', link: '/tools/gradient-generator', icon: 'gradient' },
-  { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'text_fields' },
+  { text: 'Overview', link: '/tools', icon: 'wrench' },
+  { text: 'Gradient Generator', link: '/tools/gradient-generator', icon: 'blend' },
+  { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'type' },
   { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'search' },
   { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'palette' },
-  { text: 'Color Converter', link: '/tools/color-converter', icon: 'swap_horiz' },
+  { text: 'Color Converter', link: '/tools/color-converter', icon: 'arrow-left-right' },
   { text: 'Color Contrast Checker', link: '/tools/color-contrast', icon: 'contrast' },
-  { text: 'NASA-TLX', link: '/tools/nasa-tlx', icon: 'psychology' },
-  { text: 'System Usability Scale', link: '/tools/sus', icon: 'psychology' },
-  { text: 'Heuristic Evaluation', link: '/tools/heuristic-evaluation', icon: 'checklist' },
+  { text: 'NASA-TLX', link: '/tools/nasa-tlx', icon: 'brain' },
+  { text: 'System Usability Scale', link: '/tools/sus', icon: 'brain' },
+  { text: 'Heuristic Evaluation', link: '/tools/heuristic-evaluation', icon: 'list-checks' },
   { text: 'PNG to ICO Converter', link: '/tools/png-to-ico', icon: 'image' },
-  { text: 'Theme Builder', link: '/theme-builder', icon: 'tune' },
+  { text: 'Theme Builder', link: '/theme-builder', icon: 'sliders-horizontal' },
 ];
 
 // Group tools by category
 const toolGroups = computed(() => ({
   overview: [
-    { text: 'Overview', link: '/tools', icon: 'build' }
+    { text: 'Overview', link: '/tools', icon: 'wrench' }
   ],
   color: [
-    { text: 'Gradient Generator', link: '/tools/gradient-generator', icon: 'gradient' },
+    { text: 'Gradient Generator', link: '/tools/gradient-generator', icon: 'blend' },
     { text: 'Palette Builder', link: '/palette-builder', icon: 'swatch-book' },
-    { text: 'Color Converter', link: '/tools/color-converter', icon: 'swap_horiz' },
+    { text: 'Color Converter', link: '/tools/color-converter', icon: 'arrow-left-right' },
     { text: 'Color Contrast Checker', link: '/tools/color-contrast', icon: 'contrast' },
-    { text: 'APCA Calculator', link: '/tools/apca-calculator', icon: 'calculate' }
+    { text: 'APCA Calculator', link: '/tools/apca-calculator', icon: 'calculator' }
   ],
   text: [
     { text: 'Lorem Ipsum Generator', link: '/tools/lorem-ipsum', icon: 'text-initial' },
-    { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'tag' },
-    { text: 'Font Scale', link: '/tools/font-scale', icon: 'format_size' },
+    { text: 'SEO Tagging Generator', link: '/tools/seo-tagging', icon: 'hash' },
+    { text: 'Font Scale', link: '/tools/font-scale', icon: 'a-large-small' },
     { text: 'Font Stack & Subsetting', link: '/tools/font-stack', icon: 'layers' },
-    { text: 'Spacing Scale Generator', link: '/tools/spacing-scale', icon: 'space_dashboard' },
+    { text: 'Spacing Scale Generator', link: '/tools/spacing-scale', icon: 'layout-panel-left' },
     { text: 'Box Shadow Generator', link: '/tools/box-shadow', icon: 'layers' },
-    { text: 'Border Radius Generator', link: '/tools/border-radius', icon: 'rounded_corner' }
+    { text: 'Border Radius Generator', link: '/tools/border-radius', icon: 'square-round-corner' }
   ],
   development: [
-    { text: 'HTML Viewer', link: '/tools/html-viewer', icon: 'preview' },
+    { text: 'HTML Viewer', link: '/tools/html-viewer', icon: 'eye' },
     { text: 'HTML Escaper', link: '/tools/html-escaper', icon: 'lock' },
-    { text: 'PX Unit Converter', link: '/tools/px-converter', icon: 'straighten' },
+    { text: 'PX Unit Converter', link: '/tools/px-converter', icon: 'ruler' },
     { text: 'CSS Converter', link: '/tools/css-converter', icon: 'code' }
   ],
   image: [
     { text: 'Image Converter', link: '/tools/png-to-ico', icon: 'image' },
-    { text: 'Image Compressor', link: '/tools/image-compressor', icon: 'compress' },
+    { text: 'Image Compressor', link: '/tools/image-compressor', icon: 'shrink' },
     { text: 'Alt Text Generator', link: '/tools/alt-text-generator', icon: 'captions' },
-    { text: 'Photosensitivity Analysis', link: '/tools/photosensitivity', icon: 'visibility' },
-    { text: 'CSS Animation Generator', link: '/tools/css-animation', icon: 'animation' }
+    { text: 'Photosensitivity Analysis', link: '/tools/photosensitivity', icon: 'eye' },
+    { text: 'CSS Animation Generator', link: '/tools/css-animation', icon: 'wand-sparkles' }
   ],
   references: [
     { text: 'JAWS Commands', link: '/tools/references/jaws-commands', icon: 'keyboard' },
     { text: 'Penpot for Beginners', link: '/tools/references/penpot-for-beginners', icon: 'brush' },
-    { text: 'Units of Measure', link: '/tools/references/units-of-measure', icon: 'straighten' }
+    { text: 'Units of Measure', link: '/tools/references/units-of-measure', icon: 'ruler' }
   ]
 }));
 
 const designAssets = [
-  { text: 'Overview', link: '/design-assets', icon: 'collections' },
+  { text: 'Overview', link: '/design-assets', icon: 'images' },
   { text: 'Icons', link: '/design-assets/icons', icon: 'star' },
-  { text: 'Font Library', link: '/design-assets/font-library', icon: 'library_books' },
+  { text: 'Font Library', link: '/design-assets/font-library', icon: 'library' },
   { text: 'Country Flags', link: '/design-assets/country-flags', icon: 'flag' },
-  { text: 'USG Seals', link: '/design-assets/usg-seals', icon: 'verified' },
-  { text: 'Internal Seals', link: '/design-assets/internal-seals', icon: 'security' },
-  { text: 'Interactives', link: '/design-assets/interactives', icon: 'touch_app' },
-  { text: 'Stock Photos', link: '/design-assets/stock-photos', icon: 'photo_library' },
-  { text: 'Illustrations', link: '/design-assets/illustrations', icon: 'draw' },
-  { text: 'Capability Logos', link: '/design-assets/capability-logos', icon: 'workspace_premium' },
-  { text: 'Company Logos', link: '/design-assets/company-logos', icon: 'business' }
+  { text: 'USG Seals', link: '/design-assets/usg-seals', icon: 'badge-check' },
+  { text: 'Internal Seals', link: '/design-assets/internal-seals', icon: 'shield' },
+  { text: 'Interactives', link: '/design-assets/interactives', icon: 'pointer' },
+  { text: 'Stock Photos', link: '/design-assets/stock-photos', icon: 'images' },
+  { text: 'Illustrations', link: '/design-assets/illustrations', icon: 'pencil-line' },
+  { text: 'Capability Logos', link: '/design-assets/capability-logos', icon: 'award' },
+  { text: 'Company Logos', link: '/design-assets/company-logos', icon: 'building-2' }
 ];
 
 const componentUtilities = [
   { text: 'Loupe', link: '/components/loupe', icon: 'scan-eye' },
-  { text: 'Component Status', link: '/components/status', icon: 'check_circle' },
-  { text: 'Component Examples', link: '/components/examples', icon: 'preview' },
-  { text: 'Testing Framework', link: '/components/testing', icon: 'bug_report' },
-  { text: 'Documentation Generator', link: '/components/documentation', icon: 'description' },
-  { text: 'Component Composition', link: '/components/composition', icon: 'view_quilt' },
-  { text: 'Deprecation Manager', link: '/components/deprecation', icon: 'warning' },
-  { text: 'Badge Generator', link: '/components/badge-generator', icon: 'label' },
-  { text: 'Progress Generator', link: '/components/progress-generator', icon: 'trending_up' },
-  { text: 'Loading Spinner Generator', link: '/components/loading-generator', icon: 'refresh' }
+  { text: 'Component Status', link: '/components/status', icon: 'circle-check' },
+  { text: 'Component Examples', link: '/components/examples', icon: 'eye' },
+  { text: 'Testing Framework', link: '/components/testing', icon: 'bug' },
+  { text: 'Documentation Generator', link: '/components/documentation', icon: 'file-text' },
+  { text: 'Component Composition', link: '/components/composition', icon: 'layout-dashboard' },
+  { text: 'Deprecation Manager', link: '/components/deprecation', icon: 'triangle-alert' },
+  { text: 'Badge Generator', link: '/components/badge-generator', icon: 'tag' },
+  { text: 'Progress Generator', link: '/components/progress-generator', icon: 'trending-up' },
+  { text: 'Loading Spinner Generator', link: '/components/loading-generator', icon: 'refresh-cw' }
 ];
 
 const componentItems = [
-  { text: 'Component Scaffolding Wizard', link: '/components/scaffold', icon: 'auto_fix_high' },
-  { text: 'Buttons', link: '/components/buttons', icon: 'smart_button' },
+  { text: 'Component Scaffolding Wizard', link: '/components/scaffold', icon: 'wand-sparkles' },
+  { text: 'Buttons', link: '/components/buttons', icon: 'rectangle-horizontal' },
   { text: 'Color Picker', link: '/components/color-picker', icon: 'pipette' },
-  { text: 'Forms', link: '/components/forms', icon: 'description' },
-  { text: 'Cards', link: '/components/cards', icon: 'view_module' },
+  { text: 'Forms', link: '/components/forms', icon: 'file-text' },
+  { text: 'Cards', link: '/components/cards', icon: 'layout-grid' },
   { text: 'Navigation', link: '/components/navigation', icon: 'navigation' },
-  { text: 'Data Display', link: '/components/data-display', icon: 'table_chart' }
+  { text: 'Data Display', link: '/components/data-display', icon: 'table-2' }
 ];
 
 const adminItems = [
-  { text: 'Overview', link: '/admin', icon: 'admin_panel_settings' },
+  { text: 'Overview', link: '/admin', icon: 'shield-user' },
   { text: 'Audit Logs', link: '/admin/audit', icon: 'history' },
-  { text: 'System Health', link: '/admin/health', icon: 'space_dashboard' },
+  { text: 'System Health', link: '/admin/health', icon: 'layout-panel-left' },
   { text: 'Governance', link: '/admin/governance', icon: 'gavel' },
-  { text: 'Role Management', link: '/admin/roles', icon: 'admin_panel_settings' },
+  { text: 'Role Management', link: '/admin/roles', icon: 'shield-user' },
   { text: 'Feature Flags', link: '/admin/feature-flags', icon: 'flag' },
-  { text: 'Component and Pattern Lifecycle Management', link: '/admin/content', icon: 'edit_document' },
-  { text: 'Application Management', link: '/admin/applications', icon: 'apps' },
-  { text: 'Performance Analysis', link: '/admin/performance', icon: 'speed' },
+  { text: 'Component and Pattern Lifecycle Management', link: '/admin/content', icon: 'file-pen-line' },
+  { text: 'Application Management', link: '/admin/applications', icon: 'layout-grid' },
+  { text: 'Performance Analysis', link: '/admin/performance', icon: 'gauge' },
   { text: 'Accessibility Reports', link: '/admin/accessibility-reports', icon: 'accessibility' }
 ];
 
 const gettingStartedBasics = [
-  { text: 'Overview', link: '/getting-started', icon: 'rocket_launch' },
-  { text: 'Why a Design System?', link: '/getting-started/why-design-system', icon: 'help_outline' },
-  { text: 'Quick Start', link: '/getting-started/quick-start', icon: 'play_arrow' },
+  { text: 'Overview', link: '/getting-started', icon: 'rocket' },
+  { text: 'Why a Design System?', link: '/getting-started/why-design-system', icon: 'circle-help' },
+  { text: 'Quick Start', link: '/getting-started/quick-start', icon: 'play' },
   { text: 'Get in Touch', link: '/getting-started/get-in-touch', icon: 'mail' },
-  { text: 'Adopt', link: '/getting-started/adopt', icon: 'trending_up' },
-  { text: 'Improving UX Through Acquisition', link: '/getting-started/improving-ux-through-acquisition', icon: 'insights' }
+  { text: 'Adopt', link: '/getting-started/adopt', icon: 'trending-up' },
+  { text: 'Improving UX Through Acquisition', link: '/getting-started/improving-ux-through-acquisition', icon: 'lightbulb' }
 ];
 
 const gettingStartedPrinciples = [
@@ -1211,69 +1211,69 @@ const gettingStartedPrinciples = [
 
 const gettingStartedSetup = [
   { text: 'Installation', link: '/getting-started/installation', icon: 'download' },
-  { text: 'Best Practices', link: '/getting-started/best-practices', icon: 'check_circle' },
-  { text: 'Contribute', link: '/getting-started/contribute', icon: 'groups' }
+  { text: 'Best Practices', link: '/getting-started/best-practices', icon: 'circle-check' },
+  { text: 'Contribute', link: '/getting-started/contribute', icon: 'users-round' }
 ];
 
 const gettingStartedFoundations = [
-  { text: 'Atomic Design', link: '/getting-started/foundations/atomic-design', icon: 'science' },
-  { text: 'Building Trust', link: '/getting-started/foundations/building-trust', icon: 'verified' },
-  { text: 'Responsiveness', link: '/getting-started/foundations/responsiveness', icon: 'devices' },
+  { text: 'Atomic Design', link: '/getting-started/foundations/atomic-design', icon: 'flask-conical' },
+  { text: 'Building Trust', link: '/getting-started/foundations/building-trust', icon: 'badge-check' },
+  { text: 'Responsiveness', link: '/getting-started/foundations/responsiveness', icon: 'monitor-smartphone' },
   { text: 'Usability', link: '/getting-started/foundations/usability', icon: 'accessibility' },
-  { text: 'Writing & Content', link: '/getting-started/foundations/writing-content', icon: 'edit_note' }
+  { text: 'Writing & Content', link: '/getting-started/foundations/writing-content', icon: 'notebook-pen' }
 ];
 
 const gettingStartedResources = [
   { text: 'Resources', link: '/getting-started/resources', icon: 'book' },
-  { text: 'Support', link: '/getting-started/support', icon: 'help' }
+  { text: 'Support', link: '/getting-started/support', icon: 'circle-help' }
 ];
 
 const researchArtifacts = [
   { text: 'Journey Maps', link: '/research/journey-maps', icon: 'map' },
-  { text: 'HCD Reports', link: '/research/hcd-reports', icon: 'description' },
-  { text: 'User Personas', link: '/research/user-studies', icon: 'groups' },
-  { text: 'Insights & Findings', link: '/research/insights', icon: 'insights' }
+  { text: 'HCD Reports', link: '/research/hcd-reports', icon: 'file-text' },
+  { text: 'User Personas', link: '/research/user-studies', icon: 'users-round' },
+  { text: 'Insights & Findings', link: '/research/insights', icon: 'lightbulb' }
 ];
 
 const uxResearchTools = [
-  { text: 'User Persona Generator', link: '/research/user-personas', icon: 'person' },
-  { text: 'NASA-TLX', link: '/tools/nasa-tlx', icon: 'psychology' },
-  { text: 'System Usability Scale', link: '/tools/sus', icon: 'psychology' },
-  { text: 'Heuristic Evaluation', link: '/tools/heuristic-evaluation', icon: 'checklist' },
-  { text: 'Session Replay', link: '/hcd/session-replay', icon: 'videocam' }
+  { text: 'User Persona Generator', link: '/research/user-personas', icon: 'user' },
+  { text: 'NASA-TLX', link: '/tools/nasa-tlx', icon: 'brain' },
+  { text: 'System Usability Scale', link: '/tools/sus', icon: 'brain' },
+  { text: 'Heuristic Evaluation', link: '/tools/heuristic-evaluation', icon: 'list-checks' },
+  { text: 'Session Replay', link: '/hcd/session-replay', icon: 'video' }
 ];
 
 const tokenItems = [
-  { text: 'Overview', link: '/tokens', icon: 'style' },
-  { text: 'Design Tokens', link: '/tokens/studio', icon: 'tune' },
-  { text: 'AI Tokens', link: '/tokens/ai-builder', icon: 'smart_toy' },
+  { text: 'Overview', link: '/tokens', icon: 'swatch-book' },
+  { text: 'Design Tokens', link: '/tokens/studio', icon: 'sliders-horizontal' },
+  { text: 'AI Tokens', link: '/tokens/ai-builder', icon: 'bot' },
   { text: 'Token Playground', link: '/tokens/playground', icon: 'palette' },
-  { text: 'Style Library', link: '/tokens/library', icon: 'library_books' },
+  { text: 'Style Library', link: '/tokens/library', icon: 'library' },
   { text: 'Color Palettes', link: '/tokens/color-palettes', icon: 'palette' }
 ];
 
 const tokenUtilities = [
-  { text: 'Token Migration', link: '/tokens/migration', icon: 'swap_horiz' },
-  { text: 'Token Sync', link: '/tokens/sync', icon: 'sync' },
-  { text: 'Token Relationships', link: '/tokens/relationships', icon: 'account_tree' },
+  { text: 'Token Migration', link: '/tokens/migration', icon: 'arrow-left-right' },
+  { text: 'Token Sync', link: '/tokens/sync', icon: 'refresh-cw' },
+  { text: 'Token Relationships', link: '/tokens/relationships', icon: 'network' },
   { text: 'Design Extractor', link: '/tokens/extract', icon: 'download' }
 ];
 
 const dataVizGenerators = [
-  { text: 'Chart Builder', link: '/tools/chart-builder', icon: 'bar_chart' },
+  { text: 'Chart Builder', link: '/tools/chart-builder', icon: 'chart-column' },
   { text: 'Map Maker', link: '/tools/map-maker', icon: 'map' },
-  { text: 'Timeline Generator', link: '/tools/timeline-generator', icon: 'timeline' },
-  { text: 'Table Generator', link: '/tools/table-generator', icon: 'table_chart' }
+  { text: 'Timeline Generator', link: '/tools/timeline-generator', icon: 'chart-gantt' },
+  { text: 'Table Generator', link: '/tools/table-generator', icon: 'table-2' }
 ];
 
 const dataVizUtilities = [
-  { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'format_color_fill' }
+  { text: 'Color Scale Generator', link: '/tools/color-scale', icon: 'paint-bucket' }
 ];
 
 const dataVizGuidance = [
-  { text: 'Types of Dashboards', link: '/data-viz/types-of-dashboards', icon: 'dashboard' },
-  { text: 'Dashboard Patterns', link: '/data-viz/dashboard-patterns', icon: 'pattern' },
-  { text: 'Dashboard Design', link: '/data-viz/dashboard-design', icon: 'space_dashboard' }
+  { text: 'Types of Dashboards', link: '/data-viz/types-of-dashboards', icon: 'layout-dashboard' },
+  { text: 'Dashboard Patterns', link: '/data-viz/dashboard-patterns', icon: 'layout-template' },
+  { text: 'Dashboard Design', link: '/data-viz/dashboard-design', icon: 'layout-panel-left' }
 ];
 
 const showAdmin = computed(() => {

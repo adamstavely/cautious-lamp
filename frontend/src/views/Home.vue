@@ -8,7 +8,7 @@
         spot="site/compass-rose"
       >
         <template #actions>
-          <UiButton variant="primary" to="/getting-started" trailing-icon="arrow_forward">Get started</UiButton>
+          <UiButton variant="primary" to="/getting-started" trailing-icon="arrow-right">Get started</UiButton>
           <UiButton to="/components">Browse components</UiButton>
           <UiButton variant="ghost" to="/search" icon="search">Search</UiButton>
         </template>
@@ -28,7 +28,7 @@
             <p class="role-body">{{ role.body }}</p>
             <span class="role-cta">
               {{ role.cta }}
-              <span class="material-symbols-outlined role-arrow" aria-hidden="true">arrow_forward</span>
+              <AppIcon name="arrow-right" class="role-arrow" />
             </span>
           </router-link>
         </div>
@@ -51,7 +51,7 @@
               <UiChip tone="accent">Stable</UiChip>
               <UiChip tone="warning">Beta</UiChip>
               <UiChip>Deprecated</UiChip>
-              <UiChip icon="accessibility_new">WCAG 2.1 AA</UiChip>
+              <UiChip icon="person-standing">WCAG 2.1 AA</UiChip>
             </div>
             <router-link to="/components/buttons" class="specimen group">
               <div class="flex items-start gap-3">

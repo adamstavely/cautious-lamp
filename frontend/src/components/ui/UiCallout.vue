@@ -1,6 +1,6 @@
 <template>
   <div class="ui-callout" :class="`ui-callout-${tone}`" :role="role">
-    <span class="material-symbols-outlined text-lg leading-6" aria-hidden="true">{{ icon || defaultIcon }}</span>
+    <AppIcon :name="icon || defaultIcon" class="text-lg leading-6" />
     <div class="min-w-0 flex-1">
       <p v-if="title" class="ui-callout-title">{{ title }}</p>
       <div class="ui-callout-body"><slot /></div>
@@ -21,7 +21,7 @@ const props = defineProps({
   role: { type: String, default: undefined },
 });
 
-const defaultIcon = computed(() => ({ info: 'info', success: 'check_circle', warning: 'warning', danger: 'error' })[props.tone]);
+const defaultIcon = computed(() => ({ info: 'info', success: 'circle-check', warning: 'triangle-alert', danger: 'circle-alert' })[props.tone]);
 </script>
 
 <style scoped>

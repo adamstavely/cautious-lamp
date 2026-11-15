@@ -73,7 +73,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">support_agent</span>
+                  <AppIcon name="headset" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Support
@@ -97,7 +97,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">feedback</span>
+                  <AppIcon name="message-square-warning" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Feedback
@@ -121,7 +121,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">forum</span>
+                  <AppIcon name="messages-square" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Community
@@ -145,7 +145,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">handshake</span>
+                  <AppIcon name="handshake" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Partnerships
@@ -169,7 +169,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">menu_book</span>
+                  <AppIcon name="book-open" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Documentation
@@ -193,7 +193,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">mail</span>
+                  <AppIcon name="mail" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   General Inquiry
@@ -229,15 +229,15 @@
                   </h3>
                   <ul class="space-y-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                     <li class="flex items-start gap-2">
-                      <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-sm mt-1">check_circle</span>
+                      <AppIcon name="circle-check" class="text-indigo-600 dark:text-indigo-400 text-sm mt-1" />
                       <span><strong>Support requests:</strong> Within 24 hours</span>
                     </li>
                     <li class="flex items-start gap-2">
-                      <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-sm mt-1">check_circle</span>
+                      <AppIcon name="circle-check" class="text-indigo-600 dark:text-indigo-400 text-sm mt-1" />
                       <span><strong>Feedback:</strong> Acknowledged within 48 hours</span>
                     </li>
                     <li class="flex items-start gap-2">
-                      <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-sm mt-1">check_circle</span>
+                      <AppIcon name="circle-check" class="text-indigo-600 dark:text-indigo-400 text-sm mt-1" />
                       <span><strong>General inquiries:</strong> Within 3-5 business days</span>
                     </li>
                   </ul>
@@ -248,19 +248,19 @@
                   </h3>
                   <ul class="space-y-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                     <li class="flex items-start gap-2">
-                      <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-sm mt-1">check_circle</span>
+                      <AppIcon name="circle-check" class="text-indigo-600 dark:text-indigo-400 text-sm mt-1" />
                       <span>Technical implementation guidance</span>
                     </li>
                     <li class="flex items-start gap-2">
-                      <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-sm mt-1">check_circle</span>
+                      <AppIcon name="circle-check" class="text-indigo-600 dark:text-indigo-400 text-sm mt-1" />
                       <span>Best practices and recommendations</span>
                     </li>
                     <li class="flex items-start gap-2">
-                      <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-sm mt-1">check_circle</span>
+                      <AppIcon name="circle-check" class="text-indigo-600 dark:text-indigo-400 text-sm mt-1" />
                       <span>Component customization support</span>
                     </li>
                     <li class="flex items-start gap-2">
-                      <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-sm mt-1">check_circle</span>
+                      <AppIcon name="circle-check" class="text-indigo-600 dark:text-indigo-400 text-sm mt-1" />
                       <span>Adoption strategy consultation</span>
                     </li>
                   </ul>

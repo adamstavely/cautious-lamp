@@ -35,7 +35,7 @@
                 :hint="`${altText.length} / 125 characters (recommended max)`"
               />
               <div v-if="altText" class="mt-2 flex justify-end">
-                <UiButton size="sm" variant="ghost" :icon="copied ? 'check' : 'content_copy'" @click="copyAltText">{{ copied ? 'Copied!' : 'Copy' }}</UiButton>
+                <UiButton size="sm" variant="ghost" :icon="copied ? 'check' : 'copy'" @click="copyAltText">{{ copied ? 'Copied!' : 'Copy' }}</UiButton>
               </div>
             </div>
 
@@ -45,7 +45,7 @@
           </div>
 
           <template #footer>
-            <UiButton variant="primary" icon="auto_awesome" class="w-full" :loading="isGenerating" :disabled="!selectedFile" @click="generateAltText">
+            <UiButton variant="primary" icon="sparkles" class="w-full" :loading="isGenerating" :disabled="!selectedFile" @click="generateAltText">
               {{ isGenerating ? 'Generating...' : 'Generate alt text' }}
             </UiButton>
           </template>
@@ -54,14 +54,14 @@
         <UiPanel title="Best practices">
           <ul class="space-y-4">
             <li v-for="tip in bestPractices" :key="tip.title" class="flex items-start gap-3">
-              <span class="material-symbols-outlined text-base text-accent-text" aria-hidden="true">check_circle</span>
+              <AppIcon name="circle-check" class="text-base text-accent-text" />
               <div>
                 <p class="text-sm font-medium text-ink-strong mb-1">{{ tip.title }}</p>
                 <p class="text-sm text-ink-secondary">{{ tip.body }}</p>
               </div>
             </li>
             <li class="flex items-start gap-3">
-              <span class="material-symbols-outlined text-base text-accent-text" aria-hidden="true">check_circle</span>
+              <AppIcon name="circle-check" class="text-base text-accent-text" />
               <div>
                 <p class="text-sm font-medium text-ink-strong mb-1">Decorative images</p>
                 <p class="text-sm text-ink-secondary">Use empty alt text (<UiCode>alt=""</UiCode>) for purely decorative images.</p>

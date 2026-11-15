@@ -15,8 +15,8 @@
       <div v-else class="flex flex-col items-center gap-4 px-6 text-center" :role="state === 'error' ? 'alert' : 'status'">
         <SpotArt :name="state === 'password' ? 'site/building-trust' : 'site/not-found'" size="lg" />
         <p class="text-ink">{{ message }}</p>
-        <UiButton v-if="state === 'error'" variant="primary" icon="refresh" @click="load()">Try again</UiButton>
-        <UiButton v-else-if="state === 'password' && !showPasswordPrompt" variant="primary" icon="lock_open" @click="showPasswordPrompt = true">Enter password</UiButton>
+        <UiButton v-if="state === 'error'" variant="primary" icon="refresh-cw" @click="load()">Try again</UiButton>
+        <UiButton v-else-if="state === 'password' && !showPasswordPrompt" variant="primary" icon="lock-open" @click="showPasswordPrompt = true">Enter password</UiButton>
       </div>
     </div>
 

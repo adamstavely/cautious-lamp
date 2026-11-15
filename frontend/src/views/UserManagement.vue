@@ -9,7 +9,7 @@
 
     <PageSection title="Users" description="Search, filter and manage accounts.">
       <template v-if="canManageUsers" #actions>
-        <UiButton variant="primary" icon="person_add" @click="createOpen = true">Create user</UiButton>
+        <UiButton variant="primary" icon="user-plus" @click="createOpen = true">Create user</UiButton>
       </template>
 
       <div class="flex flex-col gap-4">
@@ -82,7 +82,7 @@
                 </td>
                 <td class="whitespace-nowrap text-ink-secondary">{{ formatDateTime(u.lastLoginAt) }}</td>
                 <td class="whitespace-nowrap text-right">
-                  <UiButton variant="ghost" size="sm" icon="manage_accounts" :aria-label="`Manage ${u.name} (${u.email})`" @click="openUser(u)">
+                  <UiButton variant="ghost" size="sm" icon="user-cog" :aria-label="`Manage ${u.name} (${u.email})`" @click="openUser(u)">
                     Manage
                   </UiButton>
                 </td>
@@ -94,9 +94,9 @@
             <nav class="flex w-full flex-wrap items-center justify-between gap-3 text-sm text-ink-secondary" aria-label="Users pages">
               <span>Showing {{ pageStart + 1 }}–{{ pageEnd }} of {{ filteredUsers.length }}</span>
               <div class="flex items-center gap-2">
-                <UiButton size="sm" icon="chevron_left" :disabled="page === 0" @click="page--">Previous</UiButton>
+                <UiButton size="sm" icon="chevron-left" :disabled="page === 0" @click="page--">Previous</UiButton>
                 <span aria-live="polite">Page {{ page + 1 }} of {{ pageCount }}</span>
-                <UiButton size="sm" trailing-icon="chevron_right" :disabled="page >= pageCount - 1" @click="page++">Next</UiButton>
+                <UiButton size="sm" trailing-icon="chevron-right" :disabled="page >= pageCount - 1" @click="page++">Next</UiButton>
               </div>
             </nav>
           </template>

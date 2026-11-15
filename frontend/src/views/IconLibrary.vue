@@ -34,11 +34,11 @@
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">label</span>
+                      <AppIcon name="tag" class="text-base" />
                       Icon Management
                     </span>
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
+                      <AppIcon name="refresh-ccw" class="text-base" />
                       Updated Jan 15, 2024
                     </span>
                   </div>
@@ -75,14 +75,14 @@
             >
               <div class="flex items-center justify-between mb-4">
                 <h2 class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">upload</span>
+                  <AppIcon name="upload" class="text-indigo-600" />
                   Upload Icon Set
                 </h2>
                 <button
                   @click="showUploadModal = true"
                   class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
                 >
-                  <span class="material-symbols-outlined text-lg">upload</span>
+                  <AppIcon name="upload" class="text-lg" />
                   Upload Icons
                 </button>
               </div>
@@ -98,7 +98,7 @@
               <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Icon Sets</h2>
               <div class="flex items-center gap-4">
                 <div class="relative">
-                  <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">search</span>
+                  <AppIcon name="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" />
                   <input
                     v-model="searchQuery"
                     type="text"
@@ -134,9 +134,9 @@
               >
                 <div class="flex items-center justify-between mb-4">
                   <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span v-if="set.id === 'material'" class="material-symbols-outlined text-indigo-600">palette</span>
+                    <AppIcon name="palette" v-if="set.id === 'material'" class="text-indigo-600" />
                     <span v-else-if="set.id === 'lucide'" class="w-6 h-6 flex-shrink-0" v-html="lucideLogo"></span>
-                    <span v-else class="material-symbols-outlined text-indigo-600">{{ set.sourceIcon }}</span>
+                    <AppIcon :name="set.sourceIcon" v-else class="text-indigo-600" />
                     {{ set.name }}
                   </h3>
                   <span 
@@ -150,7 +150,7 @@
                 </div>
                 <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ set.description }}</p>
                 <div class="flex items-center gap-2 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                  <span class="material-symbols-outlined text-base">{{ set.sourceIcon }}</span>
+                  <AppIcon :name="set.sourceIcon" class="text-base" />
                   {{ set.source }}
                 </div>
               </div>
@@ -209,7 +209,7 @@
                           ? 'text-gray-400 hover:bg-slate-700' 
                           : 'text-gray-400 hover:bg-gray-100')"
                     >
-                      <span class="material-symbols-outlined">grid_view</span>
+                      <AppIcon name="layout-grid" />
                     </button>
                     <button
                       @click="viewMode = 'list'"
@@ -222,7 +222,7 @@
                           ? 'text-gray-400 hover:bg-slate-700' 
                           : 'text-gray-400 hover:bg-gray-100')"
                     >
-                      <span class="material-symbols-outlined">view_list</span>
+                      <AppIcon name="list" />
                     </button>
                   </div>
                 </div>
@@ -270,7 +270,7 @@
                         : 'bg-white text-gray-600 hover:text-indigo-600'"
                       title="Copy icon"
                     >
-                      <span class="material-symbols-outlined text-sm">content_copy</span>
+                      <AppIcon name="copy" class="text-sm" />
                     </button>
                     <button
                       @click.stop="downloadIcon(icon)"
@@ -280,14 +280,14 @@
                         : 'bg-white text-gray-600 hover:text-indigo-600'"
                       title="Download icon"
                     >
-                      <span class="material-symbols-outlined text-sm">download</span>
+                      <AppIcon name="download" class="text-sm" />
                     </button>
                   </div>
                   <div v-if="isIconSelected(icon.id)" class="absolute top-2 left-2">
                     <div class="w-5 h-5 rounded-full flex items-center justify-center"
                       :class="isDarkMode ? 'bg-indigo-500' : 'bg-indigo-600'"
                     >
-                      <span class="material-symbols-outlined text-white text-xs">check</span>
+                      <AppIcon name="check" class="text-white text-xs" />
                     </div>
                   </div>
                 </div>
@@ -326,7 +326,7 @@
                     <div v-if="isIconSelected(icon.id)" class="w-5 h-5 rounded-full flex items-center justify-center"
                       :class="isDarkMode ? 'bg-indigo-500' : 'bg-indigo-600'"
                     >
-                      <span class="material-symbols-outlined text-white text-xs">check</span>
+                      <AppIcon name="check" class="text-white text-xs" />
                     </div>
                     <button
                       @click.stop="copyIcon(icon)"
@@ -336,7 +336,7 @@
                         : 'text-gray-400 hover:text-indigo-600 hover:bg-white'"
                       title="Copy icon"
                     >
-                      <span class="material-symbols-outlined text-lg">content_copy</span>
+                      <AppIcon name="copy" class="text-lg" />
                     </button>
                     <button
                       @click.stop="downloadIcon(icon)"
@@ -346,7 +346,7 @@
                         : 'text-gray-400 hover:text-indigo-600 hover:bg-white'"
                       title="Download icon"
                     >
-                      <span class="material-symbols-outlined text-lg">download</span>
+                      <AppIcon name="download" class="text-lg" />
                     </button>
                   </div>
                 </div>
@@ -372,7 +372,7 @@
                         : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
                       title="Reset customizer"
                     >
-                      <span class="material-symbols-outlined text-lg">refresh</span>
+                      <AppIcon name="refresh-cw" class="text-lg" />
                     </button>
                   </div>
                   
@@ -554,7 +554,7 @@
                 ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' 
                 : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
             >
-              <span class="material-symbols-outlined">close</span>
+              <AppIcon name="x" />
             </button>
           </div>
         </div>
@@ -614,7 +614,7 @@
                 @change="handleFileSelect"
                 class="hidden"
               />
-              <span class="material-symbols-outlined text-4xl mb-2" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">cloud_upload</span>
+              <AppIcon name="cloud-upload" class="text-4xl mb-2" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" />
               <p class="mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Drag and drop icon files here, or
                 <button
@@ -644,7 +644,7 @@
                     ? 'text-red-400 hover:text-red-300' 
                     : 'text-red-600 hover:text-red-700'"
                 >
-                  <span class="material-symbols-outlined text-sm">close</span>
+                  <AppIcon name="x" class="text-sm" />
                 </button>
               </div>
             </div>
@@ -834,7 +834,7 @@ const iconSets = ref([
     description: 'Material Design icons from Google',
     iconCount: 2000,
     icons: [
-      { id: 'home', name: 'home', category: 'Navigation', svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>' },
+      { id: 'house', name: 'house', category: 'Navigation', svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>' },
       { id: 'search', name: 'search', category: 'Action', svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>' },
       { id: 'favorite', name: 'favorite', category: 'Action', svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' },
     ]
@@ -843,7 +843,7 @@ const iconSets = ref([
     id: 'lucide',
     name: 'Lucide Icons',
     source: 'Lucide',
-    sourceIcon: 'auto_awesome',
+    sourceIcon: 'sparkles',
     description: 'Beautiful & consistent icon toolkit',
     iconCount: 0,
     icons: []
@@ -1115,7 +1115,7 @@ const uploadIconSet = async () => {
     id: newSetName.value.toLowerCase().replace(/\s+/g, '-'),
     name: newSetName.value,
     source: newSetSource.value === 'material' ? 'Google' : newSetSource.value === 'lucide' ? 'Lucide' : 'Custom',
-    sourceIcon: newSetSource.value === 'material' ? 'palette' : newSetSource.value === 'lucide' ? 'auto_awesome' : 'upload',
+    sourceIcon: newSetSource.value === 'material' ? 'palette' : newSetSource.value === 'lucide' ? 'sparkles' : 'upload',
     description: `Custom icon set uploaded from ${newSetSource.value}`,
     iconCount: selectedFiles.value.length,
     icons: [] // Would be parsed from uploaded files

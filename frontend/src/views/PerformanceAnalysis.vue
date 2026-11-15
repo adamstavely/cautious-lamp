@@ -16,11 +16,11 @@
 
         <template v-if="analysis">
           <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <UiStat icon="widgets" label="Total components" :value="analysis.summary.totalComponents" />
-            <UiStat icon="storage" label="Total size" :value="formatSize(analysis.summary.totalSize)" />
-            <UiStat icon="calculate" label="Average size" :value="formatSize(analysis.summary.averageSize)" />
+            <UiStat icon="blocks" label="Total components" :value="analysis.summary.totalComponents" />
+            <UiStat icon="hard-drive" label="Total size" :value="formatSize(analysis.summary.totalSize)" />
+            <UiStat icon="calculator" label="Average size" :value="formatSize(analysis.summary.averageSize)" />
             <UiStat
-              icon="expand_more"
+              icon="chevron-down"
               label="Largest component"
               :value="analysis.summary.largestComponent?.componentName"
               :hint="formatSize(analysis.summary.largestComponent?.totalSize)"
@@ -29,7 +29,7 @@
 
           <UiPanel title="Component analysis" flush>
             <template #actions>
-              <UiButton variant="primary" size="sm" icon="refresh" :loading="loading" @click="loadAnalysis">Refresh</UiButton>
+              <UiButton variant="primary" size="sm" icon="refresh-cw" :loading="loading" @click="loadAnalysis">Refresh</UiButton>
             </template>
             <UiEmptyState
               v-if="!analysis.components || analysis.components.length === 0"
@@ -82,7 +82,7 @@
           </p>
           <ul class="grid md:grid-cols-2 gap-3 mt-4">
             <li v-for="benefit in budgetBenefits" :key="benefit.title" class="flex items-start gap-2">
-              <span class="material-symbols-outlined text-lg text-success" aria-hidden="true">check_circle</span>
+              <AppIcon name="circle-check" class="text-lg text-success" />
               <span>
                 <span class="block font-medium text-ink-strong">{{ benefit.title }}</span>
                 <span class="block text-xs text-ink-secondary">{{ benefit.body }}</span>
@@ -92,15 +92,15 @@
         </UiCallout>
 
         <div class="flex justify-end mb-6">
-          <UiButton variant="primary" icon="add" @click="showCreateModal = true">Create budget</UiButton>
+          <UiButton variant="primary" icon="plus" @click="showCreateModal = true">Create budget</UiButton>
         </div>
 
         <div v-if="budgets.length" class="grid gap-4">
           <UiPanel v-for="budget in budgets" :key="budget.id" :title="budget.name" heading-tag="h3">
             <template #actions>
               <UiChip :tone="budget.enabled ? 'success' : 'neutral'">{{ budget.enabled ? 'Active' : 'Disabled' }}</UiChip>
-              <UiButton variant="ghost" size="sm" icon="edit" icon-only :label="`Edit ${budget.name}`" @click="editBudget(budget)" />
-              <UiButton variant="ghost" size="sm" icon="delete" icon-only :label="`Delete ${budget.name}`" @click="deleteBudget(budget.id)" />
+              <UiButton variant="ghost" size="sm" icon="pencil" icon-only :label="`Edit ${budget.name}`" @click="editBudget(budget)" />
+              <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Delete ${budget.name}`" @click="deleteBudget(budget.id)" />
             </template>
 
             <div class="flex items-center gap-2 mb-2">
@@ -207,7 +207,7 @@
     <UiDialog v-model:open="analysisModalOpen" :title="selectedComponent ? selectedComponent.componentName : 'Component'" size="lg">
       <div v-if="selectedComponent" class="space-y-6">
         <p class="flex items-center gap-2 text-sm text-ink-secondary">
-          <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">{{ getComponentIcon(selectedComponent.componentId) }}</span>
+          <AppIcon :name="getComponentIcon(selectedComponent.componentId)" class="text-xl text-accent-text" />
           Detailed bundle analysis
         </p>
 
@@ -515,9 +515,9 @@ const breakdownSlices = computed(() => {
 const breakdownSummary = computed(() => breakdownSlices.value.map((s) => `${s.label} ${formatSize(s.size)}`).join(', '));
 
 const getComponentIcon = (componentId) => {
-  if (!componentId) return 'widgets';
+  if (!componentId) return 'blocks';
   const metadata = componentMetadataService.getComponentMetadata(componentId);
-  return metadata?.icon || 'widgets';
+  return metadata?.icon || 'blocks';
 };
 
 const getComponentPercentile = (componentSize) => {

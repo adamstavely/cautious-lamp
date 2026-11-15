@@ -5,7 +5,7 @@
     <!-- Color variants -->
     <UiPanel title="Color variants" description="Generate tints, shades, and dark variants for each color" heading-tag="h3">
       <div v-if="variants.length === 0" class="flex flex-col items-start gap-3">
-        <UiButton variant="primary" icon="auto_fix_high" label="Generate variants" @click.prevent="generateVariants" />
+        <UiButton variant="primary" icon="wand-sparkles" label="Generate variants" @click.prevent="generateVariants" />
         <p v-if="palette && palette.colors && palette.colors.length > 0" class="text-sm text-ink-muted">
           Click "Generate variants" to create tints and shades
         </p>
@@ -34,12 +34,12 @@
       <ul class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <li v-for="semantic in semanticTypes" :key="semantic.type" class="semantic-card">
           <p class="flex items-center gap-2 mb-2">
-            <span class="material-symbols-outlined text-lg" :class="semanticIconClass[semantic.type]" aria-hidden="true">{{ semantic.icon }}</span>
+            <AppIcon :name="semantic.icon" class="text-lg" :class="semanticIconClass[semantic.type]" />
             <span class="font-semibold text-ink-strong">{{ semantic.label }}</span>
           </p>
 
           <p v-if="semanticMatches[semantic.type]" class="text-sm text-success flex items-center gap-1 mb-2">
-            <span class="material-symbols-outlined text-sm" aria-hidden="true">check</span>
+            <AppIcon name="check" class="text-sm" />
             {{ semanticMatches[semantic.type].name || semanticMatches[semantic.type].hex }}
           </p>
           <div v-else class="mb-2 flex flex-col items-start gap-2">
@@ -57,7 +57,7 @@
               </div>
               <UiButton variant="primary" size="sm" label="Add" @click="addSemanticSuggestion(semantic.type)" />
             </div>
-            <UiButton variant="ghost" size="sm" icon="refresh" label="Generate another" @click="generateSemanticSuggestion(semantic.type)" />
+            <UiButton variant="ghost" size="sm" icon="refresh-cw" label="Generate another" @click="generateSemanticSuggestion(semantic.type)" />
           </div>
         </li>
       </ul>
@@ -72,7 +72,7 @@
       <div v-if="colorScales.length === 0">
         <UiButton
           variant="primary"
-          icon="format_color_fill"
+          icon="paint-bucket"
           label="Generate color scales"
           :disabled="!palette?.colors || palette.colors.length === 0"
           @click.prevent="generateColorScale"
@@ -119,7 +119,7 @@
     <!-- Dark mode generator -->
     <UiPanel title="Dark mode palette generator" description="Generate dark mode variants optimized for dark backgrounds" heading-tag="h3">
       <div v-if="darkModeColors.length === 0">
-        <UiButton variant="primary" icon="dark_mode" label="Generate dark mode variants" @click.prevent="generateDarkModePalette" />
+        <UiButton variant="primary" icon="moon" label="Generate dark mode variants" @click.prevent="generateDarkModePalette" />
       </div>
 
       <div v-else class="flex flex-col items-start gap-4">
@@ -133,7 +133,7 @@
             </li>
           </ul>
         </div>
-        <UiButton icon="add" label="Add dark mode colors to palette" @click="addDarkModeColors" />
+        <UiButton icon="plus" label="Add dark mode colors to palette" @click="addDarkModeColors" />
       </div>
     </UiPanel>
   </div>
@@ -180,9 +180,9 @@ const semanticMatches = ref({});
 const semanticSuggestions = ref({});
 const semanticIconClass = { success: 'text-success', error: 'text-danger', warning: 'text-warning', info: 'text-info' };
 const semanticTypes = [
-  { type: 'success', label: 'Success', color: '#10b981', icon: 'check_circle', targetHue: 140 },
-  { type: 'error', label: 'Error', color: '#ef4444', icon: 'error', targetHue: 0 },
-  { type: 'warning', label: 'Warning', color: '#f59e0b', icon: 'warning', targetHue: 45 },
+  { type: 'success', label: 'Success', color: '#10b981', icon: 'circle-check', targetHue: 140 },
+  { type: 'error', label: 'Error', color: '#ef4444', icon: 'circle-alert', targetHue: 0 },
+  { type: 'warning', label: 'Warning', color: '#f59e0b', icon: 'triangle-alert', targetHue: 45 },
   { type: 'info', label: 'Info', color: '#3b82f6', icon: 'info', targetHue: 210 },
 ];
 const darkModeColors = ref([]);

@@ -1,7 +1,7 @@
 <template>
   <component :is="to ? 'router-link' : 'a'" v-bind="to ? { to } : { href, target: external ? '_blank' : undefined, rel: external ? 'noopener noreferrer' : undefined }" class="ui-link group">
     <slot />
-    <span v-if="arrow || external" class="material-symbols-outlined ui-link-arrow" aria-hidden="true">{{ external ? 'open_in_new' : 'arrow_forward' }}</span>
+    <AppIcon :name="external ? 'external-link' : 'arrow-right'" v-if="arrow || external" class="ui-link-arrow" />
     <span v-if="external" class="sr-only">(opens in a new tab)</span>
   </component>
 </template>

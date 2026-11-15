@@ -32,7 +32,7 @@
                     to="/hcd/laws-of-ux"
                     class="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors text-sm"
                   >
-                    <span class="material-symbols-outlined text-base">arrow_back</span>
+                    <AppIcon name="arrow-left" class="text-base" />
                     Back to Laws of UX
                   </router-link>
                 </div>
@@ -55,7 +55,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h2 class="text-2xl font-bold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">info</span>
+                <AppIcon name="info" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                 Overview
               </h2>
               <p class="text-lg leading-relaxed" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -71,7 +71,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h2 class="text-2xl font-bold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">lightbulb</span>
+                <AppIcon name="lightbulb" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                 Explanation
               </h2>
               <p class="text-lg leading-relaxed" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -87,7 +87,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h2 class="text-2xl font-bold mb-6 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">build</span>
+                <AppIcon name="wrench" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                 Design Applications
               </h2>
               <ul class="space-y-3">
@@ -97,7 +97,7 @@
                   class="flex items-start gap-3"
                 >
                   <span class="mt-1.5 flex-shrink-0" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-lg">check_circle</span>
+                    <AppIcon name="circle-check" class="text-lg" />
                   </span>
                   <span class="text-lg leading-relaxed" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                     {{ application }}
@@ -114,7 +114,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h2 class="text-2xl font-bold mb-6 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">auto_awesome</span>
+                <AppIcon name="sparkles" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                 Examples
               </h2>
               <ul class="space-y-3">
@@ -124,7 +124,7 @@
                   class="flex items-start gap-3"
                 >
                   <span class="mt-1.5 flex-shrink-0" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-lg">star</span>
+                    <AppIcon name="star" class="text-lg" />
                   </span>
                   <span class="text-lg leading-relaxed" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                     {{ example }}
@@ -141,7 +141,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h2 class="text-2xl font-bold mb-6 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">menu_book</span>
+                <AppIcon name="book-open" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                 References
               </h2>
               <ul class="space-y-3">
@@ -151,7 +151,7 @@
                   class="flex items-start gap-3"
                 >
                   <span class="mt-1.5 flex-shrink-0" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-lg">article</span>
+                    <AppIcon name="newspaper" class="text-lg" />
                   </span>
                   <span class="text-lg leading-relaxed" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
                     {{ reference }}

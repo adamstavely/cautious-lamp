@@ -24,7 +24,7 @@
     <!-- Color Blindness Simulation -->
     <section v-if="palette.colors && palette.colors.length > 0" class="mb-8">
       <h3 class="text-lg font-semibold text-ink-strong mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">visibility</span>
+        <AppIcon name="eye" class="text-xl text-accent-text" />
         Color blindness simulation
       </h3>
       <p class="text-sm text-ink-secondary mb-4">
@@ -50,7 +50,7 @@
     <!-- Readability Testing -->
     <section v-if="palette.colors && palette.colors.length > 0" class="mb-8">
       <h3 class="text-lg font-semibold text-ink-strong mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">text_fields</span>
+        <AppIcon name="type" class="text-xl text-accent-text" />
         Readability testing
       </h3>
       <p class="text-sm text-ink-secondary mb-4">
@@ -85,7 +85,7 @@
     <div v-else>
       <section v-if="contrastResults.length > 0" class="mb-8">
         <h3 class="text-lg font-semibold text-ink-strong flex items-center gap-2 mb-6">
-          <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">compare_arrows</span>
+          <AppIcon name="arrow-left-right" class="text-xl text-accent-text" />
           Contrast pairs
         </h3>
 
@@ -114,7 +114,7 @@
           heading-tag="h3"
         >
           <template #actions>
-            <UiButton variant="primary" size="sm" icon="refresh" :loading="loadingStrategic" @click="loadStrategicSuggestions">Refresh suggestions</UiButton>
+            <UiButton variant="primary" size="sm" icon="refresh-cw" :loading="loadingStrategic" @click="loadStrategicSuggestions">Refresh suggestions</UiButton>
           </template>
 
           <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -126,7 +126,7 @@
                     <UiColorSample class="w-16 h-16 rounded-tile border-2 shrink-0" :color="suggestion.replaceColor" />
                     <div class="text-xs font-code text-ink-secondary mt-1">{{ suggestion.replaceColor }}</div>
                   </div>
-                  <span class="material-symbols-outlined text-ink-muted" aria-label="becomes">arrow_forward</span>
+                  <AppIcon name="arrow-right" class="text-ink-muted" aria-label="becomes" />
                   <div class="text-center">
                     <div class="text-xs text-ink-muted mb-1">After</div>
                     <UiColorSample class="w-16 h-16 rounded-tile border-2 shrink-0" :color="suggestion.hex" />
@@ -160,7 +160,7 @@
               <UiButton v-if="suggestion.replaceColor" variant="primary" size="sm" class="w-full justify-center" @click="applyReplacement(suggestion.replaceColor, suggestion.hex)">
                 Replace color
               </UiButton>
-              <UiButton v-else variant="primary" size="sm" icon="add" class="w-full justify-center" @click="applyStrategicColor(suggestion.hex)">
+              <UiButton v-else variant="primary" size="sm" icon="plus" class="w-full justify-center" @click="applyStrategicColor(suggestion.hex)">
                 Add to palette
               </UiButton>
             </li>
@@ -280,8 +280,8 @@
 
     <!-- Navigation -->
     <div class="flex justify-between mt-8">
-      <UiButton icon="arrow_back" @click="$emit('back')">Back</UiButton>
-      <UiButton variant="primary" trailing-icon="arrow_forward" @click="$emit('next')">Next: Assign roles</UiButton>
+      <UiButton icon="arrow-left" @click="$emit('back')">Back</UiButton>
+      <UiButton variant="primary" trailing-icon="arrow-right" @click="$emit('next')">Next: Assign roles</UiButton>
     </div>
   </div>
 </template>

@@ -14,7 +14,7 @@
           <UiInput v-model="searchQuery" type="search" icon="search" label="Search tokens" placeholder="Search tokens..." />
         </div>
         <UiSegmented v-model="viewMode" :options="viewOptions" label="View" />
-        <UiButton icon="restart_alt" @click="resetView">Reset view</UiButton>
+        <UiButton icon="rotate-ccw" @click="resetView">Reset view</UiButton>
       </div>
     </UiPanel>
 
@@ -30,7 +30,7 @@
                   variant="ghost"
                   size="sm"
                   icon-only
-                  :icon="expandedChains.has(chain.root) ? 'expand_more' : 'chevron_right'"
+                  :icon="expandedChains.has(chain.root) ? 'chevron-down' : 'chevron-right'"
                   :label="`${expandedChains.has(chain.root) ? 'Collapse' : 'Expand'} ${chain.root}`"
                   :aria-expanded="expandedChains.has(chain.root)"
                   @click="toggleChain(chain.root)"

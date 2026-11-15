@@ -64,7 +64,7 @@
             >
               <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  <span class="material-symbols-outlined text-indigo-600">check_circle</span>
+                  <AppIcon name="circle-check" class="text-indigo-600" />
                   Production Ready
                 </span>
                 <span class="w-3 h-3 rounded-full bg-green-500"></span>
@@ -84,7 +84,7 @@
             >
               <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  <span class="material-symbols-outlined text-indigo-600">event</span>
+                  <AppIcon name="calendar-check" class="text-indigo-600" />
                   Planned
                 </span>
                 <span class="w-3 h-3 rounded-full bg-blue-500"></span>
@@ -104,7 +104,7 @@
             >
               <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  <span class="material-symbols-outlined text-indigo-600">progress_activity</span>
+                  <AppIcon name="loader-circle" class="text-indigo-600" />
                   In Progress
                 </span>
                 <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
@@ -124,7 +124,7 @@
             >
               <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  <span class="material-symbols-outlined text-indigo-600">schedule</span>
+                  <AppIcon name="clock" class="text-indigo-600" />
                   Sunsetting
                 </span>
                 <span class="w-3 h-3 rounded-full bg-orange-500"></span>
@@ -144,7 +144,7 @@
             >
               <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  <span class="material-symbols-outlined text-indigo-600">science</span>
+                  <AppIcon name="flask-conical" class="text-indigo-600" />
                   Experimental
                 </span>
                 <span class="w-3 h-3 rounded-full bg-purple-500"></span>
@@ -164,7 +164,7 @@
             >
               <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  <span class="material-symbols-outlined text-indigo-600">warning</span>
+                  <AppIcon name="triangle-alert" class="text-indigo-600" />
                   Deprecated
                 </span>
                 <span class="w-3 h-3 rounded-full bg-red-500"></span>
@@ -187,7 +187,7 @@
               :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
             >
               <h2 class="text-2xl font-bold flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">widgets</span>
+                <AppIcon name="blocks" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                 All Components
               </h2>
             </div>
@@ -213,7 +213,7 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="flex items-center gap-3">
                         <Pipette v-if="component.name === 'Color Picker'" :size="20" :stroke-width="2" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
-                        <span v-else class="material-symbols-outlined" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">{{ component.icon }}</span>
+                        <AppIcon :name="component.icon" v-else :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                         <span class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ component.name }}</span>
                       </div>
                     </td>
