@@ -10,14 +10,27 @@ import {
   OnModuleInit,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { AuthPrincipal, hasPermission } from '../auth/principal';
 import { EncryptionService } from '../common/security/encryption.service';
-import { DesignSystemService } from '../design-system/design-system.service';
+import { DesignSystemService, TokenChangedError } from '../design-system/design-system.service';
 import { startAutoSyncTimer } from '../design-tools/auto-sync-timer';
 import { DESIGN_TOOL_READER, DesignToolReader } from '../design-tools/design-tool-reader';
 import { DesignToolError } from '../design-tools/design-tool-http';
 import { SUPPORTED_DESIGN_TOOLS } from '../design-tools/design-tool.types';
-import { SYNC_RUN_STORE, ItemOutcome, SyncActor, SyncRun, SyncRunLog, SyncRunSummary, newRunId, summarize } from '../design-tools/sync-runs';
+import {
+  ApplyClaim,
+  ItemOutcome,
+  ItemResult,
+  SYNC_RUN_STORE,
+  SyncActor,
+  SyncRun,
+  SyncRunLog,
+  SyncRunSummary,
+  isNewerRun,
+  newRunId,
+  summarize,
+} from '../design-tools/sync-runs';
 import { BaselineEntry, SYNC_CHOICES, SyncChoice, TokenDiffItem, allowedChoices, diffTokens } from '../design-tools/token-diff';
 import { DocumentStore } from '../reviews/document-store';
 import { Permission } from '../rbac/rbac.service';
@@ -45,7 +58,9 @@ export interface TokenSyncConnection extends StoredConnection {
   enabled: boolean;
   lastSync?: string;
   lastSyncVersion?: string;
+  /** The latest pull (isNewerRun), and when it started; an older pull finishing later never replaces it */
   lastRunId?: string;
+  lastRunStartedAt?: string;
   /** Explicit names for design tokens whose mapped name isn't the one wanted, by design token id */
   mappings: TokenMapping[];
   /** Each synced token's design and code values when both sides last agreed, for the three-way diff */
@@ -67,6 +82,15 @@ function parseMappings(value: unknown): TokenMapping[] {
     return { designToolTokenId, designSystemTokenName, ...(typeof autoMap === 'boolean' ? { autoMap } : {}) };
   });
 }
+
+/**
+ * How long an apply's claim on a run lasts without progress. Each written item
+ * renews it; once it lapses (the server stopped mid-apply), anyone allowed to
+ * apply the run can finish it.
+ */
+export const APPLY_LEASE_MS = 2 * 60_000;
+
+const DRIFTED = 'Changed in code since this diff was made; pull again';
 
 /** Recorded as the starter of scheduled pulls */
 const SCHEDULER: SyncActor = { type: 'service', id: 'token-sync-scheduler', name: 'Scheduled token sync' };
@@ -172,13 +196,28 @@ export class TokenSyncService implements OnModuleInit, OnModuleDestroy {
   /**
    * Applies a run's diff with a choice per item (`choices[itemId]`; an item
    * left out gets its default, which is never destructive). Every change is
-   * checked against the token the diff was made from, so one changed in code
-   * since then fails instead of being overwritten.
+   * written only if the stored token still has the value the diff was made
+   * from, so one changed since then fails instead of being overwritten.
+   *
+   * The caller first claims the run (compare-and-swap); only the caller whose
+   * claim lands writes anything, and everyone else gets a 409. Each item's
+   * outcome is recorded as it is written. An apply that stopped part-way (its
+   * claim lapsed after APPLY_LEASE_MS) is finished by applying the run again,
+   * with the choices it was started with: recorded items are not redone, and
+   * an item already holding its design value counts as written.
    */
   async applyRun(principal: AuthPrincipal, runId: string, body: unknown): Promise<SyncRun> {
     const run = await this.getRun(principal, runId);
     const items = run.tokenItems ?? [];
-    const choices = parseChoices(body, items);
+    const now = Date.now();
+    const resuming = run.status === 'applying';
+    if (resuming && run.claim && Date.parse(run.claim.expiresAt) > now) {
+      throw new ConflictException('This diff is being applied by someone else');
+    }
+    if (!resuming && run.status !== 'review') {
+      throw new ConflictException(run.status === 'superseded' ? 'A newer pull replaced this diff; review and apply that one' : 'This diff has already been applied');
+    }
+    const choices = resuming ? (run.claim?.choices ?? {}) : parseChoices(body, items);
     const plan = items.map((item) => ({ item, choice: choices[item.id] ?? item.defaultChoice }));
 
     const needed = new Set<Permission>();
@@ -190,29 +229,60 @@ export class TokenSyncService implements OnModuleInit, OnModuleDestroy {
     const missing = [...needed].filter((p) => !hasPermission(principal, p));
     if (missing.length) throw new ForbiddenException(`Applying these changes requires ${missing.join(', ')}`);
 
-    if (run.status !== 'review') {
-      throw new ConflictException(run.status === 'superseded' ? 'A newer pull replaced this diff; review and apply that one' : 'This diff has already been applied');
-    }
-    // Claim the run, so two people applying at once can't both write
-    let claimed = false;
-    await this.runs.update(run.id, (r) => {
-      if (r.status === 'review') {
-        r.status = 'applying';
-        claimed = true;
-      }
+    // Claim the run: only the caller whose compare-and-swap lands may write
+    const claim: ApplyClaim = { token: randomUUID(), by: actorOf(principal), at: new Date(now).toISOString(), expiresAt: leaseFrom(now), choices };
+    const previous = run.claim?.token;
+    const claimed = await this.runs.update(run.id, (r) => {
+      const claimable = resuming ? r.status === 'applying' && r.claim?.token === previous : r.status === 'review';
+      if (!claimable) return false;
+      r.status = 'applying';
+      r.claim = claim;
+      if (!resuming) r.progress = [];
     });
     if (!claimed) throw new ConflictException('This diff is being applied by someone else');
 
-    const results: NonNullable<SyncRun['applied']>['results'] = [];
+    try {
+      return await this.finishApply(principal, run, plan, claim, resuming);
+    } catch (error) {
+      // Let the apply be finished straight away rather than after the lease
+      await this.runs
+        .update(run.id, (r) => {
+          if (r.claim?.token !== claim.token) return false;
+          r.claim.expiresAt = new Date().toISOString();
+        })
+        .catch(() => undefined);
+      throw error;
+    }
+  }
+
+  private async finishApply(
+    principal: AuthPrincipal,
+    run: SyncRun,
+    plan: Array<{ item: TokenDiffItem; choice: SyncChoice }>,
+    claim: ApplyClaim,
+    resuming: boolean,
+  ): Promise<SyncRun> {
+    const done = new Map((resuming ? (run.progress ?? []) : []).map((result) => [result.id, result]));
+    const results: ItemResult[] = [];
     for (const { item, choice } of plan) {
-      results.push({ id: item.id, choice, ...(await this.applyItem(item, choice)) });
+      const earlier = done.get(item.id);
+      if (earlier) {
+        results.push(earlier);
+        continue;
+      }
+      const result: ItemResult = { id: item.id, choice, ...(await this.applyItem(item, choice, resuming)) };
+      results.push(result);
+      await this.holdClaim(run.id, claim, (r) => {
+        r.progress = [...(r.progress ?? []).filter((p) => p.id !== result.id), result];
+      });
     }
 
     const counts = { created: 0, updated: 0, deleted: 0, 'kept-code': 0, skipped: 0, failed: 0 } as Record<ItemOutcome, number>;
     for (const result of results) counts[result.outcome]++;
     const now = new Date().toISOString();
-    const byId = new Map(items.map((item) => [item.id, item]));
+    const byId = new Map(plan.map(({ item }) => [item.id, item]));
 
+    // Folding the outcomes into the baseline is idempotent, so a resumed apply can repeat it
     const connection = await this.registry.patch(run.connectionId, (c) => {
       const baseline = { ...(c.baseline ?? {}), ...(run.matched ?? {}) };
       for (const result of results) {
@@ -226,14 +296,29 @@ export class TokenSyncService implements OnModuleInit, OnModuleDestroy {
       c.lastSync = now;
       if (run.fileVersion) c.lastSyncVersion = run.fileVersion;
     });
-    this.logger.log(`Token sync ${run.id} on ${connection.id} applied by ${principal.id}: ${JSON.stringify(counts)}`);
 
+    const status = counts.failed ? 'partial' : 'applied';
     const applied: SyncRun['applied'] = { by: actorOf(principal), at: now, counts, results };
-    await this.runs.update(run.id, (r) => {
-      r.status = counts.failed ? 'partial' : 'applied';
+    await this.holdClaim(run.id, claim, (r) => {
+      r.status = status;
       r.applied = applied;
+      delete r.claim;
+      delete r.progress;
     });
-    return { ...run, status: counts.failed ? 'partial' : 'applied', applied };
+    this.logger.log(`Token sync ${run.id} on ${connection.id} applied by ${principal.id}: ${JSON.stringify(counts)}`);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { claim: _claim, progress: _progress, ...rest } = run;
+    return { ...rest, status, applied };
+  }
+
+  /** Writes to the run as the holder of `claim`, renewing it; a 409 if the claim was taken over */
+  private async holdClaim(runId: string, claim: ApplyClaim, change: (run: SyncRun) => void): Promise<void> {
+    const held = await this.runs.update(runId, (r) => {
+      if (r.status !== 'applying' || r.claim?.token !== claim.token) return false;
+      change(r);
+      if (r.claim) r.claim.expiresAt = leaseFrom(Date.now());
+    });
+    if (!held) throw new ConflictException('Another apply took over this diff');
   }
 
   async enableAutoSync(principal: AuthPrincipal, connectionId: string, body?: { intervalHours?: unknown }): Promise<TokenSyncConnectionView> {
@@ -309,7 +394,9 @@ export class TokenSyncService implements OnModuleInit, OnModuleDestroy {
     }
     await this.runs.record(run);
     await this.registry.patch(connection.id, (c) => {
+      if (c.lastRunId && c.lastRunStartedAt && !isNewerRun(run, { id: c.lastRunId, startedAt: c.lastRunStartedAt })) return;
       c.lastRunId = run.id;
+      c.lastRunStartedAt = run.startedAt;
       if (run.status === 'applied') {
         c.baseline = { ...(c.baseline ?? {}), ...(run.matched ?? {}) };
         c.lastSync = run.finishedAt;
@@ -319,19 +406,19 @@ export class TokenSyncService implements OnModuleInit, OnModuleDestroy {
     return run;
   }
 
-  private async applyItem(item: TokenDiffItem, choice: SyncChoice): Promise<{ outcome: ItemOutcome; error?: string }> {
+  /**
+   * Writes one chosen change, conditional on the stored token still holding
+   * the value the diff was made from. When `resuming`, a token that already
+   * holds the design value (this apply wrote it before stopping) counts as written.
+   */
+  private async applyItem(item: TokenDiffItem, choice: SyncChoice, resuming: boolean): Promise<{ outcome: ItemOutcome; error?: string }> {
     if (choice === 'skip') return { outcome: 'skipped' };
     if (choice === 'keep-code') return { outcome: 'kept-code' };
-    const current = this.designSystemService.getTokenByName(item.id);
-    if ((current?.value ?? undefined) !== item.codeValue) {
-      return { outcome: 'failed', error: 'Changed in code since this diff was made; pull again' };
-    }
+    const outcome: ItemOutcome = item.kind === 'removed' ? 'deleted' : item.codeValue === undefined ? 'created' : 'updated';
     try {
       if (item.kind === 'removed') {
-        await this.designSystemService.deleteToken(item.id);
-        return { outcome: 'deleted' };
-      }
-      if (!current) {
+        await this.designSystemService.deleteToken(item.id, { expectedValue: item.codeValue! });
+      } else if (item.codeValue === undefined) {
         await this.designSystemService.createToken({
           name: item.id,
           value: item.designValue!,
@@ -340,15 +427,24 @@ export class TokenSyncService implements OnModuleInit, OnModuleDestroy {
           ...(item.description ? { description: item.description } : {}),
           tags: ['design-sync'],
         });
-        return { outcome: 'created' };
+      } else {
+        await this.designSystemService.updateToken(item.id, { value: item.designValue! }, { expectedValue: item.codeValue });
       }
-      await this.designSystemService.updateToken(item.id, { value: item.designValue! });
-      return { outcome: 'updated' };
+      return { outcome };
     } catch (error) {
-      return { outcome: 'failed', error: (error as Error).message };
+      // A create finding the token already there is the same drift as a changed value
+      const drifted = error instanceof TokenChangedError || (outcome === 'created' && error instanceof ConflictException);
+      if (!drifted) return { outcome: 'failed', error: (error as Error).message };
+      if (resuming) {
+        const stored = await this.designSystemService.readStoredToken(item.id);
+        if (item.kind === 'removed' ? !stored : stored?.value === item.designValue) return { outcome };
+      }
+      return { outcome: 'failed', error: DRIFTED };
     }
   }
 }
+
+const leaseFrom = (ms: number) => new Date(ms + APPLY_LEASE_MS).toISOString();
 
 /** `{ choices: { [itemId]: choice } }`, each a choice the item allows */
 function parseChoices(body: unknown, items: TokenDiffItem[]): Record<string, SyncChoice> {

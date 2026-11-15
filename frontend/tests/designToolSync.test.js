@@ -156,6 +156,49 @@ describe('Token sync page', () => {
     expect(text()).toContain('Applying these changes requires token:create');
   });
 
+  it('offers to finish an apply that stopped part-way, showing the outcomes recorded so far', async () => {
+    responses['POST /api/v1/token-sync/connections/conn-1/sync'] = {
+      ...structuredClone(TOKEN_RUN),
+      status: 'applying',
+      claim: { by: { name: 'Dana' }, expiresAt: '2026-11-01T10:07:00.000Z', choices: {} },
+      progress: [{ id: 'color.secondary', choice: 'take-design', outcome: 'updated' }],
+    };
+    responses['POST /api/v1/token-sync/runs/run-1/apply'] = () => ({
+      status: 'applied',
+      applied: { by: { name: 'Lee' }, at: '2026-11-01T10:09:00.000Z', counts: { created: 1, updated: 1, deleted: 0, 'kept-code': 0, skipped: 2, failed: 0 }, results: [] },
+    });
+    page = await mountView(TokenSync, { path: '/tokens/sync' });
+    await flush();
+    button('Pull changes').click();
+    await flush();
+
+    expect(text()).toContain('This apply stopped part-way');
+    expect(text()).toContain('Dana started applying these changes');
+    expect(text()).toContain('Updated');
+    expect(button('Apply choices')).toBeUndefined();
+    button('Finish applying').click();
+    await flush();
+    // Finishing uses the choices the apply started with, so none are sent
+    expect(calls.find((c) => c.key === 'POST /api/v1/token-sync/runs/run-1/apply').data).toEqual({});
+    expect(text()).toContain('Your choices were applied.');
+    expect(button('Finish applying')).toBeUndefined();
+  });
+
+  it('says a run is being applied, without a button, while its claim holds', async () => {
+    responses['POST /api/v1/token-sync/connections/conn-1/sync'] = {
+      ...structuredClone(TOKEN_RUN),
+      status: 'applying',
+      claim: { by: { name: 'Dana' }, expiresAt: new Date(Date.now() + 60_000).toISOString(), choices: {} },
+      progress: [],
+    };
+    page = await mountView(TokenSync, { path: '/tokens/sync' });
+    await flush();
+    button('Pull changes').click();
+    await flush();
+    expect(text()).toContain('Dana is applying these changes');
+    expect(button('Finish applying')).toBeUndefined();
+  });
+
   it('shows why a pull failed', async () => {
     responses['POST /api/v1/token-sync/connections/conn-1/sync'] = fail(422, 'Refused to contact 127.0.0.1:9001: URLs that point to private or internal addresses are not allowed');
     page = await mountView(TokenSync, { path: '/tokens/sync' });

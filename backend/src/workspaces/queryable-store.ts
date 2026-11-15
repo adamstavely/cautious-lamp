@@ -50,8 +50,8 @@ export class EsQueryableStore<T extends { id: string }> implements QueryableStor
     return this.inner.replace(doc, version);
   }
 
-  delete(id: string): Promise<boolean> {
-    return this.inner.delete(id);
+  delete(id: string, version?: DocVersion): Promise<boolean> {
+    return this.inner.delete(id, version);
   }
 
   list(options?: { excludes?: string[] }): Promise<T[]> {

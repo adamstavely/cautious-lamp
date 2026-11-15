@@ -76,7 +76,11 @@ Tokens only changed in code since the last sync aren't proposed (code wins). Tok
 - **keep-code** leaves the token and records the design value in the baseline, so the same design value isn't proposed again; a later design change is.
 - **skip** changes nothing; the item comes back on the next pull.
 
-A token changed in code after the diff was made isn't overwritten: that item fails with "Changed in code since this diff was made". A run is applied once; pulling again marks older unapplied runs as superseded.
+A token changed after the diff was made isn't overwritten, on whichever server the change was made: each write checks the stored value against the one the diff was made from in the same compare-and-swap, and an item that no longer matches fails with "Changed in code since this diff was made".
+
+A run is applied once. Applying first claims the run with a compare-and-swap; only the caller whose claim lands writes anything, and a second caller at the same time gets 409. Each item's outcome is recorded on the run as it is written, and the claim is renewed with it. If an apply stops part-way (an error, or the server stopping), the run stays `applying` with its outcomes so far; once its claim lapses (immediately after an error, two minutes after a server stopped), applying it again finishes it with the choices it was started with. Items already recorded aren't written again, and a token that already holds its design value counts as written. The Token sync page shows **Finish applying** for such a run.
+
+Of the diffs waiting for review, only the latest pull (by start time) can be applied; the others are marked superseded, including when two pulls finish at the same time or an earlier pull finishes later. The connection's `lastRunId` always names that latest pull.
 
 ### History
 
