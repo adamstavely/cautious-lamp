@@ -1,14 +1,37 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { ChangelogAggregationService } from './changelog-aggregation.service';
+import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
+import { AuthPrincipal, Principal } from '../auth/principal';
+import { CHANGE_ACTIONS, ChangeAction, ChangeEntityType } from '../notifications/notification.types';
+import { ChangelogAggregationService, ChangelogFilters } from './changelog-aggregation.service';
 
-@Controller('changelog')
+const ENTITY_TYPES: readonly ChangeEntityType[] = ['component', 'token', 'pattern', 'workspace', 'application', 'system'];
+
+function parseDate(value: string | undefined, name: string): Date | undefined {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw new BadRequestException(`${name} must be a date`);
+  return date;
+}
+
+function parseType(value: string | undefined): ChangeEntityType | undefined {
+  if (!value) return undefined;
+  if (!ENTITY_TYPES.includes(value as ChangeEntityType)) throw new BadRequestException(`type must be one of ${ENTITY_TYPES.join(', ')}`);
+  return value as ChangeEntityType;
+}
+
+function parseAction(value: string | undefined): ChangeAction | undefined {
+  if (!value) return undefined;
+  if (!CHANGE_ACTIONS.includes(value as ChangeAction)) throw new BadRequestException(`action must be one of ${CHANGE_ACTIONS.join(', ')}`);
+  return value as ChangeAction;
+}
+
+/** The design-system changelog, as the caller may see it (workspace items only to their workspaces) */
+@Controller('api/v1/changelog')
 export class ChangelogAggregationController {
-  constructor(
-    private readonly changelogService: ChangelogAggregationService,
-  ) {}
+  constructor(private readonly changelogService: ChangelogAggregationService) {}
 
   @Get('aggregated')
   getAggregatedChangelog(
+    @Principal() principal: AuthPrincipal,
     @Query('version') version?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
@@ -16,18 +39,19 @@ export class ChangelogAggregationController {
     @Query('breakingOnly') breakingOnly?: string,
     @Query('workspaceId') workspaceId?: string,
   ) {
-    const filters: any = {};
-    if (version) filters.version = version;
-    if (startDate) filters.startDate = new Date(startDate);
-    if (endDate) filters.endDate = new Date(endDate);
-    if (type) filters.type = type;
-    if (breakingOnly === 'true') filters.breakingOnly = true;
-    if (workspaceId) filters.workspaceId = workspaceId;
-    return this.changelogService.getAggregatedChangelog(filters);
+    return this.changelogService.getAggregatedChangelog(principal, {
+      version: version || undefined,
+      startDate: parseDate(startDate, 'startDate'),
+      endDate: parseDate(endDate, 'endDate'),
+      type: parseType(type),
+      breakingOnly: breakingOnly === 'true',
+      workspaceId: workspaceId || undefined,
+    });
   }
 
   @Get('entries')
   getChangelogEntries(
+    @Principal() principal: AuthPrincipal,
     @Query('type') type?: string,
     @Query('entityId') entityId?: string,
     @Query('action') action?: string,
@@ -35,41 +59,34 @@ export class ChangelogAggregationController {
     @Query('since') since?: string,
     @Query('workspaceId') workspaceId?: string,
   ) {
-    const filters: any = {};
-    if (type) filters.type = type;
-    if (entityId) filters.entityId = entityId;
-    if (action) filters.action = action;
-    if (breakingOnly === 'true') filters.breakingOnly = true;
-    if (since) filters.since = new Date(since);
-    if (workspaceId) filters.workspaceId = workspaceId;
-    return this.changelogService.getChangelogEntries(filters);
-  }
-
-  @Get('components/:componentId')
-  getComponentChangelog(
-    @Query('componentId') componentId: string,
-  ) {
-    return this.changelogService.getComponentChangelog(componentId);
-  }
-
-  @Get('tokens/:tokenName')
-  getTokenChangelog(
-    @Query('tokenName') tokenName: string,
-  ) {
-    return this.changelogService.getTokenChangelog(tokenName);
+    const filters: ChangelogFilters = {
+      type: parseType(type),
+      entityId: entityId || undefined,
+      action: parseAction(action),
+      breakingOnly: breakingOnly === 'true',
+      since: parseDate(since, 'since'),
+      workspaceId: workspaceId || undefined,
+    };
+    return this.changelogService.getChangelogEntries(principal, filters);
   }
 
   @Get('breaking-changes')
-  getBreakingChanges(
-    @Query('since') since?: string,
-  ) {
-    return this.changelogService.getBreakingChanges(since ? new Date(since) : undefined);
+  getBreakingChanges(@Principal() principal: AuthPrincipal, @Query('since') since?: string) {
+    return this.changelogService.getBreakingChanges(principal, parseDate(since, 'since'));
+  }
+
+  @Get('components/:componentId')
+  getComponentChangelog(@Principal() principal: AuthPrincipal, @Param('componentId') componentId: string) {
+    return this.changelogService.getComponentChangelog(principal, componentId);
+  }
+
+  @Get('tokens/:tokenId')
+  getTokenChangelog(@Principal() principal: AuthPrincipal, @Param('tokenId') tokenId: string) {
+    return this.changelogService.getTokenChangelog(principal, tokenId);
   }
 
   @Get('release-notes/:version')
-  generateReleaseNotes(
-    @Query('version') version: string,
-  ) {
-    return this.changelogService.generateReleaseNotes(version);
+  generateReleaseNotes(@Principal() principal: AuthPrincipal, @Param('version') version: string) {
+    return this.changelogService.generateReleaseNotes(principal, version);
   }
 }

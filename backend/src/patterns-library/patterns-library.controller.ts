@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, BadRequestException, Inject } from '@nestjs/common';
 import { PatternsLibraryService, ComponentPattern } from './patterns-library.service';
-import { RequirePermission } from '../auth/principal';
+import { AuthPrincipal, Principal, RequirePermission } from '../auth/principal';
 import { Permission } from '../rbac/rbac.service';
+import { CHANGE_RECORDER, ChangeRecorder } from '../notifications/notification.types';
 
 const PATTERN_CATEGORIES: ReadonlyArray<ComponentPattern['category']> = ['common', 'anti-pattern', 'best-practice', 'accessibility', 'performance', 'composition'];
 
@@ -18,10 +19,16 @@ function assertPatternFields(data: Partial<ComponentPattern> | undefined, creati
   }
 }
 
+/** Tagging a pattern "deprecated" deprecates it */
+const isDeprecated = (tags?: string[]) => (tags ?? []).some((tag) => tag.toLowerCase() === 'deprecated');
+
+const PATTERN_LINK = '/patterns';
+
 @Controller('patterns-library')
 export class PatternsLibraryController {
   constructor(
     private readonly patternsService: PatternsLibraryService,
+    @Inject(CHANGE_RECORDER) private readonly changes: ChangeRecorder,
   ) {}
 
   @Get('patterns')
@@ -64,7 +71,8 @@ export class PatternsLibraryController {
 
   @Post('patterns')
   @RequirePermission(Permission.PATTERN_CREATE)
-  createPattern(
+  async createPattern(
+    @Principal() principal: AuthPrincipal,
     @Body() data: {
       name: string;
       description: string;
@@ -79,32 +87,57 @@ export class PatternsLibraryController {
     },
   ) {
     assertPatternFields(data, true);
-    return this.patternsService.createPattern(data);
+    const pattern = this.patternsService.createPattern(data);
+    await this.changes.record(
+      { type: 'pattern', entityId: pattern.id, entityName: pattern.name, action: 'created', changes: [{ description: pattern.description }], link: PATTERN_LINK },
+      principal,
+    );
+    return pattern;
   }
 
   @Put('patterns/:id')
   @RequirePermission(Permission.PATTERN_EDIT)
-  updatePattern(
+  async updatePattern(
+    @Principal() principal: AuthPrincipal,
     @Param('id') patternId: string,
     @Body() updates: Partial<Omit<ComponentPattern, 'id' | 'createdAt'>>,
   ) {
     assertPatternFields(updates, false);
+    const wasDeprecated = isDeprecated(this.patternsService.getPattern(patternId)?.tags);
     const pattern = this.patternsService.updatePattern(patternId, updates);
     if (!pattern) {
       throw new BadRequestException(`Pattern '${patternId}' not found`);
     }
+    const deprecated = !wasDeprecated && isDeprecated(pattern.tags);
+    await this.changes.record(
+      {
+        type: 'pattern',
+        entityId: pattern.id,
+        entityName: pattern.name,
+        action: deprecated ? 'deprecated' : 'updated',
+        changes: Object.keys(updates ?? {}).map((field) => ({ field, description: `${field} changed` })),
+        link: PATTERN_LINK,
+      },
+      principal,
+    );
     return pattern;
   }
 
   @Delete('patterns/:id')
   @RequirePermission(Permission.PATTERN_DELETE)
-  deletePattern(
+  async deletePattern(
+    @Principal() principal: AuthPrincipal,
     @Param('id') patternId: string,
   ) {
+    const pattern = this.patternsService.getPattern(patternId);
     const deleted = this.patternsService.deletePattern(patternId);
-    if (!deleted) {
+    if (!deleted || !pattern) {
       throw new BadRequestException(`Pattern '${patternId}' not found`);
     }
+    await this.changes.record(
+      { type: 'pattern', entityId: pattern.id, entityName: pattern.name, action: 'deleted', breaking: true, link: PATTERN_LINK },
+      principal,
+    );
     return { message: 'Pattern deleted successfully' };
   }
 }

@@ -1,244 +1,242 @@
-import { Injectable } from '@nestjs/common';
-import { DesignSystemService } from '../design-system/design-system.service';
-import { ChangeValue } from '../common/types/common.types';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { randomBytes } from 'crypto';
+import { AuthPrincipal } from '../auth/principal';
+import { NotificationService } from '../notifications/notification.service';
+import { NotificationSettingsService } from '../notifications/notification-settings.service';
+import {
+  CHANGELOG_STORE,
+  ChangeAction,
+  ChangeActor,
+  ChangeEntityType,
+  ChangeInput,
+  ChangeRecorder,
+  ChangelogEntry,
+} from '../notifications/notification.types';
+import { DocumentStore, ListOptions } from '../reviews/document-store';
+import { WorkspaceAccessService, isWorkspaceSuperuser } from '../workspaces/workspace-access.service';
 
-export interface ChangelogChange {
-  field?: string;
-  oldValue?: ChangeValue;
-  newValue?: ChangeValue;
-  description?: string;
-}
+export type { ChangelogEntry, ChangelogChange } from '../notifications/notification.types';
 
-export interface ChangelogEntry {
-  id: string;
-  type: 'component' | 'token' | 'workspace' | 'application' | 'system';
-  entityId: string;
-  entityName: string;
-  action: 'created' | 'updated' | 'deprecated' | 'deleted' | 'status-changed';
+export interface ChangelogFilters {
+  type?: ChangeEntityType;
+  entityId?: string;
+  action?: ChangeAction;
   version?: string;
-  changes: ChangelogChange[];
-  breaking?: boolean;
-  timestamp: Date;
-  author?: string;
+  breakingOnly?: boolean;
+  since?: Date;
+  until?: Date;
   workspaceId?: string;
 }
 
 export interface AggregatedChangelog {
-  version: string;
-  releaseDate: Date;
+  /** The version asked for, or null for a date range */
+  version: string | null;
+  startDate: string | null;
+  endDate: string | null;
   entries: ChangelogEntry[];
   summary: {
     totalChanges: number;
     breakingChanges: number;
     componentsChanged: number;
     tokensChanged: number;
-    newFeatures: number;
+    patternsChanged: number;
+    newItems: number;
+    deprecations: number;
   };
 }
 
+const TYPE_LABELS: Record<ChangeEntityType, string> = {
+  component: 'Component',
+  token: 'Token',
+  pattern: 'Pattern',
+  workspace: 'Workspace',
+  application: 'Application',
+  system: 'System',
+};
+
+const ACTION_VERBS: Record<ChangeAction, string> = {
+  created: 'added',
+  updated: 'updated',
+  deprecated: 'deprecated',
+  deleted: 'removed',
+  'status-changed': 'changed status',
+};
+
+/**
+ * The design-system changelog, stored in Elasticsearch. Write paths (component
+ * routes, the patterns library, workspace tokens and patterns) report changes
+ * through `record`; each change is stored and the people who follow the item
+ * get a notification. Reads are scoped like the items themselves: a workspace
+ * item's changes are visible to the members of the workspaces that could see it.
+ */
 @Injectable()
-export class ChangelogAggregationService {
-  private changelogEntries: ChangelogEntry[] = [];
+export class ChangelogAggregationService implements ChangeRecorder {
+  private readonly logger = new Logger(ChangelogAggregationService.name);
 
   constructor(
-    private readonly designSystemService: DesignSystemService,
-  ) {
-    this.initializeChangelog();
-  }
+    @Inject(CHANGELOG_STORE) private readonly store: DocumentStore<ChangelogEntry>,
+    private readonly notifications: NotificationService,
+    private readonly settings: NotificationSettingsService,
+    private readonly workspaces: WorkspaceAccessService,
+  ) {}
 
   /**
-   * Initialize changelog with existing data
+   * ChangeRecorder: records the change and notifies subscribers. The caller's
+   * own write has already succeeded, so a failure here is logged rather than
+   * turned into an error response that would invite a retry of that write.
    */
-  private initializeChangelog(): void {
-    // This would typically load from a database
-    // For now, we'll track changes going forward
+  async record(change: ChangeInput, actor?: ChangeActor): Promise<void> {
+    try {
+      await this.recordChange(change, actor);
+    } catch (error) {
+      this.logger.error(`Changelog entry for ${change.type} ${change.entityId} not recorded: ${(error as Error)?.message}`);
+    }
   }
 
-  /**
-   * Record a changelog entry
-   */
-  recordChange(data: {
-    type: ChangelogEntry['type'];
-    entityId: string;
-    entityName: string;
-    action: ChangelogEntry['action'];
-    version?: string;
-    changes: ChangelogEntry['changes'];
-    breaking?: boolean;
-    author?: string;
-    workspaceId?: string;
-  }): ChangelogEntry {
+  /** Stores a changelog entry, then notifies the people following the item */
+  async recordChange(change: ChangeInput, actor?: ChangeActor): Promise<ChangelogEntry> {
     const entry: ChangelogEntry = {
-      id: `changelog-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      ...data,
-      timestamp: new Date(),
+      id: `chg_${randomBytes(12).toString('hex')}`,
+      type: change.type,
+      entityId: change.entityId,
+      entityName: change.entityName,
+      action: change.action,
+      ...(change.version ? { version: change.version } : {}),
+      changes: change.changes ?? [],
+      breaking: change.breaking ?? false,
+      createdAt: new Date().toISOString(),
+      ...(actor ? { authorId: actor.id, author: actor.name || actor.id } : {}),
+      ...(change.workspaceId ? { workspaceId: change.workspaceId } : {}),
+      audience: [...new Set(change.audience ?? [])],
+      ...(change.link ? { link: change.link } : {}),
     };
-    this.changelogEntries.push(entry);
+    await this.store.create(entry);
+    await this.notifySubscribers(entry);
     return entry;
   }
 
-  /**
-   * Get aggregated changelog for a version or date range
-   */
-  getAggregatedChangelog(filters?: {
-    version?: string;
-    startDate?: Date;
-    endDate?: Date;
-    type?: ChangelogEntry['type'];
-    breakingOnly?: boolean;
-    workspaceId?: string;
-  }): AggregatedChangelog {
-    let entries = [...this.changelogEntries];
+  /** Entries the principal may read, newest first */
+  async getChangelogEntries(principal: AuthPrincipal, filters: ChangelogFilters = {}): Promise<ChangelogEntry[]> {
+    const where: NonNullable<ListOptions['where']> = {};
+    if (filters.type) where.type = filters.type;
+    if (filters.entityId) where.entityId = filters.entityId;
+    if (filters.action) where.action = filters.action;
+    if (filters.version) where.version = filters.version;
+    if (filters.breakingOnly) where.breaking = true;
+    if (filters.workspaceId) where.workspaceId = filters.workspaceId;
+    // `after` is exclusive; one millisecond earlier makes `since` inclusive
+    const after = filters.since ? { createdAt: new Date(filters.since.getTime() - 1).toISOString() } : undefined;
 
-    if (filters) {
-      if (filters.version) {
-        entries = entries.filter(e => e.version === filters.version);
-      }
-      if (filters.startDate) {
-        entries = entries.filter(e => e.timestamp >= filters.startDate!);
-      }
-      if (filters.endDate) {
-        entries = entries.filter(e => e.timestamp <= filters.endDate!);
-      }
-      if (filters.type) {
-        entries = entries.filter(e => e.type === filters.type);
-      }
-      if (filters.breakingOnly) {
-        entries = entries.filter(e => e.breaking === true);
-      }
-      if (filters.workspaceId) {
-        entries = entries.filter(e => e.workspaceId === filters.workspaceId);
-      }
-    }
+    const entries = await this.store.list({ where, ...(after ? { after } : {}) });
+    const visible = await this.visibilityFor(principal);
+    return entries.filter((e) => visible(e) && (!filters.until || new Date(e.createdAt) <= filters.until));
+  }
 
-    // Sort by timestamp (newest first)
-    entries.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-
-    // Group by version if provided, otherwise use date-based grouping
-    const version = filters?.version || this.getCurrentVersion();
-    const releaseDate = filters?.endDate || new Date();
-
-    const summary = {
-      totalChanges: entries.length,
-      breakingChanges: entries.filter(e => e.breaking).length,
-      componentsChanged: entries.filter(e => e.type === 'component').length,
-      tokensChanged: entries.filter(e => e.type === 'token').length,
-      newFeatures: entries.filter(e => e.action === 'created').length,
-    };
-
+  async getAggregatedChangelog(
+    principal: AuthPrincipal,
+    filters: { version?: string; startDate?: Date; endDate?: Date; type?: ChangeEntityType; breakingOnly?: boolean; workspaceId?: string } = {},
+  ): Promise<AggregatedChangelog> {
+    const entries = await this.getChangelogEntries(principal, {
+      version: filters.version,
+      since: filters.startDate,
+      until: filters.endDate,
+      type: filters.type,
+      breakingOnly: filters.breakingOnly,
+      workspaceId: filters.workspaceId,
+    });
     return {
-      version,
-      releaseDate,
+      version: filters.version ?? null,
+      startDate: filters.startDate?.toISOString() ?? null,
+      endDate: filters.endDate?.toISOString() ?? null,
       entries,
-      summary,
+      summary: summarize(entries),
     };
   }
 
-  /**
-   * Get changelog entries
-   */
-  getChangelogEntries(filters?: {
-    type?: ChangelogEntry['type'];
-    entityId?: string;
-    action?: ChangelogEntry['action'];
-    breakingOnly?: boolean;
-    since?: Date;
-    workspaceId?: string;
-  }): ChangelogEntry[] {
-    let entries = [...this.changelogEntries];
-
-    if (filters) {
-      if (filters.type) {
-        entries = entries.filter(e => e.type === filters.type);
-      }
-      if (filters.entityId) {
-        entries = entries.filter(e => e.entityId === filters.entityId);
-      }
-      if (filters.action) {
-        entries = entries.filter(e => e.action === filters.action);
-      }
-      if (filters.breakingOnly) {
-        entries = entries.filter(e => e.breaking === true);
-      }
-      if (filters.since) {
-        entries = entries.filter(e => e.timestamp >= filters.since!);
-      }
-      if (filters.workspaceId) {
-        entries = entries.filter(e => e.workspaceId === filters.workspaceId);
-      }
-    }
-
-    return entries.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  getComponentChangelog(principal: AuthPrincipal, componentId: string): Promise<ChangelogEntry[]> {
+    return this.getChangelogEntries(principal, { type: 'component', entityId: componentId });
   }
 
-  /**
-   * Get changelog for a specific component
-   */
-  getComponentChangelog(componentId: string): ChangelogEntry[] {
-    return this.getChangelogEntries({
-      type: 'component',
-      entityId: componentId,
-    });
+  getTokenChangelog(principal: AuthPrincipal, tokenId: string): Promise<ChangelogEntry[]> {
+    return this.getChangelogEntries(principal, { type: 'token', entityId: tokenId });
   }
 
-  /**
-   * Get changelog for a specific token
-   */
-  getTokenChangelog(tokenName: string): ChangelogEntry[] {
-    return this.getChangelogEntries({
-      type: 'token',
-      entityId: tokenName,
-    });
+  getBreakingChanges(principal: AuthPrincipal, since?: Date): Promise<ChangelogEntry[]> {
+    return this.getChangelogEntries(principal, { breakingOnly: true, since });
   }
 
-  /**
-   * Get breaking changes
-   */
-  getBreakingChanges(since?: Date): ChangelogEntry[] {
-    return this.getChangelogEntries({
-      breakingOnly: true,
-      since,
-    });
-  }
-
-  /**
-   * Get current version (simplified - would come from version management)
-   */
-  private getCurrentVersion(): string {
-    // In a real implementation, this would come from version management
-    return '1.0.0';
-  }
-
-  /**
-   * Generate release notes for a version
-   */
-  generateReleaseNotes(version: string): {
-    version: string;
-    releaseDate: Date;
-    features: ChangelogEntry[];
-    improvements: ChangelogEntry[];
-    fixes: ChangelogEntry[];
-    breakingChanges: ChangelogEntry[];
-  } {
-    const changelog = this.getAggregatedChangelog({ version });
-    const entries = changelog.entries;
-
-    const features = entries.filter(e => e.action === 'created');
-    const improvements = entries.filter(e => e.action === 'updated' && !e.breaking);
-    const fixes = entries.filter(e => e.action === 'updated' && e.type === 'system');
-    const breakingChanges = entries.filter(e => e.breaking === true);
-
+  /** Release notes from the entries recorded with this version */
+  async generateReleaseNotes(principal: AuthPrincipal, version: string) {
+    const entries = await this.getChangelogEntries(principal, { version });
     return {
       version,
-      releaseDate: changelog.releaseDate,
-      features,
-      improvements,
-      fixes,
-      breakingChanges,
+      features: entries.filter((e) => e.action === 'created'),
+      improvements: entries.filter((e) => e.action === 'updated' && !e.breaking),
+      deprecations: entries.filter((e) => e.action === 'deprecated'),
+      breakingChanges: entries.filter((e) => e.breaking),
     };
+  }
+
+  /** Who may read what: superusers everything; others public entries and their workspaces' */
+  private async visibilityFor(principal: AuthPrincipal): Promise<(entry: ChangelogEntry) => boolean> {
+    if (isWorkspaceSuperuser(principal)) return () => true;
+    const mine = await this.workspaces.memberWorkspaceIds(principal);
+    return (entry) => !entry.audience?.length || entry.audience.some((id) => mine.has(id));
+  }
+
+  /** Members of any of the workspaces */
+  private async membersOf(workspaceIds: string[]): Promise<Set<string>> {
+    const members = new Set<string>();
+    for (const id of workspaceIds) {
+      const workspace = await this.workspaces.find(id);
+      for (const memberId of workspace?.memberIds ?? []) members.add(memberId);
+    }
+    return members;
+  }
+
+  private async notifySubscribers(entry: ChangelogEntry): Promise<void> {
+    const subscribers = await this.settings.subscribersTo(entry.type, entry.entityId);
+    if (!subscribers.length) return;
+    // A workspace item's change only reaches people who can see the item
+    const allowed = entry.audience.length ? await this.membersOf(entry.audience) : null;
+    const title = `${TYPE_LABELS[entry.type]} "${entry.entityName}" ${ACTION_VERBS[entry.action]}`;
+    const detail = entry.changes.map((c) => c.description).filter(Boolean).join('; ');
+    const message = [entry.breaking ? 'Breaking change.' : '', detail, entry.author ? `By ${entry.author}.` : '']
+      .filter(Boolean)
+      .join(' ');
+
+    for (const subscriber of subscribers) {
+      const prefs = subscriber.preferences;
+      if (subscriber.userId === entry.authorId) continue;
+      if (allowed && !allowed.has(subscriber.userId)) continue;
+      if (!prefs?.inApp) continue;
+      if (prefs.breakingOnly && !entry.breaking) continue;
+      if (!(prefs.actions ?? []).includes(entry.action)) continue;
+      try {
+        await this.notifications.createNotification({
+          userId: subscriber.userId,
+          type: 'design-system-change',
+          title,
+          message: message || title,
+          link: entry.link,
+          changelogEntryId: entry.id,
+          breaking: entry.breaking,
+        });
+      } catch (error) {
+        this.logger.warn(`Notification for ${subscriber.userId} about ${entry.id} not saved: ${(error as Error)?.message}`);
+      }
+    }
   }
 }
 
-
-
-
+function summarize(entries: ChangelogEntry[]): AggregatedChangelog['summary'] {
+  return {
+    totalChanges: entries.length,
+    breakingChanges: entries.filter((e) => e.breaking).length,
+    componentsChanged: new Set(entries.filter((e) => e.type === 'component').map((e) => e.entityId)).size,
+    tokensChanged: new Set(entries.filter((e) => e.type === 'token').map((e) => e.entityId)).size,
+    patternsChanged: new Set(entries.filter((e) => e.type === 'pattern').map((e) => e.entityId)).size,
+    newItems: entries.filter((e) => e.action === 'created').length,
+    deprecations: entries.filter((e) => e.action === 'deprecated').length,
+  };
+}

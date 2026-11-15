@@ -211,6 +211,36 @@ describe('Workspaces HTTP API', () => {
       expect((await h.call('viewer', 'GET', `/workspaces/${id}/resources/${kind}/${rid}`)).status).toBe(404);
     });
 
+    it('reports token and pattern changes to the changelog, and nothing for other kinds', async () => {
+      const start = h.recordedChanges.length;
+      const token = await h.call('editor', 'POST', `/workspaces/${id}/resources/tokens`, RESOURCE_SAMPLES.tokens.create);
+      const rid = token.body.id;
+      await h.call('editor', 'PATCH', `/workspaces/${id}/resources/tokens/${rid}`, { value: '#000000' });
+      // Sending the same value again changes nothing, so nothing is recorded
+      await h.call('editor', 'PATCH', `/workspaces/${id}/resources/tokens/${rid}`, { value: '#000000' });
+      await h.call('editor', 'PATCH', `/workspaces/${id}/resources/tokens/${rid}`, { name: 'color.brand' });
+      await h.call('editor', 'PATCH', `/workspaces/${id}/resources/tokens/${rid}`, { tags: ['deprecated'] });
+      await h.call('editor', 'DELETE', `/workspaces/${id}/resources/tokens/${rid}`);
+      await h.call('editor', 'POST', `/workspaces/${id}/resources/patterns`, RESOURCE_SAMPLES.patterns.create);
+      await h.call('editor', 'POST', `/workspaces/${id}/resources/fonts`, RESOURCE_SAMPLES.fonts.create);
+      // A viewer's refused write records nothing
+      await h.call('viewer', 'POST', `/workspaces/${id}/resources/tokens`, RESOURCE_SAMPLES.tokens.create);
+
+      const changes = h.recordedChanges.slice(start);
+      expect(changes.map(({ change }) => [change.type, change.action, change.breaking ?? false])).toEqual([
+        ['token', 'created', false],
+        ['token', 'updated', false],
+        ['token', 'updated', true], // renamed: references by the old name break
+        ['token', 'deprecated', false],
+        ['token', 'deleted', true],
+        ['pattern', 'created', false],
+      ]);
+      expect(changes[0].change).toMatchObject({ entityId: rid, entityName: 'color.primary', workspaceId: id, audience: [id], link: `/admin/workspaces/${id}` });
+      expect(changes[0].actor).toMatchObject({ id: PEOPLE.editor.id });
+      expect(changes[1].change.changes).toEqual([{ field: 'value', description: 'value changed' }]);
+      expect(changes[2].change.changes?.[0].description).toBe('Renamed from "color.primary"');
+    });
+
     it('rejects unknown kinds, a kind mismatch and invalid bodies', async () => {
       expect((await h.call('editor', 'GET', `/workspaces/${id}/resources/components`)).status).toBe(404);
       expect((await h.call('editor', 'POST', `/workspaces/${id}/resources/__proto__`, {})).status).toBe(404);

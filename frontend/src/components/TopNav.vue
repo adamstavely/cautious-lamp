@@ -174,222 +174,91 @@
           <AppIcon name="badge-alert" />
         </router-link>
 
-        <!-- Notifications -->
-        <div class="relative" ref="notificationsContainer">
+        <!-- Notifications: the signed-in person's own, from the API -->
+        <div class="relative" ref="notificationsContainer" @keydown.esc.stop="closeNotifications(true)">
           <button
+            ref="notificationsButton"
             type="button"
             @click="toggleNotifications"
             class="icon-btn"
             title="Notifications"
-            :aria-label="`Notifications${totalNotificationCount > 0 ? `, ${totalNotificationCount} unread` : ''}`"
-            :aria-expanded="showNotifications"
-            aria-haspopup="true"
+            :aria-label="`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`"
+            :aria-expanded="showNotifications ? 'true' : 'false'"
+            aria-haspopup="dialog"
+            aria-controls="notifications-panel"
           >
             <AppIcon name="bell" />
             <span
-              v-if="totalNotificationCount > 0"
+              v-if="unreadCount > 0"
               class="count-badge"
-              :class="breakingChangeNotifications.length > 0 ? 'count-badge-danger' : 'count-badge-accent'"
+              :class="hasUnreadBreaking ? 'count-badge-danger' : 'count-badge-accent'"
               aria-hidden="true"
             >
-              {{ totalNotificationCount > 9 ? '9+' : totalNotificationCount }}
+              {{ unreadCount > 9 ? '9+' : unreadCount }}
             </span>
           </button>
 
-          <!-- Notifications dropdown -->
           <div
             v-if="showNotifications"
+            id="notifications-panel"
             class="popover popover-end w-96 overflow-hidden"
-            role="menu"
-            aria-label="Recent activity notifications"
+            role="dialog"
+            aria-labelledby="notifications-panel-title"
           >
-            <!-- Header -->
-            <div class="px-4 py-3 border-b border-line flex items-center justify-between">
-              <h3 class="font-semibold text-lg text-ink-strong">Notifications</h3>
-              <button type="button" @click="closeNotifications" class="close-btn" aria-label="Close notifications">
-                <AppIcon name="x" class="text-xl" />
-              </button>
+            <div class="px-4 py-3 border-b border-line flex items-center justify-between gap-2">
+              <h2 id="notifications-panel-title" class="font-semibold text-lg text-ink-strong">Notifications</h2>
+              <div class="flex items-center gap-1">
+                <UiButton v-if="unreadCount > 0" variant="ghost" size="sm" icon="check-check" :loading="markingAll" @click="markAllNotificationsRead">
+                  Mark all read
+                </UiButton>
+                <button type="button" @click="closeNotifications(true)" class="close-btn" aria-label="Close notifications">
+                  <AppIcon name="x" class="text-xl" />
+                </button>
+              </div>
             </div>
 
-            <!-- Tabs -->
-            <div class="flex border-b border-line">
-              <button
-                type="button"
-                @click="notificationTab = 'all'"
-                class="notif-tab"
-                :class="{ 'notif-tab-on': notificationTab === 'all' }"
-              >
-                All
-                <span v-if="totalNotificationCount > 0" class="notif-tab-count">{{ totalNotificationCount }}</span>
-              </button>
-              <button
-                type="button"
-                @click="notificationTab = 'breaking'"
-                class="notif-tab notif-tab-danger"
-                :class="{ 'notif-tab-on': notificationTab === 'breaking' }"
-              >
-                Breaking Changes
-                <span v-if="breakingChangeNotifications.length > 0" class="notif-tab-count">{{ breakingChangeNotifications.length }}</span>
-              </button>
-              <button
-                type="button"
-                @click="notificationTab = 'activity'"
-                class="notif-tab"
-                :class="{ 'notif-tab-on': notificationTab === 'activity' }"
-              >
-                Activity
-                <span v-if="recentActivity.length > 0" class="notif-tab-count">{{ recentActivity.length }}</span>
-              </button>
+            <div class="max-h-96 overflow-y-auto">
+              <p v-if="notificationsError && !notificationsLoaded" class="p-6 text-sm text-ink-secondary" role="alert">
+                Notifications couldn't be loaded. Try again later.
+              </p>
+              <div v-else-if="!notificationsLoaded" class="flex justify-center p-8">
+                <UiSpinner label="Loading notifications…" />
+              </div>
+              <div v-else-if="notifications.length === 0" class="p-8 text-center">
+                <AppIcon name="bell-off" class="text-4xl mb-3 block text-ink-disabled" />
+                <p class="text-sm font-medium text-ink-strong">No notifications</p>
+                <p class="text-sm text-ink-muted mt-1">Follow components, tokens or patterns to hear when they change.</p>
+              </div>
+              <ul v-else class="divide-y divide-line">
+                <li v-for="notification in recentNotifications" :key="notification.id">
+                  <button
+                    type="button"
+                    class="popover-row notif-row"
+                    :class="{ 'notif-row-unread': !notification.read }"
+                    @click="openNotification(notification)"
+                  >
+                    <span class="activity-icon" :class="`activity-icon-${notification.breaking ? 'danger' : 'accent'}`" aria-hidden="true">
+                      <AppIcon :name="notificationIcon(notification)" class="text-base" />
+                    </span>
+                    <span class="flex-1 min-w-0">
+                      <span class="flex items-center gap-2 mb-1">
+                        <span class="text-sm font-semibold truncate text-ink-strong">{{ notification.title }}</span>
+                        <UiChip v-if="notification.breaking" tone="danger">Breaking</UiChip>
+                      </span>
+                      <span class="block text-sm mb-1 line-clamp-2 text-ink-secondary">{{ notification.message }}</span>
+                      <span class="block text-xs text-ink-muted">
+                        {{ formatRelativeTime(notification.createdAt) }}<span v-if="!notification.read" class="sr-only">, unread</span>
+                      </span>
+                    </span>
+                    <span v-if="!notification.read" class="unread-dot" aria-hidden="true"></span>
+                  </button>
+                </li>
+              </ul>
+              <p v-if="notificationActionError" class="px-4 py-2 text-sm text-danger" role="alert">{{ notificationActionError }}</p>
             </div>
 
-            <!-- Notification list -->
-            <div class="overflow-y-auto max-h-96">
-              <!-- Breaking changes tab -->
-              <div v-if="notificationTab === 'breaking'">
-                <div v-if="breakingChangeNotifications.length === 0" class="p-8 text-center">
-                  <AppIcon name="circle-check" class="text-4xl mb-3 block text-ink-disabled" />
-                  <p class="text-sm text-ink-muted">No breaking changes</p>
-                </div>
-                <div v-else class="divide-y divide-line">
-                  <div
-                    v-for="notification in breakingChangeNotifications"
-                    :key="notification.id"
-                    @click="goToComponent(notification.componentId)"
-                    class="popover-row p-4 cursor-pointer"
-                  >
-                    <div class="flex items-start gap-3">
-                      <div class="activity-icon activity-icon-danger">
-                        <AppIcon name="triangle-alert" class="text-base" />
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-1">
-                          <h4 class="text-sm font-semibold text-ink-strong">Breaking Change</h4>
-                          <UiChip tone="danger">{{ notification.componentName }}</UiChip>
-                        </div>
-                        <p class="text-sm mb-1 line-clamp-2 text-ink-secondary">{{ notification.message }}</p>
-                        <p class="text-xs text-ink-muted">{{ formatRelativeTime(notification.timestamp) }}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Activity tab -->
-              <div v-else-if="notificationTab === 'activity'">
-                <div v-if="recentActivity.length === 0" class="p-8 text-center">
-                  <svg class="w-12 h-12 mx-auto mb-3 text-ink-disabled" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p class="text-sm text-ink-muted">No recent activity</p>
-                </div>
-                <div v-else class="divide-y divide-line">
-                  <div
-                    v-for="activity in recentActivity"
-                    :key="activity.id"
-                    @click="goToReview(activity.reviewId)"
-                    class="popover-row p-4 cursor-pointer"
-                  >
-                    <div class="flex items-start gap-3">
-                      <div class="activity-icon" :class="`activity-icon-${getActivityTone(activity.type, activity.action)}`">
-                        <svg v-if="activity.type === 'comment'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                        <svg v-else-if="activity.action === 'uploaded' || activity.action === 'created_from_url'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        <AppIcon name="diff" v-else-if="activity.action === 'version_uploaded'" class="text-base" />
-                        <AppIcon name="stamp" v-else-if="activity.action === 'approved'" class="text-base" />
-                        <AppIcon name="check-check" v-else-if="activity.action === 'completed'" class="text-base" />
-                        <AppIcon name="notebook-text" v-else-if="activity.action === 'rejected'" class="text-base" />
-                        <AppIcon name="chart-line" v-else-if="activity.action === 'moved_to_review'" class="text-base" />
-                        <svg v-else-if="activity.type === 'workflow'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-1">
-                          <h4 class="text-sm font-semibold truncate text-ink-strong">{{ activity.reviewName }}</h4>
-                          <UiChip :tone="getWorkflowTone(activity.workflowState)">{{ getWorkflowLabel(activity.workflowState) }}</UiChip>
-                        </div>
-                        <p class="text-sm mb-1 line-clamp-2 text-ink-secondary">{{ activity.description }}</p>
-                        <p class="text-xs text-ink-muted">{{ formatRelativeTime(activity.timestamp) }}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- All tab -->
-              <div v-else>
-                <div v-if="totalNotificationCount === 0" class="p-8 text-center">
-                  <AppIcon name="bell-off" class="text-4xl mb-3 block text-ink-disabled" />
-                  <p class="text-sm text-ink-muted">No notifications</p>
-                </div>
-                <div v-else class="divide-y divide-line">
-                  <!-- Breaking changes first -->
-                  <div
-                    v-for="notification in breakingChangeNotifications"
-                    :key="`breaking-${notification.id}`"
-                    @click="goToComponent(notification.componentId)"
-                    class="popover-row popover-row-breaking p-4 cursor-pointer"
-                  >
-                    <div class="flex items-start gap-3">
-                      <div class="activity-icon activity-icon-danger">
-                        <AppIcon name="triangle-alert" class="text-base" />
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-1">
-                          <h4 class="text-sm font-semibold text-ink-strong">Breaking Change</h4>
-                          <UiChip tone="danger">{{ notification.componentName }}</UiChip>
-                        </div>
-                        <p class="text-sm mb-1 line-clamp-2 text-ink-secondary">{{ notification.message }}</p>
-                        <p class="text-xs text-ink-muted">{{ formatRelativeTime(notification.timestamp) }}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Then activity -->
-                  <div
-                    v-for="activity in recentActivity"
-                    :key="activity.id"
-                    @click="goToReview(activity.reviewId)"
-                    class="popover-row p-4 cursor-pointer"
-                  >
-                    <div class="flex items-start gap-3">
-                      <div class="activity-icon" :class="`activity-icon-${getActivityTone(activity.type, activity.action)}`">
-                        <svg v-if="activity.type === 'comment'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                        <svg v-else-if="activity.action === 'uploaded' || activity.action === 'created_from_url'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        <AppIcon name="diff" v-else-if="activity.action === 'version_uploaded'" class="text-base" />
-                        <AppIcon name="stamp" v-else-if="activity.action === 'approved'" class="text-base" />
-                        <AppIcon name="check-check" v-else-if="activity.action === 'completed'" class="text-base" />
-                        <AppIcon name="notebook-text" v-else-if="activity.action === 'rejected'" class="text-base" />
-                        <AppIcon name="chart-line" v-else-if="activity.action === 'moved_to_review'" class="text-base" />
-                        <svg v-else-if="activity.type === 'workflow'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-1">
-                          <h4 class="text-sm font-semibold truncate text-ink-strong">{{ activity.reviewName }}</h4>
-                          <UiChip :tone="getWorkflowTone(activity.workflowState)">{{ getWorkflowLabel(activity.workflowState) }}</UiChip>
-                        </div>
-                        <p class="text-sm mb-1 line-clamp-2 text-ink-secondary">{{ activity.description }}</p>
-                        <p class="text-xs text-ink-muted">{{ formatRelativeTime(activity.timestamp) }}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div class="px-4 py-3 border-t border-line">
+              <UiLink to="/notifications" @click="closeNotifications(false)">See all notifications and settings</UiLink>
             </div>
           </div>
         </div>
@@ -457,15 +326,16 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
-import { mockAPI, isMockMode, mockReviews, getCurrentUser } from '../mockData.js';
 import { useAuth } from '../composables/useAuth.js';
-import { authHeaders } from '../services/api.js';
+import { apiErrorMessage, authHeaders } from '../services/api.js';
 import { canAccessPath } from '../router/rbacGuards.js';
-import { UiChip } from './ui';
+import { UiButton, UiChip, UiLink, UiSpinner } from './ui';
+import { formatRelativeTime, useNotifications } from '../composables/useNotifications.js';
 
 const router = useRouter();
 const { user, initials, logout } = useAuth();
 const notificationsContainer = ref(null);
+const notificationsButton = ref(null);
 const searchContainer = ref(null);
 const searchQuery = ref('');
 const showSearchResults = ref(false);
@@ -861,20 +731,21 @@ const selectSearchResult = () => {
 };
 
 const showNotifications = ref(false);
-const recentActivity = ref([]);
-const breakingChangeNotifications = ref([]);
-const systemNotifications = ref([]);
-const notificationTab = ref('all');
+const {
+  notifications,
+  unreadCount,
+  loaded: notificationsLoaded,
+  error: notificationsError,
+  load: loadNotifications,
+  markRead,
+  markAllRead,
+} = useNotifications();
+const markingAll = ref(false);
+const notificationActionError = ref('');
 
-const totalNotificationCount = computed(() => {
-  return breakingChangeNotifications.value.length + recentActivity.value.length;
-});
-
-// The signed-in user, as the review UI sees them
-const reviewUser = computed(() => getCurrentUser());
-const currentUser = computed(() => reviewUser.value.name);
-const currentUserEmail = computed(() => reviewUser.value.email);
-const currentUserRole = computed(() => reviewUser.value.role);
+/** The bell shows the newest ten; the notifications page has the rest */
+const recentNotifications = computed(() => notifications.value.slice(0, 10));
+const hasUnreadBreaking = computed(() => notifications.value.some((n) => n.breaking && !n.read));
 
 // Account menu
 const userMenuOpen = ref(false);
@@ -948,15 +819,58 @@ const signOut = async () => {
   router.replace({ path: '/login', query: { signedOut: '1' } });
 };
 
-// Toggle notifications dropdown
+// Notifications panel: refreshed each time it opens
 const toggleNotifications = () => {
-  showNotifications.value = !showNotifications.value;
-  if (showNotifications.value) closeUserMenu(false);
+  if (showNotifications.value) {
+    closeNotifications(false);
+    return;
+  }
+  showNotifications.value = true;
+  notificationActionError.value = '';
+  closeUserMenu(false);
+  loadNotifications();
 };
 
-// Close notifications dropdown
-const closeNotifications = () => {
+const closeNotifications = (returnFocus = false) => {
+  if (!showNotifications.value) return;
   showNotifications.value = false;
+  if (returnFocus === true) notificationsButton.value?.focus();
+};
+
+const markAllNotificationsRead = async () => {
+  markingAll.value = true;
+  notificationActionError.value = '';
+  try {
+    await markAllRead();
+  } catch (error) {
+    notificationActionError.value = apiErrorMessage(error, "Notifications couldn't be marked read.");
+  } finally {
+    markingAll.value = false;
+  }
+};
+
+/** Opening a notification marks it read and goes to what it's about */
+const openNotification = async (notification) => {
+  notificationActionError.value = '';
+  if (!notification.read) {
+    try {
+      await markRead(notification.id);
+    } catch (error) {
+      notificationActionError.value = apiErrorMessage(error, "The notification couldn't be marked read.");
+      return;
+    }
+  }
+  if (notification.link) {
+    closeNotifications(false);
+    router.push(notification.link);
+  }
+};
+
+const notificationIcon = (notification) => {
+  if (notification.breaking) return 'triangle-alert';
+  if (notification.type === 'design-system-change') return 'history';
+  if (notification.type === 'request-commented') return 'message-square';
+  return 'bell';
 };
 
 // Click outside handler
@@ -972,188 +886,10 @@ const handleClickOutside = (event) => {
   }
 };
 
-// Load breaking change notifications
-const loadBreakingChangeNotifications = async () => {
-  try {
-    // Mock breaking change notifications - in real app, this would come from an API
-    breakingChangeNotifications.value = [
-      {
-        id: 'breaking-button-2.0.0',
-        componentId: 'button',
-        componentName: 'Button',
-        version: '2.0.0',
-        message: 'Breaking changes in Button v2.0.0: "type" prop renamed to "variant"',
-        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        link: '/components/buttons'
-      }
-    ];
-  } catch (error) {
-    console.error('Failed to load breaking change notifications:', error);
-  }
-};
-
-// Navigate to component page
-const goToComponent = (componentId) => {
-  const routeMap = {
-    'button': '/components/buttons',
-    'color-picker': '/components/color-picker',
-    'input': '/components/forms',
-    'card': '/components/cards'
-  };
-  const route = routeMap[componentId] || `/components/${componentId}`;
-  router.push(route);
-  closeNotifications();
-};
-
-// Load recent activity for designer
-const loadRecentActivity = async () => {
-  if (currentUserRole.value !== 'designer') return;
-  
-  try {
-    const useMockMode = await isMockMode();
-    const activities = [];
-    
-    if (useMockMode) {
-      // Get designer's reviews (outstanding = not completed and not approved)
-      const designerReviews = mockReviews.filter(review => 
-        !review.completed &&
-        review.workflowState !== 'approved' &&
-        (review.designerEmail === currentUserEmail.value || review.designer === currentUser.value)
-      );
-      
-      // Collect recent comments from outstanding reviews
-      for (const review of designerReviews) {
-        if (review.comments && review.comments.length > 0) {
-          // Get most recent comments (last 2 per review)
-          const recentComments = review.comments
-            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-            .slice(0, 2);
-          
-          recentComments.forEach(comment => {
-            activities.push({
-              id: `comment-${comment.id}`,
-              type: 'comment',
-              reviewId: review.id,
-              reviewName: review.filename,
-              workflowState: review.workflowState,
-              description: `${comment.author}: ${comment.text.substring(0, 100)}${comment.text.length > 100 ? '...' : ''}`,
-              timestamp: comment.timestamp
-            });
-          });
-        }
-        
-        // Collect workflow history entries
-        if (review.workflowHistory && review.workflowHistory.length > 0) {
-          const recentHistory = review.workflowHistory
-            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-            .slice(0, 2);
-          
-          recentHistory.forEach(entry => {
-            const actionLabels = {
-              'moved_to_review': 'Moved to Review',
-              'approved': 'Approved',
-              'rejected': 'Rejected',
-              'resubmitted': 'Resubmitted',
-              'version_uploaded': 'New Version Uploaded',
-              'extended': 'Expiration Extended',
-              'password_set': 'Password Set',
-              'password_removed': 'Password Removed'
-            };
-            
-            activities.push({
-              id: `history-${review.id}-${entry.timestamp}`,
-              type: 'workflow',
-              action: entry.action,
-              reviewId: review.id,
-              reviewName: review.filename,
-              workflowState: review.workflowState,
-              description: `${entry.user}: ${actionLabels[entry.action] || entry.action}`,
-              timestamp: entry.timestamp
-            });
-          });
-        }
-      }
-    } else {
-      // In real app, would call API endpoint
-      // const res = await fetch('/api/reviews/activity');
-      // activities = await res.json();
-    }
-    
-    // Sort by timestamp (newest first) and limit to 10
-    recentActivity.value = activities
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-      .slice(0, 10);
-  } catch (error) {
-    console.error('Failed to load recent activity:', error);
-  }
-};
-
-// Format relative time
-const formatRelativeTime = (timestamp) => {
-  if (!timestamp) return '';
-  try {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
-  } catch (error) {
-    return '';
-  }
-};
-
-// The tone of an activity's icon: comments and uploads in the accent, approvals in success, rejections in warning
-const getActivityTone = (type, action) => {
-  if (action === 'approved' || action === 'completed') return 'success';
-  if (action === 'rejected') return 'warning';
-  if (type === 'comment' || type === 'workflow' || ['uploaded', 'created_from_url', 'version_uploaded', 'moved_to_review'].includes(action)) return 'accent';
-  return 'neutral';
-};
-
-// Workflow helper functions
-const getWorkflowLabel = (state) => {
-  const labels = {
-    'draft': 'Draft',
-    'client_review': 'Client Review',
-    'client_approved': 'Client Approved',
-    'art_director_review': 'Art Director Review',
-    'art_director_approved': 'Art Director Approved',
-    'ad_changes_requested': 'AD Changes Requested',
-    'creative_director_review': 'Creative Director Review',
-    'cd_changes_requested': 'CD Changes Requested',
-    'approved': 'Approved & Released'
-  };
-  return labels[state] || state;
-};
-
-// The chip tone for a review's workflow state
-const getWorkflowTone = (state) => {
-  if (state === 'approved' || state === 'client_approved' || state === 'art_director_approved') return 'success';
-  if (state === 'ad_changes_requested' || state === 'cd_changes_requested') return 'warning';
-  if (state && state.endsWith('_review')) return 'accent';
-  return 'neutral';
-};
-
-// Navigate to review
-const goToReview = (reviewId) => {
-  router.push(`/review/${reviewId}`);
-  closeNotifications();
-};
-
 onMounted(() => {
-  // Load recent activity
-  loadRecentActivity();
-  
-  // Load breaking change notifications
-  loadBreakingChangeNotifications();
-  
+  // The unread count on the bell
+  loadNotifications();
+
   // Add click outside listener
   document.addEventListener('click', handleClickOutside);
 });
@@ -1204,9 +940,6 @@ onBeforeUnmount(() => {
 .popover-row-on {
   @apply bg-accent-subtle;
 }
-.popover-row-breaking {
-  @apply border-l-4 border-l-danger-solid bg-danger-bg;
-}
 
 .filter-label {
   @apply block text-xs font-medium mb-2 text-ink-secondary;
@@ -1243,20 +976,15 @@ onBeforeUnmount(() => {
   @apply focus-visible:outline focus-visible:outline-2 outline-focus;
 }
 
-.notif-tab {
-  @apply flex-1 px-4 py-2 border-b-2 border-transparent text-sm font-medium text-ink-muted transition-colors hover:text-ink;
+.notif-row {
+  @apply w-full flex items-start gap-3 p-4 text-left;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 outline-focus;
 }
-.notif-tab-on {
-  @apply border-accent text-accent-text hover:text-accent-text;
+.notif-row-unread {
+  @apply bg-accent-subtle;
 }
-.notif-tab-danger.notif-tab-on {
-  @apply border-danger-solid text-danger hover:text-danger;
-}
-.notif-tab-count {
-  @apply ml-2 px-1.5 py-0.5 rounded-control bg-accent-subtle text-xs text-accent-text;
-}
-.notif-tab-danger .notif-tab-count {
-  @apply bg-danger-bg text-danger;
+.unread-dot {
+  @apply flex-shrink-0 w-2 h-2 mt-2 rounded-pill bg-accent;
 }
 
 .activity-icon {
@@ -1265,17 +993,8 @@ onBeforeUnmount(() => {
 .activity-icon-accent {
   @apply bg-accent-subtle text-accent-text;
 }
-.activity-icon-success {
-  @apply bg-success-bg text-success;
-}
-.activity-icon-warning {
-  @apply bg-warning-bg text-warning;
-}
 .activity-icon-danger {
   @apply bg-danger-bg text-danger;
-}
-.activity-icon-neutral {
-  @apply bg-fill text-ink-secondary;
 }
 
 .account-btn {

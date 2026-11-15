@@ -13,7 +13,7 @@ import { ComponentAccessService } from './component-access.service';
 import { ComponentRequestService } from './component-request.service';
 import { DesignSystemController } from './design-system.controller';
 import { DesignSystemService } from './design-system.service';
-import { NotificationService } from './notification.service';
+import { CHANGE_RECORDER, ChangeActor, ChangeInput } from '../notifications/notification.types';
 
 const MEMBER_PERMISSIONS = [Permission.COMPONENT_VIEW, Permission.COMPONENT_CREATE, Permission.COMPONENT_EDIT, Permission.FEEDBACK_CREATE];
 
@@ -58,6 +58,8 @@ describe('Design system HTTP API', () => {
   let app: INestApplication;
   let base: string;
   let designSystem: DesignSystemService;
+  /** Changes the routes reported to the changelog */
+  const recorded: Array<{ change: ChangeInput; actor?: ChangeActor }> = [];
 
   const call = async (method: string, route: string, options: { as?: string; token?: string; body?: unknown } = {}) => {
     const token = options.token ?? (options.as ? `tok-${options.as}` : undefined);
@@ -82,7 +84,7 @@ describe('Design system HTTP API', () => {
       providers: [
         DesignSystemService,
         ComponentRequestService,
-        NotificationService,
+        { provide: CHANGE_RECORDER, useValue: { record: async (change: ChangeInput, actor?: ChangeActor) => void recorded.push({ change, actor }) } },
         ComponentAccessService,
         WorkspaceAccessService,
         { provide: WORKSPACE_STORE, useValue: workspaces },
@@ -199,6 +201,47 @@ describe('Design system HTTP API', () => {
       expect((await save('bob', library)).status).toBe(201);
       expect((await remove('vic', library)).status).toBe(200);
       expect((await save('roadmap', library)).status).toBe(403); // no component:edit
+    });
+  });
+
+  describe('changelog', () => {
+    const since = () => recorded.length;
+
+    it('records a created component with its workspace audience and author', async () => {
+      const start = since();
+      const body = { id: 'alpha-logged', name: 'AlphaLogged', description: 'Logged on create', workspaceId: 'ws_alpha' };
+      expect((await call('POST', '/components', { as: 'alice', body })).status).toBe(201);
+      expect(recorded.slice(start)).toEqual([
+        {
+          change: expect.objectContaining({
+            type: 'component',
+            entityId: 'alpha-logged',
+            entityName: 'AlphaLogged',
+            action: 'created',
+            workspaceId: 'ws_alpha',
+            audience: ['ws_alpha'],
+          }),
+          actor: expect.objectContaining({ id: 'usr_alice' }),
+        },
+      ]);
+    });
+
+    it('records saved variants as updates and removed variants as breaking', async () => {
+      const start = since();
+      await call('POST', '/components/alpha-shared/variants', { as: 'alice', body: { name: 'dense', properties: {} } });
+      await call('DELETE', '/components/alpha-shared/variants/dense', { as: 'alice' });
+      const [saved, removed] = recorded.slice(start).map((r) => r.change);
+      expect(saved).toMatchObject({ entityId: 'alpha-shared', action: 'updated', audience: ['ws_alpha', 'ws_beta'] });
+      expect(saved.breaking).toBeFalsy();
+      expect(removed).toMatchObject({ entityId: 'alpha-shared', action: 'updated', breaking: true });
+      expect(removed.changes?.[0].description).toContain('dense');
+    });
+
+    it('records nothing when the write is refused', async () => {
+      const start = since();
+      await call('POST', '/components/alpha-secret/variants', { as: 'vic', body: { name: 'nope', properties: {} } });
+      await call('POST', '/components', { as: 'bob', body: { id: 'x', name: 'X', description: 'x', workspaceId: 'ws_alpha' } });
+      expect(recorded.slice(start)).toEqual([]);
     });
   });
 

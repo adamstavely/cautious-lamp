@@ -21,6 +21,7 @@ import { WORKSPACE_RESOURCE_STORE, WORKSPACE_STORE, WorkspaceDoc, WorkspaceResou
 import { WorkspacesController } from '../workspaces.controller';
 import { WorkspacesService } from '../workspaces.service';
 import { InMemoryQueryableStore } from './in-memory-queryable-store';
+import { CHANGE_RECORDER, ChangeActor, ChangeInput } from '../../notifications/notification.types';
 
 /** People the tests sign in as. The token for each is `tok-<key>`. */
 export const PEOPLE = {
@@ -142,6 +143,9 @@ export async function createWorkspacesApp() {
   const applicationStore = new InMemoryQueryableStore<ApplicationDoc>();
   const components = createComponentSource();
   const vr = createVisualRegressionFake();
+  /** Changes reported to the changelog, in order */
+  const recordedChanges: Array<{ change: ChangeInput; actor?: ChangeActor }> = [];
+  const changeRecorder = { record: async (change: ChangeInput, actor?: ChangeActor) => void recordedChanges.push({ change, actor }) };
   // The real session-replay service, so OpenReplay URL checks run for real (no API key: no network calls)
 
   const moduleRef = await Test.createTestingModule({
@@ -156,6 +160,7 @@ export async function createWorkspacesApp() {
       { provide: APPLICATION_STORE, useValue: applicationStore },
       { provide: APPLICATION_NAME_STORE, useValue: new InMemoryStore<ApplicationNameClaim>() },
       { provide: WORKSPACE_COMPONENT_SOURCE, useValue: components.source },
+      { provide: CHANGE_RECORDER, useValue: changeRecorder },
       { provide: VisualRegressionService, useValue: vr },
       SessionReplayService,
       ProjectAccessService,
@@ -194,5 +199,5 @@ export async function createWorkspacesApp() {
     return { status: res.status, body: json };
   };
 
-  return { app, call, workspaceStore, resourceStore, applicationStore, components, vr, sessionReplay };
+  return { app, call, workspaceStore, resourceStore, applicationStore, components, vr, sessionReplay, recordedChanges };
 }

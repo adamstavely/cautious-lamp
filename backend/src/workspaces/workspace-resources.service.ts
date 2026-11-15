@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuthPrincipal } from '../auth/principal';
+import { CHANGE_RECORDER, ChangeAction, ChangeRecorder } from '../notifications/notification.types';
 import { VersionConflictError } from '../reviews/document-store';
 import { QueryableStore } from './queryable-store';
 import { ResourceKindSpec, resourceKind, validateResourceFields } from './resource-kinds';
@@ -15,6 +16,13 @@ import { WorkspaceAccess, WorkspaceAccessService, actorOf, assertRole, isSafeId,
 import { WORKSPACE_RESOURCE_STORE, WorkspaceDoc, WorkspaceResource, WorkspaceResourceDoc } from './workspace.types';
 
 const MAX_WRITE_ATTEMPTS = 5;
+
+/** Kinds whose changes go into the design-system changelog, and their changelog type */
+const CHANGELOG_TYPES: Record<string, 'token' | 'pattern'> = { tokens: 'token', patterns: 'pattern' };
+
+/** Tagging an item "deprecated" deprecates it */
+const isDeprecated = (fields: Record<string, unknown>) =>
+  Array.isArray(fields.tags) && fields.tags.some((tag) => String(tag).toLowerCase() === 'deprecated');
 
 /**
  * The 18 kinds of workspace items (fonts, tokens, guidelines, …) behind one
@@ -33,6 +41,7 @@ export class WorkspaceResourcesService {
   constructor(
     @Inject(WORKSPACE_RESOURCE_STORE) private readonly store: QueryableStore<WorkspaceResourceDoc>,
     private readonly access: WorkspaceAccessService,
+    @Inject(CHANGE_RECORDER) private readonly changes: ChangeRecorder,
   ) {}
 
   async list(principal: AuthPrincipal, workspaceId: string, kind: string, filter?: string): Promise<WorkspaceResource[]> {
@@ -74,6 +83,7 @@ export class WorkspaceResourcesService {
       updatedBy: actor,
     };
     await this.store.create(doc);
+    await this.recordChange(principal, spec, doc, isDeprecated(fields) ? 'deprecated' : 'created');
     return toView(doc);
   }
 
@@ -87,10 +97,30 @@ export class WorkspaceResourcesService {
     const spec = this.spec(kind);
     await this.access.require(principal, workspaceId, 'editor');
     const patch = await validateResourceFields(spec, body, true);
-    return this.mutateOwned(workspaceId, kind, resourceId, (doc) => {
+    let before: Record<string, unknown> = {};
+    const view = await this.mutateOwned(workspaceId, kind, resourceId, (doc) => {
+      before = { ...doc.fields };
       doc.fields = { ...doc.fields, ...patch };
       doc.updatedBy = actorOf(principal);
     });
+    const changed = Object.keys(patch).filter((field) => JSON.stringify(before[field]) !== JSON.stringify(patch[field]));
+    if (changed.length) {
+      const renamed = changed.includes(spec.titleField);
+      await this.recordChange(
+        principal,
+        spec,
+        fromView(view),
+        !isDeprecated(before) && isDeprecated(view) ? 'deprecated' : 'updated',
+        changed.map((field) =>
+          field === spec.titleField
+            ? { field, description: `Renamed from "${String(before[field] ?? '')}"` }
+            : { field, description: `${field} changed` },
+        ),
+        // References by the old name stop resolving
+        renamed && kind === 'tokens',
+      );
+    }
+    return view;
   }
 
   async delete(principal: AuthPrincipal, workspaceId: string, kind: string, resourceId: string): Promise<void> {
@@ -99,6 +129,7 @@ export class WorkspaceResourcesService {
     const doc = await this.load(kind, resourceId);
     if (!doc || doc.workspaceId !== workspaceId) throw new NotFoundException('Item not found');
     if (!(await this.store.delete(doc.id))) throw new NotFoundException('Item not found');
+    await this.recordChange(principal, this.spec(kind), doc, 'deleted', [], true);
   }
 
   async setSharing(
@@ -154,6 +185,33 @@ export class WorkspaceResourcesService {
   }
 
   // ---------- Internals ----------
+
+  /** Reports a token or pattern change to the design-system changelog; other kinds aren't tracked */
+  private async recordChange(
+    principal: AuthPrincipal,
+    spec: ResourceKindSpec,
+    doc: Pick<WorkspaceResourceDoc, 'id' | 'workspaceId' | 'sharedWith' | 'isGlobal' | 'fields'>,
+    action: ChangeAction,
+    changes: Array<{ field?: string; description?: string }> = [],
+    breaking = false,
+  ): Promise<void> {
+    const type = CHANGELOG_TYPES[spec.kind];
+    if (!type) return;
+    await this.changes.record(
+      {
+        type,
+        entityId: doc.id,
+        entityName: String(doc.fields[spec.titleField] ?? doc.id),
+        action,
+        changes,
+        breaking,
+        workspaceId: doc.workspaceId,
+        audience: doc.isGlobal ? [] : [doc.workspaceId, ...doc.sharedWith],
+        link: `/admin/workspaces/${doc.workspaceId}`,
+      },
+      principal,
+    );
+  }
 
   private spec(kind: string): ResourceKindSpec {
     const spec = resourceKind(kind);
@@ -239,6 +297,11 @@ export async function checkSharing(
 
 function visibleTo(doc: WorkspaceResourceDoc, workspaceId: string): boolean {
   return doc.workspaceId === workspaceId || doc.isGlobal || doc.sharedWith.includes(workspaceId);
+}
+
+/** The parts of a stored item a view still carries */
+function fromView(view: WorkspaceResource): Pick<WorkspaceResourceDoc, 'id' | 'workspaceId' | 'sharedWith' | 'isGlobal' | 'fields'> {
+  return { id: view.id, workspaceId: view.workspaceId, sharedWith: view.sharedWith, isGlobal: view.isGlobal, fields: view as Record<string, unknown> };
 }
 
 /** Kind fields first, so control fields always win */

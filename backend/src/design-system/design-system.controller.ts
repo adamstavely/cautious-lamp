@@ -1,11 +1,23 @@
-import { Controller, Get, Post, Put, Delete, Query, Param, Body, BadRequestException } from '@nestjs/common';
-import { DesignSystemService } from './design-system.service';
+import { Controller, Get, Post, Put, Delete, Query, Param, Body, BadRequestException, Inject } from '@nestjs/common';
+import { Component, DesignSystemService } from './design-system.service';
 import { ComponentRequestService } from './component-request.service';
-import { NotificationService } from './notification.service';
 import { ComponentAccessService } from './component-access.service';
 import { AuthPrincipal, Principal, Public, RequirePermission } from '../auth/principal';
 import { Permission } from '../rbac/rbac.service';
 import { WorkspaceAccessService } from '../workspaces/workspace-access.service';
+import { CHANGE_RECORDER, ChangeRecorder } from '../notifications/notification.types';
+
+/** The changelog fields every component change shares: who can see it and where it lives */
+function componentChange(component: Component) {
+  return {
+    type: 'component' as const,
+    entityId: component.id,
+    entityName: component.name,
+    workspaceId: component.workspaceId,
+    audience: component.workspaceId && !component.isGlobal ? [component.workspaceId, ...(component.sharedWith ?? [])] : [],
+    link: '/components',
+  };
+}
 
 @Controller('api/v1')
 export class DesignSystemController {
@@ -21,9 +33,9 @@ export class DesignSystemController {
   constructor(
     private readonly designSystemService: DesignSystemService,
     private readonly componentRequestService: ComponentRequestService,
-    private readonly notificationService: NotificationService,
     private readonly componentAccess: ComponentAccessService,
     private readonly workspaceAccess: WorkspaceAccessService,
+    @Inject(CHANGE_RECORDER) private readonly changes: ChangeRecorder,
   ) {}
 
   @Get('tokens')
@@ -468,41 +480,6 @@ export class DesignSystemController {
     return mergedRequest;
   }
 
-  // Notification endpoints
-  @Get('notifications')
-  getNotifications(
-    @Principal() principal: AuthPrincipal,
-    @Query('unreadOnly') unreadOnly?: string,
-  ) {
-    return this.notificationService.getNotifications(principal.id, unreadOnly === 'true');
-  }
-
-  @Put('notifications/:id/read')
-  markNotificationAsRead(
-    @Param('id') id: string,
-  ) {
-    const success = this.notificationService.markAsRead(id);
-    if (!success) {
-      throw new BadRequestException(`Notification ${id} not found`);
-    }
-    return { success: true };
-  }
-
-  @Put('notifications/read-all')
-  markAllNotificationsAsRead(
-    @Principal() principal: AuthPrincipal,
-  ) {
-    const count = this.notificationService.markAllAsRead(principal.id);
-    return { success: true, count };
-  }
-
-  @Get('notifications/unread-count')
-  getUnreadCount(
-    @Principal() principal: AuthPrincipal,
-  ) {
-    return { count: this.notificationService.getUnreadCount(principal.id) };
-  }
-
   // NASA-TLX endpoint
   @Post('nasa-tlx')
   submitNASATLX(
@@ -591,8 +568,17 @@ export class DesignSystemController {
     @Body() variant: any,
     @Principal() principal: AuthPrincipal,
   ) {
-    await this.componentAccess.getForWrite(principal, componentId);
-    return this.designSystemService.saveComponentVariant(componentId, variant);
+    const component = await this.componentAccess.getForWrite(principal, componentId);
+    const saved = this.designSystemService.saveComponentVariant(componentId, variant);
+    await this.changes.record(
+      {
+        ...componentChange(component),
+        action: 'updated',
+        changes: [{ field: 'variants', description: `Variant "${saved.name}" saved` }],
+      },
+      principal,
+    );
+    return saved;
   }
 
   @RequirePermission(Permission.COMPONENT_EDIT)
@@ -602,11 +588,21 @@ export class DesignSystemController {
     @Param('variantName') variantName: string,
     @Principal() principal: AuthPrincipal,
   ) {
-    await this.componentAccess.getForWrite(principal, componentId);
+    const component = await this.componentAccess.getForWrite(principal, componentId);
     const deleted = this.designSystemService.deleteComponentVariant(componentId, variantName);
     if (!deleted) {
       throw new BadRequestException(`Variant '${variantName}' not found for component '${componentId}'`);
     }
+    // Code that used the variant stops working, so removing one is breaking
+    await this.changes.record(
+      {
+        ...componentChange(component),
+        action: 'updated',
+        breaking: true,
+        changes: [{ field: 'variants', description: `Variant "${variantName}" removed` }],
+      },
+      principal,
+    );
     return { success: true };
   }
 
@@ -633,7 +629,16 @@ export class DesignSystemController {
     if (data.workspaceId !== undefined) {
       await this.workspaceAccess.require(principal, data.workspaceId, 'editor');
     }
-    return this.designSystemService.createComponent({ ...data, isGlobal: false });
+    const component = this.designSystemService.createComponent({ ...data, isGlobal: false });
+    await this.changes.record(
+      {
+        ...componentChange(component),
+        action: component.status === 'deprecated' ? 'deprecated' : 'created',
+        changes: component.description ? [{ description: component.description }] : [],
+      },
+      principal,
+    );
+    return component;
   }
 
   // Get linked requests for a component

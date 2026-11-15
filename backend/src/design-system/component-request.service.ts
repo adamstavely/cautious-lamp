@@ -1,4 +1,5 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import type { NotificationService } from '../notifications/notification.service';
 
 export interface ComponentRequest {
   id: string;
@@ -61,14 +62,14 @@ export class ComponentRequestService {
   private requests = new Map<string, ComponentRequest>();
   private issues = new Map<string, ComponentIssue>();
   private comments = new Map<string, RequestComment>();
-  private notificationService?: any; // Will be injected if available
+  private notificationService?: NotificationService; // Set by DesignSystemModule
 
   constructor() {
     // Initialize with some example data
     this.initializeExampleData();
   }
 
-  setNotificationService(service: any) {
+  setNotificationService(service: NotificationService) {
     this.notificationService = service;
   }
 
@@ -347,7 +348,7 @@ export class ComponentRequestService {
         // Notify mentioned users
         if (data.mentions && data.mentions.length > 0) {
           data.mentions.forEach(mentionedId => {
-            this.notificationService.createNotification({
+            this.notificationService.notify({
               userId: mentionedId,
               type: 'request-commented',
               title: `You were mentioned in "${request.title}"`,
@@ -831,7 +832,7 @@ export class ComponentRequestService {
 
     // Send notifications
     if (this.notificationService) {
-      this.notificationService.createNotification({
+      this.notificationService.notify({
         userId: sourceRequest.requestedBy,
         type: 'request-merged',
         title: 'Request Merged',
