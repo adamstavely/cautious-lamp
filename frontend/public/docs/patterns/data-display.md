@@ -1,12 +1,8 @@
-# Data Display Patterns
-
-Patterns for presenting data effectively and clearly.
-
 ## Tables
 
 Use tables for structured, tabular data.
 
-### Best Practices
+### Best practices
 
 - Use clear headers
 - Ensure proper alignment
@@ -17,7 +13,7 @@ Use tables for structured, tabular data.
 
 Use lists for sequential or hierarchical information.
 
-### Best Practices
+### Best practices
 
 - Use consistent spacing
 - Provide clear visual hierarchy
@@ -28,7 +24,7 @@ Use lists for sequential or hierarchical information.
 
 Use cards to display related information groups.
 
-### Best Practices
+### Best practices
 
 - Keep content focused
 - Use consistent layouts

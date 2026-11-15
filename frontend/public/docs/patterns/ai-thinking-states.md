@@ -1,21 +1,27 @@
-<div class="mb-12 -mx-4">
-  <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-    <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-    <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-      <div class="flex-1">
-        <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">AI Thinking States</h1>
-        <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">Designing visual indicators and feedback for AI processing and thinking states.</p>
-      </div>
-      <div class="hidden md:block flex-shrink-0">
-        <div class="w-64 h-64 relative">
-          <img src="/svgs/patterns/ai-thinking-states.svg" alt="AI Thinking States" class="w-full h-full" />
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+## Show that work has started
 
-## Overview
+As soon as the request is sent, acknowledge it. Silence after pressing send reads as failure.
 
-Learn how to communicate AI processing states to users through clear visual feedback and status indicators.
+- Show the person's message immediately, then a working indicator where the answer will appear.
+- Keep the input usable for a follow-up, or explain why it is disabled.
+- Offer a "Stop" control while the AI is working.
 
+## Say what is happening
+
+For anything longer than a few seconds, a generic spinner isn't enough.
+
+- Describe the current step in plain words ("Searching your documents", "Reading 4 sources").
+- Show steps as they complete, so progress is visible even without a percentage.
+- Stream the answer as it is written when the model supports it, so people can start reading.
+- If you show the model's reasoning, label it as such and keep it collapsible.
+
+## When it takes too long
+
+- Set an expectation for long tasks ("This usually takes about a minute").
+- After a time limit, say so and offer to keep waiting, retry or cancel. See [AI timeouts and disengagement](/guidelines/patterns/ai-disengagement-timeout-error).
+
+## Accessibility
+
+- Announce the working state and the finished answer through a polite live region (`role="status"`), not every streamed word.
+- Mark the answer area with `aria-busy="true"` while it streams.
+- Respect reduced motion: replace pulsing or typing animations with a static indicator and text.

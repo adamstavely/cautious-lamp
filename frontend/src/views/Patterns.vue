@@ -1,541 +1,139 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" @navigate-doc="handleDocNavigation" />
-    
-    <!-- Main Content Area - shifts when drawer is open -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
+  <!-- An experience pattern: its guidance document under its own hero -->
+  <GuidanceDocPage
+    v-if="experiencePattern"
+    :key="experiencePattern.slug"
+    eyebrow="Patterns"
+    :title="experiencePattern.title"
+    :lead="experiencePattern.lead"
+    :spot="experiencePattern.spot"
+    :doc-path="`/patterns/${experiencePattern.slug}`"
+  />
+
+  <PageShell v-else-if="slug">
+    <PageHero :back="{ to: '/patterns', label: 'Patterns' }" title="Pattern not found" size="tool" />
+    <PageSection>
+      <UiEmptyState spot="site/not-found" title="There's no pattern at this address" :body="`Nothing is published at ${route.path}. It may have moved; the patterns page lists everything there is.`">
+        <template #actions>
+          <UiButton variant="primary" to="/patterns">Browse patterns</UiButton>
+        </template>
+      </UiEmptyState>
+    </PageSection>
+  </PageShell>
+
+  <PageShell v-else>
+    <PageHero
+      eyebrow="Guidelines"
+      title="Patterns"
+      lead="Proven solutions to common interface problems: written guidance, decision aids and code you can copy."
+      spot="patterns/pattern-overview"
     >
-      <!-- Pattern Content - shown when a pattern doc link is clicked -->
-      <div v-if="currentDocLink" class="h-full w-full relative flex flex-col">
-        <!-- Breadcrumbs -->
-        <Breadcrumbs 
-          :custom-path="currentDocLink"
-          :on-navigate="handleBreadcrumbNavigate"
-        />
-        <div class="flex-1 overflow-hidden">
-          <MarkdownViewer :doc-path="currentDocLink" />
-        </div>
+      <template #actions>
+        <UiButton variant="primary" icon="layout-template" to="/patterns/status">Pattern status</UiButton>
+      </template>
+    </PageHero>
+
+    <PageSection title="Core patterns" description="The building blocks of every page.">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <UiCard v-for="guide in PATTERN_GUIDES" :key="guide.slug" :to="guide.to" :title="guide.title" :spot="guide.spot" compact>{{ guide.lead }}</UiCard>
       </div>
-      
-      <!-- Overview Content - shown by default -->
-      <div v-else class="h-full overflow-y-auto">
-        <!-- Breadcrumbs -->
-        <Breadcrumbs />
-        
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-16">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <!-- Background texture/grain effect -->
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Patterns
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Discover proven design patterns and UI solutions. Learn from best practices and reusable solutions that solve common design problems across web and mobile interfaces.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                    <defs>
-                      <linearGradient id="patternsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Stylized patterns icon -->
-                    <rect x="20" y="20" width="40" height="40" rx="4" fill="url(#patternsGradient)" opacity="0.3"/>
-                    <rect x="70" y="20" width="40" height="40" rx="4" fill="url(#patternsGradient)" opacity="0.5"/>
-                    <rect x="120" y="20" width="40" height="40" rx="4" fill="url(#patternsGradient)" opacity="0.4"/>
-                    <rect x="170" y="20" width="20" height="40" rx="4" fill="url(#patternsGradient)" opacity="0.6"/>
-                    <rect x="20" y="70" width="40" height="40" rx="4" fill="url(#patternsGradient)" opacity="0.5"/>
-                    <rect x="70" y="70" width="40" height="40" rx="4" fill="url(#patternsGradient)" opacity="0.3"/>
-                    <rect x="120" y="70" width="40" height="40" rx="4" fill="url(#patternsGradient)" opacity="0.6"/>
-                    <rect x="170" y="70" width="20" height="40" rx="4" fill="url(#patternsGradient)" opacity="0.4"/>
-                    <rect x="20" y="120" width="40" height="40" rx="4" fill="url(#patternsGradient)" opacity="0.4"/>
-                    <rect x="70" y="120" width="40" height="40" rx="4" fill="url(#patternsGradient)" opacity="0.6"/>
-                    <rect x="120" y="120" width="40" height="40" rx="4" fill="url(#patternsGradient)" opacity="0.3"/>
-                    <rect x="170" y="120" width="20" height="40" rx="4" fill="url(#patternsGradient)" opacity="0.5"/>
-                    <rect x="20" y="170" width="40" height="20" rx="4" fill="url(#patternsGradient)" opacity="0.6"/>
-                    <rect x="70" y="170" width="40" height="20" rx="4" fill="url(#patternsGradient)" opacity="0.4"/>
-                    <rect x="120" y="170" width="40" height="20" rx="4" fill="url(#patternsGradient)" opacity="0.5"/>
-                    <rect x="170" y="170" width="20" height="20" rx="4" fill="url(#patternsGradient)" opacity="0.3"/>
-                  </svg>
-                </div>
-              </div>
+    </PageSection>
+
+    <PageSection title="Code patterns" description="Accessible components with Vue, React and HTML versions to copy." divided>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <UiCard v-for="snippet in patternSnippets" :key="snippet.slug" :to="`/patterns/${snippet.slug}`" :title="snippet.title" compact>
+          <template #media>
+            <AppIcon :name="snippet.icon" class="mb-2 text-2xl text-accent-text" />
+          </template>
+          {{ snippet.description }}
+          <template #footer>
+            <div class="flex flex-wrap gap-2">
+              <UiChip :tone="COMPLEXITY_TONES[snippet.complexity]">{{ snippet.complexity }}</UiChip>
+              <UiChip v-if="libraryStatus(snippet.slug)" :tone="statusTone(libraryStatus(snippet.slug))">{{ statusLabel(libraryStatus(snippet.slug)) }}</UiChip>
             </div>
-          </div>
-        </div>
-
-        <!-- Browse Patterns Section -->
-        <div class="max-w-7xl mx-auto mb-16">
-          <div class="mb-8">
-            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Browse patterns
-            </h2>
-          </div>
-          
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <!-- Pattern Card 1: Layout -->
-            <router-link 
-              to="/patterns/layout" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="layout-dashboard" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Layout
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Grid systems, containers, and responsive layouts.
-              </p>
-            </router-link>
-
-            <!-- Pattern Card 2: Navigation -->
-            <router-link 
-              to="/patterns/navigation" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="navigation" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Navigation
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Menu patterns, breadcrumbs, and navigation flows.
-              </p>
-            </router-link>
-
-            <!-- Pattern Card 3: Data Display -->
-            <router-link 
-              to="/patterns/data-display" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="table-2" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Data Display
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Effective patterns for presenting tables and lists.
-              </p>
-            </router-link>
-
-            <!-- Pattern Card 4: Forms -->
-            <router-link 
-              to="/patterns/forms" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="file-text" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Forms
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Form layouts, validation, and user input patterns.
-              </p>
-            </router-link>
-
-            <!-- Pattern Card 5: Feedback -->
-            <router-link 
-              to="/patterns/feedback" 
-              class="group rounded-2xl p-6 border transition-all relative"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="message-square-warning" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Feedback
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Alerts, notifications, and user feedback patterns.
-              </p>
-              <AppIcon name="chevron-right" class="absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" />
-            </router-link>
-
-            <!-- Pattern Card 6: Notifications -->
-            <router-link 
-              to="/patterns/notifications" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="bell" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Notifications
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Decision tree for choosing the right notification component.
-              </p>
-            </router-link>
-          </div>
-        </div>
-
-        <!-- Code Snippet Patterns Section -->
-        <div class="max-w-7xl mx-auto mb-16">
-          <div class="flex items-center justify-between mb-8">
-            <h2 class="text-4xl md:text-5xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              Code Pattern Library
-            </h2>
-          </div>
-          
-          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <router-link 
-              to="/patterns/form-validation" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="file-text" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Form Validation
-              </h3>
-              <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Complete form validation with error handling and accessibility
-              </p>
-              <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-800'">
-                Intermediate
-              </span>
-            </router-link>
-
-            <router-link 
-              to="/patterns/accessible-modal" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="maximize" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Accessible Modal
-              </h3>
-              <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Fully accessible modal dialog with focus trap and keyboard support
-              </p>
-              <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-800'">
-                Advanced
-              </span>
-            </router-link>
-
-            <router-link 
-              to="/patterns/sortable-data-table" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="table-2" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Sortable Data Table
-              </h3>
-              <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Data table with sorting, filtering, and pagination
-              </p>
-              <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-800'">
-                Advanced
-              </span>
-            </router-link>
-
-            <router-link 
-              to="/patterns/login-form" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="lock" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Login Form
-              </h3>
-              <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Complete authentication form with validation and error handling
-              </p>
-              <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-800'">
-                Intermediate
-              </span>
-            </router-link>
-
-            <router-link 
-              to="/patterns/responsive-navigation" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="menu" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Responsive Navigation
-              </h3>
-              <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Mobile-responsive navigation menu with dropdowns
-              </p>
-              <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-100 text-yellow-800'">
-                Intermediate
-              </span>
-            </router-link>
-
-            <router-link 
-              to="/patterns/toast-notification" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="bell" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Toast Notification
-              </h3>
-              <p class="text-sm mb-3" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Toast notification system for temporary messages
-              </p>
-              <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-800'">
-                Beginner
-              </span>
-            </router-link>
-          </div>
-        </div>
-
-        <!-- Featured Patterns Section -->
-        <div class="max-w-7xl mx-auto">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-950 dark:via-indigo-900 dark:to-indigo-800">
-            <div class="mb-8">
-              <h2 class="text-4xl md:text-5xl font-bold text-white">
-                Pattern library
-              </h2>
-            </div>
-            
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-              <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                <h3 class="text-white font-semibold text-xl mb-2">Layout Patterns</h3>
-                <p class="text-white/80 text-sm">Explore grid systems, containers, and responsive layout solutions for modern web applications.</p>
-              </div>
-              <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                <h3 class="text-white font-semibold text-xl mb-2">Navigation Patterns</h3>
-                <p class="text-white/80 text-sm">Learn about menus, breadcrumbs, tabs, and other navigation patterns that improve user experience.</p>
-              </div>
-              <div class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-                <h3 class="text-white font-semibold text-xl mb-2">Data Display Patterns</h3>
-                <p class="text-white/80 text-sm">Discover effective ways to present tables, lists, cards, and other data visualization patterns.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        </div>
+          </template>
+        </UiCard>
       </div>
-    </div>
-  </div>
+    </PageSection>
+
+    <PageSection title="Experience patterns" description="Guidance for empty states, errors, new features and AI interactions." divided>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <UiCard v-for="pattern in EXPERIENCE_PATTERNS" :key="pattern.slug" :to="pattern.to" :title="pattern.title" :spot="pattern.spot" compact>{{ pattern.lead }}</UiCard>
+      </div>
+    </PageSection>
+
+    <PageSection title="Patterns library" description="Patterns the team maintains, with their status. The AI assistant draws on these too." divided>
+      <template #actions>
+        <UiButton icon="list-checks" to="/patterns/status">Status of every pattern</UiButton>
+      </template>
+
+      <UiSpinner v-if="loadingPatterns && !patterns.length" label="Loading the patterns library…" />
+
+      <UiCallout v-else-if="patternsError" tone="danger" title="The patterns library couldn't be loaded" role="alert">
+        {{ apiErrorMessage(patternsError) }}
+        <template #actions>
+          <UiButton size="sm" icon="refresh-cw" @click="loadPatterns">Try again</UiButton>
+        </template>
+      </UiCallout>
+
+      <div v-else-if="patterns.length" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <UiCard v-for="pattern in patterns" :key="pattern.id" :to="patternPage(pattern.name)" :title="pattern.name" compact>
+          {{ pattern.description }}
+          <template #footer>
+            <div class="flex flex-wrap gap-2">
+              <UiChip :tone="pattern.category === 'anti-pattern' ? 'warning' : 'neutral'">{{ categoryLabel(pattern.category) }}</UiChip>
+              <UiChip :tone="statusTone(pattern.status)">{{ statusLabel(pattern.status) }}</UiChip>
+            </div>
+          </template>
+        </UiCard>
+      </div>
+
+      <UiEmptyState v-else title="The patterns library is empty" body="Patterns added to the library appear here with their status." />
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import MarkdownViewer from '../components/MarkdownViewer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDrawer } from '../composables/useDrawer.js';
+import GuidanceDocPage from '../components/GuidanceDocPage.vue';
+import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiCard, UiChip, UiEmptyState, UiSpinner } from '../components/ui';
+import { categoryLabel, patternPage, statusLabel, statusTone, toComponentId, useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
+import { EXPERIENCE_PATTERNS, PATTERN_GUIDES, experiencePatternForSlug, guideForSlug } from '../data/patternGuides.js';
+import { COMPLEXITY_TONES, patternSnippets, snippetForSlug } from '../data/patternSnippets.js';
+import { apiErrorMessage } from '../services/api.js';
 
+/**
+ * /patterns: every pattern page, the code patterns and the patterns library
+ * (GET /patterns-library/patterns) with each pattern's status.
+ * /patterns/<slug> and /guidelines/patterns/<slug> (the catch-alls): an
+ * experience pattern's guidance document, or "not found".
+ */
 const route = useRoute();
 const router = useRouter();
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const currentDocLink = ref(null);
 
-const handleBreadcrumbNavigate = (path) => {
-  // Handle navigation from breadcrumbs
-  if (path === '/patterns' || path === '/') {
-    currentDocLink.value = null;
-    router.push('/patterns');
-  } else if (path.startsWith('/patterns/')) {
-    currentDocLink.value = path;
-    router.push(path);
-  } else if (path.startsWith('/guidelines/patterns/')) {
-    currentDocLink.value = path;
-    router.push(path);
-  }
-};
+const slug = computed(() => route.path.replace(/^\/(guidelines\/)?patterns\/?/, '').replace(/\/+$/, ''));
+const experiencePattern = computed(() => experiencePatternForSlug(slug.value));
 
-const handleDocNavigation = (link) => {
-  // Navigate to the full path to update the URL
-  if (link.startsWith('/guidelines/patterns/')) {
-    currentDocLink.value = link;
-    router.push(link);
-  } else if (link.startsWith('/patterns/')) {
-    currentDocLink.value = link;
-    router.push(link);
-  } else {
-    // For links without /patterns prefix, add it
-    currentDocLink.value = `/patterns${link}`;
-    router.push(`/patterns${link}`);
-  }
-  // Open drawer if closed
-  if (!drawerOpen.value) {
-    drawerOpen.value = true;
-  }
-};
+// /guidelines/patterns/<slug> for a pattern with a page of its own goes to that page
+watch(
+  slug,
+  (value) => {
+    if (value && (guideForSlug(value) || snippetForSlug(value))) router.replace(`/patterns/${value}`);
+  },
+  { immediate: true },
+);
 
-// Watch for dark mode changes
-let darkModeObserver = null;
-let darkModeInterval = null;
+const { patterns, loadingPatterns, patternsError, loadPatterns } = useComponentPatternStatus();
 
-// Watch for route changes to update currentDocLink
-watch(() => route.path, (newPath) => {
-  if (newPath.startsWith('/guidelines/patterns/')) {
-    // Update currentDocLink when route changes (e.g., from browser back/forward)
-    currentDocLink.value = newPath;
-  } else if (newPath.startsWith('/patterns/') && newPath !== '/patterns' && newPath !== '/patterns/status') {
-    // For /patterns/... routes, set currentDocLink to the full path
-    currentDocLink.value = newPath;
-  } else if (newPath === '/patterns' || newPath === '/patterns/status') {
-    currentDocLink.value = null;
-  }
-}, { immediate: true });
+/** The library's status for a code pattern, when the library has a pattern of that name */
+const libraryStatus = (snippetSlug) => patterns.value.find((p) => toComponentId(p.name) === snippetSlug)?.status ?? null;
 
-onMounted(() => {
-  // Auto-open drawer if navigating from sidebar
-  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-    drawerOpen.value = true;
-    sessionStorage.removeItem('openDrawerOnLoad');
-  }
-  
-  // Handle route on mount
-  if (route.path.startsWith('/guidelines/patterns/')) {
-    currentDocLink.value = route.path;
-  } else if (route.path.startsWith('/patterns/') && route.path !== '/patterns' && route.path !== '/patterns/status') {
-    currentDocLink.value = route.path;
-  }
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
+watch(
+  slug,
+  (value) => {
+    if (!value && !patterns.value.length) loadPatterns();
+  },
+  { immediate: true },
+);
 </script>
-
-<style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-</style>
-

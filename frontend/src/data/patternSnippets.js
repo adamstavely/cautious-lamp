@@ -1,571 +1,661 @@
-// Pattern code snippets data
-// These are reusable code patterns that solve common UI problems
+// Code patterns: reusable solutions to common UI problems, each with a Vue,
+// React and HTML version, an example of using it, and accessibility notes.
+// Every pattern page (/patterns/<slug>) shows this code; nothing is a stub.
+
+/** The frameworks a code pattern can be written in, in tab order */
+export const FRAMEWORKS = [
+  { value: 'vue', label: 'Vue' },
+  { value: 'react', label: 'React' },
+  { value: 'html', label: 'HTML' },
+];
+
+export const COMPLEXITY_TONES = { Beginner: 'success', Intermediate: 'warning', Advanced: 'danger' };
 
 export const patternSnippets = [
   {
     id: 'form-validation',
-    title: 'Form Validation',
-    description: 'Complete form validation with error handling and accessibility',
-    category: 'forms',
-    framework: 'vue',
+    slug: 'form-validation',
+    title: 'Form validation',
+    description: 'Validate an email field on submit, show the error next to it and tell assistive technology.',
+    category: 'Forms',
+    icon: 'file-text',
     tags: ['form', 'validation', 'accessibility'],
-    useCase: 'User Input',
     complexity: 'Intermediate',
+    usage: 'Use it for any form field that needs checking before the form is sent: show the error beside the field and keep it linked to the input.',
     code: {
       vue: `<template>
-  <form @submit.prevent="handleSubmit">
-    <div class="form-group">
-      <label for="email">Email</label>
-      <input
-        id="email"
-        v-model="form.email"
-        type="email"
-        :aria-invalid="errors.email ? 'true' : 'false'"
-        :aria-describedby="errors.email ? 'email-error' : undefined"
-      />
-      <div v-if="errors.email" id="email-error" role="alert" class="error">
-        {{ errors.email }}
-      </div>
-    </div>
-    <button type="submit" :disabled="!isValid">Submit</button>
+  <form novalidate @submit.prevent="handleSubmit">
+    <label for="email">Email</label>
+    <input
+      id="email"
+      v-model="email"
+      type="email"
+      autocomplete="email"
+      :aria-invalid="error ? 'true' : 'false'"
+      :aria-describedby="error ? 'email-error' : undefined"
+    />
+    <p v-if="error" id="email-error" class="error">{{ error }}</p>
+    <button type="submit">Submit</button>
   </form>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 
-const form = ref({ email: '' });
-const errors = ref({});
+const emit = defineEmits(['submit']);
+const email = ref('');
+const error = ref('');
 
-const isValid = computed(() => {
-  return form.value.email && !errors.value.email;
-});
-
-const validateEmail = (email) => {
-  const re = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
-  return re.test(email);
-};
+const EMAIL = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
 
 const handleSubmit = () => {
-  errors.value = {};
-  if (!validateEmail(form.value.email)) {
-    errors.value.email = 'Please enter a valid email address';
+  error.value = EMAIL.test(email.value) ? '' : 'Enter an email address, like name@example.com';
+  if (error.value) {
+    document.getElementById('email').focus();
+    return;
   }
-  if (isValid.value) {
-    // Submit form
-  }
+  emit('submit', { email: email.value });
 };
 </script>`,
-      react: `import React, { useState } from 'react';
+      react: `import { useRef, useState } from 'react';
 
-function FormValidation() {
-  const [form, setForm] = useState({ email: '' });
-  const [errors, setErrors] = useState({});
+const EMAIL = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
 
-  const validateEmail = (email) => {
-    const re = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
-    return re.test(email);
-  };
+export function EmailForm({ onSubmit }) {
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  const input = useRef(null);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const newErrors = {};
-    if (!validateEmail(form.email)) {
-      newErrors.email = 'Please enter a valid email address';
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const message = EMAIL.test(email) ? '' : 'Enter an email address, like name@example.com';
+    setError(message);
+    if (message) {
+      input.current.focus();
+      return;
     }
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length === 0) {
-      // Submit form
-    }
+    onSubmit({ email });
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="form-group">
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          aria-invalid={errors.email ? 'true' : 'false'}
-          aria-describedby={errors.email ? 'email-error' : undefined}
-        />
-        {errors.email && (
-          <div id="email-error" role="alert" className="error">
-            {errors.email}
-          </div>
-        )}
-      </div>
-      <button type="submit" disabled={!form.email || errors.email}>
-        Submit
-      </button>
+    <form noValidate onSubmit={handleSubmit}>
+      <label htmlFor="email">Email</label>
+      <input
+        ref={input}
+        id="email"
+        type="email"
+        autoComplete="email"
+        value={email}
+        onChange={(event) => setEmail(event.target.value)}
+        aria-invalid={error ? 'true' : 'false'}
+        aria-describedby={error ? 'email-error' : undefined}
+      />
+      {error && <p id="email-error" className="error">{error}</p>}
+      <button type="submit">Submit</button>
     </form>
   );
 }`,
-      html: `<!DOCTYPE html>
-<html>
-<head>
-  <title>Form Validation</title>
-</head>
-<body>
-  <form id="myForm">
-    <div class="form-group">
-      <label for="email">Email</label>
-      <input id="email" type="email" required />
-      <div id="email-error" role="alert" class="error" style="display: none;"></div>
-    </div>
-    <button type="submit">Submit</button>
-  </form>
-  <script>
-    document.getElementById('myForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const email = document.getElementById('email').value;
-      const errorDiv = document.getElementById('email-error');
-      const re = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
-      if (!re.test(email)) {
-        errorDiv.textContent = 'Please enter a valid email address';
-        errorDiv.style.display = 'block';
-        document.getElementById('email').setAttribute('aria-invalid', 'true');
-      } else {
-        errorDiv.style.display = 'none';
-        document.getElementById('email').setAttribute('aria-invalid', 'false');
-        // Submit form
-      }
-    });
-  </script>
-</body>
-</html>`
+      html: `<form id="email-form" novalidate>
+  <label for="email">Email</label>
+  <input id="email" type="email" autocomplete="email" aria-invalid="false" />
+  <p id="email-error" class="error" hidden></p>
+  <button type="submit">Submit</button>
+</form>
+
+<script>
+  const EMAIL = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+  const form = document.getElementById('email-form');
+  const input = document.getElementById('email');
+  const error = document.getElementById('email-error');
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const valid = EMAIL.test(input.value);
+    error.hidden = valid;
+    error.textContent = valid ? '' : 'Enter an email address, like name@example.com';
+    input.setAttribute('aria-invalid', String(!valid));
+    if (valid) {
+      input.removeAttribute('aria-describedby');
+      form.dispatchEvent(new CustomEvent('valid-submit', { detail: { email: input.value } }));
+    } else {
+      input.setAttribute('aria-describedby', 'email-error');
+      input.focus();
+    }
+  });
+</script>`,
     },
-    usageExample: 'Use this snippet for any form that requires email validation with proper error handling and accessibility.',
-    props: [
-      { name: 'email', type: 'string', required: true, description: 'Email address to validate', default: '' }
-    ]
-  },
-  {
-    id: 'modal-component',
-    title: 'Accessible Modal',
-    description: 'Fully accessible modal dialog with focus trap and keyboard support',
-    category: 'feedback',
-    framework: 'vue',
-    tags: ['modal', 'dialog', 'accessibility'],
-    useCase: 'User Feedback',
-    complexity: 'Advanced',
-    code: {
-      vue: `<template>
-  <div v-if="isOpen" class="modal-overlay" @click.self="close">
-    <div class="modal" role="dialog" aria-modal="true" :aria-labelledby="titleId">
-      <div class="modal-header">
-        <h2 :id="titleId">{{ title }}</h2>
-        <button @click="close" aria-label="Close modal">×</button>
-      </div>
-      <div class="modal-body">
-        <slot />
-      </div>
+    props: [{ name: 'submit', type: 'event', required: false, description: 'Emitted with { email } once the address is valid', default: '' }],
+    usageExamples: [
+      {
+        title: 'Several fields with their own rules',
+        description: 'Each field checks itself when it loses focus and again on submit; the first field in error takes focus.',
+        code: `<template>
+  <form novalidate @submit.prevent="handleSubmit">
+    <div v-for="field in fields" :key="field.name" class="field">
+      <label :for="field.name">{{ field.label }}</label>
+      <input
+        :id="field.name"
+        v-model="values[field.name]"
+        :type="field.type"
+        :autocomplete="field.autocomplete"
+        :aria-invalid="errors[field.name] ? 'true' : 'false'"
+        :aria-describedby="errors[field.name] ? field.name + '-error' : undefined"
+        @blur="validateField(field)"
+      />
+      <p v-if="errors[field.name]" :id="field.name + '-error'" class="error">{{ errors[field.name] }}</p>
     </div>
-  </div>
+    <button type="submit">Create account</button>
+  </form>
 </template>
 
 <script setup>
-import { computed, watch, onBeforeUnmount } from 'vue';
+import { reactive } from 'vue';
 
-const props = defineProps({
-  isOpen: { type: Boolean, required: true },
-  title: { type: String, required: true }
-});
+const emit = defineEmits(['submit']);
 
-const emit = defineEmits(['close']);
+const fields = [
+  { name: 'name', label: 'Full name', type: 'text', autocomplete: 'name', check: (v) => (v.trim() ? '' : 'Enter your name') },
+  { name: 'email', label: 'Email', type: 'email', autocomplete: 'email', check: (v) => (/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v) ? '' : 'Enter an email address, like name@example.com') },
+  { name: 'phone', label: 'Phone', type: 'tel', autocomplete: 'tel', check: (v) => (v.replace(/\\D/g, '').length >= 10 ? '' : 'Enter a phone number with at least 10 digits') },
+];
 
-const titleId = computed(() => \`modal-title-\${props.title.toLowerCase().replace(/\\s/g, '-')}\`);
+const values = reactive({ name: '', email: '', phone: '' });
+const errors = reactive({});
 
-const close = () => {
-  emit('close');
+const validateField = (field) => {
+  errors[field.name] = field.check(values[field.name]);
+  return !errors[field.name];
 };
 
-const handleEscape = (e) => {
-  if (e.key === 'Escape' && props.isOpen) {
-    close();
+const handleSubmit = () => {
+  const invalid = fields.filter((field) => !validateField(field));
+  if (invalid.length) {
+    document.getElementById(invalid[0].name).focus();
+    return;
   }
+  emit('submit', { ...values });
 };
-
-watch(() => props.isOpen, (isOpen) => {
-  if (isOpen) {
-    document.body.style.overflow = 'hidden';
-    document.addEventListener('keydown', handleEscape);
-  } else {
-    document.body.style.overflow = '';
-    document.removeEventListener('keydown', handleEscape);
-  }
-});
-
-onBeforeUnmount(() => {
-  document.removeEventListener('keydown', handleEscape);
-  document.body.style.overflow = '';
-});
 </script>`,
-      react: `import React, { useEffect } from 'react';
-
-function Modal({ isOpen, title, onClose, children }) {
-  const titleId = \`modal-title-\${title.toLowerCase().replace(/\\s/g, '-')}\`;
-
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      document.addEventListener('keydown', handleEscape);
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = '';
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2 id={titleId}>{title}</h2>
-          <button onClick={onClose} aria-label="Close modal">×</button>
-        </div>
-        <div className="modal-body">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}`,
-      html: `<!DOCTYPE html>
-<html>
-<head>
-  <title>Accessible Modal</title>
-</head>
-<body>
-  <button onclick="openModal()">Open Modal</button>
-  <div id="modal" class="modal-overlay" style="display: none;" onclick="closeModal(event)">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <h2 id="modal-title">Modal Title</h2>
-        <button onclick="closeModal()" aria-label="Close modal">×</button>
-      </div>
-      <div class="modal-body">
-        Modal content here
-      </div>
-    </div>
-  </div>
-  <script>
-    function openModal() {
-      document.getElementById('modal').style.display = 'flex';
-      document.body.style.overflow = 'hidden';
-      document.addEventListener('keydown', handleEscape);
-    }
-    function closeModal(e) {
-      if (!e || e.target.classList.contains('modal-overlay')) {
-        document.getElementById('modal').style.display = 'none';
-        document.body.style.overflow = '';
-        document.removeEventListener('keydown', handleEscape);
-      }
-    }
-    function handleEscape(e) {
-      if (e.key === 'Escape') closeModal();
-    }
-  </script>
-</body>
-</html>`
-    },
-    usageExample: 'Use this modal component for any dialog that needs to be accessible and keyboard-friendly.',
-    props: [
-      { name: 'isOpen', type: 'boolean', required: true, description: 'Controls modal visibility', default: false },
-      { name: 'title', type: 'string', required: true, description: 'Modal title', default: '' }
-    ]
+      },
+    ],
+    accessibility: [
+      'Give every input a visible `<label>` tied to it with `for` and `id`.',
+      'Set `aria-invalid="true"` on a field in error and point `aria-describedby` at its message.',
+      'Move focus to the first field in error after a failed submit, so screen reader users hear the problem.',
+      'Say how to fix the problem ("Enter an email address, like name@example.com"), not only that it is wrong.',
+      'Use `novalidate` and your own messages so errors look and read the same in every browser.',
+    ],
+    related: [
+      { title: 'Form patterns', to: '/patterns/forms', body: 'Labels, layout and validation guidance for whole forms.' },
+      { title: 'Login form', to: '/patterns/login-form', body: 'The same validation approach for signing in.' },
+      { title: 'Error handling', to: '/guidelines/patterns/error-handling', body: 'Writing errors that explain what went wrong and how to recover.' },
+    ],
   },
   {
-    id: 'data-table',
-    title: 'Sortable Data Table',
-    description: 'Data table with sorting, filtering, and pagination',
-    category: 'data-display',
-    framework: 'vue',
-    tags: ['table', 'data', 'sorting'],
-    useCase: 'Data Display',
+    id: 'accessible-modal',
+    slug: 'accessible-modal',
+    title: 'Accessible modal',
+    description: 'A modal dialog built on the native dialog element: focus stays inside, Escape closes it and focus returns to the trigger.',
+    category: 'Feedback',
+    icon: 'maximize',
+    tags: ['modal', 'dialog', 'accessibility'],
     complexity: 'Advanced',
+    usage: 'Use it when the user must deal with something before carrying on: a confirmation, a short form, a blocking error.',
+    code: {
+      vue: `<template>
+  <dialog ref="dialog" class="modal" :aria-labelledby="titleId" @close="emit('update:open', false)">
+    <header class="modal-header">
+      <h2 :id="titleId">{{ title }}</h2>
+      <button type="button" aria-label="Close" @click="close">&times;</button>
+    </header>
+    <div class="modal-body">
+      <slot />
+    </div>
+    <footer v-if="$slots.footer" class="modal-footer">
+      <slot name="footer" :close="close" />
+    </footer>
+  </dialog>
+</template>
+
+<script setup>
+import { onMounted, ref, useId, watch } from 'vue';
+
+// showModal() makes the rest of the page inert, keeps focus inside the dialog,
+// closes on Escape and returns focus to the element that opened it
+const props = defineProps({
+  open: { type: Boolean, required: true },
+  title: { type: String, required: true },
+});
+const emit = defineEmits(['update:open']);
+
+const dialog = ref(null);
+const titleId = useId();
+
+const sync = (open) => {
+  if (open && !dialog.value.open) dialog.value.showModal();
+  if (!open && dialog.value.open) dialog.value.close();
+};
+const close = () => sync(false);
+
+onMounted(() => sync(props.open));
+watch(() => props.open, sync);
+</script>`,
+      react: `import { useEffect, useId, useRef } from 'react';
+
+// showModal() makes the rest of the page inert, keeps focus inside the dialog,
+// closes on Escape and returns focus to the element that opened it
+export function Modal({ open, title, onClose, footer, children }) {
+  const dialog = useRef(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    const element = dialog.current;
+    if (open && !element.open) element.showModal();
+    if (!open && element.open) element.close();
+  }, [open]);
+
+  return (
+    <dialog ref={dialog} className="modal" aria-labelledby={titleId} onClose={onClose}>
+      <header className="modal-header">
+        <h2 id={titleId}>{title}</h2>
+        <button type="button" aria-label="Close" onClick={() => dialog.current.close()}>&times;</button>
+      </header>
+      <div className="modal-body">{children}</div>
+      {footer && <footer className="modal-footer">{footer}</footer>}
+    </dialog>
+  );
+}`,
+      html: `<button type="button" id="open-dialog">Delete project</button>
+
+<dialog id="confirm-dialog" aria-labelledby="confirm-title">
+  <h2 id="confirm-title">Delete this project?</h2>
+  <p>Its files and history go too. You can't undo this.</p>
+  <form method="dialog">
+    <button value="cancel" autofocus>Cancel</button>
+    <button value="delete">Delete project</button>
+  </form>
+</dialog>
+
+<script>
+  const dialog = document.getElementById('confirm-dialog');
+
+  // showModal() traps focus and closes on Escape; closing returns focus to the opener
+  document.getElementById('open-dialog').addEventListener('click', () => dialog.showModal());
+
+  // A <form method="dialog"> closes the dialog and sets returnValue to the button's value
+  dialog.addEventListener('close', () => {
+    if (dialog.returnValue === 'delete') {
+      document.dispatchEvent(new CustomEvent('project-delete-confirmed'));
+    }
+  });
+</script>`,
+    },
+    props: [
+      { name: 'open', type: 'boolean', required: true, description: 'Whether the dialog is showing; use v-model:open', default: 'false' },
+      { name: 'title', type: 'string', required: true, description: 'The heading, which also names the dialog', default: '' },
+    ],
+    usageExamples: [
+      {
+        title: 'Confirming a destructive action',
+        description: 'The page opens the modal from a button and only deletes once the user confirms.',
+        code: `<template>
+  <button type="button" @click="confirming = true">Delete project</button>
+
+  <Modal v-model:open="confirming" title="Delete this project?">
+    <p>{{ project.name }}, its files and its history will be deleted. You can't undo this.</p>
+    <template #footer="{ close }">
+      <button type="button" autofocus @click="close">Cancel</button>
+      <button type="button" class="danger" @click="remove">Delete project</button>
+    </template>
+  </Modal>
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import Modal from './Modal.vue';
+
+const props = defineProps({ project: { type: Object, required: true } });
+const emit = defineEmits(['deleted']);
+const confirming = ref(false);
+
+const remove = async () => {
+  await fetch(\`/api/projects/\${props.project.id}\`, { method: 'DELETE' });
+  confirming.value = false;
+  emit('deleted', props.project.id);
+};
+</script>`,
+      },
+    ],
+    accessibility: [
+      'Open it with `showModal()`: the page behind becomes inert and focus stays inside the dialog.',
+      'Name the dialog with `aria-labelledby` pointing at its heading.',
+      'Give the close button an accessible name such as `aria-label="Close"`.',
+      'Let Escape close it, and return focus to the button that opened it (the native dialog does both).',
+      'Put initial focus on the safest action with `autofocus`, usually Cancel.',
+    ],
+    related: [
+      { title: 'Notifications', to: '/patterns/notifications', body: 'When a modal is the right choice, and when a banner or toast is better.' },
+      { title: 'Feedback patterns', to: '/patterns/feedback', body: 'Alerts, loading states and confirmations.' },
+      { title: 'Buttons', to: '/components/buttons', body: 'Primary, secondary and danger buttons for dialog actions.' },
+    ],
+  },
+  {
+    id: 'sortable-data-table',
+    slug: 'sortable-data-table',
+    title: 'Sortable data table',
+    description: 'A table with search, sortable columns that announce their order, and pagination.',
+    category: 'Data display',
+    icon: 'table-2',
+    tags: ['table', 'data', 'sorting'],
+    complexity: 'Advanced',
+    usage: 'Use it for lists of records people compare or scan: search narrows them, column headers sort them and pages keep them short.',
     code: {
       vue: `<template>
   <div>
-    <input v-model="searchQuery" placeholder="Search..." />
+    <label for="table-search">Search</label>
+    <input id="table-search" v-model="query" type="search" @input="page = 1" />
+
     <table>
+      <caption>{{ caption }}</caption>
       <thead>
         <tr>
-          <th @click="sort('name')">
-            Name
-            <span v-if="sortKey === 'name'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
-          </th>
-          <th @click="sort('email')">
-            Email
-            <span v-if="sortKey === 'email'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+          <th v-for="column in columns" :key="column.key" scope="col" :aria-sort="ariaSort(column.key)">
+            <button type="button" @click="sortBy(column.key)">
+              {{ column.label }}
+              <span aria-hidden="true">{{ sortKey === column.key ? (ascending ? '▲' : '▼') : '' }}</span>
+            </button>
           </th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="item in paginatedData" :key="item.id">
-          <td>{{ item.name }}</td>
-          <td>{{ item.email }}</td>
+        <tr v-for="row in pageRows" :key="row.id">
+          <td v-for="column in columns" :key="column.key">{{ row[column.key] }}</td>
+        </tr>
+        <tr v-if="!pageRows.length">
+          <td :colspan="columns.length">No rows match "{{ query }}"</td>
         </tr>
       </tbody>
     </table>
-    <div class="pagination">
-      <button @click="prevPage" :disabled="currentPage === 1">Previous</button>
-      <span>Page {{ currentPage }} of {{ totalPages }}</span>
-      <button @click="nextPage" :disabled="currentPage === totalPages">Next</button>
-    </div>
+
+    <nav aria-label="Table pages">
+      <button type="button" :disabled="page === 1" @click="page--">Previous</button>
+      <span aria-live="polite">Page {{ page }} of {{ pageCount }}</span>
+      <button type="button" :disabled="page === pageCount" @click="page++">Next</button>
+    </nav>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { computed, ref } from 'vue';
 
-const data = ref([...]);
-const searchQuery = ref('');
+const props = defineProps({
+  caption: { type: String, required: true },
+  columns: { type: Array, required: true }, // [{ key, label }]
+  rows: { type: Array, required: true }, // objects with an id and a value for each column key
+  pageSize: { type: Number, default: 10 },
+});
+
+const query = ref('');
 const sortKey = ref('');
-const sortOrder = ref('asc');
-const currentPage = ref(1);
-const itemsPerPage = 10;
+const ascending = ref(true);
+const page = ref(1);
 
-const filteredData = computed(() => {
-  return data.value.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-    item.email.toLowerCase().includes(searchQuery.value.toLowerCase())
+const filtered = computed(() => {
+  const q = query.value.trim().toLowerCase();
+  if (!q) return props.rows;
+  return props.rows.filter((row) => props.columns.some((c) => String(row[c.key]).toLowerCase().includes(q)));
+});
+
+const sorted = computed(() => {
+  if (!sortKey.value) return filtered.value;
+  const direction = ascending.value ? 1 : -1;
+  return [...filtered.value].sort((a, b) =>
+    String(a[sortKey.value]).localeCompare(String(b[sortKey.value]), undefined, { numeric: true }) * direction,
   );
 });
 
-const sortedData = computed(() => {
-  if (!sortKey.value) return filteredData.value;
-  return [...filteredData.value].sort((a, b) => {
-    const aVal = a[sortKey.value];
-    const bVal = b[sortKey.value];
-    return sortOrder.value === 'asc' 
-      ? aVal.localeCompare(bVal)
-      : bVal.localeCompare(aVal);
-  });
-});
+const pageCount = computed(() => Math.max(1, Math.ceil(sorted.value.length / props.pageSize)));
+const pageRows = computed(() => sorted.value.slice((page.value - 1) * props.pageSize, page.value * props.pageSize));
 
-const paginatedData = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage;
-  return sortedData.value.slice(start, start + itemsPerPage);
-});
-
-const totalPages = computed(() => Math.ceil(sortedData.value.length / itemsPerPage));
-
-const sort = (key) => {
-  if (sortKey.value === key) {
-    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
-  } else {
-    sortKey.value = key;
-    sortOrder.value = 'asc';
-  }
+const sortBy = (key) => {
+  ascending.value = sortKey.value === key ? !ascending.value : true;
+  sortKey.value = key;
+  page.value = 1;
 };
 
-const nextPage = () => {
-  if (currentPage.value < totalPages.value) currentPage.value++;
-};
-
-const prevPage = () => {
-  if (currentPage.value > 1) currentPage.value--;
-};
+const ariaSort = (key) => (sortKey.value === key ? (ascending.value ? 'ascending' : 'descending') : 'none');
 </script>`,
-      react: `import React, { useState, useMemo } from 'react';
+      react: `import { useMemo, useState } from 'react';
 
-function DataTable({ data }) {
-  const [searchQuery, setSearchQuery] = useState('');
+export function DataTable({ caption, columns, rows, pageSize = 10 }) {
+  const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState('');
-  const [sortOrder, setSortOrder] = useState('asc');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [ascending, setAscending] = useState(true);
+  const [page, setPage] = useState(1);
 
-  const filteredData = useMemo(() => {
-    return data.filter(item => 
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [data, searchQuery]);
+  const sorted = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const filtered = q ? rows.filter((row) => columns.some((c) => String(row[c.key]).toLowerCase().includes(q))) : rows;
+    if (!sortKey) return filtered;
+    const direction = ascending ? 1 : -1;
+    return [...filtered].sort((a, b) => String(a[sortKey]).localeCompare(String(b[sortKey]), undefined, { numeric: true }) * direction);
+  }, [rows, columns, query, sortKey, ascending]);
 
-  const sortedData = useMemo(() => {
-    if (!sortKey) return filteredData;
-    return [...filteredData].sort((a, b) => {
-      const aVal = a[sortKey];
-      const bVal = b[sortKey];
-      return sortOrder === 'asc' 
-        ? aVal.localeCompare(bVal)
-        : bVal.localeCompare(aVal);
-    });
-  }, [filteredData, sortKey, sortOrder]);
+  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const pageRows = sorted.slice((page - 1) * pageSize, page * pageSize);
 
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return sortedData.slice(start, start + itemsPerPage);
-  }, [sortedData, currentPage]);
-
-  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
-
-  const sort = (key) => {
-    if (sortKey === key) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortKey(key);
-      setSortOrder('asc');
-    }
+  const sortBy = (key) => {
+    setAscending(sortKey === key ? !ascending : true);
+    setSortKey(key);
+    setPage(1);
   };
+
+  const ariaSort = (key) => (sortKey === key ? (ascending ? 'ascending' : 'descending') : 'none');
 
   return (
     <div>
-      <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search..." />
+      <label htmlFor="table-search">Search</label>
+      <input id="table-search" type="search" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
+
       <table>
+        <caption>{caption}</caption>
         <thead>
           <tr>
-            <th onClick={() => sort('name')}>
-              Name {sortKey === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </th>
-            <th onClick={() => sort('email')}>
-              Email {sortKey === 'email' && (sortOrder === 'asc' ? '↑' : '↓')}
-            </th>
+            {columns.map((column) => (
+              <th key={column.key} scope="col" aria-sort={ariaSort(column.key)}>
+                <button type="button" onClick={() => sortBy(column.key)}>
+                  {column.label}
+                  <span aria-hidden="true">{sortKey === column.key ? (ascending ? '▲' : '▼') : ''}</span>
+                </button>
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {paginatedData.map(item => (
-            <tr key={item.id}>
-              <td>{item.name}</td>
-              <td>{item.email}</td>
+          {pageRows.map((row) => (
+            <tr key={row.id}>
+              {columns.map((column) => <td key={column.key}>{row[column.key]}</td>)}
             </tr>
           ))}
+          {!pageRows.length && (
+            <tr><td colSpan={columns.length}>No rows match "{query}"</td></tr>
+          )}
         </tbody>
       </table>
-      <div className="pagination">
-        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-          Previous
-        </button>
-        <span>Page {currentPage} of {totalPages}</span>
-        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-          Next
-        </button>
-      </div>
+
+      <nav aria-label="Table pages">
+        <button type="button" disabled={page === 1} onClick={() => setPage(page - 1)}>Previous</button>
+        <span aria-live="polite">Page {page} of {pageCount}</span>
+        <button type="button" disabled={page === pageCount} onClick={() => setPage(page + 1)}>Next</button>
+      </nav>
     </div>
   );
 }`,
-      html: `<!DOCTYPE html>
-<html>
-<head>
-  <title>Sortable Data Table</title>
-</head>
-<body>
-  <input id="search" type="text" placeholder="Search..." />
-  <table id="dataTable">
-    <thead>
-      <tr>
-        <th onclick="sort('name')">Name <span id="name-sort"></span></th>
-        <th onclick="sort('email')">Email <span id="email-sort"></span></th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
-  <div class="pagination">
-    <button onclick="prevPage()" id="prevBtn">Previous</button>
-    <span id="pageInfo">Page 1 of 1</span>
-    <button onclick="nextPage()" id="nextBtn">Next</button>
-  </div>
-  <script>
-    let data = [...];
-    let searchQuery = '';
-    let sortKey = '';
-    let sortOrder = 'asc';
-    let currentPage = 1;
-    const itemsPerPage = 10;
+      html: `<label for="table-search">Search</label>
+<input id="table-search" type="search" />
 
-    document.getElementById('search').addEventListener('input', (e) => {
-      searchQuery = e.target.value.toLowerCase();
-      renderTable();
+<table id="people">
+  <caption>Team members</caption>
+  <thead>
+    <tr>
+      <th scope="col" aria-sort="none"><button type="button" data-key="name">Name</button></th>
+      <th scope="col" aria-sort="none"><button type="button" data-key="email">Email</button></th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<nav aria-label="Table pages">
+  <button type="button" id="prev">Previous</button>
+  <span id="page-info" aria-live="polite"></span>
+  <button type="button" id="next">Next</button>
+</nav>
+
+<script>
+  // Replace with your own rows, e.g. from fetch()
+  const rows = [
+    { id: 1, name: 'Ada Lovelace', email: 'ada@example.com' },
+    { id: 2, name: 'Grace Hopper', email: 'grace@example.com' },
+    { id: 3, name: 'Alan Turing', email: 'alan@example.com' },
+  ];
+  const pageSize = 10;
+  const state = { query: '', sortKey: '', ascending: true, page: 1 };
+
+  const table = document.getElementById('people');
+  const body = table.querySelector('tbody');
+
+  function visibleRows() {
+    const q = state.query.toLowerCase();
+    let list = rows.filter((row) => !q || row.name.toLowerCase().includes(q) || row.email.toLowerCase().includes(q));
+    if (state.sortKey) {
+      const direction = state.ascending ? 1 : -1;
+      list = [...list].sort((a, b) => a[state.sortKey].localeCompare(b[state.sortKey]) * direction);
+    }
+    return list;
+  }
+
+  function render() {
+    const list = visibleRows();
+    const pageCount = Math.max(1, Math.ceil(list.length / pageSize));
+    state.page = Math.min(state.page, pageCount);
+    body.replaceChildren(
+      ...list.slice((state.page - 1) * pageSize, state.page * pageSize).map((row) => {
+        const tr = document.createElement('tr');
+        for (const key of ['name', 'email']) {
+          const td = document.createElement('td');
+          td.textContent = row[key];
+          tr.append(td);
+        }
+        return tr;
+      }),
+    );
+    table.querySelectorAll('th').forEach((th) => {
+      const key = th.querySelector('button').dataset.key;
+      th.setAttribute('aria-sort', key === state.sortKey ? (state.ascending ? 'ascending' : 'descending') : 'none');
     });
+    document.getElementById('page-info').textContent = \`Page \${state.page} of \${pageCount}\`;
+    document.getElementById('prev').disabled = state.page === 1;
+    document.getElementById('next').disabled = state.page === pageCount;
+  }
 
-    function sort(key) {
-      if (sortKey === key) {
-        sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-      } else {
-        sortKey = key;
-        sortOrder = 'asc';
-      }
-      renderTable();
-    }
+  document.getElementById('table-search').addEventListener('input', (event) => {
+    state.query = event.target.value.trim();
+    state.page = 1;
+    render();
+  });
+  table.querySelectorAll('th button').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.ascending = state.sortKey === button.dataset.key ? !state.ascending : true;
+      state.sortKey = button.dataset.key;
+      state.page = 1;
+      render();
+    });
+  });
+  document.getElementById('prev').addEventListener('click', () => { state.page--; render(); });
+  document.getElementById('next').addEventListener('click', () => { state.page++; render(); });
 
-    function renderTable() {
-      // Filter, sort, paginate and render
-    }
-
-    function nextPage() {
-      const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-      if (currentPage < totalPages) {
-        currentPage++;
-        renderTable();
-      }
-    }
-
-    function prevPage() {
-      if (currentPage > 1) {
-        currentPage--;
-        renderTable();
-      }
-    }
-  </script>
-</body>
-</html>`
+  render();
+</script>`,
     },
-    usageExample: 'Use this table component for displaying large datasets with search, sort, and pagination capabilities.',
     props: [
-      { name: 'data', type: 'array', required: true, description: 'Array of data objects to display', default: '[]' },
-      { name: 'itemsPerPage', type: 'number', required: false, description: 'Number of items per page', default: 10 }
-    ]
+      { name: 'caption', type: 'string', required: true, description: 'Names the table for assistive technology', default: '' },
+      { name: 'columns', type: 'array', required: true, description: 'The columns, as { key, label }', default: '' },
+      { name: 'rows', type: 'array', required: true, description: 'The records, each with an id and a value per column key', default: '' },
+      { name: 'pageSize', type: 'number', required: false, description: 'Rows per page', default: '10' },
+    ],
+    usageExamples: [
+      {
+        title: 'Loading rows from an API',
+        description: 'The page fetches the records once and hands them to the table, with a loading and an error state of its own.',
+        code: `<template>
+  <p v-if="loading" role="status">Loading team members…</p>
+  <p v-else-if="error" role="alert">{{ error }}</p>
+  <DataTable v-else caption="Team members" :columns="columns" :rows="people" :page-size="20" />
+</template>
+
+<script setup>
+import { onMounted, ref } from 'vue';
+import DataTable from './DataTable.vue';
+
+const columns = [
+  { key: 'name', label: 'Name' },
+  { key: 'email', label: 'Email' },
+  { key: 'team', label: 'Team' },
+];
+const people = ref([]);
+const loading = ref(true);
+const error = ref('');
+
+onMounted(async () => {
+  try {
+    const response = await fetch('/api/people');
+    if (!response.ok) throw new Error(\`The people list didn't load (\${response.status})\`);
+    people.value = await response.json();
+  } catch (e) {
+    error.value = e.message;
+  } finally {
+    loading.value = false;
+  }
+});
+</script>`,
+      },
+    ],
+    accessibility: [
+      'Give the table a `<caption>` and its headers `scope="col"`.',
+      'Make each sortable header a `<button>` so it is reachable and operable from the keyboard.',
+      'Set `aria-sort` on the sorted column ("ascending" or "descending") and "none" on the others.',
+      'Hide the sort arrows from screen readers with `aria-hidden="true"`; `aria-sort` already says the order.',
+      'Announce the page number with `aria-live="polite"` when it changes.',
+    ],
+    related: [
+      { title: 'Data display patterns', to: '/patterns/data-display', body: 'Tables, lists and cards, and when to use each.' },
+      { title: 'Pattern status', to: '/patterns/status', body: 'A live table of the patterns library built the same way.' },
+      { title: 'Data visualization', to: '/guidelines/patterns/data-visualization', body: 'When a chart says more than a table.' },
+    ],
   },
   {
-    id: 'authentication-form',
-    title: 'Login Form',
-    description: 'Complete authentication form with validation and error handling',
-    category: 'authentication',
-    framework: 'vue',
+    id: 'login-form',
+    slug: 'login-form',
+    title: 'Login form',
+    description: 'A sign-in form with autocomplete hints, a busy state and an error message that is announced.',
+    category: 'Authentication',
+    icon: 'lock',
     tags: ['auth', 'form', 'security'],
-    useCase: 'Authentication',
     complexity: 'Intermediate',
+    usage: 'Use it for any username-and-password sign-in. The page passes in the function that signs the user in; the form handles input, the busy state and errors.',
     code: {
       vue: `<template>
   <form @submit.prevent="handleLogin">
-    <div class="form-group">
-      <label for="username">Username</label>
-      <input
-        id="username"
-        v-model="form.username"
-        type="text"
-        required
-        autocomplete="username"
-      />
-    </div>
-    <div class="form-group">
-      <label for="password">Password</label>
-      <input
-        id="password"
-        v-model="form.password"
-        type="password"
-        required
-        autocomplete="current-password"
-      />
-    </div>
-    <div v-if="error" class="error" role="alert">
-      {{ error }}
-    </div>
-    <button type="submit" :disabled="loading">
-      {{ loading ? 'Logging in...' : 'Login' }}
+    <label for="username">Email or username</label>
+    <input id="username" v-model="username" type="text" autocomplete="username" required />
+
+    <label for="password">Password</label>
+    <input id="password" v-model="password" type="password" autocomplete="current-password" required />
+
+    <p v-if="error" class="error" role="alert">{{ error }}</p>
+
+    <button type="submit" :disabled="loading" :aria-busy="loading">
+      {{ loading ? 'Signing in…' : 'Sign in' }}
     </button>
   </form>
 </template>
@@ -573,7 +663,12 @@ function DataTable({ data }) {
 <script setup>
 import { ref } from 'vue';
 
-const form = ref({ username: '', password: '' });
+// login({ username, password }) signs the user in and throws an Error with a readable message on failure
+const props = defineProps({ login: { type: Function, required: true } });
+const emit = defineEmits(['signed-in']);
+
+const username = ref('');
+const password = ref('');
 const loading = ref(false);
 const error = ref('');
 
@@ -581,31 +676,35 @@ const handleLogin = async () => {
   loading.value = true;
   error.value = '';
   try {
-    // API call
-    await login(form.value);
-  } catch (err) {
-    error.value = err.message;
+    const user = await props.login({ username: username.value.trim(), password: password.value });
+    emit('signed-in', user);
+  } catch (e) {
+    error.value = e.message || "That email and password don't match. Check them and try again.";
+    password.value = '';
   } finally {
     loading.value = false;
   }
 };
 </script>`,
-      react: `import React, { useState } from 'react';
+      react: `import { useState } from 'react';
 
-function LoginForm() {
-  const [form, setForm] = useState({ username: '', password: '' });
+// login({ username, password }) signs the user in and throws an Error with a readable message on failure
+export function LoginForm({ login, onSignedIn }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const handleLogin = async (event) => {
+    event.preventDefault();
     setLoading(true);
     setError('');
     try {
-      // API call
-      await login(form);
-    } catch (err) {
-      setError(err.message);
+      const user = await login({ username: username.trim(), password });
+      onSignedIn(user);
+    } catch (e) {
+      setError(e.message || "That email and password don't match. Check them and try again.");
+      setPassword('');
     } finally {
       setLoading(false);
     }
@@ -613,294 +712,476 @@ function LoginForm() {
 
   return (
     <form onSubmit={handleLogin}>
-      <div className="form-group">
-        <label htmlFor="username">Username</label>
-        <input
-          id="username"
-          type="text"
-          value={form.username}
-          onChange={(e) => setForm({ ...form, username: e.target.value })}
-          required
-          autoComplete="username"
-        />
-      </div>
-      <div className="form-group">
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-          required
-          autoComplete="current-password"
-        />
-      </div>
-      {error && <div className="error" role="alert">{error}</div>}
-      <button type="submit" disabled={loading}>
-        {loading ? 'Logging in...' : 'Login'}
+      <label htmlFor="username">Email or username</label>
+      <input id="username" type="text" autoComplete="username" required value={username} onChange={(e) => setUsername(e.target.value)} />
+
+      <label htmlFor="password">Password</label>
+      <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+
+      {error && <p className="error" role="alert">{error}</p>}
+
+      <button type="submit" disabled={loading} aria-busy={loading}>
+        {loading ? 'Signing in…' : 'Sign in'}
       </button>
     </form>
   );
 }`,
-      html: `<!DOCTYPE html>
-<html>
-<head>
-  <title>Login Form</title>
-</head>
-<body>
-  <form id="loginForm">
-    <div class="form-group">
-      <label for="username">Username</label>
-      <input id="username" type="text" required autocomplete="username" />
-    </div>
-    <div class="form-group">
-      <label for="password">Password</label>
-      <input id="password" type="password" required autocomplete="current-password" />
-    </div>
-    <div id="error" class="error" role="alert" style="display: none;"></div>
-    <button type="submit">Login</button>
-  </form>
-  <script>
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
-      const errorDiv = document.getElementById('error');
-      try {
-        // API call
-        await login({ username, password });
-      } catch (err) {
-        errorDiv.textContent = err.message;
-        errorDiv.style.display = 'block';
-      }
-    });
-  </script>
-</body>
-</html>`
+      html: `<form id="login-form">
+  <label for="username">Email or username</label>
+  <input id="username" type="text" autocomplete="username" required />
+
+  <label for="password">Password</label>
+  <input id="password" type="password" autocomplete="current-password" required />
+
+  <p id="login-error" class="error" role="alert" hidden></p>
+
+  <button type="submit">Sign in</button>
+</form>
+
+<script>
+  const form = document.getElementById('login-form');
+  const error = document.getElementById('login-error');
+  const button = form.querySelector('button');
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    error.hidden = true;
+    button.disabled = true;
+    button.textContent = 'Signing in…';
+    try {
+      const response = await fetch('/api/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: form.username.value.trim(),
+          password: form.password.value,
+        }),
+      });
+      if (!response.ok) throw new Error("That email and password don't match. Check them and try again.");
+      window.location.assign('/');
+    } catch (e) {
+      error.textContent = e.message;
+      error.hidden = false;
+      form.password.value = '';
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Sign in';
+    }
+  });
+</script>`,
     },
-    usageExample: 'Use this form for user authentication with proper security practices and error handling.',
     props: [
-      { name: 'username', type: 'string', required: true, description: 'User username', default: '' },
-      { name: 'password', type: 'string', required: true, description: 'User password', default: '' }
-    ]
+      { name: 'login', type: 'function', required: true, description: 'Signs the user in with { username, password }; throws an Error with a readable message on failure', default: '' },
+      { name: 'signed-in', type: 'event', required: false, description: 'Emitted with whatever login() returned', default: '' },
+    ],
+    usageExamples: [
+      {
+        title: 'Signing in against your API',
+        description: 'The page supplies login(), turns a failed response into a readable error and moves on once signed in.',
+        code: `<template>
+  <LoginForm :login="login" @signed-in="router.push('/')" />
+</template>
+
+<script setup>
+import { useRouter } from 'vue-router';
+import LoginForm from './LoginForm.vue';
+
+const router = useRouter();
+
+const login = async ({ username, password }) => {
+  const response = await fetch('/api/session', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  if (response.status === 401) throw new Error("That email and password don't match. Check them and try again.");
+  if (!response.ok) throw new Error('Signing in is not working right now. Try again in a few minutes.');
+  return response.json();
+};
+</script>`,
+      },
+    ],
+    accessibility: [
+      'Use `autocomplete="username"` and `autocomplete="current-password"` so password managers can fill the form.',
+      'Keep visible labels; placeholders disappear as soon as someone types.',
+      'Put the sign-in error in an element with `role="alert"` so it is announced.',
+      'Say the form is busy with `aria-busy` and a changed button label while it signs in.',
+      "Don't say which of the two fields was wrong; that tells attackers which usernames exist.",
+    ],
+    related: [
+      { title: 'Form validation', to: '/patterns/form-validation', body: 'Field-level errors that are linked and announced.' },
+      { title: 'Form patterns', to: '/patterns/forms', body: 'Input, layout and validation guidance.' },
+      { title: 'Error handling', to: '/guidelines/patterns/error-handling', body: 'Messages that explain the problem and the way out.' },
+    ],
   },
   {
-    id: 'navigation-menu',
-    title: 'Responsive Navigation',
-    description: 'Mobile-responsive navigation menu with dropdowns',
-    category: 'navigation',
-    framework: 'vue',
+    id: 'responsive-navigation',
+    slug: 'responsive-navigation',
+    title: 'Responsive navigation',
+    description: 'A navigation bar that collapses into a menu button on small screens, with disclosure submenus.',
+    category: 'Navigation',
+    icon: 'menu',
     tags: ['navigation', 'menu', 'responsive'],
-    useCase: 'Navigation',
     complexity: 'Intermediate',
+    usage: 'Use it for a site or app header with a handful of sections, some with a short list of child pages.',
     code: {
       vue: `<template>
-  <nav class="navbar">
-    <div class="nav-container">
-      <button @click="toggleMobileMenu" class="mobile-toggle" aria-label="Toggle menu">
-        ☰
-      </button>
-      <ul :class="['nav-menu', { active: mobileMenuOpen }]">
-        <li v-for="item in menuItems" :key="item.id">
-          <a :href="item.href" @click="closeMobileMenu">{{ item.label }}</a>
-          <ul v-if="item.children" class="dropdown">
-            <li v-for="child in item.children" :key="child.id">
-              <a :href="child.href">{{ child.label }}</a>
+  <nav aria-label="Main">
+    <button type="button" class="menu-toggle" :aria-expanded="String(menuOpen)" aria-controls="main-menu" @click="menuOpen = !menuOpen">
+      Menu
+    </button>
+    <ul id="main-menu" :class="['menu', { open: menuOpen }]" @keydown.esc="closeAll">
+      <li v-for="item in items" :key="item.href">
+        <template v-if="item.children">
+          <button type="button" :aria-expanded="String(openItem === item.href)" @click="toggle(item.href)">
+            {{ item.label }}
+          </button>
+          <ul v-show="openItem === item.href">
+            <li v-for="child in item.children" :key="child.href">
+              <a :href="child.href" :aria-current="current === child.href ? 'page' : undefined">{{ child.label }}</a>
             </li>
           </ul>
-        </li>
-      </ul>
-    </div>
+        </template>
+        <a v-else :href="item.href" :aria-current="current === item.href ? 'page' : undefined">{{ item.label }}</a>
+      </li>
+    </ul>
   </nav>
 </template>
 
 <script setup>
 import { ref } from 'vue';
 
-const mobileMenuOpen = ref(false);
-const menuItems = ref([...]);
+defineProps({
+  items: { type: Array, required: true }, // [{ label, href, children?: [{ label, href }] }]
+  current: { type: String, default: '' }, // href of the page being shown
+});
 
-const toggleMobileMenu = () => {
-  mobileMenuOpen.value = !mobileMenuOpen.value;
+const menuOpen = ref(false);
+const openItem = ref(null);
+
+const toggle = (href) => {
+  openItem.value = openItem.value === href ? null : href;
 };
-
-const closeMobileMenu = () => {
-  mobileMenuOpen.value = false;
+const closeAll = () => {
+  openItem.value = null;
+  menuOpen.value = false;
 };
-</script>`,
-      react: `import React, { useState } from 'react';
+</script>
 
-function Navigation({ menuItems }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+<style>
+.menu { display: none; }
+.menu.open { display: block; }
+@media (min-width: 48rem) {
+  .menu-toggle { display: none; }
+  .menu { display: flex; gap: 1.5rem; }
+}
+</style>`,
+      react: `import { useState } from 'react';
+
+export function Navigation({ items, current = '' }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [openItem, setOpenItem] = useState(null);
+
+  const closeAll = (event) => {
+    if (event.key !== 'Escape') return;
+    setOpenItem(null);
+    setMenuOpen(false);
+  };
 
   return (
-    <nav className="navbar">
-      <div className="nav-container">
-        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="mobile-toggle" aria-label="Toggle menu">
-          ☰
-        </button>
-        <ul className={\`nav-menu \${mobileMenuOpen ? 'active' : ''}\`}>
-          {menuItems.map(item => (
-            <li key={item.id}>
-              <a href={item.href} onClick={() => setMobileMenuOpen(false)}>{item.label}</a>
-              {item.children && (
-                <ul className="dropdown">
-                  {item.children.map(child => (
-                    <li key={child.id}>
-                      <a href={child.href}>{child.label}</a>
+    <nav aria-label="Main">
+      <button type="button" className="menu-toggle" aria-expanded={menuOpen} aria-controls="main-menu" onClick={() => setMenuOpen(!menuOpen)}>
+        Menu
+      </button>
+      <ul id="main-menu" className={menuOpen ? 'menu open' : 'menu'} onKeyDown={closeAll}>
+        {items.map((item) => (
+          <li key={item.href}>
+            {item.children ? (
+              <>
+                <button type="button" aria-expanded={openItem === item.href} onClick={() => setOpenItem(openItem === item.href ? null : item.href)}>
+                  {item.label}
+                </button>
+                <ul hidden={openItem !== item.href}>
+                  {item.children.map((child) => (
+                    <li key={child.href}>
+                      <a href={child.href} aria-current={current === child.href ? 'page' : undefined}>{child.label}</a>
                     </li>
                   ))}
                 </ul>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
+              </>
+            ) : (
+              <a href={item.href} aria-current={current === item.href ? 'page' : undefined}>{item.label}</a>
+            )}
+          </li>
+        ))}
+      </ul>
     </nav>
   );
 }`,
-      html: `<!DOCTYPE html>
-<html>
-<head>
-  <title>Responsive Navigation</title>
-</head>
-<body>
-  <nav class="navbar">
-    <div class="nav-container">
-      <button onclick="toggleMobileMenu()" class="mobile-toggle" aria-label="Toggle menu">☰</button>
-      <ul id="navMenu" class="nav-menu">
-        <li><a href="#home">Home</a></li>
-        <li>
-          <a href="#about">About</a>
-          <ul class="dropdown">
-            <li><a href="#team">Team</a></li>
-            <li><a href="#history">History</a></li>
-          </ul>
-        </li>
-        <li><a href="#contact">Contact</a></li>
+      html: `<nav aria-label="Main">
+  <button type="button" class="menu-toggle" aria-expanded="false" aria-controls="main-menu">Menu</button>
+  <ul id="main-menu" class="menu">
+    <li><a href="/" aria-current="page">Home</a></li>
+    <li>
+      <button type="button" aria-expanded="false" aria-controls="about-menu">About</button>
+      <ul id="about-menu" hidden>
+        <li><a href="/about/team">Team</a></li>
+        <li><a href="/about/history">History</a></li>
       </ul>
-    </div>
-  </nav>
-  <script>
-    function toggleMobileMenu() {
-      document.getElementById('navMenu').classList.toggle('active');
-    }
-  </script>
-</body>
-</html>`
+    </li>
+    <li><a href="/contact">Contact</a></li>
+  </ul>
+</nav>
+
+<style>
+  .menu { display: none; }
+  .menu.open { display: block; }
+  @media (min-width: 48rem) {
+    .menu-toggle { display: none; }
+    .menu { display: flex; gap: 1.5rem; }
+  }
+</style>
+
+<script>
+  // Every button with aria-controls shows or hides the element it names
+  document.querySelectorAll('nav [aria-controls]').forEach((button) => {
+    const target = document.getElementById(button.getAttribute('aria-controls'));
+    button.addEventListener('click', () => {
+      const open = button.getAttribute('aria-expanded') !== 'true';
+      button.setAttribute('aria-expanded', String(open));
+      if (target.classList.contains('menu')) target.classList.toggle('open', open);
+      else target.hidden = !open;
+    });
+  });
+
+  // Escape closes any open submenu and returns focus to its button
+  document.getElementById('main-menu').addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    document.querySelectorAll('#main-menu [aria-expanded="true"]').forEach((button) => {
+      button.setAttribute('aria-expanded', 'false');
+      document.getElementById(button.getAttribute('aria-controls')).hidden = true;
+      button.focus();
+    });
+  });
+</script>`,
     },
-    usageExample: 'Use this navigation component for responsive menus that work on both desktop and mobile devices.',
     props: [
-      { name: 'menuItems', type: 'array', required: true, description: 'Array of menu items with optional children', default: '[]' }
-    ]
+      { name: 'items', type: 'array', required: true, description: 'Links as { label, href, children? }', default: '' },
+      { name: 'current', type: 'string', required: false, description: 'The href of the current page, marked with aria-current', default: "''" },
+    ],
+    usageExamples: [
+      {
+        title: 'In a Vue Router app',
+        description: 'The layout passes its sections and the current route so the active link is marked.',
+        code: `<template>
+  <header class="site-header">
+    <a href="/" class="logo">Acme</a>
+    <Navigation :items="items" :current="route.path" />
+  </header>
+  <main id="main"><router-view /></main>
+</template>
+
+<script setup>
+import { useRoute } from 'vue-router';
+import Navigation from './Navigation.vue';
+
+const route = useRoute();
+
+const items = [
+  { label: 'Home', href: '/' },
+  {
+    label: 'Products',
+    href: '/products',
+    children: [
+      { label: 'All products', href: '/products' },
+      { label: 'Pricing', href: '/products/pricing' },
+    ],
+  },
+  { label: 'Support', href: '/support' },
+];
+</script>`,
+      },
+    ],
+    accessibility: [
+      'Wrap the links in `<nav>` with an `aria-label` such as "Main".',
+      'Give the menu button and submenu buttons `aria-expanded`, and point them at what they open with `aria-controls`.',
+      'Mark the link to the current page with `aria-current="page"`.',
+      'Let Escape close an open submenu.',
+      'Use a text label ("Menu") or an accessible name on the toggle, not just an icon.',
+    ],
+    related: [
+      { title: 'Navigation patterns', to: '/patterns/navigation', body: 'Sidebars, top bars and breadcrumbs, and when to use each.' },
+      { title: 'Layout patterns', to: '/patterns/layout', body: 'Grids and breakpoints the navigation sits in.' },
+      { title: 'Content organization', to: '/guidelines/content-organization-navigation', body: 'Structuring sections before you build the menu.' },
+    ],
   },
   {
     id: 'toast-notification',
-    title: 'Toast Notification',
-    description: 'Toast notification system for temporary messages',
-    category: 'feedback',
-    framework: 'vue',
+    slug: 'toast-notification',
+    title: 'Toast notification',
+    description: 'Short-lived status messages that are announced to screen readers and can be dismissed.',
+    category: 'Feedback',
+    icon: 'bell',
     tags: ['notification', 'toast', 'feedback'],
-    useCase: 'User Feedback',
     complexity: 'Beginner',
+    usage: 'Use it to confirm something worked ("Saved") or report a problem that needs no immediate action. Anything the user must act on belongs in a banner or a dialog.',
     code: {
       vue: `<template>
-  <div class="toast-container">
-    <transition-group name="toast" tag="div">
-      <div
-        v-for="toast in toasts"
-        :key="toast.id"
-        :class="['toast', \`toast-\${toast.type}\`]"
-        role="alert"
-      >
-        {{ toast.message }}
-        <button @click="removeToast(toast.id)" aria-label="Close">×</button>
-      </div>
-    </transition-group>
+  <div class="toast-region" role="status" aria-live="polite">
+    <div v-for="toast in toasts" :key="toast.id" :class="['toast', 'toast-' + toast.type]">
+      <span>{{ toast.message }}</span>
+      <button type="button" aria-label="Dismiss" @click="dismiss(toast.id)">&times;</button>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { onBeforeUnmount, ref } from 'vue';
 
 const toasts = ref([]);
-let toastId = 0;
+const timers = new Map();
+let nextId = 0;
 
-const showToast = (message, type = 'info', duration = 3000) => {
-  const id = toastId++;
+const dismiss = (id) => {
+  clearTimeout(timers.get(id));
+  timers.delete(id);
+  toasts.value = toasts.value.filter((t) => t.id !== id);
+};
+
+/** show('Saved', 'success') — errors stay until dismissed */
+const show = (message, type = 'info', duration = 5000) => {
+  const id = nextId++;
   toasts.value.push({ id, message, type });
-  setTimeout(() => removeToast(id), duration);
+  if (type !== 'error' && duration > 0) timers.set(id, setTimeout(() => dismiss(id), duration));
+  return id;
 };
 
-const removeToast = (id) => {
-  const index = toasts.value.findIndex(t => t.id === id);
-  if (index > -1) {
-    toasts.value.splice(index, 1);
-  }
-};
+defineExpose({ show, dismiss });
+onBeforeUnmount(() => timers.forEach(clearTimeout));
 </script>`,
-      react: `import React, { useState } from 'react';
+      react: `import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
-function ToastContainer() {
+export const Toasts = forwardRef(function Toasts(_, ref) {
   const [toasts, setToasts] = useState([]);
-  let toastId = 0;
+  const nextId = useRef(0);
+  const timers = useRef(new Map());
 
-  const showToast = (message, type = 'info', duration = 3000) => {
-    const id = toastId++;
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, duration);
-  };
+  const dismiss = useCallback((id) => {
+    clearTimeout(timers.current.get(id));
+    timers.current.delete(id);
+    setToasts((list) => list.filter((t) => t.id !== id));
+  }, []);
 
-  const removeToast = (id) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  };
+  // show('Saved', 'success') — errors stay until dismissed
+  const show = useCallback((message, type = 'info', duration = 5000) => {
+    const id = nextId.current++;
+    setToasts((list) => [...list, { id, message, type }]);
+    if (type !== 'error' && duration > 0) timers.current.set(id, setTimeout(() => dismiss(id), duration));
+    return id;
+  }, [dismiss]);
+
+  useImperativeHandle(ref, () => ({ show, dismiss }), [show, dismiss]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   return (
-    <div className="toast-container">
-      {toasts.map(toast => (
-        <div key={toast.id} className={\`toast toast-\${toast.type}\`} role="alert">
-          {toast.message}
-          <button onClick={() => removeToast(toast.id)} aria-label="Close">×</button>
+    <div className="toast-region" role="status" aria-live="polite">
+      {toasts.map((toast) => (
+        <div key={toast.id} className={'toast toast-' + toast.type}>
+          <span>{toast.message}</span>
+          <button type="button" aria-label="Dismiss" onClick={() => dismiss(toast.id)}>&times;</button>
         </div>
       ))}
     </div>
   );
-}`,
-      html: `<!DOCTYPE html>
-<html>
-<head>
-  <title>Toast Notification</title>
-</head>
-<body>
-  <div id="toastContainer" class="toast-container"></div>
-  <script>
-    let toastId = 0;
-    function showToast(message, type = 'info', duration = 3000) {
-      const id = toastId++;
-      const toast = document.createElement('div');
-      toast.id = \`toast-\${id}\`;
-      toast.className = \`toast toast-\${type}\`;
-      toast.setAttribute('role', 'alert');
-      toast.innerHTML = \`\${message} <button onclick="removeToast(\${id})" aria-label="Close">×</button>\`;
-      document.getElementById('toastContainer').appendChild(toast);
-      setTimeout(() => removeToast(id), duration);
-    }
-    function removeToast(id) {
-      const toast = document.getElementById(\`toast-\${id}\`);
-      if (toast) toast.remove();
-    }
-  </script>
-</body>
-</html>`
-    },
-    usageExample: 'Use this toast system to show temporary success, error, or info messages to users.',
-    props: [
-      { name: 'message', type: 'string', required: true, description: 'Toast message text', default: '' },
-      { name: 'type', type: 'string', required: false, description: 'Toast type (success, error, info, warning)', default: 'info' },
-      { name: 'duration', type: 'number', required: false, description: 'Display duration in milliseconds', default: 3000 }
-    ]
+});`,
+      html: `<div id="toasts" class="toast-region" role="status" aria-live="polite"></div>
+
+<script>
+  const region = document.getElementById('toasts');
+
+  // showToast('Saved', 'success') — errors stay until dismissed
+  function showToast(message, type = 'info', duration = 5000) {
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+
+    const text = document.createElement('span');
+    text.textContent = message; // textContent, never innerHTML, for messages
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.setAttribute('aria-label', 'Dismiss');
+    close.textContent = '×';
+    close.addEventListener('click', () => toast.remove());
+
+    toast.append(text, close);
+    region.append(toast);
+    if (type !== 'error' && duration > 0) setTimeout(() => toast.remove(), duration);
   }
+</script>`,
+    },
+    props: [
+      { name: 'show(message, type, duration)', type: 'method', required: false, description: 'Adds a toast; type is info, success, warning or error; errors stay until dismissed', default: "type 'info', duration 5000" },
+      { name: 'dismiss(id)', type: 'method', required: false, description: 'Removes a toast early', default: '' },
+    ],
+    usageExamples: [
+      {
+        title: 'Confirming a save',
+        description: 'One toast region for the app; any page reaches it through provide/inject and reports the result of an action.',
+        code: `<!-- App.vue -->
+<template>
+  <router-view />
+  <Toasts ref="toasts" />
+</template>
+
+<script setup>
+import { provide, ref } from 'vue';
+import Toasts from './Toasts.vue';
+
+const toasts = ref(null);
+provide('toast', (...args) => toasts.value.show(...args));
+</script>
+
+<!-- SettingsPage.vue -->
+<template>
+  <form @submit.prevent="save">
+    <label for="display-name">Display name</label>
+    <input id="display-name" v-model="name" autocomplete="nickname" />
+    <button type="submit">Save</button>
+  </form>
+</template>
+
+<script setup>
+import { inject, ref } from 'vue';
+
+const toast = inject('toast');
+const name = ref('');
+
+const save = async () => {
+  const response = await fetch('/api/profile', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name.value }),
+  });
+  if (response.ok) toast('Your profile is saved', 'success');
+  else toast("Your profile couldn't be saved. Try again.", 'error');
+};
+</script>`,
+      },
+    ],
+    accessibility: [
+      'Render toasts inside one live region (`role="status"`, `aria-live="polite"`) that is on the page before any toast appears.',
+      'Keep error toasts on screen until they are dismissed; never auto-hide something the user has to read.',
+      'Give the dismiss button an accessible name such as `aria-label="Dismiss"`.',
+      'Leave at least five seconds before an informational toast disappears.',
+      "Don't put links or actions only in a toast; offer them somewhere that stays.",
+    ],
+    related: [
+      { title: 'Notifications', to: '/patterns/notifications', body: 'Choose between a toast, a banner, a dialog and a modal.' },
+      { title: 'Feedback patterns', to: '/patterns/feedback', body: 'Alerts, loading states and confirmations.' },
+      { title: 'Empty and loading states', to: '/guidelines/patterns/empty-loading-states', body: 'Feedback while content is on its way.' },
+    ],
+  },
 ];
 
+/** The code pattern a /patterns/<slug> page shows, or null */
+export const snippetForSlug = (slug) => patternSnippets.find((p) => p.slug === slug) ?? null;

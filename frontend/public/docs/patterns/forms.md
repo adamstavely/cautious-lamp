@@ -1,12 +1,8 @@
-# Form Patterns
-
-Forms enable users to input and submit data efficiently.
-
-## Input Fields
+## Input fields
 
 Text inputs for various data types.
 
-### Best Practices
+### Best practices
 
 - Use clear labels
 - Provide helpful placeholder text
@@ -14,11 +10,11 @@ Text inputs for various data types.
 - Support keyboard navigation
 - Ensure proper input types
 
-## Form Layout
+## Form layout
 
 Organize form fields for clarity and usability.
 
-### Best Practices
+### Best practices
 
 - Group related fields
 - Use single-column layouts when possible
@@ -30,7 +26,7 @@ Organize form fields for clarity and usability.
 
 Provide clear feedback on user input.
 
-### Best Practices
+### Best practices
 
 - Validate in real-time when possible
 - Show errors clearly and accessibly
@@ -38,11 +34,11 @@ Provide clear feedback on user input.
 - Prevent submission of invalid forms
 - Provide helpful error messages
 
-## Form Actions
+## Form actions
 
 Clear actions for form submission and cancellation.
 
-### Best Practices
+### Best practices
 
 - Use primary action for submit
 - Provide cancel/back options
