@@ -1,4 +1,4 @@
-import { Controller, Get, INestApplication, ValidationPipe } from '@nestjs/common';
+import { Controller, Get, INestApplication } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { API_KEY_STORE, ApiKeyDoc, KeyManagementService } from '../common/security/key-management.service';
@@ -17,6 +17,7 @@ import { TokenService } from './token.service';
 import { USER_STORE, UserDoc } from './user.types';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
+import { globalValidationPipe } from '../common/validation/global-validation';
 
 @Controller('api/v1')
 class PingController {
@@ -78,7 +79,7 @@ describe('Auth HTTP API', () => {
       ],
     }).compile();
     app = moduleRef.createNestApplication({ logger: false });
-    app.useGlobalPipes(new ValidationPipe());
+    app.useGlobalPipes(globalValidationPipe());
     await app.listen(0, '127.0.0.1');
     base = (await app.getUrl()).replace('[::1]', '127.0.0.1');
   });

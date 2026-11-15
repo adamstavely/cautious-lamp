@@ -92,9 +92,9 @@
       </div>
     </PageSection>
 
-    <PageSection title="Health score trends" description="Measured, last 30 days." divided>
+    <PageSection title="Health score trends" description="One snapshot a day, last 30 days." divided>
       <UiCallout v-if="healthScoreTrends.length === 0" role="status">
-        No health score history yet. Scores are recorded (at most hourly) as they are measured, starting when the server starts.
+        No health score history yet. The server stores a snapshot once a day; the trend starts with the first one.
       </UiCallout>
       <UiPanel v-else>
         <svg
@@ -163,14 +163,22 @@
       <template #actions>
         <UiSelect v-model="adoptionTimeframe" label="Timeframe" :options="timeframeOptions" />
       </template>
-      <UiPanel>
-        <p v-if="topComponents.length === 0" class="text-sm text-ink-secondary">Not collected: no component usage recorded for this timeframe.</p>
+      <UiCallout v-if="usageSummary && !usageSummary.usageDataAvailable" role="status" title="No component usage recorded yet">
+        Usage comes from governance scans of your applications' code: each scan records which design-system components the code uses.
+        Scan an application to see adoption here.
+      </UiCallout>
+      <UiPanel v-else>
+        <p v-if="usageSummary" class="text-sm text-ink-secondary mb-4">
+          From {{ usageSummary.scannedApplications }} of {{ usageSummary.totalApplications }} applications scanned; adoption is the share of
+          scanned applications using each component.
+        </p>
+        <p v-if="topComponents.length === 0" class="text-sm text-ink-secondary">No component use recorded in this timeframe.</p>
         <ul v-else class="space-y-4">
           <li v-for="component in topComponents" :key="component.name" class="flex items-center justify-between gap-4">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-3 mb-2">
                 <span class="text-sm font-medium text-ink-strong">{{ component.name }}</span>
-                <UiChip :tone="statusTone(component.status)">{{ component.status }}</UiChip>
+                <UiChip :tone="statusTone(component.status)">{{ statusLabel(component.status) }}</UiChip>
               </div>
               <UiMeter :value="component.adoption" />
             </div>
@@ -228,11 +236,15 @@
       </UiPanel>
     </PageSection>
 
-    <PageSection v-if="designDebtMetrics" title="Design debt metrics" divided>
-      <div class="grid md:grid-cols-3 gap-4 mb-6">
+    <PageSection v-if="designDebtMetrics?.usageDataAvailable" title="Design debt metrics" divided>
+      <div class="grid md:grid-cols-2 gap-4 mb-6">
         <UiStat label="Deprecated components in use" :value="designDebtMetrics.deprecatedComponentsInUse" />
-        <UiStat label="Custom components" :value="designDebtMetrics.customComponentCount" />
-        <UiStat label="Technical debt score" :value="`${designDebtMetrics.technicalDebtScore}/100`" :tone="debtTone(designDebtMetrics.technicalDebtScore)" />
+        <UiStat
+          label="Uses of deprecated components"
+          :value="`${designDebtMetrics.technicalDebtScore}%`"
+          hint="Share of all recorded component uses"
+          :tone="debtTone(designDebtMetrics.technicalDebtScore)"
+        />
       </div>
       <UiPanel v-if="designDebtMetrics.recommendations && designDebtMetrics.recommendations.length > 0" title="Recommendations" heading-tag="h3">
         <ul class="space-y-2">
@@ -244,7 +256,7 @@
       </UiPanel>
     </PageSection>
 
-    <PageSection v-if="crossApplicationComparison.length > 0" title="Cross-application comparison" divided>
+    <PageSection v-if="usageSummary?.usageDataAvailable && crossApplicationComparison.length > 0" title="Cross-application comparison" divided>
       <UiPanel flush>
         <UiTable caption="Design system use by application">
           <thead>
@@ -258,14 +270,18 @@
           <tbody>
             <tr v-for="app in crossApplicationComparison" :key="app.applicationId">
               <th scope="row" class="font-medium text-ink-strong">{{ app.applicationName }}</th>
-              <td>{{ app.uniqueComponents }}</td>
-              <td>
-                <span class="flex items-center gap-2">
-                  <UiMeter class="w-24" :value="app.adoptionRate" />
-                  {{ app.adoptionRate.toFixed(1) }}%
-                </span>
-              </td>
-              <td>{{ app.sharedComponents.length }}</td>
+              <template v-if="app.scanned">
+                <td>{{ app.uniqueComponents }}</td>
+                <td>
+                  <span v-if="app.adoptionRate !== null" class="flex items-center gap-2">
+                    <UiMeter class="w-24" :value="app.adoptionRate" />
+                    {{ app.adoptionRate.toFixed(1) }}%
+                  </span>
+                  <span v-else class="text-ink-muted">No production components</span>
+                </td>
+                <td>{{ app.sharedComponents.length }}</td>
+              </template>
+              <td v-else colspan="3" class="text-ink-muted">Not scanned yet</td>
             </tr>
           </tbody>
         </UiTable>
@@ -552,9 +568,10 @@ const alerts = computed(() => {
   return [...healthAlerts, ...staticAlerts];
 });
 
+// Whether any governance scan has recorded component usage (GET /analytics/summary)
+const usageSummary = ref(null);
 const topComponents = ref([]);
 const mostUsedComponents = ref([]);
-const applicationAdoption = ref([]);
 const designDebtMetrics = ref(null);
 const crossApplicationComparison = ref([]);
 const loadingAnalytics = ref(false);
@@ -564,27 +581,24 @@ const usageTrends = ref([]);
 const loadAnalytics = async () => {
   loadingAnalytics.value = true;
   try {
-    // Load component popularity
+    usageSummary.value = (await apiClient.get('/api/v1/analytics/summary')).data;
+
+    // Components by recorded usage (empty before any scan)
     const popularityResponse = await apiClient.get(`/api/v1/analytics/component-popularity?timeframe=${adoptionTimeframe.value}`);
     const popularity = popularityResponse.data || [];
 
-    // Update top components with real data
-    topComponents.value = popularity.slice(0, 6).map((comp) => ({
+    const used = popularity.filter((comp) => comp.totalUsage > 0);
+    topComponents.value = used.slice(0, 6).map((comp) => ({
       name: comp.componentName,
-      status: 'Production Ready', // TODO: Get from component status
+      status: comp.status,
       adoption: comp.adoptionRate,
       usage: comp.totalUsage,
     }));
 
-    // Update most used components
-    mostUsedComponents.value = popularity.slice(0, 5).map((comp) => ({
+    mostUsedComponents.value = used.slice(0, 5).map((comp) => ({
       name: comp.componentName,
       usage: comp.totalUsage,
     }));
-
-    // Load application adoption
-    const adoptionResponse = await apiClient.get('/api/v1/analytics/application-adoption');
-    applicationAdoption.value = adoptionResponse.data || [];
 
     // Load usage trends
     const trendsResponse = await apiClient.get('/api/v1/analytics/usage-trends?days=30');
@@ -618,8 +632,9 @@ watch(adoptionTimeframe, () => {
   loadAnalytics();
 });
 
-const statusTone = (status) =>
-  ({ 'Production Ready': 'success', 'In Progress': 'warning', Planned: 'info', Deprecated: 'danger' })[status] || 'neutral';
+const statusTone = (status) => ({ production: 'success', 'in-progress': 'warning', planned: 'info', deprecated: 'danger' })[status] || 'neutral';
+const statusLabel = (status) =>
+  ({ production: 'Production ready', 'in-progress': 'In progress', planned: 'Planned', deprecated: 'Deprecated' })[status] || status;
 
 const handleAlertAction = (alert) => {
   if (alert.actionPath) {

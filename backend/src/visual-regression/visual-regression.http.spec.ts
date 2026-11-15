@@ -1,5 +1,5 @@
 import { createHmac } from 'crypto';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { AuthGuard } from '../auth/auth.guard';
@@ -15,6 +15,7 @@ import { VisualRegressionGateway } from './visual-regression.gateway';
 import { ArgosWebhookController, VisualRegressionController } from './visual-regression.controller';
 import { VisualRegressionService } from './visual-regression.service';
 import { createProjectServices } from './testing/services';
+import { globalValidationPipe } from '../common/validation/global-validation';
 
 const PEOPLE = {
   owner: { id: 'usr_owner', name: 'Olive Owner', permissions: [] as string[] },
@@ -109,7 +110,7 @@ describe('Project access over HTTP (visual regression and session replay)', () =
     }).compile();
     // rawBody as in main.ts, so webhook signatures are checked over the exact bytes
     app = moduleRef.createNestApplication({ logger: false, rawBody: true });
-    app.useGlobalPipes(new ValidationPipe());
+    app.useGlobalPipes(globalValidationPipe());
     await app.listen(0, '127.0.0.1');
     base = (await app.getUrl()).replace('[::1]', '127.0.0.1');
   });
@@ -349,7 +350,10 @@ describe('Project access over HTTP (visual regression and session replay)', () =
       expect((await call('viewer', 'GET', `/session-replay/projects/${id}`)).status).toBe(200);
       expect((await call('viewer', 'PUT', `/session-replay/projects/${id}`, { name: 'Nope' })).status).toBe(403);
       expect((await call('viewer', 'POST', '/session-replay/projects', { name: 'X', openreplayProjectKey: '1', workspaceId: WS })).status).toBe(403);
-      expect((await call('editor', 'PUT', `/session-replay/projects/${id}`, { name: 'Replay 2', workspaceId: 'ws_other' })).body).toMatchObject({
+      // A project can't be moved by an update: the field is refused, not silently dropped
+      const move = await call('editor', 'PUT', `/session-replay/projects/${id}`, { name: 'Replay 2', workspaceId: 'ws_other' });
+      expect(move).toMatchObject({ status: 400, body: { message: ['property workspaceId should not exist'] } });
+      expect((await call('editor', 'PUT', `/session-replay/projects/${id}`, { name: 'Replay 2' })).body).toMatchObject({
         name: 'Replay 2',
         workspaceId: WS,
       });

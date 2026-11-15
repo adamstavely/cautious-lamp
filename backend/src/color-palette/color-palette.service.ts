@@ -1,16 +1,44 @@
-import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
+import { AuthPrincipal } from '../auth/principal';
 import { ColorTheoryService } from './color-theory.service';
 import { EsIndexService, esStatusCode, isEsNotFound } from '../common/elasticsearch/es-index.service';
-import { CreatePaletteDto } from './dto/create-palette.dto';
+import { WorkspaceAccessService, isWorkspaceSuperuser } from '../workspaces/workspace-access.service';
+import { CreatePaletteDto, UpdatePaletteDto } from './dto/create-palette.dto';
 import { AnalyzePaletteDto } from './dto/analyze-palette.dto';
 
+const INDEX = 'color-palettes';
+
+/** Who saved a palette: a signed-in user or an API key */
+export interface PaletteOwner {
+  type: 'user' | 'service';
+  id: string;
+  name: string;
+}
+
+/** A palette as stored. Palettes saved before owners were recorded have neither field. */
+interface PaletteDoc {
+  name: string;
+  colors: Array<{ hex: string; name?: string; role?: string }>;
+  owner?: PaletteOwner;
+  workspaceId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Saved palettes in Elasticsearch. Anyone signed in reads them; a palette's
+ * owner (set from the principal that created it), editors of its workspace
+ * and admin:users holders change or delete it. A palette saved before owners
+ * were recorded has none, so only an admin can change it.
+ */
 @Injectable()
 export class ColorPaletteService {
   constructor(
     private readonly elasticsearchService: ElasticsearchService,
     private readonly colorTheoryService: ColorTheoryService,
     private readonly esIndexService: EsIndexService,
+    private readonly workspaces: WorkspaceAccessService,
   ) {}
 
   /** Maps Elasticsearch failures to 404 or 503 instead of a bare 500 */
@@ -25,76 +53,109 @@ export class ColorPaletteService {
     throw error;
   }
 
-  async createPalette(dto: CreatePaletteDto) {
-    const palette = {
+  /** Whether the principal may change or delete the palette */
+  async canEdit(principal: AuthPrincipal, palette: Pick<PaletteDoc, 'owner' | 'workspaceId'>): Promise<boolean> {
+    if (isWorkspaceSuperuser(principal)) return true;
+    const owner = palette.owner;
+    if (owner && owner.type === principal.type && owner.id === principal.id) return true;
+    return !!palette.workspaceId && (await this.workspaces.has(principal, palette.workspaceId, 'editor'));
+  }
+
+  private async assertCanEdit(principal: AuthPrincipal, palette: PaletteDoc): Promise<void> {
+    if (await this.canEdit(principal, palette)) return;
+    throw new ForbiddenException(
+      palette.owner
+        ? 'Only the palette\'s owner, editors of its workspace or an admin can change it'
+        : 'This palette was saved before palettes had owners; only an admin can change it',
+    );
+  }
+
+  private async load(id: string): Promise<{ doc: PaletteDoc; seqNo: number; primaryTerm: number }> {
+    const result = await this.elasticsearchService.get<PaletteDoc>({ index: INDEX, id }).catch((error) => this.storageError(error, id));
+    return { doc: result._source as PaletteDoc, seqNo: result._seq_no, primaryTerm: result._primary_term };
+  }
+
+  private async view(principal: AuthPrincipal, id: string, doc: PaletteDoc) {
+    return { id, ...doc, owner: doc.owner ?? null, workspaceId: doc.workspaceId ?? null, canEdit: await this.canEdit(principal, doc) };
+  }
+
+  async createPalette(principal: AuthPrincipal, dto: CreatePaletteDto) {
+    // Sharing with a workspace needs the editor role there (404 for one the caller isn't in)
+    if (dto.workspaceId) await this.workspaces.require(principal, dto.workspaceId, 'editor');
+    const now = new Date().toISOString();
+    const palette: PaletteDoc = {
       name: dto.name,
       colors: dto.colors,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      owner: { type: principal.type, id: principal.id, name: principal.name },
+      workspaceId: dto.workspaceId ?? null,
+      createdAt: now,
+      updatedAt: now,
     };
 
     await this.esIndexService.assertAvailable();
     const result = await this.elasticsearchService
-      .index({ index: 'color-palettes', document: palette, refresh: 'wait_for' })
+      .index({ index: INDEX, document: palette, refresh: 'wait_for' })
       .catch((error) => this.storageError(error));
 
-    return {
-      id: result._id,
-      ...palette,
-    };
+    return this.view(principal, result._id, palette);
   }
 
-  async updatePalette(id: string, dto: CreatePaletteDto) {
-    // Get existing palette to preserve createdAt
-    const existing = await this.elasticsearchService
-      .get({ index: 'color-palettes', id })
-      .catch((error) => this.storageError(error, id));
-
-    const palette = {
+  async updatePalette(principal: AuthPrincipal, id: string, dto: UpdatePaletteDto) {
+    const existing = await this.load(id);
+    await this.assertCanEdit(principal, existing.doc);
+    const palette: PaletteDoc = {
+      ...existing.doc,
       name: dto.name,
       colors: dto.colors,
-      createdAt: (existing._source as any).createdAt || new Date().toISOString(),
+      createdAt: existing.doc.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
+    // Only if nobody changed it (or its owner) since it was read
     await this.elasticsearchService
-      .update({ index: 'color-palettes', id, doc: palette, refresh: 'wait_for' })
-      .catch((error) => this.storageError(error, id));
+      .index({ index: INDEX, id, document: palette, if_seq_no: existing.seqNo, if_primary_term: existing.primaryTerm, refresh: 'wait_for' })
+      .catch((error) => {
+        if (esStatusCode(error) === 409) throw new ConflictException('The palette changed while saving; please try again');
+        return this.storageError(error, id);
+      });
 
-    return { id, ...palette };
+    return this.view(principal, id, palette);
   }
 
-  async getPalette(id: string) {
-    const result = await this.elasticsearchService
-      .get({ index: 'color-palettes', id })
-      .catch((error) => this.storageError(error, id));
-
-    return {
-      id: result._id,
-      ...(result._source as any),
-    };
+  async deletePalette(principal: AuthPrincipal, id: string): Promise<void> {
+    const existing = await this.load(id);
+    await this.assertCanEdit(principal, existing.doc);
+    await this.elasticsearchService
+      .delete({ index: INDEX, id, if_seq_no: existing.seqNo, if_primary_term: existing.primaryTerm, refresh: 'wait_for' })
+      .catch((error) => {
+        if (esStatusCode(error) === 409) throw new ConflictException('The palette changed while deleting; please try again');
+        return this.storageError(error, id);
+      });
   }
 
-  async getAllPalettes(page = 1, pageSize = 50) {
+  async getPalette(principal: AuthPrincipal, id: string) {
+    return this.view(principal, id, (await this.load(id)).doc);
+  }
+
+  async getAllPalettes(principal: AuthPrincipal, page = 1, pageSize = 50) {
     const size = Math.min(Math.max(pageSize, 1), 200);
     const from = (Math.max(page, 1) - 1) * size;
+    let hits: Array<{ _id: string; _source?: PaletteDoc }>;
     try {
-      const result = await this.elasticsearchService.search({
-        index: 'color-palettes',
+      const result = await this.elasticsearchService.search<PaletteDoc>({
+        index: INDEX,
         from,
         size,
         query: { match_all: {} },
         sort: [{ createdAt: { order: 'desc', unmapped_type: 'date' } }],
       });
-      return result.hits.hits.map((hit: any) => ({
-        id: hit._id,
-        ...hit._source,
-      }));
+      hits = result.hits.hits as Array<{ _id: string; _source?: PaletteDoc }>;
     } catch (error) {
       // No palettes have been saved yet, so the index doesn't exist
       if (isEsNotFound(error)) return [];
       this.storageError(error);
     }
+    return Promise.all(hits.map((hit) => this.view(principal, hit._id, hit._source as PaletteDoc)));
   }
 
   async analyzePalette(dto: AnalyzePaletteDto) {

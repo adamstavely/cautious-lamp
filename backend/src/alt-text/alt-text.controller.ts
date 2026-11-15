@@ -1,8 +1,18 @@
 import { BadRequestException, Body, Controller, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 import { memoryStorage } from 'multer';
 import { ApiKeyGuard } from '../common/security/api-key.guard';
 import { AltTextService, SupportedImageType } from './alt-text.service';
+
+/** The form fields sent with the image (multipart) */
+export class GenerateAltTextDto {
+  /** Where the image appears; only the first 500 characters are used */
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  context?: string;
+}
 
 const IMAGE_TYPES = new Set<SupportedImageType>(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 
@@ -26,7 +36,7 @@ export class AltTextController {
       },
     }),
   )
-  generate(@UploadedFile() image: Express.Multer.File, @Body() body: { context?: string }) {
+  generate(@UploadedFile() image: Express.Multer.File, @Body() body: GenerateAltTextDto) {
     if (!image) {
       throw new BadRequestException('No image uploaded');
     }

@@ -2,10 +2,10 @@ import { Body, Controller, Delete, Get, Headers, HttpCode, NotImplementedExcepti
 import { AuthPrincipal, Principal, Public } from '../auth/principal';
 import { parsePaginationParams } from '../common/pagination/pagination.types';
 import { ApiKeyGuard } from '../common/security/api-key.guard';
-import { NotificationConfig } from '../common/types/common.types';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { TriggerTestDto } from './dto/trigger-test.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { CreateBaselineDto, NotificationSettingsDto, WebhookSecretDto } from './dto/project-settings.dto';
 import { creatorOf } from './project-access';
 import { VisualRegressionService } from './visual-regression.service';
 
@@ -140,7 +140,7 @@ export class VisualRegressionController {
   async createBaseline(
     @Principal() principal: AuthPrincipal,
     @Param('id') projectId: string,
-    @Body() dto: { name: string; description?: string; runId: string },
+    @Body() dto: CreateBaselineDto,
   ) {
     await this.visualRegressionService.authorizeProject(principal, projectId, 'run');
     return this.visualRegressionService.createBaseline(projectId, dto, principal.id);
@@ -169,7 +169,7 @@ export class VisualRegressionController {
    * when left out). The response is the only time the secret is shown.
    */
   @Post('projects/:id/webhook-secret')
-  async setWebhookSecret(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @Body() dto: { secret?: string } = {}) {
+  async setWebhookSecret(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @Body() dto: WebhookSecretDto) {
     await this.visualRegressionService.authorizeProject(principal, projectId, 'manage');
     const { secret } = await this.visualRegressionService.setWebhookSecret(projectId, dto?.secret);
     return { secret, hasWebhookSecret: true, webhookUrl: '/api/v1/visual-regression/webhooks/argos', signatureHeader: 'x-argos-signature' };
@@ -187,7 +187,7 @@ export class VisualRegressionController {
   async configureNotifications(
     @Principal() principal: AuthPrincipal,
     @Param('id') projectId: string,
-    @Body() dto: { type: 'email' | 'slack' | 'teams' | 'webhook'; config: NotificationConfig },
+    @Body() dto: NotificationSettingsDto,
   ) {
     await this.visualRegressionService.authorizeProject(principal, projectId, 'manage');
     return this.visualRegressionService.configureNotifications(projectId, dto);

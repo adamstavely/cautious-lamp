@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { AuthGuard } from '../../auth/auth.guard';
@@ -15,6 +15,7 @@ import { READ_SCOPE } from '../evidence-access';
 import { ApplicationDirectory, DesignSystemSource, GovernanceApplication } from '../sources';
 import { DesignComponent, DesignToken } from '../governance.types';
 import { designSystemStoreProviders } from '../../design-system/testing/in-memory-stores';
+import { globalValidationPipe } from '../../common/validation/global-validation';
 
 export const API_KEY = 'test-key';
 export const ADMIN_KEY = 'admin-key';
@@ -137,7 +138,7 @@ export function readScopeProviders(workspaces: WorkspaceDoc[] = []) {
 export async function startApp(metadata: Parameters<typeof Test.createTestingModule>[0]) {
   const moduleRef = await Test.createTestingModule(metadata).compile();
   const app: INestApplication = moduleRef.createNestApplication({ logger: false });
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(globalValidationPipe());
   await app.listen(0, '127.0.0.1');
   const base = (await app.getUrl()).replace('[::1]', '127.0.0.1');
   const call = async (method: string, route: string, body?: unknown, key: string | null = API_KEY) => {

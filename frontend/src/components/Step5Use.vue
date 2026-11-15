@@ -122,7 +122,7 @@
 </template>
 
 <script setup>
-import apiClient from '../services/api.js';
+import apiClient, { apiErrorMessage } from '../services/api.js';
 import jsPDF from 'jspdf';
 import InlineNotice from './InlineNotice.vue';
 import { UiButton } from './ui';
@@ -1523,7 +1523,8 @@ const savePalette = async () => {
     return updatedPalette;
   } catch (error) {
     console.error('Error saving palette:', error);
-    showNotice(`Error saving palette: ${error.message || 'Please try again.'}`, 'error');
+    // A 403 names who may change the palette (its owner, its workspace's editors or an admin)
+    showNotice(error.response ? apiErrorMessage(error, 'The palette could not be saved.') : `Error saving palette: ${error.message || 'Please try again.'}`, 'error');
     throw error;
   }
 };

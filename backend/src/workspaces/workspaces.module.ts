@@ -23,7 +23,12 @@ export function designSystemComponentSource(
   return {
     listComponents: () => designSystem.getAllComponents() as unknown as WorkspaceComponent[],
     getComponent: (id) => designSystem.getComponentById(id) as unknown as WorkspaceComponent | undefined,
-    usage: (id) => analytics.getComponentUsage(id).map((r) => ({ applicationId: r.applicationId, usageCount: r.usageCount })),
+    usage: async (applicationIds) => {
+      const state = await analytics.currentUsage([...applicationIds].map((id) => ({ id })));
+      return new Map(
+        [...state.byComponent].map(([componentId, usages]) => [componentId, usages.map((u) => ({ applicationId: u.applicationId, usageCount: u.usageCount }))]),
+      );
+    },
     setSharing: async (id, sharing) => {
       if (!designSystem.getComponentById(id)) return undefined;
       return (await designSystem.setComponentSharing(id, sharing)) as unknown as WorkspaceComponent;

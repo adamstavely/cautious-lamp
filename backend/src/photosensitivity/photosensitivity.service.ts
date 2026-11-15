@@ -9,6 +9,8 @@ import {
   Optional,
 } from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
+import { AuthPrincipal, hasPermission } from '../auth/principal';
+import { Permission } from '../rbac/rbac.service';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -160,42 +162,64 @@ export class PhotosensitivityService {
   }
 
   /**
-   * Store an analysis summary so it can be fetched again later
+   * Stores an analysis summary, owned by whoever ran it, so they can fetch it
+   * again (GET /summary/:id). Throws 503 when there is no storage or the
+   * write fails: no id is handed out for a summary that wasn't stored.
    */
-  async saveSummary(record: {
-    videoName: string;
-    applicationName: string;
-    summary: IRISSummary;
-    resultsCount: number;
-  }): Promise<string> {
+  async saveSummary(
+    record: {
+      videoName: string;
+      applicationName: string;
+      summary: IRISSummary;
+      resultsCount: number;
+    },
+    owner: AuthPrincipal,
+  ): Promise<string> {
+    if (!this.elasticsearchService) throw new ServiceUnavailableException('Analysis storage is not configured');
     const analysisId = randomUUID();
-    if (!this.elasticsearchService) return analysisId;
     try {
       await this.elasticsearchService.index({
         index: SUMMARY_INDEX,
         id: analysisId,
-        document: { ...record, analysisId, createdAt: new Date().toISOString() },
+        document: {
+          ...record,
+          analysisId,
+          owner: { type: owner.type, id: owner.id, name: owner.name },
+          createdAt: new Date().toISOString(),
+        },
+        refresh: 'wait_for',
       });
     } catch (error: any) {
-      // The analysis itself succeeded, so return it; it just can't be looked up later
       this.logger.warn(`Could not store photosensitivity summary: ${error.message}`);
+      throw new ServiceUnavailableException('Analysis storage is unavailable, so the summary was not saved');
     }
     return analysisId;
   }
 
-  async getSummary(analysisId: string) {
+  /**
+   * A stored summary, for whoever ran the analysis or an admin:users holder.
+   * Anyone else gets 404, like a missing one, so ids can't be probed.
+   * Summaries stored before owners were recorded are admin-only.
+   */
+  async getSummary(principal: AuthPrincipal, analysisId: string) {
     if (!this.elasticsearchService) {
       throw new ServiceUnavailableException('Analysis storage is not configured');
     }
+    let doc: { owner?: { type: string; id: string } } & Record<string, unknown>;
     try {
-      const result = await this.elasticsearchService.get({ index: SUMMARY_INDEX, id: analysisId });
-      return result._source;
+      const result = await this.elasticsearchService.get<typeof doc>({ index: SUMMARY_INDEX, id: analysisId });
+      doc = result._source;
     } catch (error: any) {
       if (error?.meta?.statusCode === 404) {
         throw new NotFoundException(`Analysis ${analysisId} not found`);
       }
       throw new ServiceUnavailableException('Analysis storage is unavailable, please try again later');
     }
+    const isOwner = !!doc?.owner && doc.owner.type === principal.type && doc.owner.id === principal.id;
+    if (!doc || !(isOwner || hasPermission(principal, Permission.ADMIN_USERS))) {
+      throw new NotFoundException(`Analysis ${analysisId} not found`);
+    }
+    return doc;
   }
 
   /**

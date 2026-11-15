@@ -19,6 +19,7 @@ import { WORKSPACE_STORE, WorkspaceDoc } from '../workspaces/workspace.types';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
 import { designSystemStoreProviders } from '../design-system/testing/in-memory-stores';
+import { COMPONENT_USAGE_STORE, UsageDoc } from './component-usage.types';
 
 /** Who the tests sign in as: the token is `tok-<name>` */
 const PEOPLE: Record<string, string[]> = {
@@ -101,6 +102,7 @@ describe('Analytics HTTP API: application scope', () => {
         { provide: WORKSPACE_STORE, useValue: workspaces },
         { provide: APPLICATION_STORE, useValue: applications },
         { provide: APPLICATION_NAME_STORE, useValue: new InMemoryStore<ApplicationNameClaim>() },
+        { provide: COMPONENT_USAGE_STORE, useValue: new InMemoryStore<UsageDoc>() },
         { provide: VisualRegressionService, useValue: {} },
         { provide: SessionReplayService, useValue: {} },
         { provide: AuthService, useValue: authStub },
@@ -115,15 +117,23 @@ describe('Analytics HTTP API: application scope', () => {
     // Usage recorded by scans: every application uses a production library
     // component; only Alpha's application still uses a deprecated one
     const designSystem = moduleRef.get(DesignSystemService);
-    shared = designSystem.getAllComponents().find((c) => !c.workspaceId && c.status === 'production')!.id;
+    const sharedComponent = designSystem.getAllComponents().find((c) => !c.workspaceId && c.status === 'production')!;
+    shared = sharedComponent.id;
     deprecated = (await designSystem.createComponent({ id: 'old-thing', name: 'OldThing', description: 'x', status: 'deprecated' })).id;
     const analytics = moduleRef.get(AnalyticsService);
-    analytics.trackComponentUsage('app_alpha', 'Alpha Secret App', [
-      { componentId: shared, componentName: 'Shared', files: ['a.vue', 'b.vue', 'c.vue'] },
-      { componentId: deprecated, componentName: 'OldThing', files: ['old.vue'] },
-    ]);
-    analytics.trackComponentUsage('app_beta', 'Beta App', [{ componentId: shared, componentName: 'Shared', files: ['x.vue'] }]);
-    analytics.trackComponentUsage('app_open', 'Unassigned App', [{ componentId: shared, componentName: 'Shared', files: ['y.vue'] }]);
+    const tag = `<${sharedComponent.name.replace(/\s+/g, '')} />`;
+    const scan = (applicationId: string, applicationName: string, html: string, target: string) =>
+      analytics.recordApplicationScan({
+        scanId: `scan-${applicationId}`,
+        applicationId,
+        applicationName,
+        target,
+        scannedAt: new Date().toISOString(),
+        inputs: [{ html, css: '', javascript: '' }],
+      });
+    await scan('app_alpha', 'Alpha Secret App', `${tag}${tag}${tag}<OldThing />`, 'codebase:a.vue');
+    await scan('app_beta', 'Beta App', tag, 'codebase:x.vue');
+    await scan('app_open', 'Unassigned App', tag, 'codebase:y.vue');
   });
 
   afterAll(async () => {
@@ -131,6 +141,7 @@ describe('Analytics HTTP API: application scope', () => {
   });
 
   const routes = () => [
+    '/summary',
     '/component-popularity',
     `/component/${shared}/usage`,
     '/application-adoption',
@@ -159,7 +170,8 @@ describe('Analytics HTTP API: application scope', () => {
 
   it("leaves other workspaces' applications out of counts and denominators", async () => {
     const popularity = (await get('bob', '/component-popularity')).body.find((p: { componentId: string }) => p.componentId === shared);
-    // Beta's and the unassigned application: 2 of 2, 2 files
+    expect((await get('bob', '/summary')).body).toMatchObject({ usageDataAvailable: true, totalApplications: 2, scannedApplications: 2 });
+    // Beta's and the unassigned application: 2 of 2, 2 uses
     expect(popularity).toMatchObject({ totalUsage: 2, applicationCount: 2, adoptionRate: 100 });
     const usage = (await get('bob', `/component/${shared}/usage`)).body;
     expect(usage).toMatchObject({ totalUsage: 2, applicationCount: 2 });
@@ -173,5 +185,9 @@ describe('Analytics HTTP API: application scope', () => {
       totalUsage: 5,
       applicationCount: 3,
     });
+  });
+
+  it('refuses a timeframe it does not know', async () => {
+    expect((await get('bob', '/component-popularity?timeframe=forever')).status).toBe(400);
   });
 });

@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { AuthGuard } from '../auth/auth.guard';
@@ -12,6 +12,7 @@ import { DesignSystemService } from '../design-system/design-system.service';
 import { Permission } from '../rbac/rbac.service';
 import { TokenSyncController } from './token-sync.controller';
 import { TokenSyncService } from './token-sync.service';
+import { globalValidationPipe } from '../common/validation/global-validation';
 
 const PEOPLE = {
   alice: { id: 'usr_alice', permissions: [] as string[] },
@@ -58,7 +59,7 @@ describe('Sync connections over HTTP', () => {
       ],
     }).compile();
     app = moduleRef.createNestApplication({ logger: false });
-    app.useGlobalPipes(new ValidationPipe());
+    app.useGlobalPipes(globalValidationPipe());
     await app.listen(0, '127.0.0.1');
     base = (await app.getUrl()).replace('[::1]', '127.0.0.1');
   });

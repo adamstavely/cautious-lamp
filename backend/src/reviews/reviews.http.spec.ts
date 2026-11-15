@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { existsSync, readdirSync } from 'fs';
@@ -16,6 +16,7 @@ import { ReviewsService } from './reviews.service';
 import { TeamsController } from './teams.controller';
 import { TeamsService } from './teams.service';
 import { SAMPLE_FILES, createHarness } from './testing/harness';
+import { globalValidationPipe } from '../common/validation/global-validation';
 
 const API_KEY = 'test-key';
 const ADMIN_KEY = 'admin-key';
@@ -91,7 +92,7 @@ describe('Reviews HTTP API', () => {
       ],
     }).compile();
     app = moduleRef.createNestApplication({ rawBody: true, logger: false });
-    app.useGlobalPipes(new ValidationPipe());
+    app.useGlobalPipes(globalValidationPipe());
     await app.listen(0, '127.0.0.1');
     base = (await app.getUrl()).replace('[::1]', '127.0.0.1');
   });

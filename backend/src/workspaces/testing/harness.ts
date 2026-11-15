@@ -1,5 +1,5 @@
 import { InMemoryStore } from '../../reviews/testing/in-memory-store';
-import { INestApplication, NotFoundException, ValidationPipe } from '@nestjs/common';
+import { INestApplication, NotFoundException } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { ApplicationsController } from '../../applications/applications.controller';
@@ -22,6 +22,7 @@ import { WorkspacesController } from '../workspaces.controller';
 import { WorkspacesService } from '../workspaces.service';
 import { InMemoryQueryableStore } from './in-memory-queryable-store';
 import { CHANGE_RECORDER, ChangeActor, ChangeInput } from '../../notifications/notification.types';
+import { globalValidationPipe } from '../../common/validation/global-validation';
 
 /** People the tests sign in as. The token for each is `tok-<key>`. */
 export const PEOPLE = {
@@ -86,7 +87,8 @@ export function createComponentSource() {
   const source: WorkspaceComponentSource = {
     listComponents: () => components,
     getComponent: (id) => components.find((c) => c.id === id),
-    usage: (id) => usage.get(id) ?? [],
+    usage: async (applicationIds) =>
+      new Map([...usage].map(([id, records]) => [id, records.filter((r) => applicationIds.has(r.applicationId))])),
     setSharing: async (id, sharing) => {
       const c = components.find((x) => x.id === id);
       if (!c) return undefined;
@@ -174,7 +176,7 @@ export async function createWorkspacesApp() {
   }).compile();
   const sessionReplay = moduleRef.get(SessionReplayService);
   const app: INestApplication = moduleRef.createNestApplication({ logger: false });
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(globalValidationPipe());
   await app.listen(0, '127.0.0.1');
   const base = (await app.getUrl()).replace('[::1]', '127.0.0.1');
 

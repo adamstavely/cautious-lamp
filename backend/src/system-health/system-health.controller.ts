@@ -1,48 +1,39 @@
 import { Controller, Get, Query } from '@nestjs/common';
+import { AuthPrincipal, Principal } from '../auth/principal';
 import { SystemHealthService } from './system-health.service';
 
+/**
+ * Every figure is limited to the components, applications and accessibility
+ * reports the caller may read. Reads never record anything: history comes
+ * from the daily snapshots SystemHealthSnapshotScheduler stores.
+ */
 @Controller('api/v1/system-health')
 export class SystemHealthController {
-  constructor(
-    private readonly systemHealthService: SystemHealthService,
-  ) {}
+  constructor(private readonly systemHealthService: SystemHealthService) {}
 
   @Get('score')
-  getHealthScore() {
-    const healthScore = this.systemHealthService.calculateHealthScore();
-    const alerts = this.systemHealthService.checkHealthScoreAlerts(healthScore.score);
-    const recommendations = this.systemHealthService.generateRecommendations(healthScore);
-
-    return {
-      ...healthScore,
-      timestamp: healthScore.timestamp instanceof Date ? healthScore.timestamp.toISOString() : healthScore.timestamp,
-      alerts,
-      recommendations,
-      inventory: this.systemHealthService.getInventory(),
-    };
+  getHealthScore(@Principal() principal: AuthPrincipal) {
+    return this.systemHealthService.getDashboard(principal);
   }
 
   @Get('trends')
-  getHealthScoreTrends(@Query('days') days?: string) {
+  getHealthScoreTrends(@Principal() principal: AuthPrincipal, @Query('days') days?: string) {
     const daysNum = days ? parseInt(days, 10) : 30;
-    return this.systemHealthService.getHealthScoreTrends(daysNum);
+    return this.systemHealthService.getHealthScoreTrends(principal, daysNum);
   }
 
   @Get('recommendations')
-  getRecommendations() {
-    const healthScore = this.systemHealthService.calculateHealthScore();
-    return this.systemHealthService.generateRecommendations(healthScore);
+  async getRecommendations(@Principal() principal: AuthPrincipal) {
+    return this.systemHealthService.generateRecommendations(await this.systemHealthService.calculateHealthScore(principal));
   }
 
   @Get('alerts')
-  getAlerts() {
-    const healthScore = this.systemHealthService.calculateHealthScore();
-    return this.systemHealthService.checkHealthScoreAlerts(healthScore.score);
+  async getAlerts(@Principal() principal: AuthPrincipal) {
+    return this.systemHealthService.checkHealthScoreAlerts(await this.systemHealthService.calculateHealthScore(principal));
   }
 
   @Get('audit-report')
-  getAuditReport() {
-    return this.systemHealthService.generateAuditReport();
+  getAuditReport(@Principal() principal: AuthPrincipal) {
+    return this.systemHealthService.generateAuditReport(principal);
   }
 }
-

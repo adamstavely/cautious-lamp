@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, NotFoundException, OnModuleDestroy, PayloadTooLargeException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException, OnModuleDestroy, Optional, PayloadTooLargeException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { AuthPrincipal } from '../auth/principal';
 import { ComponentReadScope, canReadComponent } from '../design-system/component-access.service';
@@ -11,7 +11,14 @@ import { RunResult, runRules } from './rule-interpreter';
 import { normalizeRuleDefinition } from './rule-validation';
 import { RulesService } from './rules.service';
 import { fetchPublicPage } from './safe-fetch';
-import { APPLICATION_DIRECTORY, ApplicationDirectory, DESIGN_SYSTEM_SOURCE, DesignSystemSource } from './sources';
+import {
+  APPLICATION_DIRECTORY,
+  ApplicationDirectory,
+  COMPONENT_USAGE_RECORDER,
+  ComponentUsageRecorder,
+  DESIGN_SYSTEM_SOURCE,
+  DesignSystemSource,
+} from './sources';
 
 export interface CodebaseInput {
   html?: string;
@@ -78,6 +85,7 @@ function actor(principal: AuthPrincipal): ScanActor {
 @Injectable()
 export class ScansService implements OnModuleDestroy {
   readonly runner = new RegexRunner();
+  private readonly logger = new Logger(ScansService.name);
 
   constructor(
     private readonly rules: RulesService,
@@ -85,6 +93,7 @@ export class ScansService implements OnModuleDestroy {
     @Inject(APPLICATION_DIRECTORY) private readonly applications: ApplicationDirectory,
     @Inject(DESIGN_SYSTEM_SOURCE) private readonly designSystem: DesignSystemSource,
     @Inject(READ_SCOPE) private readonly readScope: ReadScopeResolver,
+    @Optional() @Inject(COMPONENT_USAGE_RECORDER) private readonly usage?: ComponentUsageRecorder,
   ) {}
 
   async onModuleDestroy(): Promise<void> {
@@ -146,8 +155,33 @@ export class ScansService implements OnModuleDestroy {
       if (stored) return this.toResponse(stored.doc);
       throw error;
     }
-    if (record.applicationId) await this.applications.recordScan(record.applicationId, new Date(record.createdAt), 'governance');
+    if (record.applicationId) {
+      await this.applications.recordScan(record.applicationId, new Date(record.createdAt), 'governance');
+      await this.recordUsage(record, inputs);
+    }
     return this.toResponse(record);
+  }
+
+  /**
+   * Records which design-system components the scanned code uses (analytics).
+   * The scan is already stored, so a failure here is logged rather than
+   * failing it; analytics then lacks this scan until the application is scanned again.
+   */
+  private async recordUsage(record: ScanRecord, inputs: ScanInput[]): Promise<void> {
+    if (!this.usage || !record.applicationId) return;
+    const target = record.source === 'url' ? `url:${record.url ?? ''}` : `codebase:${inputs[0]?.file ?? ''}`;
+    try {
+      await this.usage.recordApplicationScan({
+        scanId: record.id,
+        applicationId: record.applicationId,
+        applicationName: record.applicationName ?? record.applicationId,
+        target,
+        scannedAt: record.createdAt,
+        inputs,
+      });
+    } catch (error) {
+      this.logger.warn(`Component usage from scan ${record.id} was not recorded: ${(error as Error).message}`);
+    }
   }
 
   /** Runs one unsaved rule against sample code (the rule editor's "Test" button). Nothing is stored. */
