@@ -2,7 +2,7 @@
   <PageShell>
     <PageHero :back="{ to: '/patterns', label: 'Patterns' }" :title="guide.title" :lead="guide.lead" :spot="guide.spot" size="tool">
       <template #actions>
-        <UiButton variant="primary" icon="code" to="/patterns/responsive-navigation">Responsive navigation code</UiButton>
+        <UiButton variant="primary" icon="code" to="/patterns/responsive-navigation">See the code</UiButton>
       </template>
     </PageHero>
 
