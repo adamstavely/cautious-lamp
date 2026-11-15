@@ -4,14 +4,15 @@
     data-ds-component="breadcrumbs"
     data-ds-path="@design-system/components/breadcrumbs"
     class="breadcrumbs"
+    :class="{ 'breadcrumbs-bar': !inline }"
     aria-label="Breadcrumb"
   >
-    <ol class="flex flex-wrap items-center gap-2 text-sm">
+    <ol class="breadcrumb-list">
       <li>
         <router-link to="/" class="breadcrumb-link">Home</router-link>
       </li>
-      <li v-for="(crumb, index) in crumbs" :key="index" class="flex items-center gap-2">
-        <span class="text-ink-disabled" aria-hidden="true">/</span>
+      <li v-for="(crumb, index) in crumbs" :key="index" class="breadcrumb-item">
+        <AppIcon name="chevron-right" class="breadcrumb-sep" />
         <button
           v-if="index < crumbs.length - 1 && crumb.path"
           type="button"
@@ -27,7 +28,7 @@
         >
           {{ crumb.label }}
         </router-link>
-        <span v-else class="font-medium text-ink-strong" :aria-current="index === crumbs.length - 1 ? 'page' : undefined">
+        <span v-else class="breadcrumb-current" :aria-current="index === crumbs.length - 1 ? 'page' : undefined">
           {{ crumb.label }}
         </span>
       </li>
@@ -47,6 +48,11 @@ const props = defineProps({
   onNavigate: {
     type: Function,
     default: null
+  },
+  /** Placed by its parent (PageShell puts it at the top of the page column); otherwise it pads itself */
+  inline: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -311,11 +317,23 @@ const handleClick = (crumbPath) => {
 </script>
 
 <style scoped>
-.breadcrumbs {
-  @apply px-8 pt-6 pb-4 border-b border-line bg-surface;
+.breadcrumbs-bar {
+  @apply px-8 pt-6 pb-2;
+}
+.breadcrumb-list {
+  @apply flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm;
+}
+.breadcrumb-item {
+  @apply flex items-center gap-1.5 min-w-0;
+}
+.breadcrumb-sep {
+  @apply text-sm text-ink-disabled;
 }
 .breadcrumb-link {
-  @apply text-ink-muted transition-colors hover:text-accent-text;
-  @apply focus-visible:outline focus-visible:outline-2 outline-focus rounded-control;
+  @apply text-ink-secondary underline-offset-4 transition-colors hover:text-accent-text hover:underline;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus rounded-control;
+}
+.breadcrumb-current {
+  @apply font-medium text-ink truncate;
 }
 </style>
