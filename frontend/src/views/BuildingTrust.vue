@@ -1,144 +1,75 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-12">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                    Building Trust
-                  </h1>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                    Trust is the foundation of great user experiences. Learn how to build trust through consistent design, clear communication, and reliable interactions.
-                  </p>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-                      <defs>
-                        <linearGradient id="buildingTrustGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Shield/trust symbol -->
-                      <path d="M 100 30 L 50 50 L 50 100 Q 50 140 100 170 Q 150 140 150 100 L 150 50 Z" fill="url(#buildingTrustGradient)" opacity="0.8"/>
-                      <path d="M 100 40 L 60 55 L 60 100 Q 60 130 100 155 Q 140 130 140 100 L 140 55 Z" fill="url(#buildingTrustGradient)" opacity="0.6"/>
-                      <!-- Checkmark -->
-                      <path d="M 70 100 L 90 120 L 130 80" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.9"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/getting-started', label: 'Getting started' }"
+      title="Building trust"
+      lead="Trust is the foundation of great user experiences. Learn how to build trust through consistent design, clear communication, and reliable interactions."
+      spot="site/building-trust"
+    />
 
-          <!-- Content Section -->
-          <div class="max-w-7xl mx-auto">
-            <div 
-              class="rounded-lg shadow-sm border p-8"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h2 class="text-2xl font-bold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Principles of Building Trust
-              </h2>
-              <p class="text-lg mb-6" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Trust is earned through consistent, reliable, and transparent interactions. Our design system helps you build trust by providing predictable patterns and clear communication.
-              </p>
-              
-              <div class="space-y-6 mt-8">
-                <div>
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-gray-200' : 'text-gray-900'">
-                    Consistency
-                  </h3>
-                  <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Consistent design patterns create familiarity and predictability. When users know what to expect, they feel more confident and trusting of your interface.
-                  </p>
-                </div>
-                
-                <div>
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-gray-200' : 'text-gray-900'">
-                    Transparency
-                  </h3>
-                  <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Clear communication about actions, states, and outcomes builds trust. Users should always understand what's happening and what will happen next.
-                  </p>
-                </div>
-                
-                <div>
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-gray-200' : 'text-gray-900'">
-                    Reliability
-                  </h3>
-                  <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Interfaces that work consistently and handle errors gracefully demonstrate reliability. Users trust systems that they can depend on.
-                  </p>
-                </div>
-                
-                <div>
-                  <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-gray-200' : 'text-gray-900'">
-                    Security & Privacy
-                  </h3>
-                  <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Visual indicators of security and clear privacy policies help users feel safe. Trust is built when users know their data and interactions are protected.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <PageSection title="Principles of building trust" description="Trust is earned through consistent, reliable, and transparent interactions. Our design system helps you build trust by providing predictable patterns and clear communication.">
+      <ul class="foundation-grid">
+        <li v-for="item in principles" :key="item.title">
+          <UiCard :title="item.title" class="h-full">
+            <template #media>
+              <span class="foundation-icon"><AppIcon :name="item.icon" /></span>
+            </template>
+            {{ item.body }}
+          </UiCard>
+        </li>
+      </ul>
+    </PageSection>
+
+    <PageSection title="More foundations" description="The other principles the design system is built on." divided>
+      <div class="foundation-links">
+        <UiLinkRow v-for="page in otherFoundations" :key="page.to" :to="page.to" :title="page.title" :body="page.body" :spot="page.spot" />
       </div>
-    </div>
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
+import { PageHero, PageSection, PageShell, UiCard, UiLinkRow } from '../components/ui';
 
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const isDarkMode = ref(false);
+const principles = [
+  {
+    title: 'Consistency',
+    icon: 'repeat',
+    body: 'Consistent design patterns create familiarity and predictability. When users know what to expect, they feel more confident and trusting of your interface.',
+  },
+  {
+    title: 'Transparency',
+    icon: 'eye',
+    body: 'Clear communication about actions, states, and outcomes builds trust. Users should always understand what\'s happening and what will happen next.',
+  },
+  {
+    title: 'Reliability',
+    icon: 'badge-check',
+    body: 'Interfaces that work consistently and handle errors gracefully demonstrate reliability. Users trust systems that they can depend on.',
+  },
+  {
+    title: 'Security and privacy',
+    icon: 'lock',
+    body: 'Visual indicators of security and clear privacy policies help users feel safe. Trust is built when users know their data and interactions are protected.',
+  },
+];
 
-
-
-
-
-onMounted(() => {
-  isDarkMode.value = document.documentElement.classList.contains('dark');
-  
-  const observer = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-});
+const otherFoundations = [
+  { title: 'Atomic design', to: '/getting-started/foundations/atomic-design', spot: 'site/atomic-design', body: 'Build interfaces from atoms up to full pages.' },
+  { title: 'Responsiveness', to: '/getting-started/foundations/responsiveness', spot: 'site/responsiveness', body: 'Adapt layouts to every device and screen size.' },
+  { title: 'Usability', to: '/getting-started/foundations/usability', spot: 'research/usability', body: 'Make interfaces easy to learn, efficient and satisfying.' },
+  { title: 'Writing and content', to: '/getting-started/foundations/writing-content', spot: 'site/writing-content', body: 'Write clear, concise copy that guides users.' },
+];
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.foundation-grid {
+  @apply grid gap-4 sm:grid-cols-2;
+}
+.foundation-icon {
+  @apply inline-flex items-center justify-center w-10 h-10 mb-4 rounded-control bg-accent-subtle text-accent-text text-xl;
+}
+.foundation-links {
+  @apply grid gap-x-8 gap-y-4 sm:grid-cols-2;
 }
 </style>
-

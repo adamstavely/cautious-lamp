@@ -111,6 +111,13 @@ const vuetify = createVuetify({
 
 const router = createRouter({
   history: createWebHistory(),
+  // A new page starts at the top; back/forward restores where you were; #links go to their heading
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition;
+    if (to.hash) return { el: to.hash };
+    if (to.path !== from.path) return { top: 0 };
+    return false;
+  },
   routes: [
     // Sign-in screens: shown without the app chrome. /login is the only public route.
     {
