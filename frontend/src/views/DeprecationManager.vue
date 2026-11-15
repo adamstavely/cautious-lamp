@@ -1,348 +1,282 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Deprecation Manager
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Track and manage deprecated components. Set deprecation dates, migration paths, and retirement schedules.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                    <defs>
-                      <linearGradient id="deprecationGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Warning triangle -->
-                    <path d="M 100 30 L 170 150 L 30 150 Z" fill="url(#deprecationGradient)" opacity="0.6"/>
-                    <path d="M 100 50 L 150 140 L 50 140 Z" fill="url(#deprecationGradient)" opacity="0.8"/>
-                    <!-- Exclamation mark -->
-                    <rect x="90" y="70" width="20" height="40" rx="2" fill="white" opacity="0.9"/>
-                    <circle cx="100" cy="125" r="6" fill="white" opacity="0.9"/>
-                    <!-- Component boxes representing deprecated items -->
-                    <rect x="40" y="160" width="30" height="20" rx="2" fill="url(#deprecationGradient)" opacity="0.4"/>
-                    <rect x="85" y="160" width="30" height="20" rx="2" fill="url(#deprecationGradient)" opacity="0.5"/>
-                    <rect x="130" y="160" width="30" height="20" rx="2" fill="url(#deprecationGradient)" opacity="0.3"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
+  <PageShell width="wide">
+    <PageHero
+      :back="{ to: '/components', label: 'Components' }"
+      title="Deprecation manager"
+      lead="Which components are deprecated, what replaces them and when they stop being supported."
+      spot="admin/deprecation-manager"
+    />
+
+    <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
+
+    <UiSpinner v-if="loadingComponents && !components.length" label="Loading components…" />
+
+    <UiCallout v-else-if="componentsError" tone="danger" title="Components couldn't be loaded" role="alert">
+      {{ apiErrorMessage(componentsError) }}
+      <template #actions>
+        <UiButton size="sm" icon="refresh-cw" @click="loadComponents">Try again</UiButton>
+      </template>
+    </UiCallout>
+
+    <template v-else>
+      <PageSection title="Overview" description="Deprecated components and how close they are to their sunset date.">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <UiStat label="Deprecated" icon="triangle-alert" :tone="deprecated.length ? 'warning' : 'neutral'" :value="deprecated.length" />
+          <UiStat label="Sunset within 90 days" icon="calendar-clock" :tone="soon.length ? 'warning' : 'neutral'" :value="soon.length" />
+          <UiStat label="Past their sunset date" icon="clock" :tone="past.length ? 'danger' : 'neutral'" :value="past.length" />
+        </div>
+      </PageSection>
+
+      <PageSection title="Deprecated components" description="Sorted by sunset date, soonest first." divided>
+        <div v-if="canEdit" class="mb-6">
+          <UiButton variant="primary" icon="triangle-alert" :disabled="!active.length" @click="openDeprecate()">Deprecate a component</UiButton>
         </div>
 
-        <div class="max-w-7xl mx-auto grid lg:grid-cols-3 gap-6">
-          <!-- Left Column: Deprecation List -->
-          <div class="lg:col-span-1 space-y-6">
-            <!-- Filter -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <AppIcon name="list-filter" class="text-indigo-600" />
-                Filter
-              </h3>
-              <Dropdown
-                :model-value="filterStatus"
-                @update:model-value="filterStatus = $event"
-                :options="filterOptions"
-                :is-dark-mode="isDarkMode"
-              />
-            </div>
+        <UiCallout v-if="deprecated.length && usageError" tone="warning" class="mb-6">Usage couldn't be loaded, so it isn't shown.</UiCallout>
+        <UiCallout v-else-if="deprecated.length && !usageAvailable" tone="info" class="mb-6">
+          Usage isn't shown: no application scan has recorded component usage yet.
+        </UiCallout>
 
-            <!-- Deprecated Components -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <AppIcon name="triangle-alert" class="text-indigo-600" />
-                Deprecated Components
-              </h3>
-              <div class="space-y-2">
-                <div
-                  v-for="component in filteredDeprecated"
-                  :key="component.id"
-                  @click="selectedComponent = component"
-                  class="p-3 rounded-lg cursor-pointer transition-colors flex items-center gap-3"
-                  :class="selectedComponent?.id === component.id
-                    ? (isDarkMode ? 'bg-indigo-900/30 border border-indigo-700' : 'bg-indigo-50 border border-indigo-200')
-                    : (isDarkMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-50 hover:bg-gray-100')"
-                >
-                  <AppIcon name="blocks" class="text-indigo-600 flex-shrink-0" />
-                  <div class="flex-1 min-w-0">
-                    <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ component.name }}
-                    </div>
-                    <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      {{ component.status }}
-                    </div>
-                  </div>
+        <UiTable v-if="deprecated.length" caption="Deprecated components" bordered>
+          <thead>
+            <tr>
+              <th scope="col">Component</th>
+              <th scope="col">Replacement</th>
+              <th scope="col">Sunset</th>
+              <th v-if="usageAvailable" scope="col">Usage</th>
+              <th v-if="canEdit" scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="component in deprecated" :key="component.id">
+              <th scope="row" class="align-top">
+                <span class="font-medium text-ink-strong">{{ component.name }}</span>
+                <span v-if="component.deprecation?.reason" class="block text-sm font-normal text-ink-secondary">{{ component.deprecation.reason }}</span>
+                <details v-if="component.deprecation?.migrationGuide" class="mt-2 text-sm font-normal">
+                  <summary class="cursor-pointer text-accent-text">Migration guide</summary>
+                  <pre class="migration-guide">{{ component.deprecation.migrationGuide }}</pre>
+                </details>
+              </th>
+              <td class="align-top whitespace-nowrap">{{ nameOf(component.deprecation?.replacement) ?? 'None named' }}</td>
+              <td class="align-top whitespace-nowrap">
+                <template v-if="component.deprecation?.sunsetDate">
+                  <span class="block">{{ formatDay(component.deprecation.sunsetDate) }}</span>
+                  <UiChip :tone="sunsetTone(component.deprecation.sunsetDate)">{{ sunsetLabel(component.deprecation.sunsetDate) }}</UiChip>
+                </template>
+                <span v-else class="text-ink-secondary">Not set</span>
+              </td>
+              <td v-if="usageAvailable" class="align-top whitespace-nowrap">{{ usageLabel(component.id) }}</td>
+              <td v-if="canEdit" class="align-top whitespace-nowrap">
+                <div class="flex gap-2">
+                  <UiButton size="sm" icon="pencil" @click="openDeprecate(component)">Edit<span class="sr-only"> {{ component.name }}</span></UiButton>
+                  <UiButton size="sm" icon="undo-2" @click="openRestore(component)">Undeprecate<span class="sr-only"> {{ component.name }}</span></UiButton>
                 </div>
-              </div>
-            </div>
-          </div>
+              </td>
+            </tr>
+          </tbody>
+        </UiTable>
 
-          <!-- Right Column: Details -->
-          <div class="lg:col-span-2 space-y-6">
-            <!-- Component Details -->
-            <div 
-              v-if="selectedComponent"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <AppIcon name="blocks" class="text-indigo-600" />
-                  {{ selectedComponent.name }}
-                </h3>
-                <span 
-                  class="px-3 py-1 rounded text-sm font-medium"
-                  :class="selectedComponent.status === 'deprecated'
-                    ? (isDarkMode ? 'bg-yellow-900/50 text-yellow-300' : 'bg-yellow-100 text-yellow-700')
-                    : selectedComponent.status === 'sunset'
-                    ? (isDarkMode ? 'bg-orange-900/50 text-orange-300' : 'bg-orange-100 text-orange-700')
-                    : (isDarkMode ? 'bg-red-900/50 text-red-300' : 'bg-red-100 text-red-700')"
-                >
-                  {{ selectedComponent.status }}
-                </span>
-              </div>
-              <div class="space-y-4">
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Deprecation Date
-                  </label>
-                  <div class="text-sm" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ formatDate(selectedComponent.deprecationDate) }}
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Sunset Date
-                  </label>
-                  <div class="text-sm" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ formatDate(selectedComponent.sunsetDate) }}
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Replacement Component
-                  </label>
-                  <div class="text-sm" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    {{ selectedComponent.replacement }}
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Reason
-                  </label>
-                  <div class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    {{ selectedComponent.reason }}
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Migration Guide
-                  </label>
-                  <div class="rounded-lg p-4" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                    <pre class="text-xs font-mono whitespace-pre-wrap" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'"><code>{{ selectedComponent.migrationGuide }}</code></pre>
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Usage Count
-                  </label>
-                  <div class="text-sm font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ selectedComponent.usageCount }} projects
-                  </div>
-                </div>
-              </div>
-            </div>
+        <UiEmptyState v-else title="No deprecated components" body="Every component in the library is current." spot="admin/deprecation-manager" />
+      </PageSection>
+    </template>
 
-            <!-- Deprecation Schedule -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <AppIcon name="calendar" class="text-indigo-600" />
-                Deprecation Schedule
-              </h3>
-              <div class="space-y-3">
-                <div
-                  v-for="item in deprecationSchedule"
-                  :key="item.id"
-                  class="flex items-center gap-4 p-3 rounded-lg"
-                  :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'"
-                >
-                  <div class="flex-1">
-                    <div class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ item.component }}
-                    </div>
-                    <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      {{ item.action }} on {{ formatDate(item.date) }}
-                    </div>
-                  </div>
-                  <div class="text-xs" :class="getDaysUntil(item.date) < 30 ? 'text-red-500' : getDaysUntil(item.date) < 90 ? 'text-yellow-500' : 'text-gray-500'">
-                    {{ getDaysUntil(item.date) }} days
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        </div>
+    <!-- Deprecate, or edit a deprecation -->
+    <UiDialog :open="!!form" :title="form?.editing ? `Edit deprecation of ${nameOf(form.id)}` : 'Deprecate a component'" @update:open="(open) => { if (!open) form = null; }">
+      <form v-if="form" id="deprecation-form" class="space-y-5" @submit.prevent="saveDeprecation">
+        <UiSelect
+          v-if="!form.editing"
+          id="deprecate-component"
+          v-model="form.id"
+          label="Component"
+          required
+          placeholder="Select a component"
+          :error="form.errors.id"
+          :options="active.map((c) => ({ value: c.id, label: c.name }))"
+        />
+        <UiSelect
+          id="deprecate-replacement"
+          v-model="form.replacement"
+          label="Replacement"
+          :options="replacementOptions"
+          hint="The component to use instead"
+        />
+        <UiInput id="deprecate-sunset" v-model="form.sunsetDate" type="date" label="Sunset date" hint="When the component stops being supported" />
+        <UiTextarea id="deprecate-reason" v-model="form.reason" label="Reason" :rows="2" />
+        <UiTextarea id="deprecate-guide" v-model="form.migrationGuide" label="Migration guide" :rows="4" mono />
+        <UiCallout v-if="form.error" tone="danger" role="alert">{{ form.error }}</UiCallout>
+      </form>
+      <template #footer>
+        <UiButton @click="form = null">Cancel</UiButton>
+        <UiButton type="submit" form="deprecation-form" variant="primary" :loading="saving">{{ form?.editing ? 'Save changes' : 'Deprecate' }}</UiButton>
+      </template>
+    </UiDialog>
+
+    <!-- Undeprecate -->
+    <UiDialog :open="!!restore" :title="restore ? `Undeprecate ${restore.component.name}` : 'Undeprecate'" size="sm" @update:open="(open) => { if (!open) restore = null; }">
+      <div v-if="restore" class="space-y-5">
+        <p class="text-ink-secondary">Its replacement, sunset date and migration guide are removed.</p>
+        <UiSelect id="restore-status" v-model="restore.status" label="New status" required :options="restoreOptions" />
+        <UiCallout v-if="restore.error" tone="danger" role="alert">{{ restore.error }}</UiCallout>
       </div>
-    </div>
-  </div>
+      <template #footer>
+        <UiButton @click="restore = null">Cancel</UiButton>
+        <UiButton variant="primary" :loading="saving" @click="saveRestore">Undeprecate</UiButton>
+      </template>
+    </UiDialog>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Dropdown from '../components/Dropdown.vue';
+import { computed, ref } from 'vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiChip, UiDialog, UiEmptyState, UiInput, UiSelect, UiSpinner, UiStat, UiTable, UiTextarea } from '../components/ui';
+import { useAuth } from '../composables/useAuth.js';
+import { STATUS_OPTIONS, statusLabel, useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
+import { useNotice } from '../composables/useNotice.js';
+import apiClient, { apiErrorMessage } from '../services/api.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const selectedComponent = ref(null);
-const filterStatus = ref('all');
+/**
+ * Deprecated components (status 'deprecated' in GET /api/v1/components) with
+ * the replacement, sunset date, reason and migration guide stored on each.
+ * component:edit holders deprecate (PUT /components/:id/deprecation) and
+ * undeprecate (PUT /components/:id/status). Usage comes from application
+ * scans (GET /analytics/component-popularity) and is only shown when a scan
+ * has recorded some.
+ */
+const { components, loadingComponents, componentsError, loadComponents, updateComponentStatus, upsertComponent } = useComponentPatternStatus();
+const { hasPermission } = useAuth();
+const { notice, showNotice, clearNotice } = useNotice();
 
-const deprecatedComponents = ref([
-  {
-    id: 1,
-    name: 'OldButton',
-    status: 'deprecated',
-    deprecationDate: new Date('2024-01-15'),
-    sunsetDate: new Date('2024-07-15'),
-    replacement: 'Button',
-    reason: 'Replaced with improved Button component with better accessibility',
-    migrationGuide: 'Replace <OldButton> with <Button>\nAll props are compatible.',
-    usageCount: 12
-  },
-  {
-    id: 2,
-    name: 'LegacyCard',
-    status: 'sunset',
-    deprecationDate: new Date('2023-11-01'),
-    sunsetDate: new Date('2024-05-01'),
-    replacement: 'Card',
-    reason: 'Legacy component, use new Card component',
-    migrationGuide: 'Migrate to Card component:\n1. Replace import\n2. Update props\n3. Test functionality',
-    usageCount: 5
-  },
-  {
-    id: 3,
-    name: 'DeprecatedModal',
-    status: 'retired',
-    deprecationDate: new Date('2023-06-01'),
-    sunsetDate: new Date('2024-01-01'),
-    replacement: 'Modal',
-    reason: 'Component retired, use Modal instead',
-    migrationGuide: 'Component has been retired. Use Modal component.',
-    usageCount: 0
-  }
-]);
+const canEdit = computed(() => hasPermission('component:edit'));
 
-const deprecationSchedule = ref([
-  { id: 1, component: 'OldButton', action: 'Sunset', date: new Date('2024-07-15') },
-  { id: 2, component: 'LegacyCard', action: 'Retire', date: new Date('2024-05-01') }
-]);
-
-const filterOptions = computed(() => [
-  { label: 'All Status', value: 'all' },
-  { label: 'Deprecated', value: 'deprecated' },
-  { label: 'Sunset Scheduled', value: 'sunset' },
-  { label: 'Retired', value: 'retired' }
-]);
-
-const filteredDeprecated = computed(() => {
-  if (filterStatus.value === 'all') return deprecatedComponents.value;
-  return deprecatedComponents.value.filter(c => c.status === filterStatus.value);
-});
-
-const formatDate = (date) => {
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-};
-
-const getDaysUntil = (date) => {
+const DAY = 24 * 60 * 60 * 1000;
+/** Whole days from today to a YYYY-MM-DD date (negative once it has passed) */
+const daysUntil = (day) => {
+  const [y, m, d] = day.split('-').map(Number);
   const now = new Date();
-  const diff = date - now;
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / DAY);
 };
 
+const deprecated = computed(() =>
+  components.value
+    .filter((c) => c.status === 'deprecated')
+    .sort((a, b) => (a.deprecation?.sunsetDate ?? '9999').localeCompare(b.deprecation?.sunsetDate ?? '9999')),
+);
+const active = computed(() => components.value.filter((c) => c.status !== 'deprecated'));
+const soon = computed(() => deprecated.value.filter((c) => c.deprecation?.sunsetDate && daysUntil(c.deprecation.sunsetDate) >= 0 && daysUntil(c.deprecation.sunsetDate) <= 90));
+const past = computed(() => deprecated.value.filter((c) => c.deprecation?.sunsetDate && daysUntil(c.deprecation.sunsetDate) < 0));
 
+const namesById = computed(() => new Map(components.value.map((c) => [c.id, c.name])));
+const nameOf = (id) => (id ? namesById.value.get(id) ?? id : null);
 
+const formatDay = (day) => {
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+};
+const sunsetLabel = (day) => {
+  const days = daysUntil(day);
+  if (days < 0) return `${-days} ${-days === 1 ? 'day' : 'days'} ago`;
+  if (days === 0) return 'Today';
+  return `In ${days} ${days === 1 ? 'day' : 'days'}`;
+};
+const sunsetTone = (day) => {
+  const days = daysUntil(day);
+  if (days < 30) return 'danger';
+  if (days <= 90) return 'warning';
+  return 'neutral';
+};
 
+// Usage recorded by application scans
+const usage = ref(new Map());
+const usageError = ref(null);
+const usageAvailable = computed(() => [...usage.value.values()].some((u) => u.totalUsage > 0));
+const usageLabel = (id) => {
+  const record = usage.value.get(id);
+  if (!record || record.totalUsage === 0) return 'Not used';
+  return `${record.totalUsage} ${record.totalUsage === 1 ? 'use' : 'uses'} in ${record.applicationCount} ${record.applicationCount === 1 ? 'application' : 'applications'}`;
+};
+const loadUsage = async () => {
+  try {
+    const { data } = await apiClient.get('/api/v1/analytics/component-popularity');
+    usage.value = new Map((Array.isArray(data) ? data : []).map((u) => [u.componentId, u]));
+  } catch (error) {
+    usageError.value = error;
+  }
+};
 
-let darkModeObserver = null;
-let darkModeInterval = null;
+const saving = ref(false);
+const form = ref(null);
 
-onMounted(() => {
-  selectedComponent.value = deprecatedComponents.value[0];
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
+const openDeprecate = (component) => {
+  const details = component?.deprecation ?? {};
+  form.value = {
+    editing: !!component,
+    id: component?.id ?? '',
+    replacement: details.replacement ?? '',
+    sunsetDate: details.sunsetDate ?? '',
+    reason: details.reason ?? '',
+    migrationGuide: details.migrationGuide ?? '',
+    errors: {},
+    error: '',
   };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
+};
 
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
+const replacementOptions = computed(() => [
+  { value: '', label: 'No replacement' },
+  ...active.value.filter((c) => c.id !== form.value?.id).map((c) => ({ value: c.id, label: c.name })),
+]);
+
+const saveDeprecation = async () => {
+  const current = form.value;
+  current.errors = {};
+  current.error = '';
+  if (!current.id) {
+    current.errors.id = 'Choose a component.';
+    return;
   }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
+  saving.value = true;
+  try {
+    const { data } = await apiClient.put(`/api/v1/components/${encodeURIComponent(current.id)}/deprecation`, {
+      replacement: current.replacement || undefined,
+      sunsetDate: current.sunsetDate || undefined,
+      reason: current.reason.trim() || undefined,
+      migrationGuide: current.migrationGuide.trim() || undefined,
+    });
+    upsertComponent(data);
+    showNotice(current.editing ? `Saved the deprecation of ${data.name}.` : `${data.name} is now deprecated.`, 'success');
+    form.value = null;
+  } catch (error) {
+    current.error = apiErrorMessage(error, "The deprecation couldn't be saved.");
+  } finally {
+    saving.value = false;
   }
-});
+};
+
+const restoreOptions = STATUS_OPTIONS.filter((o) => o.value !== 'deprecated');
+const restore = ref(null);
+const openRestore = (component) => {
+  restore.value = { component, status: 'production', error: '' };
+};
+const saveRestore = async () => {
+  const { component, status } = restore.value;
+  saving.value = true;
+  try {
+    await updateComponentStatus(component.id, status);
+    showNotice(`${component.name} is no longer deprecated; it's now ${statusLabel(status).toLowerCase()}.`, 'success');
+    restore.value = null;
+  } catch (error) {
+    restore.value.error = apiErrorMessage(error, `${component.name} couldn't be undeprecated.`);
+  } finally {
+    saving.value = false;
+  }
+};
+
+loadComponents();
+loadUsage();
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.migration-guide {
+  @apply mt-2 p-3 rounded-md bg-surface-sunken text-ink font-mono text-xs whitespace-pre-wrap;
 }
 </style>
-

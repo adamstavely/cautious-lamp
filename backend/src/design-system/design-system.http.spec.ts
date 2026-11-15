@@ -245,6 +245,93 @@ describe('Design system HTTP API', () => {
     });
   });
 
+  describe('component lifecycle (status, deprecation, dependencies)', () => {
+    beforeAll(() => {
+      for (const id of ['life-base', 'life-mid', 'life-top', 'life-old']) {
+        designSystem.createComponent({ id, name: id, description: 'Lifecycle test', status: 'production' });
+      }
+    });
+
+    it('needs component:edit, and the editor role for a workspace component', async () => {
+      expect((await call('PUT', '/components/life-old/status', { as: 'roadmap', body: { status: 'planned' } })).status).toBe(403);
+      expect((await call('PUT', '/components/life-old/deprecation', { as: 'roadmap', body: {} })).status).toBe(403);
+      expect((await call('PUT', '/components/life-old/dependencies', { as: 'roadmap', body: { dependencies: [] } })).status).toBe(403);
+      expect((await call('PUT', '/components/alpha-secret/status', { as: 'vic', body: { status: 'planned' } })).status).toBe(403);
+      expect((await call('PUT', '/components/alpha-shared/status', { as: 'bob', body: { status: 'planned' } })).status).toBe(403);
+      // Hidden components answer like missing ones
+      expect((await call('PUT', '/components/alpha-secret/status', { as: 'bob', body: { status: 'planned' } })).status).toBe(400);
+      expect((await call('PUT', '/components/alpha-secret/status', { as: 'ed', body: { status: 'planned' } })).status).toBe(200);
+      expect(designSystem.getComponentById('alpha-secret')!.status).toBe('planned');
+    });
+
+    it('changes the status and records who changed it', async () => {
+      expect((await call('PUT', '/components/life-old/status', { as: 'bob', body: { status: 'retired' } })).status).toBe(400);
+      expect((await call('PUT', '/components/life-old/status', { as: 'bob', body: { status: 'planned', extra: 1 } })).status).toBe(400);
+      const res = await call('PUT', '/components/life-old/status', { as: 'bob', body: { status: 'in-progress' } });
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ id: 'life-old', status: 'in-progress', updatedBy: 'usr_bob' });
+      expect((await call('GET', '/components/life-old', { as: 'alice' })).body.status).toBe('in-progress');
+    });
+
+    it('deprecates with a replacement and sunset date, and undeprecates by changing the status', async () => {
+      const details = { replacement: 'life-base', sunsetDate: '2027-06-30', reason: 'Merged into base', migrationGuide: 'Swap the import' };
+      const res = await call('PUT', '/components/life-old/deprecation', { as: 'bob', body: details });
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('deprecated');
+      expect(res.body.deprecation).toMatchObject({ ...details, deprecatedBy: 'usr_bob', deprecatedAt: expect.any(String) });
+      expect(await componentIds('alice', '/components?status=deprecated')).toContain('life-old');
+
+      expect((await call('PUT', '/components/life-old/deprecation', { as: 'bob', body: { replacement: 'life-old' } })).status).toBe(400);
+      expect((await call('PUT', '/components/life-old/deprecation', { as: 'bob', body: { replacement: 'no-such-thing' } })).status).toBe(400);
+      expect((await call('PUT', '/components/life-old/deprecation', { as: 'bob', body: { sunsetDate: 'next year' } })).status).toBe(400);
+      // A component the caller can't see can't be named as the replacement
+      expect((await call('PUT', '/components/life-old/deprecation', { as: 'bob', body: { replacement: 'alpha-secret' } })).status).toBe(400);
+
+      const back = await call('PUT', '/components/life-old/status', { as: 'bob', body: { status: 'production' } });
+      expect(back.body.status).toBe('production');
+      expect(back.body.deprecation).toBeUndefined();
+    });
+
+    it('stores dependencies, refusing unknown, hidden, self and cyclic ones', async () => {
+      const put = (as: string, id: string, dependencies: string[]) => call('PUT', `/components/${id}/dependencies`, { as, body: { dependencies } });
+      expect((await put('bob', 'life-mid', ['life-base', 'life-base'])).body.dependencies).toEqual(['life-base']);
+      expect((await put('bob', 'life-top', ['life-mid'])).status).toBe(200);
+      expect((await put('bob', 'life-base', ['life-top'])).status).toBe(400); // base -> top -> mid -> base
+      expect((await put('bob', 'life-base', ['life-base'])).status).toBe(400);
+      expect((await put('bob', 'life-base', ['nope'])).status).toBe(400);
+      expect((await put('bob', 'life-base', ['alpha-secret'])).status).toBe(400);
+      expect((await put('alice', 'life-base', ['alpha-secret'])).status).toBe(200);
+      expect((await call('PUT', '/components/life-base/dependencies', { as: 'bob', body: { dependencies: 'life-top' } })).status).toBe(400);
+      expect(designSystem.getComponentById('life-top')!.dependencies).toEqual(['life-mid']);
+    });
+
+    it('records status changes, deprecations and dependency changes in the changelog', async () => {
+      const start = recorded.length;
+      await call('PUT', '/components/life-mid/status', { as: 'bob', body: { status: 'planned' } });
+      await call('PUT', '/components/life-mid/status', { as: 'bob', body: { status: 'planned' } }); // unchanged: nothing recorded
+      await call('PUT', '/components/life-mid/deprecation', { as: 'bob', body: { replacement: 'life-base', sunsetDate: '2027-01-31' } });
+      await call('PUT', '/components/life-mid/dependencies', { as: 'bob', body: { dependencies: [] } });
+      await call('PUT', '/components/life-mid/status', { as: 'roadmap', body: { status: 'production' } }); // refused
+      expect(recorded.slice(start).map((r) => [r.change.entityId, r.change.action])).toEqual([
+        ['life-mid', 'status-changed'],
+        ['life-mid', 'deprecated'],
+        ['life-mid', 'updated'],
+      ]);
+      expect(recorded[start + 1].change.changes).toEqual([
+        { field: 'deprecation', description: 'Use life-base instead' },
+        { field: 'deprecation', description: 'Sunset on 2027-01-31' },
+      ]);
+    });
+
+    it('validates new components and refuses a duplicate id', async () => {
+      expect((await call('POST', '/components', { as: 'bob', body: { id: 'Not A Slug', name: 'x', description: 'y' } })).status).toBe(400);
+      expect((await call('POST', '/components', { as: 'bob', body: { id: 'new-one', name: ' ', description: 'y' } })).status).toBe(400);
+      expect((await call('POST', '/components', { as: 'bob', body: { id: 'new-one', name: 'x', description: 'y', status: 'retired' } })).status).toBe(400);
+      expect((await call('POST', '/components', { as: 'bob', body: { id: 'life-base', name: 'x', description: 'y' } })).status).toBe(409);
+      expect((await call('POST', '/components', { as: 'bob', body: { id: 'new-one', name: 'New one', description: 'y', status: 'planned' } })).status).toBe(201);
+    });
+  });
+
   describe('administrative routes', () => {
     const banner = { title: 'Maintenance', message: 'Tonight', type: 'info' };
 

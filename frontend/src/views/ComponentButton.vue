@@ -8,7 +8,7 @@
       size="tool"
     >
       <template #actions>
-        <UiChip :tone="componentStatusTone(componentStatus)">{{ componentStatus || 'Production Ready' }}</UiChip>
+        <UiChip v-if="componentStatus" :tone="componentStatus.tone">{{ componentStatus.label }}</UiChip>
       </template>
     </PageHero>
 
@@ -470,10 +470,9 @@ import {
 import UiDesignedButton from '../components/ui/UiDesignedButton.vue';
 import { antiPatterns, bestPractices, usageExamples, variantExamples } from '../data/componentButtonExamples.js';
 import apiClient from '../services/api.js';
-import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
+import { useComponentStatus } from '../composables/useComponentPatternStatus.js';
 
 const route = useRoute();
-const { getComponent } = useComponentPatternStatus();
 
 const variantOptions = [
   { value: 'primary', label: 'Primary' },
@@ -547,11 +546,8 @@ const newVariant = reactive({
   generatedCode: null,
 });
 
-// Get component status from shared store
-const componentStatus = computed(() => {
-  const component = getComponent('Button');
-  return component?.status || 'Production Ready';
-});
+// Lifecycle status from the component library (GET /api/v1/components/button)
+const componentStatus = useComponentStatus('button');
 const propValues = reactive({
   label: 'Click me',
   variant: 'primary',
@@ -886,9 +882,6 @@ const formatDate = (dateString) => {
 const versionStatusTone = (status) =>
   ({ Current: 'success', Stable: 'info', Deprecated: 'danger', Beta: 'warning' })[status] || 'neutral';
 
-const componentStatusTone = (status) =>
-  ({ 'Production Ready': 'success', 'In Progress': 'warning', Planned: 'info', Deprecated: 'danger', Beta: 'warning' })[status] ||
-  'neutral';
 
 const getChangeTypeIcon = (type) => {
   const icons = {

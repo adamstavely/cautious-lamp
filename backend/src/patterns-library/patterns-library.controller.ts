@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, BadRequestException, Inject } from '@nestjs/common';
-import { PatternsLibraryService, ComponentPattern } from './patterns-library.service';
+import { PatternsLibraryService, ComponentPattern, PATTERN_STATUSES, PatternStatus } from './patterns-library.service';
 import { AuthPrincipal, Principal, RequirePermission } from '../auth/principal';
 import { Permission } from '../rbac/rbac.service';
 import { CHANGE_RECORDER, ChangeRecorder } from '../notifications/notification.types';
@@ -17,10 +17,14 @@ function assertPatternFields(data: Partial<ComponentPattern> | undefined, creati
   if ((creating || data.category !== undefined) && !PATTERN_CATEGORIES.includes(data.category as ComponentPattern['category'])) {
     throw new BadRequestException(`category must be one of ${PATTERN_CATEGORIES.join(', ')}`);
   }
+  if (data.status !== undefined && !PATTERN_STATUSES.includes(data.status as PatternStatus)) {
+    throw new BadRequestException(`status must be one of ${PATTERN_STATUSES.join(', ')}`);
+  }
 }
 
-/** Tagging a pattern "deprecated" deprecates it */
-const isDeprecated = (tags?: string[]) => (tags ?? []).some((tag) => tag.toLowerCase() === 'deprecated');
+/** A pattern is deprecated by its status, or by tagging it "deprecated" */
+const isDeprecated = (pattern?: Pick<ComponentPattern, 'status' | 'tags'> | null) =>
+  pattern?.status === 'deprecated' || (pattern?.tags ?? []).some((tag) => tag.toLowerCase() === 'deprecated');
 
 const PATTERN_LINK = '/patterns';
 
@@ -77,6 +81,7 @@ export class PatternsLibraryController {
       name: string;
       description: string;
       category: ComponentPattern['category'];
+      status?: PatternStatus;
       componentIds?: string[];
       codeExample?: ComponentPattern['codeExample'];
       useCases?: string[];
@@ -103,18 +108,21 @@ export class PatternsLibraryController {
     @Body() updates: Partial<Omit<ComponentPattern, 'id' | 'createdAt'>>,
   ) {
     assertPatternFields(updates, false);
-    const wasDeprecated = isDeprecated(this.patternsService.getPattern(patternId)?.tags);
+    const before = this.patternsService.getPattern(patternId);
+    const wasDeprecated = isDeprecated(before);
+    const previousStatus = before?.status;
     const pattern = this.patternsService.updatePattern(patternId, updates);
     if (!pattern) {
       throw new BadRequestException(`Pattern '${patternId}' not found`);
     }
-    const deprecated = !wasDeprecated && isDeprecated(pattern.tags);
+    const deprecated = !wasDeprecated && isDeprecated(pattern);
+    const statusChanged = pattern.status !== previousStatus;
     await this.changes.record(
       {
         type: 'pattern',
         entityId: pattern.id,
         entityName: pattern.name,
-        action: deprecated ? 'deprecated' : 'updated',
+        action: deprecated ? 'deprecated' : statusChanged ? 'status-changed' : 'updated',
         changes: Object.keys(updates ?? {}).map((field) => ({ field, description: `${field} changed` })),
         link: PATTERN_LINK,
       },

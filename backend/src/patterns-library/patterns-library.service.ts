@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
 
+/** A pattern's lifecycle stage; the same stages as components */
+export const PATTERN_STATUSES = ['production', 'in-progress', 'planned', 'deprecated'] as const;
+export type PatternStatus = (typeof PATTERN_STATUSES)[number];
+
 export interface ComponentPattern {
   id: string;
   name: string;
   description: string;
   category: 'common' | 'anti-pattern' | 'best-practice' | 'accessibility' | 'performance' | 'composition';
+  status: PatternStatus;
   componentIds?: string[]; // Components this pattern relates to
   codeExample?: {
     good?: string;
@@ -176,6 +181,7 @@ export class PatternsLibraryService {
     name: string;
     description: string;
     category: ComponentPattern['category'];
+    status?: PatternStatus;
     componentIds?: string[];
     codeExample?: ComponentPattern['codeExample'];
     useCases?: string[];
@@ -188,6 +194,8 @@ export class PatternsLibraryService {
     const pattern: ComponentPattern = {
       id,
       ...data,
+      // The built-in patterns are published; new ones say where they are
+      status: data.status ?? 'production',
       tags: data.tags || [],
       createdAt: new Date(),
       updatedAt: new Date(),

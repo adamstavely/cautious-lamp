@@ -3,7 +3,7 @@
     <PageHero
       eyebrow="Admin"
       title="Component and pattern lifecycle management"
-      lead="Create new pattern and component pages, and manage statuses throughout their lifecycle."
+      lead="Add components and patterns to the library, and move them through their lifecycle."
       spot="admin/content-management"
     />
 
@@ -11,48 +11,53 @@
 
     <UiTabs v-model="activeTab" :tabs="tabs" label="Lifecycle management">
       <template #create>
-        <UiPanel title="Create new page">
-          <form class="space-y-6" @submit.prevent="handleCreateSubmit">
+        <UiPanel title="Add to the library">
+          <UiEmptyState
+            v-if="!contentTypeOptions.length"
+            :bordered="false"
+            title="You can't add components or patterns"
+            body="Adding a component needs component:create, and adding a pattern needs pattern:create. Ask an administrator for the permission you need."
+          />
+          <form v-else class="space-y-6" @submit.prevent="handleCreateSubmit">
             <UiSegmented v-model="newItem.type" label="Content type" :options="contentTypeOptions" />
             <p class="-mt-4 text-sm text-ink-secondary">
-              {{ newItem.type === 'component' ? 'Create a new component page' : 'Create a new pattern page' }}
+              {{
+                newItem.type === 'component'
+                  ? 'Adds a component record to the component library. Its documentation page is written separately.'
+                  : 'Adds a pattern to the patterns library.'
+              }}
             </p>
 
-            <UiInput id="name" v-model="newItem.name" label="Name" required placeholder="e.g., Button, Navigation Pattern" />
+            <UiInput id="name" v-model="newItem.name" label="Name" required :error="errors.name" placeholder="e.g. Stepper" />
+
+            <UiInput
+              v-if="newItem.type === 'component'"
+              id="componentId"
+              v-model="newItem.id"
+              label="Component id"
+              mono
+              :error="errors.id"
+              :placeholder="toComponentId(newItem.name) || 'stepper'"
+              hint="Lowercase letters, numbers and hyphens. Left empty, it's made from the name."
+            />
+
+            <UiTextarea id="description" v-model="newItem.description" label="Description" required :error="errors.description" :rows="3" />
 
             <UiSelect
               v-if="newItem.type === 'pattern'"
-              id="patternType"
-              v-model="newItem.patternType"
-              label="Pattern type"
-              placeholder="Select pattern type"
-              :options="patternTypeOptions"
-            />
-
-            <UiInput id="category" v-model="newItem.category" label="Category" placeholder="e.g., Forms, Navigation, Layout" />
-
-            <UiSelect id="status" v-model="newItem.status" label="Status" required :options="statusOptions" />
-
-            <UiInput
-              id="icon"
-              v-model="newItem.icon"
-              label="Icon (Lucide icon name)"
-              placeholder="A Lucide icon name, e.g. rectangle-horizontal"
-              hint="Use Material Symbols icon names. Leave empty for default."
-            />
-
-            <UiInput
-              id="route"
-              v-model="newItem.route"
-              label="Route path"
+              id="category"
+              v-model="newItem.category"
+              label="Category"
               required
-              mono
-              :placeholder="newItem.type === 'component' ? '/components/example' : '/patterns/example'"
-              hint="URL path for the new page (e.g., /components/button or /patterns/navigation)"
+              placeholder="Select a category"
+              :error="errors.category"
+              :options="PATTERN_CATEGORIES"
             />
+
+            <UiSelect id="status" v-model="newItem.status" label="Status" required :options="STATUS_OPTIONS" />
 
             <div class="flex gap-3 pt-2">
-              <UiButton type="submit" variant="primary">Create page</UiButton>
+              <UiButton type="submit" variant="primary" :loading="creating">Add {{ newItem.type }}</UiButton>
               <UiButton @click="resetForm">Reset</UiButton>
             </div>
           </form>
@@ -62,26 +67,26 @@
       <template #manage>
         <div class="space-y-6">
           <UiPanel title="Components" flush>
-            <UiTable caption="Components and their lifecycle status">
+            <UiSpinner v-if="loadingComponents && !components.length" label="Loading components…" class="p-6" />
+            <UiCallout v-else-if="componentsError" tone="danger" title="Components couldn't be loaded" role="alert" class="m-6">
+              {{ apiErrorMessage(componentsError) }}
+            </UiCallout>
+            <UiEmptyState v-else-if="!components.length" :bordered="false" title="No components yet" />
+            <UiTable v-else caption="Components and their lifecycle status">
               <thead>
                 <tr>
                   <th scope="col">Component</th>
+                  <th scope="col">Id</th>
                   <th scope="col">Status</th>
-                  <th scope="col">Version</th>
-                  <th scope="col"><span class="sr-only">Actions</span></th>
+                  <th v-if="canEditComponents" scope="col"><span class="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="component in components" :key="component.name">
-                  <th scope="row" class="whitespace-nowrap">
-                    <span class="flex items-center gap-3">
-                      <AppIcon :name="component.icon" class="text-accent-text" />
-                      <span class="font-medium text-ink-strong">{{ component.name }}</span>
-                    </span>
-                  </th>
-                  <td class="whitespace-nowrap"><UiChip :tone="statusTone(component.status)">{{ component.status }}</UiChip></td>
-                  <td class="whitespace-nowrap text-ink-secondary">{{ component.version }}</td>
-                  <td class="whitespace-nowrap">
+                <tr v-for="component in components" :key="component.id">
+                  <th scope="row" class="whitespace-nowrap font-medium text-ink-strong">{{ component.name }}</th>
+                  <td class="whitespace-nowrap font-mono text-sm text-ink-secondary">{{ component.id }}</td>
+                  <td class="whitespace-nowrap"><UiChip :tone="statusTone(component.status)">{{ statusLabel(component.status) }}</UiChip></td>
+                  <td v-if="canEditComponents" class="whitespace-nowrap">
                     <UiButton size="sm" icon="pencil" @click="editItem('component', component)">Edit<span class="sr-only"> {{ component.name }}</span></UiButton>
                   </td>
                 </tr>
@@ -90,28 +95,26 @@
           </UiPanel>
 
           <UiPanel title="Patterns" flush>
-            <UiTable caption="Patterns and their lifecycle status">
+            <UiSpinner v-if="loadingPatterns && !patterns.length" label="Loading patterns…" class="p-6" />
+            <UiCallout v-else-if="patternsError" tone="danger" title="Patterns couldn't be loaded" role="alert" class="m-6">
+              {{ apiErrorMessage(patternsError) }}
+            </UiCallout>
+            <UiEmptyState v-else-if="!patterns.length" :bordered="false" title="No patterns yet" />
+            <UiTable v-else caption="Patterns and their lifecycle status">
               <thead>
                 <tr>
                   <th scope="col">Pattern</th>
-                  <th scope="col">Type</th>
-                  <th scope="col">Status</th>
                   <th scope="col">Category</th>
-                  <th scope="col"><span class="sr-only">Actions</span></th>
+                  <th scope="col">Status</th>
+                  <th v-if="canEditPatterns" scope="col"><span class="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="pattern in patterns" :key="pattern.name">
-                  <th scope="row" class="whitespace-nowrap">
-                    <span class="flex items-center gap-3">
-                      <AppIcon :name="pattern.icon" class="text-accent-text" />
-                      <span class="font-medium text-ink-strong">{{ pattern.name }}</span>
-                    </span>
-                  </th>
-                  <td class="whitespace-nowrap"><UiChip :tone="pattern.type === 'Design Pattern' ? 'accent' : 'info'">{{ pattern.type }}</UiChip></td>
-                  <td class="whitespace-nowrap"><UiChip :tone="statusTone(pattern.status)">{{ pattern.status }}</UiChip></td>
-                  <td class="whitespace-nowrap text-ink-secondary">{{ pattern.category }}</td>
-                  <td class="whitespace-nowrap">
+                <tr v-for="pattern in patterns" :key="pattern.id">
+                  <th scope="row" class="whitespace-nowrap font-medium text-ink-strong">{{ pattern.name }}</th>
+                  <td class="whitespace-nowrap text-ink-secondary">{{ categoryLabel(pattern.category) }}</td>
+                  <td class="whitespace-nowrap"><UiChip :tone="statusTone(pattern.status)">{{ statusLabel(pattern.status) }}</UiChip></td>
+                  <td v-if="canEditPatterns" class="whitespace-nowrap">
                     <UiButton size="sm" icon="pencil" @click="editItem('pattern', pattern)">Edit<span class="sr-only"> {{ pattern.name }}</span></UiButton>
                   </td>
                 </tr>
@@ -123,167 +126,189 @@
     </UiTabs>
 
     <!-- Edit status -->
-    <UiDialog :open="showEditModal" title="Edit status" size="sm" @update:open="(open) => { if (!open) closeEditModal(); }">
-      <div v-if="editingItem" class="space-y-5">
-        <div class="flex items-center gap-3">
-          <AppIcon :name="editingItem.icon || 'blocks'" class="text-accent-text" />
-          <div>
-            <div class="font-semibold text-ink-strong">{{ editingItem.name }}</div>
-            <div v-if="editingItemType" class="text-sm text-ink-secondary">
-              {{ editingItemType === 'component' ? 'Component' : (editingItem.type || 'Pattern') }}
-            </div>
-          </div>
+    <UiDialog :open="!!editing" title="Edit status" size="sm" @update:open="(open) => { if (!open) closeEditModal(); }">
+      <div v-if="editing" class="space-y-5">
+        <div>
+          <div class="font-semibold text-ink-strong">{{ editing.item.name }}</div>
+          <div class="text-sm text-ink-secondary">{{ editing.type === 'component' ? 'Component' : 'Pattern' }}</div>
         </div>
-        <UiSelect id="editStatus" v-model="editingItem.status" label="Status" required :options="statusOptions" />
+        <UiSelect id="editStatus" v-model="editing.status" label="Status" required :options="STATUS_OPTIONS" />
+        <UiCallout v-if="editing.error" tone="danger" role="alert">{{ editing.error }}</UiCallout>
       </div>
       <template #footer>
         <UiButton @click="closeEditModal">Cancel</UiButton>
-        <UiButton variant="primary" @click="saveStatusChange">Save changes</UiButton>
+        <UiButton variant="primary" :loading="saving" @click="saveStatusChange">Save changes</UiButton>
       </template>
     </UiDialog>
   </PageShell>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
+import { useAuth } from '../composables/useAuth.js';
+import {
+  PATTERN_CATEGORIES,
+  STATUS_OPTIONS,
+  categoryLabel,
+  statusLabel,
+  statusTone,
+  toComponentId,
+  useComponentPatternStatus,
+} from '../composables/useComponentPatternStatus.js';
 import { useNotice } from '../composables/useNotice.js';
-import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
+import apiClient, { apiErrorMessage } from '../services/api.js';
 import {
   PageHero,
   PageShell,
   UiButton,
+  UiCallout,
   UiChip,
   UiDialog,
+  UiEmptyState,
   UiInput,
   UiPanel,
   UiSegmented,
   UiSelect,
+  UiSpinner,
   UiTable,
   UiTabs,
+  UiTextarea,
 } from '../components/ui';
 
-const { components, patterns, updateComponentStatus, updatePatternStatus } = useComponentPatternStatus();
-
+/**
+ * Adds components (POST /api/v1/components, component:create) and patterns
+ * (POST /patterns-library/patterns, pattern:create) to the library, and
+ * changes their status (component:edit, pattern:edit). The server checks
+ * every permission again.
+ */
+const {
+  components,
+  patterns,
+  loadingComponents,
+  loadingPatterns,
+  componentsError,
+  patternsError,
+  loadComponents,
+  loadPatterns,
+  updateComponentStatus,
+  updatePatternStatus,
+  upsertComponent,
+  upsertPattern,
+} = useComponentPatternStatus();
+const { hasPermission } = useAuth();
 const { notice, showNotice, clearNotice } = useNotice();
+
+const canEditComponents = computed(() => hasPermission('component:edit'));
+const canEditPatterns = computed(() => hasPermission('pattern:edit'));
+
 const activeTab = ref('create');
 const tabs = [
-  { value: 'create', label: 'Create new', icon: 'circle-plus' },
+  { value: 'create', label: 'Add new', icon: 'circle-plus' },
   { value: 'manage', label: 'Manage existing', icon: 'list' },
 ];
-const contentTypeOptions = [
-  { value: 'component', label: 'Component', icon: 'blocks' },
-  { value: 'pattern', label: 'Pattern', icon: 'layout-template' },
-];
-const patternTypeOptions = [
-  { value: 'Design Pattern', label: 'Design Pattern' },
-  { value: 'Code Pattern', label: 'Code Pattern' },
-];
-const showEditModal = ref(false);
-const editingItem = ref(null);
-const editingItemType = ref(null);
 
-// Form data for creating new items
-const newItem = ref({
-  type: 'component',
+const contentTypeOptions = computed(() => [
+  ...(hasPermission('component:create') ? [{ value: 'component', label: 'Component', icon: 'blocks' }] : []),
+  ...(hasPermission('pattern:create') ? [{ value: 'pattern', label: 'Pattern', icon: 'layout-template' }] : []),
+]);
+
+const blankItem = () => ({
+  type: contentTypeOptions.value[0]?.value ?? 'component',
   name: '',
-  patternType: '',
+  id: '',
+  description: '',
   category: '',
-  status: 'Production Ready',
-  icon: '',
-  route: ''
+  status: 'in-progress',
 });
 
-// Components and patterns are now loaded from the shared composable
+const newItem = ref(blankItem());
+const errors = reactive({});
+const creating = ref(false);
 
-// Status options for dropdowns
-const statusOptions = [
-  { value: 'Production Ready', label: 'Production Ready' },
-  { value: 'In Progress', label: 'In Progress' },
-  { value: 'Planned', label: 'Planned' },
-  { value: 'Experimental', label: 'Experimental' },
-  { value: 'Sunsetting', label: 'Sunsetting' },
-  { value: 'Deprecated', label: 'Deprecated' }
-];
-
-const statusTone = (status) =>
-  ({
-    'Production Ready': 'success',
-    'In Progress': 'warning',
-    Planned: 'info',
-    Experimental: 'accent',
-    Sunsetting: 'warning',
-    Deprecated: 'danger',
-  })[status] || 'neutral';
+// Permissions can arrive after the page opens
+watch(contentTypeOptions, (options) => {
+  if (!options.some((o) => o.value === newItem.value.type) && options.length) newItem.value.type = options[0].value;
+});
 
 const resetForm = () => {
-  newItem.value = {
-    type: 'component',
-    name: '',
-    patternType: '',
-    category: '',
-    status: 'Production Ready',
-    icon: '',
-    route: ''
-  };
+  newItem.value = blankItem();
+  Object.keys(errors).forEach((key) => delete errors[key]);
 };
 
-const handleCreateSubmit = () => {
-  // In a real app, this would make an API call to create the page
-  console.log('Creating new page:', newItem.value);
-  
-  // Show success message
-  showNotice(`Successfully created ${newItem.value.type}: ${newItem.value.name}`, 'success');
-  
-  // Reset form
-  resetForm();
-  
-  // Switch to manage tab to see the new item
-  activeTab.value = 'manage';
-};
-
-const updateStatus = (type, name, newStatus) => {
-  // Update status using the shared composable
-  if (type === 'component') {
-    updateComponentStatus(name, newStatus);
-  } else if (type === 'pattern') {
-    updatePatternStatus(name, newStatus);
+const validate = () => {
+  Object.keys(errors).forEach((key) => delete errors[key]);
+  const item = newItem.value;
+  if (!item.name.trim()) errors.name = 'Enter a name.';
+  if (!item.description.trim()) errors.description = 'Enter a description.';
+  if (item.type === 'component') {
+    const id = item.id.trim() || toComponentId(item.name);
+    if (!/^[a-z0-9][a-z0-9-]{0,99}$/.test(id)) errors.id = 'Use lowercase letters, numbers and hyphens.';
   }
-  
-  // Show success message
-  showNotice(`Status updated to ${newStatus}`, 'success');
+  if (item.type === 'pattern' && !item.category) errors.category = 'Choose a category.';
+  return Object.keys(errors).length === 0;
 };
+
+const handleCreateSubmit = async () => {
+  if (!validate()) return;
+  const item = newItem.value;
+  creating.value = true;
+  try {
+    if (item.type === 'component') {
+      const { data } = await apiClient.post('/api/v1/components', {
+        id: item.id.trim() || toComponentId(item.name),
+        name: item.name.trim(),
+        description: item.description.trim(),
+        status: item.status,
+      });
+      upsertComponent(data);
+      showNotice(`Added ${data.name} to the component library.`, 'success');
+    } else {
+      const { data } = await apiClient.post('/patterns-library/patterns', {
+        name: item.name.trim(),
+        description: item.description.trim(),
+        category: item.category,
+        status: item.status,
+      });
+      upsertPattern(data);
+      showNotice(`Added ${data.name} to the patterns library.`, 'success');
+    }
+    resetForm();
+    activeTab.value = 'manage';
+  } catch (error) {
+    showNotice(apiErrorMessage(error, `The ${item.type} couldn't be added.`), 'error');
+  } finally {
+    creating.value = false;
+  }
+};
+
+const editing = ref(null);
+const saving = ref(false);
 
 const editItem = (type, item) => {
-  editingItemType.value = type;
-  // Create a copy with all properties, including type for patterns
-  editingItem.value = { 
-    ...item,
-    type: type === 'component' ? 'component' : item.type || 'Pattern'
-  };
-  showEditModal.value = true;
+  editing.value = { type, item, status: item.status, error: '' };
 };
 
 const closeEditModal = () => {
-  showEditModal.value = false;
-  editingItem.value = null;
-  editingItemType.value = null;
+  editing.value = null;
 };
 
-const saveStatusChange = () => {
-  if (!editingItem.value || !editingItemType.value) return;
-  
-  // Update status using the shared composable
-  if (editingItemType.value === 'component') {
-    updateComponentStatus(editingItem.value.name, editingItem.value.status);
-  } else if (editingItemType.value === 'pattern') {
-    updatePatternStatus(editingItem.value.name, editingItem.value.status);
+const saveStatusChange = async () => {
+  if (!editing.value) return;
+  const { type, item, status } = editing.value;
+  saving.value = true;
+  try {
+    if (type === 'component') await updateComponentStatus(item.id, status);
+    else await updatePatternStatus(item.id, status);
+    showNotice(`${item.name} is now ${statusLabel(status).toLowerCase()}.`, 'success');
+    closeEditModal();
+  } catch (error) {
+    editing.value.error = apiErrorMessage(error, `${item.name}'s status couldn't be saved.`);
+  } finally {
+    saving.value = false;
   }
-  
-  // Show success message
-  showNotice(`Status updated to ${editingItem.value.status}`, 'success');
-  
-  // Close modal
-  closeEditModal();
 };
+
+loadComponents();
+loadPatterns();
 </script>

@@ -1,153 +1,147 @@
-import { ref, computed, watch } from 'vue';
+import { computed, ref } from 'vue';
+import apiClient from '../services/api.js';
 
-// Shared state for component and pattern statuses
-const components = ref([]);
-const patterns = ref([]);
+/**
+ * Components and patterns with their lifecycle status, from the server:
+ * components from GET /api/v1/components (only those the caller may see),
+ * patterns from GET /patterns-library/patterns. Status changes are saved
+ * there too (component:edit, pattern:edit; docs/AUTH.md).
+ */
 
-// Initialize from localStorage or use defaults
-const STORAGE_KEY_COMPONENTS = 'ds_components_status';
-const STORAGE_KEY_PATTERNS = 'ds_patterns_status';
-
-// Default component data
-const defaultComponents = [
-  { name: 'Button', icon: 'rectangle-horizontal', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-15' },
-  { name: 'Input', icon: 'text-cursor-input', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-10' },
-  { name: 'Card', icon: 'layout-grid', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-12' },
-  { name: 'Modal', icon: 'maximize', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-08' },
-  { name: 'Dropdown', icon: 'chevron-down', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-05' },
-  { name: 'Checkbox', icon: 'square-check', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-03' },
-  { name: 'Radio', icon: 'circle-dot', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-02' },
-  { name: 'Switch', icon: 'toggle-right', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2023-12-28' },
-  { name: 'Color Picker', icon: 'pipette', status: 'Production Ready', version: '1.0.0', documentation: 'Complete', lastUpdated: '2024-01-15' },
-  { name: 'Tabs', icon: 'app-window', status: 'In Progress', version: '0.9.0', documentation: 'Partial', lastUpdated: '2024-01-20' },
-  { name: 'Accordion', icon: 'chevron-down', status: 'In Progress', version: '0.8.0', documentation: 'Partial', lastUpdated: '2024-01-18' },
-  { name: 'Tooltip', icon: 'info', status: 'In Progress', version: '0.7.0', documentation: 'Partial', lastUpdated: '2024-01-16' },
-  { name: 'Popover', icon: 'external-link', status: 'In Progress', version: '0.6.0', documentation: 'Partial', lastUpdated: '2024-01-14' },
-  { name: 'Breadcrumbs', icon: 'chevron-right', status: 'Planned', version: '-', documentation: 'Not Started', lastUpdated: '-' },
-  { name: 'Pagination', icon: 'ellipsis', status: 'Planned', version: '-', documentation: 'Not Started', lastUpdated: '-' },
-  { name: 'Data Table', icon: 'table-2', status: 'Planned', version: '-', documentation: 'Not Started', lastUpdated: '-' },
+/** Lifecycle stages, the same for components and patterns (COMPONENT_STATUSES on the server) */
+export const STATUSES = [
+  { value: 'production', label: 'Production ready', icon: 'circle-check', tone: 'success' },
+  { value: 'in-progress', label: 'In progress', icon: 'loader-circle', tone: 'accent' },
+  { value: 'planned', label: 'Planned', icon: 'calendar-check', tone: 'info' },
+  { value: 'deprecated', label: 'Deprecated', icon: 'triangle-alert', tone: 'danger' },
 ];
 
-// Default pattern data
-const defaultPatterns = [
-  // Design Patterns
-  { name: 'Layout', icon: 'layout-dashboard', type: 'Design Pattern', status: 'Production Ready', category: 'Layout', documentation: 'Complete', lastUpdated: '2024-01-15', route: '/patterns/layout' },
-  { name: 'Navigation', icon: 'navigation', type: 'Design Pattern', status: 'Production Ready', category: 'Navigation', documentation: 'Complete', lastUpdated: '2024-01-12', route: '/patterns/navigation' },
-  { name: 'Data Display', icon: 'table-2', type: 'Design Pattern', status: 'Production Ready', category: 'Data Display', documentation: 'Complete', lastUpdated: '2024-01-10', route: '/patterns/data-display' },
-  { name: 'Forms', icon: 'file-text', type: 'Design Pattern', status: 'Production Ready', category: 'Forms', documentation: 'Complete', lastUpdated: '2024-01-08', route: '/patterns/forms' },
-  { name: 'Feedback', icon: 'message-square-warning', type: 'Design Pattern', status: 'Production Ready', category: 'Feedback', documentation: 'Complete', lastUpdated: '2024-01-05', route: '/patterns/feedback' },
-  
-  // Code Patterns
-  { name: 'Form Validation', icon: 'badge-check', type: 'Code Pattern', status: 'Production Ready', category: 'Forms', documentation: 'Complete', lastUpdated: '2024-01-20', route: '/patterns/form-validation' },
-  { name: 'Accessible Modal', icon: 'maximize', type: 'Code Pattern', status: 'Production Ready', category: 'Feedback', documentation: 'Complete', lastUpdated: '2024-01-18', route: '/patterns/accessible-modal' },
-  { name: 'Sortable Data Table', icon: 'arrow-up-down', type: 'Code Pattern', status: 'Production Ready', category: 'Data Display', documentation: 'Complete', lastUpdated: '2024-01-16', route: '/patterns/sortable-data-table' },
-  { name: 'Login Form', icon: 'lock', type: 'Code Pattern', status: 'Production Ready', category: 'Authentication', documentation: 'Complete', lastUpdated: '2024-01-14', route: '/patterns/login-form' },
-  { name: 'Responsive Navigation', icon: 'menu', type: 'Code Pattern', status: 'In Progress', category: 'Navigation', documentation: 'Partial', lastUpdated: '2024-01-22', route: '/patterns/responsive-navigation' },
-  { name: 'Toast Notification', icon: 'bell', type: 'Code Pattern', status: 'Production Ready', category: 'Feedback', documentation: 'Complete', lastUpdated: '2024-01-12', route: '/patterns/toast-notification' },
-  
-  // Planned Patterns
-  { name: 'Dashboard Layout', icon: 'layout-dashboard', type: 'Design Pattern', status: 'Planned', category: 'Layout', documentation: 'Not Started', lastUpdated: '-', route: '/patterns' },
-  { name: 'Search Interface', icon: 'search', type: 'Design Pattern', status: 'Planned', category: 'Navigation', documentation: 'Not Started', lastUpdated: '-', route: '/patterns' },
-  { name: 'Data Visualization', icon: 'chart-column', type: 'Design Pattern', status: 'Planned', category: 'Data Display', documentation: 'Not Started', lastUpdated: '-', route: '/patterns' },
+export const STATUS_OPTIONS = STATUSES.map(({ value, label }) => ({ value, label }));
+
+export const statusLabel = (status) => STATUSES.find((s) => s.value === status)?.label ?? status ?? 'Unknown';
+export const statusTone = (status) => STATUSES.find((s) => s.value === status)?.tone ?? 'neutral';
+
+/** Pattern categories the patterns library accepts */
+export const PATTERN_CATEGORIES = [
+  { value: 'common', label: 'Common' },
+  { value: 'best-practice', label: 'Best practice' },
+  { value: 'anti-pattern', label: 'Anti-pattern' },
+  { value: 'accessibility', label: 'Accessibility' },
+  { value: 'performance', label: 'Performance' },
+  { value: 'composition', label: 'Composition' },
 ];
 
-// Load from localStorage
-const loadFromStorage = () => {
-  try {
-    const storedComponents = localStorage.getItem(STORAGE_KEY_COMPONENTS);
-    const storedPatterns = localStorage.getItem(STORAGE_KEY_PATTERNS);
-    
-    if (storedComponents) {
-      const parsed = JSON.parse(storedComponents);
-      // Merge with defaults to ensure all components exist
-      const merged = defaultComponents.map(defaultComp => {
-        const stored = parsed.find(c => c.name === defaultComp.name);
-        return stored ? { ...defaultComp, ...stored } : defaultComp;
-      });
-      components.value = merged;
-    } else {
-      components.value = [...defaultComponents];
-    }
-    
-    if (storedPatterns) {
-      const parsed = JSON.parse(storedPatterns);
-      // Merge with defaults to ensure all patterns exist
-      const merged = defaultPatterns.map(defaultPattern => {
-        const stored = parsed.find(p => p.name === defaultPattern.name);
-        return stored ? { ...defaultPattern, ...stored } : defaultPattern;
-      });
-      patterns.value = merged;
-    } else {
-      patterns.value = [...defaultPatterns];
-    }
-  } catch (error) {
-    console.error('Error loading from localStorage:', error);
-    components.value = [...defaultComponents];
-    patterns.value = [...defaultPatterns];
-  }
-};
+export const categoryLabel = (category) => PATTERN_CATEGORIES.find((c) => c.value === category)?.label ?? category;
 
-// Save to localStorage
-const saveToStorage = () => {
-  try {
-    localStorage.setItem(STORAGE_KEY_COMPONENTS, JSON.stringify(components.value));
-    localStorage.setItem(STORAGE_KEY_PATTERNS, JSON.stringify(patterns.value));
-  } catch (error) {
-    console.error('Error saving to localStorage:', error);
-  }
-};
+// Components and patterns with a documentation page of their own
+const COMPONENT_PAGES = { button: '/components/buttons', 'color-picker': '/components/color-picker' };
+const PATTERN_PAGES = new Set([
+  'navigation',
+  'notifications',
+  'data-display',
+  'layout',
+  'forms',
+  'feedback',
+  'form-validation',
+  'accessible-modal',
+  'sortable-data-table',
+  'login-form',
+  'responsive-navigation',
+  'toast-notification',
+]);
 
-// Watch for changes and save
-watch(components, () => {
-  saveToStorage();
-}, { deep: true });
+const slug = (name) => String(name).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-watch(patterns, () => {
-  saveToStorage();
-}, { deep: true });
+/** The component's documentation page, or null when it has none */
+export const componentPage = (id) => COMPONENT_PAGES[id] ?? null;
+/** The pattern's guidance page, or null when it has none */
+export const patternPage = (name) => (PATTERN_PAGES.has(slug(name)) ? `/patterns/${slug(name)}` : null);
 
-// Initialize on first import
-loadFromStorage();
+export const toComponentId = slug;
 
 export function useComponentPatternStatus() {
-  // Update component status
-  const updateComponentStatus = (componentName, newStatus) => {
-    const component = components.value.find(c => c.name === componentName);
-    if (component) {
-      component.status = newStatus;
-      // Trigger reactivity
-      components.value = [...components.value];
+  const components = ref([]);
+  const patterns = ref([]);
+  const loadingComponents = ref(false);
+  const loadingPatterns = ref(false);
+  const componentsError = ref(null);
+  const patternsError = ref(null);
+
+  const loadComponents = async () => {
+    loadingComponents.value = true;
+    componentsError.value = null;
+    try {
+      const { data } = await apiClient.get('/api/v1/components');
+      components.value = [...(data.components ?? [])].sort((a, b) => a.name.localeCompare(b.name));
+    } catch (error) {
+      componentsError.value = error;
+    } finally {
+      loadingComponents.value = false;
     }
   };
 
-  // Update pattern status
-  const updatePatternStatus = (patternName, newStatus) => {
-    const pattern = patterns.value.find(p => p.name === patternName);
-    if (pattern) {
-      pattern.status = newStatus;
-      // Trigger reactivity
-      patterns.value = [...patterns.value];
+  const loadPatterns = async () => {
+    loadingPatterns.value = true;
+    patternsError.value = null;
+    try {
+      const { data } = await apiClient.get('/patterns-library/patterns');
+      patterns.value = Array.isArray(data) ? data : [];
+    } catch (error) {
+      patternsError.value = error;
+    } finally {
+      loadingPatterns.value = false;
     }
   };
 
-  // Get component by name
-  const getComponent = (componentName) => {
-    return components.value.find(c => c.name === componentName);
+  const replace = (list, item) => {
+    list.value = list.value.map((existing) => (existing.id === item.id ? item : existing));
+    return item;
   };
 
-  // Get pattern by name
-  const getPattern = (patternName) => {
-    return patterns.value.find(p => p.name === patternName);
+  /** Puts a created or changed item into the list, keeping it sorted by name */
+  const upsert = (list, item) => {
+    const others = list.value.filter((existing) => existing.id !== item.id);
+    list.value = [...others, item].sort((a, b) => a.name.localeCompare(b.name));
+    return item;
+  };
+
+  /** Saves the status; the server's copy replaces the local one. Errors reach the caller. */
+  const updateComponentStatus = async (id, status) => {
+    const { data } = await apiClient.put(`/api/v1/components/${encodeURIComponent(id)}/status`, { status });
+    return replace(components, data);
+  };
+
+  const updatePatternStatus = async (id, status) => {
+    const { data } = await apiClient.put(`/patterns-library/patterns/${encodeURIComponent(id)}`, { status });
+    return replace(patterns, data);
   };
 
   return {
     components: computed(() => components.value),
     patterns: computed(() => patterns.value),
+    loadingComponents,
+    loadingPatterns,
+    componentsError,
+    patternsError,
+    loadComponents,
+    loadPatterns,
     updateComponentStatus,
     updatePatternStatus,
-    getComponent,
-    getPattern,
-    refresh: loadFromStorage
+    upsertComponent: (item) => upsert(components, item),
+    upsertPattern: (item) => upsert(patterns, item),
   };
 }
 
+/** One component's status, for the chip on its documentation page; null until loaded or if it isn't in the library */
+export function useComponentStatus(id) {
+  const component = ref(null);
+  apiClient
+    .get(`/api/v1/components/${encodeURIComponent(id)}`)
+    .then(({ data }) => {
+      component.value = data;
+    })
+    .catch(() => {
+      component.value = null;
+    });
+  return computed(() => (component.value ? { value: component.value.status, label: statusLabel(component.value.status), tone: statusTone(component.value.status) } : null));
+}

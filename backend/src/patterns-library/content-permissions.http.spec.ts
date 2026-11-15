@@ -109,6 +109,26 @@ describe('Pattern library and contribution workflow permissions', () => {
     ]);
   });
 
+  it('gives patterns a lifecycle status that pattern:edit holders change', async () => {
+    const res = await fetch(`${base}/patterns-library/patterns`, { headers: { Authorization: 'Bearer tok-viewer' } });
+    const patterns = (await res.json()) as Array<{ id: string; status: string }>;
+    expect(patterns.length).toBeGreaterThan(0);
+    expect(patterns.every((p) => p.status === 'production')).toBe(true);
+
+    const id = patterns[0].id;
+    expect(await call('PUT', `/patterns-library/patterns/${id}`, 'viewer', { status: 'deprecated' })).toBe(403);
+    expect(await call('PUT', `/patterns-library/patterns/${id}`, 'author', { status: 'retired' })).toBe(400);
+    recorded.length = 0;
+    expect(await call('PUT', `/patterns-library/patterns/${id}`, 'author', { status: 'deprecated' })).toBe(200);
+    expect(recorded.map((c) => c.action)).toEqual(['deprecated']);
+    expect(await call('POST', '/patterns-library/patterns', 'author', { name: 'Stepper', description: 'Steps', category: 'common', status: 'nope' })).toBe(400);
+    expect(await call('POST', '/patterns-library/patterns', 'author', { name: 'Stepper', description: 'Steps', category: 'common', status: 'planned' })).toBe(201);
+
+    const after = (await (await fetch(`${base}/patterns-library/patterns`, { headers: { Authorization: 'Bearer tok-viewer' } })).json()) as Array<{ id: string; name: string; status: string }>;
+    expect(after.find((p) => p.id === id)!.status).toBe('deprecated');
+    expect(after.find((p) => p.name === 'Stepper')!.status).toBe('planned');
+  });
+
   it('keeps reads open to anyone signed in', async () => {
     expect(await call('GET', '/patterns-library/patterns', 'viewer')).toBe(200);
     expect(await call('GET', '/contribution-workflow/guidelines', 'viewer')).toBe(200);
