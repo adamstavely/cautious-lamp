@@ -1,0 +1,10 @@
+# Only out/, snippets/, package.json, README, CHANGELOG and LICENSE ship in the .vsix
+src/**
+test/**
+out-test/**
+out/**/*.map
+node_modules/.cache/**
+tsconfig*.json
+STATUS.md
+PRODUCTION.md
+*.vsix

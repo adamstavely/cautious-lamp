@@ -1,41 +1,31 @@
 # Changelog
 
-All notable changes to the Design System VS Code Extension will be documented in this file.
+All notable changes to the Design System VS Code Extension are documented in this file.
 
-## [1.0.0] - 2024-01-XX
+## [Unreleased]
+
+### Fixed
+- The extension compiles and packages from a clean checkout: `@types/vscode` matches the supported VS Code version, `@vscode/vsce` is a dev dependency, and the manifest has a `repository` and `.vscodeignore`.
+- Hover finds dotted token names (`tokens.color.primary`), bracketed ones (`tokens.spacing["2xl"]`) and CSS custom properties (`var(--color-primary)`).
+- The hover colour swatch is a valid image.
+- Hovering a hard-coded hex colour works: the `#` is now part of the value.
+- `color.` and other bare token paths complete (they matched the category, `colors`, instead of the token name).
+- "Replace with token" matches spacing: px and rem values find the rem `dimension` spacing tokens.
+- Open Component Documentation opens pages that exist in the app instead of `localhost:5173/components/<name>`.
+- `designSystem.enableSnippets` turns snippets off.
+- 401 and 404 answers are no longer retried.
+- The typography token snippet names real tokens.
 
 ### Added
-- Initial release
-- Autocomplete for design tokens and components
-- Hover information for tokens and components
-- Color preview decorations
-- Code snippets for Vue, React, JavaScript, TypeScript
-- Quick actions to replace hardcoded values with tokens
-- Command palette integration
-- API integration with Design System backend
-- Caching for performance
-- Comprehensive error handling
-- Output channel for logging
-- Retry logic for API calls
-- Configuration validation
+- Warnings for hard-coded colours and spacing that equal a token, with the replace-with-token quick fix.
+- Settings: `designSystem.docsBaseUrl`, `designSystem.requestTimeout`, `designSystem.enableDiagnostics`.
+- Unit tests for each feature, run in CI with the build and packaging.
 
-### Features
-- Token autocomplete (`tokens.`)
-- Component autocomplete (JSX/Vue templates)
-- Hover documentation
-- Color decorations
-- Code snippets (`ds-button`, `ds-input`, etc.)
-- Replace with token quick action
-- Insert component/token commands
-- Open component documentation
-- Refresh cache command
-- Show output command
+### Changed
+- `designSystem.apiKey` has no fallback key; without one the extension warns and sends no `Authorization` header.
+- `designSystem.tokenImportPath` is empty by default (the old `@design-system/tokens` doesn't exist). Empty means quick fixes in JS/TS strings write `var(--token)`.
 
-### Configuration
-- `designSystem.apiUrl` - API endpoint URL
-- `designSystem.apiKey` - API authentication key
-- `designSystem.enableAutocomplete` - Enable/disable autocomplete
-- `designSystem.enableHover` - Enable/disable hover info
-- `designSystem.enableColorPreview` - Enable/disable color previews
-- `designSystem.enableSnippets` - Enable/disable snippets
+## [1.0.0] - 2025-11-07
 
+### Added
+- Initial version (not published): token and component completions, hover, colour decorations, snippets for Vue, React, JavaScript and TypeScript, replace-with-token, and commands to insert components and tokens, open component docs, refresh the cache and show the log.

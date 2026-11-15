@@ -1,6 +1,9 @@
-import axios, { AxiosError } from 'axios';
-import * as vscode from 'vscode';
+import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
+import type * as vscode from 'vscode';
 import { TtlCache } from './ttlCache';
+import type { Token } from './tokenLookup';
+
+export type { Token } from './tokenLookup';
 
 export interface Component {
   id: string;
@@ -20,34 +23,48 @@ export interface Component {
   }>;
 }
 
-export interface Token {
-  id: string;
-  name: string;
-  value: string;
-  type: string;
-  category: string;
-  description?: string;
+export const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
+
+/** A response the server gave on purpose (4xx): asking again gets the same answer */
+class ClientError extends Error {}
+
+export interface DesignSystemAPIOptions {
+  requestTimeout?: number;
+  /** For tests: the HTTP GET and the wait between retries */
+  get?: (url: string, config: AxiosRequestConfig) => Promise<AxiosResponse>;
+  sleep?: (ms: number) => Promise<void>;
 }
 
 export class DesignSystemAPI {
   private apiUrl: string;
   private apiKey: string;
-  private outputChannel: vscode.OutputChannel;
+  private outputChannel: Pick<vscode.OutputChannel, 'appendLine'>;
   private cacheTimeout: number = 5 * 60 * 1000; // 5 minutes
   // Separate freshness per data set: loading tokens must not make stale components look fresh
   private componentsCache = new TtlCache<Component[]>(this.cacheTimeout);
   private tokensCache = new TtlCache<Token[]>(this.cacheTimeout);
-  private requestTimeout: number = 10000; // 10 seconds
+  private requestTimeout: number;
+  private get: (url: string, config: AxiosRequestConfig) => Promise<AxiosResponse>;
+  private sleep: (ms: number) => Promise<void>;
 
-  constructor(apiUrl: string, apiKey: string, outputChannel: vscode.OutputChannel) {
+  constructor(
+    apiUrl: string,
+    apiKey: string,
+    outputChannel: Pick<vscode.OutputChannel, 'appendLine'>,
+    options: DesignSystemAPIOptions = {}
+  ) {
     this.apiUrl = apiUrl.replace(/\/$/, ''); // Remove trailing slash
     this.apiKey = apiKey;
     this.outputChannel = outputChannel;
+    this.requestTimeout = options.requestTimeout || DEFAULT_REQUEST_TIMEOUT_MS;
+    this.get = options.get ?? ((url, config) => axios.get(url, config));
+    this.sleep = options.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
   }
 
-  updateConfig(apiUrl: string, apiKey: string) {
+  updateConfig(apiUrl: string, apiKey: string, requestTimeout?: number) {
     this.apiUrl = apiUrl.replace(/\/$/, '');
     this.apiKey = apiKey;
+    this.requestTimeout = requestTimeout || DEFAULT_REQUEST_TIMEOUT_MS;
     this.clearCache();
     this.outputChannel.appendLine(`Configuration updated: ${this.apiUrl}`);
   }
@@ -69,41 +86,45 @@ export class DesignSystemAPI {
     ]);
   }
 
+  /**
+   * GETs `endpoint`, retrying timeouts, dropped connections and 5xx with
+   * backoff. A 4xx (a bad key, a missing route) fails at once: retrying it
+   * only delays the same error.
+   */
   private async fetch<T>(endpoint: string, retries: number = 2): Promise<T> {
     const url = `${this.apiUrl}${endpoint}`;
-    
+
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        const response = await axios.get<T>(url, {
-          headers: {
-            Authorization: `Bearer ${this.apiKey}`
-          },
+        const response = await this.get(url, {
+          headers: this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {},
           timeout: this.requestTimeout,
           validateStatus: (status) => status < 500 // Don't throw on 4xx errors
         });
 
         if (response.status === 401) {
-          throw new Error('Unauthorized: Check your API key');
+          throw new ClientError(this.apiKey ? 'Unauthorized: Check your API key' : 'Unauthorized: Set designSystem.apiKey');
         }
         if (response.status === 404) {
-          throw new Error(`Endpoint not found: ${endpoint}`);
+          throw new ClientError(`Endpoint not found: ${endpoint}`);
         }
         if (response.status >= 400) {
-          throw new Error(`API error: ${response.status} ${response.statusText}`);
+          throw new ClientError(`API error: ${response.status} ${response.statusText}`);
         }
 
         return response.data;
       } catch (error: any) {
+        if (error instanceof ClientError) throw error;
         const axiosError = error as AxiosError;
-        
+
         if (axiosError.code === 'ECONNREFUSED' || axiosError.code === 'ENOTFOUND') {
           throw new Error(`Cannot connect to API at ${this.apiUrl}. Is the server running?`);
         }
-        
+
         if (axiosError.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
           if (attempt < retries) {
             this.outputChannel.appendLine(`Request timeout, retrying... (${attempt + 1}/${retries})`);
-            await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))); // Exponential backoff
+            await this.sleep(1000 * (attempt + 1)); // Linear backoff
             continue;
           }
           throw new Error(`Request timeout: API did not respond within ${this.requestTimeout}ms`);
@@ -111,7 +132,7 @@ export class DesignSystemAPI {
 
         if (attempt < retries) {
           this.outputChannel.appendLine(`Request failed, retrying... (${attempt + 1}/${retries})`);
-          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+          await this.sleep(1000 * (attempt + 1));
           continue;
         }
 

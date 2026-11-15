@@ -104,3 +104,17 @@ test('Vue script without imports gets the import on its first line', () => {
     "<script>\nimport { tokens } from '@design-system/tokens';\nexport default { data: () => ({ c: tokens.color.primary }) };\n</script>"
   );
 });
+
+test('JS without an import path: a file that does not bind tokens gets var(--token) inside the string', () => {
+  const noImport = { importPath: '' };
+  const src = "const c = '#4f46e5';\n";
+  const start = src.indexOf('#');
+  const result = computeTokenReplacement(src, start, start + 7, 'javascript', 'color.primary', noImport)!;
+  assert.equal(applyEdits(src, result.edits), "const c = 'var(--color-primary)';\n");
+
+  // A file that already imports tokens still gets the accessor
+  const bound = "import { tokens } from './tokens';\nconst c = '#4f46e5';\n";
+  const at = bound.indexOf('#');
+  const fixed = computeTokenReplacement(bound, at, at + 7, 'javascript', 'color.primary', noImport)!;
+  assert.equal(applyEdits(bound, fixed.edits), "import { tokens } from './tokens';\nconst c = tokens.color.primary;\n");
+});

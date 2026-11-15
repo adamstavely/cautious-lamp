@@ -1,120 +1,34 @@
-# VS Code Design System Extension - Production Ready ✅
+# VS Code Design System Extension: operating notes
 
-## Production Features
+What the extension does when things go wrong, and how to build and ship it. For what's tested, see [STATUS.md](./STATUS.md).
 
-### ✅ Error Handling
-- Comprehensive try-catch blocks throughout
-- Graceful degradation when API is unavailable
-- User-friendly error messages
-- Detailed logging to output channel
+## API behaviour
 
-### ✅ Logging
-- VS Code output channel for all logs
-- Log levels (info, warning, error)
-- Command to show output channel
-- Detailed error messages with context
+- **Authentication**: `designSystem.apiKey` is sent as `Authorization: Bearer <key>`. Every API route needs a key, so without one the extension warns at start-up and tokens and components stay empty. There is no default key.
+- **Timeouts and retries**: each request waits `designSystem.requestTimeout` ms (10 s by default). Timeouts, dropped connections and 5xx answers are retried twice, waiting 1 s then 2 s. 4xx answers (401 bad key, 404 wrong URL) fail at once, since asking again gets the same answer.
+- **Caching**: tokens and components are cached for 5 minutes each. When a refresh fails, the last data loaded is kept; with none, features show nothing rather than guessing.
+- **Logging**: every load, retry and error goes to the "Design System" output channel (`Design System: Show Output`).
 
-### ✅ API Resilience
-- Retry logic with exponential backoff
-- Request timeouts (10 seconds)
-- Connection error handling
-- Caching with fallback to cached data
-- Validation of API responses
+## Build and package
 
-### ✅ User Experience
-- Clear error messages
-- Warning messages for configuration issues
-- Progress indicators
-- Empty state handling
-- Validation of user input
-
-### ✅ Performance
-- Caching (5-minute default)
-- Background preloading
-- Efficient API calls
-- Lazy loading of providers
-
-### ✅ Configuration
-- Validation of API URL
-- Secure API key handling
-- Configurable timeouts
-- Feature toggles
-
-## Testing Checklist
-
-- [x] Extension activates without errors
-- [x] Handles missing API gracefully
-- [x] Caches data properly
-- [x] Retries failed requests
-- [x] Shows helpful error messages
-- [x] Logs to output channel
-- [x] Handles invalid configuration
-- [x] Works offline (with cached data)
-
-## Production Deployment
-
-### Build
 ```bash
 cd vscode-design-system-extension
-npm install
+npm ci
 npm run compile
+npm test
+npm run package   # design-system-extension.vsix
 ```
 
-### Package
-```bash
-npm install -g @vscode/vsce
-vsce package
-```
+`@vscode/vsce` is a dev dependency, so nothing needs installing globally. `.vscodeignore` keeps sources, tests and source maps out of the `.vsix`.
 
-### Install
-1. Open VS Code
-2. Extensions → "..." → "Install from VSIX..."
-3. Select `.vsix` file
+## Publishing
 
-### Publish (Optional)
-```bash
-vsce publish
-```
-
-## Configuration
-
-```json
-{
-  "designSystem.apiUrl": "http://localhost:3000/api/v1",
-  "designSystem.apiKey": "your-api-key",
-  "designSystem.enableAutocomplete": true,
-  "designSystem.enableHover": true,
-  "designSystem.enableColorPreview": true,
-  "designSystem.enableSnippets": true
-}
-```
+Not set up: there is no Marketplace publisher or token for `design-system`. Until there is, distribute the `.vsix` from the CI artifact.
 
 ## Troubleshooting
 
-### Extension not working?
-1. Check output channel: `Design System: Show Output`
-2. Verify API URL is correct
-3. Check API key is valid
-4. Ensure backend is running
-
-### No autocomplete?
-1. Check `designSystem.enableAutocomplete` is true
-2. Verify API connection
-3. Check output channel for errors
-
-### API connection errors?
-1. Verify backend is running
-2. Check API URL format (no trailing slash)
-3. Verify API key is correct
-4. Check firewall/network settings
-
-## Status: ✅ Production Ready
-
-The extension is fully production-ready with:
-- Comprehensive error handling
-- Proper logging
-- API resilience
-- User-friendly messages
-- Performance optimizations
-- Security considerations
-
+1. Open `Design System: Show Output`.
+2. "Unauthorized": set or fix `designSystem.apiKey`.
+3. "Endpoint not found": `designSystem.apiUrl` must end in `/api/v1`.
+4. "Cannot connect": the backend isn't running at `designSystem.apiUrl`.
+5. "Request timeout": raise `designSystem.requestTimeout` or check the network.

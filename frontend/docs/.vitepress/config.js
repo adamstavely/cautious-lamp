@@ -1,9 +1,15 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitepress'
+
+// The pages' illustrations live in the app's public/svgs, which the app serves too
+const sharedSvgs = fileURLToPath(new URL('../../public/svgs/', import.meta.url))
 
 export default defineConfig({
   title: 'Design System Guidelines',
   description: 'Design guidelines, best practices, and usage documentation',
   base: '/guidelines/',
+  // The folder's own README is for contributors, not a page of the site
+  srcExclude: ['README.md'],
   
   // Server configuration
   server: {
@@ -13,7 +19,10 @@ export default defineConfig({
   
   // Vite configuration
   vite: {
-    publicDir: '../../public',
+    resolve: {
+      // Pages reference them as /svgs/..., so they build as hashed assets under the site's base
+      alias: [{ find: /^\/svgs\//, replacement: sharedSvgs }]
+    },
     assetsInclude: ['**/*.svg'],
     optimizeDeps: {
       exclude: ['**/*.svg']
@@ -26,7 +35,6 @@ export default defineConfig({
   },
   
   themeConfig: {
-    logo: '/logo.svg',
     // Disable VitePress default appearance toggle - we'll handle it ourselves
     appearance: false,
     
@@ -131,7 +139,7 @@ export default defineConfig({
     ],
     
     socialLinks: [
-      { icon: 'github', link: 'https://github.com' }
+      { icon: 'github', link: 'https://github.com/adamstavely/cautious-lamp' }
     ],
     
     footer: {
