@@ -1,208 +1,57 @@
-# Database Indexing Recommendations
+# Elasticsearch indexes
 
-This document provides recommendations for database indexing to optimize query performance in the Design System platform.
+Elasticsearch is the backend's only database. There is no PostgreSQL or other SQL store (the backend has no `pg`, TypeORM, Prisma or similar dependency). The connection is set with `ELASTICSEARCH_NODE` (default `http://localhost:9200`) and optional `ELASTICSEARCH_USERNAME` / `ELASTICSEARCH_PASSWORD`.
 
-## Overview
+## How indexes are created
 
-Proper indexing is crucial for performance, especially as the system scales. This document outlines recommended indexes for common query patterns.
+- **Index template.** On start, `EsIndexService` (`backend/src/common/elasticsearch/es-index.service.ts`) installs the template `cautious-lamp-defaults` for `design-system-*`, `color-palettes`, `nasa-tlx`, `sus-scores`, `heuristic-evaluations` and `reviews*`. It maps every dynamically added string as `keyword` (up to 1,024 characters) with a `.text` subfield for full-text search, so `term` lookups on ids and emails work. If Elasticsearch is down the app still starts, and the template is installed on the next write.
+- **Document stores.** Most modules keep their documents through `EsDocumentStore` (`backend/src/reviews/document-store.ts`) or `EsQueryableStore` (`backend/src/workspaces/queryable-store.ts`). The store creates its index on first write with `dynamic: false` and the module's explicit properties (the `*_PROPERTIES` constants next to each index name). Only those fields are indexed and can be filtered or sorted on; other fields are kept in `_source` but aren't searchable. To query a new field, add it to the module's properties (and to the mapping of an existing index).
+- Writes use `refresh: 'wait_for'` and compare-and-swap (`seq_no`/`primary_term`) where documents are changed in place. When Elasticsearch can't be reached, writes answer `503`.
 
-## Elasticsearch Indexes
+## Indexes
 
-### Audit Logs Index
+Index names are constants in the files listed; grep for the name to find the code.
 
-**Index Pattern**: `design-system-audit-*`
+| Index | What it holds | Defined in |
+| --- | --- | --- |
+| `design-system-users` | User accounts | `auth/user.types.ts` |
+| `design-system-api-keys` | API keys (SHA-256 hash and metadata) | `common/security/key-management.service.ts` |
+| `design-system-rbac-roles`, `design-system-rbac-user-roles` | Roles and role assignments | `rbac/rbac.store.ts` |
+| `design-system-workspaces`, `design-system-workspace-resources` | Workspaces and their resources | `workspaces/workspace.types.ts` |
+| `design-system-components`, `design-system-tokens` | Components and tokens (seeded once when empty) | `design-system/design-system-stores.ts` |
+| `design-system-roadmap`, `design-system-banners`, `design-system-performance-budgets`, `design-system-issues`, `design-system-meta` | Roadmap items, banners, performance budgets, reported component issues, design-system bookkeeping | `design-system/design-system-stores.ts` |
+| `design-system-component-requests`, `design-system-component-request-comments` | Component requests (with votes and status history) and their comments | `component-requests/component-request.types.ts` |
+| `design-system-component-usage` | Component usage recorded by governance application scans | `analytics/component-usage.types.ts` |
+| `design-system-patterns`, `design-system-patterns-meta` | Patterns library | `patterns-library/patterns-library.service.ts` |
+| `design-system-contribution-guidelines`, `design-system-contribution-templates`, `design-system-contribution-checks`, `design-system-contribution-meta` | Contribution process: guidelines, templates, checks, seed marker | `contribution-workflow/contribution-workflow.service.ts` |
+| `design-system-governance-rules`, `design-system-governance-scans`, `design-system-governance-meta` | Governance rules and scans | `governance/governance-stores.ts` |
+| `design-system-applications`, `design-system-application-names` | Applications, and name claims that keep names unique | `applications/application.types.ts` |
+| `design-system-brands` | Brands (multi-brand theming) | `brands/brands.types.ts` |
+| `design-system-feature-flags-flags` | Feature flags | `feature-flags/feature-flags.service.ts` |
+| `design-system-notifications`, `design-system-notification-settings`, `design-system-changelog` | In-app notifications, people's subscriptions and delivery preferences, the change log | `notifications/notification.types.ts` |
+| `design-system-delivery-attempts` | Each email, Slack, Teams and webhook delivery with its tries | `delivery/delivery.types.ts` |
+| `design-system-token-sync-connections`, `design-system-design-sync-connections`, `design-system-sync-runs` | Figma and Penpot token and design sync connections, and sync runs | `token-sync/`, `design-sync/`, `design-tools/sync-runs.ts` |
+| `design-system-visual-regression-projects`, `design-system-visual-regression-runs` | Visual regression projects (with baselines, shares and notification channels) and runs (with results) | `visual-regression/visual-regression.types.ts` |
+| `design-system-session-replay-projects` | Session replay projects | `session-replay/session-replay.service.ts` |
+| `design-system-a11y-reports`, `design-system-a11y-schedules`, `design-system-a11y-slas` | Accessibility reports, scan schedules and SLAs | `accessibility-reports/accessibility-reports.service.ts` |
+| `design-system-photosensitivity` | Photosensitivity analysis summaries | `photosensitivity/photosensitivity.service.ts` |
+| `design-system-health-snapshots` | Daily system-health snapshots | `system-health/health-snapshots.ts` |
+| `design-system-audit-YYYY.MM.DD` | Audit log, one index per day (see below) | `audit/audit.service.ts` |
+| `reviews`, `reviews-teams` | Design reviews and review teams | `reviews/document-store.ts` |
+| `color-palettes` | Saved color palettes | `color-palette/color-palette.service.ts` |
+| `nasa-tlx`, `sus-scores`, `heuristic-evaluations` | Research survey responses | `design-system/design-system.service.ts` |
+| `otel-trace-*`, `otel-metric-*`, `otel-log-*` | Backend telemetry, only with `OTEL_EXPORTER_ELASTICSEARCH=true` | `observability/elasticsearch-exporter.ts` |
 
-**Recommended Indexes**:
-```json
-{
-  "mappings": {
-    "properties": {
-      "@timestamp": { "type": "date" },
-      "userId": { "type": "keyword" },
-      "action": { "type": "keyword" },
-      "resourceType": { "type": "keyword" },
-      "resourceId": { "type": "keyword" },
-      "endpoint": { "type": "text", "fields": { "keyword": { "type": "keyword" } } },
-      "responseStatus": { "type": "integer" },
-      "success": { "type": "boolean" }
-    }
-  },
-  "settings": {
-    "number_of_shards": 1,
-    "number_of_replicas": 1
-  }
-}
-```
+Paths are under `backend/src/`. Global search (`search/`) has no index of its own: it searches the loaded components and the caller's workspaces in memory.
 
-**Query Patterns**:
-- Filter by userId + date range
-- Filter by action + resourceType
-- Filter by endpoint + date range
-- Filter by responseStatus
+## Audit log
 
-**Index Strategy**: Daily indices with retention policy (e.g., 90 days)
+The global `AuditInterceptor` records every API request, successful or not, through `AuditService`. Each day's entries go to `design-system-audit-YYYY.MM.DD` (for example `design-system-audit-2026.11.15`); reads, exports and stats (`/api/v1/audit/logs`, `/export`, `/stats`, needing `admin:audit`) query `design-system-audit-*`. These indexes are written with the plain client, not a document store, so they get the default template (strings as `keyword` with `.text`) rather than an explicit mapping. Fields include `@timestamp`, `userId`, `userName`, `action`, `resourceType`, `resourceId`, `method`, `endpoint`, `ipAddress`, `responseStatus`, `success`, `errorMessage` and `riskScore`; request bodies are sanitized first. If writing an entry fails, the error is logged and the request carries on.
 
-### Design System Components Index
+Nothing deletes old audit indexes. Set an index lifecycle policy (or delete old daily indexes) in Elasticsearch if they must not grow forever.
 
-**Index Pattern**: `design-system-components`
+## Querying
 
-**Recommended Indexes**:
-```json
-{
-  "mappings": {
-    "properties": {
-      "id": { "type": "keyword" },
-      "name": { 
-        "type": "text",
-        "fields": {
-          "keyword": { "type": "keyword" },
-          "suggest": { "type": "completion" }
-        }
-      },
-      "status": { "type": "keyword" },
-      "category": { "type": "keyword" },
-      "tags": { "type": "keyword" },
-      "workspaceId": { "type": "keyword" },
-      "createdAt": { "type": "date" },
-      "updatedAt": { "type": "date" }
-    }
-  }
-}
-```
-
-**Query Patterns**:
-- Search by name (text search)
-- Filter by status + workspaceId
-- Filter by category + tags
-- Sort by createdAt/updatedAt
-
-### Tokens Index
-
-**Index Pattern**: `design-system-tokens`
-
-**Recommended Indexes**:
-```json
-{
-  "mappings": {
-    "properties": {
-      "name": { 
-        "type": "text",
-        "fields": {
-          "keyword": { "type": "keyword" }
-        }
-      },
-      "type": { "type": "keyword" },
-      "category": { "type": "keyword" },
-      "workspaceId": { "type": "keyword" }
-    }
-  }
-}
-```
-
-## In-Memory Data Structures
-
-For in-memory Maps used in services, consider the following:
-
-### Visual Regression Service
-
-**Data Structures**:
-- `projects: Map<string, Project>` - Indexed by project ID
-- `testRuns: Map<string, TestRun>` - Indexed by run ID
-- `testResults: Map<string, TestResult[]>` - Indexed by run ID
-
-**Optimization Recommendations**:
-1. For queries filtering by `projectId`, maintain a secondary index:
-   ```typescript
-   private projectRunsIndex = new Map<string, Set<string>>(); // projectId -> Set<runId>
-   ```
-
-2. For date range queries on test runs, consider a sorted data structure or maintain a date index.
-
-### Search Service
-
-**Optimization Recommendations**:
-1. Pre-index component names and descriptions for faster search
-2. Maintain inverted indexes for tags and categories
-3. Cache search results with TTL for common queries
-
-## Performance Best Practices
-
-### 1. Index Selection
-- Use `keyword` type for exact matches and filtering
-- Use `text` type for full-text search
-- Use `date` type for date range queries
-- Use `completion` suggester for autocomplete
-
-### 2. Query Optimization
-- Use filters instead of queries when possible (filters are cached)
-- Combine multiple filters in a `bool` query
-- Use `term` queries for exact matches on keyword fields
-- Use `range` queries for date/number ranges
-
-### 3. Pagination
-- Always use pagination for large result sets
-- Use `from` and `size` parameters
-- Consider using `search_after` for deep pagination
-
-### 4. Caching
-- Cache frequently accessed data (components, tokens)
-- Use TTL-based cache invalidation
-- Implement cache warming for critical data
-
-### 5. Monitoring
-- Monitor query performance
-- Track slow queries (>100ms)
-- Monitor index size and growth
-- Track cache hit rates
-
-## Migration to Database
-
-When migrating from in-memory storage to a database:
-
-### PostgreSQL Recommendations
-
-**Audit Logs Table**:
-```sql
-CREATE INDEX idx_audit_user_date ON audit_logs(user_id, timestamp DESC);
-CREATE INDEX idx_audit_action_resource ON audit_logs(action, resource_type);
-CREATE INDEX idx_audit_endpoint ON audit_logs(endpoint);
-CREATE INDEX idx_audit_status ON audit_logs(response_status);
-```
-
-**Components Table**:
-```sql
-CREATE INDEX idx_components_workspace ON components(workspace_id);
-CREATE INDEX idx_components_status ON components(status);
-CREATE INDEX idx_components_name ON components USING gin(to_tsvector('english', name));
-CREATE INDEX idx_components_tags ON components USING gin(tags);
-```
-
-**Test Runs Table**:
-```sql
-CREATE INDEX idx_test_runs_project ON test_runs(project_id, started_at DESC);
-CREATE INDEX idx_test_runs_status ON test_runs(status);
-CREATE INDEX idx_test_runs_date ON test_runs(started_at DESC);
-```
-
-**Test Results Table**:
-```sql
-CREATE INDEX idx_test_results_run ON test_results(run_id, test_name);
-CREATE INDEX idx_test_results_status ON test_results(status);
-CREATE INDEX idx_test_results_approved ON test_results(approved);
-```
-
-## Index Maintenance
-
-1. **Regular Review**: Review indexes quarterly to ensure they're still needed
-2. **Monitor Usage**: Track which indexes are used and which are not
-3. **Remove Unused Indexes**: Drop indexes that are not being used
-4. **Update Statistics**: Keep database statistics up to date for query planning
-
-## Notes
-
-- Indexes improve read performance but can slow down writes
-- Balance between query performance and write performance
-- Monitor index size and impact on storage
-- Consider partial indexes for filtered queries
-- Use composite indexes for multi-column queries
-
+- Filter on `keyword` fields with `term`/`terms`, and use the `.text` subfield for full-text matches on template-mapped strings.
+- Only properties listed in a store's mapping are searchable in `dynamic: false` indexes.
+- Use `range` on `date` fields (`createdAt`, `updatedAt`, `startedAt` and the like where mapped).

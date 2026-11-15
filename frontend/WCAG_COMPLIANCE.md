@@ -1,115 +1,56 @@
-# WCAG 2.1 AA Compliance Report
+# WCAG 2.1 AA status of the app
 
-## ✅ Completed Improvements
+This describes the accessibility work in the frontend as the code stands, and what is still open. It is not an audit: no screen-reader or contrast audit has been done across the app. To scan pages, use the accessibility reports (`/admin/accessibility-reports`, axe-core; see [docs/AUTOMATED_ACCESSIBILITY_REPORTS.md](../docs/AUTOMATED_ACCESSIBILITY_REPORTS.md)).
 
-### 1. Skip Links (2.4.1 Bypass Blocks - Level A)
-- Added skip links to main content and navigation
-- Links are hidden until focused, meeting WCAG requirements
-- Located in `App.vue`
+## In place
 
-### 2. ARIA Labels and Roles (4.1.2 Name, Role, Value - Level A)
-- Added `aria-label` to all icon-only buttons:
-  - Dark mode toggle
-  - Live chat button
-  - Notifications button (with dynamic unread count)
-  - User menu button
-  - App picker button
-  - Floating action button
-  - Copy buttons
-  - Color picker buttons
-- Added `aria-hidden="true"` to decorative icons and SVGs
-- Added `aria-expanded` to collapsible elements
-- Added `aria-haspopup` to buttons with dropdowns
-- Added `role` attributes to navigation elements
-- Added `role="dialog"` and `aria-modal="true"` to modals
-- Added `aria-labelledby` to modals for proper labeling
+### Bypass blocks (2.4.1)
+- `App.vue` has "Skip to main content" (`#main-content`, the `<main>` element) and, outside bare pages such as sign-in, "Skip to navigation" (`#navigation`, in `Sidebar.vue`). The links are hidden until focused.
 
-### 3. Focus Indicators (2.4.7 Focus Visible - Level AA)
-- Implemented visible focus indicators with 3px outline
-- Meets WCAG AA contrast requirement (3:1 minimum)
-- Focus indicators only appear for keyboard navigation (`:focus-visible`)
-- Mouse users don't see focus rings (better UX)
+### Focus visible (2.4.7)
+- `style.css` gives every `:focus-visible` element the design system's focus ring (`--tc-focus-outline`, `--tc-focus-ring-offset`) in both themes, and hides the outline for mouse focus. Fields in the ui kit show focus with their own ring.
 
-### 4. Semantic HTML
-- Added `<main>` element with `id="main-content"`
-- Added proper `<nav>` elements with `aria-label`
-- Changed search input to `type="search"` for better semantics
-- Proper heading hierarchy (h1-h6) - one h1 per page
+### Name, role, value (4.1.2)
+- Icons come from Lucide through `<AppIcon>`, which is decorative (`aria-hidden`) unless given a label. Icon-only buttons in the top bar and ui kit carry `aria-label`; `npm run check:icons` keeps icons on AppIcon.
+- Menus in the top bar use `aria-expanded` and `aria-haspopup`.
 
-### 5. Form Labels (3.3.2 Labels or Instructions - Level A)
-- Added `for` attributes linking labels to inputs
-- Added `id` attributes to form inputs
-- Added `aria-required="true"` for required fields
-- Added `aria-describedby` for form hints and descriptions
-- Added `aria-label` for inputs without visible labels
-- Created `.sr-only` class for screen-reader-only text
-- All form inputs now have proper label associations
+### Dialogs
+- `UiDialog` (`components/ui/UiDialog.vue`) is built on the native `<dialog>` element: focus moves into it and back, Escape and the close button close it, the page behind is inert, and its heading labels it (`aria-labelledby`). Pages moved onto the design system use it. Older pages still have hand-built modals of varying quality.
 
-### 6. Keyboard Navigation (2.1.1 Keyboard - Level A)
-- Added Escape key handlers to all modals
-- Modals can be closed with Escape key
-- All interactive elements are keyboard accessible
-- Tab order is logical
+### Labels, instructions and errors (1.3.1, 3.3.1, 3.3.2)
+- `UiField` and `UiInput` tie each label, hint and error to the control (`for`/`id`, `aria-describedby`) and set `aria-invalid`; the error is announced with `role="alert"`.
+- `.sr-only` in `style.css` hides text visually but keeps it for screen readers.
 
-### 7. Modal Accessibility
-- Added `role="dialog"` and `aria-modal="true"` to modals
-- Added `aria-labelledby` pointing to modal titles
-- Added `aria-label` to close buttons
-- Escape key closes modals
-- Click outside closes modals (where appropriate)
+### Non-text content (1.1.1)
+- The app does use `<img>`: visual regression diffs (`EnhancedDiffViewer.vue`, `ImageComparisonSlider.vue`), image previews (`PNGToICO.vue`, `ImageCompressor.vue`) and workspace resources (`WorkspaceResourceList.vue`, `ResourceLibrary.vue`). Each has an `alt`, mostly built from the image's name; decorative ones use `alt=""`.
+- Page-hero spot illustrations (`SpotArt.vue`) are inlined SVG and `aria-hidden`.
+- `MarkdownViewer.vue` inlines `/svgs/*.svg` images from the guidance Markdown in place of their `<img>` tags.
 
-## 🔄 In Progress / To Complete
+### Headings
+- Pages on the design system (`PageShell` and `PageHero`, listed in `frontend/scripts/reskinned.json`) have one `h1` and sentence-case headings.
 
-### 8. Color Contrast (1.4.3 Contrast Minimum - Level AA)
-- Normal text: 4.5:1 contrast ratio required
-- Large text (18pt+ or 14pt+ bold): 3:1 contrast ratio required
-- UI components: 3:1 contrast ratio required
-- **Status**: Need to audit all text colors against backgrounds using tools like WebAIM Contrast Checker
+## Open
 
-### 9. Alt Text for Images (1.1.1 Non-text Content - Level A)
-- ✅ Most decorative SVGs already have `aria-hidden="true"`
-- ✅ No `<img>` tags found in codebase (using SVGs instead)
-- ✅ Informative SVGs have proper `aria-label` or `role="img"` with `aria-label`
-- **Status**: ✅ Complete - All images/SVGs have appropriate accessibility attributes
+- **Contrast (1.4.3, 1.4.11)**: the token colours are designed for AA, but text and UI colours across the app haven't been checked. Pages not yet moved onto tokens (not in `reskinned.json`) still use raw palette colours.
+- **Pages not yet on the design system** may lack labels, use hand-built modals without focus handling, or have more than one `h1`.
+- **Manual testing**: none recorded with a screen reader (NVDA, JAWS, VoiceOver), keyboard only, or at 200% zoom.
+- The open accessibility items in [CODE_REVIEW.md](../CODE_REVIEW.md) (F13) still apply.
 
-### 10. Error Identification (3.3.1 Error Identification - Level A)
-- Added `aria-invalid="true"` for invalid form inputs
-- Added `aria-describedby` linking to error messages
-- Error messages have `role="alert"` for screen reader announcements
-- Visual error indicators (red borders) for invalid fields
-- Validation functions for Token Studio forms (token name, value, category name, dictionary name)
-- **Status**: ✅ Complete - Forms now properly announce errors to screen readers
+## Checklist
 
-## Testing Checklist
-
-- [x] Skip links work correctly
-- [x] All icon buttons have ARIA labels
-- [x] Focus indicators visible for keyboard navigation
-- [x] Forms have proper label associations
-- [x] Modals can be closed with Escape key
-- [x] Heading hierarchy is correct (one h1 per page)
-- [x] Form error announcements implemented
-- [x] Images/SVGs have appropriate alt text or aria-hidden
-- [ ] Test with screen reader (NVDA/JAWS/VoiceOver)
-- [ ] Test keyboard-only navigation (Tab, Shift+Tab, Enter, Space, Arrow keys)
-- [ ] Verify color contrast ratios using tools (WebAIM Contrast Checker) ⚠️ **REQUIRED**
-- [ ] Test with browser zoom at 200%
-- [ ] Verify all interactive elements are focusable
-- [ ] Test form validation and error announcements
+- [x] Skip links
+- [x] Visible focus ring for keyboard focus
+- [x] Labelled fields and announced errors in the ui kit
+- [x] Accessible dialog component
+- [x] Alt text on `<img>` elements
+- [ ] Contrast checked across the app
+- [ ] Every page on the design system
+- [ ] Screen reader testing
+- [ ] Keyboard-only testing
+- [ ] 200% zoom testing
 
 ## Resources
 
-- [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
-- [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)
-- [WAVE Browser Extension](https://wave.webaim.org/extension/)
+- [WCAG 2.1 quick reference](https://www.w3.org/WAI/WCAG21/quickref/)
+- [WebAIM contrast checker](https://webaim.org/resources/contrastchecker/)
 - [axe DevTools](https://www.deque.com/axe/devtools/)
-
-## Files Modified
-
-- `frontend/src/App.vue` - Added skip links and main element
-- `frontend/src/components/Sidebar.vue` - Added ARIA labels and navigation roles
-- `frontend/src/components/TopNav.vue` - Added ARIA labels to all buttons
-- `frontend/src/components/FloatingActionButton.vue` - Added ARIA labels
-- `frontend/src/style.css` - Added focus indicators and sr-only class
-- `frontend/src/views/ColorConverter.vue` - Added form labels and ARIA attributes
-- `frontend/src/views/TokenStudio.vue` - Added form labels, modal accessibility, Escape key handlers, form validation with aria-invalid and error announcements

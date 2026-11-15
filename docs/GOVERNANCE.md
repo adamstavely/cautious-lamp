@@ -2,7 +2,7 @@
 
 Governance checks code against compliance rules. Accessibility reports run axe-core against a page and track WCAG results, schedules and SLAs over time. Both need a signed-in caller (see [AUTH.md](AUTH.md)). Every change needs `admin:governance`.
 
-This replaces the old rules engine, which ran rule code (`scannerCode`) with `new Function` on the server and in the browser. No route takes code now, and nothing evaluates it. `RULES_ENGINE_GUIDE.md` and `AUTOMATED_ACCESSIBILITY_REPORTS.md` describe the old behaviour.
+This replaces the old rules engine, which ran rule code (`scannerCode`) with `new Function` on the server and in the browser. No route takes code now, and nothing evaluates it. [RULES_ENGINE_GUIDE.md](./RULES_ENGINE_GUIDE.md) is a how-to for writing and testing rules on this engine.
 
 ## Rules
 
@@ -101,7 +101,7 @@ An application's `capabilities.governance.scanSchedule` decides whether it's sca
 | `DELETE /governance/rules/:id` | `admin:governance` | `204` |
 | `POST /governance/rules/import` | `admin:governance` | `{ rules, mode?: "merge" \| "replace" }` (at most 200 rules). Every rule is validated before anything is written. Rules with a known `id` are updated; others are created. `replace` also deletes rules that aren't in the import. Returns `{ created, updated, deleted }`. An exported file can be posted as-is. |
 | `POST /governance/rules/test` | `admin:governance` | `{ rule, sample: { html?, css?, javascript? } }`. Returns `{ outcome, reason?, checks, summary }`. Nothing is stored. |
-| `POST /governance/scans` | `component:view`; application scope also needs `admin:governance` | `{ scope: "design-system" \| "application", applicationId?, codebase?, url?, ruleIds?, categories? }` |
+| `POST /governance/scans` | `component:view`; application scope also needs `admin:governance` | `{ scope: "design-system" \| "application", applicationId?, codebase?, url?, componentIds?, ruleIds?, categories? }`. `componentIds` (at most 200) limits a design-system scan to those components; an id the caller can't read, or that doesn't exist, returns `404`, and sending it with the application scope returns `400`. |
 | `GET /governance/scans?applicationId=&scope=&limit=` | signed in | `{ scans, total }` without checks, newest first; only scans the caller may read (see Who can read scans) |
 | `GET /governance/scans/:id` | signed in | The full scan; `404` if the caller may not read it |
 | `GET /governance/scheduled-scans` | `admin:governance` | `{ occurrences, total }`: each scheduled application's latest occurrence (`applicationId`, `value`, `state`, `attempts`, `leaseUntil`, `retryAt`, `lastStatus`, `lastError`, `lastScanId`, `deadLetters`) |

@@ -1,191 +1,38 @@
-# Performance Section Setup Guide
+# Performance section and analysis
 
-## Overview
-The performance section on component pages displays bundle size metrics, dependencies, and browser support information. This guide explains what needs to be done to get performance data working.
+Component pages show a performance section with the component's source sizes, and `/admin/performance` (`PerformanceAnalysis.vue`) shows the same analysis for every component plus performance budgets. Both read from the design-system API.
 
-## Current Status
+## Where the numbers come from
 
-### ✅ What's Working
-1. **Frontend Implementation**: Performance section is added to component pages (ComponentButton.vue, ComponentColorPicker.vue)
-2. **API Endpoint**: Backend has `/api/v1/performance/bundle-analysis/analyze` endpoint
-3. **Error Handling**: Frontend gracefully handles missing components with "Performance data unavailable" message
+`POST /api/v1/performance/bundle-analysis/analyze` with `{ componentId?, includeDependencies? }` measures one component (`backend/src/design-system/bundle-analysis.service.ts`); without `componentId` it returns every component, as `GET /api/v1/performance/bundle-analysis` does. Both need a signed-in user or API key.
 
-### ⚠️ What Needs to Be Done
+The sizes are measured from the component code stored in Elasticsearch (`design-system-components`), not estimated and not from a production build (no minification or tree shaking):
 
-## 1. Component ID Mapping
+| Field | Meaning |
+| --- | --- |
+| `vueSize`, `reactSize`, `totalSize` | Raw UTF-8 bytes of the stored Vue and React source, and their sum |
+| `gzippedSize`, `brotliSize` | Real gzip (level 9) and brotli (quality 11) output sizes of that source |
+| `dependencies`, `dependenciesSize`, `totalWithDeps` | Dependencies listed on the component that exist in the design system, and their measured source |
+| `missingDependencies` | Listed dependencies that weren't found (not measured) |
+| `status` | `pass`, `warning` (raw size of 50,000 bytes or more) or `error` (100,000 or more); `thresholds` gives the limits |
+| `method` | Always `measured-source` |
 
-The frontend maps route paths to component IDs. Currently mapped:
+An unknown `componentId` returns `404`.
 
-```javascript
-const routeToIdMap = {
-  '/components/buttons': 'button',        // ✅ Exists in backend
-  '/components/color-picker': 'color-picker', // ❌ Does NOT exist in backend
-  '/components/forms': 'input',           // ✅ Exists in backend
-  '/components/cards': 'card',            // ✅ Exists in backend
-  '/components/navigation': 'navigation',  // ❌ Does NOT exist in backend
-  '/components/data-display': 'table'      // ❌ Does NOT exist in backend
-};
-```
+## Component pages
 
-### Backend Components Available
-- ✅ `button` - Works
-- ✅ `card` - Works
-- ✅ `input` - Works
-- ✅ `select` - Works
-- ✅ `modal` - Works
-- ❌ `color-picker` - **Needs to be added**
-- ❌ `navigation` - **Needs to be added**
-- ❌ `table` - **Needs to be added**
+`ComponentButton.vue` and `ComponentColorPicker.vue` render the section. Each maps its route to a component id (`getComponentId()`: `/components/buttons` to `button`, `/components/color-picker` to `color-picker`, and so on) and calls the analyze route. When the call fails the section shows "Performance data unavailable". `ComponentTesting.vue` calls the same route for the component being tested.
 
-## 2. Add Missing Components to Backend
+The design system is seeded once, when its Elasticsearch indexes are empty, from `backend/src/design-system/design-system-seed.ts`. The seed includes `button`, `card`, `input`, `select`, `modal`, `color-picker`, `navigation` and `table`, so every id in the route map exists on a fresh install. After seeding, the stored documents are the source of truth: add or change components through the components API (`POST /api/v1/components`, needs `component:create`), not by editing the seed.
 
-To get performance data for components that don't exist, you need to add them to the backend:
+The "Supported browsers" list on these pages is a fixed list in the page (Chrome 90, Firefox 88, Safari 14, Edge 90); components have no browser support field.
 
-**File**: `backend/src/design-system/design-system.service.ts`
+## Performance budgets
 
-Add to the `components` array (around line 164):
+`/admin/performance` also manages budgets: `GET /api/v1/performance/budgets` (anyone signed in), and `POST`, `PUT /performance/budgets/:id` and `DELETE /performance/budgets/:id`, which need `admin:performance_analysis`. A budget has `name`, `metric`, `threshold`, `unit`, optional `alertThreshold` and `enabled`. Budgets are stored in `design-system-performance-budgets`.
 
-```typescript
-{
-  id: 'color-picker',
-  name: 'Color Picker',
-  description: 'Color picker component with gradient selector and multiple format support',
-  status: 'production',
-  props: [
-    // Add props here
-  ],
-  code: {
-    vue: `<!-- Vue component code -->`,
-    react: `/* React component code */`
-  },
-  dependencies: [],
-  examples: [],
-  accessibility: {
-    wcag: 'AA',
-    notes: 'WCAG 2.1 AA compliant'
-  }
-}
-```
+`/performance/budgets` and `/performance/bundle-analysis` redirect to `/admin/performance`. The older `BundleSizeAnalysis.vue` and `PerformanceBudgets.vue` duplicates were deleted in #66.
 
-## 3. Update Route-to-ID Mapping
+## Backend telemetry
 
-After adding components to the backend, update the mapping in component pages:
-
-**Files**: 
-- `frontend/src/views/ComponentButton.vue`
-- `frontend/src/views/ComponentColorPicker.vue`
-
-Update the `getComponentId()` function:
-
-```javascript
-const getComponentId = () => {
-  const routeToIdMap = {
-    '/components/buttons': 'button',
-    '/components/color-picker': 'color-picker',  // ✅ Now works
-    '/components/forms': 'input',
-    '/components/cards': 'card',
-    '/components/navigation': 'navigation',      // ✅ Now works
-    '/components/data-display': 'table'          // ✅ Now works
-  };
-  return routeToIdMap[route.path] || null;
-};
-```
-
-## 4. Browser Support Data
-
-Currently, browser support is hardcoded in the frontend:
-
-```javascript
-const getSupportedBrowsers = () => {
-  return [
-    { name: 'Chrome', version: '90' },
-    { name: 'Firefox', version: '88' },
-    { name: 'Safari', version: '14' },
-    { name: 'Edge', version: '90' }
-  ];
-};
-```
-
-### Option A: Keep Hardcoded (Current)
-- Simple and works immediately
-- Easy to customize per component
-- No backend changes needed
-
-### Option B: Add to Backend Component Data
-Add `browserSupport` field to Component interface:
-
-```typescript
-export interface Component {
-  // ... existing fields
-  browserSupport?: {
-    chrome?: string;
-    firefox?: string;
-    safari?: string;
-    edge?: string;
-  };
-}
-```
-
-Then update frontend to use component data:
-
-```javascript
-const getSupportedBrowsers = () => {
-  // Try to get from component data first
-  if (performanceData.value?.browserSupport) {
-    const support = performanceData.value.browserSupport;
-    return [
-      support.chrome && { name: 'Chrome', version: support.chrome },
-      support.firefox && { name: 'Firefox', version: support.firefox },
-      support.safari && { name: 'Safari', version: support.safari },
-      support.edge && { name: 'Edge', version: support.edge }
-    ].filter(Boolean);
-  }
-  
-  // Fallback to defaults
-  return [
-    { name: 'Chrome', version: '90' },
-    { name: 'Firefox', version: '88' },
-    { name: 'Safari', version: '14' },
-    { name: 'Edge', version: '90' }
-  ];
-};
-```
-
-## 5. Testing
-
-After adding components:
-
-1. **Test API Endpoint**:
-   ```bash
-   curl -X POST http://localhost:3000/api/v1/performance/bundle-analysis/analyze \
-     -H "Authorization: Bearer test-api-key-123" \
-     -H "Content-Type: application/json" \
-     -d '{"componentId": "color-picker", "includeDependencies": true}'
-   ```
-
-2. **Check Component Page**: Navigate to `/components/color-picker` and verify performance data loads
-
-3. **Verify Metrics**: Check that Vue Size, React Size, Total Size, Gzipped, and Dependencies are displayed correctly
-
-## Summary Checklist
-
-- [ ] Add missing components to backend (`color-picker`, `navigation`, `table`, etc.)
-- [ ] Update route-to-ID mapping in component pages
-- [ ] Test API endpoint returns data for each component
-- [ ] Verify performance section displays correctly on all component pages
-- [ ] (Optional) Add browser support to backend component data
-- [ ] (Optional) Customize browser support per component if needed
-
-## Current Behavior
-
-- **Components that exist** (button, card, input, select, modal): Performance data loads automatically
-- **Components that don't exist** (color-picker, navigation, table): Shows "Performance data unavailable" message
-- **Error handling**: API errors are caught and displayed gracefully
-
-## Next Steps
-
-1. Add `color-picker` component to backend (highest priority - has a dedicated page)
-2. Add other missing components as needed
-3. Update route mappings
-4. Test and verify
-
+Request traces, metrics and logs of the backend itself are a separate concern: `backend/src/observability/` sets up OpenTelemetry (on unless `OTEL_ENABLED=false`), exporting over OTLP (`OTEL_EXPORTER_OTLP_ENDPOINT`, default `http://localhost:4318`) or, with `OTEL_EXPORTER_ELASTICSEARCH=true`, straight to Elasticsearch in daily indexes `otel-trace-YYYY.MM.DD`, `otel-metric-YYYY.MM.DD` and `otel-log-YYYY.MM.DD`.

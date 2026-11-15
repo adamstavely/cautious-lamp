@@ -1,341 +1,121 @@
-# Loupe Tool Integration Guide
+# Adding Loupe to another application
 
-This guide explains how to integrate the Loupe Tool into applications that use design system components.
+The standalone Loupe package (`loupe-tool-standalone/`, package name `@adamstavely/loupe-tool`) brings component inspection to applications outside this site: it highlights elements marked as design system components and shows each one's name, import path and links on hover. It doesn't have the in-app version's breakpoint ruler or layout inspector; see [LOUPE_TOOL.md](LOUPE_TOOL.md) for that.
 
-## Overview
+The package is written in Vue 3, and `vue` (3.3 or later) is a peer dependency, so the host application needs Vue installed or loaded even if it uses another framework.
 
-The Loupe Tool is a component inspector that works in **any application** that uses design system components. It detects components on the page and provides quick access to their documentation, source code, and design files.
+## Build and install
 
-## How It Works
-
-The Loupe Tool works by:
-
-1. **Scanning the DOM** for elements with `data-ds-component` attributes
-2. **Fetching metadata** from the Design System API (or using fallback metadata)
-3. **Highlighting components** with a visual overlay
-4. **Displaying information** when hovering over components
-
-## Integration Steps
-
-### Step 1: Install the Loupe Tool Package
+The package is released to GitHub Packages under the `@adamstavely` scope by `.github/workflows/release.yml`, but nothing has been published yet. Once it is, add `@adamstavely:registry=https://npm.pkg.github.com` (and a token with `read:packages`) to your `.npmrc` and run `npm install @adamstavely/loupe-tool`; see the package [README](../loupe-tool-standalone/README.md). Until then, build it from this repository:
 
 ```bash
-npm install @designsystem/loupe-tool
+cd loupe-tool-standalone
+npm run build
 ```
 
-### Step 2: Add Data Attributes to Components
+`vite.config.js` writes:
 
-For each design system component in your application, add the `data-ds-component` attribute:
+| File | Use |
+| --- | --- |
+| `dist/loupe-tool.es.mjs` | ES module (`import`) |
+| `dist/loupe-tool.umd.js` | UMD (`require` or a `<script>` tag); expects a global `Vue` in the browser |
+| `dist/style.css` | The tool's styles. The JavaScript doesn't inject them; import this file once. |
 
-```vue
-<!-- Vue Example -->
-<template>
-  <Button 
-    data-ds-component="button"
-    data-ds-path="@design-system/components/button"
-  >
-    Click me
-  </Button>
-</template>
-```
+Types are in `types/index.d.ts`. To use the build in another project, install it from the folder or from a tarball made with `npm pack`.
 
-```jsx
-// React Example
-<Button 
+## Mark your components
+
+Loupe finds elements with a `data-ds-component` attribute. Put it on each component's root element:
+
+```html
+<button
   data-ds-component="button"
   data-ds-path="@design-system/components/button"
 >
-  Click me
-</Button>
+  Save
+</button>
 ```
 
-### Step 3: Initialize the Loupe Tool
+- `data-ds-component` (required): the component's id, matched case-insensitively against the metadata ids.
+- `data-ds-path` (optional): the import path to show; otherwise the metadata's path is used.
 
-#### Vue 3
+## Start it
+
+### Vue 3
 
 ```vue
 <template>
-  <div>
-    <!-- Your application -->
-    <LoupeTool :api-url="apiUrl" :api-key="apiKey" />
-  </div>
+  <LoupeTool :api-url="apiUrl" :api-key="apiKey" />
 </template>
 
 <script setup>
-import { LoupeTool } from '@designsystem/loupe-tool';
+import { LoupeTool } from '@adamstavely/loupe-tool';
+import '@adamstavely/loupe-tool/style.css';
 
-const apiUrl = 'https://your-design-system-api.com/api/v1';
-const apiKey = 'your-api-key';
+const apiUrl = import.meta.env.VITE_DS_API_URL; // e.g. https://design-system.example.com/api/v1
+const apiKey = import.meta.env.VITE_DS_API_KEY;
 </script>
 ```
 
-#### React
+### Any framework
 
-```jsx
-import { useEffect, useRef } from 'react';
-import { initLoupeTool } from '@designsystem/loupe-tool';
-
-function App() {
-  const loupeRef = useRef(null);
-
-  useEffect(() => {
-    loupeRef.current = initLoupeTool({
-      apiUrl: process.env.REACT_APP_DS_API_URL,
-      apiKey: process.env.REACT_APP_DS_API_KEY,
-    });
-
-    return () => {
-      if (loupeRef.current) {
-        loupeRef.current.destroy();
-      }
-    };
-  }, []);
-
-  return <div>{/* Your app */}</div>;
-}
-```
-
-#### Vanilla JavaScript
-
-```html
-<script type="module">
-  import { initLoupeTool } from 'https://unpkg.com/@designsystem/loupe-tool/dist/loupe-tool.esm.js';
-  
-  initLoupeTool({
-    apiUrl: 'https://your-design-system-api.com/api/v1',
-    apiKey: 'your-api-key',
-  });
-</script>
-```
-
-## Component Detection
-
-The Loupe Tool detects components by looking for the `data-ds-component` attribute:
-
-```html
-<div data-ds-component="button">
-  <!-- Component content -->
-</div>
-```
-
-### Required Attributes
-
-- **`data-ds-component`** (required): Component identifier (e.g., "button", "card", "input")
-- **`data-ds-path`** (optional): Import path (e.g., "@design-system/components/button")
-
-### Example Component Markup
-
-```vue
-<template>
-  <!-- Button Component -->
-  <button
-    data-ds-component="button"
-    data-ds-path="@design-system/components/button"
-    class="btn btn-primary"
-  >
-    Submit
-  </button>
-
-  <!-- Card Component -->
-  <div
-    data-ds-component="card"
-    data-ds-path="@design-system/components/card"
-    class="card"
-  >
-    <div class="card-body">Content</div>
-  </div>
-
-  <!-- Input Component -->
-  <input
-    data-ds-component="input"
-    data-ds-path="@design-system/components/input"
-    type="text"
-    class="form-control"
-  />
-</template>
-```
-
-## Component Metadata
-
-The Loupe Tool fetches component metadata from the Design System API:
-
-**Endpoint:** `GET /api/v1/components/metadata`
-
-**Response Format:**
-```json
-{
-  "button": {
-    "name": "Button",
-    "path": "@design-system/components/button",
-    "icon": "smart_button",
-    "links": {
-      "docs": "/components/buttons",
-      "github": "https://github.com/.../Button",
-      "figma": "https://www.figma.com/.../button"
-    }
-  }
-}
-```
-
-### Fallback Metadata
-
-If the API is unavailable, the tool uses built-in fallback metadata for common components.
-
-## API Configuration
-
-### API URL
-
-Set the Design System API URL:
+`initLoupeTool()` mounts the tool in its own Vue app and returns a handle:
 
 ```javascript
-initLoupeTool({
-  apiUrl: 'https://your-design-system-api.com/api/v1',
-});
-```
+import { initLoupeTool } from '@adamstavely/loupe-tool';
+import '@adamstavely/loupe-tool/style.css';
 
-### API Key
-
-Provide an API key for authentication:
-
-```javascript
-initLoupeTool({
-  apiKey: 'your-api-key',
-});
-```
-
-The tool will also check `localStorage.getItem('apiKey')` as a fallback.
-
-## Usage
-
-### Activating the Tool
-
-1. **Keyboard Shortcut**: Press `Ctrl+Shift+L` (or `Cmd+Shift+L` on Mac)
-2. **Click Indicator**: Click the small icon in the bottom-right corner
-
-### Viewing Component Information
-
-1. Activate the Loupe Tool
-2. Hover over any highlighted component
-3. View component name, path, and links in the info panel
-4. Click links to open documentation, GitHub, or Figma
-
-### Deactivating
-
-- Press `Ctrl+Shift+L` again
-- Press `Escape`
-- Click the close button in the info panel
-
-## Best Practices
-
-### 1. Add Attributes at the Component Level
-
-Add `data-ds-component` to the root element of each component:
-
-```vue
-<template>
-  <div 
-    data-ds-component="card"
-    data-ds-path="@design-system/components/card"
-  >
-    <!-- Card content -->
-  </div>
-</template>
-```
-
-### 2. Use Consistent Component Names
-
-Use the same component identifiers as defined in the Design System:
-
-- `button` (not `Button` or `btn`)
-- `card` (not `Card` or `panel`)
-- `input` (not `Input` or `textfield`)
-
-### 3. Provide Import Paths
-
-Include `data-ds-path` to help developers understand how to import components:
-
-```html
-<div 
-  data-ds-component="button"
-  data-ds-path="@design-system/components/button"
->
-```
-
-### 4. Environment-Specific Configuration
-
-Use environment variables for API configuration:
-
-```javascript
-initLoupeTool({
-  apiUrl: process.env.DESIGN_SYSTEM_API_URL,
-  apiKey: process.env.DESIGN_SYSTEM_API_KEY,
-});
-```
-
-## Troubleshooting
-
-### Components Not Detected
-
-1. **Check attributes**: Ensure `data-ds-component` is present
-2. **Check casing**: Component names are case-insensitive but should match metadata
-3. **Check DOM**: Verify components are rendered (not hidden or conditionally rendered)
-
-### Metadata Not Loading
-
-1. **Check API URL**: Verify the API URL is correct
-2. **Check API key**: Ensure the API key is valid
-3. **Check network**: Verify the API is accessible
-4. **Check console**: Look for error messages in the browser console
-
-### Tool Not Activating
-
-1. **Check keyboard shortcut**: Try `Ctrl+Shift+L` or `Cmd+Shift+L`
-2. **Check console**: Look for error messages
-3. **Check initialization**: Verify the tool is properly initialized
-4. **Check conflicts**: Ensure no other code is intercepting the keyboard shortcut
-
-## Advanced Configuration
-
-### Custom Container
-
-Mount the tool in a specific container:
-
-```javascript
-const container = document.getElementById('my-app');
-initLoupeTool({
-  apiUrl: 'https://api.example.com/api/v1',
-  container: container,
-});
-```
-
-### Programmatic Control
-
-```javascript
 const loupe = initLoupeTool({
-  apiUrl: 'https://api.example.com/api/v1',
+  apiUrl: 'https://design-system.example.com/api/v1', // default http://localhost:3000/api/v1
+  apiKey: '<your key>',
+  container: document.body,                           // default document.body
 });
 
-// Later, destroy the tool
+// Later
 loupe.destroy();
 ```
 
-## Browser Support
+In React, call it in an effect and call `destroy()` in the cleanup.
 
-- Chrome/Edge (latest)
-- Firefox (latest)
-- Safari (latest)
+### Script tag
 
-## Security Considerations
+With the UMD build and a global `Vue`, the `data-auto-init` attribute mounts the tool and sets `window.loupeTool`:
 
-- The Loupe Tool only reads `data-ds-component` attributes (no code execution)
-- API keys should be kept secure and not committed to version control
-- Use environment variables for sensitive configuration
-- The tool only displays information, it does not modify your application
+```html
+<link rel="stylesheet" href="/vendor/loupe-tool/style.css">
+<script src="/vendor/vue.global.prod.js"></script>
+<script
+  src="/vendor/loupe-tool/loupe-tool.umd.js"
+  data-auto-init
+  data-api-url="https://design-system.example.com/api/v1"
+  data-api-key="<your key>"
+></script>
+```
 
-## Examples
+## Using it
 
-See the `loupe-tool-standalone/` directory for:
-- Standalone package
-- Integration examples
-- Build configuration
+- Press `Ctrl+Shift+L` (`Cmd+Shift+L` on Mac), or click the round button in the bottom-right corner, to turn it on.
+- Hover over a highlighted component to see its details and links.
+- Press the shortcut again, press `Escape`, or use the close button in the info panel to turn it off.
 
+## Component metadata
+
+When it starts, the tool requests `GET {apiUrl}/component-metadata` (`COMPONENT_METADATA_PATH` in `src/loupe-core.mjs`). The backend route is in `backend/src/design-system/design-system.controller.ts` and returns `{ [componentId]: { name, path, links: { docs, github, figma }, … } }`.
+
+- The route needs a valid credential, sent as `Authorization: Bearer <apiKey>`. If `apiKey` isn't given, the tool uses `localStorage.getItem('apiKey')`.
+- It only returns components the caller can read. An API key isn't a workspace member, so it sees the shared library and global components, not workspace-private ones (see [AUTH.md](AUTH.md)).
+- With no key, the tool requests nothing and says "Configure apiKey to load component details"; components show only their `data-ds-component` names. If the request fails (a wrong key, the API down), it says so the same way. There is no built-in sample metadata.
+- The `docs` link points at the component's page on the design system site, absolute when the backend has `APP_PUBLIC_URL`. `github` and `figma` links are included only when the backend sets `COMPONENT_SOURCE_URL_TEMPLATE` and `COMPONENT_FIGMA_URL_TEMPLATE` (`{id}` and `{name}` are filled in), and the tool shows only absolute links.
+
+## Getting an API key
+
+The development keys used in older guides are rejected by the server. Ask an administrator for a key: someone with the `admin:users` permission creates it with `POST /api/v1/auth/api-keys` (there's no screen for this in the app; the **Design system API** page at `/api` describes the route). Ask for a key limited to reading, for example `{ "name": "Loupe for <app>", "scopes": ["component:view"], "expiresInDays": 90 }`. The key is shown once, in the response.
+
+A key given to a browser can be read by anyone who can load the page. Only ship Loupe with a key in internal or development builds, give that key read-only scopes, and keep it in your build's environment rather than in source control. [AUTH.md](AUTH.md#api-keys) describes keys, scopes, rotation and revocation.
+
+## Troubleshooting
+
+- **Nothing is highlighted.** Check that elements have `data-ds-component` and are rendered. While it's open, the tool rescans the page every second.
+- **Components show only their id and no links.** Metadata didn't load (the tool's notice says why), or has no entry for that id. Check `apiUrl` (it must end in `/api/v1`) and the key.
+- **No styles.** Import `@adamstavely/loupe-tool/style.css` (or link `dist/style.css`).
+- **`Vue is not defined`** with the UMD build: load Vue 3's global build before the Loupe script.

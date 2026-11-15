@@ -20,15 +20,22 @@ Components make sense when:
 - **Reusable across projects** - Things that will be used repeatedly
 - **Design system integration** - Should be part of the core component library
 
-## Current Implementation Status
+## Current implementation status
 
-### ✅ Built as Generators
-1. **Chart Builder** - Many chart types, complex data configurations
-2. **Badge Generator** - Multiple styles (rounded, pill, ribbon, medal, tag), many states
-3. **Progress Generator** - ⚠️ *Question: Should this be a component?*
-4. **Loading Spinner Generator** - ⚠️ *Question: Should this be a component?*
+Checked against the code at `main` (`69076bb`), 15 November 2026.
 
-### 🤔 Under Review
+### Built as generators
+1. **Chart Builder** (`/tools/chart-builder`) - many chart types, complex data configurations
+2. **Badge Generator** (`/components/badge-generator`) - multiple styles and states
+3. **Progress Generator** (`/components/progress-generator`) - linear, circular and step indicators; React, Vue or CSS export
+4. **Loading Spinner Generator** (`/components/loading-generator`) - spinner, dots, bars, skeleton and pulse; React, Vue or CSS export
+5. **Timeline Generator** (`/tools/timeline-generator`) - React, Vue or SVG export
+6. **Table Generator** (`/tools/table-generator`) - React, Vue or HTML export
+7. **Map Maker** (`/tools/map-maker`) - thematic maps, described under item 12 below
+
+The Button and Color picker pages (`/components/buttons`, `/components/color-picker`) have a props playground that copies Vue, React, React Native or HTML; that is the nearest thing to a component configurator.
+
+### Under review
 - **Progress Indicators** - Standard UI pattern, but has multiple visual types (linear, circular, steps)
 - **Loading Spinners** - Standard UI pattern, but has multiple visual styles (spinner, dots, bars, skeleton, pulse)
 
@@ -38,6 +45,8 @@ Components make sense when:
 - C) Keep as generators but refactor to use design system components
 
 ## Recommended App/Interactive Generators
+
+Not built unless marked: Form, Button, Card, Dashboard Layout, Modal/Dialog, Navigation, Accordion, Tabs, Flowchart/Diagram and Calendar generators. Table, Timeline and Map are built (see above).
 
 ### High Priority - Complex Visual Builders
 
@@ -87,7 +96,7 @@ Components make sense when:
    - Export as component
    - **Rationale:** Different menu types and structures, complex configurations
 
-7. **Table/DataTable Generator**
+7. **Table/DataTable Generator** (built: `/tools/table-generator`)
    - Create data tables visually
    - Configure columns, sorting, filtering
    - Pagination options
@@ -110,7 +119,7 @@ Components make sense when:
    - Export as component
    - **Rationale:** Various tab styles and configurations
 
-10. **Interactive Timeline Generator**
+10. **Interactive Timeline Generator** (built: `/tools/timeline-generator`)
     - Create visual timelines
     - Add events with dates, descriptions, icons
     - Multiple styles (vertical, horizontal)
@@ -124,44 +133,15 @@ Components make sense when:
     - Export as SVG or component
     - **Rationale:** Custom diagrams, visual creation needed
 
-12. **Interactive Map Generator** ✅ *Implemented*
-    - Create interactive maps with visual builder
-    - **Map Configuration:**
-      - Center coordinates (lat/lng input or map click)
-      - Initial zoom level (1-18)
-      - Multiple map styles (street, satellite, terrain, dark theme)
-      - Map dimensions and responsive options
-    - **Marker Management:**
-      - Add markers by clicking map or entering coordinates
-      - Custom marker icons (default, custom image, emoji)
-      - Marker colors, sizes, and labels
-      - Drag-and-drop repositioning
-      - Delete and edit markers
-      - Marker clustering option for large datasets
-    - **Region/Area Drawing:**
-      - Draw polygons, circles, and rectangles
-      - Custom fill colors and opacity
-      - Border colors and widths
-      - Region labels and descriptions
-      - Edit and delete regions
-    - **Tooltips & Popups:**
-      - Configure popup content (HTML/text)
-      - Popup positioning options
-      - Auto-open on load option
-      - Custom styling and formatting
-    - **Controls & Interactions:**
-      - Zoom controls (show/hide, position)
-      - Attribution control
-      - Fullscreen control
-      - Scale control
-      - Enable/disable dragging, zoom, double-click zoom
-      - Touch interactions for mobile
-    - **Export Options:**
-      - React component with Leaflet integration
-      - Vue component with Vue-Leaflet integration
-      - Standalone HTML with embedded Leaflet
-      - All dependencies included in export
-    - **Rationale:** Complex configurations, custom content, many visual variations, helps non-developers create interactive maps
+12. **Map Maker** (built: `/tools/map-maker`, `frontend/src/views/MapMaker.vue`)
+    - Thematic maps drawn with d3-geo from bundled TopoJSON (`frontend/public/maps`), not a tiled slippy map: no Leaflet, street or satellite tiles, pan and zoom, or drawing tools.
+    - **Map types:** choropleth (regions coloured by value), proportional symbols (circles sized by value), dot map (places, with optional categories) and flow map (movement between places, sized by volume).
+    - **Areas:** the world (Equal Earth or Mercator), six continents, US states, US counties, and any country's first-level regions from Natural Earth admin-1. Open a country by clicking it, from the keyboard, or from a select; focus moves to Back and returns to the country (#35). Remote regions can be fitted in or left out.
+    - **Data:** paste or upload CSV/TSV, or edit rows in place. A match report lists skipped rows, places off the map, and did-you-mean fixes for region names and postal, ISO or FIPS codes. Each map type has sample data and a CSV download.
+    - **Colour:** sequential or diverging palettes from the app's colour tokens, with a midpoint for diverging; 3 to 7 equal-interval or quantile classes, or custom breaks.
+    - **Output:** a legend, a Table tab with the map's data as an accessible table, and PNG or SVG export. There is no React, Vue or HTML component export.
+    - Built in #35 (`483269b`) on the earlier drill-down page; map logic is in tested utils (`utils/csv.js`, `mapImport.js`, `regionMatch.js`, `mapScales.js`, `mapAreas.js`).
+    - **Rationale:** lets non-designers turn a table of numbers into an accessible thematic map without GIS tools.
 
 13. **Interactive Calendar Generator**
     - Create calendar components
@@ -211,12 +191,12 @@ For standard components that have many variants, consider building **Component C
 ### Phase 3: Layout & Navigation
 5. Dashboard Layout Generator
 6. Navigation Generator
-7. Table/DataTable Generator
+7. Table/DataTable Generator (built)
 
 ### Phase 4: Interactive Components
 8. Accordion Generator
 9. Tabs Generator
-10. Interactive Timeline Generator
+10. Interactive Timeline Generator (built)
 11. Flowchart/Diagram Generator
 
 ## Questions to Resolve

@@ -182,10 +182,9 @@ Tracks issues by category:
 ## Integration Points
 
 ### With Existing Features
-- **Governance Rules Engine**: Uses existing accessibility rules for scanning
-- **Application Management**: Integrates with registered applications
-- **Compliance Scanning**: Leverages existing `scanApplicationCodebase` functionality
-- **IRIS Photosensitivity**: Includes photosensitivity analysis results
+- **Axe-core**: reports run axe-core against the page or HTML (`axe-engine.ts`), not the governance rules
+- **Application Management**: reports can target a registered application's URL, read through the governance application directory
+- **Scheduling**: schedules share the governance scheduler's retry and lease policy (`governance/occurrence-policy.ts`)
 
 ## Usage
 
