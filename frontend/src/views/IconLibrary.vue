@@ -1,677 +1,241 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
+  <PageShell width="wide">
+    <PageHero
+      :back="{ to: '/design-assets', label: 'Design assets' }"
+      title="Icon library"
+      lead="Browse the Lucide icons the app ships with and the SVG icon sets your workspaces upload. Customize, copy and download them for your projects."
+      spot="foundations/icon-library"
+      size="tool"
     >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      Icon Library
-                    </h1>
-                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
-                      Production Ready
-                    </span>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Upload and manage icon sets from Material Icons, Lucide, and custom collections. Browse, search, and copy icons for your projects.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <AppIcon name="tag" class="text-base" />
-                      Icon Management
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <AppIcon name="refresh-ccw" class="text-base" />
-                      Updated Jan 15, 2024
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="iconLibraryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- Stylized icon library icon -->
-                      <circle cx="50" cy="50" r="20" fill="url(#iconLibraryGradient)" opacity="0.6"/>
-                      <circle cx="150" cy="50" r="20" fill="url(#iconLibraryGradient)" opacity="0.5"/>
-                      <circle cx="50" cy="150" r="20" fill="url(#iconLibraryGradient)" opacity="0.7"/>
-                      <circle cx="150" cy="150" r="20" fill="url(#iconLibraryGradient)" opacity="0.4"/>
-                      <rect x="100" y="90" width="20" height="20" rx="4" fill="url(#iconLibraryGradient)" opacity="0.8"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+      <template #actions>
+        <UiButton variant="primary" icon="upload" label="Upload icons" @click="openUpload" />
+      </template>
+    </PageHero>
 
-          <!-- Upload Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div 
-              class="rounded-lg border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <AppIcon name="upload" class="text-indigo-600" />
-                  Upload Icon Set
-                </h2>
-                <button
-                  @click="showUploadModal = true"
-                  class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                >
-                  <AppIcon name="upload" class="text-lg" />
-                  Upload Icons
-                </button>
-              </div>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Upload icon sets from Material Icons, Lucide, or your own custom SVG collections. Supported formats: SVG files, SVG sprite sheets, and icon font files.
-              </p>
-            </div>
-          </div>
+    <PageSection title="Icon sets" description="Pick a set to browse its icons.">
+      <template #actions>
+        <UiInput v-model="searchQuery" type="search" label="Search icons" hide-label icon="search" placeholder="Search icons…" size="sm" />
+      </template>
 
-          <!-- Icon Sets Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="flex items-center justify-between mb-6">
-              <h2 class="text-2xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Icon Sets</h2>
-              <div class="flex items-center gap-4">
-                <div class="relative">
-                  <AppIcon name="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" />
-                  <input
-                    v-model="searchQuery"
-                    type="text"
-                    placeholder="Search icons..."
-                    class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-                <Dropdown
-                  :model-value="selectedSet"
-                  @update:model-value="selectedSet = $event"
-                  :options="[
-                    { value: '', label: 'All Sets' },
-                    ...iconSets.map(set => ({ value: set.id, label: set.name }))
-                  ]"
-                  :is-dark-mode="isDarkMode"
-                />
-              </div>
-            </div>
+      <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
 
-            <!-- Icon Sets Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-              <div
-                v-for="set in filteredSets"
-                :key="set.id"
-                class="rounded-lg border p-6 transition-all cursor-pointer"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-400' 
-                  : 'bg-white border-gray-200 hover:border-indigo-500'"
-                @click="selectedSet = set.id"
-              >
-                <div class="flex items-center justify-between mb-4">
-                  <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <AppIcon name="palette" v-if="set.id === 'material'" class="text-indigo-600" />
-                    <span v-else-if="set.id === 'lucide'" class="w-6 h-6 flex-shrink-0" v-html="lucideLogo"></span>
-                    <AppIcon :name="set.sourceIcon" v-else class="text-indigo-600" />
-                    {{ set.name }}
-                  </h3>
-                  <span 
-                    class="px-2 py-1 text-xs rounded-full"
-                    :class="isDarkMode 
-                      ? 'bg-indigo-900/30 text-indigo-300' 
-                      : 'bg-indigo-100 text-indigo-700'"
-                  >
-                    {{ set.iconCount }} icons
-                  </span>
-                </div>
-                <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ set.description }}</p>
-                <div class="flex items-center gap-2 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                  <AppIcon :name="set.sourceIcon" class="text-base" />
-                  {{ set.source }}
-                </div>
-              </div>
-            </div>
+      <UiCallout v-if="library.error.value" tone="danger" role="alert" class="mb-6" title="Uploaded icon sets couldn't be loaded">
+        {{ library.error.value }}
+        <template #actions><UiButton size="sm" label="Try again" @click="library.load" /></template>
+      </UiCallout>
 
-            <!-- Icons Grid -->
-            <div 
-              v-if="selectedSet" 
-              class="flex gap-6"
-            >
-              <!-- Main Icons Area -->
-              <div 
-                class="flex-1 rounded-lg border p-6"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <div class="flex items-center justify-between mb-6">
-                  <div class="flex items-center gap-4">
-                    <h3 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      {{ getSelectedSet()?.name }} Icons
-                    </h3>
-                    <div v-if="selectedIcons.length > 0" class="flex items-center gap-2">
-                      <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        {{ selectedIcons.length }} selected
-                      </span>
-                      <button
-                        @click="copySelectedIcons"
-                        class="px-3 py-1 text-sm rounded-lg transition-colors"
-                        :class="isDarkMode 
-                          ? 'bg-indigo-500 hover:bg-indigo-400 text-white' 
-                          : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-                      >
-                        Copy Selected
-                      </button>
-                      <button
-                        @click="downloadSelectedIcons"
-                        class="px-3 py-1 text-sm rounded-lg transition-colors"
-                        :class="isDarkMode 
-                          ? 'bg-indigo-500 hover:bg-indigo-400 text-white' 
-                          : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-                      >
-                        Download Selected
-                      </button>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <button
-                      @click="viewMode = 'grid'"
-                      class="p-2 rounded-lg transition-colors"
-                      :class="viewMode === 'grid' 
-                        ? (isDarkMode 
-                          ? 'bg-indigo-900/30 text-indigo-400' 
-                          : 'bg-indigo-100 text-indigo-600')
-                        : (isDarkMode
-                          ? 'text-gray-400 hover:bg-slate-700' 
-                          : 'text-gray-400 hover:bg-gray-100')"
-                    >
-                      <AppIcon name="layout-grid" />
-                    </button>
-                    <button
-                      @click="viewMode = 'list'"
-                      class="p-2 rounded-lg transition-colors"
-                      :class="viewMode === 'list' 
-                        ? (isDarkMode 
-                          ? 'bg-indigo-900/30 text-indigo-400' 
-                          : 'bg-indigo-100 text-indigo-600')
-                        : (isDarkMode
-                          ? 'text-gray-400 hover:bg-slate-700' 
-                          : 'text-gray-400 hover:bg-gray-100')"
-                    >
-                      <AppIcon name="list" />
-                    </button>
-                  </div>
-                </div>
-
-              <div v-if="loadingLucide && selectedSet === 'lucide'" class="flex items-center justify-center py-12">
-                <div class="text-center">
-                  <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-                  <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">Loading Lucide icons...</p>
-                </div>
-              </div>
-              
-              <div v-else-if="viewMode === 'grid'" class="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                <div
-                  v-for="icon in filteredIcons"
-                  :key="icon.id"
-                  class="group relative rounded-lg p-4 transition-colors cursor-pointer border-2"
-                  :class="isIconSelected(icon.id)
-                    ? (isDarkMode 
-                      ? 'bg-indigo-900/30 border-indigo-500' 
-                      : 'bg-indigo-50 border-indigo-500')
-                    : (isDarkMode 
-                      ? 'bg-slate-700 border-transparent hover:bg-indigo-900/20 hover:border-indigo-700' 
-                      : 'bg-gray-50 border-transparent hover:bg-indigo-50 hover:border-indigo-300')"
-                  @click="toggleIconSelection(icon)"
-                >
-                  <div class="flex flex-col items-center gap-2">
-                    <div 
-                      class="text-2xl transition-all" 
-                      :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                      :style="{ 
-                        color: iconColor,
-                        fontSize: `${iconSize}px`,
-                        filter: `drop-shadow(0 0 ${absoluteStrokeWidth ? iconStrokeWidth : iconStrokeWidth / 24}px currentColor)`
-                      }"
-                      v-html="getCustomizedIcon(icon)"
-                    ></div>
-                    <span class="text-xs text-center truncate w-full" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ icon.name }}</span>
-                  </div>
-                  <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                    <button
-                      @click.stop="copyIcon(icon)"
-                      class="p-1 rounded shadow-lg transition-colors"
-                      :class="isDarkMode 
-                        ? 'bg-slate-800 text-gray-400 hover:text-indigo-400' 
-                        : 'bg-white text-gray-600 hover:text-indigo-600'"
-                      title="Copy icon"
-                    >
-                      <AppIcon name="copy" class="text-sm" />
-                    </button>
-                    <button
-                      @click.stop="downloadIcon(icon)"
-                      class="p-1 rounded shadow-lg transition-colors"
-                      :class="isDarkMode 
-                        ? 'bg-slate-800 text-gray-400 hover:text-indigo-400' 
-                        : 'bg-white text-gray-600 hover:text-indigo-600'"
-                      title="Download icon"
-                    >
-                      <AppIcon name="download" class="text-sm" />
-                    </button>
-                  </div>
-                  <div v-if="isIconSelected(icon.id)" class="absolute top-2 left-2">
-                    <div class="w-5 h-5 rounded-full flex items-center justify-center"
-                      :class="isDarkMode ? 'bg-indigo-500' : 'bg-indigo-600'"
-                    >
-                      <AppIcon name="check" class="text-white text-xs" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div v-else class="space-y-2">
-                <div
-                  v-for="icon in filteredIcons"
-                  :key="icon.id"
-                  class="flex items-center justify-between p-4 rounded-lg transition-colors cursor-pointer border-2"
-                  :class="isIconSelected(icon.id)
-                    ? (isDarkMode 
-                      ? 'bg-indigo-900/30 border-indigo-500' 
-                      : 'bg-indigo-50 border-indigo-500')
-                    : (isDarkMode 
-                      ? 'bg-slate-700 border-transparent hover:bg-indigo-900/20' 
-                      : 'bg-gray-50 border-transparent hover:bg-indigo-50')"
-                  @click="toggleIconSelection(icon)"
-                >
-                  <div class="flex items-center gap-4">
-                    <div 
-                      class="text-xl transition-all" 
-                      :class="isDarkMode ? 'text-white' : 'text-gray-900'"
-                      :style="{ 
-                        color: iconColor,
-                        fontSize: `${iconSize}px`
-                      }"
-                      v-html="getCustomizedIcon(icon)"
-                    ></div>
-                    <div>
-                      <div class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ icon.name }}</div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">{{ icon.category }}</div>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <div v-if="isIconSelected(icon.id)" class="w-5 h-5 rounded-full flex items-center justify-center"
-                      :class="isDarkMode ? 'bg-indigo-500' : 'bg-indigo-600'"
-                    >
-                      <AppIcon name="check" class="text-white text-xs" />
-                    </div>
-                    <button
-                      @click.stop="copyIcon(icon)"
-                      class="p-2 rounded-lg transition-colors"
-                      :class="isDarkMode 
-                        ? 'text-gray-400 hover:text-indigo-400 hover:bg-slate-800' 
-                        : 'text-gray-400 hover:text-indigo-600 hover:bg-white'"
-                      title="Copy icon"
-                    >
-                      <AppIcon name="copy" class="text-lg" />
-                    </button>
-                    <button
-                      @click.stop="downloadIcon(icon)"
-                      class="p-2 rounded-lg transition-colors"
-                      :class="isDarkMode 
-                        ? 'text-gray-400 hover:text-indigo-400 hover:bg-slate-800' 
-                        : 'text-gray-400 hover:text-indigo-600 hover:bg-white'"
-                      title="Download icon"
-                    >
-                      <AppIcon name="download" class="text-lg" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              </div>
-
-              <!-- Right Sidebar: Customizer & Categories -->
-              <div 
-                class="w-80 flex-shrink-0 rounded-lg border p-6 h-fit sticky top-8"
-                :class="isDarkMode 
-                  ? 'bg-slate-900 border-gray-700' 
-                  : 'bg-white border-gray-200'"
-              >
-                <!-- Customizer -->
-                <div class="mb-6">
-                  <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Customizer</h3>
-                    <button
-                      @click="resetCustomizer"
-                      class="p-1 rounded-lg transition-colors"
-                      :class="isDarkMode 
-                        ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' 
-                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
-                      title="Reset customizer"
-                    >
-                      <AppIcon name="refresh-cw" class="text-lg" />
-                    </button>
-                  </div>
-                  
-                  <!-- Color -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Color</label>
-                    <div class="flex items-center gap-3">
-                      <button
-                        @click="openColorPicker('icon', $event)"
-                        class="w-10 h-10 rounded-full border-2 cursor-pointer transition-colors"
-                        :class="isDarkMode 
-                          ? 'border-gray-600 hover:border-indigo-400' 
-                          : 'border-gray-300 hover:border-indigo-500'"
-                        :style="{ backgroundColor: iconColor }"
-                        title="Pick color"
-                      ></button>
-                      <span class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">current</span>
-                    </div>
-                  </div>
-                  
-                  <!-- Stroke Width -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Stroke width
-                    </label>
-                    <div class="flex items-center gap-3">
-                      <input
-                        v-model.number="iconStrokeWidth"
-                        type="range"
-                        min="1"
-                        max="5"
-                        step="0.5"
-                        class="flex-1 h-2 rounded-lg appearance-none cursor-pointer"
-                        :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-200'"
-                      />
-                      <span class="text-sm font-mono w-12 text-right" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        {{ iconStrokeWidth }}px
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <!-- Size -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                      Size
-                    </label>
-                    <div class="flex items-center gap-3">
-                      <input
-                        v-model.number="iconSize"
-                        type="range"
-                        min="16"
-                        max="48"
-                        step="2"
-                        class="flex-1 h-2 rounded-lg appearance-none cursor-pointer"
-                        :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-200'"
-                      />
-                      <span class="text-sm font-mono w-12 text-right" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        {{ iconSize }}px
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <!-- Absolute Stroke Width -->
-                  <div class="mb-4">
-                    <label class="flex items-center justify-between cursor-pointer">
-                      <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                        Absolute Stroke width
-                      </span>
-                      <button
-                        @click="absoluteStrokeWidth = !absoluteStrokeWidth"
-                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-                        :class="absoluteStrokeWidth 
-                          ? (isDarkMode ? 'bg-indigo-500' : 'bg-indigo-600')
-                          : (isDarkMode ? 'bg-gray-600' : 'bg-gray-300')"
-                      >
-                        <span
-                          class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-                          :class="absoluteStrokeWidth ? 'translate-x-6' : 'translate-x-1'"
-                        ></span>
-                      </button>
-                    </label>
-                  </div>
-                </div>
-
-                <!-- Include External Libs -->
-                <div class="mb-6">
-                  <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    Include external libs
-                  </h3>
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      v-model="includeLab"
-                      type="checkbox"
-                      class="w-4 h-4 rounded"
-                      :class="isDarkMode 
-                        ? 'accent-indigo-500' 
-                        : 'accent-indigo-600'"
-                    />
-                    <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Lab</span>
-                  </label>
-                </div>
-
-                <!-- View Filter -->
-                <div class="mb-6">
-                  <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">View</h3>
-                  <div class="flex gap-2">
-                    <button
-                      @click="viewFilter = 'all'"
-                      class="px-3 py-1 text-sm rounded transition-colors"
-                      :class="viewFilter === 'all'
-                        ? (isDarkMode 
-                          ? 'bg-red-900/30 text-red-300' 
-                          : 'bg-red-100 text-red-700')
-                        : (isDarkMode
-                          ? 'text-gray-400 hover:text-gray-300' 
-                          : 'text-gray-600 hover:text-gray-900')"
-                    >
-                      All
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Categories -->
-                <div>
-                  <h3 class="text-sm font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Categories</h3>
-                  <div class="space-y-1">
-                    <button
-                      v-for="category in categoriesWithCounts"
-                      :key="category.name"
-                      @click="selectedCategory = selectedCategory === category.name ? null : category.name"
-                      class="w-full flex items-center justify-between px-2 py-1.5 rounded text-sm transition-colors text-left relative"
-                      :class="selectedCategory === category.name
-                        ? (isDarkMode 
-                          ? 'bg-indigo-900/30 text-indigo-300' 
-                          : 'bg-indigo-50 text-indigo-700')
-                        : (isDarkMode
-                          ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-800' 
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50')"
-                    >
-                      <span class="absolute left-0 top-0 bottom-0 w-0.5 rounded-r" 
-                        :class="selectedCategory === category.name 
-                          ? (isDarkMode ? 'bg-indigo-400' : 'bg-indigo-600')
-                          : ''"
-                      ></span>
-                      <span class="pl-2">{{ category.name }}</span>
-                      <span class="text-xs font-medium" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                        {{ category.count }}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Upload Modal -->
-    <div
-      v-if="showUploadModal"
-      class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-      @click.self="showUploadModal = false"
-    >
-      <div 
-        class="rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        :class="isDarkMode ? 'bg-slate-900' : 'bg-white'"
-      >
-        <div 
-          class="p-6 border-b"
-          :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <button
+          v-for="set in filteredSets"
+          :key="set.id"
+          type="button"
+          class="set-card"
+          :class="{ 'set-card-on': selectedSet === set.id }"
+          :aria-pressed="selectedSet === set.id ? 'true' : 'false'"
+          @click="selectedSet = set.id"
         >
-          <div class="flex items-center justify-between">
-            <h3 class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Upload Icon Set</h3>
-            <button
-              @click="showUploadModal = false"
-              class="p-2 rounded-lg transition-colors"
-              :class="isDarkMode 
-                ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' 
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
-            >
-              <AppIcon name="x" />
-            </button>
+          <span class="flex items-center justify-between gap-3 mb-2">
+            <span class="flex items-center gap-2 text-lg font-semibold text-ink-strong">
+              <AppIcon :name="set.builtIn ? 'sparkles' : 'shapes'" class="text-accent-text" />
+              {{ set.name }}
+            </span>
+            <UiChip>{{ set.builtIn && loadingLucide ? 'Loading…' : `${set.icons.length} icons` }}</UiChip>
+          </span>
+          <span class="block text-sm text-ink-secondary">{{ set.description }}</span>
+        </button>
+      </div>
+
+      <div v-if="library.loading.value && !library.loaded.value" class="flex justify-center py-6">
+        <UiSpinner label="Loading uploaded icon sets…" />
+      </div>
+      <p v-else-if="library.loaded.value && uploadedSets.length === 0" class="mt-4 text-sm text-ink-secondary">
+        No icon sets have been uploaded to your workspaces yet.
+      </p>
+    </PageSection>
+
+    <PageSection v-if="currentSet" :title="`${currentSet.name} icons`" :description="currentSetDescription" divided>
+      <template #actions>
+        <UiSegmented v-model="viewMode" aria-label="View" :options="viewOptions" />
+        <UiButton
+          v-if="currentSet.canEdit"
+          variant="danger"
+          icon="trash-2"
+          label="Delete set"
+          :loading="deletingSet"
+          @click="confirmDeleteOpen = true"
+        />
+      </template>
+
+      <div class="grid lg:grid-cols-content-aside gap-6 items-start">
+        <UiPanel>
+          <div v-if="selectedIcons.length > 0" class="flex flex-wrap items-center gap-2 mb-4" role="status">
+            <span class="text-sm text-ink-secondary">{{ selectedIcons.length }} selected</span>
+            <UiButton size="sm" icon="copy" label="Copy selected" @click="copySelectedIcons" />
+            <UiButton size="sm" icon="download" label="Download selected" @click="downloadSelectedIcons" />
+            <UiButton size="sm" variant="ghost" label="Clear selection" @click="selectedIcons = []" />
           </div>
-        </div>
-        <div class="p-6">
-          <div class="mb-6">
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Icon Set Name
-            </label>
-            <input
-              v-model="newSetName"
-              type="text"
-              placeholder="e.g., Material Icons, Lucide Icons, Custom Set"
-              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-              :class="isDarkMode 
-                ? 'border-gray-600 bg-slate-700 text-white' 
-                : 'border-gray-300 bg-white text-gray-900'"
-            />
+
+          <div v-if="currentSet.builtIn && loadingLucide" class="flex justify-center py-12">
+            <UiSpinner label="Loading Lucide icons…" />
           </div>
-          <div class="mb-6">
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Source Type
-            </label>
-            <select
-              v-model="newSetSource"
-              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-              :class="isDarkMode 
-                ? 'border-gray-600 bg-slate-700 text-white' 
-                : 'border-gray-300 bg-white text-gray-900'"
-            >
-              <option value="material">Material Icons</option>
-              <option value="lucide">Lucide Icons</option>
-              <option value="custom">Custom</option>
-            </select>
-          </div>
-          <div class="mb-6">
-            <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-              Upload Files
-            </label>
-            <div
-              @drop.prevent="handleDrop"
-              @dragover.prevent="isDragging = true"
-              @dragleave.prevent="isDragging = false"
-              class="border-2 border-dashed rounded-lg p-8 text-center transition-colors"
-              :class="isDragging 
-                ? (isDarkMode 
-                  ? 'border-indigo-500 bg-indigo-900/20' 
-                  : 'border-indigo-500 bg-indigo-50')
-                : (isDarkMode 
-                  ? 'border-gray-600' 
-                  : 'border-gray-300')"
-            >
-              <input
-                ref="fileInput"
-                type="file"
-                multiple
-                accept=".svg,.woff,.woff2,.ttf,.eot"
-                @change="handleFileSelect"
-                class="hidden"
-              />
-              <AppIcon name="cloud-upload" class="text-4xl mb-2" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" />
-              <p class="mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Drag and drop icon files here, or
-                <button
-                  @click="fileInput?.click()"
-                  class="hover:underline"
-                  :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'"
-                >
-                  browse
-                </button>
-              </p>
-              <p class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                Supported formats: SVG files, SVG sprite sheets, icon fonts (WOFF, WOFF2, TTF, EOT)
-              </p>
-            </div>
-            <div v-if="selectedFiles.length > 0" class="mt-4 space-y-2">
-              <div
-                v-for="(file, index) in selectedFiles"
-                :key="index"
-                class="flex items-center justify-between p-3 rounded-lg"
-                :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-50'"
+
+          <UiEmptyState
+            v-else-if="filteredIcons.length === 0"
+            title="No icons match"
+            :body="searchQuery || selectedCategory ? 'Try a different search or category.' : 'This set has no icons.'"
+            :bordered="false"
+          />
+
+          <ul v-else-if="viewMode === 'grid'" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-8 gap-3">
+            <li v-for="icon in filteredIcons" :key="icon.id" class="group relative">
+              <button
+                type="button"
+                class="icon-tile"
+                :title="icon.name"
+                :class="{ 'icon-tile-on': isIconSelected(icon.id) }"
+                :aria-pressed="isIconSelected(icon.id) ? 'true' : 'false'"
+                :aria-label="`Select ${icon.name}`"
+                @click="toggleIconSelection(icon)"
               >
-                <span class="text-sm" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ file.name }}</span>
-                <button
-                  @click="removeFile(index)"
-                  class="transition-colors"
-                  :class="isDarkMode 
-                    ? 'text-red-400 hover:text-red-300' 
-                    : 'text-red-600 hover:text-red-700'"
-                >
-                  <AppIcon name="x" class="text-sm" />
-                </button>
+                <img v-if="iconSrc(icon)" :src="iconSrc(icon)" :width="iconSize" :height="iconSize" alt="" class="icon-img" />
+                <span class="w-full truncate text-xs text-center text-ink-secondary">{{ icon.name }}</span>
+                <span v-if="isIconSelected(icon.id)" class="icon-check" aria-hidden="true"><AppIcon name="check" class="text-xs" /></span>
+              </button>
+              <span class="icon-actions">
+                <UiButton size="sm" variant="ghost" icon="copy" icon-only :label="`Copy ${icon.name}`" @click="copyIcon(icon)" />
+                <UiButton size="sm" variant="ghost" icon="download" icon-only :label="`Download ${icon.name}`" @click="downloadIcon(icon)" />
+              </span>
+            </li>
+          </ul>
+
+          <ul v-else class="divide-y divide-line-faint">
+            <li v-for="icon in filteredIcons" :key="icon.id" class="flex items-center gap-3 py-2">
+              <button
+                type="button"
+                class="icon-row"
+                :class="{ 'icon-tile-on': isIconSelected(icon.id) }"
+                :aria-pressed="isIconSelected(icon.id) ? 'true' : 'false'"
+                :aria-label="`Select ${icon.name}`"
+                @click="toggleIconSelection(icon)"
+              >
+                <img v-if="iconSrc(icon)" :src="iconSrc(icon)" :width="iconSize" :height="iconSize" alt="" class="icon-img" />
+                <span class="min-w-0 text-left">
+                  <span class="block font-medium text-ink-strong truncate">{{ icon.name }}</span>
+                  <span class="block text-xs text-ink-muted">{{ icon.category }}</span>
+                </span>
+                <AppIcon v-if="isIconSelected(icon.id)" name="check" class="ml-auto text-accent-text" />
+              </button>
+              <UiButton size="sm" variant="ghost" icon="copy" icon-only :label="`Copy ${icon.name}`" @click="copyIcon(icon)" />
+              <UiButton size="sm" variant="ghost" icon="download" icon-only :label="`Download ${icon.name}`" @click="downloadIcon(icon)" />
+            </li>
+          </ul>
+        </UiPanel>
+
+        <div class="space-y-6 lg:w-80">
+          <UiPanel title="Customizer" heading-tag="h3">
+            <template #actions>
+              <UiButton size="sm" variant="ghost" icon="rotate-ccw" icon-only label="Reset customizer" @click="resetCustomizer" />
+            </template>
+            <div class="space-y-4">
+              <div>
+                <p class="text-sm font-medium text-ink-strong mb-2">Color</p>
+                <div class="flex items-center gap-3">
+                  <button type="button" class="swatch-btn" aria-label="Pick icon color" @click="openColorPicker">
+                    <UiSwatch :color="displayColor" :label="iconColor ? `Icon color ${iconColor}` : 'Icon color follows the theme'" size="fill" />
+                  </button>
+                  <span class="text-sm text-ink-secondary">{{ iconColor || 'Follows the theme' }}</span>
+                </div>
               </div>
+              <UiRange v-model="iconStrokeWidth" label="Stroke width" :min="1" :max="5" :step="0.5" unit="px" />
+              <UiRange v-model="iconSize" label="Size" :min="16" :max="48" :step="2" unit="px" />
+              <UiSwitch v-model="absoluteStrokeWidth" label="Absolute stroke width" hint="Keep the stroke width the same at every size" />
             </div>
-          </div>
-          <div class="flex justify-end gap-3">
-            <button
-              @click="showUploadModal = false"
-              class="px-4 py-2 border rounded-lg transition-colors"
-              :class="isDarkMode 
-                ? 'border-gray-600 text-gray-300 hover:bg-slate-700' 
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
-            >
-              Cancel
-            </button>
-            <button
-              @click="uploadIconSet"
-              :disabled="!newSetName || selectedFiles.length === 0"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Upload
-            </button>
-          </div>
+          </UiPanel>
+
+          <UiPanel v-if="categoriesWithCounts.length > 1" title="Categories" heading-tag="h3">
+            <ul class="space-y-1">
+              <li v-for="category in categoriesWithCounts" :key="category.name">
+                <button
+                  type="button"
+                  class="category-btn"
+                  :class="{ 'category-btn-on': selectedCategory === category.name }"
+                  :aria-pressed="selectedCategory === category.name ? 'true' : 'false'"
+                  @click="selectedCategory = selectedCategory === category.name ? null : category.name"
+                >
+                  <span>{{ category.name }}</span>
+                  <span class="text-xs text-ink-muted">{{ category.count }}</span>
+                </button>
+              </li>
+            </ul>
+          </UiPanel>
         </div>
       </div>
-    </div>
+    </PageSection>
 
-    <!-- Color Picker -->
+    <!-- Upload: parse the SVG files and save each as an icons item in a workspace -->
+    <UiDialog v-model:open="showUploadModal" title="Upload an icon set" size="lg">
+      <UiCallout v-if="library.loaded.value && library.editableWorkspaces.value.length === 0" tone="info" title="Editor access needed">
+        Uploaded icons are saved in a workspace. You need the editor role in a workspace to upload; ask a workspace admin, or
+        create a workspace in Workspace management.
+      </UiCallout>
+      <form v-else id="icon-upload-form" class="space-y-4" @submit.prevent="uploadIconSet">
+        <UiInput v-model="newSetName" label="Icon set name" placeholder="e.g., Product icons" required />
+        <UiSelect
+          v-model="uploadWorkspaceId"
+          label="Workspace"
+          hint="Members of this workspace, and workspaces it shares with, will see the set."
+          :options="workspaceOptions"
+          required
+        />
+        <UiFileDropZone
+          ref="dropZone"
+          label="SVG files"
+          hint="SVG files, up to 100KB each. Each file becomes one icon, named after the file."
+          accept=".svg,image/svg+xml"
+          prompt="Drop SVG files here, or choose them."
+          button-label="Choose files"
+          multiple
+          @select="addFile"
+        />
+        <ul v-if="selectedFiles.length > 0" class="divide-y divide-line-faint rounded-tile border border-line">
+          <li v-for="(file, index) in selectedFiles" :key="`${file.name}-${index}`" class="flex items-center justify-between gap-3 px-3 py-2">
+            <span class="text-sm text-ink truncate">{{ file.name }}</span>
+            <UiButton size="sm" variant="ghost" icon="x" icon-only :label="`Remove ${file.name}`" @click="removeFile(index)" />
+          </li>
+        </ul>
+        <UiCallout v-if="rejectedFiles.length > 0" tone="warning" title="Some files weren't uploaded">
+          <ul class="list-disc pl-5">
+            <li v-for="file in rejectedFiles" :key="file.fileName">{{ file.fileName }}: {{ file.reason }}</li>
+          </ul>
+        </UiCallout>
+        <UiCallout v-if="uploadError" tone="danger" role="alert">{{ uploadError }}</UiCallout>
+      </form>
+      <template #footer>
+        <UiButton label="Cancel" @click="showUploadModal = false" />
+        <UiButton
+          v-if="library.editableWorkspaces.value.length > 0"
+          type="submit"
+          form="icon-upload-form"
+          variant="primary"
+          icon="upload"
+          :label="uploading ? `Uploading ${uploadProgress}…` : 'Upload'"
+          :loading="uploading"
+          :disabled="!newSetName.trim() || !uploadWorkspaceId || selectedFiles.length === 0"
+        />
+      </template>
+    </UiDialog>
+
+    <UiDialog v-model:open="confirmDeleteOpen" title="Delete icon set?" size="sm">
+      <p class="text-sm text-ink">
+        This deletes the {{ currentSet?.icons.length }} icons in “{{ currentSet?.name }}” from {{ currentSet?.workspaceName || 'its workspace' }}.
+        It can't be undone.
+      </p>
+      <template #footer>
+        <UiButton label="Cancel" @click="confirmDeleteOpen = false" />
+        <UiButton variant="danger" icon="trash-2" label="Delete set" :loading="deletingSet" @click="deleteCurrentSet" />
+      </template>
+    </UiDialog>
+
     <ColorPicker
       :show="showColorPicker"
       :initial-color="pickerColor"
@@ -680,297 +244,248 @@
       @apply="handleColorPickerApply"
       @cancel="showColorPicker = false"
     />
-  </div>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, h, createApp, watch } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import ColorPicker from '../components/ColorPicker.vue';
-import Dropdown from '../components/Dropdown.vue';
+import { computed, createApp, h, nextTick, onMounted, ref, watch } from 'vue';
 import * as LucideIcons from 'lucide-vue-next';
+import ColorPicker from '../components/ColorPicker.vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import {
+  PageHero,
+  PageSection,
+  PageShell,
+  UiButton,
+  UiCallout,
+  UiChip,
+  UiDialog,
+  UiEmptyState,
+  UiFileDropZone,
+  UiInput,
+  UiPanel,
+  UiRange,
+  UiSegmented,
+  UiSelect,
+  UiSpinner,
+  UiSwatch,
+  UiSwitch,
+} from '../components/ui';
+import { svgDataUri } from '../components/workspaces/safeContent.js';
+import { useChartTheme } from '../composables/useChartTheme.js';
+import { useNotice } from '../composables/useNotice.js';
+import { useResourceLibrary } from '../composables/useResourceLibrary.js';
+import { readSvgFiles } from '../utils/svgIconFiles.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const showUploadModal = ref(false);
+const { notice, showNotice, clearNotice } = useNotice();
+const theme = useChartTheme();
+
+// Uploaded icon sets: workspace `icons` items, grouped by their iconSet
+const library = useResourceLibrary('icons');
+
 const searchQuery = ref('');
-const selectedSet = ref('');
+const selectedSet = ref('lucide');
 const viewMode = ref('grid');
-const newSetName = ref('');
-const newSetSource = ref('custom');
-const selectedFiles = ref([]);
-const isDragging = ref(false);
-const fileInput = ref(null);
+const viewOptions = [
+  { value: 'grid', label: 'Grid', icon: 'layout-grid' },
+  { value: 'list', label: 'List', icon: 'list' },
+];
 const loadingLucide = ref(false);
+const lucideIcons = ref([]);
 
-// Customizer state
-const iconColor = ref(isDarkMode.value ? '#ffffff' : '#000000');
+// Customizer state; a null colour follows the theme's text colour
+const iconColor = ref(null);
 const iconStrokeWidth = ref(2);
 const iconSize = ref(24);
 const absoluteStrokeWidth = ref(false);
-const includeLab = ref(false);
-const viewFilter = ref('all');
 const selectedCategory = ref(null);
 const selectedIcons = ref([]);
 const showColorPicker = ref(false);
 const pickerColor = ref('#000000');
 const pickerPosition = ref({ left: 0, top: 0 });
-const currentPickerType = ref('icon');
 
-// Load Lucide icons dynamically
+// A curated list of Lucide icons, grouped by use. Names Lucide doesn't export are skipped.
+const LUCIDE_CATEGORIES = {
+  Navigation: ['House', 'Search', 'Menu', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ChevronLeft', 'ChevronRight', 'ChevronUp', 'ChevronDown'],
+  Actions: ['Plus', 'Minus', 'X', 'Check', 'Pencil', 'Trash2', 'Copy', 'Save', 'Download', 'Upload', 'Share2', 'Heart', 'Star', 'Bookmark', 'Flag'],
+  Media: ['Play', 'Pause', 'SkipForward', 'SkipBack', 'Volume2', 'VolumeX', 'Mic', 'Camera', 'Image', 'Video', 'Music'],
+  Communication: ['Mail', 'Phone', 'MessageSquare', 'Bell', 'Send', 'Reply', 'Forward', 'Archive', 'Inbox'],
+  Files: ['File', 'Folder', 'FileText', 'FileCode', 'FolderOpen', 'FolderPlus'],
+  Settings: ['Settings', 'User', 'Users', 'Shield', 'Lock', 'LockOpen', 'Key', 'SlidersHorizontal', 'Funnel'],
+  Shapes: ['Circle', 'Square', 'Triangle', 'Hexagon', 'Pentagon', 'Diamond'],
+  Charts: ['ChartColumn', 'ChartLine', 'ChartPie', 'TrendingUp', 'TrendingDown', 'Activity', 'Gauge'],
+  Weather: ['Sun', 'Moon', 'Cloud', 'CloudRain', 'CloudSnow', 'Wind', 'Droplet', 'Umbrella'],
+  Food: ['Coffee', 'Pizza', 'Apple', 'Banana', 'Cherry', 'Grape'],
+  Objects: ['Box', 'Package', 'Gift', 'ShoppingCart', 'CreditCard', 'Wallet', 'Tag', 'Tags', 'Book', 'BookOpen'],
+  Status: ['CircleCheck', 'CircleX', 'CircleAlert', 'Info', 'CircleHelp', 'Zap', 'TriangleAlert'],
+  Devices: ['Monitor', 'Laptop', 'Smartphone', 'Tablet', 'Watch', 'Headphones', 'Speaker', 'Printer', 'Wifi', 'Bluetooth'],
+  Editing: ['Crop', 'RotateCw', 'RotateCcw', 'FlipHorizontal', 'FlipVertical', 'ZoomIn', 'ZoomOut', 'Eraser', 'Brush', 'Paintbrush', 'Palette'],
+  Layout: ['LayoutGrid', 'List', 'Columns2', 'Rows2', 'PanelLeft', 'LayoutDashboard', 'Layers'],
+  Text: ['Bold', 'Italic', 'Underline', 'Strikethrough', 'Heading', 'Pilcrow', 'Quote', 'ListOrdered'],
+  Development: ['Code', 'Terminal', 'Database', 'Server', 'QrCode', 'Barcode', 'Fingerprint', 'Scan'],
+  Misc: ['Sparkles', 'WandSparkles', 'Target', 'Smile', 'ThumbsUp', 'ThumbsDown', 'Award', 'Trophy', 'Calendar', 'Clock', 'Map', 'Globe', 'Link', 'ExternalLink', 'Eye', 'EyeOff'],
+};
+
+const kebab = (name) => name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').replace(/([a-zA-Z])([0-9])/g, '$1-$2').toLowerCase();
+
+/** Renders the curated Lucide icons once and keeps their SVG markup */
 const loadLucideIcons = async () => {
   loadingLucide.value = true;
   try {
-    // Curated list of popular Lucide icons
-    const lucideIconList = [
-      'Home', 'Search', 'Heart', 'Star', 'User', 'Settings', 'Menu', 'X', 'Check', 'Plus', 'Minus',
-      'Edit', 'Trash', 'Download', 'Upload', 'Share', 'Copy', 'Save', 'File', 'Folder', 'Image',
-      'Video', 'Music', 'Mail', 'Phone', 'Message', 'Bell', 'Calendar', 'Clock', 'Map', 'Globe',
-      'Link', 'ExternalLink', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ChevronLeft',
-      'ChevronRight', 'ChevronUp', 'ChevronDown', 'Filter', 'Sort', 'Grid', 'List', 'Eye',
-      'EyeOff', 'Lock', 'Unlock', 'Key', 'Shield', 'AlertCircle', 'AlertTriangle', 'Info',
-      'CheckCircle', 'XCircle', 'HelpCircle', 'Zap', 'Sun', 'Moon', 'Cloud', 'CloudRain', 'Wind',
-      'Activity', 'BarChart', 'LineChart', 'PieChart', 'TrendingUp', 'TrendingDown', 'DollarSign',
-      'CreditCard', 'ShoppingCart', 'Package', 'Tag', 'Tags', 'Bookmark', 'Book', 'BookOpen',
-      'FileText', 'FileCode', 'Code', 'Terminal', 'Database', 'Server', 'Wifi', 'Bluetooth',
-      'Camera', 'Mic', 'Volume', 'VolumeX', 'Play', 'Pause', 'SkipForward', 'SkipBack',
-      'Github', 'Twitter', 'Facebook', 'Instagram', 'Linkedin', 'Youtube', 'Discord', 'Slack',
-      'Monitor', 'Laptop', 'Smartphone', 'Tablet', 'Watch', 'Headphones', 'Speaker', 'Printer',
-      'Scan', 'QrCode', 'Barcode', 'Fingerprint', 'Wand', 'Sparkles', 'Palette', 'Paintbrush',
-      'Brush', 'Eraser', 'Crop', 'RotateCw', 'RotateCcw', 'FlipHorizontal', 'FlipVertical',
-      'ZoomIn', 'ZoomOut', 'Target', 'Layers', 'Layout', 'Sidebar', 'Panel', 'Columns', 'Rows',
-      'Bold', 'Italic', 'Underline', 'Strikethrough', 'Heading', 'Paragraph', 'Quote',
-      'Circle', 'Square', 'Triangle', 'Hexagon', 'Diamond', 'Smile', 'ThumbsUp', 'ThumbsDown',
-      'Flag', 'Award', 'Trophy', 'Gift', 'Coffee', 'Pizza', 'Burger', 'Apple', 'Banana'
-    ];
-
-    const lucideIcons = [];
-    const categories = {
-      'Navigation': ['Home', 'Search', 'Menu', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ChevronLeft', 'ChevronRight', 'ChevronUp', 'ChevronDown', 'ChevronsLeft', 'ChevronsRight', 'ChevronsUp', 'ChevronsDown'],
-      'Actions': ['Plus', 'Minus', 'X', 'Check', 'Edit', 'Trash', 'Copy', 'Save', 'Download', 'Upload', 'Share', 'Heart', 'Star', 'Bookmark', 'Flag'],
-      'Media': ['Play', 'Pause', 'SkipForward', 'SkipBack', 'Repeat', 'Shuffle', 'Volume', 'VolumeX', 'Mic', 'Camera', 'Image', 'Video', 'Music'],
-      'Communication': ['Mail', 'Phone', 'Message', 'Bell', 'Send', 'Reply', 'Forward', 'Archive', 'Inbox', 'Outbox'],
-      'Files': ['File', 'Folder', 'FileText', 'FileCode', 'Save', 'Download', 'Upload', 'Archive', 'FolderOpen', 'FolderPlus'],
-      'Settings': ['Settings', 'User', 'Users', 'Shield', 'Lock', 'Unlock', 'Key', 'Cog', 'Sliders', 'Filter'],
-      'Shapes': ['Circle', 'Square', 'Triangle', 'Hexagon', 'Pentagon', 'Diamond', 'Star', 'Heart'],
-      'Charts': ['BarChart', 'LineChart', 'PieChart', 'TrendingUp', 'TrendingDown', 'Activity', 'Gauge'],
-      'Weather': ['Sun', 'Moon', 'Cloud', 'CloudRain', 'CloudSnow', 'Wind', 'Droplet', 'Umbrella'],
-      'Food': ['Coffee', 'Pizza', 'Burger', 'IceCream', 'Apple', 'Banana', 'Cherry', 'Grape'],
-      'Objects': ['Box', 'Package', 'Gift', 'ShoppingCart', 'CreditCard', 'Wallet', 'Key', 'Lock'],
-      'Arrows': ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'MoveUp', 'MoveDown', 'MoveLeft', 'MoveRight'],
-      'Status': ['CheckCircle', 'XCircle', 'AlertCircle', 'Info', 'HelpCircle', 'Zap', 'AlertTriangle'],
-      'Social': ['Github', 'Twitter', 'Facebook', 'Instagram', 'Linkedin', 'Youtube', 'Discord', 'Slack'],
-      'Devices': ['Monitor', 'Laptop', 'Smartphone', 'Tablet', 'Watch', 'Headphones', 'Speaker', 'Printer'],
-      'Editing': ['Edit', 'Crop', 'RotateCw', 'RotateCcw', 'FlipHorizontal', 'FlipVertical', 'ZoomIn', 'ZoomOut'],
-      'Layout': ['Grid', 'List', 'Columns', 'Rows', 'Sidebar', 'Layout', 'Layers', 'Panel'],
-      'Text': ['Bold', 'Italic', 'Underline', 'Strikethrough', 'Heading', 'Paragraph', 'List', 'ListOrdered'],
-      'Misc': ['Zap', 'Sparkles', 'Wand', 'Palette', 'Paintbrush', 'Brush', 'Eraser', 'Target']
-    };
-
-    // Load icons dynamically
-    for (const iconName of lucideIconList) {
-      try {
-        const IconComponent = LucideIcons[iconName];
-        if (IconComponent && typeof IconComponent === 'function') {
-          // Create SVG string from icon using renderToString approach
-          const tempDiv = document.createElement('div');
-          const app = createApp({
-            render: () => h(IconComponent, { size: 24, strokeWidth: 2 })
-          });
-          app.mount(tempDiv);
-          
-          await new Promise(resolve => setTimeout(resolve, 0)); // Wait for render
-          
-          const svgElement = tempDiv.querySelector('svg');
-          if (svgElement) {
-            svgElement.setAttribute('stroke', 'currentColor');
-            svgElement.setAttribute('fill', 'none');
-            svgElement.setAttribute('viewBox', '0 0 24 24');
-            
-            // Find category
-            let category = 'Misc';
-            for (const [cat, icons] of Object.entries(categories)) {
-              if (icons.includes(iconName)) {
-                category = cat;
-                break;
-              }
-            }
-            
-            lucideIcons.push({
-              id: `lucide-${iconName.toLowerCase()}`,
-              name: iconName.toLowerCase(),
-              category: category,
-              svg: svgElement.outerHTML
-            });
-          }
-          app.unmount();
-        }
-      } catch (error) {
-        console.warn(`Failed to load icon ${iconName}:`, error);
-      }
-    }
-
-    // Update Lucide icon set
-    const lucideSet = iconSets.value.find(set => set.id === 'lucide');
-    if (lucideSet) {
-      lucideSet.icons = lucideIcons;
-      lucideSet.iconCount = lucideIcons.length;
-    }
+    const entries = Object.entries(LUCIDE_CATEGORIES).flatMap(([category, names]) =>
+      names.filter((name) => LucideIcons[name]).map((name) => ({ name, category })),
+    );
+    const unique = [...new Map(entries.map((entry) => [entry.name, entry])).values()];
+    const host = document.createElement('div');
+    const app = createApp({
+      render: () => h('div', unique.map(({ name }) => h(LucideIcons[name], { size: 24, strokeWidth: 2, 'data-icon': name }))),
+    });
+    app.mount(host);
+    await nextTick();
+    lucideIcons.value = unique
+      .map(({ name, category }) => {
+        const svg = host.querySelector(`[data-icon="${name}"]`);
+        if (!svg) return null;
+        svg.removeAttribute('data-icon');
+        svg.removeAttribute('class');
+        return { id: `lucide-${kebab(name)}`, name: kebab(name), category, svg: svg.outerHTML };
+      })
+      .filter(Boolean);
+    app.unmount();
   } catch (error) {
     console.error('Error loading Lucide icons:', error);
+    showNotice("Lucide icons couldn't be loaded.", 'error');
   } finally {
     loadingLucide.value = false;
   }
 };
 
-const iconSets = ref([
-  {
-    id: 'material',
-    name: 'Material Icons',
-    source: 'Google',
-    sourceIcon: 'palette',
-    description: 'Material Design icons from Google',
-    iconCount: 2000,
-    icons: [
-      { id: 'house', name: 'house', category: 'Navigation', svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>' },
-      { id: 'search', name: 'search', category: 'Action', svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>' },
-      { id: 'favorite', name: 'favorite', category: 'Action', svg: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' },
-    ]
-  },
+const workspaceName = (id) => library.workspaceName(id);
+
+const uploadedSets = computed(() => {
+  const groups = new Map();
+  for (const item of library.items.value) {
+    const name = item.iconSet || 'Ungrouped icons';
+    const id = `ws:${item.workspaceId}:${name}`;
+    if (!groups.has(id)) {
+      groups.set(id, { id, name, workspaceId: item.workspaceId, workspaceName: workspaceName(item.workspaceId), builtIn: false, items: [] });
+    }
+    groups.get(id).items.push(item);
+  }
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      description: group.workspaceName ? `Uploaded to ${group.workspaceName}` : 'Shared with your workspaces',
+      canEdit: group.items.every((item) => library.canEdit(item)),
+      icons: group.items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        category: item.tags?.[0] || 'Uncategorized',
+        svg: item.svg || '',
+      })),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+});
+
+const iconSets = computed(() => [
   {
     id: 'lucide',
-    name: 'Lucide Icons',
-    source: 'Lucide',
-    sourceIcon: 'sparkles',
-    description: 'Beautiful & consistent icon toolkit',
-    iconCount: 0,
-    icons: []
-  }
+    name: 'Lucide',
+    description: 'A curated set of the Lucide icons the app is built with.',
+    builtIn: true,
+    canEdit: false,
+    icons: lucideIcons.value,
+  },
+  ...uploadedSets.value,
 ]);
+
+const currentSet = computed(() => iconSets.value.find((set) => set.id === selectedSet.value) || null);
+const currentSetDescription = computed(() =>
+  currentSet.value?.builtIn ? 'Select icons to copy or download them together.' : `${currentSet.value?.description}. Select icons to copy or download them together.`,
+);
 
 const filteredSets = computed(() => {
   if (!searchQuery.value) return iconSets.value;
   const query = searchQuery.value.toLowerCase();
-  return iconSets.value.filter(set =>
-    set.name.toLowerCase().includes(query) ||
-    set.description.toLowerCase().includes(query) ||
-    set.source.toLowerCase().includes(query)
+  return iconSets.value.filter(
+    (set) =>
+      set.name.toLowerCase().includes(query) ||
+      set.description.toLowerCase().includes(query) ||
+      set.icons.some((icon) => icon.name.toLowerCase().includes(query)),
   );
 });
 
 const filteredIcons = computed(() => {
-  const set = getSelectedSet();
-  if (!set) return [];
-  let icons = set.icons || [];
-  
-  // Filter by category
-  if (selectedCategory.value) {
-    icons = icons.filter(icon => icon.category === selectedCategory.value);
-  }
-  
-  // Filter by search query
+  let icons = currentSet.value?.icons || [];
+  if (selectedCategory.value) icons = icons.filter((icon) => icon.category === selectedCategory.value);
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
-    icons = icons.filter(icon =>
-      icon.name.toLowerCase().includes(query) ||
-      icon.category.toLowerCase().includes(query)
-    );
+    icons = icons.filter((icon) => icon.name.toLowerCase().includes(query) || icon.category.toLowerCase().includes(query));
   }
-  
   return icons;
 });
 
-// Categories with counts
 const categoriesWithCounts = computed(() => {
-  const set = getSelectedSet();
-  if (!set) return [];
-  
-  const categoryMap = {};
-  set.icons?.forEach(icon => {
-    const cat = icon.category || 'Misc';
-    categoryMap[cat] = (categoryMap[cat] || 0) + 1;
-  });
-  
-  return Object.entries(categoryMap)
+  const counts = {};
+  for (const icon of currentSet.value?.icons || []) counts[icon.category] = (counts[icon.category] || 0) + 1;
+  return Object.entries(counts)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => a.name.localeCompare(b.name));
 });
 
-// Get customized icon SVG
-const getCustomizedIcon = (icon) => {
+/** The colour icons are drawn in on the page: the picked one, or the theme's strong text */
+const displayColor = computed(() => iconColor.value || theme.value.title);
+
+/** The icon's SVG with the customizer applied; `color` defaults to currentColor for copies and downloads */
+const customizeSvg = (icon, color = iconColor.value || 'currentColor') => {
   if (!icon.svg) return '';
-  
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(icon.svg, 'image/svg+xml');
-  const svgElement = doc.querySelector('svg');
-  
-  if (!svgElement) return icon.svg;
-  
-  // Check if icon uses fill or stroke
+  const doc = new DOMParser().parseFromString(icon.svg, 'image/svg+xml');
+  const svgElement = doc.documentElement;
+  if (!svgElement || svgElement.localName !== 'svg') return icon.svg;
+
   const hasFill = svgElement.getAttribute('fill') && svgElement.getAttribute('fill') !== 'none';
-  const hasStroke = svgElement.getAttribute('stroke') && svgElement.getAttribute('stroke') !== 'none';
-  
-  // Apply customizations
   if (hasFill) {
-    svgElement.setAttribute('fill', iconColor.value);
-  } else if (hasStroke) {
-    svgElement.setAttribute('stroke', iconColor.value);
-    svgElement.setAttribute('fill', 'none');
-    
-    const strokeWidth = absoluteStrokeWidth.value 
-      ? iconStrokeWidth.value 
-      : (iconStrokeWidth.value / 24) * iconSize.value;
-    
-    svgElement.setAttribute('stroke-width', strokeWidth.toString());
+    svgElement.setAttribute('fill', color);
   } else {
-    // Default to stroke for Lucide icons
-    svgElement.setAttribute('stroke', iconColor.value);
+    // Stroke icons (Lucide and most line sets)
+    svgElement.setAttribute('stroke', color);
     svgElement.setAttribute('fill', 'none');
-    
-    const strokeWidth = absoluteStrokeWidth.value 
-      ? iconStrokeWidth.value 
-      : (iconStrokeWidth.value / 24) * iconSize.value;
-    
-    svgElement.setAttribute('stroke-width', strokeWidth.toString());
+    const strokeWidth = absoluteStrokeWidth.value ? (iconStrokeWidth.value * 24) / iconSize.value : iconStrokeWidth.value;
+    svgElement.setAttribute('stroke-width', String(strokeWidth));
   }
-  
-  svgElement.setAttribute('width', `${iconSize.value}`);
-  svgElement.setAttribute('height', `${iconSize.value}`);
-  
-  return svgElement.outerHTML;
+  if (!svgElement.getAttribute('xmlns')) svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svgElement.setAttribute('width', String(iconSize.value));
+  svgElement.setAttribute('height', String(iconSize.value));
+  return new XMLSerializer().serializeToString(svgElement);
 };
 
-// Icon selection
+/**
+ * Icons are shown as sanitized SVG images, never as page markup. Worked out
+ * once per icon shown and customizer change, not on every render.
+ */
+const iconSources = computed(() => new Map(filteredIcons.value.map((icon) => [icon.id, svgDataUri(customizeSvg(icon, displayColor.value))])));
+const iconSrc = (icon) => iconSources.value.get(icon.id);
+
+// Selection
 const toggleIconSelection = (icon) => {
-  const index = selectedIcons.value.findIndex(i => i.id === icon.id);
-  if (index > -1) {
-    selectedIcons.value.splice(index, 1);
-  } else {
-    selectedIcons.value.push(icon);
-  }
+  const index = selectedIcons.value.findIndex((i) => i.id === icon.id);
+  if (index > -1) selectedIcons.value.splice(index, 1);
+  else selectedIcons.value.push(icon);
 };
+const isIconSelected = (iconId) => selectedIcons.value.some((i) => i.id === iconId);
 
-const isIconSelected = (iconId) => {
-  return selectedIcons.value.some(i => i.id === iconId);
-};
-
-// Copy/Download functions
+// Copy and download
 const copyIcon = async (icon) => {
   try {
-    const customizedSvg = getCustomizedIcon(icon);
-    await navigator.clipboard.writeText(customizedSvg);
-    // Could add toast notification here
-    alert('Icon copied to clipboard!');
-  } catch (err) {
-    console.error('Failed to copy icon:', err);
+    await navigator.clipboard.writeText(customizeSvg(icon));
+    showNotice(`Copied ${icon.name} to the clipboard.`, 'success');
+  } catch {
+    showNotice("The icon couldn't be copied. Your browser may block clipboard access.", 'error');
   }
 };
 
 const downloadIcon = (icon) => {
-  const customizedSvg = getCustomizedIcon(icon);
-  const blob = new Blob([customizedSvg], { type: 'image/svg+xml' });
+  const blob = new Blob([customizeSvg(icon)], { type: 'image/svg+xml' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -983,291 +498,200 @@ const downloadIcon = (icon) => {
 
 const copySelectedIcons = async () => {
   if (selectedIcons.value.length === 0) return;
-  
   try {
-    const svgs = selectedIcons.value.map(icon => getCustomizedIcon(icon)).join('\n\n');
-    await navigator.clipboard.writeText(svgs);
-    alert(`${selectedIcons.value.length} icons copied to clipboard!`);
-  } catch (err) {
-    console.error('Failed to copy icons:', err);
+    await navigator.clipboard.writeText(selectedIcons.value.map((icon) => customizeSvg(icon)).join('\n\n'));
+    showNotice(`Copied ${selectedIcons.value.length} icons to the clipboard.`, 'success');
+  } catch {
+    showNotice("The icons couldn't be copied. Your browser may block clipboard access.", 'error');
   }
 };
 
 const downloadSelectedIcons = () => {
-  if (selectedIcons.value.length === 0) return;
-  
   selectedIcons.value.forEach((icon, index) => {
-    setTimeout(() => {
-      downloadIcon(icon);
-    }, index * 100); // Stagger downloads
+    setTimeout(() => downloadIcon(icon), index * 100); // browsers drop downloads started together
   });
 };
 
-// Reset customizer
 const resetCustomizer = () => {
-  iconColor.value = isDarkMode.value ? '#ffffff' : '#000000';
+  iconColor.value = null;
   iconStrokeWidth.value = 2;
   iconSize.value = 24;
   absoluteStrokeWidth.value = false;
 };
 
-// Color picker
-const openColorPicker = (type, event) => {
-  if (event) {
-    event.stopPropagation();
-    const rect = event.target.getBoundingClientRect();
-    
-    const pickerWidth = 300;
-    const pickerHeight = 550;
-    const padding = 16;
-    
-    // Calculate position relative to viewport
-    let left = rect.right + padding;
-    let top = rect.top;
-    
-    // Check if picker would go off right edge
-    if (left + pickerWidth > window.innerWidth) {
-      left = rect.left - pickerWidth - padding;
-    }
-    
-    // Check if picker would go off left edge
-    if (left < padding) {
-      left = padding;
-    }
-    
-    // Check if picker would go off bottom edge
-    if (top + pickerHeight > window.innerHeight - padding) {
-      top = window.innerHeight - pickerHeight - padding;
-    }
-    
-    // Check if picker would go off top edge
-    if (top < padding) {
-      top = padding;
-    }
-    
-    // Ensure picker stays within viewport
-    left = Math.max(padding, Math.min(left, window.innerWidth - pickerWidth - padding));
-    top = Math.max(padding, Math.min(top, window.innerHeight - pickerHeight - padding));
-    
-    pickerPosition.value = { left, top };
-  }
-  
-  currentPickerType.value = type;
-  pickerColor.value = iconColor.value;
+// Colour picker, placed beside the swatch and kept on screen
+const openColorPicker = (event) => {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const width = 300;
+  const height = 550;
+  const padding = 16;
+  let left = rect.right + padding;
+  if (left + width > window.innerWidth) left = rect.left - width - padding;
+  pickerPosition.value = {
+    left: Math.max(padding, Math.min(left, window.innerWidth - width - padding)),
+    top: Math.max(padding, Math.min(rect.top, window.innerHeight - height - padding)),
+  };
+  pickerColor.value = iconColor.value || '#000000';
   showColorPicker.value = true;
 };
 
 const handleColorPickerApply = (color) => {
-  if (currentPickerType.value === 'icon') {
-    iconColor.value = color;
-  }
+  iconColor.value = color;
   showColorPicker.value = false;
 };
 
-const getSelectedSet = () => {
-  return iconSets.value.find(set => set.id === selectedSet.value);
+// Upload
+const showUploadModal = ref(false);
+const newSetName = ref('');
+const uploadWorkspaceId = ref('');
+const selectedFiles = ref([]);
+const rejectedFiles = ref([]);
+const uploadError = ref('');
+const uploading = ref(false);
+const uploadProgress = ref('');
+const dropZone = ref(null);
+
+const workspaceOptions = computed(() => library.editableWorkspaces.value.map((ws) => ({ value: ws.id, label: ws.name })));
+
+const openUpload = () => {
+  newSetName.value = '';
+  selectedFiles.value = [];
+  rejectedFiles.value = [];
+  uploadError.value = '';
+  uploadWorkspaceId.value = library.editableWorkspaces.value.length === 1 ? library.editableWorkspaces.value[0].id : '';
+  showUploadModal.value = true;
+  if (!library.loaded.value) library.load();
 };
 
-const lucideLogo = computed(() => {
-  // Lucide logo SVG - dark mode version
-  if (isDarkMode.value) {
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full">
-      <path d="M14 12C14 9.79086 12.2091 8 10 8C7.79086 8 6 9.79086 6 12C6 16.4183 9.58172 20 14 20C18.4183 20 22 16.4183 22 12C22 8.446 20.455 5.25285 18 3.05557" stroke="#fff" />
-      <path d="M10 12C10 14.2091 11.7909 16 14 16C16.2091 16 18 14.2091 18 12C18 7.58172 14.4183 4 10 4C5.58172 4 2 7.58172 2 12C2 15.5841 3.57127 18.8012 6.06253 21" stroke="#F56565" />
-    </svg>`;
-  }
-  // Lucide logo SVG - light mode version
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full">
-    <path d="M14 12C14 9.79086 12.2091 8 10 8C7.79086 8 6 9.79086 6 12C6 16.4183 9.58172 20 14 20C18.4183 20 22 16.4183 22 12C22 8.446 20.455 5.25285 18 3.05557" stroke="#2D3748" />
-    <path d="M10 12C10 14.2091 11.7909 16 14 16C16.2091 16 18 14.2091 18 12C18 7.58172 14.4183 4 10 4C5.58172 4 2 7.58172 2 12C2 15.5841 3.57127 18.8012 6.06253 21" stroke="#F56565" />
-  </svg>`;
-});
-
-const handleDrop = (e) => {
-  isDragging.value = false;
-  const files = Array.from(e.dataTransfer.files);
-  addFiles(files);
+const addFile = (file) => {
+  selectedFiles.value.push(file);
 };
-
-const handleFileSelect = (e) => {
-  const files = Array.from(e.target.files);
-  addFiles(files);
-};
-
-const addFiles = (files) => {
-  const validFiles = files.filter(file => {
-    const ext = file.name.split('.').pop().toLowerCase();
-    return ['svg', 'woff', 'woff2', 'ttf', 'eot'].includes(ext);
-  });
-  selectedFiles.value.push(...validFiles);
-};
-
 const removeFile = (index) => {
   selectedFiles.value.splice(index, 1);
 };
 
+/** Saves each valid SVG file as an icons item in the chosen workspace */
 const uploadIconSet = async () => {
-  if (!newSetName.value || selectedFiles.value.length === 0) return;
-  
-  // TODO: Implement actual upload logic
-  // For now, just add to iconSets
-  const newSet = {
-    id: newSetName.value.toLowerCase().replace(/\s+/g, '-'),
-    name: newSetName.value,
-    source: newSetSource.value === 'material' ? 'Google' : newSetSource.value === 'lucide' ? 'Lucide' : 'Custom',
-    sourceIcon: newSetSource.value === 'material' ? 'palette' : newSetSource.value === 'lucide' ? 'sparkles' : 'upload',
-    description: `Custom icon set uploaded from ${newSetSource.value}`,
-    iconCount: selectedFiles.value.length,
-    icons: [] // Would be parsed from uploaded files
-  };
-  
-  iconSets.value.push(newSet);
-  selectedSet.value = newSet.id;
-  showUploadModal.value = false;
-  newSetName.value = '';
-  selectedFiles.value = [];
+  const setName = newSetName.value.trim();
+  if (!setName || !uploadWorkspaceId.value || selectedFiles.value.length === 0) return;
+  uploading.value = true;
+  uploadError.value = '';
+  try {
+    const { icons, rejected } = await readSvgFiles(selectedFiles.value);
+    rejectedFiles.value = rejected;
+    if (icons.length === 0) {
+      uploadError.value = 'None of the files is an SVG icon that can be uploaded.';
+      return;
+    }
+    const failed = [];
+    let saved = 0;
+    for (const [index, icon] of icons.entries()) {
+      uploadProgress.value = `${index + 1} of ${icons.length}`;
+      try {
+        await library.create(uploadWorkspaceId.value, { name: icon.name, iconSet: setName, svg: icon.svg });
+        saved++;
+      } catch (error) {
+        failed.push({ fileName: icon.fileName, reason: error.message });
+      }
+    }
+    rejectedFiles.value = [...rejected, ...failed];
+    if (saved > 0) {
+      selectedSet.value = `ws:${uploadWorkspaceId.value}:${setName}`;
+      showNotice(`Uploaded ${saved} ${saved === 1 ? 'icon' : 'icons'} to “${setName}”.`, 'success');
+    }
+    if (rejectedFiles.value.length === 0) {
+      showUploadModal.value = false;
+      selectedFiles.value = [];
+    } else {
+      // Keep the dialog open with the reasons; only the files that failed stay listed
+      const failedNames = new Set(rejectedFiles.value.map((f) => f.fileName));
+      selectedFiles.value = selectedFiles.value.filter((file) => failedNames.has(file.name));
+      dropZone.value?.reset?.();
+    }
+  } catch (error) {
+    uploadError.value = error.message || "The icons couldn't be uploaded.";
+  } finally {
+    uploading.value = false;
+    uploadProgress.value = '';
+  }
 };
 
+// Deleting an uploaded set deletes its items
+const confirmDeleteOpen = ref(false);
+const deletingSet = ref(false);
 
-
-
-
-let darkModeObserver = null;
-let darkModeInterval = null;
+const deleteCurrentSet = async () => {
+  const set = currentSet.value;
+  if (!set || set.builtIn) return;
+  deletingSet.value = true;
+  let deleted = 0;
+  try {
+    for (const item of set.items) {
+      await library.remove(item);
+      deleted++;
+    }
+    confirmDeleteOpen.value = false;
+    selectedSet.value = 'lucide';
+    showNotice(`Deleted “${set.name}”.`, 'success');
+  } catch (error) {
+    confirmDeleteOpen.value = false;
+    showNotice(`Deleted ${deleted} of ${set.items.length} icons. ${error.message}`, 'error');
+  } finally {
+    deletingSet.value = false;
+  }
+};
 
 watch(selectedSet, () => {
   selectedIcons.value = [];
   selectedCategory.value = null;
 });
-
 watch(selectedCategory, () => {
   selectedIcons.value = [];
 });
 
-watch(isDarkMode, (newValue) => {
-  // Update icon color to match theme
-  if (iconColor.value === '#000000' || iconColor.value === '#ffffff') {
-    iconColor.value = newValue ? '#ffffff' : '#000000';
-  }
-});
-
 onMounted(() => {
-  // Load Lucide icons on mount
   loadLucideIcons();
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
+  library.load();
 });
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.set-card {
+  @apply flex flex-col text-left rounded-card border border-line bg-surface-raised p-5 transition-all hover:border-accent-border;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
 }
-
-/* Custom range slider styles for brand blue */
-input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
-  cursor: pointer;
+.set-card-on {
+  @apply border-line-selected bg-accent-subtle;
 }
-
-input[type="range"]::-webkit-slider-runnable-track {
-  background: #e0e7ff; /* indigo-100 */
-  border-radius: 9999px;
-  height: 8px;
+.icon-tile {
+  @apply relative w-full flex flex-col items-center gap-2 rounded-tile border border-transparent bg-surface-sunken p-3 pt-4 transition-colors hover:border-accent-border;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
 }
-
-html.dark input[type="range"]::-webkit-slider-runnable-track {
-  background: #6366f1; /* indigo-500 */
+.icon-row {
+  @apply flex flex-1 min-w-0 items-center gap-3 rounded-tile border border-transparent p-2 transition-colors hover:bg-fill-hover;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
 }
-
-input[type="range"]::-moz-range-track {
-  background: #e0e7ff; /* indigo-100 */
-  border-radius: 9999px;
-  height: 8px;
+.icon-tile-on {
+  @apply border-line-selected bg-accent-subtle;
 }
-
-html.dark input[type="range"]::-moz-range-track {
-  background: #6366f1; /* indigo-500 */
+.icon-img {
+  @apply flex-shrink-0;
 }
-
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  background-color: #4f46e5; /* indigo-600 - brand blue */
-  border: 2px solid #fff;
-  border-radius: 50%;
-  height: 16px;
-  width: 16px;
-  margin-top: -4px;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
-  transition: background-color 0.2s, box-shadow 0.2s;
+.icon-check {
+  @apply absolute top-1.5 left-1.5 flex items-center justify-center w-5 h-5 rounded-pill bg-accent text-ink-on-accent;
 }
-
-html.dark input[type="range"]::-webkit-slider-thumb {
-  background-color: #6366f1; /* indigo-500 - brand blue for dark mode */
-  border-color: #1e293b;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+.icon-actions {
+  @apply absolute top-0 right-0 flex opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100;
 }
-
-input[type="range"]::-webkit-slider-thumb:hover {
-  background-color: #4338ca; /* indigo-700 */
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.3);
+.swatch-btn {
+  @apply w-10 h-10 overflow-hidden rounded-pill border border-line-control;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
 }
-
-html.dark input[type="range"]::-webkit-slider-thumb:hover {
-  background-color: #818cf8; /* indigo-400 */
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+.category-btn {
+  @apply w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-control text-sm text-left text-ink-secondary transition-colors hover:bg-fill-hover hover:text-ink-strong;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
 }
-
-input[type="range"]::-moz-range-thumb {
-  background-color: #4f46e5; /* indigo-600 - brand blue */
-  border: 2px solid #fff;
-  border-radius: 50%;
-  height: 16px;
-  width: 16px;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
-  transition: background-color 0.2s, box-shadow 0.2s;
-}
-
-html.dark input[type="range"]::-moz-range-thumb {
-  background-color: #6366f1; /* indigo-500 - brand blue for dark mode */
-  border-color: #1e293b;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-}
-
-input[type="range"]::-moz-range-thumb:hover {
-  background-color: #4338ca; /* indigo-700 */
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.3);
-}
-
-html.dark input[type="range"]::-moz-range-thumb:hover {
-  background-color: #818cf8; /* indigo-400 */
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+.category-btn-on {
+  @apply bg-accent-subtle text-accent-text;
 }
 </style>
-

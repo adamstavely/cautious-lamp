@@ -1,760 +1,364 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Component Composition
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Build complex components from primitives. Drag and drop components to create new compositions.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                    <defs>
-                      <linearGradient id="compositionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Building blocks/primitives -->
-                    <rect x="40" y="50" width="40" height="40" rx="4" fill="url(#compositionGradient)" opacity="0.4"/>
-                    <rect x="90" y="50" width="40" height="40" rx="4" fill="url(#compositionGradient)" opacity="0.5"/>
-                    <rect x="120" y="50" width="40" height="40" rx="4" fill="url(#compositionGradient)" opacity="0.3"/>
-                    <!-- Composed component (larger) -->
-                    <rect x="50" y="110" width="100" height="60" rx="4" fill="url(#compositionGradient)" opacity="0.6"/>
-                    <rect x="60" y="120" width="30" height="20" rx="2" fill="url(#compositionGradient)" opacity="0.4"/>
-                    <rect x="100" y="120" width="40" height="20" rx="2" fill="url(#compositionGradient)" opacity="0.4"/>
-                    <rect x="60" y="150" width="80" height="10" rx="2" fill="url(#compositionGradient)" opacity="0.4"/>
-                    <!-- Connection lines -->
-                    <line x1="60" y1="90" x2="70" y2="110" stroke="url(#compositionGradient)" stroke-width="2" opacity="0.4" stroke-dasharray="4,4"/>
-                    <line x1="110" y1="90" x2="100" y2="110" stroke="url(#compositionGradient)" stroke-width="2" opacity="0.4" stroke-dasharray="4,4"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
+  <PageShell width="wide">
+    <PageHero
+      :back="{ to: '/components', label: 'Components' }"
+      title="Component composition"
+      lead="Build complex components from primitives. Drag primitives onto the canvas, or use their Add buttons, then save the composition to a workspace."
+      spot="foundations/component-composition"
+      size="tool"
+    />
+
+    <PageSection title="Build" description="Add primitives, nest them inside each other, and edit their properties.">
+      <template #actions>
+        <UiButton
+          variant="primary"
+          icon="save"
+          :label="openedEditable ? 'Save changes' : 'Save'"
+          :disabled="composition.length === 0"
+          :loading="saving"
+          @click="save"
+        />
+        <UiButton v-if="opened" icon="copy" label="Save as new" :disabled="composition.length === 0" @click="openSaveDialog" />
+        <UiButton variant="ghost" icon="x" label="Clear" :disabled="composition.length === 0" @click="clearCanvas" />
+      </template>
+
+      <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
+      <p v-if="opened" class="mb-6 text-sm text-ink-secondary">
+        Editing <span class="font-semibold text-ink-strong">{{ opened.name }}</span>
+        <template v-if="workspaceName(opened.workspaceId)"> in {{ workspaceName(opened.workspaceId) }}</template>
+        <template v-if="!openedEditable"> (read-only: save it as a new composition to keep your changes)</template>
+      </p>
+
+      <div class="grid lg:grid-cols-4 gap-6">
+        <!-- Primitives, templates and layout -->
+        <div class="space-y-6">
+          <UiPanel title="Primitives">
+            <UiSelect v-model="primitiveFilter" label="Show" size="sm" :options="primitiveFilterOptions" class="mb-4" />
+            <ul class="space-y-2">
+              <li
+                v-for="primitive in filteredPrimitives"
+                :key="primitive.id"
+                class="primitive"
+                draggable="true"
+                @dragstart="handleDragStart($event, primitive)"
+              >
+                <AppIcon name="grip-vertical" class="text-base text-ink-muted" />
+                <span class="flex-1 min-w-0">
+                  <span class="block text-sm font-medium text-ink-strong">{{ primitive.name }}</span>
+                  <span class="block text-xs text-ink-secondary">{{ primitive.type }}</span>
+                </span>
+                <UiButton
+                  size="sm"
+                  variant="ghost"
+                  icon="plus"
+                  icon-only
+                  :label="selectedItem ? `Add ${primitive.name} to ${selectedItem.name}` : `Add ${primitive.name} to the canvas`"
+                  @click="addPrimitive(primitive)"
+                />
+              </li>
+            </ul>
+          </UiPanel>
+
+          <UiPanel title="Templates">
+            <ul class="space-y-2">
+              <li v-for="template in templates" :key="template.id">
+                <button type="button" class="template" @click="loadTemplate(template)">
+                  <span class="block text-sm font-medium text-ink-strong">{{ template.name }}</span>
+                  <span class="block text-xs text-ink-secondary">{{ countNodes(template.components) }} components</span>
+                </button>
+              </li>
+            </ul>
+          </UiPanel>
+
+          <UiPanel title="Layout">
+            <UiRadioChoices v-model="layoutType" aria-label="Top-level layout" :options="layoutOptions" />
+          </UiPanel>
         </div>
 
-        <div class="max-w-7xl mx-auto grid lg:grid-cols-4 gap-6">
-          <!-- Left Column: Component Library & Templates -->
-          <div class="lg:col-span-1 space-y-6">
-            <!-- Primitives -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <AppIcon name="blocks" class="text-indigo-600" />
-                  Primitives
-                </h3>
-                <Dropdown
-                  :model-value="primitiveFilter"
-                  @update:model-value="primitiveFilter = $event"
-                  :options="[
-                    { value: 'all', label: 'All' },
-                    { value: 'component', label: 'Components' },
-                    { value: 'layout', label: 'Layouts' },
-                    { value: 'element', label: 'Elements' }
-                  ]"
-                  :is-dark-mode="isDarkMode"
-                />
-              </div>
-              <div class="space-y-2 max-h-64 overflow-y-auto">
-                <div
-                  v-for="primitive in filteredPrimitives"
-                  :key="primitive.id"
-                  @dragstart="handleDragStart($event, primitive)"
-                  draggable="true"
-                  class="p-3 rounded-lg border cursor-move transition-colors"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 border-gray-700 hover:border-indigo-500' 
-                    : 'bg-gray-50 border-gray-200 hover:border-indigo-500'"
-                >
-                  <div class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ primitive.name }}
-                  </div>
-                  <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ primitive.type }}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Templates -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <AppIcon name="file-text" class="text-indigo-600" />
-                Templates
-              </h3>
-              <div class="space-y-2">
-                <button
-                  v-for="template in templates"
-                  :key="template.id"
-                  @click="loadTemplate(template)"
-                  class="w-full p-3 rounded-lg border text-left transition-colors text-sm"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 border-gray-700 hover:border-indigo-500' 
-                    : 'bg-gray-50 border-gray-200 hover:border-indigo-500'"
-                >
-                  <div class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ template.name }}
-                  </div>
-                  <div class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ template.components.length }} components
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <!-- Layout Options -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <AppIcon name="layout-dashboard" class="text-indigo-600" />
-                Layout Options
-              </h3>
-              <div class="space-y-2">
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" v-model="layoutType" value="stack" class="accent-indigo-600" />
-                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Stack (Vertical)</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" v-model="layoutType" value="flex" class="accent-indigo-600" />
-                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Flex (Horizontal)</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" v-model="layoutType" value="grid" class="accent-indigo-600" />
-                  <span class="text-sm" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Grid</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <!-- Center Column: Canvas & Live Preview -->
-          <div class="lg:col-span-2 space-y-6">
-            <!-- Composition Canvas -->
-            <div 
-              class="rounded-lg shadow-sm border p-6 min-h-[400px]"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-              @drop="handleDrop"
-              @dragover.prevent
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <AppIcon name="pencil" class="text-indigo-600" />
-                  Composition Canvas
-                </h3>
-                <div class="flex items-center gap-2">
-                  <button
-                    @click="saveComposition"
-                    :disabled="composition.length === 0"
-                    class="px-3 py-1 rounded-lg text-sm font-medium transition-colors"
-                    :class="composition.length > 0
-                      ? (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')
-                      : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-                  >
-                    Save
-                  </button>
-                  <button
-                    @click="clearCanvas"
-                    class="px-3 py-1 rounded-lg text-sm font-medium transition-colors"
-                    :class="isDarkMode 
-                      ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-              <div v-if="composition.length === 0" class="flex items-center justify-center h-full min-h-[350px] border-2 border-dashed rounded-lg" :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'">
-                <div class="text-center">
-                  <AppIcon name="layout-dashboard" class="text-5xl mb-3" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'" />
-                  <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Drag components here to build
-                  </p>
-                </div>
-              </div>
-              <div v-else class="space-y-3">
-                <div
+        <!-- Canvas and preview -->
+        <div class="lg:col-span-2 space-y-6">
+          <UiPanel title="Canvas" description="Drop a primitive here, or onto an item to nest it.">
+            <div class="canvas" :class="{ 'canvas-over': dragOverCanvas }" @drop="handleDrop" @dragover.prevent="dragOverCanvas = true" @dragleave="dragOverCanvas = false">
+              <UiEmptyState
+                v-if="composition.length === 0"
+                title="Nothing on the canvas yet"
+                body="Drag primitives here, use their Add buttons, or start from a template or a saved composition."
+                spot="foundations/component-composition"
+              />
+              <ul v-else class="space-y-3">
+                <li
                   v-for="(item, index) in composition"
-                  :key="item.id || index"
-                  class="p-4 rounded-lg border relative group"
-                  :class="selectedItemIndex === index
-                    ? (isDarkMode ? 'bg-indigo-900/30 border-indigo-500' : 'bg-indigo-50 border-indigo-500')
-                    : (isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200')"
-                  @click="selectedItemIndex = index"
+                  :key="item.id"
+                  class="canvas-item"
+                  :class="{ 'canvas-item-on': selectedItemIndex === index }"
                   @drop="handleNestedDrop($event, index)"
                   @dragover.prevent
                 >
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2">
-                      <AppIcon name="grip-vertical" class="text-sm cursor-move" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'" />
-                      <span class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ item.name }}
-                      </span>
-                      <span 
-                        v-if="item.children && item.children.length > 0"
-                        class="text-xs px-2 py-1 rounded"
-                        :class="isDarkMode ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-700'"
-                      >
-                        {{ item.children.length }} nested
-                      </span>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <AppIcon name="grip-vertical" class="text-base text-ink-muted" />
+                    <button type="button" class="canvas-item-name" :aria-pressed="selectedItemIndex === index" @click="selectedItemIndex = index">
+                      {{ item.name }}
+                    </button>
+                    <UiChip v-if="item.children?.length" tone="accent">{{ item.children.length }} nested</UiChip>
+                    <span class="flex-1 text-xs text-ink-secondary">{{ item.type }}</span>
+                    <UiButton size="sm" variant="ghost" icon="settings" icon-only :label="`Edit ${item.name} properties`" @click="selectedItemIndex = index" />
+                    <UiButton size="sm" variant="ghost" icon="x" icon-only :label="`Remove ${item.name}`" @click="removeFromComposition(index)" />
+                  </div>
+                  <dl v-if="item.props && Object.keys(item.props).length" class="canvas-props">
+                    <div v-for="(value, key) in item.props" :key="key" class="flex gap-2">
+                      <dt class="font-code text-ink">{{ key }}:</dt>
+                      <dd class="text-ink-secondary">{{ value }}</dd>
                     </div>
-                    <div class="flex items-center gap-1">
-                      <button
-                        @click.stop="configureItem(index)"
-                        class="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700"
-                        aria-label="Configure"
-                      >
-                        <AppIcon name="settings" class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'" />
-                      </button>
-                      <button
-                        @click.stop="removeFromComposition(index)"
-                        class="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700"
-                        aria-label="Remove component"
-                      >
-                        <AppIcon name="x" class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'" />
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-xs mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ item.type }}
-                  </div>
-                  <div v-if="item.props && Object.keys(item.props).length > 0" class="text-xs mt-2 p-2 rounded" :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'">
-                    <div v-for="(value, key) in item.props" :key="key" class="flex items-center gap-2">
-                      <span class="font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">{{ key }}:</span>
-                      <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ value }}</span>
-                    </div>
-                  </div>
-                  <div v-if="item.children && item.children.length > 0" class="mt-3 ml-4 space-y-2 border-l-2 pl-3" :class="isDarkMode ? 'border-gray-700' : 'border-gray-300'">
-                    <div
-                      v-for="(child, childIndex) in item.children"
-                      :key="childIndex"
-                      class="p-2 rounded text-xs"
-                      :class="isDarkMode ? 'bg-slate-700' : 'bg-gray-100'"
-                    >
-                      {{ child.name }}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                  </dl>
+                  <ul v-if="item.children?.length" class="canvas-children">
+                    <li v-for="(child, childIndex) in item.children" :key="child.id ?? childIndex" class="canvas-child">
+                      <span class="flex-1">{{ child.name }}</span>
+                      <UiButton size="sm" variant="ghost" icon="x" icon-only :label="`Remove ${child.name} from ${item.name}`" @click="item.children.splice(childIndex, 1)" />
+                    </li>
+                  </ul>
+                </li>
+              </ul>
             </div>
+          </UiPanel>
 
-            <!-- Live Preview -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <AppIcon name="eye" class="text-indigo-600" />
-                  Live Preview
-                </h3>
-                <div class="flex items-center gap-2">
-                  <button
-                    @click="previewDarkMode = !previewDarkMode"
-                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                    :class="previewDarkMode
-                      ? (isDarkMode 
-                        ? 'bg-indigo-600 text-white' 
-                        : 'bg-indigo-600 text-white')
-                      : (isDarkMode 
-                        ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
-                  >
-                    <AppIcon :name="previewDarkMode ? 'moon' : 'sun'" class="text-base" />
-                    {{ previewDarkMode ? 'Dark' : 'Light' }}
-                  </button>
-                  <button
-                    @click="refreshPreview"
-                    class="px-2 py-1 rounded text-xs font-medium transition-colors"
-                    :class="isDarkMode 
-                      ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                    title="Refresh preview"
-                  >
-                    <AppIcon name="refresh-cw" class="text-sm" />
-                  </button>
-                </div>
-              </div>
-              <div class="rounded-lg border p-6 min-h-[200px]" :class="previewDarkMode ? 'bg-slate-950 border-gray-800 dark' : 'bg-gray-50 border-gray-200'">
-                <div v-if="composition.length === 0" class="text-center py-12">
-                  <AppIcon name="eye" class="text-4xl mb-3" :class="previewDarkMode ? 'text-gray-600' : 'text-gray-300'" />
-                  <p class="text-sm" :class="previewDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                    Preview will appear here
-                  </p>
-                </div>
-                <div v-else :class="getLayoutClass()">
-                  <component
-                    v-for="(item, index) in composition"
-                    :is="getPreviewComponent(item)"
-                    :key="`${item.id || index}-${previewKey}`"
-                    :item="item"
-                    :is-dark-mode="previewDarkMode"
-                  />
-                </div>
+          <UiPanel title="Live preview">
+            <template #actions>
+              <UiButton
+                size="sm"
+                variant="ghost"
+                :icon="previewDarkMode ? 'moon' : 'sun'"
+                :label="previewDarkMode ? 'Dark' : 'Light'"
+                :aria-pressed="previewDarkMode"
+                @click="previewDarkMode = !previewDarkMode"
+              />
+              <UiButton size="sm" variant="ghost" icon="refresh-cw" icon-only label="Refresh preview" @click="refreshPreview" />
+            </template>
+            <div class="preview-stage" :class="previewDarkMode ? 'bg-surface-inverse dark' : 'bg-surface-sunken'">
+              <p v-if="composition.length === 0" class="py-12 text-center text-sm text-ink-muted">The preview appears here</p>
+              <div v-else :class="layoutClass">
+                <PreviewNode v-for="item in composition" :key="`${item.id}-${previewKey}`" :item="item" />
               </div>
             </div>
-          </div>
-
-          <!-- Right Column: Properties & Export -->
-          <div class="lg:col-span-1 space-y-6">
-            <!-- Component Properties -->
-            <div 
-              v-if="selectedItemIndex !== null && composition[selectedItemIndex]"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <AppIcon name="sliders-horizontal" class="text-indigo-600" />
-                Properties
-              </h3>
-              <div class="space-y-3">
-                <div v-for="prop in getComponentProps(composition[selectedItemIndex])" :key="prop.name">
-                  <label class="block text-sm mb-1" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    {{ prop.name }}
-                  </label>
-                  <input
-                    v-if="prop.type === 'string'"
-                    v-model="composition[selectedItemIndex].props[prop.name]"
-                    type="text"
-                    class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                  <input
-                    v-else-if="prop.type === 'boolean'"
-                    type="checkbox"
-                    v-model="composition[selectedItemIndex].props[prop.name]"
-                    class="accent-indigo-600"
-                  />
-                  <input
-                    v-else-if="prop.type === 'number'"
-                    v-model.number="composition[selectedItemIndex].props[prop.name]"
-                    type="number"
-                    class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Generated Code -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <AppIcon name="code" class="text-indigo-600" />
-                  Generated Code
-                </h3>
-                <Dropdown
-                  :model-value="codeFormat"
-                  @update:model-value="codeFormat = $event"
-                  :options="[
-                    { value: 'vue', label: 'Vue' },
-                    { value: 'react', label: 'React' },
-                    { value: 'html', label: 'HTML' }
-                  ]"
-                  :is-dark-mode="isDarkMode"
-                />
-              </div>
-              <div v-if="composition.length > 0" class="rounded-lg overflow-hidden" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                <div class="p-3 overflow-x-auto max-h-64 overflow-y-auto">
-                  <pre class="text-xs text-green-400 font-mono whitespace-pre-wrap"><code>{{ getGeneratedCode() }}</code></pre>
-                </div>
-                <div class="p-2 border-t flex items-center justify-end gap-2" :class="isDarkMode ? 'border-gray-800' : 'border-gray-800'">
-                  <button
-                    @click="copyCode"
-                    class="px-2 py-1 rounded text-xs font-medium transition-colors"
-                    :class="isDarkMode 
-                      ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                  >
-                    Copy
-                  </button>
-                  <button
-                    @click="exportCode"
-                    class="px-2 py-1 rounded text-xs font-medium transition-colors"
-                    :class="isDarkMode 
-                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-                  >
-                    Export
-                  </button>
-                </div>
-              </div>
-              <div v-else class="text-center py-8">
-                <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  Add components to generate code
-                </p>
-              </div>
-            </div>
-
-            <!-- Component Relationships -->
-            <div 
-              v-if="composition.length > 1"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <AppIcon name="network" class="text-indigo-600" />
-                Relationships
-              </h3>
-              <div class="space-y-2 text-sm">
-                <div
-                  v-for="(item, index) in composition"
-                  :key="index"
-                  class="p-2 rounded"
-                  :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'"
-                >
-                  <div class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ item.name }}
-                  </div>
-                  <div v-if="item.children && item.children.length > 0" class="text-xs mt-1" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    Contains: {{ item.children.map(c => c.name).join(', ') }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          </UiPanel>
         </div>
+
+        <!-- Properties, code and relationships -->
+        <div class="space-y-6">
+          <UiPanel v-if="selectedItem" :title="`${selectedItem.name} properties`">
+            <div class="space-y-3">
+              <template v-for="prop in selectedProps" :key="prop.name">
+                <UiCheckbox v-if="prop.type === 'boolean'" v-model="selectedItem.props[prop.name]" :label="prop.name" />
+                <UiInput
+                  v-else-if="prop.type === 'number'"
+                  :model-value="selectedItem.props[prop.name]"
+                  type="number"
+                  :label="prop.name"
+                  size="sm"
+                  @update:model-value="selectedItem.props[prop.name] = Number($event)"
+                />
+                <UiInput v-else v-model="selectedItem.props[prop.name]" :label="prop.name" size="sm" />
+              </template>
+              <p v-if="selectedProps.length === 0" class="text-sm text-ink-secondary">This item has no properties.</p>
+            </div>
+          </UiPanel>
+
+          <UiPanel title="Generated code">
+            <template #actions>
+              <UiButton size="sm" variant="ghost" icon="download" label="Export" :disabled="composition.length === 0" @click="exportCode" />
+            </template>
+            <UiSelect v-model="codeFormat" label="Format" size="sm" :options="codeFormatOptions" class="mb-4" />
+            <UiCodeBlock v-if="composition.length > 0" :code="generatedCode" :label="codeFormatLabel" />
+            <p v-else class="text-sm text-ink-secondary">Add components to generate code.</p>
+          </UiPanel>
+
+          <UiPanel v-if="composition.length > 1" title="Relationships">
+            <ul class="space-y-2 text-sm">
+              <li v-for="item in composition" :key="item.id" class="relationship">
+                <span class="block font-medium text-ink-strong">{{ item.name }}</span>
+                <span v-if="item.children?.length" class="block text-xs text-ink-secondary">Contains: {{ item.children.map((c) => c.name).join(', ') }}</span>
+              </li>
+            </ul>
+          </UiPanel>
         </div>
       </div>
-    </div>
-  </div>
+    </PageSection>
+
+    <PageSection title="Saved compositions" description="Compositions saved to the workspaces you belong to. Open one to keep working on it." divided>
+      <template #actions>
+        <UiButton size="sm" variant="ghost" icon="refresh-cw" label="Refresh" :loading="loading" @click="load" />
+      </template>
+
+      <UiCallout v-if="error" tone="danger" role="alert" class="mb-6">Saved compositions couldn't be loaded. {{ error }}</UiCallout>
+      <UiCallout v-else-if="loaded && editableWorkspaces.length === 0" tone="info" role="status" class="mb-6" title="You can't save compositions yet">
+        Saving needs editor access to a workspace. Ask a workspace admin to add you as an editor, or create a workspace under Admin, Workspaces.
+      </UiCallout>
+
+      <div v-if="loading && !loaded" class="flex justify-center p-8"><UiSpinner label="Loading saved compositions…" /></div>
+      <UiEmptyState
+        v-else-if="loaded && items.length === 0"
+        title="No saved compositions"
+        body="Build a composition above and save it to a workspace; it will be listed here."
+        spot="foundations/component-composition"
+      />
+      <UiPanel v-else-if="items.length > 0" flush>
+        <ul class="divide-y divide-line">
+          <li v-for="saved in items" :key="saved.id" class="saved-row">
+            <div class="flex-1 min-w-0">
+              <p class="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink-strong">
+                {{ saved.name }}
+                <UiChip v-if="opened?.id === saved.id" tone="accent">Open</UiChip>
+              </p>
+              <p class="text-xs text-ink-secondary">
+                {{ [workspaceName(saved.workspaceId), `${countNodes(saved.components)} components`, saved.layout, `updated ${formatDate(saved.updatedAt || saved.createdAt)}`].filter(Boolean).join(' · ') }}
+              </p>
+            </div>
+            <UiButton size="sm" icon="folder-open" label="Open" :aria-label="`Open ${saved.name}`" @click="openSaved(saved)" />
+            <UiButton
+              v-if="canEdit(saved)"
+              size="sm"
+              variant="ghost"
+              icon="trash-2"
+              icon-only
+              :label="`Delete ${saved.name}`"
+              @click="deleteSaved(saved)"
+            />
+          </li>
+        </ul>
+      </UiPanel>
+    </PageSection>
+
+    <UiDialog v-model:open="saveDialogOpen" title="Save composition" size="sm">
+      <form id="save-composition-form" class="space-y-4" @submit.prevent="saveAsNew">
+        <UiInput v-model="saveForm.name" label="Name" required :error="saveFormError" />
+        <UiSelect
+          v-if="editableWorkspaces.length > 1"
+          v-model="saveForm.workspaceId"
+          label="Workspace"
+          :options="editableWorkspaces.map((ws) => ({ value: ws.id, label: ws.name }))"
+          required
+        />
+        <p v-else-if="editableWorkspaces.length === 1" class="text-sm text-ink-secondary">Saved to {{ editableWorkspaces[0].name }}.</p>
+        <UiCallout v-else tone="warning">Saving needs editor access to a workspace.</UiCallout>
+      </form>
+      <template #footer>
+        <UiButton variant="ghost" label="Cancel" @click="saveDialogOpen = false" />
+        <UiButton
+          variant="primary"
+          type="submit"
+          form="save-composition-form"
+          label="Save"
+          :loading="saving"
+          :disabled="editableWorkspaces.length === 0"
+        />
+      </template>
+    </UiDialog>
+
+    <ConfirmDialog :state="confirmState" />
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount, h } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Dropdown from '../components/Dropdown.vue';
+import { computed, h, onMounted, reactive, ref, watch } from 'vue';
+import {
+  AppIcon,
+  PageHero,
+  PageSection,
+  PageShell,
+  UiButton,
+  UiCallout,
+  UiCheckbox,
+  UiChip,
+  UiCodeBlock,
+  UiDialog,
+  UiEmptyState,
+  UiInput,
+  UiPanel,
+  UiRadioChoices,
+  UiSelect,
+  UiSpinner,
+} from '../components/ui';
+import InlineNotice from '../components/InlineNotice.vue';
+import ConfirmDialog from '../components/workspaces/ConfirmDialog.vue';
+import { useNotice } from '../composables/useNotice.js';
+import { useConfirmDialog } from '../composables/useConfirmDialog.js';
+import { useResourceLibrary } from '../composables/useResourceLibrary.js';
 
-// Helper function to get preview component (defined first)
-let getPreviewComponent = null;
+// ---------- Preview: one recursive renderer, token classes only ----------
 
-// Preview Components
-const PreviewButton = {
-  props: ['item', 'isDarkMode'],
+const GRID_COLUMNS = { 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4', 5: 'grid-cols-5', 6: 'grid-cols-6' };
+const BUTTON_VARIANTS = {
+  primary: 'bg-accent text-ink-on-accent hover:bg-accent-hover',
+  secondary: 'border border-accent text-accent-text hover:bg-accent-subtle',
+  tertiary: 'bg-fill text-ink hover:bg-fill-hover',
+};
+const BUTTON_SIZES = { small: 'px-2 py-1 text-xs', medium: 'px-4 py-2 text-sm', large: 'px-6 py-3 text-lg' };
+
+const children = (item) => (item.children ?? []).map((child, i) => h(PreviewNode, { item: child, key: child.id ?? i }));
+const caption = (text) => h('p', { class: 'mb-2 text-xs font-medium text-ink-secondary' }, text);
+
+const PreviewNode = {
+  name: 'PreviewNode',
+  props: { item: { type: Object, required: true } },
   setup(props) {
-    return () => h('button', {
-      class: [
-        'px-4 py-2 rounded-lg transition-colors text-sm font-medium',
-        props.item.props?.variant === 'primary' || !props.item.props?.variant
-          ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-          : props.item.props?.variant === 'secondary'
-          ? 'border border-indigo-600 text-indigo-600 hover:bg-indigo-50'
-          : 'bg-gray-200 text-gray-800 hover:bg-gray-300',
-        props.item.props?.size === 'small' ? 'px-2 py-1 text-xs' : props.item.props?.size === 'large' ? 'px-6 py-3 text-lg' : ''
-      ],
-      disabled: props.item.props?.disabled || false
-    }, props.item.props?.label || 'Button');
-  }
+    return () => {
+      const { item } = props;
+      const p = item.props ?? {};
+      switch (item.name) {
+        case 'Button':
+          return h(
+            'button',
+            {
+              type: 'button',
+              class: ['rounded-pill font-medium transition-colors', BUTTON_VARIANTS[p.variant] ?? BUTTON_VARIANTS.primary, BUTTON_SIZES[p.size] ?? BUTTON_SIZES.medium],
+              disabled: !!p.disabled,
+            },
+            p.label || 'Button',
+          );
+        case 'Input':
+          return h('input', {
+            type: p.type || 'text',
+            placeholder: p.placeholder || 'Enter text…',
+            'aria-label': p.placeholder || 'Preview input',
+            class: 'w-full rounded-field border border-line-control bg-surface-control px-3 py-2 text-sm text-ink placeholder:text-ink-muted',
+          });
+        case 'Text':
+          return h('p', { class: 'text-sm text-ink' }, p.content || 'Text content');
+        case 'Card':
+          return h('div', { class: 'rounded-tile border border-line bg-surface-raised p-4' }, [
+            h('p', { class: 'mb-2 text-sm font-semibold text-ink-strong' }, p.title || 'Card title'),
+            h('p', { class: 'text-xs text-ink-secondary' }, p.content || 'Card content'),
+            item.children?.length ? h('div', { class: 'mt-3 space-y-2' }, children(item)) : null,
+          ]);
+        case 'Modal':
+          return h('div', { class: 'rounded-tile border border-line bg-surface-overlay p-4 shadow-overlay' }, [
+            h('div', { class: 'mb-2 flex items-center justify-between' }, [
+              h('p', { class: 'text-sm font-semibold text-ink-strong' }, p.title || 'Modal'),
+              h(AppIcon, { name: 'x', class: 'text-base text-ink-muted' }),
+            ]),
+            h('p', { class: 'text-xs text-ink-secondary' }, p.content || 'Modal content'),
+            item.children?.length ? h('div', { class: 'mt-3 space-y-2' }, children(item)) : null,
+          ]);
+        case 'Form':
+          return h('form', { class: 'space-y-3 rounded-tile border border-line bg-surface-raised p-4', onSubmit: (e) => e.preventDefault() }, [caption('Form'), ...children(item)]);
+        case 'Container':
+          return h('div', { class: 'rounded-tile border border-line bg-surface-sunken p-4' }, [caption('Container'), h('div', { class: 'space-y-2' }, children(item))]);
+        case 'Stack':
+          return h('div', { class: 'flex flex-col gap-2 rounded-control bg-fill-subtle p-2' }, [caption('Stack'), ...children(item)]);
+        case 'Grid':
+          return h('div', { class: ['grid gap-2 rounded-control bg-fill-subtle p-2', GRID_COLUMNS[p.columns] ?? GRID_COLUMNS[3]] }, [
+            h('p', { class: 'col-span-full text-xs font-medium text-ink-secondary' }, 'Grid'),
+            ...children(item),
+          ]);
+        default:
+          return h('div', { class: 'rounded-control border border-line bg-fill-subtle p-3 text-xs text-ink' }, item.name);
+      }
+    };
+  },
 };
 
-const PreviewCard = {
-  props: ['item', 'isDarkMode'],
-  setup(props) {
-    return () => h('div', {
-      class: [
-        'rounded-lg border p-4',
-        props.isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'
-      ]
-    }, [
-      h('h3', {
-        class: ['text-sm font-semibold mb-2', props.isDarkMode ? 'text-white' : 'text-gray-900']
-      }, props.item.props?.title || 'Card Title'),
-      h('p', {
-        class: ['text-xs', props.isDarkMode ? 'text-gray-400' : 'text-gray-600']
-      }, props.item.props?.content || 'Card content'),
-      props.item.children && props.item.children.length > 0
-        ? h('div', { class: 'mt-3 space-y-2' }, props.item.children.map(child => {
-            if (child.name === 'Button') return h(PreviewButton, { item: child, isDarkMode: props.isDarkMode });
-            if (child.name === 'Text') return h(PreviewText, { item: child, isDarkMode: props.isDarkMode });
-            return h('div', { class: 'text-xs text-gray-500' }, child.name);
-          }))
-        : null
-    ]);
-  }
-};
+// ---------- Building ----------
 
-const PreviewInput = {
-  props: ['item', 'isDarkMode'],
-  setup(props) {
-    return () => h('input', {
-      type: props.item.props?.type || 'text',
-      placeholder: props.item.props?.placeholder || 'Enter text...',
-      class: [
-        'w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500',
-        props.isDarkMode
-          ? 'bg-slate-700 border-gray-600 text-white placeholder-gray-400'
-          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-      ]
-    });
-  }
-};
-
-const PreviewText = {
-  props: ['item', 'isDarkMode'],
-  setup(props) {
-    return () => h('p', {
-      class: [
-        'text-sm',
-        props.isDarkMode ? 'text-gray-300' : 'text-gray-700'
-      ]
-    }, props.item.props?.content || 'Text content');
-  }
-};
-
-const PreviewContainer = {
-  props: ['item', 'isDarkMode'],
-  setup(props) {
-    return () => h('div', {
-      class: [
-        'p-4 rounded-lg border',
-        props.isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-100 border-gray-200'
-      ]
-    }, [
-      h('div', { class: ['text-xs mb-2 font-medium', props.isDarkMode ? 'text-gray-400' : 'text-gray-600'] }, 'Container'),
-      props.item.children && props.item.children.length > 0
-        ? h('div', { class: 'space-y-2' }, props.item.children.map(child => {
-            let PreviewComp = PreviewGeneric;
-            if (child.type === 'component') {
-              if (child.name === 'Button') PreviewComp = PreviewButton;
-              else if (child.name === 'Card') PreviewComp = PreviewCard;
-              else if (child.name === 'Input') PreviewComp = PreviewInput;
-              else if (child.name === 'Modal') PreviewComp = PreviewModal;
-              else if (child.name === 'Form') PreviewComp = PreviewForm;
-            } else if (child.type === 'layout') {
-              if (child.name === 'Container') PreviewComp = PreviewContainer;
-              else if (child.name === 'Stack') PreviewComp = PreviewStack;
-              else if (child.name === 'Grid') PreviewComp = PreviewGrid;
-            } else if (child.type === 'element' && child.name === 'Text') {
-              PreviewComp = PreviewText;
-            }
-            return h(PreviewComp, { item: child, isDarkMode: props.isDarkMode });
-          }))
-        : null
-    ]);
-  }
-};
-
-const PreviewStack = {
-  props: ['item', 'isDarkMode'],
-  setup(props) {
-    return () => h('div', {
-      class: [
-        'flex flex-col gap-2 p-2 rounded',
-        props.isDarkMode ? 'bg-slate-800' : 'bg-gray-100'
-      ]
-    }, [
-      h('div', { class: ['text-xs mb-1 font-medium', props.isDarkMode ? 'text-gray-400' : 'text-gray-600'] }, 'Stack'),
-      props.item.children && props.item.children.length > 0
-        ? props.item.children.map(child => {
-            let PreviewComp = PreviewGeneric;
-            if (child.type === 'component') {
-              if (child.name === 'Button') PreviewComp = PreviewButton;
-              else if (child.name === 'Card') PreviewComp = PreviewCard;
-              else if (child.name === 'Input') PreviewComp = PreviewInput;
-              else if (child.name === 'Modal') PreviewComp = PreviewModal;
-              else if (child.name === 'Form') PreviewComp = PreviewForm;
-            } else if (child.type === 'layout') {
-              if (child.name === 'Container') PreviewComp = PreviewContainer;
-              else if (child.name === 'Stack') PreviewComp = PreviewStack;
-              else if (child.name === 'Grid') PreviewComp = PreviewGrid;
-            } else if (child.type === 'element' && child.name === 'Text') {
-              PreviewComp = PreviewText;
-            }
-            return h(PreviewComp, { item: child, isDarkMode: props.isDarkMode });
-          })
-        : null
-    ]);
-  }
-};
-
-const PreviewGrid = {
-  props: ['item', 'isDarkMode'],
-  setup(props) {
-    return () => h('div', {
-      class: [
-        'grid gap-2 p-2 rounded',
-        `grid-cols-${props.item.props?.columns || 3}`,
-        props.isDarkMode ? 'bg-slate-800' : 'bg-gray-100'
-      ]
-    }, [
-      h('div', { class: ['text-xs mb-1 font-medium col-span-full', props.isDarkMode ? 'text-gray-400' : 'text-gray-600'] }, 'Grid'),
-      props.item.children && props.item.children.length > 0
-        ? props.item.children.map(child => {
-            let PreviewComp = PreviewGeneric;
-            if (child.type === 'component') {
-              if (child.name === 'Button') PreviewComp = PreviewButton;
-              else if (child.name === 'Card') PreviewComp = PreviewCard;
-              else if (child.name === 'Input') PreviewComp = PreviewInput;
-              else if (child.name === 'Modal') PreviewComp = PreviewModal;
-              else if (child.name === 'Form') PreviewComp = PreviewForm;
-            } else if (child.type === 'layout') {
-              if (child.name === 'Container') PreviewComp = PreviewContainer;
-              else if (child.name === 'Stack') PreviewComp = PreviewStack;
-              else if (child.name === 'Grid') PreviewComp = PreviewGrid;
-            } else if (child.type === 'element' && child.name === 'Text') {
-              PreviewComp = PreviewText;
-            }
-            return h(PreviewComp, { item: child, isDarkMode: props.isDarkMode });
-          })
-        : null
-    ]);
-  }
-};
-
-const PreviewForm = {
-  props: ['item', 'isDarkMode'],
-  setup(props) {
-    return () => h('form', {
-      class: [
-        'space-y-3 p-4 rounded-lg border',
-        props.isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'
-      ]
-    }, [
-      h('div', { class: ['text-xs mb-2 font-medium', props.isDarkMode ? 'text-gray-400' : 'text-gray-600'] }, 'Form'),
-      props.item.children && props.item.children.length > 0
-        ? props.item.children.map(child => {
-            let PreviewComp = PreviewGeneric;
-            if (child.type === 'component') {
-              if (child.name === 'Button') PreviewComp = PreviewButton;
-              else if (child.name === 'Card') PreviewComp = PreviewCard;
-              else if (child.name === 'Input') PreviewComp = PreviewInput;
-              else if (child.name === 'Modal') PreviewComp = PreviewModal;
-              else if (child.name === 'Form') PreviewComp = PreviewForm;
-            } else if (child.type === 'layout') {
-              if (child.name === 'Container') PreviewComp = PreviewContainer;
-              else if (child.name === 'Stack') PreviewComp = PreviewStack;
-              else if (child.name === 'Grid') PreviewComp = PreviewGrid;
-            } else if (child.type === 'element' && child.name === 'Text') {
-              PreviewComp = PreviewText;
-            }
-            return h(PreviewComp, { item: child, isDarkMode: props.isDarkMode });
-          })
-        : null
-    ]);
-  }
-};
-
-const PreviewModal = {
-  props: ['item', 'isDarkMode'],
-  setup(props) {
-    return () => h('div', {
-      class: [
-        'p-4 rounded-lg border shadow-lg',
-        props.isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-white border-gray-200'
-      ]
-    }, [
-      h('div', { class: 'flex items-center justify-between mb-2' }, [
-        h('h3', { class: ['text-sm font-semibold', props.isDarkMode ? 'text-white' : 'text-gray-900'] }, props.item.props?.title || 'Modal'),
-        h('button', { class: 'text-gray-400 hover:text-gray-600' }, '×')
-      ]),
-      h('p', { class: ['text-xs', props.isDarkMode ? 'text-gray-400' : 'text-gray-600'] }, props.item.props?.content || 'Modal content'),
-      props.item.children && props.item.children.length > 0
-        ? h('div', { class: 'mt-3 space-y-2' }, props.item.children.map(child => {
-            const PreviewComp = getPreviewComponent(child);
-            return h(PreviewComp, { item: child, isDarkMode: props.isDarkMode });
-          }))
-        : null
-    ]);
-  }
-};
-
-const PreviewGeneric = {
-  props: ['item', 'isDarkMode'],
-  setup(props) {
-    return () => h('div', {
-      class: [
-        'p-3 rounded border text-xs',
-        props.isDarkMode ? 'bg-slate-800 border-gray-700 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-700'
-      ]
-    }, props.item.name);
-  }
-};
-
-// Define getPreviewComponent function after all preview components are defined
-getPreviewComponent = (item) => {
-  if (item.type === 'component') {
-    if (item.name === 'Button') return PreviewButton;
-    if (item.name === 'Card') return PreviewCard;
-    if (item.name === 'Input') return PreviewInput;
-    if (item.name === 'Modal') return PreviewModal;
-    if (item.name === 'Form') return PreviewForm;
-  }
-  if (item.type === 'layout') {
-    if (item.name === 'Container') return PreviewContainer;
-    if (item.name === 'Stack') return PreviewStack;
-    if (item.name === 'Grid') return PreviewGrid;
-  }
-  if (item.type === 'element') {
-    if (item.name === 'Text') return PreviewText;
-  }
-  return PreviewGeneric;
-};
-
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const previewDarkMode = ref(false);
-const composition = ref([]);
-const draggedItem = ref(null);
-const selectedItemIndex = ref(null);
-const primitiveFilter = ref('all');
-const layoutType = ref('stack');
-const codeFormat = ref('vue');
-let compositionIdCounter = 0;
-
-const primitives = ref([
+const primitives = [
   { id: 1, name: 'Button', type: 'component', props: { label: 'Click me', variant: 'primary', size: 'medium' } },
   { id: 2, name: 'Card', type: 'component', props: { padding: 'medium', shadow: true } },
   { id: 3, name: 'Input', type: 'component', props: { placeholder: 'Enter text', type: 'text' } },
@@ -762,251 +366,310 @@ const primitives = ref([
   { id: 5, name: 'Container', type: 'layout', props: { maxWidth: 'lg', padding: true } },
   { id: 6, name: 'Stack', type: 'layout', props: { direction: 'vertical', gap: 'medium' } },
   { id: 7, name: 'Grid', type: 'layout', props: { columns: 3, gap: 'medium' } },
-  { id: 8, name: 'Modal', type: 'component', props: { title: 'Modal Title', isOpen: false } },
-  { id: 9, name: 'Form', type: 'component', props: { onSubmit: 'handleSubmit' } }
-]);
+  { id: 8, name: 'Modal', type: 'component', props: { title: 'Modal title', isOpen: false } },
+  { id: 9, name: 'Form', type: 'component', props: { onSubmit: 'handleSubmit' } },
+];
 
-const templates = ref([
+const templates = [
   {
     id: 1,
-    name: 'Login Form',
+    name: 'Login form',
     components: [
-      { id: 1, name: 'Form', type: 'component', props: {}, children: [
-        { id: 2, name: 'Input', type: 'component', props: { placeholder: 'Email' } },
-        { id: 3, name: 'Input', type: 'component', props: { placeholder: 'Password', type: 'password' } },
-        { id: 4, name: 'Button', type: 'component', props: { label: 'Login' } }
-      ]}
-    ]
+      {
+        name: 'Form', type: 'component', props: {}, children: [
+          { name: 'Input', type: 'component', props: { placeholder: 'Email' } },
+          { name: 'Input', type: 'component', props: { placeholder: 'Password', type: 'password' } },
+          { name: 'Button', type: 'component', props: { label: 'Log in' } },
+        ],
+      },
+    ],
   },
   {
     id: 2,
-    name: 'Card with Actions',
+    name: 'Card with actions',
     components: [
-      { id: 1, name: 'Card', type: 'component', props: {}, children: [
-        { id: 2, name: 'Text', type: 'element', props: { content: 'Card Title' } },
-        { id: 3, name: 'Text', type: 'element', props: { content: 'Card description' } },
-        { id: 4, name: 'Button', type: 'component', props: { label: 'Action' } }
-      ]}
-    ]
+      {
+        name: 'Card', type: 'component', props: {}, children: [
+          { name: 'Text', type: 'element', props: { content: 'Card title' } },
+          { name: 'Text', type: 'element', props: { content: 'Card description' } },
+          { name: 'Button', type: 'component', props: { label: 'Action' } },
+        ],
+      },
+    ],
   },
   {
     id: 3,
-    name: 'Data Table',
+    name: 'Data table',
     components: [
-      { id: 1, name: 'Container', type: 'layout', props: {}, children: [
-        { id: 2, name: 'Input', type: 'component', props: { placeholder: 'Search...' } },
-        { id: 3, name: 'Grid', type: 'layout', props: { columns: 3 } }
-      ]}
-    ]
-  }
-]);
+      {
+        name: 'Container', type: 'layout', props: {}, children: [
+          { name: 'Input', type: 'component', props: { placeholder: 'Search…' } },
+          { name: 'Grid', type: 'layout', props: { columns: 3 } },
+        ],
+      },
+    ],
+  },
+];
 
-const filteredPrimitives = computed(() => {
-  if (primitiveFilter.value === 'all') return primitives.value;
-  return primitives.value.filter(p => p.type === primitiveFilter.value);
+const primitiveFilterOptions = [
+  { value: 'all', label: 'All' },
+  { value: 'component', label: 'Components' },
+  { value: 'layout', label: 'Layouts' },
+  { value: 'element', label: 'Elements' },
+];
+const layoutOptions = [
+  { value: 'stack', label: 'Stack (vertical)' },
+  { value: 'flex', label: 'Flex (horizontal)' },
+  { value: 'grid', label: 'Grid' },
+];
+const codeFormatOptions = [
+  { value: 'vue', label: 'Vue' },
+  { value: 'react', label: 'React' },
+  { value: 'html', label: 'HTML' },
+];
+
+const previewDarkMode = ref(false);
+const composition = ref([]);
+const draggedItem = ref(null);
+const dragOverCanvas = ref(false);
+const selectedItemIndex = ref(null);
+const primitiveFilter = ref('all');
+const layoutType = ref('stack');
+const codeFormat = ref('vue');
+const previewKey = ref(0);
+let idCounter = 0;
+
+const filteredPrimitives = computed(() =>
+  primitiveFilter.value === 'all' ? primitives : primitives.filter((p) => p.type === primitiveFilter.value),
+);
+const selectedItem = computed(() => (selectedItemIndex.value === null ? null : composition.value[selectedItemIndex.value] ?? null));
+const selectedProps = computed(() =>
+  Object.entries(selectedItem.value?.props ?? {}).map(([name, value]) => ({ name, type: typeof value })),
+);
+
+/** A fresh canvas node from a primitive or a stored node, with new ids all the way down */
+const instantiate = (node) => ({
+  id: ++idCounter,
+  name: node.name,
+  type: node.type,
+  props: { ...(node.props ?? {}) },
+  children: (node.children ?? []).map(instantiate),
 });
 
-const handleDragStart = (event, item) => {
-  draggedItem.value = item;
-  event.dataTransfer.effectAllowed = 'move';
+/** Nodes as stored: no canvas ids */
+const serialize = (nodes) => nodes.map(({ name, type, props, children: kids }) => ({ name, type, props: { ...props }, children: serialize(kids ?? []) }));
+
+const countNodes = (nodes) => (Array.isArray(nodes) ? nodes.reduce((sum, n) => sum + 1 + countNodes(n.children), 0) : 0);
+
+const handleDragStart = (event, primitive) => {
+  draggedItem.value = primitive;
+  event.dataTransfer.effectAllowed = 'copy';
 };
 
 const handleDrop = (event) => {
   event.preventDefault();
-  if (draggedItem.value) {
-    const newItem = {
-      ...draggedItem.value,
-      id: ++compositionIdCounter,
-      props: { ...draggedItem.value.props },
-      children: []
-    };
-    composition.value.push(newItem);
-    draggedItem.value = null;
-  }
+  dragOverCanvas.value = false;
+  if (!draggedItem.value) return;
+  composition.value.push(instantiate(draggedItem.value));
+  draggedItem.value = null;
 };
 
 const handleNestedDrop = (event, parentIndex) => {
   event.preventDefault();
   event.stopPropagation();
-  if (draggedItem.value && parentIndex !== null) {
-    if (!composition.value[parentIndex].children) {
-      composition.value[parentIndex].children = [];
-    }
-    const newChild = {
-      ...draggedItem.value,
-      id: ++compositionIdCounter,
-      props: { ...draggedItem.value.props }
-    };
-    composition.value[parentIndex].children.push(newChild);
-    draggedItem.value = null;
-  }
+  dragOverCanvas.value = false;
+  if (!draggedItem.value) return;
+  composition.value[parentIndex].children.push(instantiate(draggedItem.value));
+  draggedItem.value = null;
+};
+
+/** The keyboard path: into the selected item, or onto the canvas */
+const addPrimitive = (primitive) => {
+  if (selectedItem.value) selectedItem.value.children.push(instantiate(primitive));
+  else composition.value.push(instantiate(primitive));
 };
 
 const removeFromComposition = (index) => {
   composition.value.splice(index, 1);
-  if (selectedItemIndex.value === index) {
-    selectedItemIndex.value = null;
-  } else if (selectedItemIndex.value > index) {
-    selectedItemIndex.value--;
-  }
+  if (selectedItemIndex.value === index) selectedItemIndex.value = null;
+  else if (selectedItemIndex.value > index) selectedItemIndex.value--;
 };
 
 const clearCanvas = () => {
   composition.value = [];
   selectedItemIndex.value = null;
-};
-
-const configureItem = (index) => {
-  selectedItemIndex.value = index;
+  opened.value = null;
 };
 
 const loadTemplate = (template) => {
-  composition.value = JSON.parse(JSON.stringify(template.components));
-  composition.value.forEach((item, index) => {
-    item.id = ++compositionIdCounter;
-    if (item.children) {
-      item.children.forEach(child => {
-        child.id = ++compositionIdCounter;
-      });
-    }
-  });
+  composition.value = template.components.map(instantiate);
+  selectedItemIndex.value = null;
+  opened.value = null;
 };
-
-const saveComposition = () => {
-  const saved = JSON.parse(localStorage.getItem('compositions') || '[]');
-  const newComposition = {
-    id: Date.now(),
-    name: `Composition ${saved.length + 1}`,
-    components: JSON.parse(JSON.stringify(composition.value)),
-    createdAt: new Date().toISOString()
-  };
-  saved.push(newComposition);
-  localStorage.setItem('compositions', JSON.stringify(saved));
-  alert('Composition saved!');
-};
-
-const getComponentProps = (item) => {
-  if (!item || !item.props) return [];
-  return Object.keys(item.props).map(key => ({
-    name: key,
-    type: typeof item.props[key],
-    value: item.props[key]
-  }));
-};
-
-const previewKey = ref(0);
 
 const refreshPreview = () => {
   previewKey.value++;
 };
 
-// Watch for changes in composition or props to refresh preview
-watch([composition, layoutType], () => {
-  previewKey.value++;
-}, { deep: true });
+watch([composition, layoutType], refreshPreview, { deep: true });
 
-const getLayoutClass = () => {
-  if (layoutType.value === 'flex') return 'flex gap-4 flex-wrap';
-  if (layoutType.value === 'grid') return 'grid grid-cols-3 gap-4';
-  return 'flex flex-col gap-4';
-};
+const layoutClass = computed(
+  () => ({ flex: 'flex flex-wrap gap-4', grid: 'grid grid-cols-3 gap-4' })[layoutType.value] ?? 'flex flex-col gap-4',
+);
 
+// ---------- Code ----------
 
-const getGeneratedCode = () => {
-  if (composition.value.length === 0) return '';
-  
-  const generateItemCode = (item, indent = 0) => {
-    const indentStr = '  '.repeat(indent);
-    const propsStr = item.props && Object.keys(item.props).length > 0
-      ? ' ' + Object.entries(item.props).map(([k, v]) => {
-          if (typeof v === 'string') return `${k}="${v}"`;
-          if (typeof v === 'boolean') return v ? k : '';
-          return `:${k}="${v}"`;
-        }).filter(Boolean).join(' ')
-      : '';
-    
-    if (codeFormat.value === 'vue') {
-      if (item.children && item.children.length > 0) {
-        const childrenCode = item.children.map(child => generateItemCode(child, indent + 1)).join('\n');
-        return `${indentStr}<${item.name}${propsStr}>\n${childrenCode}\n${indentStr}</${item.name}>`;
-      }
-      return `${indentStr}<${item.name}${propsStr} />`;
-    } else if (codeFormat.value === 'react') {
-      if (item.children && item.children.length > 0) {
-        const childrenCode = item.children.map(child => generateItemCode(child, indent + 1)).join('\n');
-        return `${indentStr}<${item.name}${propsStr}>\n${childrenCode}\n${indentStr}</${item.name}>`;
-      }
-      return `${indentStr}<${item.name}${propsStr} />`;
-    } else {
-      if (item.children && item.children.length > 0) {
-        const childrenCode = item.children.map(child => generateItemCode(child, indent + 1)).join('\n');
-        return `${indentStr}<${item.name}${propsStr}>\n${childrenCode}\n${indentStr}</${item.name}>`;
-      }
-      return `${indentStr}<${item.name}${propsStr}></${item.name}>`;
+const codeFormatLabel = computed(() => codeFormatOptions.find((f) => f.value === codeFormat.value)?.label ?? 'Code');
+
+const generatedCode = computed(() => {
+  const itemCode = (item, indent = 0) => {
+    const pad = '  '.repeat(indent);
+    const props = Object.entries(item.props ?? {})
+      .map(([k, v]) => (typeof v === 'string' ? `${k}="${v}"` : typeof v === 'boolean' ? (v ? k : '') : `:${k}="${v}"`))
+      .filter(Boolean)
+      .join(' ');
+    const open = `${item.name}${props ? ` ${props}` : ''}`;
+    if (item.children?.length) {
+      return `${pad}<${open}>\n${item.children.map((c) => itemCode(c, indent + 1)).join('\n')}\n${pad}</${item.name}>`;
     }
+    return codeFormat.value === 'html' ? `${pad}<${open}></${item.name}>` : `${pad}<${open} />`;
   };
-  
-  return composition.value.map(item => generateItemCode(item)).join('\n\n');
-};
-
-const copyCode = async () => {
-  try {
-    await navigator.clipboard.writeText(getGeneratedCode());
-  } catch (err) {
-    console.error('Failed to copy:', err);
-  }
-};
+  return composition.value.map((item) => itemCode(item)).join('\n\n');
+});
 
 const exportCode = () => {
-  const extension = codeFormat.value === 'vue' ? 'vue' : codeFormat.value === 'react' ? 'jsx' : 'html';
-  const filename = `composition.${extension}`;
-  const blob = new Blob([getGeneratedCode()], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
+  const extension = { vue: 'vue', react: 'jsx', html: 'html' }[codeFormat.value];
+  const url = URL.createObjectURL(new Blob([generatedCode.value], { type: 'text/plain' }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename;
+  link.download = `${opened.value?.name?.replace(/[^\w-]+/g, '-') || 'composition'}.${extension}`;
   link.click();
   URL.revokeObjectURL(url);
 };
 
+// ---------- Saved compositions (workspace items of kind "compositions") ----------
 
+const { items, editableWorkspaces, loading, loaded, error, load, canEdit, workspaceName, create, update, remove } = useResourceLibrary('compositions');
+const { notice, showNotice, clearNotice } = useNotice();
+const { confirmState, askConfirm } = useConfirmDialog();
 
+/** The saved composition on the canvas, if one was opened or saved */
+const opened = ref(null);
+const openedEditable = computed(() => !!opened.value && canEdit(opened.value));
+const saving = ref(false);
+const saveDialogOpen = ref(false);
+const saveForm = reactive({ name: '', workspaceId: '' });
+const saveFormError = ref('');
 
+const openSaveDialog = () => {
+  saveForm.name = opened.value ? `${opened.value.name} (copy)` : `Composition ${items.value.length + 1}`;
+  saveForm.workspaceId = editableWorkspaces.value[0]?.id ?? '';
+  saveFormError.value = '';
+  saveDialogOpen.value = true;
+};
 
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
+/** Save: updates the opened composition when the user may change it, otherwise asks where to save a new one */
+const save = async () => {
+  if (!openedEditable.value) {
+    openSaveDialog();
+    return;
   }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
+  saving.value = true;
+  try {
+    opened.value = await update(opened.value, { components: serialize(composition.value), layout: layoutType.value });
+    showNotice(`Saved ${opened.value.name}.`, 'success');
+  } catch (err) {
+    showNotice(err.message, 'error');
+  } finally {
+    saving.value = false;
   }
-});
+};
+
+const saveAsNew = async () => {
+  const name = saveForm.name.trim();
+  if (!name) {
+    saveFormError.value = 'Enter a name.';
+    return;
+  }
+  const workspaceId = editableWorkspaces.value.length === 1 ? editableWorkspaces.value[0].id : saveForm.workspaceId;
+  if (!workspaceId) return;
+  saving.value = true;
+  try {
+    opened.value = await create(workspaceId, { name, layout: layoutType.value, components: serialize(composition.value) });
+    saveDialogOpen.value = false;
+    showNotice(`Saved ${name} to ${workspaceName(workspaceId) ?? 'the workspace'}.`, 'success');
+  } catch (err) {
+    saveFormError.value = err.message;
+  } finally {
+    saving.value = false;
+  }
+};
+
+const openSaved = (saved) => {
+  composition.value = (saved.components ?? []).map(instantiate);
+  layoutType.value = saved.layout || 'stack';
+  selectedItemIndex.value = null;
+  opened.value = saved;
+  showNotice(`Opened ${saved.name}.`, 'info');
+};
+
+const deleteSaved = async (saved) => {
+  const ok = await askConfirm({ title: `Delete ${saved.name}?`, message: 'The saved composition is removed from its workspace.', confirmText: 'Delete', danger: true });
+  if (!ok) return;
+  try {
+    await remove(saved);
+    if (opened.value?.id === saved.id) opened.value = null;
+    showNotice(`Deleted ${saved.name}.`, 'success');
+  } catch (err) {
+    showNotice(err.message, 'error');
+  }
+};
+
+const formatDate = (iso) => (iso ? new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '');
+
+onMounted(load);
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.primitive {
+  @apply flex items-center gap-2 rounded-control border border-line bg-surface-sunken px-3 py-2 cursor-move transition-colors hover:border-accent-border;
+}
+.template {
+  @apply w-full rounded-control border border-line bg-surface-sunken px-3 py-2 text-left transition-colors hover:border-accent-border;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.canvas {
+  @apply min-h-96 rounded-tile border-2 border-dashed border-line p-4 transition-colors;
+}
+.canvas-over {
+  @apply border-accent-border bg-accent-subtle;
+}
+.canvas-item {
+  @apply rounded-tile border border-line bg-surface-sunken p-4;
+}
+.canvas-item-on {
+  @apply border-accent-border bg-accent-subtle;
+}
+.canvas-item-name {
+  @apply rounded-control text-sm font-medium text-ink-strong hover:underline underline-offset-4;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.canvas-props {
+  @apply mt-2 space-y-0.5 rounded-control bg-fill-subtle p-2 text-xs;
+}
+.canvas-children {
+  @apply mt-3 ml-4 space-y-2 border-l-2 border-line pl-3;
+}
+.canvas-child {
+  @apply flex items-center gap-2 rounded-control bg-fill-subtle px-2 py-1 text-xs text-ink;
+}
+.preview-stage {
+  @apply min-h-48 rounded-tile p-6;
+}
+.relationship {
+  @apply rounded-control bg-surface-sunken p-2;
+}
+.saved-row {
+  @apply flex flex-wrap items-center gap-3 px-6 py-4;
 }
 </style>
-

@@ -244,6 +244,16 @@ export const RESOURCE_KINDS = [
       description, link, tags,
     ],
   },
+  {
+    kind: 'compositions', label: 'Compositions', singular: 'Composition', icon: 'layout-dashboard', titleField: 'name',
+    subtitle: (item) => [item.layout, Array.isArray(item.components) ? `${item.components.length} components` : ''].filter(Boolean).join(' · '),
+    fields: [
+      { key: 'name', label: 'Name', type: 'text', required: true },
+      { key: 'layout', label: 'Layout', type: 'select', default: 'stack', options: ['stack', 'flex', 'grid'] },
+      { key: 'components', label: 'Components (JSON)', type: 'json', required: true, placeholder: '[{ "name": "Button", "type": "component", "props": {} }]' },
+      description, tags,
+    ],
+  },
 ];
 
 export const resourceKind = (kind) => RESOURCE_KINDS.find((k) => k.kind === kind);

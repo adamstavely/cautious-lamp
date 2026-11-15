@@ -1,6 +1,6 @@
 import { ref, computed, watch, reactive } from 'vue';
 import OpenFeature, { evaluateFlag } from '../services/featureFlagsService';
-import { authState, authHeaders, getToken, isMockAuth } from '../services/auth.js';
+import { authState } from '../services/auth.js';
 
 // Cache for feature flag states - load from localStorage on initialization
 const loadFlagCache = () => {
@@ -29,25 +29,13 @@ export const getUserContext = () => ({
   userGroups: authState.user?.roles?.length ? [...authState.user.roles] : undefined,
 });
 
-// Preload all flags from API on initialization
+// Preload every flag into the reactive cache from the shared flag list
 const preloadAllFlags = async () => {
-  try {
-    const context = getUserContext();
-    // Get all flags from the service
-    if (!isMockAuth() && !getToken()) return;
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/feature-flags`, {
-      headers: authHeaders(),
-    });
-    if (response.ok) {
-      const flags = await response.json();
-      // Populate flagCache with all flags
-      flags.forEach(flag => {
-        flagCache[flag.key] = evaluateFlag(flag, context);
-      });
-    }
-  } catch (error) {
-    console.warn('Failed to preload feature flags:', error);
-  }
+  const context = getUserContext();
+  const flags = await OpenFeature.getAllFlags();
+  flags.forEach((flag) => {
+    flagCache[flag.key] = evaluateFlag(flag, context);
+  });
 };
 
 // Preload flags once someone is signed in (and again for each new sign-in)

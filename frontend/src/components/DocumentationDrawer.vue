@@ -686,7 +686,7 @@
               </a>
               <a
                 v-for="item in filteredGuidelines.filter(item => {
-                  const isFoundation = ['/colors', '/typography', '/spacing', '/shadows', '/accessibility'].includes(item.link);
+                  const isFoundation = foundations.some((foundation) => foundation.link === item.link);
                   const isGuidelinePage = item.link.startsWith('/guidelines/') && 
                     !item.link.startsWith('/guidelines/ai/') && 
                     !item.link.startsWith('/guidelines/patterns/') && 
@@ -974,9 +974,6 @@ const navigateToDoc = (link) => {
     // For all other guidelines docs, navigate directly to the specific path
     // This ensures the URL shows the full path and breadcrumbs work correctly
     router.push(link);
-  } else if (['/colors', '/typography', '/spacing', '/shadows', '/accessibility'].includes(link)) {
-    // Foundation links without /guidelines/ prefix - convert to full path
-    router.push(`/guidelines${link}`);
   }
   // Don't close the drawer - keep it open
   // The drawer state is managed by the parent component, so we don't emit 'close' here
@@ -990,11 +987,11 @@ const getDocUrl = (link) => {
 };
 
 const foundations = [
-  { text: 'Colors', link: '/colors', icon: 'palette' },
-  { text: 'Typography', link: '/typography', icon: 'type' },
-  { text: 'Spacing', link: '/spacing', icon: 'layout-panel-left' },
-  { text: 'Shadows', link: '/shadows', icon: 'layers' },
-  { text: 'Accessibility', link: '/accessibility', icon: 'accessibility' }
+  { text: 'Colors', link: '/guidelines/colors', icon: 'palette' },
+  { text: 'Typography', link: '/guidelines/typography', icon: 'type' },
+  { text: 'Spacing', link: '/guidelines/spacing', icon: 'layout-panel-left' },
+  { text: 'Shadows', link: '/guidelines/shadows', icon: 'layers' },
+  { text: 'Accessibility', link: '/guidelines/accessibility', icon: 'accessibility' }
 ];
 
 const artificialIntelligence = [
@@ -1024,11 +1021,6 @@ const humanCenteredDesign = [
 ];
 
 const guidelines = [
-  { text: 'Colors', link: '/colors', icon: 'palette' },
-  { text: 'Typography', link: '/typography', icon: 'type' },
-  { text: 'Spacing', link: '/spacing', icon: 'layout-panel-left' },
-  { text: 'Shadows', link: '/shadows', icon: 'layers' },
-  { text: 'Accessibility', link: '/accessibility', icon: 'accessibility' },
   { text: 'Voice and Tone', link: '/guidelines/voice-and-tone', icon: 'mic' },
   { text: 'Terminal UI (TUI) Guidance', link: '/guidelines/tui-guidance', icon: 'terminal' },
   { text: 'Color Contrast', link: '/guidelines/color-contrast', icon: 'contrast' },
@@ -1042,8 +1034,7 @@ const guidelines = [
   { text: 'Metadata SEO', link: '/guidelines/metadata-seo', icon: 'search' },
   { text: 'Multimedia Animation', link: '/guidelines/multimedia-animation', icon: 'wand-sparkles' },
   { text: 'Text Graphics', link: '/guidelines/text-graphics', icon: 'type' },
-  { text: 'Time', link: '/guidelines/time', icon: 'clock' },
-  { text: 'Typography Guidelines', link: '/guidelines/typography', icon: 'type' }
+  { text: 'Time', link: '/guidelines/time', icon: 'clock' }
 ];
 
 // Design Patterns - core UI patterns
@@ -1162,7 +1153,6 @@ const designAssets = [
 const componentUtilities = [
   { text: 'Loupe', link: '/components/loupe', icon: 'scan-eye' },
   { text: 'Component Status', link: '/components/status', icon: 'circle-check' },
-  { text: 'Component Examples', link: '/components/examples', icon: 'eye' },
   { text: 'Testing Framework', link: '/components/testing', icon: 'bug' },
   { text: 'Documentation Generator', link: '/components/documentation', icon: 'file-text' },
   { text: 'Component Composition', link: '/components/composition', icon: 'layout-dashboard' },
@@ -1175,11 +1165,7 @@ const componentUtilities = [
 const componentItems = [
   { text: 'Component Scaffolding Wizard', link: '/components/scaffold', icon: 'wand-sparkles' },
   { text: 'Buttons', link: '/components/buttons', icon: 'rectangle-horizontal' },
-  { text: 'Color Picker', link: '/components/color-picker', icon: 'pipette' },
-  { text: 'Forms', link: '/components/forms', icon: 'file-text' },
-  { text: 'Cards', link: '/components/cards', icon: 'layout-grid' },
-  { text: 'Navigation', link: '/components/navigation', icon: 'navigation' },
-  { text: 'Data Display', link: '/components/data-display', icon: 'table-2' }
+  { text: 'Color Picker', link: '/components/color-picker', icon: 'pipette' }
 ];
 
 const adminItems = [
@@ -1617,10 +1603,10 @@ onBeforeUnmount(() => {
 <style scoped>
 /* The closed rail and the open panel sit beside the side nav, under the top bar */
 .drawer-rail {
-  @apply fixed left-24 top-16 bottom-0 z-30 flex items-start justify-center w-drawer-closed pt-4 border-r border-line bg-surface transition-all duration-300;
+  @apply fixed left-16 sm:left-24 top-16 bottom-0 z-30 flex items-start justify-center w-drawer-closed pt-4 border-r border-line bg-surface transition-all duration-300;
 }
 .drawer-panel {
-  @apply fixed left-24 top-16 bottom-0 z-30 w-drawer-open overflow-y-auto border-r border-line bg-surface transition-transform duration-300 ease-in-out;
+  @apply fixed left-16 sm:left-24 top-16 bottom-0 z-30 w-drawer-open overflow-y-auto border-r border-line bg-surface transition-transform duration-300 ease-in-out;
 }
 .drawer-heading {
   @apply text-sm font-semibold uppercase tracking-wider text-ink-muted;

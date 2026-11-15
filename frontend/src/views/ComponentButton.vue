@@ -58,9 +58,18 @@
               :aria-pressed="previewDarkMode"
               @click="previewDarkMode = !previewDarkMode"
             />
-            <UiButton size="sm" variant="ghost" icon="maximize" icon-only label="Toggle fullscreen" @click="toggleFullscreen" />
+            <UiButton
+              v-if="fullscreenSupported"
+              size="sm"
+              variant="ghost"
+              :icon="previewFullscreen ? 'minimize' : 'maximize'"
+              icon-only
+              :label="previewFullscreen ? 'Exit full screen' : 'Show preview full screen'"
+              :aria-pressed="previewFullscreen"
+              @click="toggleFullscreen"
+            />
           </template>
-          <div class="preview-stage" :class="previewDarkMode ? 'bg-surface-inverse dark' : 'bg-surface-sunken'">
+          <div ref="previewStage" class="preview-stage" :class="previewDarkMode ? 'bg-surface-inverse dark' : 'bg-surface-sunken'">
             <component-preview
               :key="`button-${JSON.stringify(propValues)}`"
               component="button"
@@ -303,51 +312,15 @@
     <!-- Component dependencies -->
     <ComponentDependencyGraphCard :component-id="getComponentId()" />
 
-    <!-- Version history -->
-    <PageSection title="Version history" description="Track component versions, view changelogs, and manage breaking changes." divided>
-      <UiPanel v-if="currentVersion.version" :title="`Current version: v${currentVersion.version}`" :description="currentVersion.description" class="mb-6">
-        <template #actions>
-          <UiChip :tone="versionStatusTone(currentVersion.status)">{{ currentVersion.status }}</UiChip>
-        </template>
-        <p class="flex flex-wrap gap-4 text-xs text-ink-muted">
-          <span>Released: {{ formatDate(currentVersion.releasedAt) }}</span>
-          <span v-if="currentVersion.lastUpdated">Last Updated: {{ formatDate(currentVersion.lastUpdated) }}</span>
-        </p>
-      </UiPanel>
-
-      <UiPanel v-if="componentVersions.length > 0" flush>
-        <ol class="divide-y divide-line-faint">
-          <li v-for="version in componentVersions" :key="version.version" class="p-6 space-y-3">
-            <div class="flex flex-wrap items-center gap-3">
-              <h3 class="text-lg font-semibold text-ink-strong">v{{ version.version }}</h3>
-              <UiChip :tone="versionStatusTone(version.status)">{{ version.status }}</UiChip>
-              <UiChip v-if="version.breaking" tone="danger">Breaking Changes</UiChip>
-            </div>
-            <p class="text-sm text-ink">{{ version.description }}</p>
-            <p class="text-xs text-ink-muted">Released: {{ formatDate(version.releasedAt) }}</p>
-
-            <div v-if="version.changelog && version.changelog.length > 0" class="ml-6 border-l-2 border-line-faint pl-4">
-              <h4 class="text-sm font-semibold text-ink-strong mb-2">Changelog</h4>
-              <ul class="space-y-1 text-sm text-ink-secondary">
-                <li v-for="(change, idx) in version.changelog" :key="idx" class="flex items-start gap-2">
-                  <span :class="getChangeTypeColor(change.type)" aria-hidden="true">{{ getChangeTypeIcon(change.type) }}</span>
-                  <span><span class="sr-only">{{ change.type }}: </span>{{ change.description }}</span>
-                </li>
-              </ul>
-            </div>
-
-            <UiCallout v-if="version.migrationGuide" tone="warning" title="Migration guide">
-              {{ version.migrationGuide }}
-            </UiCallout>
-          </li>
-        </ol>
-      </UiPanel>
-
-      <UiEmptyState
-        v-else
-        title="No version history"
-        body="Version history will appear here once versions are added"
-        spot="admin/deprecation-manager"
+    <!-- Version history: recorded in the design-system changelog -->
+    <PageSection title="Version history" description="Versions and changes recorded for this component in the design-system changelog." divided>
+      <ComponentVersionHistory
+        :versions="componentVersions"
+        :unversioned="unversionedChanges"
+        :loading="changelogLoading"
+        :loaded="changelogLoaded"
+        :error="changelogError"
+        @retry="loadChangelog"
       />
     </PageSection>
 
@@ -358,6 +331,9 @@
       divided
       data-migration-section
     >
+      <UiCallout v-if="changelogLoaded && componentVersions.length < 2" class="mb-6">
+        A migration guide needs two recorded versions of this component. The changelog has {{ componentVersions.length === 1 ? 'one' : 'none' }} so far.
+      </UiCallout>
       <UiPanel title="Component migration setup">
         <div class="space-y-4">
           <UiSelect
@@ -442,10 +418,11 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted, nextTick, watch } from 'vue';
+import { ref, computed, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import ComponentPreview from '../components/ComponentPreview.vue';
 import ComponentDependencyGraphCard from '../components/ComponentDependencyGraphCard.vue';
+import ComponentVersionHistory from '../components/ComponentVersionHistory.vue';
 import BreakingChangeAlert from '../components/BreakingChangeAlert.vue';
 import {
   PageHero,
@@ -471,6 +448,7 @@ import UiDesignedButton from '../components/ui/UiDesignedButton.vue';
 import { antiPatterns, bestPractices, usageExamples, variantExamples } from '../data/componentButtonExamples.js';
 import apiClient from '../services/api.js';
 import { useComponentStatus } from '../composables/useComponentPatternStatus.js';
+import { useComponentChangelog } from '../composables/useComponentChangelog.js';
 
 const route = useRoute();
 
@@ -808,106 +786,37 @@ const codeFormats = [
 ];
 const codeFormatLabel = computed(() => codeFormats.find((f) => f.value === codeFormat.value)?.label ?? 'Code');
 
-const toggleFullscreen = () => {
-  // Could implement fullscreen preview
+// Full-screen preview (Fullscreen API); Esc or the button leaves it
+const previewStage = ref(null);
+const previewFullscreen = ref(false);
+const fullscreenSupported = typeof document !== 'undefined' && !!document.fullscreenEnabled;
+
+const toggleFullscreen = async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await previewStage.value?.requestFullscreen();
+  } catch (error) {
+    console.warn('Full screen preview is not available:', error);
+  }
 };
 
-// Component-specific version data - in a real app, this would come from an API
-const componentVersions = ref([
-  {
-    version: '2.1.0',
-    status: 'Current',
-    description: 'Added loading state and improved accessibility',
-    releasedAt: '2024-01-15',
-    lastUpdated: '2024-01-20',
-    breaking: false,
-    changelog: [
-      { type: 'added', description: 'Added loading prop and spinner animation' },
-      { type: 'added', description: 'Added aria-busy attribute for screen readers' },
-      { type: 'improved', description: 'Enhanced focus indicators for better accessibility' },
-      { type: 'fixed', description: 'Fixed button text alignment in small sizes' },
-    ]
-  },
-  {
-    version: '2.0.0',
-    status: 'Stable',
-    description: 'Major refactor with new variant system',
-    releasedAt: '2023-12-01',
-    breaking: true,
-    migrationGuide: 'The "type" prop has been renamed to "variant". Update all instances: type="primary" → variant="primary"',
-    changelog: [
-      { type: 'breaking', description: 'Renamed "type" prop to "variant" for consistency' },
-      { type: 'breaking', description: 'Removed "outline" variant, use "secondary" instead' },
-      { type: 'added', description: 'Added "tertiary" variant' },
-      { type: 'added', description: 'Added size prop (sm, md, lg)' },
-      { type: 'improved', description: 'Improved button styling and hover states' },
-    ]
-  },
-  {
-    version: '1.5.2',
-    status: 'Stable',
-    description: 'Bug fixes and minor improvements',
-    releasedAt: '2023-10-15',
-    breaking: false,
-    changelog: [
-      { type: 'fixed', description: 'Fixed disabled state styling' },
-      { type: 'fixed', description: 'Fixed button width in flex containers' },
-    ]
-  },
-  {
-    version: '1.5.0',
-    status: 'Stable',
-    description: 'Added new button variants',
-    releasedAt: '2023-09-01',
-    breaking: false,
-    changelog: [
-      { type: 'added', description: 'Added "outline" variant' },
-      { type: 'added', description: 'Added "ghost" variant' },
-      { type: 'improved', description: 'Improved button spacing' },
-    ]
-  },
-]);
-
-const currentVersion = computed(() => {
-  return componentVersions.value.find(v => v.status === 'Current') || componentVersions.value[0] || {};
-});
-
-
-const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const syncFullscreen = () => {
+  previewFullscreen.value = !!previewStage.value && document.fullscreenElement === previewStage.value;
 };
+document.addEventListener('fullscreenchange', syncFullscreen);
+onBeforeUnmount(() => document.removeEventListener('fullscreenchange', syncFullscreen));
 
-const versionStatusTone = (status) =>
-  ({ Current: 'success', Stable: 'info', Deprecated: 'danger', Beta: 'warning' })[status] || 'neutral';
+// Version history from the design-system changelog (GET /api/v1/changelog/components/button)
+const {
+  versions: componentVersions,
+  unversioned: unversionedChanges,
+  loading: changelogLoading,
+  loaded: changelogLoaded,
+  error: changelogError,
+  load: loadChangelog,
+} = useComponentChangelog('button');
 
-
-const getChangeTypeIcon = (type) => {
-  const icons = {
-    'added': '✓',
-    'changed': '→',
-    'deprecated': '⚠',
-    'removed': '✗',
-    'fixed': '🔧',
-    'improved': '↑',
-    'breaking': '⚠',
-  };
-  return icons[type] || '•';
-};
-
-const getChangeTypeColor = (type) => {
-  const colors = {
-    'added': 'text-success',
-    'changed': 'text-info',
-    'deprecated': 'text-warning',
-    'removed': 'text-danger',
-    'fixed': 'text-accent-text',
-    'improved': 'text-accent-text',
-    'breaking': 'text-danger font-bold',
-  };
-  return colors[type] || 'text-ink-muted';
-};
+const currentVersion = computed(() => componentVersions.value[0] || {});
 
 // Component Migration Setup
 // Get component name from route (e.g., /components/button -> 'button')
@@ -1446,6 +1355,9 @@ onMounted(() => {
 <style scoped>
 .preview-stage {
   @apply min-h-96 p-8 rounded-tile flex items-center justify-center;
+}
+.preview-stage:fullscreen {
+  @apply rounded-none;
 }
 .demo-stage {
   @apply p-6 rounded-tile bg-surface-sunken flex flex-wrap items-center gap-4;

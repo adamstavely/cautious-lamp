@@ -164,7 +164,7 @@ describe('breadcrumbs', () => {
     expect(await crumbsFor('/tools/references/jaws-commands')).toEqual([
       ['Tools', '/tools'],
       ['References', null],
-      ['Jaws Commands', null],
+      ['JAWS Commands', null],
     ]);
   });
 

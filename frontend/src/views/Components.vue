@@ -1,399 +1,64 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-16">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <!-- Background texture/grain effect -->
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Components
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Explore our comprehensive library of reusable UI components. Each component is designed with accessibility, consistency, and flexibility in mind, enabling you to build beautiful interfaces faster.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                    <defs>
-                      <linearGradient id="componentsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Stylized components icon -->
-                    <rect x="30" y="30" width="60" height="60" rx="8" fill="url(#componentsGradient)" opacity="0.3"/>
-                    <rect x="110" y="30" width="60" height="60" rx="8" fill="url(#componentsGradient)" opacity="0.5"/>
-                    <rect x="30" y="110" width="60" height="60" rx="8" fill="url(#componentsGradient)" opacity="0.4"/>
-                    <rect x="110" y="110" width="60" height="60" rx="8" fill="url(#componentsGradient)" opacity="0.6"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+  <PageShell>
+    <PageHero
+      eyebrow="Build"
+      title="Components"
+      lead="Reusable UI components designed for accessibility, consistency and flexibility, with the tools to build, test, document and ship them."
+      spot="foundations/components"
+    />
 
-        <!-- Browse Components Section -->
-        <div class="max-w-7xl mx-auto mb-16">
-          <div class="mb-8">
-            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-              Browse components
-            </h2>
-          </div>
-          
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <!-- Component Scaffolding Wizard Card -->
-            <router-link 
-              to="/components/scaffold" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="wand-sparkles" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Component Scaffolding Wizard
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Create new Stencil.js components with our interactive wizard.
-              </p>
-            </router-link>
-
-            <!-- Component Card 0: Buttons -->
-            <router-link 
-              to="/components/buttons" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="rectangle-horizontal" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Buttons
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Primary, secondary, and tertiary button variants.
-              </p>
-            </router-link>
-
-            <!-- Component Card: Color Picker -->
-            <router-link 
-              to="/components/color-picker" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4 flex items-center justify-center" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <Pipette :size="48" :stroke-width="2" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Color Picker
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Comprehensive color picker with gradient selector and multiple color formats.
-              </p>
-            </router-link>
-
-            <!-- Component Card 3: Forms -->
-            <router-link 
-              to="/components/forms" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="file-text" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Forms
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Input fields, selects, checkboxes, and form controls.
-              </p>
-            </router-link>
-
-            <!-- Component Card 4: Cards -->
-            <router-link 
-              to="/components/cards" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="layout-grid" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Cards
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Card components for displaying content and actions.
-              </p>
-            </router-link>
-
-            <!-- Component Card 5: Navigation -->
-            <router-link 
-              to="/components/navigation" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="navigation" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Navigation
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Menus, breadcrumbs, tabs, and navigation components.
-              </p>
-            </router-link>
-
-            <!-- Component Card 6: Data Display -->
-            <router-link 
-              to="/components/data-display" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="table-2" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Data Display
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Tables, lists, and data visualization components.
-              </p>
-            </router-link>
-
-            <!-- Component Card 7c: Testing Framework -->
-            <router-link 
-              to="/components/testing" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="bug" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Testing Framework
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Generate tests and run visual regression tests.
-              </p>
-            </router-link>
-
-            <!-- Component Card 7d: Documentation Generator -->
-            <router-link 
-              to="/components/documentation" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="file-text" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Documentation Generator
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Auto-generate docs from code comments.
-              </p>
-            </router-link>
-
-            <!-- Component Card 7: Export -->
-            <router-link 
-              to="/components/export" 
-              class="group rounded-2xl p-6 border transition-all"
-              :class="isDarkMode 
-                ? 'border-gray-700 bg-slate-900 hover:border-indigo-400' 
-                : 'border-gray-300 bg-white hover:border-indigo-500'"
-            >
-              <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <AppIcon name="download" class="text-5xl" />
-              </div>
-              <h3 
-                class="font-semibold text-lg transition-colors mb-2"
-                :class="isDarkMode 
-                  ? 'text-white group-hover:text-indigo-400' 
-                  : 'text-gray-900 group-hover:text-indigo-600'"
-              >
-                Library Export
-              </h3>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Export components as Storybook, PDF, Markdown, and more.
-              </p>
-            </router-link>
-          </div>
-        </div>
-
-        <!-- Featured Components Section -->
-        <div class="max-w-7xl mx-auto">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 dark:from-indigo-950 dark:via-indigo-900 dark:to-indigo-800">
-            <div class="flex items-center justify-between mb-8">
-              <h2 class="text-4xl md:text-5xl font-bold text-white">
-                Component Tools
-              </h2>
-            </div>
-            
-            <div class="grid md:grid-cols-3 gap-6 mt-8">
-              <!-- Component Status Card -->
-              <router-link 
-                to="/components/status" 
-                class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
-              >
-                <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
-                  <AppIcon name="circle-check" class="text-5xl" />
-                </div>
-                <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">Component Status</h3>
-                <p class="text-white/80 text-sm">Track component development status and availability.</p>
-              </router-link>
-
-              <!-- Loupe Card -->
-              <router-link 
-                to="/components/loupe" 
-                class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
-              >
-                <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
-                  <ScanEye :size="48" :stroke-width="2" />
-                </div>
-                <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">Loupe</h3>
-                <p class="text-white/80 text-sm">Inspect design system components on any page.</p>
-              </router-link>
-
-            </div>
-          </div>
-        </div>
-        </div>
+    <PageSection title="Browse components" description="Live documentation, playgrounds and code for each component.">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <UiCard v-for="card in components" :key="card.to" :to="card.to" :title="card.title" :spot="card.art" compact>{{ card.body }}</UiCard>
       </div>
-    </div>
-  </div>
+    </PageSection>
+
+    <PageSection title="Build and ship" description="Create new components and get them ready for release." divided>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <UiCard v-for="card in buildTools" :key="card.to" :to="card.to" :title="card.title" :spot="card.art" compact>{{ card.body }}</UiCard>
+      </div>
+    </PageSection>
+
+    <PageSection title="Generators" description="Generate styled component code from a few settings." divided>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <UiCard v-for="card in generators" :key="card.to" :to="card.to" :title="card.title" :spot="card.art" compact>{{ card.body }}</UiCard>
+      </div>
+    </PageSection>
+
+    <PageSection title="Track and inspect" description="Follow each component's lifecycle and look at components in place." divided>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <UiCard v-for="card in trackTools" :key="card.to" :to="card.to" :title="card.title" :spot="card.art" compact>{{ card.body }}</UiCard>
+      </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { RouterLink } from 'vue-router';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { Pipette, ScanEye } from 'lucide-vue-next';
+import { PageHero, PageSection, PageShell, UiCard } from '../components/ui';
 
-import { useDrawer } from '../composables/useDrawer.js';
+const components = [
+  { title: 'Button', to: '/components/buttons', art: 'foundations/component-button', body: 'Primary, secondary and tertiary variants, sizes and states.' },
+  { title: 'Color picker', to: '/components/color-picker', art: 'foundations/component-color-picker', body: 'A colour picker with a gradient selector and several colour formats.' },
+];
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const buildTools = [
+  { title: 'Component scaffolding wizard', to: '/components/scaffold', art: 'foundations/component-scaffolding-wizard', body: 'Create a new Stencil.js component step by step.' },
+  { title: 'Component composition', to: '/components/composition', art: 'foundations/component-composition', body: 'Build compositions from primitives and save them to a workspace.' },
+  { title: 'Testing framework', to: '/components/testing', art: 'foundations/component-testing', body: 'Generate tests and run accessibility checks on components.' },
+  { title: 'Documentation generator', to: '/components/documentation', art: 'tools/documentation-generator', body: 'Generate documentation from code comments.' },
+  { title: 'Library export', to: '/components/export', art: 'foundations/components', body: 'Export components as Storybook, PDF, Markdown and more.' },
+];
 
-let darkModeObserver = null;
-let darkModeInterval = null;
+const generators = [
+  { title: 'Badge generator', to: '/components/badge-generator', art: 'tools/badge-generator', body: 'Badges and status labels with your colours and shapes.' },
+  { title: 'Progress generator', to: '/components/progress-generator', art: 'tools/progress-generator', body: 'Progress bars and rings.' },
+  { title: 'Loading spinner generator', to: '/components/loading-generator', art: 'tools/loading-spinner-generator', body: 'Loading spinners and indicators.' },
+];
 
-onMounted(() => {
-  // Auto-open drawer if navigating from sidebar
-  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-    drawerOpen.value = true;
-    sessionStorage.removeItem('openDrawerOnLoad');
-  }
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
+const trackTools = [
+  { title: 'Component status', to: '/components/status', art: 'admin/component-status', body: 'Where each component is in its lifecycle.' },
+  { title: 'Dependency graph', to: '/admin/dependencies', art: 'foundations/component-dependency-graph', body: 'Which components use which, and what a change affects.' },
+  { title: 'Deprecation manager', to: '/components/deprecation', art: 'admin/deprecation-manager', body: 'Deprecate components and guide teams to replacements.' },
+  { title: 'Loupe', to: '/components/loupe', art: 'tools/loupe-tool', body: 'Inspect design system components on any page.' },
+];
 </script>
-
-<style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-</style>

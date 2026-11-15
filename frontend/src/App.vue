@@ -5,17 +5,17 @@
     <a v-if="!bare" href="#navigation" class="skip-link">Skip to navigation</a>
 
     <!-- Sign-in screens: no app chrome, and nothing that calls the API -->
-    <main v-if="bare" id="main-content" class="min-h-screen bg-[#fff] dark:bg-slate-950" role="main">
+    <main v-if="bare" id="main-content" class="min-h-screen bg-surface" role="main">
       <router-view :key="$route.path" />
     </main>
 
-    <div v-else class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col">
+    <div v-else class="min-h-screen bg-surface flex flex-col">
       <div class="flex flex-1 min-h-0">
         <Sidebar />
         <div class="flex-1 min-w-0 flex flex-col">
           <TopNav />
           <InfoBanner />
-          <main id="main-content" class="flex-1 overflow-auto bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" role="main">
+          <main id="main-content" class="flex-1 min-w-0 overflow-auto bg-surface" role="main">
             <router-view :key="$route.path" />
           </main>
         </div>
@@ -69,7 +69,7 @@ watch(() => route.query.featureDisabled, (featureKey) => {
   if (featureKey) {
     // Refresh feature flag cache and try to enable the feature
     if (window.OpenFeature) {
-      window.OpenFeature.refreshCache().then(() => {
+      window.OpenFeature.refreshCache({ force: true }).then(() => {
         // Show notification using window.showToast (exposed by Toast component)
         if (window.showToast) {
           window.showToast(

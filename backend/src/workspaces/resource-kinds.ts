@@ -261,6 +261,17 @@ export class GuidelineDto extends Tagged {
   @IsOptional() @HttpUrl() url?: string;
 }
 
+/**
+ * A component composition from the composition builder: a tree of nodes
+ * ({ name, type, props, children }) and how the top level is laid out.
+ */
+export class CompositionDto extends Tagged {
+  @Name() name: string;
+  @Description() description?: string;
+  @IsOptional() @IsIn(['stack', 'flex', 'grid']) layout?: string;
+  @IsArray() @ArrayMaxSize(200) @IsObject({ each: true }) @MaxJsonSize(256 * 1024) components: Record<string, unknown>[];
+}
+
 // ---------- The allowlist ----------
 
 export interface ResourceKindSpec {
@@ -295,6 +306,7 @@ export const RESOURCE_KINDS: readonly ResourceKindSpec[] = [
   { kind: 'internal-seals', dto: SealDto, titleField: 'name', filterField: 'organization' },
   { kind: 'style-dictionaries', dto: StyleDictionaryDto, titleField: 'name', filterField: 'format' },
   { kind: 'guidelines', dto: GuidelineDto, titleField: 'title', filterField: 'category' },
+  { kind: 'compositions', dto: CompositionDto, titleField: 'name', filterField: 'layout' },
 ];
 
 const BY_KIND = new Map(RESOURCE_KINDS.map((spec) => [spec.kind, spec]));
