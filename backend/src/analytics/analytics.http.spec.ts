@@ -1,7 +1,8 @@
+import { InMemoryStore } from '../reviews/testing/in-memory-store';
 import { INestApplication } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
-import { APPLICATION_STORE, ApplicationDoc } from '../applications/application.types';
+import { APPLICATION_STORE, ApplicationDoc, APPLICATION_NAME_STORE, ApplicationNameClaim } from '../applications/application.types';
 import { ApplicationsService } from '../applications/applications.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
@@ -97,6 +98,7 @@ describe('Analytics HTTP API: application scope', () => {
         WorkspaceAccessService,
         { provide: WORKSPACE_STORE, useValue: workspaces },
         { provide: APPLICATION_STORE, useValue: applications },
+        { provide: APPLICATION_NAME_STORE, useValue: new InMemoryStore<ApplicationNameClaim>() },
         { provide: VisualRegressionService, useValue: {} },
         { provide: SessionReplayService, useValue: {} },
         { provide: AuthService, useValue: authStub },

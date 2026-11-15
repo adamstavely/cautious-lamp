@@ -37,6 +37,8 @@ export interface ApplicationDirectory {
    * own timestamp. Both set lastScanned.
    */
   recordScan(id: string, at: Date, kind: ScanKind): Promise<void>;
+  /** Runs `listener` after an application is deleted, so its dependants can be removed */
+  onDeleted?(listener: (applicationId: string) => Promise<void>): void;
 }
 
 export const APPLICATION_DIRECTORY = Symbol('APPLICATION_DIRECTORY');
@@ -79,7 +81,7 @@ const toApplication = (app: RegistryApplication | undefined): GovernanceApplicat
 export class RegistryApplicationDirectory implements ApplicationDirectory {
   private readonly logger = new Logger(RegistryApplicationDirectory.name);
 
-  constructor(private readonly registry: Pick<ApplicationsService, 'find' | 'list' | 'markScanned'>) {}
+  constructor(private readonly registry: Pick<ApplicationsService, 'find' | 'list' | 'markScanned'> & Partial<Pick<ApplicationsService, 'onDeleted'>>) {}
 
   async get(id: string): Promise<GovernanceApplication | null> {
     return toApplication((await this.registry.find(id)) ?? undefined);
@@ -95,6 +97,10 @@ export class RegistryApplicationDirectory implements ApplicationDirectory {
     } catch (error) {
       this.logger.warn(`Could not record lastScanned for application ${id}: ${(error as Error).message}`);
     }
+  }
+
+  onDeleted(listener: (applicationId: string) => Promise<void>): void {
+    this.registry.onDeleted?.((app) => listener(app.id));
   }
 }
 

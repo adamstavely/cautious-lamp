@@ -120,7 +120,12 @@
         />
         <UiStat label="Up to date" :value="migrationData?.upgradeSummary?.upToDate ?? 0" />
         <UiStat label="Needs upgrade" :value="migrationData?.upgradeSummary?.needsUpgrade ?? 0" />
-        <UiStat label="Major upgrades" tone="danger" :value="migrationData?.upgradeSummary?.needsMajorUpgrade ?? 0" />
+        <UiStat
+          label="Major upgrades"
+          tone="danger"
+          :value="migrationData?.upgradeSummary?.needsMajorUpgrade ?? 0"
+          :hint="migrationData?.upgradeSummary?.unknownVersion ? `${migrationData.upgradeSummary.unknownVersion} more with no version recorded` : ''"
+        />
       </div>
 
       <div class="grid lg:grid-cols-2 gap-6">
@@ -189,7 +194,7 @@
               v-model="edit.workspaceId"
               label="Workspace"
               :options="moveOptions"
-              hint="Moving needs the admin role in both workspaces (or admin:governance)."
+              hint="Moving needs the admin role in both workspaces (or admin:governance). Schedules and SLAs move with it; past scans and reports stay with the workspace they were made in."
             />
           </div>
           <div v-show="edit.tab === 'capabilities'">
@@ -209,6 +214,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
   PageHero,
@@ -249,6 +255,8 @@ import { compareVersions, parseVersion } from '../utils/semver.js';
  */
 const { hasPermission } = useAuth();
 const { notice, showNotice, clearNotice } = useNotice();
+const route = useRoute();
+const router = useRouter();
 const { confirmState, askConfirm } = useConfirmDialog();
 
 const tableHeadings = ['Application', 'Workspace', 'Design system version', 'Capabilities', 'Metadata', 'Registered'];
@@ -434,7 +442,7 @@ const deleteApplication = async (app) => {
   ].filter(Boolean);
   const ok = await askConfirm({
     title: 'Delete application?',
-    message: `"${app.name}"${linked.length ? ` and ${linked.join(' and ')}` : ''} will be deleted. This can't be undone.`,
+    message: `"${app.name}"${linked.length ? `, ${linked.join(', ')},` : ''} and its accessibility schedules and SLA will be deleted. Its governance scans and accessibility reports are kept as a record. This can't be undone.`,
     confirmText: 'Delete',
     danger: true,
   });
@@ -448,5 +456,12 @@ const deleteApplication = async (app) => {
   }
 };
 
-onMounted(loadAll);
+onMounted(async () => {
+  // Arriving from registration: say it worked, then drop the query so a reload doesn't repeat it
+  if (typeof route.query.registered === 'string') {
+    showNotice(`${route.query.registered} registered.`, 'success');
+    router.replace({ query: { ...route.query, registered: undefined } });
+  }
+  await loadAll();
+});
 </script>

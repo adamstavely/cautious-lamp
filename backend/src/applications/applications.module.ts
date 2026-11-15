@@ -5,7 +5,14 @@ import { SessionReplayModule } from '../session-replay/session-replay.module';
 import { VisualRegressionModule } from '../visual-regression/visual-regression.module';
 import { EsQueryableStore } from '../workspaces/queryable-store';
 import { WorkspaceCoreModule } from '../workspaces/workspace-core.module';
-import { APPLICATIONS_INDEX, APPLICATION_PROPERTIES, APPLICATION_STORE } from './application.types';
+import {
+  APPLICATIONS_INDEX,
+  APPLICATION_NAMES_INDEX,
+  APPLICATION_NAME_PROPERTIES,
+  APPLICATION_NAME_STORE,
+  APPLICATION_PROPERTIES,
+  APPLICATION_STORE,
+} from './application.types';
 import { ApplicationsController } from './applications.controller';
 import { ApplicationsService } from './applications.service';
 
@@ -24,6 +31,12 @@ import { ApplicationsService } from './applications.service';
       inject: [ElasticsearchService, EsIndexService],
       useFactory: (es: ElasticsearchService, esIndex: EsIndexService) =>
         new EsQueryableStore(es, esIndex, APPLICATIONS_INDEX, APPLICATION_PROPERTIES),
+    },
+    {
+      provide: APPLICATION_NAME_STORE,
+      inject: [ElasticsearchService, EsIndexService],
+      useFactory: (es: ElasticsearchService, esIndex: EsIndexService) =>
+        new EsQueryableStore(es, esIndex, APPLICATION_NAMES_INDEX, APPLICATION_NAME_PROPERTIES),
     },
   ],
   exports: [ApplicationsService],

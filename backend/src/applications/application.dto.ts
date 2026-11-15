@@ -139,8 +139,9 @@ class ApplicationFieldsDto {
   @MaxLength(5000)
   description?: string;
 
-  /** Only displayed and linked to; never fetched */
+  /** Only displayed and linked to; never fetched. '' clears it on update */
   @IsOptional()
+  @ValidateIf((o) => o.repository !== '')
   @HttpUrl()
   repository?: string;
 
@@ -152,9 +153,10 @@ class ApplicationFieldsDto {
   /**
    * The live app. Accessibility reports and their schedules scan it (in a
    * browser, through the egress checks in common/security), so it must be a
-   * public http(s) address; this service only stores it.
+   * public http(s) address; this service only stores it. '' clears it on update.
    */
   @IsOptional()
+  @ValidateIf((o) => o.applicationUrl !== '')
   @HttpUrl()
   applicationUrl?: string;
 

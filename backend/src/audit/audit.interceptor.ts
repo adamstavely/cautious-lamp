@@ -50,7 +50,7 @@ export class AuditInterceptor implements NestInterceptor {
           userEmail,
           action,
           resourceType,
-          resourceId: this.extractResourceId(url, body),
+          resourceId: this.extractResourceId(request, url, body, response),
           resourceName: this.extractResourceName(url, body, response),
           method,
           endpoint: url,
@@ -69,7 +69,7 @@ export class AuditInterceptor implements NestInterceptor {
           userEmail,
           action,
           resourceType,
-          resourceId: this.extractResourceId(url, body),
+          resourceId: this.extractResourceId(request, url, body),
           method,
           endpoint: url,
           ipAddress: ip,
@@ -98,17 +98,18 @@ export class AuditInterceptor implements NestInterceptor {
     return 'unknown';
   }
 
-  private extractResourceId(url: string, body: any): string | undefined {
-    // Try to extract ID from URL
-    const urlMatch = url.match(/\/([a-f0-9-]{36}|[a-zA-Z0-9-_]+)$/);
-    if (urlMatch) {
-      return urlMatch[1];
-    }
-    // Try to extract ID from body
-    if (body?.id) {
-      return body.id;
-    }
-    return undefined;
+  /**
+   * The record the request acted on: the route's :id parameter, else the path
+   * segment after the resource type (/api/v1/applications/<id>/workspace is
+   * that application, not "workspace"), else the id in the body or, for a
+   * create, the response.
+   */
+  private extractResourceId(request: Request, url: string, body: any, response?: any): string | undefined {
+    const params = (request.params ?? {}) as Record<string, string>;
+    if (params.id) return params.id;
+    const parts = url.split('?')[0].split('/').filter(Boolean);
+    if (parts[0] === 'api' && parts[1] === 'v1' && parts.length >= 4) return decodeURIComponent(parts[3]);
+    return body?.id ?? response?.id ?? undefined;
   }
 
   private extractResourceName(url: string, body: any, response: any): string | undefined {
@@ -128,27 +129,30 @@ export class AuditInterceptor implements NestInterceptor {
     if (!body) {
       return undefined;
     }
-
-    // Remove sensitive fields
-    const sensitiveFields = [
-      'password',
-      'currentPassword',
-      'newPassword',
-      'token',
-      'accessToken',
-      'apiKey',
-      'secret',
-      'authorization',
-    ];
-    const sanitized = { ...body };
-
-    for (const field of sensitiveFields) {
-      if (sanitized[field]) {
-        sanitized[field] = '[REDACTED]';
-      }
-    }
-
-    return sanitized;
+    return redactSecrets(body);
   }
+
 }
 
+/**
+ * Field names whose values are credentials: passwords, tokens, API keys,
+ * secrets, authorization headers, and names built from them such as
+ * argosToken or openreplayApiKey. Matched anywhere in the body, at any depth.
+ */
+const SECRET_FIELD = /pass(word|phrase)?|token|api[-_]?key|secret|authorization|credential|private[-_]?key/i;
+const MAX_DEPTH = 8;
+
+/** A copy of the body with every secret-looking field's value replaced, so the audit log never stores one */
+export function redactSecrets(value: unknown, depth = 0): unknown {
+  if (depth > MAX_DEPTH) return '[TRUNCATED]';
+  if (Array.isArray(value)) return value.map((item) => redactSecrets(item, depth + 1));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, field]) => [
+        key,
+        SECRET_FIELD.test(key) && field !== undefined && field !== null && field !== '' ? '[REDACTED]' : redactSecrets(field, depth + 1),
+      ]),
+    );
+  }
+  return value;
+}

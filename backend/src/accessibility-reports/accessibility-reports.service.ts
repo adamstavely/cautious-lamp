@@ -92,7 +92,21 @@ export class AccessibilityReportsService implements OnModuleInit {
     @Inject(APPLICATION_DIRECTORY) private readonly applications: ApplicationDirectory,
     @Inject(A11Y_SCANNER) private readonly scanner: A11yScanner,
     @Inject(READ_SCOPE) private readonly readScope: ReadScopeResolver,
-  ) {}
+  ) {
+    // A deleted application's schedules and SLA go with it (its reports stay as evidence)
+    this.applications.onDeleted?.((applicationId) => this.removeApplicationData(applicationId));
+  }
+
+  /** Removes an application's schedules and SLA; called when the application is deleted */
+  async removeApplicationData(applicationId: string): Promise<void> {
+    for (const schedule of await this.schedules.list()) {
+      if (schedule.applicationId === applicationId) await this.schedules.delete(schedule.id);
+    }
+    for (const sla of await this.slas.list()) {
+      if (sla.applicationId === applicationId) await this.slas.delete(sla.id);
+    }
+    await this.refreshCache().catch(() => undefined);
+  }
 
   onModuleInit(): void {
     this.refreshCache().catch((error) => this.logger.warn(`Accessibility summary cache not loaded: ${error.message}`));
@@ -419,10 +433,7 @@ export class AccessibilityReportsService implements OnModuleInit {
       return true;
     }
     if (application) return false;
-    await this.schedules.delete(schedule.id).catch(() => false);
-    for (const sla of await this.slas.list().catch(() => [])) {
-      if (sla.applicationId === schedule.applicationId) await this.slas.delete(sla.id).catch(() => false);
-    }
+    await this.removeApplicationData(schedule.applicationId).catch(() => undefined);
     this.logger.log(`Removed schedule ${schedule.id}: application ${schedule.applicationId} no longer exists`);
     return true;
   }

@@ -1,9 +1,10 @@
+import { InMemoryStore } from '../../reviews/testing/in-memory-store';
 import { INestApplication, NotFoundException, ValidationPipe } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { ApplicationsController } from '../../applications/applications.controller';
 import { ApplicationsService } from '../../applications/applications.service';
-import { APPLICATION_STORE, ApplicationDoc } from '../../applications/application.types';
+import { APPLICATION_STORE, ApplicationDoc, APPLICATION_NAME_STORE, ApplicationNameClaim } from '../../applications/application.types';
 import { AuthGuard } from '../../auth/auth.guard';
 import { AuthService, DEFAULT_SERVICE_PERMISSIONS } from '../../auth/auth.service';
 import { UsersService } from '../../auth/users.service';
@@ -153,6 +154,7 @@ export async function createWorkspacesApp() {
       { provide: WORKSPACE_STORE, useValue: workspaceStore },
       { provide: WORKSPACE_RESOURCE_STORE, useValue: resourceStore },
       { provide: APPLICATION_STORE, useValue: applicationStore },
+      { provide: APPLICATION_NAME_STORE, useValue: new InMemoryStore<ApplicationNameClaim>() },
       { provide: WORKSPACE_COMPONENT_SOURCE, useValue: components.source },
       { provide: VisualRegressionService, useValue: vr },
       SessionReplayService,

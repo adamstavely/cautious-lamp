@@ -79,6 +79,21 @@ export interface ApplicationDoc {
 const keyword = { type: 'keyword' };
 const date = { type: 'date' };
 
+/**
+ * One document per (workspace, lower-cased name), created only if absent, so
+ * two concurrent registrations can't both take a name (ApplicationsService.claimName).
+ */
+export interface ApplicationNameClaim {
+  id: string;
+  applicationId: string;
+  name: string;
+  workspaceId: string | null;
+  claimedAt: string;
+}
+export const APPLICATION_NAMES_INDEX = 'design-system-application-names';
+export const APPLICATION_NAME_STORE = Symbol('APPLICATION_NAME_STORE');
+export const APPLICATION_NAME_PROPERTIES = { id: keyword, applicationId: keyword, workspaceId: keyword, claimedAt: date };
+
 export const APPLICATION_PROPERTIES = {
   id: keyword,
   name: { type: 'keyword', fields: { text: { type: 'text' } } },

@@ -48,7 +48,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import InlineNotice from '../components/InlineNotice.vue';
 import { PageHero, PageShell, UiButton, UiCallout, UiPanel, UiSelect, UiSpinner } from '../components/ui';
 import ApplicationCapabilitiesForm from '../components/applications/ApplicationCapabilitiesForm.vue';
@@ -66,6 +66,7 @@ import apiClient, { apiErrorMessage } from '../services/api.js';
  * session replay creates those projects; if that fails, nothing is registered
  * and the error is shown.
  */
+const route = useRoute();
 const router = useRouter();
 const { hasPermission } = useAuth();
 const { notice, showNotice, clearNotice } = useNotice();
@@ -93,7 +94,10 @@ const loadWorkspaces = async () => {
   workspacesError.value = null;
   try {
     workspaces.value = (await apiClient.get('/api/v1/workspaces')).data ?? [];
-    if (!isGovernance.value && adminWorkspaces.value.length === 1) workspaceId.value = adminWorkspaces.value[0].id;
+    // Coming from a workspace page (?workspaceId=…) preselects it, if the user can register there
+    const requested = typeof route.query.workspaceId === 'string' ? route.query.workspaceId : '';
+    if (requested && adminWorkspaces.value.some((ws) => ws.id === requested)) workspaceId.value = requested;
+    else if (!isGovernance.value && adminWorkspaces.value.length === 1) workspaceId.value = adminWorkspaces.value[0].id;
   } catch (error) {
     workspaces.value = [];
     workspacesError.value = apiErrorMessage(error, 'Workspaces could not be loaded.');
@@ -112,8 +116,9 @@ const registerApplication = async () => {
       ...(workspaceId.value ? { workspaceId: workspaceId.value } : {}),
       capabilities: capabilitiesPayload(capabilities.value),
     };
-    await apiClient.post('/api/v1/applications/register', payload);
-    router.push('/admin/applications');
+    const { data } = await apiClient.post('/api/v1/applications/register', payload);
+    // The list says it worked (the notice would be lost if shown here)
+    router.push({ path: '/admin/applications', query: { registered: data?.name ?? payload.name } });
   } catch (error) {
     showNotice(apiErrorMessage(error, 'The application could not be registered.'), 'error');
   } finally {

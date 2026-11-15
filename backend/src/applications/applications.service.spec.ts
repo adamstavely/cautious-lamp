@@ -5,7 +5,8 @@ import { createProjectServices } from '../visual-regression/testing/services';
 import { InMemoryQueryableStore } from '../workspaces/testing/in-memory-queryable-store';
 import { WorkspaceAccessService } from '../workspaces/workspace-access.service';
 import { WorkspaceDoc } from '../workspaces/workspace.types';
-import { ApplicationDoc } from './application.types';
+import { InMemoryStore } from '../reviews/testing/in-memory-store';
+import { ApplicationDoc, ApplicationNameClaim } from './application.types';
 import { ApplicationsService, linkedProjectId } from './applications.service';
 
 const governance: UserPrincipal = {
@@ -52,10 +53,11 @@ describe('ApplicationsService linked projects', () => {
   let workspaces: InMemoryQueryableStore<WorkspaceDoc>;
   let projects: ReturnType<typeof createProjectServices>;
   let appStore: InMemoryQueryableStore<ApplicationDoc>;
+  let nameStore: InMemoryStore<ApplicationNameClaim>;
   let service: ApplicationsService;
 
   const build = () =>
-    new ApplicationsService(appStore, new WorkspaceAccessService(workspaces), projects.visualRegression, projects.sessionReplay);
+    new ApplicationsService(appStore, nameStore, new WorkspaceAccessService(workspaces), projects.visualRegression, projects.sessionReplay);
 
   beforeAll(() => {
     delete process.env.OPENREPLAY_ALLOWED_BASE_URLS;
@@ -73,6 +75,7 @@ describe('ApplicationsService linked projects', () => {
     workspaces = new InMemoryQueryableStore<WorkspaceDoc>();
     projects = createProjectServices(workspaces);
     appStore = new InMemoryQueryableStore<ApplicationDoc>();
+    nameStore = new InMemoryStore<ApplicationNameClaim>();
     service = build();
   });
 
@@ -89,7 +92,7 @@ describe('ApplicationsService linked projects', () => {
     const { SessionReplayService } = await import('../session-replay/session-replay.service');
     const vr = new VisualRegressionService(projects.vrProjects, projects.vrRuns, restartedProjects.access, projects.encryption);
     const sr = new SessionReplayService(projects.srProjects, restartedProjects.access, projects.encryption);
-    const restarted = new ApplicationsService(appStore, new WorkspaceAccessService(workspaces), vr, sr);
+    const restarted = new ApplicationsService(appStore, nameStore, new WorkspaceAccessService(workspaces), vr, sr);
 
     expect(await vr.getProject(vrId)).toMatchObject({ applicationId: app.id, workspaceId: null, argosProjectId: 'argos-1' });
     expect(await sr.getProject(srId)).toMatchObject({ applicationId: app.id, openreplayProjectKey: 'key-1' });
@@ -177,5 +180,66 @@ describe('ApplicationsService linked projects', () => {
     await service.move(governance, app.id, { workspaceId: 'ws_b' });
     expect((await projects.visualRegression.getProject(app.capabilities.visualRegression.projectId!)).workspaceId).toBe('ws_b');
     expect((await projects.sessionReplay.getProject(app.capabilities.sessionReplay.projectId!)).workspaceId).toBe('ws_b');
+  });
+
+  it('lets only one of several concurrent registrations take a name', async () => {
+    // Every registration passes the "is the name free?" read before any of them writes
+    const results = await Promise.allSettled(Array.from({ length: 5 }, () => service.register(governance, { name: 'Race' } as any)));
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((r) => r.status === 'rejected').map((r) => (r as PromiseRejectedResult).reason.status)).toEqual([409, 409, 409, 409]);
+    expect((await service.list()).filter((app) => app.name === 'Race')).toHaveLength(1);
+  });
+
+  it('frees a name on rename and delete, and claims it in the new workspace on a move', async () => {
+    await workspaces.create(workspaceDoc('ws_a', ['usr_a']));
+    const first = await service.register(governance, { name: 'Alpha' } as any);
+    await service.update(governance, first.id, { name: 'Beta' } as any);
+    // The old name is free again; the new one is taken
+    const second = await service.register(governance, { name: 'alpha' } as any);
+    await expect(service.register(governance, { name: 'BETA' } as any)).rejects.toMatchObject({ status: 409 });
+    // A change of capitals only keeps the claim
+    await service.update(governance, first.id, { name: 'beta' } as any);
+    await expect(service.register(governance, { name: 'Beta' } as any)).rejects.toMatchObject({ status: 409 });
+
+    await service.move(governance, first.id, { workspaceId: 'ws_a' });
+    await expect(service.register(governance, { name: 'beta', workspaceId: 'ws_a' } as any)).rejects.toMatchObject({ status: 409 });
+    await service.register(governance, { name: 'beta' } as any); // free again outside the workspace
+
+    await service.delete(governance, second.id);
+    await service.register(governance, { name: 'Alpha' } as any);
+  });
+
+  it('takes over a claim left by a registration that never finished, once it is stale', async () => {
+    await nameStore.create({ id: (await import('crypto')).createHash('sha256').update('\u0000ghost').digest('hex').slice(0, 40).replace(/^/, 'name_'), applicationId: 'app_gone', name: 'Ghost', workspaceId: null, claimedAt: new Date(Date.now() - 120_000).toISOString() });
+    await expect(service.register(governance, { name: 'Ghost' } as any)).resolves.toMatchObject({ name: 'Ghost' });
+  });
+
+  it('deletes the application before its projects, and tells listeners', async () => {
+    const app = await service.register(governance, { name: 'Shop', capabilities: { ...enableVr } } as any);
+    const vrId = app.capabilities.visualRegression.projectId!;
+    const deleted: string[] = [];
+    service.onDeleted(async (gone) => {
+      deleted.push(gone.id);
+      // By the time listeners run the application is gone
+      expect(await appStore.get(gone.id)).toBeNull();
+    });
+    jest.spyOn(projects.visualRegression, 'deleteProject').mockRejectedValueOnce(new Error('Argos is down'));
+    await service.delete(governance, app.id);
+    expect(await service.find(app.id)).toBeNull();
+    expect(deleted).toEqual([app.id]);
+    expect(vrId).toBeTruthy();
+  });
+
+  it('rejects governance rule ids that do not exist', async () => {
+    const rules = { list: async () => [{ id: 'a11y-axe' }, { id: 'ds-important' }] };
+    const withRules = new ApplicationsService(appStore, nameStore, new WorkspaceAccessService(workspaces), projects.visualRegression, projects.sessionReplay, {
+      get: () => rules,
+    } as any);
+    await expect(
+      withRules.register(governance, { name: 'Rules', capabilities: { governance: { enabled: true, rules: ['a11y-axe', 'no-such-rule'] } } } as any),
+    ).rejects.toMatchObject({ status: 400, message: expect.stringMatching(/no-such-rule/) });
+    const app = await withRules.register(governance, { name: 'Rules', capabilities: { governance: { enabled: true, rules: ['a11y-axe'] } } } as any);
+    expect(app.capabilities.governance.rules).toEqual(['a11y-axe']);
+    await expect(withRules.updateCapabilities(governance, app.id, { governance: { enabled: true, rules: ['gone'] } } as any)).rejects.toMatchObject({ status: 400 });
   });
 });
