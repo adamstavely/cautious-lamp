@@ -6,9 +6,10 @@ import { CONNECTION_PROPERTIES } from './connection-registry';
 import { TokenSyncController } from './token-sync.controller';
 import { TOKEN_SYNC_CONNECTIONS_INDEX, TOKEN_SYNC_CONNECTION_STORE, TokenSyncService } from './token-sync.service';
 import { DesignSystemModule } from '../design-system/design-system.module';
+import { DesignToolsModule } from '../design-tools/design-tools.module';
 
 @Module({
-  imports: [DesignSystemModule],
+  imports: [DesignSystemModule, DesignToolsModule],
   controllers: [TokenSyncController],
   providers: [
     TokenSyncService,

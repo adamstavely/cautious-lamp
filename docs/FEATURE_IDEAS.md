@@ -82,8 +82,8 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 - ✅ **Photosensitivity Analysis (IRIS)** - Video content analysis for photosensitive epilepsy risks
 - ✅ **Visual Regression Testing (Argos)** - Visual regression testing service integration (Phase 1 & Quick Wins)
 - ✅ **Session Replay (OpenReplay)** - Session replay and heatmap analysis service integration (Phase 1). Located under HCD section (`/hcd/session-replay`).
-- ✅ **Design-to-Code Sync** - Sync components and tokens from Figma/Penpot with auto-component generation, bidirectional sync, and version tracking
-- ✅ **Design Token Sync** - Sync tokens from Figma/Penpot/Adobe XD with mapping, validation, conflict resolution, and auto-update
+- ✅ **Design Sync** - Compare Figma/Penpot components and component sets with the library (matched, renamed, missing in code or design), link components to design nodes, scheduled compares and version history. Read-only: no writes to design files, no code generation. See [TOKEN_SYNC.md](./TOKEN_SYNC.md)
+- ✅ **Design Token Sync** - Pull tokens from Figma (variables and styles) or Penpot, review a three-way diff, apply per-item choices with token permissions, run history and scheduled pulls that never auto-apply. Adobe XD not supported. See [TOKEN_SYNC.md](./TOKEN_SYNC.md)
 
 ### Review & Collaboration
 - ✅ **Review System** - Request reviews, Kanban board, review status tracking
@@ -234,20 +234,20 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 ## 🆕 New Features
 
 ### Design-to-Code Sync (#1)
-- ✅ **Figma Integration** - Sync components and tokens from Figma (IMPLEMENTED)
-- ✅ **Penpot Integration** - Sync components and tokens from Penpot (IMPLEMENTED)
-- ✅ **Design file parsing** - Parse design files and extract components (IMPLEMENTED)
-- ✅ **Auto-component generation** - Generate component code from design files (IMPLEMENTED)
-- ✅ **Design token extraction** - Extract design tokens from design files (IMPLEMENTED)
-- ✅ **Bidirectional sync** - Sync changes both ways (IMPLEMENTED)
-- ✅ **Design file versioning** - Track design file versions (IMPLEMENTED)
+- ✅ **Figma Integration** - Read components, component sets, styles and variables with a personal access token (IMPLEMENTED; variables need a Figma Enterprise seat, and the plan error is shown)
+- ✅ **Penpot Integration** - Read components, library colours and typographies, and design tokens through the RPC API (IMPLEMENTED)
+- ✅ **Design file parsing** - Components and variants compared with the library: matched, renamed, missing in code, missing in design; link a component to its design node (IMPLEMENTED)
+- [ ] **Auto-component generation** - Not built: code isn't generated from design files
+- ✅ **Design token extraction** - Extract design tokens from design files (IMPLEMENTED, on the token sync page)
+- [ ] **Bidirectional sync** - Not built: design sync only reads design files
+- ✅ **Design file versioning** - File versions recorded on every compare (IMPLEMENTED)
 
 ### Design Token Sync (#3)
-- ✅ **Token sync from design tools** - Sync tokens from Figma/Penpot/Adobe XD (IMPLEMENTED)
-- ✅ **Token mapping** - Map design tool tokens to design system tokens (IMPLEMENTED)
-- ✅ **Auto-update tokens** - Automatically update tokens when design files change (IMPLEMENTED)
-- ✅ **Token conflict resolution** - Handle conflicts when syncing tokens (IMPLEMENTED)
-- ✅ **Token validation** - Validate tokens before syncing (IMPLEMENTED)
+- ✅ **Token sync from design tools** - Pull tokens from Figma or Penpot (IMPLEMENTED; Adobe XD is not supported, Adobe has discontinued its APIs)
+- ✅ **Token mapping** - Colours, typography, spacing, sizes and radii mapped to design-system names, with explicit per-token mappings (IMPLEMENTED)
+- ✅ **Auto-update tokens** - Scheduled pulls that prepare a diff for review; nothing is applied automatically (IMPLEMENTED)
+- ✅ **Token conflict resolution** - Three-way diff with per-item keep code, take design or skip (IMPLEMENTED)
+- ✅ **Token validation** - Type mismatches and overwritten references reported as conflicts; changes in code since the diff are refused (IMPLEMENTED)
 
 ### Component Scaffolding Wizard (#5) ✅
 - ✅ **Interactive wizard UI** - Step-by-step component creation wizard (IMPLEMENTED)
@@ -294,7 +294,7 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 - [ ] **Design System Onboarding** - Interactive onboarding for new team members
 
 ### Integration & Export
-- [ ] **Adobe XD Integration** - Sync tokens and components with Adobe XD
+- [ ] **Adobe XD Integration** - Not possible: Adobe has discontinued the XD plugin and cloud document APIs
 - ✅ **Component Export to React Native** - Export components for React Native (IMPLEMENTED)
 
 ### Advanced Features
@@ -338,8 +338,8 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 - **Custom Rule Templates** - 12 pre-built rule templates organized by category (Design System, Accessibility, UX/HCD) with template browser, search/filter functionality, configurable options (select dropdowns, checkboxes), variable substitution, and customization modal
 - **Visual Regression Testing (Argos) Enhancements** - All 9 enhancement features completed (enhanced diff viewer, webhook handling, WebSocket real-time updates, advanced filtering, CI/CD integration, team management, analytics & reporting, notifications, baseline management)
 - **Component Scaffolding Wizard (#5)** - All 7 features completed (interactive wizard UI, component templates, props generator, code generation, documentation generation, test generation, lifecycle management integration)
-- **Design-to-Code Sync (#1)** - All 7 features completed (Figma/Penpot integration, design file parsing, auto-component generation, token extraction, bidirectional sync, version tracking)
-- **Design Token Sync (#3)** - All 5 features completed (token sync from design tools, token mapping, auto-update tokens, conflict resolution, token validation)
+- **Design Sync (#1)** - 5 of 7 completed (Figma/Penpot integration, design file parsing and component compare, token extraction, version tracking); code generation and writing back to design files are not built
+- **Design Token Sync (#3)** - All 5 features completed for Figma and Penpot (token pull and mapping, scheduled pulls for review, three-way conflict resolution, validation)
 - **Design System Analytics Dashboard Enhancements** - All 6 enhancement items completed (usage analytics, adoption tracking, design debt metrics, popularity rankings, usage trends, cross-application comparison)
 - **Design System Health Score Enhancements** - All 6 enhancement items completed (calculation, factors, trends, alerts, recommendations)
 - **Accessibility Reports Enhancements** - Multi-application dashboard, SLA tracking, automated fix suggestions with code examples
@@ -351,4 +351,4 @@ This document consolidates all feature ideas, enhancements, and remaining work f
 1. **Accessibility Reports CI/CD Integration** - Integration with CI/CD pipelines
 
 ### Low Priority (Next Quarter)
-1. **Adobe XD Integration** - Design tool sync
+1. ~~**Adobe XD Integration**~~ - Dropped: Adobe has discontinued the XD APIs

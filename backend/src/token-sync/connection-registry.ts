@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, NotFoundException, NotImplementedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { AuthPrincipal, hasPermission } from '../auth/principal';
 import { EncryptionService } from '../common/security/encryption.service';
@@ -18,7 +18,12 @@ export interface StoredConnection {
   id: string;
   owner: ConnectionOwner;
   apiKey?: string;
-  autoSync: false;
+  /** Pull the design file on a schedule and keep the diff for review; never applies anything */
+  autoSync: boolean;
+  /** Hours between scheduled pulls (default 24) */
+  syncIntervalHours?: number;
+  /** When the next scheduled pull is due; set while autoSync is on */
+  nextAutoSyncAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -30,10 +35,26 @@ export type PublicConnection<T extends StoredConnection> = Omit<T, 'apiKey'> & {
 export type FieldParser = (value: unknown) => unknown;
 
 /** Fields the server sets; a client sending them gets a 400 instead of having them silently applied */
-const SERVER_FIELDS = ['id', 'owner', 'ownerId', 'createdAt', 'updatedAt', 'lastSync', 'lastSyncVersion', 'syncHistory', 'hasApiKey'];
+const SERVER_FIELDS = [
+  'id',
+  'owner',
+  'ownerId',
+  'createdAt',
+  'updatedAt',
+  'lastSync',
+  'lastSyncVersion',
+  'lastRunId',
+  'syncHistory',
+  'hasApiKey',
+  'nextAutoSyncAt',
+  'baseline',
+  'designMatches',
+  'componentLinks',
+];
 
-export const AUTO_SYNC_UNSUPPORTED =
-  'Automatic sync is not supported: there is no scheduler or design tool integration on this server yet.';
+export const DEFAULT_SYNC_INTERVAL_HOURS = 24;
+const HOUR_MS = 60 * 60 * 1000;
+const MAX_WRITE_ATTEMPTS = 5;
 
 const keyword = { type: 'keyword' };
 
@@ -85,13 +106,14 @@ export class ConnectionRegistry<T extends StoredConnection> {
     const now = new Date().toISOString();
     const connection = {
       ...this.defaults(),
+      autoSync: false,
       ...input,
       id: `${this.idPrefix}-${randomBytes(9).toString('hex')}`,
       owner: { type: principal.type, id: principal.id, name: principal.name },
-      autoSync: false,
       createdAt: now,
       updatedAt: now,
     } as unknown as T;
+    this.scheduleAutoSync(connection, new Date(now));
     this.setApiKey(connection, body);
     await this.store.create(connection);
     return this.toPublic(connection);
@@ -100,7 +122,9 @@ export class ConnectionRegistry<T extends StoredConnection> {
   async update(principal: AuthPrincipal, id: string, body: unknown): Promise<PublicConnection<T>> {
     const { doc: connection, version } = await this.load(principal, id);
     const input = this.parse(body);
-    Object.assign(connection, input, { updatedAt: new Date().toISOString() });
+    const now = new Date();
+    Object.assign(connection, input, { updatedAt: now.toISOString() });
+    this.scheduleAutoSync(connection, now);
     this.setApiKey(connection, body);
     await this.save(connection, version);
     return this.toPublic(connection);
@@ -111,14 +135,73 @@ export class ConnectionRegistry<T extends StoredConnection> {
     await this.store.delete(id);
   }
 
-  /** Turns automatic sync off (it can't be turned on; see AUTO_SYNC_UNSUPPORTED) */
+  /** Turns scheduled pulls on (every `intervalHours`, default 24); the first is due straight away */
+  async enableAutoSync(principal: AuthPrincipal, id: string, intervalHours?: unknown): Promise<PublicConnection<T>> {
+    const { doc: connection, version } = await this.load(principal, id);
+    if (intervalHours !== undefined) connection.syncIntervalHours = hours(intervalHours) as number;
+    connection.autoSync = true;
+    connection.updatedAt = new Date().toISOString();
+    this.scheduleAutoSync(connection, new Date());
+    await this.save(connection, version);
+    return this.toPublic(connection);
+  }
+
   async disableAutoSync(principal: AuthPrincipal, id: string): Promise<PublicConnection<T>> {
     const { doc: connection, version } = await this.load(principal, id);
     connection.autoSync = false;
     delete (connection as { syncInterval?: number }).syncInterval;
     connection.updatedAt = new Date().toISOString();
+    this.scheduleAutoSync(connection, new Date());
     await this.save(connection, version);
     return this.toPublic(connection);
+  }
+
+  /** Connections whose scheduled pull is due, across every owner (for the scheduler) */
+  async dueForAutoSync(now: Date): Promise<T[]> {
+    // Filtered here: indices created before autoSync was mapped can't be queried on it
+    const connections = await this.store.list();
+    return connections.filter((c) => c.autoSync && (c as { enabled?: boolean }).enabled !== false && !!c.nextAutoSyncAt && new Date(c.nextAutoSyncAt) <= now);
+  }
+
+  /**
+   * Claims a due scheduled pull by moving its next due time on with a
+   * compare-and-swap write, so only one instance runs it. Null when it
+   * isn't due any more or another instance claimed it first.
+   */
+  async claimAutoSync(id: string, now: Date): Promise<T | null> {
+    const stored = await this.store.get(id);
+    if (!stored) return null;
+    const connection = stored.doc;
+    if (!connection.autoSync || !connection.nextAutoSyncAt || new Date(connection.nextAutoSyncAt) > now) return null;
+    connection.nextAutoSyncAt = new Date(now.getTime() + (connection.syncIntervalHours ?? DEFAULT_SYNC_INTERVAL_HOURS) * HOUR_MS).toISOString();
+    try {
+      await this.store.replace(connection, stored.version);
+      return connection;
+    } catch (error) {
+      if (error instanceof VersionConflictError) return null;
+      throw error;
+    }
+  }
+
+  /**
+   * Changes server-set fields (sync results, baselines, links) on a stored
+   * connection, compare-and-swap, retried on a concurrent write. No access
+   * check: callers have already loaded the connection for the principal.
+   */
+  async patch(id: string, change: (connection: T) => void): Promise<T> {
+    for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt++) {
+      const stored = await this.store.get(id);
+      if (!stored) throw new NotFoundException('Connection not found');
+      change(stored.doc);
+      try {
+        await this.store.replace(stored.doc, stored.version);
+        return stored.doc;
+      } catch (error) {
+        if (error instanceof VersionConflictError) continue;
+        throw error;
+      }
+    }
+    throw new ConflictException('The connection was changed by someone else at the same time, please try again');
   }
 
   /** The decrypted credential, for a provider integration */
@@ -147,6 +230,12 @@ export class ConnectionRegistry<T extends StoredConnection> {
     }
   }
 
+  /** Due now when automatic sync is (still) on and nothing is scheduled; cleared when it is off */
+  private scheduleAutoSync(connection: T, now: Date): void {
+    if (!connection.autoSync) delete connection.nextAutoSyncAt;
+    else if (!connection.nextAutoSyncAt) connection.nextAutoSyncAt = now.toISOString();
+  }
+
   private canSee(principal: AuthPrincipal, connection: T): boolean {
     if (hasPermission(principal, Permission.ADMIN_USERS)) return true;
     return connection.owner.type === principal.type && connection.owner.id === principal.id;
@@ -165,8 +254,14 @@ export class ConnectionRegistry<T extends StoredConnection> {
     const out: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(body as Record<string, unknown>)) {
       if (key === 'apiKey') continue;
-      if (key === 'autoSync' || key === 'syncInterval') {
-        if (key === 'autoSync' && value === true) throw new NotImplementedException(AUTO_SYNC_UNSUPPORTED);
+      // An old client's interval field; syncIntervalHours replaced it
+      if (key === 'syncInterval') continue;
+      if (key === 'autoSync') {
+        out.autoSync = bool('autoSync')(value);
+        continue;
+      }
+      if (key === 'syncIntervalHours') {
+        out.syncIntervalHours = hours(value);
         continue;
       }
       if (SERVER_FIELDS.includes(key)) throw new BadRequestException(`${key} is set by the server`);
@@ -196,6 +291,14 @@ export function oneOf<V extends string>(field: string, values: readonly V[]): Fi
     if (!values.includes(value as V)) throw new BadRequestException(`${field} must be one of ${values.join(', ')}`);
     return value;
   };
+}
+
+/** Hours between scheduled pulls: a whole number from 1 to 168 (a week) */
+function hours(value: unknown): unknown {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 168) {
+    throw new BadRequestException('syncIntervalHours must be a whole number of hours from 1 to 168');
+  }
+  return value;
 }
 
 export function bool(field: string): FieldParser {

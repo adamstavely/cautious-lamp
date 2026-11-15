@@ -8,7 +8,10 @@ import { SecurityAuditService } from '../common/security/security-audit.service'
 import { DesignSyncController } from '../design-sync/design-sync.controller';
 import { DesignSyncService } from '../design-sync/design-sync.service';
 import { InMemoryStore } from '../reviews/testing/in-memory-store';
-import { DesignSystemService } from '../design-system/design-system.service';
+import { createDesignSystemService } from '../design-system/testing/in-memory-stores';
+import { DesignToolReader } from '../design-tools/design-tool-reader';
+import { SyncRunLog } from '../design-tools/sync-runs';
+import { FIGMA_KEY, figmaFixture } from '../design-tools/testing/fake-design-tools';
 import { Permission } from '../rbac/rbac.service';
 import { TokenSyncController } from './token-sync.controller';
 import { TokenSyncService } from './token-sync.service';
@@ -18,6 +21,7 @@ const PEOPLE = {
   alice: { id: 'usr_alice', permissions: [] as string[] },
   bob: { id: 'usr_bob', permissions: [] as string[] },
   admin: { id: 'usr_admin', permissions: [Permission.ADMIN_USERS] as string[] },
+  carol: { id: 'usr_carol', permissions: [Permission.TOKEN_CREATE, Permission.TOKEN_EDIT, Permission.TOKEN_DELETE] as string[] },
 };
 type Person = keyof typeof PEOPLE;
 
@@ -47,11 +51,14 @@ describe('Sync connections over HTTP', () => {
 
   beforeAll(async () => {
     encryption = new EncryptionService();
-    tokenSync = new TokenSyncService({ getAllTokens: () => [] } as unknown as DesignSystemService, encryption, new InMemoryStore());
+    const designSystem = await createDesignSystemService();
+    const reader = new DesignToolReader(figmaFixture().http);
+    const runs = new SyncRunLog(new InMemoryStore());
+    tokenSync = new TokenSyncService(designSystem, encryption, new InMemoryStore(), reader, runs);
     const moduleRef = await Test.createTestingModule({
       controllers: [DesignSyncController, TokenSyncController],
       providers: [
-        { provide: DesignSyncService, useValue: new DesignSyncService(encryption, new InMemoryStore()) },
+        { provide: DesignSyncService, useValue: new DesignSyncService(encryption, new InMemoryStore(), designSystem, reader, runs) },
         { provide: TokenSyncService, useValue: tokenSync },
         { provide: AuthService, useValue: auth },
         { provide: SecurityAuditService, useValue: { logPermissionDenied: async () => undefined } },
@@ -127,7 +134,8 @@ describe('Sync connections over HTTP', () => {
         ['PUT', `${path}/connections/${id}`, { name: 'Hijacked' }],
         ['DELETE', `${path}/connections/${id}`],
         ['POST', `${path}/connections/${id}/sync`, {}],
-        ['POST', `${path}/connections/${id}/auto-sync`, { intervalMinutes: 5 }],
+        ['POST', `${path}/connections/${id}/auto-sync`, { intervalHours: 6 }],
+        ['GET', `${path}/connections/${id}/runs`],
       ] as Array<[string, string, unknown?]>) {
         expect([method, route, (await call('bob', method, route, payload)).status]).toEqual([method, route, 404]);
       }
@@ -141,14 +149,23 @@ describe('Sync connections over HTTP', () => {
       expect((await call('alice', 'POST', `${path}/connections`, { ...body, tool: 'sketch' })).status).toBe(400);
     });
 
-    it('answers 501 for sync and auto-sync instead of reporting success', async () => {
-      const sync = await call('alice', 'POST', `${path}/connections/${id}/sync`, {});
-      expect(sync.status).toBe(501);
-      expect(sync.body.message).toMatch(/not implemented/i);
-      expect((await call('alice', 'POST', `${path}/connections/${id}/auto-sync`, { intervalMinutes: 5 })).status).toBe(501);
-      expect((await call('alice', 'POST', `${path}/connections`, { ...body, autoSync: true })).status).toBe(501);
-      expect((await call('alice', 'GET', `${path}/connections/${id}`)).body).toMatchObject({ autoSync: false });
+    it('turns scheduled pulls on and off', async () => {
+      expect((await call('alice', 'POST', `${path}/connections/${id}/auto-sync`, { intervalHours: 0 })).status).toBe(400);
+      expect((await call('alice', 'POST', `${path}/connections/${id}/auto-sync`, { intervalMinutes: 5 })).status).toBe(400);
+      const on = await call('alice', 'POST', `${path}/connections/${id}/auto-sync`, { intervalHours: 6 });
+      expect(on.status).toBe(201);
+      expect(on.body).toMatchObject({ autoSync: true, syncIntervalHours: 6, nextAutoSyncAt: expect.any(String) });
       expect((await call('alice', 'DELETE', `${path}/connections/${id}/auto-sync`)).status).toBe(200);
+      expect((await call('alice', 'GET', `${path}/connections/${id}`)).body).toMatchObject({ autoSync: false });
+      expect((await call('alice', 'GET', `${path}/connections/${id}`)).body).not.toHaveProperty('nextAutoSyncAt');
+    });
+
+    it('reports a design file it cannot read as 422 with the reason', async () => {
+      const sync = await call('alice', 'POST', `${path}/connections/${id}/sync`, {});
+      expect(sync.status).toBe(422);
+      expect(sync.body.message).toMatch(/Figma file key/);
+      const runs = await call('alice', 'GET', `${path}/connections/${id}/runs`);
+      expect(runs.body[0]).toMatchObject({ status: 'failed', error: expect.stringMatching(/Figma file key/) });
     });
 
     it('lets the owner delete', async () => {
@@ -157,12 +174,56 @@ describe('Sync connections over HTTP', () => {
     });
   });
 
-  it('answers 501 for design files, code generation and conflict resolution', async () => {
-    const conn = (await call('alice', 'POST', '/design-sync/connections', features[0].body)).body;
-    expect((await call('alice', 'GET', `/design-sync/connections/${conn.id}/file`)).status).toBe(501);
-    expect((await call('alice', 'POST', '/design-sync/components/comp-1/generate', { framework: 'vue', connectionId: conn.id })).status).toBe(501);
-    expect((await call('bob', 'POST', '/design-sync/components/comp-1/generate', { framework: 'vue', connectionId: conn.id })).status).toBe(404);
-    expect((await call('alice', 'GET', `/design-sync/connections/${conn.id}/versions`)).body).toEqual([]);
-    expect((await call('alice', 'POST', '/token-sync/conflicts/c-1/resolve', { resolution: 'use-system' })).status).toBe(501);
+  it('pulls tokens into a diff, and applies the chosen changes with token permissions', async () => {
+    const conn = (await call('carol', 'POST', '/token-sync/connections', { name: 'Acme', tool: 'figma', fileId: FIGMA_KEY, apiKey: 'figd_test' })).body;
+    const run = await call('carol', 'POST', `/token-sync/connections/${conn.id}/sync`, {});
+    expect(run.status).toBe(201);
+    expect(run.body).toMatchObject({ status: 'review', fileVersion: '42' });
+    expect(run.body.tokenItems.find((i: any) => i.id === 'border.radius.sm')).toMatchObject({ kind: 'changed', designValue: '6px' });
+
+    expect((await call('carol', 'POST', `/token-sync/runs/${run.body.id}/apply`, { choices: 'all' })).status).toBe(400);
+    expect((await call('carol', 'POST', `/token-sync/runs/${run.body.id}/apply`, { choices: { 'border.radius.sm': 'merge' } })).status).toBe(400);
+    expect((await call('bob', 'POST', `/token-sync/runs/${run.body.id}/apply`, {})).status).toBe(404);
+    const applied = await call('carol', 'POST', `/token-sync/runs/${run.body.id}/apply`, { choices: { 'border.radius.sm': 'keep-code' } });
+    expect(applied.status).toBe(201);
+    expect(applied.body.applied.results).toEqual(expect.arrayContaining([{ id: 'border.radius.sm', choice: 'keep-code', outcome: 'kept-code' }]));
+    expect((await call('carol', 'GET', `/token-sync/runs/${run.body.id}`)).body).toMatchObject({ status: 'applied' });
+
+    // Without token permissions, a pull works but applying it doesn't
+    const mine = (await call('alice', 'POST', '/token-sync/connections', { name: 'Mine', tool: 'figma', fileId: FIGMA_KEY, apiKey: 'figd_test' })).body;
+    const pulled = (await call('alice', 'POST', `/token-sync/connections/${mine.id}/sync`, {})).body;
+    const refused = await call('alice', 'POST', `/token-sync/runs/${pulled.id}/apply`, {});
+    expect(refused.status).toBe(403);
+    expect(refused.body.message).toMatch(/token:/);
+  });
+
+  it('compares design components with the library and lets people link them', async () => {
+    const conn = (await call('alice', 'POST', '/design-sync/connections', { name: 'Acme', tool: 'figma', fileId: FIGMA_KEY, apiKey: 'figd_test' })).body;
+    const file = await call('alice', 'GET', `/design-sync/connections/${conn.id}/file`);
+    expect(file.status).toBe(200);
+    expect(file.body).toMatchObject({ name: 'Acme design system', tokenCount: expect.any(Number) });
+    expect(file.body.components.map((c: any) => c.name)).toEqual(['Button', 'Text Field', 'Toast']);
+
+    expect((await call('alice', 'POST', `/design-sync/connections/${conn.id}/sync`, { direction: 'code-to-design' })).status).toBe(400);
+    const compared = await call('alice', 'POST', `/design-sync/connections/${conn.id}/sync`, {});
+    expect(compared.status).toBe(201);
+    expect(compared.body).toMatchObject({ kind: 'components', status: 'compared' });
+    const items = compared.body.componentItems;
+    expect(items.find((i: any) => i.designName === 'Button')).toMatchObject({ kind: 'matched', componentId: 'button' });
+    expect(items.find((i: any) => i.designName === 'Toast')).toMatchObject({ kind: 'missing-in-code' });
+    expect(items.find((i: any) => i.componentName === 'Card')).toMatchObject({ kind: 'missing-in-design' });
+
+    expect((await call('alice', 'PUT', `/design-sync/connections/${conn.id}/links`, { componentId: 'nope', designNodeId: '2:1' })).status).toBe(400);
+    expect((await call('bob', 'PUT', `/design-sync/connections/${conn.id}/links`, { componentId: 'input', designNodeId: '2:1' })).status).toBe(404);
+    const linked = await call('alice', 'PUT', `/design-sync/connections/${conn.id}/links`, { componentId: 'input', designNodeId: '2:1' });
+    expect(linked.body.componentLinks).toEqual({ input: '2:1' });
+    const again = await call('alice', 'POST', `/design-sync/connections/${conn.id}/sync`, {});
+    expect(again.body.componentItems.find((i: any) => i.designId === '2:1')).toMatchObject({ kind: 'renamed', componentId: 'input', linked: true });
+    expect((await call('alice', 'PUT', `/design-sync/connections/${conn.id}/links`, { componentId: 'input', designNodeId: null })).body.componentLinks).toEqual({});
+
+    expect((await call('alice', 'GET', `/design-sync/connections/${conn.id}/versions`)).body).toEqual(['42']);
+    expect((await call('alice', 'GET', `/design-sync/connections/${conn.id}/runs`)).body).toHaveLength(2);
+    expect((await call('alice', 'POST', '/design-sync/components/comp-1/generate', { connectionId: conn.id })).status).toBe(404);
+    expect((await call('alice', 'POST', '/token-sync/conflicts/c-1/resolve', { resolution: 'use-system' })).status).toBe(404);
   });
 });

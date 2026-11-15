@@ -490,10 +490,10 @@ const searchIndex = [
   { id: 'colored-text-palette', title: 'Colored Text Palette', description: 'Generate accessible colored text palettes', category: 'Tokens', path: '/tokens/color-palettes/colored-text', icon: 'baseline', tags: ['colored-text', 'color', 'palette', 'tokens', 'accessibility'] },
   { id: 'token-migration', title: 'Token Migration', description: 'Migrate and update design tokens', category: 'Tokens', path: '/tokens/migration', icon: 'arrow-left-right', tags: ['migration', 'tokens', 'update'] },
   { id: 'token-relationships', title: 'Token Relationships', description: 'Visualize token relationships and dependencies', category: 'Tokens', path: '/tokens/relationships', icon: 'share-2', tags: ['relationships', 'tokens', 'dependencies'] },
-  { id: 'token-sync', title: 'Token Sync', description: 'Synchronize tokens across platforms and tools', category: 'Tokens', path: '/tokens/sync', icon: 'refresh-cw', tags: ['sync', 'tokens', 'synchronization'] },
+  { id: 'token-sync', title: 'Token Sync', description: 'Pull tokens from Figma or Penpot and review the diff', category: 'Tokens', path: '/tokens/sync', icon: 'refresh-cw', tags: ['sync', 'tokens', 'synchronization'] },
   { id: 'design-extractor', title: 'Design Extractor', description: 'Extract design tokens from design files', category: 'Tokens', path: '/tokens/extract', icon: 'file-output', tags: ['extract', 'tokens', 'design-files'] },
   { id: 'ai-token-builder', title: 'AI Token Builder', description: 'Build design tokens with AI assistance', category: 'Tokens', path: '/tokens/ai-builder', icon: 'sparkles', tags: ['ai', 'tokens', 'builder', 'generator'] },
-  { id: 'design-sync', title: 'Design Sync', description: 'Sync designs between tools and platforms', category: 'Tools', path: '/design-sync', icon: 'refresh-cw', tags: ['design-sync', 'sync', 'tools'] },
+  { id: 'design-sync', title: 'Design Sync', description: 'Compare Figma or Penpot components with the library', category: 'Tools', path: '/design-sync', icon: 'refresh-cw', tags: ['design-sync', 'sync', 'tools'] },
   // HCD/Research pages
   { id: 'hcd-principles', title: 'HCD Principles', description: 'Human-centered design principles and guidelines', category: 'HCD', path: '/hcd/principles', icon: 'lightbulb', tags: ['hcd', 'principles', 'human-centered-design'] },
   { id: 'hcd-research', title: 'HCD Research', description: 'User research methods and practices', category: 'HCD', path: '/hcd/research', icon: 'flask-conical', tags: ['hcd', 'research', 'user-research'] },

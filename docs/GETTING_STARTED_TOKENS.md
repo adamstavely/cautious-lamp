@@ -119,13 +119,13 @@ curl http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/tokens/export/style-di
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
-### Figma
+### Figma and Penpot
 
-Sync tokens with Figma using the Figma plugin.
+Pull tokens from a Figma or Penpot file on the **Token sync** page (`/tokens/sync`): save a connection with an access token, pull, review the diff and apply the changes you choose. See [Token and design sync](./TOKEN_SYNC.md).
 
 ### Adobe XD
 
-Sync tokens with Adobe XD using the XD plugin.
+Not supported: Adobe has discontinued the XD plugin and cloud document APIs a sync would read from.
 
 ## Managing Tokens
 

@@ -4,7 +4,7 @@
 
 This document outlines how a live synchronization feature between the Design System Platform and Adobe XD would work. This feature would enable real-time updates of design tokens and component specifications directly in Adobe XD documents, eliminating the need for manual file exports and imports.
 
-**Status:** Not Implemented - Technical Specification Only
+**Status:** Not implemented, and not planned. Adobe has discontinued the XD plugin and cloud document APIs this design depends on, so token sync and design sync support Figma and Penpot only (see [TOKEN_SYNC.md](./TOKEN_SYNC.md)). Kept for reference.
 
 ## Current Implementation
 

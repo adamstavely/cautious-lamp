@@ -317,7 +317,7 @@
                 Figma Sync
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Sync components and tokens from Figma.
+                Compare Figma components with the library, and pull its tokens.
               </p>
             </router-link>
 
@@ -341,7 +341,7 @@
                 Penpot Sync
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Sync components and tokens from Penpot.
+                Compare Penpot components with the library, and pull its tokens.
               </p>
             </router-link>
 
@@ -365,7 +365,7 @@
                 Token Sync
               </h3>
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Sync design tokens from Figma, Penpot, or Adobe XD.
+                Pull tokens from Figma or Penpot and review the diff before applying.
               </p>
             </router-link>
           </div>

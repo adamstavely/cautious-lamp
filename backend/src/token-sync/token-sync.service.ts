@@ -1,30 +1,36 @@
-import { BadRequestException, Inject, Injectable, NotImplementedException } from '@nestjs/common';
-import { AuthPrincipal } from '../auth/principal';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
+  UnprocessableEntityException,
+} from '@nestjs/common';
+import { AuthPrincipal, hasPermission } from '../auth/principal';
 import { EncryptionService } from '../common/security/encryption.service';
-import { DesignSystemService, Token } from '../design-system/design-system.service';
+import { DesignSystemService } from '../design-system/design-system.service';
+import { startAutoSyncTimer } from '../design-tools/auto-sync-timer';
+import { DESIGN_TOOL_READER, DesignToolReader } from '../design-tools/design-tool-reader';
+import { DesignToolError } from '../design-tools/design-tool-http';
+import { SUPPORTED_DESIGN_TOOLS } from '../design-tools/design-tool.types';
+import { SYNC_RUN_STORE, ItemOutcome, SyncActor, SyncRun, SyncRunLog, SyncRunSummary, newRunId, summarize } from '../design-tools/sync-runs';
+import { BaselineEntry, SYNC_CHOICES, SyncChoice, TokenDiffItem, allowedChoices, diffTokens } from '../design-tools/token-diff';
 import { DocumentStore } from '../reviews/document-store';
-import { AUTO_SYNC_UNSUPPORTED, ConnectionRegistry, PublicConnection, StoredConnection, bool, httpUrl, oneOf, text } from './connection-registry';
-
-export interface DesignToolToken {
-  id: string;
-  name: string;
-  value: string;
-  type: string;
-  category?: string;
-  description?: string;
-  source: 'figma' | 'penpot' | 'adobe-xd';
-  fileId?: string;
-  fileUrl?: string;
-  lastModified?: Date;
-}
+import { Permission } from '../rbac/rbac.service';
+import { ConnectionRegistry, PublicConnection, StoredConnection, bool, httpUrl, oneOf, text } from './connection-registry';
 
 export interface TokenMapping {
   designToolTokenId: string;
   designSystemTokenName: string;
-  autoMap?: boolean; // If true, automatically map tokens with matching names
+  autoMap?: boolean;
 }
 
-export const TOKEN_SYNC_TOOLS = ['figma', 'penpot', 'adobe-xd'] as const;
+/** Tools a connection can be saved for. Adobe XD connections saved earlier still load, and say why they can't sync. */
+export const TOKEN_SYNC_TOOLS = SUPPORTED_DESIGN_TOOLS;
 
 export const TOKEN_SYNC_CONNECTIONS_INDEX = 'design-system-token-sync-connections';
 /** Injection token for the connection store */
@@ -33,20 +39,21 @@ export const TOKEN_SYNC_CONNECTION_STORE = Symbol('TOKEN_SYNC_CONNECTION_STORE')
 /** As stored in Elasticsearch; `apiKey` is encrypted */
 export interface TokenSyncConnection extends StoredConnection {
   name: string;
-  tool: (typeof TOKEN_SYNC_TOOLS)[number];
+  tool: (typeof TOKEN_SYNC_TOOLS)[number] | 'adobe-xd';
   fileId?: string;
   fileUrl?: string;
   enabled: boolean;
   lastSync?: string;
+  lastSyncVersion?: string;
+  lastRunId?: string;
+  /** Explicit names for design tokens whose mapped name isn't the one wanted, by design token id */
   mappings: TokenMapping[];
+  /** Each synced token's design and code values when both sides last agreed, for the three-way diff */
+  baseline?: Record<string, BaselineEntry>;
 }
 
-/** As returned by the API: never the credential */
-export type TokenSyncConnectionView = PublicConnection<TokenSyncConnection>;
-
-/** Why sync can't run: the server has no Figma, Penpot or Adobe XD client */
-export const TOKEN_SYNC_UNSUPPORTED =
-  'Token sync is not implemented: this server has no Figma, Penpot or Adobe XD integration to read tokens from. Nothing was changed.';
+/** As returned by the API: never the credential or the baseline */
+export type TokenSyncConnectionView = Omit<PublicConnection<TokenSyncConnection>, 'baseline'>;
 
 function parseMappings(value: unknown): TokenMapping[] {
   if (!Array.isArray(value) || value.length > 1000) {
@@ -61,43 +68,32 @@ function parseMappings(value: unknown): TokenMapping[] {
   });
 }
 
-export interface TokenConflict {
-  designToolToken: DesignToolToken;
-  designSystemToken: Token;
-  conflictType: 'value-mismatch' | 'type-mismatch' | 'name-collision';
-  message: string;
-}
+/** Recorded as the starter of scheduled pulls */
+const SCHEDULER: SyncActor = { type: 'service', id: 'token-sync-scheduler', name: 'Scheduled token sync' };
 
-export interface TokenValidationResult {
-  valid: boolean;
-  errors: string[];
-  warnings: string[];
-}
-
-export interface SyncResult {
-  success: boolean;
-  tokensAdded: number;
-  tokensUpdated: number;
-  tokensSkipped: number;
-  conflicts: TokenConflict[];
-  errors: string[];
-  validationResults: TokenValidationResult[];
-}
+const actorOf = (principal: AuthPrincipal): SyncActor => ({ type: principal.type, id: principal.id, name: principal.name });
 
 /**
- * Token sync connections, and the token checks (validation, mapping, conflict
- * detection) a sync would use. Reading tokens from a design tool is not
- * implemented, so sync, conflict resolution and auto-sync answer 501 instead
- * of reporting work that didn't happen.
+ * Token sync: pulls colours, typography, spacing, sizing and radii from a
+ * Figma or Penpot file, diffs them against the design system's tokens and
+ * keeps the diff as a run for review. Applying writes the changes the person
+ * chose (take the design value, keep code, or skip) through the design
+ * system's token writes, checking token:create, token:edit and token:delete.
+ * Scheduled pulls (auto-sync) only produce diffs; nothing is applied without
+ * someone choosing it.
  */
 @Injectable()
-export class TokenSyncService {
+export class TokenSyncService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(TokenSyncService.name);
   private readonly registry: ConnectionRegistry<TokenSyncConnection>;
+  private stopTimer: () => void = () => undefined;
 
   constructor(
     private readonly designSystemService: DesignSystemService,
     encryption: EncryptionService,
     @Inject(TOKEN_SYNC_CONNECTION_STORE) store: DocumentStore<TokenSyncConnection>,
+    @Inject(DESIGN_TOOL_READER) private readonly reader: DesignToolReader,
+    @Inject(SYNC_RUN_STORE) private readonly runs: SyncRunLog,
   ) {
     this.registry = new ConnectionRegistry<TokenSyncConnection>(
       store,
@@ -116,191 +112,264 @@ export class TokenSyncService {
     );
   }
 
+  onModuleInit(): void {
+    this.stopTimer = startAutoSyncTimer(this.logger, 'token sync pull(s)', (now) => this.runDueAutoSyncs(now));
+  }
+
+  onModuleDestroy(): void {
+    this.stopTimer();
+  }
+
   // Connection Management
-  getAllConnections(principal: AuthPrincipal): Promise<TokenSyncConnectionView[]> {
-    return this.registry.list(principal);
+  async getAllConnections(principal: AuthPrincipal): Promise<TokenSyncConnectionView[]> {
+    return (await this.registry.list(principal)).map(view);
   }
 
-  getConnection(principal: AuthPrincipal, id: string): Promise<TokenSyncConnectionView> {
-    return this.registry.get(principal, id);
+  async getConnection(principal: AuthPrincipal, id: string): Promise<TokenSyncConnectionView> {
+    return view(await this.registry.get(principal, id));
   }
 
-  createConnection(principal: AuthPrincipal, body: unknown): Promise<TokenSyncConnectionView> {
-    return this.registry.create(principal, body);
+  async createConnection(principal: AuthPrincipal, body: unknown): Promise<TokenSyncConnectionView> {
+    return view(await this.registry.create(principal, body));
   }
 
-  updateConnection(principal: AuthPrincipal, id: string, body: unknown): Promise<TokenSyncConnectionView> {
-    return this.registry.update(principal, id, body);
+  async updateConnection(principal: AuthPrincipal, id: string, body: unknown): Promise<TokenSyncConnectionView> {
+    return view(await this.registry.update(principal, id, body));
   }
 
-  deleteConnection(principal: AuthPrincipal, id: string): Promise<void> {
-    return this.registry.delete(principal, id);
+  async deleteConnection(principal: AuthPrincipal, id: string): Promise<void> {
+    await this.registry.delete(principal, id);
+    await this.runs.deleteForConnection(id);
   }
 
-  /** 501: there is no design tool client to read tokens from */
-  async syncTokens(principal: AuthPrincipal, connectionId: string): Promise<never> {
+  /**
+   * Pulls the design file and records the diff against the current tokens as
+   * a run waiting for review. Nothing is written to the tokens. A file that
+   * can't be read is recorded as a failed run and answers 422 with the reason.
+   */
+  async syncTokens(principal: AuthPrincipal, connectionId: string): Promise<SyncRun> {
+    const connection = await this.registry.require(principal, connectionId);
+    const run = await this.pull(connection, actorOf(principal), 'manual');
+    if (run.status === 'failed') throw new UnprocessableEntityException(run.error);
+    return run;
+  }
+
+  /** The connection's runs, newest first, without their diffs */
+  async listRuns(principal: AuthPrincipal, connectionId: string): Promise<SyncRunSummary[]> {
     await this.registry.require(principal, connectionId);
-    throw new NotImplementedException(TOKEN_SYNC_UNSUPPORTED);
+    return (await this.runs.forConnection(connectionId)).filter((r) => r.kind === 'tokens').map(summarize);
   }
 
-  /** 501: conflicts come from a sync, which can't run (nothing is stored to resolve) */
-  resolveConflict(_conflictId: string, _resolution: 'use-design-tool' | 'use-system' | 'merge'): never {
-    throw new NotImplementedException(`Conflict resolution is not implemented. ${TOKEN_SYNC_UNSUPPORTED}`);
-  }
-
-  /** 501: there is no scheduler, and nothing to schedule */
-  async enableAutoSync(principal: AuthPrincipal, connectionId: string): Promise<never> {
-    await this.registry.require(principal, connectionId);
-    throw new NotImplementedException(AUTO_SYNC_UNSUPPORTED);
-  }
-
-  disableAutoSync(principal: AuthPrincipal, connectionId: string): Promise<TokenSyncConnectionView> {
-    return this.registry.disableAutoSync(principal, connectionId);
-  }
-
-  validateToken(token: DesignToolToken): TokenValidationResult {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    // Validate token name
-    if (!token.name || token.name.trim().length === 0) {
-      errors.push('Token name is required');
-    }
-
-    // Validate token value
-    if (!token.value || token.value.trim().length === 0) {
-      errors.push('Token value is required');
-    }
-
-    // Validate token type
-    const validTypes = ['color', 'dimension', 'fontFamily', 'fontSize', 'fontWeight', 'shadow', 'border'];
-    if (!validTypes.includes(token.type)) {
-      errors.push(`Invalid token type: ${token.type}. Must be one of: ${validTypes.join(', ')}`);
-    }
-
-    // Validate color format
-    if (token.type === 'color' && !this.isValidColor(token.value)) {
-      errors.push(`Invalid color value: ${token.value}`);
-    }
-
-    // Validate dimension format
-    if (token.type === 'dimension' && !this.isValidDimension(token.value)) {
-      warnings.push(`Dimension value may be invalid: ${token.value}`);
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors,
-      warnings,
-    };
-  }
-
-  private isValidColor(value: string): boolean {
-    // Check for hex, rgb, rgba, hsl, hsla, or named colors
-    const hexPattern = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-    const rgbPattern = /^rgba?\([\d\s,]+\)$/;
-    const hslPattern = /^hsla?\([\d\s%,]+\)$/;
-    const namedColors = ['transparent', 'currentColor'];
-    
-    return hexPattern.test(value) || 
-           rgbPattern.test(value) || 
-           hslPattern.test(value) || 
-           namedColors.includes(value.toLowerCase());
-  }
-
-  private isValidDimension(value: string): boolean {
-    // Check for valid CSS dimension (px, rem, em, %, etc.)
-    const dimensionPattern = /^-?\d+(\.\d+)?(px|rem|em|%|vh|vw|ch|ex|cm|mm|in|pt|pc)$/;
-    return dimensionPattern.test(value.trim());
-  }
-
-  mapTokens(designToolTokens: DesignToolToken[], mappings: TokenMapping[]): Array<{ designToolToken: DesignToolToken; designSystemTokenName: string }> {
-    return designToolTokens.map(designToolToken => {
-      // Check for explicit mapping
-      const explicitMapping = mappings.find(m => m.designToolTokenId === designToolToken.id);
-      if (explicitMapping) {
-        return {
-          designToolToken,
-          designSystemTokenName: explicitMapping.designSystemTokenName,
-        };
-      }
-
-      // Auto-map based on name similarity
-      const autoMapping = this.autoMapToken(designToolToken);
-      return {
-        designToolToken,
-        designSystemTokenName: autoMapping,
-      };
+  async getRun(principal: AuthPrincipal, runId: string): Promise<SyncRun> {
+    const run = await this.runs.get(runId);
+    if (!run || run.kind !== 'tokens') throw new NotFoundException('Sync run not found');
+    await this.registry.require(principal, run.connectionId).catch(() => {
+      throw new NotFoundException('Sync run not found');
     });
+    return run;
   }
 
-  private autoMapToken(designToolToken: DesignToolToken): string {
-    // Simple auto-mapping logic based on token name
-    // In a real implementation, this would be more sophisticated
-    const name = designToolToken.name.toLowerCase();
-    
-    // Map common patterns
-    if (name.includes('primary') || name.includes('brand')) {
-      return 'color.primary';
-    }
-    if (name.includes('secondary')) {
-      return 'color.secondary';
-    }
-    if (name.includes('spacing') && name.includes('medium')) {
-      return 'spacing.md';
-    }
-    if (name.includes('spacing') && name.includes('small')) {
-      return 'spacing.sm';
-    }
-    if (name.includes('spacing') && name.includes('large')) {
-      return 'spacing.lg';
-    }
-    if (name.includes('font') && name.includes('size') && name.includes('large')) {
-      return 'typography.fontSize.lg';
-    }
+  /**
+   * Applies a run's diff with a choice per item (`choices[itemId]`; an item
+   * left out gets its default, which is never destructive). Every change is
+   * checked against the token the diff was made from, so one changed in code
+   * since then fails instead of being overwritten.
+   */
+  async applyRun(principal: AuthPrincipal, runId: string, body: unknown): Promise<SyncRun> {
+    const run = await this.getRun(principal, runId);
+    const items = run.tokenItems ?? [];
+    const choices = parseChoices(body, items);
+    const plan = items.map((item) => ({ item, choice: choices[item.id] ?? item.defaultChoice }));
 
-    // Default: create a new token name based on design tool token
-    return this.generateTokenName(designToolToken);
-  }
+    const needed = new Set<Permission>();
+    for (const { item, choice } of plan) {
+      if (choice !== 'take-design') continue;
+      if (item.kind === 'removed') needed.add(Permission.TOKEN_DELETE);
+      else needed.add(item.codeValue === undefined ? Permission.TOKEN_CREATE : Permission.TOKEN_EDIT);
+    }
+    const missing = [...needed].filter((p) => !hasPermission(principal, p));
+    if (missing.length) throw new ForbiddenException(`Applying these changes requires ${missing.join(', ')}`);
 
-  private generateTokenName(token: DesignToolToken): string {
-    // Convert design tool token name to design system token name format
-    const parts = token.name.split(/[\/\-_]/).map(p => p.toLowerCase().trim());
-    const category = token.category || parts[0] || 'custom';
-    const name = parts.slice(1).join('.') || parts[0];
-    return `${category}.${name}`;
-  }
-
-  detectConflicts(mappedTokens: Array<{ designToolToken: DesignToolToken; designSystemTokenName: string }>): TokenConflict[] {
-    const conflicts: TokenConflict[] = [];
-    const systemTokens = this.designSystemService.getAllTokens();
-
-    for (const mapped of mappedTokens) {
-      const systemToken = systemTokens.find(t => t.name === mapped.designSystemTokenName);
-      
-      if (systemToken) {
-        // Check for value mismatch
-        if (systemToken.value !== mapped.designToolToken.value) {
-          conflicts.push({
-            designToolToken: mapped.designToolToken,
-            designSystemToken: systemToken,
-            conflictType: 'value-mismatch',
-            message: `Value mismatch: Design tool has "${mapped.designToolToken.value}" but system has "${systemToken.value}"`,
-          });
-        }
-
-        // Check for type mismatch
-        if (systemToken.type !== mapped.designToolToken.type) {
-          conflicts.push({
-            designToolToken: mapped.designToolToken,
-            designSystemToken: systemToken,
-            conflictType: 'type-mismatch',
-            message: `Type mismatch: Design tool has type "${mapped.designToolToken.type}" but system has "${systemToken.type}"`,
-          });
-        }
+    if (run.status !== 'review') {
+      throw new ConflictException(run.status === 'superseded' ? 'A newer pull replaced this diff; review and apply that one' : 'This diff has already been applied');
+    }
+    // Claim the run, so two people applying at once can't both write
+    let claimed = false;
+    await this.runs.update(run.id, (r) => {
+      if (r.status === 'review') {
+        r.status = 'applying';
+        claimed = true;
       }
+    });
+    if (!claimed) throw new ConflictException('This diff is being applied by someone else');
+
+    const results: NonNullable<SyncRun['applied']>['results'] = [];
+    for (const { item, choice } of plan) {
+      results.push({ id: item.id, choice, ...(await this.applyItem(item, choice)) });
     }
 
-    return conflicts;
+    const counts = { created: 0, updated: 0, deleted: 0, 'kept-code': 0, skipped: 0, failed: 0 } as Record<ItemOutcome, number>;
+    for (const result of results) counts[result.outcome]++;
+    const now = new Date().toISOString();
+    const byId = new Map(items.map((item) => [item.id, item]));
+
+    const connection = await this.registry.patch(run.connectionId, (c) => {
+      const baseline = { ...(c.baseline ?? {}), ...(run.matched ?? {}) };
+      for (const result of results) {
+        const item = byId.get(result.id)!;
+        if (result.outcome === 'failed' || result.outcome === 'skipped') continue;
+        if (item.kind === 'removed') delete baseline[item.id];
+        else if (result.outcome === 'kept-code') baseline[item.id] = { design: item.designValue!, code: item.codeValue ?? '' };
+        else baseline[item.id] = { design: item.designValue!, code: item.designValue! };
+      }
+      c.baseline = baseline;
+      c.lastSync = now;
+      if (run.fileVersion) c.lastSyncVersion = run.fileVersion;
+    });
+    this.logger.log(`Token sync ${run.id} on ${connection.id} applied by ${principal.id}: ${JSON.stringify(counts)}`);
+
+    const applied: SyncRun['applied'] = { by: actorOf(principal), at: now, counts, results };
+    await this.runs.update(run.id, (r) => {
+      r.status = counts.failed ? 'partial' : 'applied';
+      r.applied = applied;
+    });
+    return { ...run, status: counts.failed ? 'partial' : 'applied', applied };
   }
+
+  async enableAutoSync(principal: AuthPrincipal, connectionId: string, body?: { intervalHours?: unknown }): Promise<TokenSyncConnectionView> {
+    const connection = await this.registry.require(principal, connectionId);
+    if (connection.tool === 'adobe-xd') throw new BadRequestException('Adobe XD connections cannot sync');
+    return view(await this.registry.enableAutoSync(principal, connectionId, body?.intervalHours));
+  }
+
+  async disableAutoSync(principal: AuthPrincipal, connectionId: string): Promise<TokenSyncConnectionView> {
+    return view(await this.registry.disableAutoSync(principal, connectionId));
+  }
+
+  /** Pulls every connection whose scheduled pull is due; returns how many this instance ran */
+  async runDueAutoSyncs(now: Date = new Date()): Promise<number> {
+    let ran = 0;
+    for (const due of await this.registry.dueForAutoSync(now)) {
+      const connection = await this.registry.claimAutoSync(due.id, now);
+      if (!connection) continue;
+      ran++;
+      const run = await this.pull(connection, SCHEDULER, 'scheduled').catch((error) => {
+        this.logger.warn(`Scheduled token sync of ${connection.id} failed: ${(error as Error).message}`);
+        return null;
+      });
+      if (run?.status === 'failed') this.logger.warn(`Scheduled token sync of ${connection.id} failed: ${run.error}`);
+    }
+    return ran;
+  }
+
+  /** Reads the file, diffs it and records the run (a failed one when the file can't be read) */
+  private async pull(connection: TokenSyncConnection, actor: SyncActor, trigger: SyncRun['trigger']): Promise<SyncRun> {
+    const started = {
+      id: newRunId(),
+      kind: 'tokens' as const,
+      connectionId: connection.id,
+      tool: connection.tool,
+      ...(connection.fileId ? { fileId: connection.fileId } : {}),
+      trigger,
+      startedBy: actor,
+      startedAt: new Date().toISOString(),
+    };
+    let run: SyncRun;
+    try {
+      const snapshot = await this.reader.read(connection, this.registry.credential(connection));
+      const tokens = snapshot.tokens.map((token) => {
+        const mapping = connection.mappings?.find((m) => m.designToolTokenId === token.id);
+        return mapping ? { ...token, name: mapping.designSystemTokenName } : token;
+      });
+      const diff = diffTokens(tokens, this.designSystemService.getAllTokens(), connection.baseline ?? {});
+      const count = (kind: TokenDiffItem['kind']) => diff.items.filter((i) => i.kind === kind).length;
+      run = {
+        ...started,
+        fileName: snapshot.name,
+        fileVersion: snapshot.version,
+        finishedAt: new Date().toISOString(),
+        // Nothing to choose: the run is complete, and the agreed values become the baseline below
+        status: diff.items.length ? 'review' : 'applied',
+        counts: { read: tokens.length, added: count('added'), changed: count('changed'), removed: count('removed'), conflicts: count('conflict'), unchanged: diff.unchanged },
+        warnings: [...snapshot.warnings, ...diff.warnings],
+        variables: snapshot.variables,
+        tokenItems: diff.items,
+        matched: diff.matched,
+      };
+    } catch (error) {
+      if (!(error instanceof DesignToolError)) this.logger.error(`Token sync of ${connection.id} failed`, (error as Error).stack);
+      run = {
+        ...started,
+        finishedAt: new Date().toISOString(),
+        status: 'failed',
+        counts: {},
+        warnings: [],
+        error: error instanceof DesignToolError ? error.message : 'The design file could not be read (unexpected error; see the server log)',
+      };
+    }
+    await this.runs.record(run);
+    await this.registry.patch(connection.id, (c) => {
+      c.lastRunId = run.id;
+      if (run.status === 'applied') {
+        c.baseline = { ...(c.baseline ?? {}), ...(run.matched ?? {}) };
+        c.lastSync = run.finishedAt;
+        if (run.fileVersion) c.lastSyncVersion = run.fileVersion;
+      }
+    });
+    return run;
+  }
+
+  private async applyItem(item: TokenDiffItem, choice: SyncChoice): Promise<{ outcome: ItemOutcome; error?: string }> {
+    if (choice === 'skip') return { outcome: 'skipped' };
+    if (choice === 'keep-code') return { outcome: 'kept-code' };
+    const current = this.designSystemService.getTokenByName(item.id);
+    if ((current?.value ?? undefined) !== item.codeValue) {
+      return { outcome: 'failed', error: 'Changed in code since this diff was made; pull again' };
+    }
+    try {
+      if (item.kind === 'removed') {
+        await this.designSystemService.deleteToken(item.id);
+        return { outcome: 'deleted' };
+      }
+      if (!current) {
+        await this.designSystemService.createToken({
+          name: item.id,
+          value: item.designValue!,
+          type: item.type,
+          category: item.category,
+          ...(item.description ? { description: item.description } : {}),
+          tags: ['design-sync'],
+        });
+        return { outcome: 'created' };
+      }
+      await this.designSystemService.updateToken(item.id, { value: item.designValue! });
+      return { outcome: 'updated' };
+    } catch (error) {
+      return { outcome: 'failed', error: (error as Error).message };
+    }
+  }
+}
+
+/** `{ choices: { [itemId]: choice } }`, each a choice the item allows */
+function parseChoices(body: unknown, items: TokenDiffItem[]): Record<string, SyncChoice> {
+  const raw = (body ?? {}) as { choices?: unknown };
+  if (raw.choices === undefined) return {};
+  if (!raw.choices || typeof raw.choices !== 'object' || Array.isArray(raw.choices)) throw new BadRequestException('choices must be an object of item id to choice');
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const out: Record<string, SyncChoice> = {};
+  for (const [id, choice] of Object.entries(raw.choices as Record<string, unknown>)) {
+    const item = byId.get(id);
+    if (!item) throw new BadRequestException(`${id} is not an item in this diff`);
+    if (!SYNC_CHOICES.includes(choice as SyncChoice) || !allowedChoices(item.kind).includes(choice as SyncChoice)) {
+      throw new BadRequestException(`${id}: choose one of ${allowedChoices(item.kind).join(', ')}`);
+    }
+    out[id] = choice as SyncChoice;
+  }
+  return out;
+}
+
+function view(connection: PublicConnection<TokenSyncConnection>): TokenSyncConnectionView {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { baseline, ...rest } = connection;
+  return rest;
 }
