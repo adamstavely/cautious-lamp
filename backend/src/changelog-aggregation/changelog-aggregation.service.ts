@@ -1,6 +1,7 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { AuthPrincipal } from '../auth/principal';
+import { NotificationDeliveryService } from '../notifications/notification-delivery.service';
 import { NotificationService } from '../notifications/notification.service';
 import { NotificationSettingsService } from '../notifications/notification-settings.service';
 import {
@@ -78,6 +79,7 @@ export class ChangelogAggregationService implements ChangeRecorder {
     private readonly notifications: NotificationService,
     private readonly settings: NotificationSettingsService,
     private readonly workspaces: WorkspaceAccessService,
+    @Optional() private readonly delivery?: NotificationDeliveryService,
   ) {}
 
   /**
@@ -209,9 +211,21 @@ export class ChangelogAggregationService implements ChangeRecorder {
       const prefs = subscriber.preferences;
       if (subscriber.userId === entry.authorId) continue;
       if (allowed && !allowed.has(subscriber.userId)) continue;
+      if (prefs?.breakingOnly && !entry.breaking) continue;
+      if (!(prefs?.actions ?? []).includes(entry.action)) continue;
+      // Email, Slack, Teams and webhooks follow their own switches, not "show in the app"
+      this.delivery?.deliverInBackground(
+        subscriber.userId,
+        {
+          event: 'design-system-change',
+          title,
+          text: message || title,
+          ...(entry.link ? { link: entry.link } : {}),
+          data: { changelogEntryId: entry.id, type: entry.type, entityId: entry.entityId, action: entry.action, breaking: entry.breaking },
+        },
+        subscriber,
+      );
       if (!prefs?.inApp) continue;
-      if (prefs.breakingOnly && !entry.breaking) continue;
-      if (!(prefs.actions ?? []).includes(entry.action)) continue;
       try {
         await this.notifications.createNotification({
           userId: subscriber.userId,

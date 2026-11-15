@@ -130,6 +130,12 @@ POST   /api/v1/visual-regression/results/:id/reject
 
 // Webhooks
 POST   /api/v1/visual-regression/webhooks/argos
+
+// Where build results are sent (manage access; see "Notifications" below)
+GET    /api/v1/visual-regression/projects/:id/notifications
+POST   /api/v1/visual-regression/projects/:id/notifications
+DELETE /api/v1/visual-regression/projects/:id/notifications/:type
+POST   /api/v1/visual-regression/projects/:id/notifications/:type/test
 ```
 
 ### Phase 2: Frontend Dashboard
@@ -282,10 +288,8 @@ await client.results.approve(resultId);
 - Cost tracking (Argos usage)
 
 #### 4.3 Notifications
-- Email notifications for test failures
-- Slack/Teams integration
-- Custom webhook notifications
-- Notification preferences per user/team
+
+Implemented. See [Notifications](#notifications).
 
 #### 4.4 Baseline Management
 - Manual baseline updates
@@ -423,3 +427,14 @@ await client.results.approve(resultId);
 - Time saved vs manual testing
 - User satisfaction scores
 
+## Notifications
+
+When a run's Argos build finishes, its result is sent to the project's notification channels: email recipients, a Slack incoming webhook, a Microsoft Teams incoming webhook, and a generic webhook signed with HMAC-SHA256. Set them up on the project's **Settings** tab under **Send build results** (separate from **Build notifications**, which is how CI tells this app about a new upload), where each channel has **Send test** and the last 30 days of deliveries are listed with their status.
+
+- **When.** Once per run, the first time its build result is saved with a final Argos status (`no-changes`, `changes-detected`, `accepted`, `rejected` → completed; `error`, `aborted`, `expired` → failed), whether that comes from CI's signed build notification, a sync or opening the results. Later status changes (accepting the build in Argos) and refreshes don't send again. Builds that started more than 24 hours before their result is first saved (history found by a first sync) don't notify.
+- **What.** The title says whether the build passed, found changed screenshots, or failed (`Visual regression: Marketing site found 2 changed screenshots`); the text gives the branch, commit and the screenshot counts, and links to the run (with `APP_PUBLIC_URL` set). Webhooks receive event `visual-regression.build.completed` or `visual-regression.build.failed` with `data: { projectId, runId, argosBuildId, argosBuildNumber, argosStatus, argosUrl, status, branch, commitSha, summary }`.
+- **Who can change them.** People with `manage` access to the project (editors; admins for application-linked projects). Viewers see a note that only editors can see these settings.
+- **Secrets.** Slack, Teams and webhook URLs and the webhook signing secret are stored encrypted (`ENCRYPTION_KEY`) and never returned. A webhook saved with a new URL and no secret gets a generated one, shown once.
+- **API.** `POST /projects/:id/notifications` takes `{ type, enabled?, recipients? (email), url? (slack, teams, webhook), secret? (webhook) }`; fields left out keep their saved value, so `{ type, enabled: false }` only turns a channel off. `GET` answers `{ channels, availability, attempts }`. Settings saved before delivery existed (the old free-form `config`) are ignored and must be saved again.
+
+Email needs SMTP on the server; without it the panel says so and nothing is emailed. Delivery, egress checks, retries and webhook signatures work as described in [NOTIFICATIONS.md](NOTIFICATIONS.md).

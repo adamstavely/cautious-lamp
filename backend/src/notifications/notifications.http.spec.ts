@@ -6,12 +6,18 @@ import { AuthService } from '../auth/auth.service';
 import { AuthPrincipal } from '../auth/principal';
 import { ChangelogAggregationController } from '../changelog-aggregation/changelog-aggregation.controller';
 import { ChangelogAggregationService } from '../changelog-aggregation/changelog-aggregation.service';
+import { UsersService } from '../auth/users.service';
+import { EncryptionService } from '../common/security/encryption.service';
 import { SecurityAuditService } from '../common/security/security-audit.service';
+import { DeliveryService } from '../delivery/delivery.service';
+import { DeliveryAttempt } from '../delivery/delivery.types';
+import { TEST_EGRESS, fakeMail, startTarget } from '../delivery/testing/targets';
 import { Permission } from '../rbac/rbac.service';
 import { InMemoryStore } from '../reviews/testing/in-memory-store';
 import { InMemoryQueryableStore } from '../workspaces/testing/in-memory-queryable-store';
 import { WorkspaceAccessService } from '../workspaces/workspace-access.service';
 import { WORKSPACE_STORE, WorkspaceDoc } from '../workspaces/workspace.types';
+import { NotificationDeliveryService } from './notification-delivery.service';
 import { NotificationService } from './notification.service';
 import { NotificationSettingsService } from './notification-settings.service';
 import {
@@ -30,6 +36,7 @@ const PEOPLE: Record<string, string[]> = {
   bob: [], // member of ws_beta
   carol: [], // member of ws_alpha and ws_beta
   superuser: [Permission.ADMIN_USERS],
+  dora: [], // account disabled
 };
 
 const authStub = {
@@ -62,6 +69,17 @@ describe('Notifications and changelog HTTP API', () => {
   let changelogStore: InMemoryStore<ChangelogEntry>;
   let changelog: ChangelogAggregationService;
   let notifications: NotificationService;
+  let attemptStore: InMemoryStore<DeliveryAttempt>;
+  let delivery: DeliveryService;
+  let mail: ReturnType<typeof fakeMail>;
+  let encryption: EncryptionService;
+  /** People's accounts, for their email address; Dora's account is disabled */
+  const users = {
+    async findById(id: string) {
+      const name = id.replace(/^usr_/, '');
+      return PEOPLE[name] ? { id, email: `${name}@example.com`, status: name === 'dora' ? 'disabled' : 'active' } : null;
+    },
+  };
 
   const call = async (as: string | null, method: string, route: string, body?: unknown) => {
     const res = await fetch(`${base}/api/v1${route}`, {
@@ -81,10 +99,24 @@ describe('Notifications and changelog HTTP API', () => {
     await workspaces.create(workspace('ws_alpha', ['usr_alice', 'usr_carol']));
     await workspaces.create(workspace('ws_beta', ['usr_bob', 'usr_carol']));
 
+    attemptStore = new InMemoryStore<DeliveryAttempt>();
+    mail = fakeMail();
+    encryption = new EncryptionService();
+    delivery = new DeliveryService(attemptStore, mail.factory, {
+      retryDelayMs: 1,
+      allowHttp: true,
+      egress: TEST_EGRESS,
+      smtp: { from: 'ds@example.com', host: 'smtp.example.com' },
+    });
+
     const moduleRef = await Test.createTestingModule({
       controllers: [NotificationsController, ChangelogAggregationController],
       providers: [
         NotificationService,
+        NotificationDeliveryService,
+        { provide: DeliveryService, useValue: delivery },
+        { provide: EncryptionService, useValue: encryption },
+        { provide: UsersService, useValue: users },
         NotificationSettingsService,
         ChangelogAggregationService,
         WorkspaceAccessService,
@@ -105,6 +137,7 @@ describe('Notifications and changelog HTTP API', () => {
   });
 
   afterEach(async () => {
+    await delivery.idle();
     await app.close();
   });
 
@@ -175,8 +208,9 @@ describe('Notifications and changelog HTTP API', () => {
           inApp: true,
           actions: ['created', 'updated', 'deprecated', 'deleted', 'status-changed'],
           breakingOnly: false,
-          channels: { email: false, slack: false, webhook: false },
+          channels: { email: false, slack: false, teams: false, webhook: false },
         },
+        targets: { slack: { configured: false }, teams: { configured: false }, webhook: { configured: false } },
       });
       expect(settingsStore.docs.size).toBe(0);
     });
@@ -290,6 +324,123 @@ describe('Notifications and changelog HTTP API', () => {
       jest.spyOn(changelogStore, 'create').mockRejectedValueOnce(new Error('es down'));
       await expect(changelog.record({ type: 'component', entityId: 'x', entityName: 'X', action: 'created' })).resolves.toBeUndefined();
       expect(changelogStore.docs.size).toBe(0);
+    });
+  });
+
+  describe('delivery', () => {
+    let target: Awaited<ReturnType<typeof startTarget>>;
+    const follow = (as: string, type: string, entityId: string) => call(as, 'POST', '/notifications/subscriptions', { type, entityId });
+    const settled = async () => {
+      // Background deliveries start after the settings are read
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await delivery.idle();
+    };
+
+    beforeEach(async () => {
+      target = await startTarget([200]);
+    });
+
+    afterEach(async () => {
+      await target.close();
+    });
+
+    it('stores channel URLs encrypted, never returns them, and refuses private addresses', async () => {
+      const url = target.url('/services/T1/B1/slack-token');
+      expect((await call('alice', 'PUT', '/notifications/channels/slack', { url: 'http://10.0.0.8/hook' })).status).toBe(400);
+      expect((await call('alice', 'PUT', '/notifications/channels/slack', { url: 'http://169.254.169.254/' })).status).toBe(400);
+      expect((await call('alice', 'PUT', '/notifications/channels/email', { url })).status).toBe(400);
+      expect((await call('alice', 'PUT', '/notifications/channels/slack', { url, secret: 'x'.repeat(20) })).status).toBe(400);
+
+      const saved = await call('alice', 'PUT', '/notifications/channels/slack', { url });
+      expect(saved.status).toBe(200);
+      expect(saved.body.targets.slack).toMatchObject({ configured: true });
+      expect(saved.body.preferences.channels.slack).toBe(true);
+      expect(JSON.stringify(saved.body)).not.toContain('slack-token');
+      expect(JSON.stringify((await call('alice', 'GET', '/notifications/settings')).body)).not.toContain('slack-token');
+
+      const stored = (await settingsStore.get('usr_alice'))!.doc.targets!.slack!;
+      expect(stored.url).not.toContain('slack-token');
+      expect(encryption.decrypt(stored.url)).toBe(url);
+
+      expect((await call('alice', 'DELETE', '/notifications/channels/slack')).body).toMatchObject({
+        targets: { slack: { configured: false } },
+        preferences: { channels: { slack: false } },
+      });
+      expect((await settingsStore.get('usr_alice'))!.doc.targets).toEqual({});
+    });
+
+    it('returns a webhook signing secret once, stored encrypted', async () => {
+      const saved = await call('alice', 'PUT', '/notifications/channels/webhook', { url: target.url('/wh') });
+      expect(saved.body.secret).toMatch(/^[0-9a-f]{64}$/);
+      const stored = (await settingsStore.get('usr_alice'))!.doc.targets!.webhook!;
+      expect(stored.secret).not.toBe(saved.body.secret);
+      expect(encryption.decrypt(stored.secret!)).toBe(saved.body.secret);
+      expect(JSON.stringify((await call('alice', 'GET', '/notifications/settings')).body)).not.toContain(saved.body.secret);
+      expect((await call('alice', 'PUT', '/notifications/channels/webhook', { url: target.url('/wh'), secret: 'short' })).status).toBe(400);
+    });
+
+    it('sends a test to one channel and lists the recorded attempt', async () => {
+      expect((await call('alice', 'POST', '/notifications/channels/teams/test')).status).toBe(400); // no URL saved
+      expect((await call('alice', 'POST', '/notifications/channels/fax/test')).status).toBe(400);
+      await call('alice', 'PUT', '/notifications/channels/teams', { url: target.url('/teams') });
+
+      const sent = await call('alice', 'POST', '/notifications/channels/teams/test');
+      expect(sent.status).toBe(200);
+      expect(sent.body).toMatchObject({ channel: 'teams', status: 'sent', test: true });
+      expect(target.received).toHaveLength(1);
+
+      const email = await call('alice', 'POST', '/notifications/channels/email/test');
+      expect(email.body).toMatchObject({ channel: 'email', status: 'sent', target: 'alice@example.com' });
+      expect(mail.sent[0].to).toEqual(['alice@example.com']);
+
+      const overview = await call('alice', 'GET', '/notifications/delivery');
+      expect(overview.body.channels).toMatchObject({ email: { available: true }, slack: { available: true } });
+      expect(overview.body.attempts.map((a: DeliveryAttempt) => a.channel).sort()).toEqual(['email', 'teams']);
+      expect((await call('bob', 'GET', '/notifications/delivery')).body.attempts).toEqual([]);
+    });
+
+    it('delivers changes to the channels each person turned on, following their preferences', async () => {
+      for (const person of ['alice', 'bob', 'carol', 'dora']) await follow(person, 'component', '*');
+      await call('alice', 'PUT', '/notifications/channels/slack', { url: target.url('/alice-slack') });
+      await call('alice', 'PUT', '/notifications/preferences', { inApp: false, channels: { email: true } });
+      await call('bob', 'PUT', '/notifications/channels/webhook', { url: target.url('/bob-webhook') });
+      await call('bob', 'PUT', '/notifications/preferences', { breakingOnly: true });
+      await call('carol', 'PUT', '/notifications/channels/teams', { url: target.url('/carol-teams') });
+      await call('carol', 'PUT', '/notifications/preferences', { channels: { teams: false } });
+      await call('dora', 'PUT', '/notifications/preferences', { channels: { email: true } });
+
+      await changelog.recordChange({ type: 'component', entityId: 'card', entityName: 'Card', action: 'updated', link: '/components/card' });
+      await settled();
+      // Alice: Slack and email even with in-app off; Bob: breaking only; Carol: Teams turned off; Dora: disabled account
+      expect(target.received.map((r) => r.path)).toEqual(['/alice-slack']);
+      expect(mail.sent.map((m) => m.to)).toEqual([['alice@example.com']]);
+      expect(JSON.parse(target.received[0].body).text).toBe('Component "Card" updated');
+
+      await changelog.recordChange({ type: 'component', entityId: 'card', entityName: 'Card', action: 'deleted', breaking: true });
+      await settled();
+      expect(target.received.map((r) => r.path).sort()).toEqual(['/alice-slack', '/alice-slack', '/bob-webhook']);
+      const webhook = target.received.find((r) => r.path === '/bob-webhook')!;
+      expect(webhook.headers['x-signature-256']).toMatch(/^sha256=[0-9a-f]{64}$/);
+      expect(JSON.parse(webhook.body)).toMatchObject({ event: 'design-system-change', data: { entityId: 'card', action: 'deleted', breaking: true } });
+
+      const recorded = [...attemptStore.docs.values()].map((e) => e.doc);
+      expect(recorded.every((a) => a.status === 'sent' && !a.test)).toBe(true);
+      expect(JSON.stringify(recorded)).not.toContain('/alice-slack');
+    });
+
+    it('delivers request notifications too, and records failures where people can see them', async () => {
+      const failing = await startTarget([500]);
+      try {
+        await call('alice', 'PUT', '/notifications/channels/slack', { url: failing.url('/down') });
+        notifications.notify({ userId: 'usr_alice', type: 'request-commented', title: 'New comment on "Tabs"', message: 'Bo added a comment' });
+        await settled();
+        expect(failing.received).toHaveLength(3);
+        const [attempt] = (await call('alice', 'GET', '/notifications/delivery')).body.attempts;
+        expect(attempt).toMatchObject({ channel: 'slack', status: 'failed', error: 'HTTP 500', event: 'request-commented' });
+        expect(attempt.tries).toHaveLength(3);
+      } finally {
+        await failing.close();
+      }
     });
   });
 });

@@ -1,13 +1,20 @@
 import { Transform, Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
 import { trim } from '../workspaces/workspace.dto';
 import { CHANGE_ACTIONS, ChangeAction, SUBSCRIBABLE_TYPES, SubscribableType } from './notification.types';
 
-/** Saved for later delivery; nothing is sent to these channels yet */
+/** Which channels notifications are delivered to besides the app */
 export class NotificationChannelsDto {
   @IsOptional() @IsBoolean() email?: boolean;
   @IsOptional() @IsBoolean() slack?: boolean;
+  @IsOptional() @IsBoolean() teams?: boolean;
   @IsOptional() @IsBoolean() webhook?: boolean;
+}
+
+/** A Slack or Teams incoming-webhook URL, or a webhook URL with an optional signing secret (generated when left out) */
+export class ChannelTargetDto {
+  @IsString() @Transform(trim) @IsNotEmpty() @MaxLength(2000) url: string;
+  @IsOptional() @IsString() @Transform(trim) @MinLength(16) @MaxLength(256) secret?: string;
 }
 
 /** Any subset of the preferences; fields left out keep their value */

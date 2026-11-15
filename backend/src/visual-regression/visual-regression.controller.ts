@@ -9,6 +9,8 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { CreateBaselineDto, NotificationSettingsDto, ShareProjectDto, WebhookSecretDto } from './dto/project-settings.dto';
 import { creatorOf } from './project-access';
 import { VisualRegressionService } from './visual-regression.service';
+import { PROJECT_NOTIFICATION_TYPES, VisualRegressionNotifier } from './visual-regression-notifier';
+import { NotificationType } from './visual-regression.types';
 
 /**
  * Every route checks the caller's access to the project (docs/WORKSPACES.md,
@@ -22,6 +24,7 @@ export class VisualRegressionController {
   constructor(
     private readonly visualRegressionService: VisualRegressionService,
     private readonly users: UsersService,
+    private readonly notifier: VisualRegressionNotifier,
   ) {}
 
   @Get('projects')
@@ -217,7 +220,15 @@ export class VisualRegressionController {
     await this.visualRegressionService.clearWebhookSecret(projectId);
   }
 
-  // Notifications
+  // Notifications: where build results are sent (VisualRegressionNotifier)
+  /** Needs manage: the settings name webhook targets, even though URLs are never returned */
+  @Get('projects/:id/notifications')
+  async getNotificationConfig(@Principal() principal: AuthPrincipal, @Param('id') projectId: string) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'manage');
+    return this.notifier.overview(projectId);
+  }
+
+  /** Saves one channel; a generated webhook secret is returned once, here */
   @Post('projects/:id/notifications')
   async configureNotifications(
     @Principal() principal: AuthPrincipal,
@@ -225,15 +236,33 @@ export class VisualRegressionController {
     @Body() dto: NotificationSettingsDto,
   ) {
     await this.visualRegressionService.authorizeProject(principal, projectId, 'manage');
-    return this.visualRegressionService.configureNotifications(projectId, dto);
+    if (dto.type !== 'webhook' && dto.secret !== undefined) throw new BadRequestException('Only webhooks take a signing secret');
+    if (dto.type === 'email' && dto.url !== undefined) throw new BadRequestException('Email takes recipients, not a URL');
+    if (dto.type !== 'email' && dto.recipients !== undefined) throw new BadRequestException(`${dto.type} takes a URL, not recipients`);
+    return this.notifier.configure(projectId, dto);
   }
 
-  /** Needs manage: notification settings can hold webhook URLs */
-  @Get('projects/:id/notifications')
-  async getNotificationConfig(@Principal() principal: AuthPrincipal, @Param('id') projectId: string) {
+  @Delete('projects/:id/notifications/:type')
+  @HttpCode(204)
+  async removeNotification(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @Param('type') type: string) {
     await this.visualRegressionService.authorizeProject(principal, projectId, 'manage');
-    return this.visualRegressionService.getNotificationConfig(projectId);
+    await this.notifier.remove(projectId, notificationType(type));
   }
+
+  /** Sends a test message to one channel now and returns the recorded attempt */
+  @Post('projects/:id/notifications/:type/test')
+  @HttpCode(200)
+  async testNotification(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @Param('type') type: string) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'manage');
+    return this.notifier.sendTest(projectId, notificationType(type));
+  }
+}
+
+function notificationType(type: string): NotificationType {
+  if (!PROJECT_NOTIFICATION_TYPES.includes(type as NotificationType)) {
+    throw new BadRequestException(`type must be one of ${PROJECT_NOTIFICATION_TYPES.join(', ')}`);
+  }
+  return type as NotificationType;
 }
 
 /**

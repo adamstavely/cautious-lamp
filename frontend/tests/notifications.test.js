@@ -2,7 +2,9 @@
 // notifications from the API (unread count, mark read, mark all read, empty
 // state) with no made-up entries, and the Change notifications page lists
 // them, shows the real changelog, and saves following and preferences on the
-// server, saying that email, Slack and webhooks aren't delivered yet.
+// server, and sets up delivery to email, Slack, Teams and webhooks: URLs are
+// saved (never shown back), each channel has a test send, recent deliveries
+// are listed, and a channel the server can't send by says so.
 import { nextTick } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import apiClient from '../src/services/api.js';
@@ -62,7 +64,35 @@ const NOTIFICATIONS = [
 
 const SETTINGS = {
   subscriptions: [{ id: 'sub_1', type: 'component', entityId: 'card', entityName: 'Card', createdAt: minutesAgo(10) }],
-  preferences: { inApp: true, actions: ['created', 'updated', 'deprecated', 'deleted', 'status-changed'], breakingOnly: false, channels: { email: false, slack: false, webhook: false } },
+  preferences: {
+    inApp: true,
+    actions: ['created', 'updated', 'deprecated', 'deleted', 'status-changed'],
+    breakingOnly: false,
+    channels: { email: false, slack: false, teams: false, webhook: false },
+  },
+  targets: { slack: { configured: false }, teams: { configured: false }, webhook: { configured: false } },
+};
+
+const DELIVERY = {
+  channels: {
+    email: { available: false, reason: "Email isn't set up on this server: SMTP_URL or SMTP_HOST is not set." },
+    slack: { available: true },
+    teams: { available: true },
+    webhook: { available: true },
+  },
+  attempts: [
+    {
+      id: 'dlv_1',
+      channel: 'webhook',
+      target: 'hooks.example.com',
+      title: 'Component "Card" updated',
+      status: 'failed',
+      error: 'HTTP 500',
+      tries: [{}, {}, {}],
+      test: false,
+      createdAt: minutesAgo(30),
+    },
+  ],
 };
 
 const CHANGELOG = {
@@ -117,6 +147,7 @@ beforeEach(() => {
     'PUT /api/v1/notifications/ntf_2/read': { ...NOTIFICATIONS[1], read: true },
     'DELETE /api/v1/notifications/ntf_3': '',
     'GET /api/v1/notifications/settings': structuredClone(SETTINGS),
+    'GET /api/v1/notifications/delivery': structuredClone(DELIVERY),
     'PUT /api/v1/notifications/preferences': (config) => {
       const patch = JSON.parse(config.data);
       return { ...SETTINGS, preferences: { ...SETTINGS.preferences, ...patch, channels: { ...SETTINGS.preferences.channels, ...(patch.channels ?? {}) } } };
@@ -265,14 +296,13 @@ describe('Change notifications page', () => {
     expect(called('GET /api/v1/changelog/aggregated').at(-1).params).toEqual({ breakingOnly: 'true' });
   });
 
-  it('saves following and preferences on the server and says other channels are not delivered', async () => {
+  it('saves following and preferences on the server', async () => {
     await open();
     tab('Following and preferences').click();
     await flush();
     const body = text();
     expect(body).toContain('Card');
-    expect(body).toContain("Delivery isn't set up yet");
-    expect(body).toContain('Nothing is sent to email, Slack or webhooks yet');
+    expect(body).not.toContain("Delivery isn't set up yet");
 
     button('Unfollow Card').click();
     await flush();
@@ -287,13 +317,120 @@ describe('Change notifications page', () => {
     expect(called('POST /api/v1/notifications/subscriptions')[0].data).toEqual({ type: 'component', entityId: 'button', entityName: 'Button' });
 
     const checkbox = (label) => [...document.querySelectorAll('input[type="checkbox"]')].find((el) => el.closest('label')?.textContent.includes(label));
-    checkbox('Email').click();
-    await flush();
-    expect(called('PUT /api/v1/notifications/preferences').at(-1).data).toEqual({ channels: { email: true } });
-    expect(checkbox('Email').checked).toBe(true);
-
     checkbox('Removed').click();
     await flush();
     expect(called('PUT /api/v1/notifications/preferences').at(-1).data).toEqual({ actions: ['created', 'updated', 'deprecated', 'status-changed'] });
+  });
+
+  describe('delivery to email, Slack, Teams and webhooks', () => {
+    const openSettings = async () => {
+      await open();
+      tab('Following and preferences').click();
+      await flush();
+    };
+    const toggle = (label) => [...document.querySelectorAll('[role="switch"]')].find((el) => el.textContent.includes(label));
+    const input = (id) => document.getElementById(id);
+    const type = async (el, value) => {
+      el.value = value;
+      el.dispatchEvent(new Event('input'));
+      await flush();
+    };
+
+    it('says honestly that email is not set up on the server, and lists recent deliveries with their status', async () => {
+      await openSettings();
+      const body = text();
+      expect(body).toContain("Email isn't set up on this server");
+      expect(body).toContain('SMTP_URL or SMTP_HOST is not set');
+      expect(toggle('Email').disabled).toBe(true);
+      expect(button('Send test to Email').disabled).toBe(true);
+      // Slack works but needs a URL first
+      expect(body).toContain('No URL saved');
+      expect(toggle('Slack').disabled).toBe(true);
+      expect(button('Send test to Slack').disabled).toBe(true);
+
+      expect(body).toContain('Recent deliveries');
+      expect(body).toContain('hooks.example.com');
+      expect(body).toContain('Failed');
+      expect(body).toContain('HTTP 500');
+      expect(body).toContain('3 tries');
+    });
+
+    it('saves a Slack URL, turns Slack on and never shows the URL back', async () => {
+      responses['PUT /api/v1/notifications/channels/slack'] = {
+        ...SETTINGS,
+        preferences: { ...SETTINGS.preferences, channels: { ...SETTINGS.preferences.channels, slack: true } },
+        targets: { ...SETTINGS.targets, slack: { configured: true, savedAt: minutesAgo(0) } },
+      };
+      await openSettings();
+      await type(input('slack-url'), 'https://hooks.slack.com/services/T1/B1/xyz');
+      button('Save URL', input('slack-url').closest('form')).click();
+      await flush();
+
+      expect(called('PUT /api/v1/notifications/channels/slack')[0].data).toEqual({ url: 'https://hooks.slack.com/services/T1/B1/xyz' });
+      expect(input('slack-url').value).toBe('');
+      expect(input('slack-url').placeholder).toContain('Saved');
+      expect(toggle('Slack').getAttribute('aria-checked')).toBe('true');
+      expect(text()).not.toContain('T1/B1/xyz');
+      expect(button('Send test to Slack').disabled).toBe(false);
+    });
+
+    it('shows a generated webhook secret once', async () => {
+      responses['PUT /api/v1/notifications/channels/webhook'] = {
+        ...SETTINGS,
+        targets: { ...SETTINGS.targets, webhook: { configured: true } },
+        secret: 'a'.repeat(64),
+      };
+      await openSettings();
+      await type(input('webhook-url'), 'https://example.com/hooks/ds');
+      button('Save URL', input('webhook-url').closest('form')).click();
+      await flush();
+      expect(called('PUT /api/v1/notifications/channels/webhook')[0].data).toEqual({ url: 'https://example.com/hooks/ds' });
+      expect(input('webhook-secret-revealed').value).toBe('a'.repeat(64));
+      expect(text()).toContain("it won't be shown again");
+    });
+
+    it('sends a test and shows the recorded result, including a failure', async () => {
+      responses['GET /api/v1/notifications/settings'] = { ...SETTINGS, targets: { ...SETTINGS.targets, teams: { configured: true } } };
+      responses['POST /api/v1/notifications/channels/teams/test'] = {
+        id: 'dlv_2',
+        channel: 'teams',
+        target: 'contoso.webhook.office.com',
+        title: 'Test notification from the design system',
+        status: 'sent',
+        tries: [{ ok: true }],
+        test: true,
+        createdAt: minutesAgo(0),
+      };
+      await openSettings();
+      button('Send test to Microsoft Teams').click();
+      await flush();
+      expect(called('POST /api/v1/notifications/channels/teams/test')).toHaveLength(1);
+      expect(text()).toContain('Test sent to Microsoft Teams.');
+      expect(text()).toContain('contoso.webhook.office.com');
+      expect(text()).toContain('Sent');
+
+      responses['POST /api/v1/notifications/channels/teams/test'] = { ...responses['POST /api/v1/notifications/channels/teams/test'], id: 'dlv_3', status: 'refused', error: 'URLs that point to private or internal addresses are not allowed' };
+      button('Send test to Microsoft Teams').click();
+      await flush();
+      expect(text()).toContain("The test to Microsoft Teams wasn't delivered: URLs that point to private or internal addresses are not allowed");
+      expect(text()).toContain('Refused');
+    });
+
+    it('turns a ready channel on and off through preferences, and removes a saved URL', async () => {
+      const withSlack = { ...SETTINGS, targets: { ...SETTINGS.targets, slack: { configured: true } } };
+      responses['GET /api/v1/notifications/settings'] = withSlack;
+      responses['PUT /api/v1/notifications/preferences'] = { ...withSlack, preferences: { ...SETTINGS.preferences, channels: { ...SETTINGS.preferences.channels, slack: true } } };
+      responses['DELETE /api/v1/notifications/channels/slack'] = structuredClone(SETTINGS);
+      await openSettings();
+      toggle('Slack').click();
+      await flush();
+      expect(called('PUT /api/v1/notifications/preferences').at(-1).data).toEqual({ channels: { slack: true } });
+      expect(toggle('Slack').getAttribute('aria-checked')).toBe('true');
+
+      button('Remove the Slack URL').click();
+      await flush();
+      expect(called('DELETE /api/v1/notifications/channels/slack')).toHaveLength(1);
+      expect(text()).toContain('No URL saved');
+    });
   });
 });

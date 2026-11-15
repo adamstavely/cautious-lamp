@@ -1,7 +1,8 @@
-import { ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import type { ComponentRequest, RequestActor } from '../component-requests/component-request.types';
 import { DocumentStore, VersionConflictError } from '../reviews/document-store';
+import { NotificationDeliveryService } from './notification-delivery.service';
 import { NOTIFICATION_STORE, Notification, NotificationType } from './notification.types';
 
 export type { Notification } from './notification.types';
@@ -27,7 +28,10 @@ export interface NewNotification {
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
 
-  constructor(@Inject(NOTIFICATION_STORE) private readonly store: DocumentStore<Notification>) {}
+  constructor(
+    @Inject(NOTIFICATION_STORE) private readonly store: DocumentStore<Notification>,
+    @Optional() private readonly delivery?: NotificationDeliveryService,
+  ) {}
 
   async createNotification(data: NewNotification): Promise<Notification> {
     const notification: Notification = {
@@ -49,11 +53,19 @@ export class NotificationService {
   /**
    * Creates a notification without making the caller wait or fail: for side
    * effects of another change (a comment, a status change) that has already
-   * been saved. A storage failure is logged.
+   * been saved. It is also delivered to the channels the recipient turned on
+   * (email, Slack, Teams, webhook). A storage failure is logged; delivery
+   * outcomes are recorded.
    */
   notify(data: NewNotification): void {
     this.createNotification(data).catch((error) => {
       this.logger.warn(`Notification for ${data.userId} not saved: ${(error as Error)?.message}`);
+    });
+    this.delivery?.deliverInBackground(data.userId, {
+      event: data.type,
+      title: data.title,
+      text: data.message,
+      ...(data.link ? { link: data.link } : {}),
     });
   }
 
