@@ -1,5 +1,5 @@
 {
-  "name": "eslint-plugin-design-system",
+  "name": "@adamstavely/eslint-plugin-design-system",
   "version": "1.0.0",
   "description": "ESLint plugin for Design System compliance using Rules Engine",
   "main": "lib/index.js",
@@ -23,6 +23,15 @@
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adamstavely/cautious-lamp.git",
+    "directory": "eslint-plugin-design-system"
+  },
+  "homepage": "https://github.com/adamstavely/cautious-lamp/tree/main/eslint-plugin-design-system#readme",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "dependencies": {
     "axios": "^1.6.0"
   },

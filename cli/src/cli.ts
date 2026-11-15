@@ -2,7 +2,7 @@
 
 import { Command, Option } from 'commander';
 import chalk from 'chalk';
-import { DesignSystemAPI, ComplianceCheck } from '@designsystem/api';
+import { DesignSystemAPI, ComplianceCheck } from '@adamstavely/design-system-sdk';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
@@ -69,6 +69,21 @@ function run<A extends unknown[]>(fn: (...args: A) => unknown | Promise<unknown>
   };
 }
 
+/**
+ * Runs an API call for a command that needs a permission most keys lack, and
+ * turns a 403 into a message that names it.
+ */
+async function needsPermission<T>(permission: string, call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (error) {
+    if ((error as { response?: { status?: number } })?.response?.status === 403) {
+      throw new CliError(`${describeError(error)}. This needs an API key with ${permission}.`);
+    }
+    throw error;
+  }
+}
+
 function parseCategories(value: string | undefined): string[] | undefined {
   if (!value) return undefined;
   const list = value.split(',').map((c) => c.trim()).filter(Boolean);
@@ -77,8 +92,9 @@ function parseCategories(value: string | undefined): string[] | undefined {
 
 function printChecks(checks: ComplianceCheck[]): void {
   for (const check of checks) {
-    const icon = check.status === 'pass' ? '✓' : check.status === 'warning' ? '⚠' : '✗';
-    const color = check.status === 'pass' ? chalk.green : check.status === 'warning' ? chalk.yellow : chalk.red;
+    const icon = check.status === 'pass' ? '✓' : check.status === 'warning' ? '⚠' : check.status === 'info' ? 'i' : '✗';
+    const color =
+      check.status === 'pass' ? chalk.green : check.status === 'warning' ? chalk.yellow : check.status === 'info' ? chalk.cyan : chalk.red;
     console.log(color(`${icon} ${check.rule}`));
     console.log(`  ${check.message}`);
     if (check.component) console.log(`  Component: ${check.component}`);
@@ -169,16 +185,25 @@ export function createProgram(): Command {
   // ------------------------------------------------------------ compliance
   program
     .command('compliance')
-    .description('Run compliance checks (POST /compliance/scan)')
+    .description(
+      'Run compliance checks (POST /compliance/scan). The design-system scope needs component:view; ' +
+        'the applications scope scans one application (-a) and needs an API key with admin:governance',
+    )
     .addOption(new Option('-s, --scope <scope>', 'Scope').choices(['design-system', 'applications']).default('design-system'))
-    .option('-a, --application <id>', 'Application ID to scan')
+    .option('-a, --application <id>', 'Application ID to scan (applications scope)')
+    .option('--components <ids>', 'Comma-separated component IDs to scan instead of the whole design system')
     .option('-c, --categories <categories>', 'Comma-separated list of rule categories (e.g., accessibility,design-system,ux-hcd)')
     .addOption(new Option('-f, --format <format>', 'Output format').choices(['table', 'json']).default('table'))
     .action(
-      run(async (options: { scope: 'design-system' | 'applications'; application?: string; categories?: string; format: string }) => {
+      run(async (options: { scope: 'design-system' | 'applications'; application?: string; components?: string; categories?: string; format: string }) => {
+        const componentIds = parseCategories(options.components);
+        if (componentIds && options.scope !== 'design-system') {
+          throw new CliError('--components is for the design-system scope');
+        }
         const api = getAPI();
         const categories = parseCategories(options.categories);
-        const result = await api.scanCompliance(options.scope, options.application, categories);
+        const scan = () => api.scanCompliance(options.scope, options.application, categories, { componentIds });
+        const result = options.scope === 'applications' ? await needsPermission('admin:governance', scan) : await scan();
 
         if (options.format === 'json') {
           console.log(JSON.stringify(result, null, 2));
@@ -201,11 +226,15 @@ export function createProgram(): Command {
     .option('-r, --repository <repo>', 'Repository URL')
     .option('-d, --description <text>', 'Description')
     .option('-v, --app-version <version>', 'Application version')
+    .option('-w, --workspace <id>', 'Workspace the application belongs to (required unless the API key has admin:governance)')
+    .option('-u, --url <url>', "The application's public URL, which scans use when given no code")
     .action(
-      run(async (options: { name: string; repository?: string; description?: string; appVersion?: string }) => {
+      run(async (options: { name: string; repository?: string; description?: string; appVersion?: string; workspace?: string; url?: string }) => {
         const api = getAPI();
         const app = await api.registerApplication(options.name, options.repository, options.appVersion, {
           description: options.description,
+          workspaceId: options.workspace,
+          applicationUrl: options.url,
         });
         console.log(chalk.green(`✓ Application registered: ${app.id}`));
         console.log(`  Name: ${app.name}`);
@@ -243,7 +272,9 @@ export function createProgram(): Command {
 
   program
     .command('scan')
-    .description('Scan an application codebase for compliance (POST /compliance/scan-application)')
+    .description(
+      'Scan an application codebase for compliance (POST /compliance/scan-application). Needs an API key with admin:governance',
+    )
     .requiredOption('-a, --application <id>', 'Application ID to scan')
     .option('-u, --url <url>', 'Public URL for the server to fetch and scan')
     .option('--html <file>', 'HTML file to scan')
@@ -269,11 +300,8 @@ export function createProgram(): Command {
 
         const api = getAPI();
         const categories = parseCategories(options.categories);
-        const result = await api.scanApplicationCodebase(
-          options.application,
-          hasCode ? codebase : undefined,
-          categories,
-          options.url,
+        const result = await needsPermission('admin:governance', () =>
+          api.scanApplicationCodebase(options.application, hasCode ? codebase : undefined, categories, options.url),
         );
 
         if (options.format === 'json') {
@@ -281,11 +309,11 @@ export function createProgram(): Command {
           return;
         }
         const checks = result.checks ?? [];
-        console.log(chalk.bold(`\nCompliance Scan Results for ${result.applicationId ?? options.application}\n`));
+        console.log(chalk.bold(`\nCompliance Scan Results for ${result.applicationName ?? result.applicationId ?? options.application}\n`));
         if (categories) console.log(chalk.dim(`Categories: ${categories.join(', ')}\n`));
-        console.log(chalk.green(`✓ Passed: ${checks.filter((c) => c.status === 'pass').length}`));
-        console.log(chalk.yellow(`⚠ Warnings: ${checks.filter((c) => c.status === 'warning').length}`));
-        console.log(chalk.red(`✗ Failed: ${checks.filter((c) => c.status === 'error').length}\n`));
+        console.log(chalk.green(`✓ Passed: ${result.passed ?? checks.filter((c) => c.status === 'pass').length}`));
+        console.log(chalk.yellow(`⚠ Warnings: ${result.warnings ?? checks.filter((c) => c.status === 'warning').length}`));
+        console.log(chalk.red(`✗ Failed: ${result.failed ?? checks.filter((c) => c.status === 'error').length}\n`));
         printChecks(checks);
       }),
     );
@@ -389,21 +417,33 @@ export function createProgram(): Command {
   // ---------------------------------------------------------------- health
   program
     .command('health')
-    .description('Check API health (GET /health, no API key needed)')
+    .description('Check API health (GET /health, no API key needed); exits 1 when the API reports itself unavailable')
     .action(
       run(async () => {
         const health = await getAPI({ requireKey: false }).health();
-        console.log(chalk.green(`✓ API is healthy`));
-        console.log(`Status:    ${health.status}`);
-        console.log(`Version:   ${health.version}`);
-        console.log(`Timestamp: ${health.timestamp}`);
+        if (health.status === 'ok') {
+          console.log(chalk.green(`✓ API is healthy`));
+        } else {
+          console.log(chalk.red(`✗ API is unavailable`));
+          process.exitCode = 1;
+        }
+        console.log(`Status:        ${health.status}`);
+        if (health.elasticsearch) {
+          const es = health.elasticsearch;
+          console.log(`Elasticsearch: ${es.status}${es.error ? ` (${es.error})` : ''}`);
+        }
+        console.log(`Version:       ${health.version}`);
+        console.log(`Timestamp:     ${health.timestamp}`);
       }),
     );
 
   // -------------------------------------------------------------- scaffold
   program
     .command('scaffold')
-    .description('Scaffold a new component (src/components/<name>/) or token (tokens/<name>.json) on disk')
+    .description(
+      'Write a starter component (src/components/<name>/) or token (tokens/<name>.json) from built-in templates. ' +
+        'Works offline: it does not call the API or register anything',
+    )
     .addArgument(program.createArgument('<type>', 'What to scaffold').choices(['component', 'token']))
     .requiredOption('-n, --name <name>', 'Name of the component/token')
     .addOption(new Option('--framework <framework>', 'Component framework').choices(['vue', 'react']).default('vue'))
@@ -448,12 +488,10 @@ export function createProgram(): Command {
     .requiredOption('-c, --component <id>', 'Component ID to migrate')
     .addOption(new Option('--framework <framework>', 'Which code to write').choices(['vue', 'react', 'html']).default('vue'))
     .option('-d, --dir <dir>', 'Target project directory', '.')
-    .option('--from <version>', 'Source version (informational: the API has no versioned migration endpoint)')
-    .option('--to <version>', 'Target version (informational: the API only serves the current version)')
     .option('--force', 'Overwrite existing files')
     .option('--dry-run', 'Show what would be written without writing anything')
     .action(
-      run(async (options: { component: string; framework: CodeFormat; dir: string; from?: string; to?: string; force?: boolean; dryRun?: boolean }) => {
+      run(async (options: { component: string; framework: CodeFormat; dir: string; force?: boolean; dryRun?: boolean }) => {
         const api = getAPI();
         const component = await api.component(options.component);
         const code = component.code?.[options.framework];
@@ -462,15 +500,7 @@ export function createProgram(): Command {
         }
         const rootDir = path.resolve(options.dir);
 
-        console.log(chalk.bold(`\nMigrating ${component.name} (${options.component})`));
-        if (options.from || options.to) {
-          console.log(
-            chalk.yellow(
-              `Note: the API has no versioned migration endpoint, so --from/--to are not applied; ` +
-                `writing the component's current ${options.framework} source.`,
-            ),
-          );
-        }
+        console.log(chalk.bold(`\nMigrating ${component.name} (${options.component}) to its current ${options.framework} source`));
         const planned = planComponentCode(rootDir, options.component, options.framework, code);
         const written = writeFiles(planned, { force: options.force, dryRun: options.dryRun });
         console.log(options.dryRun ? chalk.yellow('\n[DRY RUN] Would write:') : chalk.green('\n✓ Migration written:'));

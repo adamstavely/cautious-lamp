@@ -258,6 +258,15 @@ describe('Governance HTTP API', () => {
     expect((await call('POST', '/compliance/scan', { scope: 'design-system', ruleIds: ['nope'] })).status).toBe(400);
   }, 30000);
 
+  it('scans just the components named in componentIds', async () => {
+    const res = await call('POST', '/compliance/scan', { scope: 'design-system', componentIds: ['button'], categories: ['design-system'] });
+    expect(res.status).toBe(200);
+    const components = new Set(res.body.checks.map((c: { component?: string }) => c.component).filter(Boolean));
+    expect([...components]).toEqual(['Button']);
+    expect((await call('POST', '/compliance/scan', { scope: 'design-system', componentIds: ['button', 'nope'] })).status).toBe(404);
+    expect((await admin('POST', '/compliance/scan', { scope: 'application', applicationId: 'app-1', componentIds: ['button'] })).status).toBe(400);
+  }, 30000);
+
   it('serves the linter export without code', async () => {
     const res = await call('GET', '/rules/export?format=eslint');
     expect(res.status).toBe(200);
@@ -317,6 +326,12 @@ describe('Governance scan visibility', () => {
     expect(alice.status).toBe(200);
     expect(alice.body.checks.map((c: { component?: string }) => c.component)).toContain('alphaSecret');
     expect(alice.body.access).toEqual({ componentAudiences: [['ws_alpha']] });
+
+    // Naming a component the caller can't read is a 404, as if it didn't exist
+    expect((await as('bob', 'POST', '/compliance/scan', { ...naming, componentIds: ['alpha-secret'] })).status).toBe(404);
+    const only = await as('alice', 'POST', '/compliance/scan', { ...naming, componentIds: ['alpha-secret'] });
+    expect(only.status).toBe(200);
+    expect(only.body.access).toEqual({ componentAudiences: [['ws_alpha']] });
   }, 30000);
 
   it('keeps stored design-system scans from readers who cannot see every component in them', async () => {

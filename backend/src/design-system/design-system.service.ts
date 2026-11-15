@@ -1517,7 +1517,7 @@ export class DesignSystemService implements OnModuleInit {
   }
 
   // Component metadata for Loupe Tool; `components` is what the caller may see
-  getComponentMetadata(components: Component[] = this.components) {
+  getComponentMetadata(components: Component[] = this.components, env: NodeJS.ProcessEnv = process.env) {
     const metadata: Record<string, any> = {};
     
     // Lucide icon names for components
@@ -1536,17 +1536,28 @@ export class DesignSystemService implements OnModuleInit {
       'tooltip': 'info',
       'drawer': 'panel-left-close',
     };
+
+    // Buttons have their own page; every other component is documented in the library at /components.
+    // With APP_PUBLIC_URL the link is absolute, so it also works from the standalone Loupe in another app
+    const appUrl = env.APP_PUBLIC_URL?.trim().replace(/\/+$/, '');
+    const docsLink = (id: string) => `${appUrl || ''}${id === 'button' ? '/components/buttons' : '/components'}`;
+    // Source and Figma links only when their templates are configured: `{id}` and `{name}` are filled in
+    const fromTemplate = (template: string | undefined, component: Component) =>
+      template?.trim()
+        ? template.trim().replace(/\{id\}/g, encodeURIComponent(component.id)).replace(/\{name\}/g, encodeURIComponent(component.name))
+        : undefined;
     
     components.forEach((component) => {
+      const links: Record<string, string> = { docs: docsLink(component.id) };
+      const github = fromTemplate(env.COMPONENT_SOURCE_URL_TEMPLATE, component);
+      const figma = fromTemplate(env.COMPONENT_FIGMA_URL_TEMPLATE, component);
+      if (github) links.github = github;
+      if (figma) links.figma = figma;
       metadata[component.id] = {
         name: component.name,
         path: `@design-system/components/${component.id}`,
         icon: iconMap[component.id] || 'blocks',
-        links: {
-          docs: `/components/${component.id === 'button' ? 'buttons' : component.id === 'card' ? 'cards' : component.id === 'input' || component.id === 'select' ? 'forms' : component.id === 'navigation' || component.id === 'sidebar' || component.id === 'topnav' || component.id === 'breadcrumbs' ? 'navigation' : component.id === 'table' ? 'data-display' : 'overlays'}`,
-          github: `https://github.com/your-org/design-system/tree/main/packages/components/src/${component.name}`,
-          figma: `https://www.figma.com/file/your-design-system/components#${component.id}`,
-        },
+        links,
       };
     });
     

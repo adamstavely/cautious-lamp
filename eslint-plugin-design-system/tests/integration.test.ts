@@ -17,11 +17,11 @@ const { FlatESLint } = require('eslint/use-at-your-own-risk');
 const LegacyESLint: any = ESLint;
 
 const EXPECTED = [
-  { ruleId: 'design-system/component-naming', line: 7, severity: 1 },
-  { ruleId: 'design-system/hardcoded-design-tokens', line: 8, severity: 2 },
-  { ruleId: 'design-system/spacing-consistency', line: 8, severity: 1 },
-  { ruleId: 'design-system/typography-scale', line: 8, severity: 1 },
-  { ruleId: 'design-system/accessibility-attributes', line: 12, severity: 2 }
+  { ruleId: '@adamstavely/design-system/component-naming', line: 7, severity: 1 },
+  { ruleId: '@adamstavely/design-system/hardcoded-design-tokens', line: 8, severity: 2 },
+  { ruleId: '@adamstavely/design-system/spacing-consistency', line: 8, severity: 1 },
+  { ruleId: '@adamstavely/design-system/typography-scale', line: 8, severity: 1 },
+  { ruleId: '@adamstavely/design-system/accessibility-attributes', line: 12, severity: 2 }
 ];
 
 type Msg = { ruleId: string | null; line: number; severity: number; message: string; fatal?: boolean };
@@ -31,13 +31,13 @@ const summarize = (messages: Msg[]) =>
     .sort((a, b) => a.line - b.line || String(a.ruleId).localeCompare(String(b.ruleId)));
 
 describe('ESLint integration', () => {
-  it('eslintrc: extends plugin:design-system/recommended', async () => {
+  it('eslintrc: extends plugin:@adamstavely/design-system/recommended', async () => {
     const eslint = new LegacyESLint({
       cwd: pkgDir,
       useEslintrc: false,
       resolvePluginsRelativeTo: pkgDir,
       overrideConfig: {
-        extends: ['plugin:design-system/recommended'],
+        extends: ['plugin:@adamstavely/design-system/recommended'],
         parserOptions: { ecmaVersion: 2022, sourceType: 'module', ecmaFeatures: { jsx: true } },
         env: { browser: true, es2022: true }
       }
@@ -55,7 +55,7 @@ describe('ESLint integration', () => {
       resolvePluginsRelativeTo: pkgDir,
       overrideConfig: {
         parser: '@typescript-eslint/parser',
-        extends: ['plugin:design-system/recommended'],
+        extends: ['plugin:@adamstavely/design-system/recommended'],
         parserOptions: { ecmaVersion: 2022, sourceType: 'module', ecmaFeatures: { jsx: true } }
       }
     });
@@ -67,7 +67,7 @@ describe('ESLint integration', () => {
 
   it('flat config: configs["flat/recommended"]', async () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const plugin = require('eslint-plugin-design-system');
+    const plugin = require('@adamstavely/eslint-plugin-design-system');
     const eslint = new FlatESLint({
       cwd: pkgDir,
       overrideConfigFile: true,

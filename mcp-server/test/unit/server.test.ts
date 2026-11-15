@@ -46,6 +46,10 @@ describe('MCP server tool calls', () => {
           for (const field of required) {
             expect(textOf(result)).toContain(field);
           }
+        } else if (tool.name === 'get_asset_types') {
+          // An empty answer doesn't describe the asset types, and the tool says so rather than guessing
+          expect(result.isError).toBe(true);
+          expect(textOf(result)).toContain('did not describe the asset types');
         } else {
           expect(result.isError).toBeFalsy();
         }

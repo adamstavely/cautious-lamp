@@ -1,80 +1,38 @@
-# ESLint Plugin - Fully Implemented
+# ESLint plugin implementation notes
 
-## ✅ Implementation Complete
+How the plugin is put together. For usage see [README.md](./README.md); for what is and isn't supported see [STATUS.md](./STATUS.md).
 
-The ESLint plugin is now fully implemented with:
-
-### Core Features
-
-1. **Built-in Rules** (work without API):
-   - `hardcoded-design-tokens` - Detects hardcoded colors, spacing, typography
-   - `component-naming` - Enforces PascalCase naming
-   - `accessibility-attributes` - Requires ARIA attributes
-   - `spacing-consistency` - Validates spacing usage
-   - `typography-scale` - Validates typography usage
-
-2. **API Integration**:
-   - Fetches rules from Rules Engine API
-   - Converts scanner code to ESLint rules
-   - Caches rules for performance
-   - Loaded by awaiting `loadRulesFromAPI(config)` before linting (see README)
-
-3. **Rule Conversion**:
-   - Scanner code → ESLint AST visitors
-   - Pattern matching for common violations
-   - No auto-fix (rules report only)
-
-### Files Structure
+## Layout
 
 ```
 eslint-plugin-design-system/
 ├── src/
-│   ├── index.ts          # Main plugin with built-in rules
-│   ├── rule-converter.ts # Converts Rules Engine rules to ESLint
-│   └── processor.ts      # ESLint processor for async loading
-├── package.json          # Plugin configuration
-├── tsconfig.json         # TypeScript config
-├── README.md            # Usage documentation
-└── .eslintrc.example.js # Example configuration
+│   ├── index.ts           # The plugin object (CommonJS `export =`) and its configs
+│   ├── rules.ts           # Built-in rules
+│   ├── checks.ts          # Parser-agnostic detection helpers
+│   ├── token-fix.ts       # Token autofix: options schema, value matching, safe replacement
+│   ├── rule-converter.ts  # Governance rule definitions -> ESLint rules
+│   ├── api.ts             # loadRulesFromAPI: fetch, convert, register, cache
+│   └── types.ts
+├── tests/                 # RuleTester, load, API and integration suites
+└── .eslintrc.example.js
 ```
 
-### Usage
+## Plugin name
 
-```bash
-# Build
-cd eslint-plugin-design-system
-npm install
-npm run build
+The package is `@adamstavely/eslint-plugin-design-system`, so ESLint resolves `plugin:@adamstavely/design-system/recommended` and rule ids are `@adamstavely/design-system/<rule>`. The flat config registers the plugin under the same key.
 
-# Use in project
-npm install ./eslint-plugin-design-system
-```
+## Autofix
 
-```javascript
-// .eslintrc.js
-module.exports = {
-  plugins: ['design-system'],
-  extends: ['plugin:design-system/recommended'],
-  settings: {
-    'design-system': {
-      apiUrl: 'http://localhost:3000/api/v1',
-      apiKey: process.env.DS_API_KEY
-    }
-  }
-};
-```
+The three token rules declare `fixable: 'code'` and accept `{ tokens, replacement }`. A fix is offered only when:
 
-### Integration Points
+1. the `tokens` option is set,
+2. exactly one token has the value (`normalizeValue` compares colors ignoring case and short hex, lengths numerically),
+3. the value can be found verbatim in the source (not written with escapes), and
+4. the reference can't break out of its string or template (`safeInside`).
 
-- ✅ Backend API: `/api/v1/governance/rules/export`
-- ✅ Rules Engine: Fetches rules from Governance UI
-- ✅ ESLint: Works with ESLint 8+
-- ✅ VS Code: Works via ESLint extension
+Colors are replaced where they sit inside a longer string or template; spacing and typography replace the whole string, and only when every part matches.
 
-### Next Steps
+## API rules
 
-1. Build the plugin: `npm run build`
-2. Test locally: Install in a test project
-3. Publish (optional): `npm publish`
-
-The plugin is production-ready! 🚀
+Rules are fetched from `GET {apiUrl}/governance/rules/export` and mapped by their declared `type` and `target` (see README). Rules that can't be checked in ESLint are skipped with a reason rather than approximated.

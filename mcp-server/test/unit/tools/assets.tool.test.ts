@@ -83,10 +83,22 @@ describe('Assets Tool', () => {
   });
 
   describe('getAssetTypes', () => {
-    it('should return asset types', async () => {
+    it("returns the assets kind's filter values from the backend's kinds list", async () => {
+      mockApiClient.get.mockResolvedValue([
+        { kind: 'fonts', titleField: 'name', filterField: 'source', filterValues: ['google', 'custom', 'system'] },
+        { kind: 'assets', titleField: 'name', filterField: 'type', filterValues: ['image', 'logo', 'video'] },
+      ]);
+
       const result = await getAssetTypes();
 
-      expect(result).toEqual(['image', 'icon', 'illustration', 'logo', 'other']);
+      expect(result).toEqual(['image', 'logo', 'video']);
+      expect(mockApiClient.get).toHaveBeenCalledWith('/resources', undefined, 'assets');
+    });
+
+    it('says so when the backend does not describe asset types', async () => {
+      mockApiClient.get.mockResolvedValue([{ kind: 'fonts', titleField: 'name' }]);
+
+      await expect(getAssetTypes()).rejects.toThrow('did not describe the asset types');
     });
   });
 });

@@ -1,14 +1,25 @@
-# eslint-plugin-design-system
+# @adamstavely/eslint-plugin-design-system
 
-ESLint plugin for Design System compliance: five built-in rules that work offline, plus optional extra rules loaded from the Design System Rules Engine API.
+ESLint plugin for Design System compliance: five built-in rules that work offline, three of them auto-fixable with your tokens, plus optional extra rules loaded from the Design System Rules Engine API.
 
 Supports ESLint 8 (eslintrc and flat config) and ESLint 9 (flat config).
 
 ## Installation
 
-```bash
-npm install --save-dev eslint-plugin-design-system
+The plugin is published to GitHub Packages under the `@adamstavely` scope. Tell npm where that scope lives, in the project's `.npmrc`:
+
+```ini
+@adamstavely:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
+
+`GITHUB_TOKEN` is a GitHub personal access token (classic) with the `read:packages` scope (in GitHub Actions, the workflow's `GITHUB_TOKEN` with `packages: read`). Then:
+
+```bash
+npm install --save-dev @adamstavely/eslint-plugin-design-system
+```
+
+ESLint names a plugin published as `@scope/eslint-plugin-name` `@scope/name`, so the plugin is `@adamstavely/design-system` and its rules are `@adamstavely/design-system/<rule>`.
 
 ## Configuration
 
@@ -22,7 +33,7 @@ The plugin ships two presets with the same rules:
 ### Flat config (`eslint.config.js`)
 
 ```javascript
-const designSystem = require('eslint-plugin-design-system');
+const designSystem = require('@adamstavely/eslint-plugin-design-system');
 
 module.exports = [
   designSystem.configs['flat/recommended'],
@@ -30,7 +41,7 @@ module.exports = [
     files: ['**/*.{js,jsx,ts,tsx}'],
     languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
     rules: {
-      'design-system/component-naming': 'error'
+      '@adamstavely/design-system/component-naming': 'error'
     }
   }
 ];
@@ -40,10 +51,10 @@ module.exports = [
 
 ```javascript
 module.exports = {
-  extends: ['plugin:design-system/recommended'],
+  extends: ['plugin:@adamstavely/design-system/recommended'],
   parserOptions: { ecmaVersion: 2022, sourceType: 'module', ecmaFeatures: { jsx: true } },
   rules: {
-    'design-system/component-naming': 'error'
+    '@adamstavely/design-system/component-naming': 'error'
   }
 };
 ```
@@ -60,7 +71,41 @@ module.exports = {
 | `component-naming` | Component declarations (variables, functions, classes whose name starts with an uppercase letter) that aren't PascalCase, e.g. `My_Component`. `_private`, `$el`, `camelCase` and ALL_CAPS constants (`MAX_SIZE`) are not components. References and imports aren't checked; only declarations. |
 | `accessibility-attributes` | Native JSX `<button>`, `<input>`, `<select>`, `<textarea>` with no accessible name. Accepted: non-empty `aria-label`, `aria-labelledby` or `title`; button text or child content; an `id` (for `<label htmlFor>`); a wrapping `<label>`; `type="hidden"/"submit"/"reset"`. Components (`<Button>`), `<ui.button>` and elements with `{...spread}` props are skipped. `placeholder` is not a label. |
 
-None of the rules are auto-fixable.
+## Autofix
+
+`hardcoded-design-tokens`, `spacing-consistency` and `typography-scale` are fixable (`eslint --fix`) when you give them your tokens. A value is replaced only when exactly one token has that value; with no match, two tokens sharing the value, or no `tokens` option, the rule reports and changes nothing.
+
+```javascript
+const tokens = {
+  'color-primary': '#3b82f6',
+  'spacing-sm': '8px',
+  'spacing-md': '16px',
+  'font-size-md': '1rem'
+};
+
+module.exports = [
+  designSystem.configs['flat/recommended'],
+  {
+    rules: {
+      '@adamstavely/design-system/hardcoded-design-tokens': ['error', { tokens }],
+      '@adamstavely/design-system/spacing-consistency': ['warn', { tokens }],
+      '@adamstavely/design-system/typography-scale': ['warn', { tokens, replacement: 'var(--{name})' }]
+    }
+  }
+];
+```
+
+| Before | After `--fix` |
+| --- | --- |
+| `color: '#3B82F6'` | `color: 'var(--color-primary)'` |
+| `border: '1px solid #3b82f6'` | `border: '1px solid var(--color-primary)'` (only the color) |
+| `` css`color: #3b82f6;` `` | `` css`color: var(--color-primary);` `` |
+| `margin: '8px 16px'` | `margin: 'var(--spacing-sm) var(--spacing-md)'` (every part must match a token) |
+| `fontSize: '1rem'` | `fontSize: 'var(--font-size-md)'` |
+
+- `tokens`: token name to value. Colors compare ignoring case and short hex (`#fff` is `#ffffff`) and whitespace in `rgb()`; lengths compare numerically (`.5em` is `0.5em`).
+- `replacement`: how a token is written, with `{name}` for its name. Default `var(--{name})`; use `{name}` alone for token names that are already references. A replacement that would end the string or start an escape or interpolation is never written.
+- Numbers (`fontSize: 16`) are reported but not fixed, since a token reference is a string. `component-naming` and `accessibility-attributes` have no autofix: their fixes would be guesses.
 
 Vue: the rules check `<script>` code when using `vue-eslint-parser`; `accessibility-attributes` only understands JSX, not Vue `<template>` markup.
 
@@ -70,7 +115,7 @@ ESLint rules run synchronously, so rules from the governance API have to be load
 
 ```javascript
 // eslint.config.mjs
-import designSystem from 'eslint-plugin-design-system';
+import designSystem from '@adamstavely/eslint-plugin-design-system';
 
 const { loaded } = await designSystem.loadRulesFromAPI({
   apiUrl: process.env.DS_API_URL,   // e.g. http://localhost:3000/api/v1
@@ -81,7 +126,7 @@ const { loaded } = await designSystem.loadRulesFromAPI({
 
 export default [
   designSystem.configs['flat/recommended'],
-  { rules: Object.fromEntries(loaded.map(id => [`design-system/${id}`, 'warn'])) }
+  { rules: Object.fromEntries(loaded.map(id => [`@adamstavely/design-system/${id}`, 'warn'])) }
 ];
 ```
 
@@ -98,9 +143,11 @@ export default [
 
   Everything else (`selector-count`, other builtins, `regex-*` on `html`/`css`, complex selectors, rules without a `type`) is skipped: it's listed in `skipped`, the reason is in `warnings`, and one warning is logged per load.
 - `config.tokenValues` lists design token values that `token-usage` rules accept as raw values, as the server does.
-- Rule ids are the rule name lowercased and hyphenated (`"No Brand Colors"` becomes `design-system/no-brand-colors`). Disabled rules, rules whose name sanitizes to nothing, and rules that would replace a built-in rule are skipped and listed in `skipped`.
+- Rule ids are the rule name lowercased and hyphenated (`"No Brand Colors"` becomes `@adamstavely/design-system/no-brand-colors`). Disabled rules, rules whose name sanitizes to nothing, and rules that would replace a built-in rule are skipped and listed in `skipped`.
 - It never rejects: if the API is down, slow (times out) or returns bad data, it logs one warning and resolves with whatever loaded (cached rules for that URL, if any).
 - `config.rules` registers rule definitions directly without a request.
+
+There is no processor and nothing loads rules in the background: `loadRulesFromAPI` is the one way to add API rules.
 
 ## Development
 
@@ -108,3 +155,5 @@ export default [
 npm run build   # tsc -> lib/
 npm test        # builds, then runs jest (RuleTester suites, load test, ESLint integration)
 ```
+
+Releases are published by `.github/workflows/release.yml` on an `eslint-plugin-v<version>` tag, or when the **Release** workflow is run with `package=eslint-plugin` (see "Publishing packages" in [the CLI README](../cli/README.md#publishing-packages)).

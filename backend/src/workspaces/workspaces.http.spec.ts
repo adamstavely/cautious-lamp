@@ -345,6 +345,23 @@ describe('Workspaces HTTP API', () => {
     });
   });
 
+  it('lists the item kinds with their filter fields and fixed filter values', async () => {
+    const res = await h.call('viewer', 'GET', '/resources');
+    expect(res.status).toBe(200);
+    expect(res.body.map((k: any) => k.kind)).toEqual(RESOURCE_KINDS.map((k) => k.kind));
+    expect(res.body.find((k: any) => k.kind === 'assets')).toEqual({
+      kind: 'assets',
+      titleField: 'name',
+      filterField: 'type',
+      filterValues: ['image', 'icon', 'illustration', 'logo', 'other'],
+    });
+    expect(res.body.find((k: any) => k.kind === 'fonts').filterValues).toEqual(['google', 'custom', 'system']);
+    // A free-text filter field has no fixed values
+    expect(res.body.find((k: any) => k.kind === 'icons')).toEqual({ kind: 'icons', titleField: 'name', filterField: 'iconSet' });
+    expect(res.body.find((k: any) => k.kind === 'stock-photos')).toEqual({ kind: 'stock-photos', titleField: 'name' });
+    expect((await h.call({}, 'GET', '/resources')).status).toBe(401);
+  });
+
   describe('GET /resources/:kind (the library across workspaces)', () => {
     let a: string;
     let b: string;

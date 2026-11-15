@@ -182,11 +182,20 @@ export async function searchAssets(args: { workspaceId: string; query: string; t
   );
 }
 
+/** One kind of workspace item as `GET /api/v1/resources` describes it */
+export interface ResourceKind {
+  kind: string;
+  titleField: 'name' | 'title';
+  filterField?: string;
+  /** The values `filter` can take, when the backend only accepts a fixed set */
+  filterValues?: string[];
+}
+
 export const getAssetTypesSchema = z.object({});
 
 export const getAssetTypesTool: Tool = {
   name: 'get_asset_types',
-  description: 'List available asset types',
+  description: 'List the asset types the backend accepts (the values of the `type` filter on get_assets and search_assets)',
   inputSchema: {
     type: 'object',
     properties: {},
@@ -194,6 +203,11 @@ export const getAssetTypesTool: Tool = {
 };
 
 export async function getAssetTypes(): Promise<string[]> {
-  return ['image', 'icon', 'illustration', 'logo', 'other'];
+  const kinds = await apiClient.get<ResourceKind[]>('/resources', undefined, 'assets');
+  const assets = Array.isArray(kinds) ? kinds.find((k) => k.kind === 'assets') : undefined;
+  if (!assets?.filterValues) {
+    throw new Error('The backend did not describe the asset types (GET /api/v1/resources has no assets kind with filterValues)');
+  }
+  return assets.filterValues;
 }
 

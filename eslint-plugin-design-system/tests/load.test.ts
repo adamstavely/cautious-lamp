@@ -19,7 +19,7 @@ describe('built package', () => {
 
   it('require() returns the plugin itself (not { default })', () => {
     expect(plugin.default).toBeUndefined();
-    expect(plugin.meta).toEqual({ name: 'eslint-plugin-design-system', version: pkgJson.version });
+    expect(plugin.meta).toEqual({ name: '@adamstavely/eslint-plugin-design-system', version: pkgJson.version });
     expect(typeof plugin.loadRulesFromAPI).toBe('function');
   });
 
@@ -33,15 +33,15 @@ describe('built package', () => {
     }
     expect(plugin.configs.recommended).toBeDefined();
     expect(plugin.configs['legacy-recommended']).toBe(plugin.configs.recommended);
-    expect(plugin.configs['flat/recommended'].plugins['design-system']).toBe(plugin);
+    expect(plugin.configs['flat/recommended'].plugins['@adamstavely/design-system']).toBe(plugin);
   });
 
   it.each(['recommended', 'flat/recommended'])('every rule in configs[%s] is defined', name => {
     const ruleIds = Object.keys(plugin.configs[name].rules);
     expect(ruleIds.length).toBeGreaterThan(0);
     for (const id of ruleIds) {
-      expect(id.startsWith('design-system/')).toBe(true);
-      expect(plugin.rules[id.slice('design-system/'.length)]).toBeDefined();
+      expect(id.startsWith('@adamstavely/design-system/')).toBe(true);
+      expect(plugin.rules[id.slice('@adamstavely/design-system/'.length)]).toBeDefined();
     }
   });
 
@@ -50,7 +50,7 @@ describe('built package', () => {
       process.execPath,
       [
         '-e',
-        `const p = require('eslint-plugin-design-system');
+        `const p = require('@adamstavely/eslint-plugin-design-system');
          const axiosLoaded = Object.keys(require.cache).some(k => k.includes('/node_modules/axios/'));
          console.log(JSON.stringify({ rules: Object.keys(p.rules).length, axiosLoaded }));`
       ],

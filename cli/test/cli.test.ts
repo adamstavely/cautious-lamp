@@ -61,6 +61,7 @@ let server: http.Server;
 let baseURL: string;
 const requests: Recorded[] = [];
 let lastBody: any;
+let healthy = true;
 
 beforeAll(async () => {
   if (!fs.existsSync(CLI)) throw new Error(`${CLI} not found: run npm run build first`);
@@ -72,8 +73,27 @@ beforeAll(async () => {
       req.on('data', (chunk) => (raw += chunk));
       req.on('end', () => {
         lastBody = raw ? JSON.parse(raw) : undefined;
+        if (lastBody?.applicationId === 'needs-admin') {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ statusCode: 403, message: 'Requires admin:governance' }));
+          return;
+        }
+        const checks = [{ id: 'c1', rule: 'Images need alt text', status: 'error', message: 'img without alt' }];
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ applicationId: lastBody?.applicationId, scannedAt: 'now', checks: [] }));
+        res.end(
+          JSON.stringify({
+            id: 'scan-1',
+            scope: lastBody?.applicationId ? 'application' : 'design-system',
+            applicationId: lastBody?.applicationId,
+            applicationName: lastBody?.applicationId ? 'Shop' : undefined,
+            createdAt: 'now',
+            checks,
+            passed: 0,
+            warnings: 0,
+            failed: 1,
+            info: 0,
+          }),
+        );
       });
       return;
     }
@@ -83,7 +103,12 @@ beforeAll(async () => {
     };
     const url = new URL(req.url ?? '/', 'http://localhost');
 
-    if (url.pathname === '/api/v1/health') return send(200, { status: 'ok', version: '1.0.0', timestamp: 'now' });
+    if (url.pathname === '/api/v1/health') {
+      // The server answers 503, with the same report, when Elasticsearch is down
+      return healthy
+        ? send(200, { status: 'ok', version: '1.0.0', timestamp: 'now', elasticsearch: { status: 'up' } })
+        : send(503, { status: 'unavailable', version: '1.0.0', timestamp: 'now', elasticsearch: { status: 'down', error: 'connect ECONNREFUSED' } });
+    }
     if (req.headers.authorization !== `Bearer ${API_KEY}`) {
       return send(401, { statusCode: 401, message: 'Invalid or missing API key' });
     }
@@ -240,6 +265,19 @@ describe('tokens (against a mock API)', () => {
     const { code, stdout } = await runCli(['health'], { env: { HOME: tmpDir('home'), DS_API_URL: baseURL } });
     expect(code).toBe(0);
     expect(stdout).toContain('API is healthy');
+    expect(stdout).toMatch(/Elasticsearch:\s+up/);
+  });
+
+  it('health reports an unavailable API and exits 1', async () => {
+    healthy = false;
+    try {
+      const { code, stdout } = await runCli(['health'], { env: { HOME: tmpDir('home'), DS_API_URL: baseURL } });
+      expect(code).toBe(1);
+      expect(stdout).toContain('API is unavailable');
+      expect(stdout).toMatch(/Elasticsearch:\s+down \(connect ECONNREFUSED\)/);
+    } finally {
+      healthy = true;
+    }
   });
 });
 
@@ -263,10 +301,77 @@ describe('scan (against a mock API)', () => {
     expect(requests.at(-1)).toMatchObject({ method: 'POST', url: '/api/v1/compliance/scan-application' });
     expect(lastBody).toMatchObject({ applicationId: 'app-1', codebase: { html: '<img src="a.png">' } });
   });
+
+  it("prints the server's counts and the application's name", async () => {
+    const { code, stdout } = await runCli(['scan', '-a', 'app-1', '--url', 'https://shop.example.com'], {
+      env: { HOME: tmpDir('home'), DS_API_URL: baseURL, DS_API_KEY: API_KEY },
+    });
+    expect(code).toBe(0);
+    expect(stdout).toContain('Compliance Scan Results for Shop');
+    expect(stdout).toContain('✗ Failed: 1');
+    expect(stdout).toContain('Images need alt text');
+  });
+
+  it('says which permission a 403 needs', async () => {
+    const { code, stderr } = await runCli(['scan', '-a', 'needs-admin', '--url', 'https://shop.example.com'], {
+      env: { HOME: tmpDir('home'), DS_API_URL: baseURL, DS_API_KEY: API_KEY },
+    });
+    expect(code).toBe(1);
+    expect(stderr).toContain('API request failed (403): Requires admin:governance. This needs an API key with admin:governance.');
+  });
+
+  it('says in its help that it needs admin:governance', async () => {
+    const { stdout } = await runCli(['scan', '--help'], { env: { HOME: tmpDir('home') } });
+    expect(stdout).toContain('admin:governance');
+  });
+});
+
+describe('register (against a mock API)', () => {
+  it('registers into a workspace with the application URL', async () => {
+    const { code } = await runCli(['register', '-n', 'Shop', '-w', 'ws_1', '-u', 'https://shop.example.com'], {
+      env: { HOME: tmpDir('home'), DS_API_URL: baseURL, DS_API_KEY: API_KEY },
+    });
+    expect(code).toBe(0);
+    expect(requests.at(-1)).toMatchObject({ method: 'POST', url: '/api/v1/applications/register' });
+    expect(lastBody).toEqual({ name: 'Shop', workspaceId: 'ws_1', applicationUrl: 'https://shop.example.com' });
+  });
+});
+
+describe('compliance (against a mock API)', () => {
+  it('scans just the components given with --components', async () => {
+    const { code, stdout } = await runCli(['compliance', '--components', 'button, card'], {
+      env: { HOME: tmpDir('home'), DS_API_URL: baseURL, DS_API_KEY: API_KEY },
+    });
+    expect(code).toBe(0);
+    expect(requests.at(-1)).toMatchObject({ method: 'POST', url: '/api/v1/compliance/scan' });
+    expect(lastBody).toEqual({ scope: 'design-system', componentIds: ['button', 'card'] });
+    expect(stdout).toContain('✗ Failed: 1');
+  });
+
+  it('refuses --components outside the design-system scope', async () => {
+    const { code, stderr } = await runCli(['compliance', '-s', 'applications', '-a', 'app-1', '--components', 'button'], {
+      env: { HOME: tmpDir('home'), DS_API_URL: baseURL, DS_API_KEY: API_KEY },
+    });
+    expect(code).toBe(1);
+    expect(stderr).toContain('--components is for the design-system scope');
+    expect(requests).toHaveLength(0);
+  });
 });
 
 describe('scaffold', () => {
   const env = () => ({ HOME: tmpDir('home') });
+
+  it('works offline from built-in templates, and its help says so', async () => {
+    const dir = tmpDir('proj');
+    // An unreachable API and no key: scaffolding must not need either
+    const { code } = await runCli(['scaffold', 'component', '-n', 'Offline', '-d', dir], {
+      env: { ...env(), DS_API_URL: 'http://127.0.0.1:9/api/v1' },
+    });
+    expect(code).toBe(0);
+    expect(requests).toHaveLength(0);
+    const { stdout } = await runCli(['scaffold', '--help'], { env: env() });
+    expect(stdout.replace(/\s+/g, ' ')).toContain('does not call the API');
+  });
 
   it('writes a vue component into the target directory', async () => {
     const dir = tmpDir('proj');
@@ -335,6 +440,15 @@ describe('migrate (against a mock API)', () => {
     const react = await runCli(['migrate', '-c', 'button', '-d', dir, '--framework', 'react'], { env });
     expect(react.code).toBe(0);
     expect(fs.existsSync(path.join(dir, 'src/components/button/Button.jsx'))).toBe(true);
+  });
+
+  it('has no --from/--to: the API only serves the current version', async () => {
+    const dir = tmpDir('proj');
+    const env = { HOME: tmpDir('home'), DS_API_URL: baseURL, DS_API_KEY: API_KEY };
+    const res = await runCli(['migrate', '-c', 'button', '-d', dir, '--from', '1.0.0'], { env });
+    expect(res.code).toBe(1);
+    expect(res.stderr).toContain("unknown option '--from'");
+    expect(requests).toHaveLength(0);
   });
 
   it('fails when the component has no code for the framework', async () => {

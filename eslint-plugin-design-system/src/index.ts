@@ -6,7 +6,9 @@ import type { DesignSystemPlugin, LegacyConfig } from './types';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { version } = require('../package.json') as { version: string };
 
-const PLUGIN_NAME = 'design-system';
+// Rule ids are `@adamstavely/design-system/<rule>`: ESLint's name for a plugin
+// published as @adamstavely/eslint-plugin-design-system
+const PLUGIN_NAME = '@adamstavely/design-system';
 
 const recommendedRules: Linter.RulesRecord = {
   [`${PLUGIN_NAME}/hardcoded-design-tokens`]: 'error',
@@ -16,14 +18,14 @@ const recommendedRules: Linter.RulesRecord = {
   [`${PLUGIN_NAME}/typography-scale`]: 'warn'
 };
 
-/** eslintrc config: `extends: ['plugin:design-system/recommended']` (ESLint 8 default). */
+/** eslintrc config: `extends: ['plugin:@adamstavely/design-system/recommended']` (ESLint 8 default). */
 const legacyRecommended: LegacyConfig = {
   plugins: [PLUGIN_NAME],
   rules: { ...recommendedRules }
 };
 
 const plugin = {
-  meta: { name: 'eslint-plugin-design-system', version },
+  meta: { name: '@adamstavely/eslint-plugin-design-system', version },
   rules,
   configs: {
     recommended: legacyRecommended,
@@ -38,6 +40,6 @@ plugin.configs['flat/recommended'] = {
   rules: { ...recommendedRules }
 };
 
-// CommonJS export so `require('eslint-plugin-design-system')` returns the plugin
+// CommonJS export so `require('@adamstavely/eslint-plugin-design-system')` returns the plugin
 // itself (ESLint loads plugins with require and reads `.rules` / `.configs`).
 export = plugin;

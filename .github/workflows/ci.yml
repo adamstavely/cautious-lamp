@@ -46,6 +46,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Every package release.yml publishes is scoped and pointed at GitHub Packages
+      - run: node scripts/check-release-config.mjs
       # The CLI depends on the SDK, so the SDK builds first.
       - run: npm run build --workspace sdk
       - run: npm test --workspace sdk --if-present
@@ -60,6 +62,8 @@ jobs:
         working-directory: loupe-tool-standalone
       - run: npm run build && npm run test:pack
         working-directory: loupe-tool-standalone
+      - run: npm test
+        working-directory: breakpoint-overlay-standalone
       - run: npm run build && npm run test:pack
         working-directory: breakpoint-overlay-standalone
       - run: npm test

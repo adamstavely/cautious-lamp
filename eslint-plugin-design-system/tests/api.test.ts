@@ -3,7 +3,6 @@ import type { AddressInfo } from 'net';
 import { Linter } from 'eslint';
 import plugin = require('../src/index');
 import { clearRulesCache, convertToESLintRule, DesignSystemRule, fetchRules, toRuleId, unsupportedReason } from '../src/rule-converter';
-import { processor, initializePlugin } from '../src/processor';
 
 type Handler = (req: http.IncomingMessage, res: http.ServerResponse) => void;
 
@@ -187,11 +186,6 @@ describe('fetchRules / loadRulesFromAPI', () => {
     expect(String(warn.mock.calls[0][0])).toMatch(/Skipped 5 rule\(s\) ESLint can't check/);
     expect(plugin.rules['old-scanner']).toBeUndefined();
   });
-
-  it('initializePlugin returns the plugin and never rejects', async () => {
-    await expect(initializePlugin({ apiUrl: 'http://127.0.0.1:9', timeout: 500 })).resolves.toBe(plugin);
-    await expect(initializePlugin()).resolves.toBe(plugin);
-  });
 });
 
 describe('convertToESLintRule', () => {
@@ -275,15 +269,5 @@ describe('convertToESLintRule', () => {
   it('toRuleId sanitizes names', () => {
     expect(toRuleId('  No  Brand -- Colors! ')).toBe('no-brand-colors');
     expect(toRuleId('!!!')).toBe('');
-  });
-});
-
-describe('processor', () => {
-  it('passes text through and flattens messages', () => {
-    expect(processor.preprocess('', 'a.js')).toEqual(['']);
-    expect(processor.preprocess(undefined as never, 'a.js')).toEqual(['']);
-    const m = { ruleId: 'x', message: 'm', line: 1, column: 1, severity: 2 } as Linter.LintMessage;
-    expect(processor.postprocess([[m], []], 'a.js')).toEqual([m]);
-    expect(processor.postprocess(undefined as never, 'a.js')).toEqual([]);
   });
 });

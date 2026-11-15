@@ -10,6 +10,7 @@ import {
   UpdateWorkspaceDto,
   UpdateWorkspaceMemberDto,
 } from './workspace.dto';
+import { describeResourceKinds } from './resource-kinds';
 import { WorkspaceResourcesService } from './workspace-resources.service';
 import { WorkspacesService } from './workspaces.service';
 
@@ -157,6 +158,12 @@ export class WorkspacesController {
   }
 
   // ---------- Items (generic over the kinds in resource-kinds.ts) ----------
+
+  /** The item kinds, with each one's `?filter=` field and its allowed values where they are fixed */
+  @Get('resources')
+  resourceKinds() {
+    return describeResourceKinds();
+  }
 
   /** One kind across every workspace the caller can read (the library pages); writes go through a workspace */
   @Get('resources/:kind')

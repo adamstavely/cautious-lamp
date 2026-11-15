@@ -1,5 +1,5 @@
 {
-  "name": "@designsystem/loupe-tool",
+  "name": "@adamstavely/loupe-tool",
   "version": "1.0.0",
   "description": "Standalone Loupe Tool for inspecting design system components in any application",
   "main": "dist/loupe-tool.umd.js",
@@ -35,6 +35,15 @@
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adamstavely/cautious-lamp.git",
+    "directory": "loupe-tool-standalone"
+  },
+  "homepage": "https://github.com/adamstavely/cautious-lamp/tree/main/loupe-tool-standalone#readme",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "dependencies": {
     "lucide-vue-next": "^0.552.0"
   },

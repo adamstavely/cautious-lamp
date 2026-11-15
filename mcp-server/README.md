@@ -13,11 +13,20 @@ The MCP server provides a standardized interface for AI assistants to interact w
 
 ## Installation
 
-```bash
-cd mcp-server
-npm install
-npm run build
+The server is published to GitHub Packages under the `@adamstavely` scope. Tell npm where that scope lives (`~/.npmrc`):
+
+```ini
+@adamstavely:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
+
+`GITHUB_TOKEN` is a GitHub personal access token (classic) with the `read:packages` scope. Then:
+
+```bash
+npm install -g @adamstavely/design-system-mcp-server   # installs the design-system-mcp command
+```
+
+From a checkout instead: `npm ci` at the repository root, then `npm run build --workspace mcp-server`; the entry point is `mcp-server/dist/index.js`.
 
 ## Configuration
 
@@ -25,6 +34,7 @@ The server requires the following environment variables:
 
 - `MCP_API_BASE_URL` - Backend API base URL (default: `http://localhost:3000/api/v1`)
 - `MCP_API_KEY` - API key for authentication (required)
+- `MCP_DOCS_DIRS` - Optional: directories of Markdown to serve as documentation resources, separated by `:` (`;` on Windows). See [Documentation resources](#documentation-resources).
 
 ## Usage
 
@@ -54,8 +64,7 @@ Add to your Cursor settings (`.cursor/mcp.json` or similar):
 {
   "mcpServers": {
     "design-system": {
-      "command": "node",
-      "args": ["/path/to/mcp-server/dist/index.js"],
+      "command": "design-system-mcp",
       "env": {
         "MCP_API_BASE_URL": "http://localhost:3000/api/v1",
         "MCP_API_KEY": "your-api-key-here"
@@ -65,6 +74,8 @@ Add to your Cursor settings (`.cursor/mcp.json` or similar):
 }
 ```
 
+From a checkout, use `"command": "node"` and `"args": ["/path/to/cautious-lamp/mcp-server/dist/index.js"]` instead.
+
 #### Claude Desktop Configuration
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or similar:
@@ -73,8 +84,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 {
   "mcpServers": {
     "design-system": {
-      "command": "node",
-      "args": ["/path/to/mcp-server/dist/index.js"],
+      "command": "design-system-mcp",
       "env": {
         "MCP_API_BASE_URL": "http://localhost:3000/api/v1",
         "MCP_API_KEY": "your-api-key-here"
@@ -108,16 +118,16 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 ### Compliance
 
 - **`get_compliance_rules`** - List all compliance rules
-- **`scan_component`** - Run compliance scan on a specific component
+- **`scan_component`** - Run a compliance scan of one component (the backend scans just that component, `componentIds`; an id the key can't read is an error)
 - **`export_rules`** - Export rules for linter integration
 
 ### Assets
 
 - **`get_assets`** - Retrieve all assets for a workspace with optional type filter
 - **`get_icons`** - Get all icons for a workspace with optional iconSet filter
-- **`get_asset`** - Get a specific asset by ID
+- **`get_asset_by_id`** - Get a specific asset by workspace and asset ID
 - **`search_assets`** - Search assets by name, description, or tags
-- **`get_asset_types`** - List available asset types
+- **`get_asset_types`** - List the asset types the backend accepts, read from `GET /api/v1/resources` (the item kinds list)
 
 ### Reviews
 
@@ -133,12 +143,19 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 
 ### Documentation Resources
 
-Documentation resources are available at `design-system://docs/*` and provide access to markdown documentation files from the design system.
+Markdown files are served as `design-system://docs/<path>` (without `.md`) from two places: the platform docs (`docs/` at the repository root) and the design system guides (`frontend/docs/`). When both have a file at the same path, `docs/` wins.
 
 Examples:
-- `design-system://docs/index` - Main documentation index
-- `design-system://docs/GETTING_STARTED` - Getting started guide
-- `design-system://docs/API_REFERENCE` - API reference
+- `design-system://docs/GETTING_STARTED` - Getting started guide (`docs/GETTING_STARTED.md`)
+- `design-system://docs/API_REFERENCE` - API reference (`docs/API_REFERENCE.md`)
+- `design-system://docs/index` - Design system guide index (`frontend/docs/index.md`)
+
+Where the files are read from:
+1. `MCP_DOCS_DIRS`, when set.
+2. The repository the server runs from: it looks for `docs/` and `frontend/docs/` above its own files, so `node /path/to/mcp-server/dist/index.js` finds them from any working directory.
+3. The copies in the installed package (`bundled-docs/`), which `npm pack` and `npm publish` make with `npm run bundle-docs`.
+
+With none of these, the server lists no documentation resources.
 
 ### Design System Resources
 
@@ -182,6 +199,7 @@ mcp-server/
 │   └── resources/             # MCP resource implementations
 │       ├── documentation.resource.ts
 │       └── design-system.resource.ts
+├── scripts/bundle-docs.js     # Copies the docs into bundled-docs/ for the published package
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -195,7 +213,8 @@ The MCP server connects to the following backend API endpoints:
 - `GET /api/v1/components` - Component retrieval
 - `GET /patterns-library/patterns` - Pattern retrieval
 - `GET /api/v1/rules/export` - Compliance rules export
-- `POST /api/v1/compliance/scan` - Compliance scanning
+- `POST /api/v1/compliance/scan` - Compliance scanning (`scope: 'design-system'`, `componentIds: [id]`)
+- `GET /api/v1/resources` - Workspace item kinds, with each kind's filter values (asset types)
 - `GET /api/v1/workspaces/:id/resources/assets?filter=<type>` - Asset retrieval
 - `GET /api/v1/workspaces/:id/resources/assets/:assetId` - One asset
 - `GET /api/v1/workspaces/:id/resources/icons?filter=<iconSet>` - Icon retrieval
@@ -222,6 +241,10 @@ The server includes comprehensive error handling:
 - Tool arguments are validated (zod); missing or invalid arguments return an `isError` result
 - Logs go to stderr only, since stdout carries the MCP JSON-RPC stream
 - Resource access errors are handled gracefully
+
+## Releasing
+
+`.github/workflows/release.yml` publishes the package on a `mcp-server-v<version>` tag that matches `package.json`, or when the **Release** workflow is run with `package=mcp-server` (see "Publishing packages" in [the CLI README](../cli/README.md#publishing-packages)).
 
 ## License
 

@@ -1,5 +1,5 @@
 {
-  "name": "@designsystem/cli",
+  "name": "@adamstavely/design-system-cli",
   "version": "1.0.0",
   "description": "CLI tool for Design System API",
   "bin": {
@@ -20,8 +20,17 @@
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adamstavely/cautious-lamp.git",
+    "directory": "cli"
+  },
+  "homepage": "https://github.com/adamstavely/cautious-lamp/tree/main/cli#readme",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "dependencies": {
-    "@designsystem/api": "^1.0.0",
+    "@adamstavely/design-system-sdk": "^1.0.0",
     "commander": "^11.0.0",
     "chalk": "^4.1.2"
   },
@@ -49,6 +58,7 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ]
 }

@@ -1,7 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { apiClient } from '../api-client';
-import { getComponent } from './components.tool';
 
 export interface ComplianceRule {
   id?: string;
@@ -15,7 +14,7 @@ export interface ComplianceRule {
 export interface ComplianceCheck {
   id: string;
   rule: string;
-  status: 'pass' | 'warning' | 'error';
+  status: 'pass' | 'warning' | 'error' | 'info';
   message: string;
   component?: string;
   application?: string;
@@ -103,17 +102,14 @@ export const scanComponentTool: Tool = {
 };
 
 export async function scanComponent(args: { componentId: string }): Promise<ComplianceScanResult> {
-  // The backend scans the whole design system (it has no per-component scope)
-  // and tags each check with the component's *name*, so resolve the name first
-  // and filter the checks down to this component.
-  const component = await getComponent({ id: args.componentId });
+  // `componentIds` scans just this component. The backend answers 404 for an id
+  // that doesn't exist or that the API key can't read, which the client turns into an error.
   const result = await apiClient.post<BackendScanResult>('/compliance/scan', {
     scope: 'design-system',
+    componentIds: [args.componentId],
   });
 
-  const matches = (value?: string) =>
-    !!value && (value === component.name || value === component.id || value === args.componentId);
-  const checks = (result?.checks || []).filter((check) => matches(check.component));
+  const checks = result?.checks || [];
 
   return {
     checks,

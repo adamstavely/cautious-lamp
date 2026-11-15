@@ -18,6 +18,7 @@ import {
   ValidateNested,
   ValidationError,
   buildMessage,
+  getMetadataStorage,
   validate,
 } from 'class-validator';
 import { trim } from './workspace.dto';
@@ -297,6 +298,32 @@ export const RESOURCE_KINDS: readonly ResourceKindSpec[] = [
 ];
 
 const BY_KIND = new Map(RESOURCE_KINDS.map((spec) => [spec.kind, spec]));
+
+/** One kind as `GET /api/v1/resources` describes it to clients */
+export interface ResourceKindDescription {
+  kind: string;
+  titleField: 'name' | 'title';
+  filterField?: string;
+  /** The values `?filter=` can take, when the filter field only accepts a fixed set (`@IsIn`) */
+  filterValues?: string[];
+}
+
+/** The values an `@IsIn` decorator allows on `property`, read from class-validator's metadata */
+function allowedValues(dto: new () => object, property: string): string[] | undefined {
+  const isIn = getMetadataStorage()
+    .getTargetValidationMetadatas(dto, '', true, false)
+    .find((m) => m.propertyName === property && m.name === 'isIn');
+  const values = isIn?.constraints?.[0];
+  return Array.isArray(values) ? values.map(String) : undefined;
+}
+
+/** The kinds clients can list, with each one's filter field and, where fixed, its values */
+export function describeResourceKinds(): ResourceKindDescription[] {
+  return RESOURCE_KINDS.map(({ kind, dto, titleField, filterField }) => {
+    const filterValues = filterField ? allowedValues(dto, filterField) : undefined;
+    return { kind, titleField, ...(filterField ? { filterField } : {}), ...(filterValues ? { filterValues } : {}) };
+  });
+}
 
 export function resourceKind(kind: string): ResourceKindSpec | undefined {
   return BY_KIND.get(kind);
