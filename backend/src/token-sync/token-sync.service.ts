@@ -332,26 +332,25 @@ export class TokenSyncService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Pulls every connection whose scheduled pull is due; returns how many this instance ran */
-  async runDueAutoSyncs(now: Date = new Date()): Promise<number> {
-    let ran = 0;
-    for (const due of await this.registry.dueForAutoSync(now)) {
-      const connection = await this.registry.claimAutoSync(due.id, now);
-      if (!connection) continue;
-      ran++;
-      const run = await this.pull(connection, SCHEDULER, 'scheduled').catch((error) => {
-        this.logger.warn(`Scheduled token sync of ${connection.id} failed: ${(error as Error).message}`);
-        return null;
-      });
-      if (run?.status === 'failed') this.logger.warn(`Scheduled token sync of ${connection.id} failed: ${run.error}`);
-    }
-    return ran;
+  runDueAutoSyncs(now: Date = new Date()): Promise<number> {
+    return this.registry.runDueAutoSyncs(
+      now,
+      this.logger,
+      async (connection) => {
+        const run = await this.pull(connection, SCHEDULER, 'scheduled');
+        if (run.status === 'failed') this.logger.warn(`Scheduled token sync of ${connection.id} failed: ${run.error}`);
+        return { error: run.status === 'failed' ? run.error : undefined };
+      },
+      async (connection, message) => {
+        await this.recordRun(connection, { ...this.startRun(connection, SCHEDULER, 'scheduled'), finishedAt: new Date().toISOString(), status: 'failed', counts: {}, warnings: [], error: message });
+      },
+    );
   }
 
-  /** Reads the file, diffs it and records the run (a failed one when the file can't be read) */
-  private async pull(connection: TokenSyncConnection, actor: SyncActor, trigger: SyncRun['trigger']): Promise<SyncRun> {
+  private startRun(connection: TokenSyncConnection, actor: SyncActor, trigger: SyncRun['trigger']) {
     // One clock reading for both, so a run's id and start time order runs the same way
     const startedMs = Date.now();
-    const started = {
+    return {
       id: newRunId(startedMs),
       kind: 'tokens' as const,
       connectionId: connection.id,
@@ -361,6 +360,11 @@ export class TokenSyncService implements OnModuleInit, OnModuleDestroy {
       startedBy: actor,
       startedAt: new Date(startedMs).toISOString(),
     };
+  }
+
+  /** Reads the file, diffs it and records the run (a failed one when the file can't be read) */
+  private async pull(connection: TokenSyncConnection, actor: SyncActor, trigger: SyncRun['trigger']): Promise<SyncRun> {
+    const started = this.startRun(connection, actor, trigger);
     let run: SyncRun;
     try {
       const snapshot = await this.reader.read(connection, this.registry.credential(connection));
@@ -394,6 +398,11 @@ export class TokenSyncService implements OnModuleInit, OnModuleDestroy {
         error: error instanceof DesignToolError ? error.message : 'The design file could not be read (unexpected error; see the server log)',
       };
     }
+    return this.recordRun(connection, run);
+  }
+
+  /** Stores the run, and moves the connection on to it if it is the latest pull */
+  private async recordRun(connection: TokenSyncConnection, run: SyncRun): Promise<SyncRun> {
     await this.runs.record(run);
     await this.registry.patch(connection.id, (c) => {
       if (c.lastRunId && c.lastRunStartedAt && !isNewerRun(run, { id: c.lastRunId, startedAt: c.lastRunStartedAt })) return;
