@@ -55,11 +55,9 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { useTheme } from 'vuetify';
 import { canAccessPath } from '../router/rbacGuards.js';
 
 const route = useRoute();
-const theme = useTheme();
 
 // Handle sidebar click - set flag to auto-open drawer
 const handleSidebarClick = () => {
@@ -84,9 +82,8 @@ const getInitialDarkMode = () => {
 
 const darkTheme = ref(getInitialDarkMode());
 
-// Load dark mode preference from localStorage and sync with Vuetify
+// Apply the saved theme, and follow the system while nothing is saved
 onMounted(() => {
-  // Ensure Vuetify theme matches current state
   applyDarkMode();
   
   // Listen for system preference changes
@@ -110,10 +107,8 @@ const applyDarkMode = () => {
   // Update Tailwind dark class first
   if (darkTheme.value) {
     document.documentElement.classList.add('dark');
-    theme.change('dark');
   } else {
     document.documentElement.classList.remove('dark');
-    theme.change('light');
   }
 };
 

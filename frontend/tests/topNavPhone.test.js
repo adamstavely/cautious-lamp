@@ -83,3 +83,14 @@ describe('TopNav on a phone', () => {
     expect(readSource('src/components/Sidebar.vue')).toMatch(/w-16 sm:w-24/);
   });
 });
+
+describe('opening the search from another page', () => {
+  it('opens and focuses the phone search when a page asks for it', async () => {
+    const container = el();
+    window.dispatchEvent(new CustomEvent('open-top-search'));
+    await nextTick();
+    await nextTick();
+    expect(container.querySelector('.search-area').classList.contains('search-area-open')).toBe(true);
+    expect(document.activeElement).toBe(container.querySelector('input[type="search"]'));
+  });
+});

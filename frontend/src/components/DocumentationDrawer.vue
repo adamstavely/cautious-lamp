@@ -581,9 +581,9 @@
           <!-- HCD Overview -->
           <div class="space-y-1">
             <router-link
-              to="/research"
+              to="/hcd"
               class="drawer-item"
-              :class="{ 'drawer-item-on': isActive('/research') }"
+              :class="{ 'drawer-item-on': route.path === '/hcd' }"
             >
               <AppIcon name="notebook-tabs" class="text-lg" />
               <span class="font-medium">Overview</span>
@@ -1272,8 +1272,9 @@ const showGettingStarted = computed(() => {
 });
 
 const showResearch = computed(() => {
-  return route.path === '/research' || 
+  return route.path === '/research' ||
          route.path.startsWith('/research/') ||
+         route.path === '/hcd' ||
          route.path.startsWith('/hcd/') ||
          route.path === '/tools/nasa-tlx' ||
          route.path === '/tools/sus' ||

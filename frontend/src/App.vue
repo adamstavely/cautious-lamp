@@ -1,5 +1,5 @@
 <template>
-  <v-app>
+  <div class="app-root">
     <!-- Skip Links for Keyboard Navigation - WCAG 2.1 AA -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
     <a v-if="!bare" href="#navigation" class="skip-link">Skip to navigation</a>
@@ -30,7 +30,7 @@
       <!-- Toast Notifications -->
       <Toast />
     </div>
-  </v-app>
+  </div>
 </template>
 
 <script setup>

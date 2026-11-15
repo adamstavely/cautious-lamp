@@ -131,7 +131,7 @@
                     v-for="(result, index) in filteredSearchResults"
                     :key="result.id"
                     :to="result.path"
-                    @click="closeSearch"
+                    @click="finishSearch"
                     class="popover-row block px-4 py-3"
                     :class="{ 'popover-row-on': selectedSearchIndex === index }"
                     role="option"
@@ -515,6 +515,11 @@ const getIconForType = (type) => {
 const closeSearch = () => {
   showSearchResults.value = false;
   selectedSearchIndex.value = -1;
+};
+
+/** After picking a result: close the results and, on phones, the search bar */
+const finishSearch = () => {
+  closeSearch();
   mobileSearchOpen.value = false;
 };
 
@@ -533,11 +538,11 @@ const selectSearchResult = () => {
   if (selectedSearchIndex.value >= 0 && selectedSearchIndex.value < filteredSearchResults.value.length) {
     const result = filteredSearchResults.value[selectedSearchIndex.value];
     router.push(result.path);
-    closeSearch();
+    finishSearch();
     searchQuery.value = '';
   } else if (filteredSearchResults.value.length > 0) {
     router.push(filteredSearchResults.value[0].path);
-    closeSearch();
+    finishSearch();
     searchQuery.value = '';
   }
 };
@@ -726,10 +731,13 @@ onMounted(() => {
 
   // Add click outside listener
   document.addEventListener('click', handleClickOutside);
+  // Other pages (the not-found page) ask for the search box
+  window.addEventListener('open-top-search', openMobileSearch);
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside);
+  window.removeEventListener('open-top-search', openMobileSearch);
 });
 </script>
 
@@ -764,7 +772,7 @@ onBeforeUnmount(() => {
   @apply absolute left-3 top-1/2 -translate-y-1/2 text-xl text-ink-muted pointer-events-none;
 }
 .search-input {
-  @apply w-full h-10 pl-10 pr-4 rounded-pill border border-solid border-line bg-surface-sunken text-sm text-ink placeholder:text-ink-muted transition-colors;
+  @apply w-full h-10 pl-10 pr-10 rounded-pill border border-solid border-line bg-surface-sunken text-sm text-ink placeholder:text-ink-muted transition-colors;
   @apply hover:border-line-control-hover focus:outline focus:outline-2 focus:outline-offset-0 outline-focus focus:border-transparent focus:bg-surface-control;
 }
 .search-filters-toggle {
