@@ -262,13 +262,15 @@ const router = useRouter();
 const project = ref(null);
 const loading = ref(false);
 const loadProblem = ref(null);
-const activeTab = ref('overview');
 const tabs = [
   { value: 'overview', label: 'Overview' },
   { value: 'sessions', label: 'Sessions' },
   { value: 'heatmaps', label: 'Heatmaps' },
   { value: 'settings', label: 'Settings' },
 ];
+// Each tab has its own address (/hcd/session-replay/:id/<tab>); the overview has none
+const tabFromRoute = () => (tabs.some((t) => t.value === route.params.tab) ? route.params.tab : 'overview');
+const activeTab = ref(tabFromRoute());
 
 const projectPath = () => `${REPLAY_API}/projects/${encodeURIComponent(route.params.id)}`;
 
@@ -357,7 +359,8 @@ const searchSessions = async (page = 1) => {
   const params = sessionParams(page);
   // The search is part of the address, so it can be shared and survives a reload
   const { limit, ...query } = params;
-  router.replace({ query: Object.fromEntries(Object.entries(query).map(([k, v]) => [k, String(v)])) });
+  sessionsQuery = Object.fromEntries(Object.entries(query).map(([k, v]) => [k, String(v)]));
+  router.replace({ query: sessionsQuery });
   sessionsLoading.value = true;
   sessionsProblem.value = null;
   try {
@@ -492,11 +495,24 @@ const loadProject = async () => {
   }
 };
 
-// The Sessions tab has its own address; the other tabs switch in place
+/** The last sessions search, so going back to the Sessions tab keeps it in the address */
+let sessionsQuery = {};
+
+const tabPath = (tab) => `/hcd/session-replay/${route.params.id}${tab === 'overview' ? '' : `/${tab}`}`;
+
 const selectTab = (tab) => {
+  if (tab === tabFromRoute()) return;
   activeTab.value = tab;
-  if (tab === 'sessions' && !route.path.endsWith('/sessions')) router.push(`/hcd/session-replay/${route.params.id}/sessions`);
+  router.push({ path: tabPath(tab), query: tab === 'sessions' ? sessionsQuery : {} });
 };
+
+// Back and forward move between tabs too
+watch(
+  () => route.params.tab,
+  () => {
+    activeTab.value = tabFromRoute();
+  },
+);
 
 watch(activeTab, (tab) => {
   if (tab === 'heatmaps' && !heatmapsUrl.value) loadHeatmapsUrl();
@@ -511,8 +527,8 @@ const formatDuration = (seconds) => {
 };
 
 onMounted(async () => {
-  if (route.path.endsWith('/sessions')) activeTab.value = 'sessions';
   await loadProject();
+  if (activeTab.value === 'heatmaps' && !heatmapsUrl.value) loadHeatmapsUrl();
   // A shared search address runs its search
   const q = route.query;
   if (activeTab.value === 'sessions' && q.userId) {

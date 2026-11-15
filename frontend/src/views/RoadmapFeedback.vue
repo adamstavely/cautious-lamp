@@ -12,27 +12,30 @@
     <UiTabs v-model="activeTab" :tabs="mainTabs" label="Roadmap and feedback">
       <!-- What's New Tab -->
       <template #whats-new>
-        <PageSection title="Release notes" description="Latest features, improvements, and updates to the design system.">
-          <template v-if="canEditReleaseNotes" #actions>
-            <UiButton variant="primary" icon="plus" @click="showReleaseNotesModal = true; editingReleaseNote = null">Add release note</UiButton>
-          </template>
-
-          <div v-if="releaseNotes.length" class="space-y-6">
+        <PageSection
+          title="Release notes"
+          description="Changes to components, tokens and patterns, grouped by the version they were released in. They come from the design system changelog."
+        >
+          <UiSpinner v-if="loadingReleaseNotes" label="Loading release notes…" />
+          <div v-else-if="releaseNotes.length" class="space-y-6">
             <UiPanel v-for="release in releaseNotes" :key="release.version" :title="`Version ${release.version}`" heading-tag="h3">
               <template #actions>
-                <UiChip :tone="releaseTone[release.type] || 'neutral'">{{ release.type }}</UiChip>
+                <UiChip v-if="release.breaking.length" tone="danger">Breaking</UiChip>
                 <span class="text-sm text-ink-muted">{{ formatDate(release.date) }}</span>
               </template>
-              <p class="text-sm text-ink-secondary mb-4">{{ release.description }}</p>
+              <p class="text-sm text-ink-secondary mb-4">{{ release.count }} {{ release.count === 1 ? 'change' : 'changes' }}</p>
               <div class="space-y-3">
                 <template v-for="group in releaseGroups" :key="group.key">
-                  <div v-if="release[group.key] && release[group.key].length > 0">
+                  <div v-if="release[group.key].length">
                     <h4 class="text-sm font-semibold mb-2 flex items-center gap-2" :class="group.text">
                       <AppIcon :name="group.icon" class="text-base" />
                       {{ group.label }}
                     </h4>
                     <ul class="space-y-1 ml-6 list-disc text-sm text-ink">
-                      <li v-for="entry in release[group.key]" :key="entry">{{ entry }}</li>
+                      <li v-for="entry in release[group.key]" :key="entry.id">
+                        <UiLink v-if="entry.link" :to="entry.link">{{ entry.text }}</UiLink>
+                        <template v-else>{{ entry.text }}</template>
+                      </li>
                     </ul>
                   </div>
                 </template>
@@ -42,7 +45,9 @@
           <UiEmptyState
             v-else
             title="No release notes yet"
-            body="Release notes will appear here as new versions are published."
+            :body="releaseNotesError
+              ? 'The changelog could not be loaded, so release notes are not shown. Try again later.'
+              : 'Release notes appear here when components, tokens or patterns change with a version number.'"
             spot="site/roadmap-feedback"
           />
         </PageSection>
@@ -191,6 +196,7 @@ import {
   UiDialog,
   UiEmptyState,
   UiInput,
+  UiLink,
   UiPanel,
   UiSegmented,
   UiSelect,
@@ -201,6 +207,7 @@ import {
 import { useNotice } from '../composables/useNotice.js';
 import apiClient from '../services/api.js';
 import { useAuth } from '../composables/useAuth.js';
+import { buildReleaseNotes } from '../utils/releaseNotes.js';
 
 // Page messages, and messages shown inside the open dialog
 const { notice, showNotice, clearNotice } = useNotice();
@@ -221,10 +228,10 @@ const statusFilterOptions = ['all', 'planned', 'in-progress', 'completed', 'canc
 }));
 
 const releaseGroups = [
-  { key: 'features', label: 'New features', icon: 'circle-plus', text: 'text-success' },
-  { key: 'improvements', label: 'Improvements', icon: 'trending-up', text: 'text-info' },
-  { key: 'fixes', label: 'Bug fixes', icon: 'bug', text: 'text-warning' },
   { key: 'breaking', label: 'Breaking changes', icon: 'triangle-alert', text: 'text-danger' },
+  { key: 'features', label: 'New', icon: 'circle-plus', text: 'text-success' },
+  { key: 'improvements', label: 'Updated', icon: 'trending-up', text: 'text-info' },
+  { key: 'deprecations', label: 'Deprecated or removed', icon: 'circle-minus', text: 'text-warning' },
 ];
 
 const roadmapCategoryOptions = [
@@ -252,12 +259,9 @@ const statusFilter = ref('all');
 const showCreateModal = ref(false);
 const editingRoadmapItem = ref(null);
 const showIssueModal = ref(false);
-const showReleaseNotesModal = ref(false);
-const editingReleaseNote = ref(null);
 const loadingIssues = ref(false);
 const submittingIssue = ref(false);
 const canEditRoadmap = ref(false);
-const canEditReleaseNotes = ref(false);
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
 
@@ -270,73 +274,12 @@ const currentUserId = computed(() => authUser.value?.id ?? '');
 const checkPermissions = async () => {
   const canEdit = hasPermission('roadmap:edit');
   canEditRoadmap.value = canEdit;
-  canEditReleaseNotes.value = canEdit; // Same permission for release notes
 };
 
-const releaseNotes = ref([
-  {
-    version: '2.1.0',
-    type: 'minor',
-    date: '2024-01-20',
-    description: 'Enhanced component playground integration and improved feedback system.',
-    features: [
-      'Integrated interactive playground into component pages',
-      'Added props editor and live preview to component documentation',
-      'Combined roadmap and feedback into unified page',
-      'Added "What\'s New" release notes section'
-    ],
-    improvements: [
-      'Improved code export functionality (Vue, React, HTML)',
-      'Enhanced dark mode support across all pages',
-      'Better mobile responsiveness'
-    ],
-    fixes: [
-      'Fixed component preview rendering issues',
-      'Resolved code generation formatting problems'
-    ]
-  },
-  {
-    version: '2.0.0',
-    type: 'major',
-    date: '2024-01-15',
-    description: 'Major update with new governance features and enhanced design system tools.',
-    features: [
-      'Design System Governance and Compliance Scanner',
-      'Component Request Workflow',
-      'Performance Budgets',
-      'Bundle Size Analysis',
-      'Public Roadmap',
-      'AI-Powered Design System Assistant (Eero)'
-    ],
-    improvements: [
-      'Enhanced component versioning system',
-      'Improved token management',
-      'Better accessibility compliance checking'
-    ],
-    fixes: [
-      'Fixed various dark mode issues',
-      'Resolved navigation drawer problems'
-    ]
-  },
-  {
-    version: '1.5.0',
-    type: 'minor',
-    date: '2024-01-01',
-    description: 'New tools and improvements to the design system.',
-    features: [
-      'Color Scale Generator',
-      'Color Converter',
-      'Color Contrast Checker',
-      'Icon Library with Lucide icons',
-      'Token Studio with Style Dictionary support'
-    ],
-    improvements: [
-      'Enhanced color utilities',
-      'Improved icon management',
-      'Better token organization'
-    ]
-  }
-]);
+// Release notes come from the changelog, grouped by version
+const releaseNotes = ref([]);
+const loadingReleaseNotes = ref(false);
+const releaseNotesError = ref(false);
 
 // Roadmap Data
 const roadmapItems = ref([]);
@@ -390,6 +333,21 @@ const formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+const loadReleaseNotes = async () => {
+  loadingReleaseNotes.value = true;
+  releaseNotesError.value = false;
+  try {
+    const response = await apiClient.get(`${API_BASE_URL}/changelog/entries`);
+    releaseNotes.value = buildReleaseNotes(response.data || []);
+  } catch (error) {
+    console.error('Error loading release notes:', error);
+    releaseNotes.value = [];
+    releaseNotesError.value = true;
+  } finally {
+    loadingReleaseNotes.value = false;
+  }
 };
 
 // Roadmap Functions
@@ -504,7 +462,6 @@ const submitIssue = async () => {
 };
 
 // Chip tones for statuses, priorities and categories
-const releaseTone = { major: 'accent', minor: 'info' };
 const roadmapStatusTone = { planned: 'info', 'in-progress': 'warning', completed: 'success', cancelled: 'neutral' };
 const priorityTone = { critical: 'danger', high: 'danger', medium: 'warning', low: 'neutral' };
 const categoryTone = { feature: 'accent', improvement: 'info', 'bug-fix': 'danger', deprecation: 'warning', integration: 'info' };
@@ -532,6 +489,7 @@ const openIssueModal = () => {
 
 onMounted(async () => {
   await checkPermissions();
+  loadReleaseNotes();
   loadRoadmap();
   loadIssues();
 });

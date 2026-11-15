@@ -1,7 +1,8 @@
 // Session replay pages: the project page asks OpenReplay (through the API) for one
 // user's sessions with the filters and page, shows both install snippets, and
 // saves privacy and capture settings; the create dialog sends key and id apart;
-// the session page links to OpenReplay's player and lists events.
+// the session page links to OpenReplay's player and lists events. Every tab
+// has its own address.
 import { nextTick } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import apiClient from '../src/services/api.js';
@@ -20,8 +21,7 @@ const flush = async () => {
 
 const routes = [
   { path: '/hcd/session-replay/:id/sessions/:sessionId', component: { render: () => null } },
-  { path: '/hcd/session-replay/:id/sessions', component: { render: () => null } },
-  { path: '/hcd/session-replay/:id', component: { render: () => null } },
+  { path: '/hcd/session-replay/:id/:tab(sessions|heatmaps|settings)?', component: { render: () => null } },
 ];
 
 const PROJECT = {
@@ -211,6 +211,43 @@ describe('Session replay project', () => {
     await page.state.updateProject();
     const second = calls.filter((c) => c.key.startsWith('PUT')).at(-1).data;
     expect(second).toMatchObject({ openreplayProjectKey: 'newKey9', openreplayProjectId: null });
+  });
+
+  it('gives every tab its own address, and opens the tab an address names', async () => {
+    await open(SessionReplayProject, '/hcd/session-replay/sr_1');
+    expect(page.state.activeTab).toBe('overview');
+    const path = () => page.router.currentRoute.value.path;
+
+    for (const tab of ['settings', 'heatmaps', 'sessions']) {
+      page.state.selectTab(tab);
+      await vi.waitFor(() => expect(path()).toBe(`/hcd/session-replay/sr_1/${tab}`));
+    }
+    page.state.selectTab('overview');
+    await vi.waitFor(() => expect(path()).toBe('/hcd/session-replay/sr_1'));
+
+    // Back goes to the previous tab
+    page.router.back();
+    await vi.waitFor(() => expect(path()).toBe('/hcd/session-replay/sr_1/sessions'));
+    await flush();
+    expect(page.state.activeTab).toBe('sessions');
+    page.unmount();
+
+    await open(SessionReplayProject, '/hcd/session-replay/sr_1/settings');
+    expect(page.state.activeTab).toBe('settings');
+    expect(document.querySelector('#settings-block-selectors')).not.toBeNull();
+  });
+
+  it('keeps the sessions search in the address when coming back to the Sessions tab', async () => {
+    await open(SessionReplayProject, '/hcd/session-replay/sr_1/sessions');
+    page.state.filters.userId = 'user-9';
+    await page.state.searchSessions(1);
+    await flush();
+    const route = () => page.router.currentRoute.value;
+    page.state.selectTab('settings');
+    await vi.waitFor(() => expect(route().path).toBe('/hcd/session-replay/sr_1/settings'));
+    expect(route().query).toEqual({});
+    page.state.selectTab('sessions');
+    await vi.waitFor(() => expect(route().query).toMatchObject({ userId: 'user-9', page: '1' }));
   });
 
   it('links heatmaps out to OpenReplay', async () => {

@@ -1,6 +1,6 @@
 /**
- * Leases and retries for scheduled runs (governance scans and accessibility
- * reports). An instance claims an occurrence with a lease; if it dies, the
+ * Leases and retries for scheduled runs (governance scans, accessibility
+ * reports and delivery-attempt retention). An instance claims an occurrence with a lease; if it dies, the
  * lease runs out and another instance takes the occurrence over. A failed
  * attempt is retried after a growing delay, at most `maxAttempts` times in
  * all, then dead-lettered (kept, visible, and not retried).
@@ -20,7 +20,7 @@ const positive = (value: string | undefined, fallback: number) => {
 };
 
 /** `<prefix>_LEASE_MS` (10 min), `<prefix>_MAX_ATTEMPTS` (3) and `<prefix>_RETRY_DELAY_MS` (5 min) */
-export function occurrencePolicy(prefix: 'GOVERNANCE_SCHEDULER' | 'A11Y_SCHEDULER', env: NodeJS.ProcessEnv = process.env): OccurrencePolicy {
+export function occurrencePolicy(prefix: 'GOVERNANCE_SCHEDULER' | 'A11Y_SCHEDULER' | 'DELIVERY_RETENTION', env: NodeJS.ProcessEnv = process.env): OccurrencePolicy {
   return {
     leaseMs: positive(env[`${prefix}_LEASE_MS`], 10 * 60_000),
     maxAttempts: Math.floor(positive(env[`${prefix}_MAX_ATTEMPTS`], 3)),
