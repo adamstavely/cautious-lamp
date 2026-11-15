@@ -119,7 +119,8 @@ describe('Photosensitivity HTTP API admission', () => {
     expect(await running()).toBe(1);
 
     await fs.writeFile(path.join(dir, 'release'), '');
-    expect((await alice).status).toBe(201);
+    // No analysis storage here: the result comes back, without an id that would lead nowhere
+    expect(await alice).toMatchObject({ status: 201, body: { analysisId: null, saved: false, saveError: 'Analysis storage is not configured' } });
     expect((await bob).status).toBe(201);
     expect(await staged()).toBe(before);
     expect(service.pool.stats()).toEqual({ running: 0, queued: 0, admitted: 0 });

@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
+import { AnalyticsModule } from '../analytics/analytics.module';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { ApplicationsModule } from '../applications/applications.module';
 import { ApplicationsService } from '../applications/applications.service';
 import { EsIndexService } from '../common/elasticsearch/es-index.service';
@@ -25,6 +27,7 @@ import { RulesService } from './rules.service';
 import { ScansService } from './scans.service';
 import {
   APPLICATION_DIRECTORY,
+  COMPONENT_USAGE_RECORDER,
   DESIGN_SYSTEM_SOURCE,
   DesignSystemServiceSource,
   RegistryApplicationDirectory,
@@ -40,10 +43,11 @@ const esStore = (index: string, properties: Record<string, unknown>) => ({
  * the registry (ApplicationsService) through APPLICATION_DIRECTORY; design
  * system components and tokens through DESIGN_SYSTEM_SOURCE, which adapts
  * DesignSystemService. GovernanceScanScheduler runs applications' daily and
- * weekly scans.
+ * weekly scans. Each application scan's component usage goes to analytics
+ * through COMPONENT_USAGE_RECORDER.
  */
 @Module({
-  imports: [DesignSystemModule, ApplicationsModule],
+  imports: [DesignSystemModule, ApplicationsModule, AnalyticsModule],
   controllers: [GovernanceController],
   providers: [
     RulesService,
@@ -57,6 +61,7 @@ const esStore = (index: string, properties: Record<string, unknown>) => ({
       inject: [ApplicationsService],
       useFactory: (registry: ApplicationsService) => new RegistryApplicationDirectory(registry),
     },
+    { provide: COMPONENT_USAGE_RECORDER, useExisting: AnalyticsService },
     // Who reads which workspaces' evidence: the same scope as component reads
     { provide: READ_SCOPE, useExisting: ComponentAccessService },
     {

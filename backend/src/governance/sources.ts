@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import type { ApplicationsService, ScanKind } from '../applications/applications.service';
 import type { DesignSystemService } from '../design-system/design-system.service';
-import { DesignComponent, DesignToken } from './governance.types';
+import { DesignComponent, DesignToken, ScanInput } from './governance.types';
 
 /** What governance and accessibility reports need to know about an application */
 export interface GovernanceApplication {
@@ -51,6 +51,28 @@ export interface DesignSystemSource {
 }
 
 export const DESIGN_SYSTEM_SOURCE = Symbol('DESIGN_SYSTEM_SOURCE');
+
+/** A stored application scan and the code it looked at */
+export interface ApplicationScanUsage {
+  scanId: string;
+  applicationId: string;
+  applicationName: string;
+  /** `codebase:<file>` or `url:<url>` */
+  target: string;
+  scannedAt: string;
+  inputs: ScanInput[];
+}
+
+/**
+ * Where the design-system components an application scan's code uses are
+ * recorded: AnalyticsService, which computes popularity, adoption and trends
+ * from them. Optional, so governance works without analytics.
+ */
+export interface ComponentUsageRecorder {
+  recordApplicationScan(scan: ApplicationScanUsage): Promise<void>;
+}
+
+export const COMPONENT_USAGE_RECORDER = Symbol('COMPONENT_USAGE_RECORDER');
 
 type RegistryApplication = {
   id: string;

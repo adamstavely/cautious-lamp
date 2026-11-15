@@ -58,6 +58,7 @@ A scan runs the selected rules and stores the result, including the version of e
 - `ruleIds` runs those rules, enabled or not. Otherwise every enabled rule runs. `categories` filters either set.
 - **Results.** A rule that finds nothing adds one `pass` check. Each violation adds one check whose `status` is the rule's severity (`error`, `warning` or `info`). A rule that couldn't run adds an `error` check with the reason. A rule that found nothing but couldn't check all of its input is `incomplete`, never a pass, and adds a `warning` check ("Not fully checked: …"). `ruleResults` lists each rule's outcome: `pass`, `fail`, `skipped` (with a reason, e.g. "No CSS to check"), `error` or `incomplete` (with a reason). The `summary` counts `{ passed, warnings, errors, info, total }` always equal the checks by status. Up to 2,000 checks are stored, and `truncated` is set if there were more.
 - **Selector limits.** `selector-attribute` checks every matching element for the attribute. With a `pattern`, at most 10,000 attribute values are tested (1,000 per regex call). If more values match and none of the tested ones fail, the rule is `incomplete`.
+- **Component usage.** After an application scan is stored, the design-system components its code uses are recorded for analytics (`AnalyticsService.recordApplicationScan`, through `COMPONENT_USAGE_RECORDER`; see `analytics/component-detection.ts`): PascalCase tags (`<DataTable`, case-sensitive, so `<button>` is never Button), kebab-case tags for multi-word names (`<data-table`), and names imported from an `@designsystem/` package (counted once when no tag uses them). Each scan stores one document per component it found plus one for the scan itself, in `design-system-component-usage`, keyed by the scan's target (`codebase:<file>` or `url:<url>`). An application's current usage is the latest scan of each target, so a component removed from a file stops counting at that file's next scan. Rendered pages (URL scans) rarely show which components produced them, so they usually find none. A failure to record is logged and doesn't fail the scan. Design-system scans record nothing.
 - After an application scan, the application's `capabilities.governance.lastScan` and `lastScanned` are set (through `ApplicationsService.markScanned(id, at, 'governance')`). Accessibility reports set `lastAccessibilityReport` and `lastScanned`, never `governance.lastScan`, so a report doesn't stand in for a governance scan. Timestamps never move backwards.
 
 ### Who can read scans
@@ -212,6 +213,7 @@ All indices use `EsDocumentStore` (optimistic concurrency, `dynamic: false`):
 - `design-system-a11y-reports`
 - `design-system-a11y-schedules`
 - `design-system-a11y-slas`
+- `design-system-component-usage` (analytics, written after each application scan)
 
 Lists read at most the 10,000 newest documents.
 

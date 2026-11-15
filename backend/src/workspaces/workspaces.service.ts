@@ -366,8 +366,9 @@ export class WorkspacesService {
     for (const c of components) componentsByStatus[c.status] = (componentsByStatus[c.status] ?? 0) + 1;
 
     const usedByApp = new Map<string, Set<string>>();
+    const recorded = await this.components.usage(appIds);
     const usage = components.map((c) => {
-      const records = this.components.usage(c.id).filter((r) => appIds.has(r.applicationId));
+      const records = (recorded.get(c.id) ?? []).filter((r) => appIds.has(r.applicationId));
       for (const r of records) {
         if (!usedByApp.has(r.applicationId)) usedByApp.set(r.applicationId, new Set());
         usedByApp.get(r.applicationId).add(c.id);

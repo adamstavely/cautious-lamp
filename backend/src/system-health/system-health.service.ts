@@ -1,7 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AccessibilityReportsService } from '../accessibility-reports/accessibility-reports.service';
+import type { MultiApplicationComplianceSummary } from '../accessibility-reports/accessibility-reports.types';
 import { AnalyticsService } from '../analytics/analytics.service';
-import { DesignSystemService } from '../design-system/design-system.service';
+import { UsageState } from '../analytics/usage-model';
+import { AuthPrincipal } from '../auth/principal';
+import { ComponentAccessService } from '../design-system/component-access.service';
+import { Component, DesignSystemService } from '../design-system/design-system.service';
+import { DocumentStore, DuplicateDocumentError } from '../reviews/document-store';
+import { HEALTH_SNAPSHOT_STORE, HealthInputs, HealthSnapshotDoc, SnapshotApplication, snapshotId } from './health-snapshots';
 
 /**
  * Each factor is 0-100, or null when there is no data to measure it from
@@ -24,6 +30,7 @@ export interface HealthScore {
   /** Factors that had no data and were left out of the score */
   notCollected: HealthFactor[];
   timestamp: Date;
+  /** Against the latest daily snapshot before today, recomputed for the same caller */
   trend?: {
     previousScore: number;
     change: number;
@@ -31,11 +38,20 @@ export interface HealthScore {
   };
 }
 
-/** A score this server measured (kept in memory since it started; nothing older exists) */
+/** A day's score, recomputed from that day's snapshot for one caller */
 export interface HealthScoreTrend {
   date: string;
   score: number;
   factors: HealthScoreFactors;
+}
+
+/** What one caller may read: other workspaces' components and applications are left out */
+export interface HealthScope {
+  componentIds: ReadonlySet<string>;
+  /** Applications whose component usage the caller may see (AnalyticsService.applicationsVisibleTo) */
+  applicationIds: ReadonlySet<string>;
+  /** Applications whose accessibility reports the caller may read (the accessibility summary's scope) */
+  reportApplicationIds: ReadonlySet<string>;
 }
 
 const WEIGHTS: Record<HealthFactor, number> = {
@@ -46,10 +62,11 @@ const WEIGHTS: Record<HealthFactor, number> = {
   accessibility: 0.15,
 };
 
-/** At most one history point per this interval: the latest measurement replaces the previous one */
-const HISTORY_INTERVAL_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MAX_HISTORY_DAYS = 365;
 
 const round1 = (n: number | null) => (n === null ? null : Math.round(n * 10) / 10);
+const utcDate = (at: Date) => at.toISOString().slice(0, 10);
 
 export interface HealthRecommendation {
   id: string;
@@ -61,158 +78,154 @@ export interface HealthRecommendation {
   action: string; // Suggested action
 }
 
+/** Applications in compliance and usage data, merged into snapshot rows */
+function applicationRows(compliance: MultiApplicationComplianceSummary, usage: UsageState, usageApplicationIds?: ReadonlySet<string>): SnapshotApplication[] {
+  const rows = new Map<string, SnapshotApplication>();
+  const row = (id: string) => {
+    if (!rows.has(id)) rows.set(id, { id, complianceScore: null, scanned: false, componentIds: [] });
+    return rows.get(id)!;
+  };
+  for (const app of compliance.applications) row(app.applicationId).complianceScore = app.complianceScore;
+  for (const id of usage.scannedApplications.keys()) {
+    if (!usageApplicationIds || usageApplicationIds.has(id)) row(id).scanned = true;
+  }
+  for (const [componentId, usages] of usage.byComponent) {
+    for (const u of usages) if (rows.get(u.applicationId)?.scanned) row(u.applicationId).componentIds.push(componentId);
+  }
+  return [...rows.values()];
+}
+
+/** The parts of a snapshot one caller may read */
+export function scopeInputs(inputs: HealthInputs, scope: HealthScope): HealthInputs {
+  return {
+    components: inputs.components.filter((c) => scope.componentIds.has(c.id)),
+    applications: inputs.applications
+      .filter((app) => scope.applicationIds.has(app.id) || scope.reportApplicationIds.has(app.id))
+      .map((app) => ({
+        id: app.id,
+        complianceScore: scope.reportApplicationIds.has(app.id) ? app.complianceScore : null,
+        scanned: scope.applicationIds.has(app.id) && app.scanned,
+        componentIds: scope.applicationIds.has(app.id) ? app.componentIds : [],
+      })),
+  };
+}
+
+/** The five factors, from the components and applications given */
+export function healthFactors(inputs: HealthInputs): HealthScoreFactors {
+  const { components, applications } = inputs;
+  const total = components.length;
+  const status = (s: string) => components.filter((c) => c.status === s).length;
+  const scanned = applications.filter((app) => app.scanned);
+  const used = new Set(scanned.flatMap((app) => app.componentIds));
+  const scores = applications.map((app) => app.complianceScore).filter((score): score is number => score !== null);
+  const compliance = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+  return {
+    componentCoverage: total ? round1((status('production') / total) * 100) : null,
+    // Null until a governance scan of one of the caller's applications has recorded usage
+    adoptionRate: total && scanned.length ? round1((components.filter((c) => used.has(c.id)).length / total) * 100) : null,
+    compliance: round1(compliance),
+    // Deprecated components cost up to 50 points, in-progress ones up to 10
+    maintenance: total ? round1(Math.max(0, 100 - (status('deprecated') / total) * 50 - (status('in-progress') / total) * 10)) : null,
+    accessibility: round1(compliance),
+  };
+}
+
+/** Weighted average over the measured factors (weights rescaled to the ones present) */
+export function overallScore(factors: HealthScoreFactors): number | null {
+  let weighted = 0;
+  let weights = 0;
+  for (const key of Object.keys(WEIGHTS) as HealthFactor[]) {
+    const value = factors[key];
+    if (value === null) continue;
+    weighted += value * WEIGHTS[key];
+    weights += WEIGHTS[key];
+  }
+  if (weights === 0) return null;
+  return round1(Math.max(0, Math.min(100, weighted / weights)));
+}
+
+/**
+ * The design system's health, measured from components, accessibility
+ * reports and the component usage governance scans record. Every figure is
+ * limited to what the caller may read: their visible components
+ * (ComponentAccessService), applications (AnalyticsService) and accessibility
+ * reports (the accessibility summary's scope).
+ *
+ * History is one snapshot a day in Elasticsearch, taken by
+ * SystemHealthSnapshotScheduler (takeSnapshot), never by a read.
+ */
 @Injectable()
 export class SystemHealthService {
-  /** Measured scores only, recorded when a score is calculated. Starts empty. */
-  private healthScoreHistory: HealthScoreTrend[] = [];
-  private readonly MAX_HISTORY_DAYS = 90;
+  private readonly logger = new Logger(SystemHealthService.name);
 
   constructor(
     private readonly designSystemService: DesignSystemService,
     private readonly accessibilityReportsService: AccessibilityReportsService,
     private readonly analyticsService: AnalyticsService,
+    private readonly componentAccess: ComponentAccessService,
+    @Inject(HEALTH_SNAPSHOT_STORE) private readonly snapshots: DocumentStore<HealthSnapshotDoc>,
   ) {}
 
-  /** Calculates the health score from current data and records it in the history */
-  calculateHealthScore(): HealthScore {
-    const factors = this.calculateFactors();
-    const score = this.calculateOverallScore(factors);
-    const previousScore = this.latestRecordedScore();
-    const notCollected = (Object.keys(factors) as HealthFactor[]).filter((key) => factors[key] === null);
+  // ---------- Snapshots ----------
 
-    const healthScore: HealthScore = {
-      score: round1(score),
-      factors,
-      notCollected,
-      timestamp: new Date(),
+  /**
+   * Stores today's snapshot (UTC) unless one exists. Its id is the day, so
+   * concurrent instances store one. Returns whether this call stored it.
+   */
+  async takeSnapshot(at = new Date()): Promise<boolean> {
+    const date = utcDate(at);
+    const id = snapshotId(date);
+    if (await this.snapshots.get(id)) return false;
+    const components = await this.allComponents();
+    const usage = await this.analyticsService.currentUsage();
+    const doc: HealthSnapshotDoc = {
+      id,
+      date,
+      createdAt: at.toISOString(),
+      components: components.map((c) => ({ id: c.id, status: c.status })),
+      applications: applicationRows(this.accessibilityReportsService.getMultiApplicationComplianceSummary(), usage),
     };
-    if (score !== null && previousScore !== null) {
-      const change = score - previousScore;
-      healthScore.trend = {
-        previousScore,
-        change: Math.round(change * 10) / 10,
-        direction: change > 2 ? 'up' : change < -2 ? 'down' : 'stable',
-      };
-    }
-    this.addToHistory(healthScore);
-    return healthScore;
-  }
-
-  private calculateFactors(): HealthScoreFactors {
-    const components = this.designSystemService.getAllComponents();
-    const total = components.length;
-    const production = components.filter((c) => c.status === 'production').length;
-    const compliance = this.complianceAverage();
-    return {
-      componentCoverage: total > 0 ? round1((production / total) * 100) : null,
-      adoptionRate: round1(this.calculateAdoptionRate(components)),
-      compliance: round1(compliance),
-      maintenance: round1(this.calculateMaintenanceScore(components)),
-      accessibility: round1(compliance),
-    };
-  }
-
-  /** Components with recorded usage in at least one application, from governance scans. Null before any scan. */
-  private calculateAdoptionRate(components: any[]): number | null {
-    if (components.length === 0) return null;
-    const used = components.filter((c) => this.analyticsService.getComponentUsage(c.id).length > 0).length;
-    const anyUsageRecorded = used > 0 || this.analyticsService.getUsageTrends(this.MAX_HISTORY_DAYS).length > 0;
-    return anyUsageRecorded ? (used / components.length) * 100 : null;
-  }
-
-  /** Average score of applications with an accessibility report; null when there are none */
-  private complianceAverage(): number | null {
     try {
-      const summary = this.accessibilityReportsService.getMultiApplicationComplianceSummary();
-      return summary.reportedApplications > 0 ? summary.averageScore : null;
-    } catch {
-      return null;
+      await this.snapshots.create(doc);
+      return true;
+    } catch (error) {
+      if (error instanceof DuplicateDocumentError) return false;
+      throw error;
     }
   }
 
-  private calculateMaintenanceScore(components: any[]): number | null {
-    if (components.length === 0) return null;
-    const deprecated = components.filter((c) => c.status === 'deprecated').length;
-    const inProgress = components.filter((c) => c.status === 'in-progress').length;
-    // Deprecated components cost up to 50 points, in-progress ones up to 10
-    return Math.max(0, 100 - (deprecated / components.length) * 50 - (inProgress / components.length) * 10);
+  // ---------- Scores ----------
+
+  /** The health score from current data, for what the caller may read */
+  async calculateHealthScore(principal: AuthPrincipal): Promise<HealthScore> {
+    const { inputs, scope } = await this.measure(principal);
+    return this.scoreOf(inputs, scope);
   }
 
-  /** Weighted average over the measured factors (weights rescaled to the ones present) */
-  private calculateOverallScore(factors: HealthScoreFactors): number | null {
-    let weighted = 0;
-    let weights = 0;
-    for (const key of Object.keys(WEIGHTS) as HealthFactor[]) {
-      const value = factors[key];
-      if (value === null) continue;
-      weighted += value * WEIGHTS[key];
-      weights += WEIGHTS[key];
-    }
-    if (weights === 0) return null;
-    return Math.max(0, Math.min(100, weighted / weights));
-  }
-
-  /** The last recorded score from before the current hour's slot */
-  private latestRecordedScore(): number | null {
-    const last = this.healthScoreHistory[this.healthScoreHistory.length - 1];
-    if (!last) return null;
-    if (Date.now() - new Date(last.date).getTime() < HISTORY_INTERVAL_MS) {
-      return this.healthScoreHistory[this.healthScoreHistory.length - 2]?.score ?? null;
-    }
-    return last.score;
-  }
-
-  private addToHistory(healthScore: HealthScore): void {
-    if (healthScore.score === null) return;
-    const entry: HealthScoreTrend = {
-      date: healthScore.timestamp.toISOString(),
-      score: healthScore.score,
-      factors: healthScore.factors,
-    };
-    const last = this.healthScoreHistory[this.healthScoreHistory.length - 1];
-    if (last && healthScore.timestamp.getTime() - new Date(last.date).getTime() < HISTORY_INTERVAL_MS) {
-      this.healthScoreHistory[this.healthScoreHistory.length - 1] = entry;
-    } else {
-      this.healthScoreHistory.push(entry);
-    }
-    const cutoff = Date.now() - this.MAX_HISTORY_DAYS * 24 * 60 * 60 * 1000;
-    this.healthScoreHistory = this.healthScoreHistory.filter((e) => new Date(e.date).getTime() >= cutoff);
-  }
-
-  /** Current component and token counts, for the dashboard's overview cards */
-  getInventory() {
-    const components = this.designSystemService.getAllComponents();
-    const tokens = this.designSystemService.getAllTokens();
-    const byCategory = new Map<string, number>();
-    for (const token of tokens) byCategory.set(token.category, (byCategory.get(token.category) ?? 0) + 1);
-    const status = (s: string) => components.filter((c) => c.status === s).length;
+  /** The score, alerts, recommendations and inventory the dashboard shows */
+  async getDashboard(principal: AuthPrincipal) {
+    const { inputs, scope, components } = await this.measure(principal);
+    const healthScore = await this.scoreOf(inputs, scope);
     return {
-      components: {
-        total: components.length,
-        production: status('production'),
-        inProgress: status('in-progress'),
-        planned: status('planned'),
-        deprecated: status('deprecated'),
-      },
-      tokens: {
-        total: tokens.length,
-        categories: [...byCategory.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
-      },
+      ...healthScore,
+      timestamp: healthScore.timestamp.toISOString(),
+      alerts: this.checkHealthScoreAlerts(healthScore),
+      recommendations: this.generateRecommendations(healthScore),
+      inventory: await this.getInventory(components),
     };
   }
 
-  /** Measured scores from the last `days` days (empty until scores have been calculated) */
-  getHealthScoreTrends(days: number = 30): HealthScoreTrend[] {
-    const span = Number.isFinite(days) && days > 0 ? Math.min(days, this.MAX_HISTORY_DAYS) : 30;
-    const cutoff = Date.now() - span * 24 * 60 * 60 * 1000;
-    return this.healthScoreHistory.filter((entry) => new Date(entry.date).getTime() >= cutoff);
+  /** Daily scores from the last `days` days of snapshots, recomputed for the caller (empty before the first snapshot) */
+  async getHealthScoreTrends(principal: AuthPrincipal, days = 30): Promise<HealthScoreTrend[]> {
+    return this.trendsFor((await this.measure(principal)).scope, days);
   }
 
   /**
-   * Check if health score has dropped significantly
+   * Alerts for a low score, or for a drop since the previous snapshot
    */
-  checkHealthScoreAlerts(currentScore: number | null): Array<{ severity: 'high' | 'medium' | 'low'; message: string }> {
+  checkHealthScoreAlerts(healthScore: HealthScore): Array<{ severity: 'high' | 'medium' | 'low'; message: string }> {
     const alerts: Array<{ severity: 'high' | 'medium' | 'low'; message: string }> = [];
+    const currentScore = healthScore.score;
     if (currentScore === null) return alerts;
 
     if (currentScore < 50) {
@@ -227,20 +240,18 @@ export class SystemHealthService {
       });
     }
 
-    // Check for significant drop
-    const previousScore = this.latestRecordedScore();
-    if (previousScore !== null) {
+    const previousScore = healthScore.trend?.previousScore;
+    if (previousScore !== undefined) {
       const drop = previousScore - currentScore;
-      
       if (drop > 10) {
         alerts.push({
           severity: 'high',
-          message: `Health score dropped by ${drop.toFixed(1)} points. Investigate recent changes.`,
+          message: `Health score dropped by ${drop.toFixed(1)} points since the last daily snapshot. Investigate recent changes.`,
         });
       } else if (drop > 5) {
         alerts.push({
           severity: 'medium',
-          message: `Health score dropped by ${drop.toFixed(1)} points.`,
+          message: `Health score dropped by ${drop.toFixed(1)} points since the last daily snapshot.`,
         });
       }
     }
@@ -335,21 +346,14 @@ export class SystemHealthService {
     });
   }
 
-  /**
-   * Generate comprehensive audit report
-   */
-  generateAuditReport(): any {
-    const healthScore = this.calculateHealthScore();
-    const components = this.designSystemService.getAllComponents();
-    const trends = this.getHealthScoreTrends(90);
+  /** A full report of the caller's view of the design system's health */
+  async generateAuditReport(principal: AuthPrincipal): Promise<any> {
+    const { inputs, scope, components, usage } = await this.measure(principal);
+    const healthScore = await this.scoreOf(inputs, scope);
+    const trends = await this.trendsFor(scope, 90);
     const recommendations = this.generateRecommendations(healthScore);
-    const alerts = this.checkHealthScoreAlerts(healthScore.score);
-
-    // Calculate detailed metrics
-    const componentMetrics = this.calculateComponentMetrics(components);
-    const tokenMetrics = this.calculateTokenMetrics();
-    const complianceMetrics = this.calculateComplianceMetrics(healthScore.factors.compliance);
-    const adoptionMetrics = this.calculateAdoptionMetrics(components, healthScore.factors.adoptionRate);
+    const alerts = this.checkHealthScoreAlerts(healthScore);
+    const summary = await this.accessibilityReportsService.getComplianceSummary(principal);
 
     return {
       reportId: `audit-${Date.now()}`,
@@ -362,13 +366,18 @@ export class SystemHealthService {
         recommendations: recommendations.slice(0, 5), // Top 5
       },
       detailedMetrics: {
-        components: componentMetrics,
-        tokens: tokenMetrics,
-        compliance: complianceMetrics,
-        adoption: adoptionMetrics,
+        components: this.calculateComponentMetrics(components),
+        tokens: await this.calculateTokenMetrics(),
+        compliance: this.calculateComplianceMetrics(healthScore.factors.compliance),
+        adoption: {
+          overallRate: healthScore.factors.adoptionRate,
+          byComponent: healthScore.factors.adoptionRate === null ? [] : this.getComponentAdoptionRates(components, usage),
+          // Adoption from each daily snapshot; empty before the first
+          trend: trends.filter((t) => t.factors.adoptionRate !== null).map((t) => ({ date: t.date, adoptionRate: t.factors.adoptionRate })),
+        },
         accessibility: {
           score: healthScore.factors.accessibility,
-          wcagLevel: this.lowestVerifiedLevel(),
+          wcagLevel: this.lowestVerifiedLevel(summary),
         },
       },
       healthScoreFactors: healthScore.factors,
@@ -376,7 +385,7 @@ export class SystemHealthService {
         current: healthScore,
         historical: trends,
         period: '90 days',
-        // History is what this server measured since it started; it is empty until then
+        // Daily snapshots start when the scheduler first ran; there is nothing older
         collectedSince: trends[0]?.date ?? null,
       },
       alerts: alerts,
@@ -384,10 +393,95 @@ export class SystemHealthService {
       components: {
         total: components.length,
         byStatus: this.groupComponentsByStatus(components),
-        topUsed: this.getTopUsedComponents(components),
-        deprecated: components.filter(c => c.status === 'deprecated'),
+        topUsed: this.getTopUsedComponents(components, usage),
+        deprecated: components.filter((c) => c.status === 'deprecated'),
       },
       nextSteps: this.generateNextSteps(recommendations, alerts),
+    };
+  }
+
+  // ---------- Internals ----------
+
+  private async allComponents(): Promise<Component[]> {
+    // Awaited so this keeps working if the design system's reads become asynchronous
+    return (await this.designSystemService.getAllComponents()) ?? [];
+  }
+
+  /** Current data, limited to what the caller may read */
+  private async measure(principal: AuthPrincipal) {
+    const [components, applications, compliance] = await Promise.all([
+      this.componentAccess.list(principal),
+      this.analyticsService.applicationsVisibleTo(principal),
+      this.accessibilityReportsService.getComplianceSummary(principal),
+    ]);
+    const usage = await this.analyticsService.currentUsage(applications);
+    const scope: HealthScope = {
+      componentIds: new Set(components.map((c) => c.id)),
+      applicationIds: new Set(applications.map((app) => app.id)),
+      reportApplicationIds: new Set(compliance.applications.map((app) => app.applicationId)),
+    };
+    const inputs = scopeInputs(
+      { components: components.map((c) => ({ id: c.id, status: c.status })), applications: applicationRows(compliance, usage, scope.applicationIds) },
+      scope,
+    );
+    return { inputs, scope, components, usage };
+  }
+
+  private async scoreOf(inputs: HealthInputs, scope: HealthScope): Promise<HealthScore> {
+    const factors = healthFactors(inputs);
+    const score = overallScore(factors);
+    const healthScore: HealthScore = {
+      score,
+      factors,
+      notCollected: (Object.keys(factors) as HealthFactor[]).filter((key) => factors[key] === null),
+      timestamp: new Date(),
+    };
+    const previous = await this.previousScore(scope);
+    if (score !== null && previous !== null) {
+      const change = Math.round((score - previous) * 10) / 10;
+      healthScore.trend = { previousScore: previous, change, direction: change > 2 ? 'up' : change < -2 ? 'down' : 'stable' };
+    }
+    return healthScore;
+  }
+
+  /** The caller's score on the latest snapshot before today */
+  private async previousScore(scope: HealthScope): Promise<number | null> {
+    const today = utcDate(new Date());
+    const earlier = (await this.snapshots.list()).filter((s) => s.date < today).sort((a, b) => b.date.localeCompare(a.date));
+    return earlier.length ? overallScore(healthFactors(scopeInputs(earlier[0], scope))) : null;
+  }
+
+  private async trendsFor(scope: HealthScope, days: number): Promise<HealthScoreTrend[]> {
+    const span = Number.isFinite(days) && days > 0 ? Math.min(days, MAX_HISTORY_DAYS) : 30;
+    const cutoff = new Date(Date.now() - span * DAY_MS).toISOString();
+    const snapshots = await this.snapshots.list({ after: { createdAt: cutoff } });
+    return snapshots
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((snapshot) => {
+        const factors = healthFactors(scopeInputs(snapshot, scope));
+        return { date: snapshot.date, score: overallScore(factors), factors };
+      })
+      .filter((trend): trend is HealthScoreTrend => trend.score !== null);
+  }
+
+  /** Component and token counts for the dashboard's overview cards (components the caller can see) */
+  private async getInventory(components: Component[]) {
+    const tokens = (await this.designSystemService.getAllTokens()) ?? [];
+    const byCategory = new Map<string, number>();
+    for (const token of tokens) byCategory.set(token.category, (byCategory.get(token.category) ?? 0) + 1);
+    const status = (s: string) => components.filter((c) => c.status === s).length;
+    return {
+      components: {
+        total: components.length,
+        production: status('production'),
+        inProgress: status('in-progress'),
+        planned: status('planned'),
+        deprecated: status('deprecated'),
+      },
+      tokens: {
+        total: tokens.length,
+        categories: [...byCategory.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+      },
     };
   }
 
@@ -413,8 +507,8 @@ export class SystemHealthService {
   }
 
   /** Token counts from the design system. Usage per token is not tracked, so it is null. */
-  private calculateTokenMetrics(): any {
-    const tokens = this.designSystemService.getAllTokens();
+  private async calculateTokenMetrics(): Promise<any> {
+    const tokens = (await this.designSystemService.getAllTokens()) ?? [];
     return {
       total: tokens.length,
       categories: new Set(tokens.map((t) => t.category)).size,
@@ -428,15 +522,6 @@ export class SystemHealthService {
       score: compliance,
       level: compliance >= 95 ? 'excellent' : compliance >= 85 ? 'good' : compliance >= 70 ? 'fair' : 'needs-improvement',
       wcagCompliance: compliance >= 90,
-    };
-  }
-
-  private calculateAdoptionMetrics(components: any[], overallRate: number | null): any {
-    return {
-      overallRate,
-      byComponent: overallRate === null ? [] : this.getComponentAdoptionRates(components),
-      // Usage history isn't kept per component, so there is no trend to report
-      trend: null,
     };
   }
 
@@ -454,18 +539,13 @@ export class SystemHealthService {
    * verified (Non-Compliant < Unverified < A < AA), or null without reports.
    * Never derived from the score: automated scores can't certify a level.
    */
-  private lowestVerifiedLevel(): string | null {
+  private lowestVerifiedLevel(summary: MultiApplicationComplianceSummary): string | null {
     const order = ['Non-Compliant', 'Unverified', 'A', 'AA'];
-    try {
-      const levels = this.accessibilityReportsService
-        .getMultiApplicationComplianceSummary()
-        .applications.map((app) => app.wcagLevel)
-        .filter((level): level is NonNullable<typeof level> => !!level && order.includes(level));
-      if (!levels.length) return null;
-      return levels.reduce((lowest, level) => (order.indexOf(level) < order.indexOf(lowest) ? level : lowest));
-    } catch {
-      return null;
-    }
+    const levels = summary.applications
+      .map((app) => app.wcagLevel)
+      .filter((level): level is NonNullable<typeof level> => !!level && order.includes(level));
+    if (!levels.length) return null;
+    return levels.reduce((lowest, level) => (order.indexOf(level) < order.indexOf(lowest) ? level : lowest));
   }
 
   /**
@@ -521,26 +601,25 @@ export class SystemHealthService {
     };
   }
 
-  /** Components by recorded usage across scanned applications (empty before any scan) */
-  private getTopUsedComponents(components: any[]): Array<{ name: string; usage: number; applications: number }> {
+  /** Components by recorded usage across the caller's scanned applications (empty before any scan) */
+  private getTopUsedComponents(components: Component[], usage: UsageState): Array<{ name: string; usage: number; applications: number }> {
     return components
       .map((c) => {
-        const usage = this.analyticsService.getComponentUsage(c.id);
-        return { name: c.name, usage: usage.reduce((sum, u) => sum + u.usageCount, 0), applications: usage.length };
+        const usages = usage.byComponent.get(c.id) ?? [];
+        return { name: c.name, usage: usages.reduce((sum, u) => sum + u.usageCount, 0), applications: usages.length };
       })
       .filter((c) => c.usage > 0)
       .sort((a, b) => b.usage - a.usage)
       .slice(0, 10);
   }
 
-  /** Share of scanned applications using each component */
-  private getComponentAdoptionRates(components: any[]): Array<{ name: string; adoptionRate: number }> {
-    const usageByComponent = components.map((c) => ({ c, usage: this.analyticsService.getComponentUsage(c.id) }));
-    const scannedApps = new Set(usageByComponent.flatMap(({ usage }) => usage.map((u) => u.applicationId)));
-    if (scannedApps.size === 0) return [];
-    return usageByComponent.map(({ c, usage }) => ({
+  /** Share of the caller's scanned applications using each component */
+  private getComponentAdoptionRates(components: Component[], usage: UsageState): Array<{ name: string; adoptionRate: number }> {
+    const scanned = usage.scannedApplications.size;
+    if (scanned === 0) return [];
+    return components.map((c) => ({
       name: c.name,
-      adoptionRate: Math.round((new Set(usage.map((u) => u.applicationId)).size / scannedApps.size) * 1000) / 10,
+      adoptionRate: Math.round(((usage.byComponent.get(c.id)?.length ?? 0) / scanned) * 1000) / 10,
     }));
   }
 

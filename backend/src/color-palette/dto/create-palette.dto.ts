@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import { IsString, IsOptional, IsArray, ValidateNested, IsNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ColorDto {
@@ -14,7 +14,8 @@ export class ColorDto {
   role?: 'hero' | 'accent' | 'neutral';
 }
 
-export class CreatePaletteDto {
+/** A palette's editable content (PUT /api/palettes/:id) */
+export class UpdatePaletteDto {
   @IsString()
   name: string;
 
@@ -24,3 +25,10 @@ export class CreatePaletteDto {
   colors: ColorDto[];
 }
 
+export class CreatePaletteDto extends UpdatePaletteDto {
+  /** Shares the palette with a workspace's editors; needs the editor role there */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  workspaceId?: string;
+}

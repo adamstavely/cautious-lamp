@@ -1,10 +1,12 @@
-import { Controller, Post, Get, Body, Param, Req, UploadedFile, UseInterceptors, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Req, UploadedFile, UseInterceptors, UseGuards, BadRequestException, HttpException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PhotosensitivityService } from './photosensitivity.service';
 import { ApiKeyGuard } from '../common/security/api-key.guard';
 import { diskStorage } from 'multer';
 import { randomUUID } from 'crypto';
 import { AdmittedRequest, AnalysisAdmissionGuard, callerKey } from './analysis-admission.guard';
+import { AuthPrincipal, Principal } from '../auth/principal';
+import { AnalyzeVideoDto } from './photosensitivity.dto';
 
 /** Accepted video types and the extension each is stored with */
 const VIDEO_EXTENSIONS: Record<string, string> = {
@@ -52,8 +54,9 @@ export class PhotosensitivityController {
   )
   async analyzeVideo(
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: { enablePatternDetection?: string; outputJson?: string; applicationName?: string },
+    @Body() body: AnalyzeVideoDto,
     @Req() req: AdmittedRequest,
+    @Principal() principal: AuthPrincipal,
   ) {
     if (!file) {
       throw new BadRequestException('No video file uploaded');
@@ -74,15 +77,23 @@ export class PhotosensitivityController {
       file.originalname
     );
 
-    const analysisId = await this.photosensitivityService.saveSummary({
-      videoName: file.originalname,
-      applicationName,
-      summary: result.summary,
-      resultsCount: result.results.length,
-    });
+    // The analysis stands even when it can't be stored; it just has no id to fetch it by
+    let analysisId: string | null = null;
+    let saveError: string | undefined;
+    try {
+      analysisId = await this.photosensitivityService.saveSummary(
+        { videoName: file.originalname, applicationName, summary: result.summary, resultsCount: result.results.length },
+        principal,
+      );
+    } catch (error) {
+      if (!(error instanceof HttpException)) throw error;
+      saveError = error.message;
+    }
 
     return {
       analysisId,
+      saved: analysisId !== null,
+      ...(saveError ? { saveError } : {}),
       videoName: file.originalname,
       summary: result.summary,
       complianceChecks,
@@ -102,8 +113,9 @@ export class PhotosensitivityController {
     };
   }
 
+  /** A stored summary: only for whoever ran the analysis, or an admin:users holder */
   @Get('summary/:analysisId')
-  async getSummary(@Param('analysisId') analysisId: string) {
-    return this.photosensitivityService.getSummary(analysisId);
+  async getSummary(@Principal() principal: AuthPrincipal, @Param('analysisId') analysisId: string) {
+    return this.photosensitivityService.getSummary(principal, analysisId);
   }
 }
