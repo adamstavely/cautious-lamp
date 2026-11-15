@@ -11,7 +11,7 @@
       @dragleave.prevent="onLeave"
       @drop.prevent="onDrop"
     >
-      <input ref="input" type="file" class="sr-only" tabindex="-1" aria-hidden="true" :accept="accept" @change="onChange" />
+      <input ref="input" type="file" class="sr-only" tabindex="-1" aria-hidden="true" :accept="accept" :multiple="multiple" @change="onChange" />
 
       <div v-if="file" class="ui-drop-file">
         <AppIcon name="file-pen" class="ui-drop-file-icon" />
@@ -44,6 +44,8 @@ import UiField from './UiField.vue';
  * stays in the parent; show problems with `error` or an InlineNotice.
  * `hint` lists what's accepted ("PDF or PNG, up to 50MB"). Call `reset()`
  * (via a ref) to clear the native input so the same file can be picked again.
+ * With `multiple`, several files can be chosen or dropped at once: `select`
+ * fires once per file and the parent lists them (leave `file` null).
  */
 const props = defineProps({
   /** The chosen file (a File, or anything with name and size), or null */
@@ -57,6 +59,7 @@ const props = defineProps({
   buttonLabel: { type: String, default: 'Choose file' },
   /** Lucide icon name (components/ui/icons.js) shown above the prompt */
   icon: { type: String, default: 'cloud-upload' },
+  multiple: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['select', 'remove']);
@@ -70,16 +73,19 @@ const reset = () => {
 };
 
 const onChange = (event) => {
-  const chosen = event.target.files?.[0];
   dragging.value = false;
-  if (chosen) emit('select', chosen);
+  emitFiles(event.target.files);
   reset();
 };
 
 const onDrop = (event) => {
   dragging.value = false;
-  const dropped = event.dataTransfer?.files?.[0];
-  if (dropped) emit('select', dropped);
+  emitFiles(event.dataTransfer?.files);
+};
+
+const emitFiles = (list) => {
+  const files = Array.from(list ?? []);
+  (props.multiple ? files : files.slice(0, 1)).forEach((file) => emit('select', file));
 };
 
 const onLeave = (event) => {

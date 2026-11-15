@@ -984,61 +984,32 @@
       </div>
     </div>
 
-    <!-- Performance Metrics Modal -->
-    <div v-if="showPerformanceMetrics" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" @click="showPerformanceMetrics = false">
-      <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative" @click.stop>
-        <div class="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <h3 class="text-xl font-bold text-gray-900">Font Performance Metrics</h3>
-          <button @click="showPerformanceMetrics = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <AppIcon name="x" class="text-gray-600" />
-          </button>
-        </div>
-        
-        <div class="p-6">
-          <div class="mb-6">
-            <label class="text-sm text-gray-600 mb-2 block">Select Font</label>
-            <select 
-              v-model="selectedFontForMetrics"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-            >
-              <option value="">Choose a font...</option>
-              <option v-for="font in fontData" :key="font.name" :value="font.name">{{ font.name }}</option>
-            </select>
+    <!-- Performance Metrics: measured in this browser (utils/fontMetrics.js) -->
+    <UiDialog v-model:open="showPerformanceMetrics" title="Font performance metrics" size="lg">
+      <div class="flex flex-col gap-4">
+        <UiSelect
+          v-model="selectedFontForMetrics"
+          label="Font"
+          placeholder="Choose a font..."
+          :options="fontData.map((f) => ({ value: f.name, label: f.name }))"
+        />
+        <UiSpinner v-if="measuringMetrics" label="Measuring the font…" />
+        <template v-else-if="selectedFontForMetrics && fontMetrics">
+          <div class="grid grid-cols-2 gap-4">
+            <UiStat label="Downloaded" :value="formatBytes(fontMetrics.bytes)" :hint="fontMetrics.sizeSource ? `${fontMetrics.files} ${fontMetrics.files === 1 ? 'file' : 'files'}, from ${fontMetrics.sizeSource}` : 'Not measurable here'" />
+            <UiStat label="Load time" :value="formatMs(fontMetrics.loadTime)" :hint="fontMetrics.loadSource ? `From ${fontMetrics.loadSource}` : 'Not measurable here'" />
+            <UiStat label="Format" :value="fontMetrics.formats.join(', ') || 'Unknown'" />
+            <UiStat label="font-display" :value="fontMetrics.display || 'Not set'" />
           </div>
-          
-          <div v-if="selectedFontForMetrics" class="space-y-4">
-            <div v-if="getFontPerformanceMetrics(fontData.find(f => f.name === selectedFontForMetrics))" class="grid grid-cols-2 gap-4">
-              <div class="p-4 bg-gray-50 rounded-lg">
-                <div class="text-sm text-gray-600 mb-1">File Size</div>
-                <div class="text-2xl font-bold text-gray-900">{{ getFontPerformanceMetrics(fontData.find(f => f.name === selectedFontForMetrics)).fileSize }}</div>
-              </div>
-              
-              <div class="p-4 bg-gray-50 rounded-lg">
-                <div class="text-sm text-gray-600 mb-1">Load Time</div>
-                <div class="text-2xl font-bold text-gray-900">{{ getFontPerformanceMetrics(fontData.find(f => f.name === selectedFontForMetrics)).loadTime }}</div>
-              </div>
-              
-              <div class="p-4 bg-gray-50 rounded-lg">
-                <div class="text-sm text-gray-600 mb-1">Format</div>
-                <div class="text-lg font-semibold text-gray-900">{{ getFontPerformanceMetrics(fontData.find(f => f.name === selectedFontForMetrics)).format }}</div>
-              </div>
-              
-              <div class="p-4 bg-gray-50 rounded-lg">
-                <div class="text-sm text-gray-600 mb-1">Optimized</div>
-                <div class="text-lg font-semibold text-green-600">{{ getFontPerformanceMetrics(fontData.find(f => f.name === selectedFontForMetrics)).optimized ? 'Yes' : 'No' }}</div>
-              </div>
-            </div>
-            
-            <div class="p-4 bg-indigo-50 rounded-lg">
-              <h4 class="font-semibold text-gray-900 mb-2">Optimization Recommendations</h4>
-              <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
-                <li v-for="rec in getFontPerformanceMetrics(fontData.find(f => f.name === selectedFontForMetrics)).recommendations" :key="rec">{{ rec }}</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+          <UiCallout v-if="fontMetrics.error" tone="warning" title="Part of the measurement failed">{{ fontMetrics.error }}</UiCallout>
+          <UiCallout v-if="fontMetrics.recommendations.length" title="Recommendations">
+            <ul class="list-disc pl-5">
+              <li v-for="rec in fontMetrics.recommendations" :key="rec">{{ rec }}</li>
+            </ul>
+          </UiCallout>
+        </template>
       </div>
-    </div>
+    </UiDialog>
 
     <!-- Variable Font Support Modal -->
     <div v-if="showVariableFont" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" @click="showVariableFont = false">
@@ -1301,6 +1272,8 @@ import FontCard from './FontCard.vue'
 import ComparisonView from './ComparisonView.vue'
 import ColorPickerPopup from './ColorPickerPopup.vue'
 import { loadFont } from '../../composables/useFontLoader.js'
+import { UiCallout, UiDialog, UiSelect, UiSpinner, UiStat } from '../ui'
+import { formatBytes, formatMs, measureFont, whenStylesheetLoaded } from '../../utils/fontMetrics.js'
 import { useLocalStorage } from '../../composables/useLocalStorage.js'
 import { calculateContrast } from '../../composables/useContrast.js'
 import { generateCSS } from '../../composables/useCSSGenerator.js'
@@ -2109,20 +2082,23 @@ function deletePlaylist(id) {
   playlistsStorage.set(fontPlaylists.value)
 }
 
-function getFontPerformanceMetrics(font) {
-  // Simulate performance metrics
-  return {
-    fileSize: Math.round(Math.random() * 200 + 50) + ' KB',
-    loadTime: (Math.random() * 100 + 50).toFixed(0) + 'ms',
-    format: 'WOFF2',
-    optimized: true,
-    recommendations: [
-      'Use font-display: swap for better performance',
-      'Consider subsetting for smaller file size',
-      'Preload critical fonts'
-    ]
+// Measured, never estimated: see utils/fontMetrics.js
+const fontMetrics = ref(null)
+const measuringMetrics = ref(false)
+watch(selectedFontForMetrics, async (name) => {
+  fontMetrics.value = null
+  const font = fontData.find(f => f.name === name)
+  if (!font) return
+  measuringMetrics.value = true
+  try {
+    loadFont(font.name, font.url)
+    await whenStylesheetLoaded(font.url)
+    const result = await measureFont(font)
+    if (selectedFontForMetrics.value === name) fontMetrics.value = result
+  } finally {
+    measuringMetrics.value = false
   }
-}
+})
 
 function getFontLicense(font) {
   // Google Fonts are open source

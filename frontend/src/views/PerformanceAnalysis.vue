@@ -52,7 +52,7 @@
               <tbody>
                 <tr v-for="component in analysis.components" :key="component.componentId">
                   <td class="whitespace-nowrap">
-                    <UiLink :to="getComponentRoute(component.componentId, component.componentName)">{{ component.componentName }}</UiLink>
+                    <UiLink :to="getComponentRoute(component.componentId)">{{ component.componentName }}</UiLink>
                     <div class="text-sm text-ink-muted">{{ component.componentId }}</div>
                   </td>
                   <td class="whitespace-nowrap">{{ formatSize(component.vueSize) }}</td>
@@ -78,7 +78,7 @@
       <template #budgets>
         <UiCallout title="What are performance budgets?" class="mb-6">
           <p>
-            Performance budgets help you maintain fast, efficient components by setting limits on key metrics like bundle size, load time, and memory usage. When a component exceeds your budget threshold, you'll get an alert so you can optimize before it impacts users.
+            A performance budget sets a limit on a size the bundle analysis measures: the raw, gzip or brotli size of the components' source, or the largest single component. Each budget is compared with the latest analysis, and its status is shown here: within budget, warning (over the warning threshold) or exceeded. Nothing is sent anywhere when a budget is exceeded.
           </p>
           <ul class="grid md:grid-cols-2 gap-3 mt-4">
             <li v-for="benefit in budgetBenefits" :key="benefit.title" class="flex items-start gap-2">
@@ -96,56 +96,53 @@
         </div>
 
         <div v-if="budgets.length" class="grid gap-4">
-          <UiPanel v-for="budget in budgets" :key="budget.id" :title="budget.name" heading-tag="h3">
+          <UiPanel v-for="item in budgetViews" :key="item.budget.id" :title="item.budget.name" heading-tag="h3">
             <template #actions>
-              <UiChip :tone="budget.enabled ? 'success' : 'neutral'">{{ budget.enabled ? 'Active' : 'Disabled' }}</UiChip>
-              <UiButton variant="ghost" size="sm" icon="pencil" icon-only :label="`Edit ${budget.name}`" @click="editBudget(budget)" />
-              <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Delete ${budget.name}`" @click="deleteBudget(budget.id)" />
+              <UiChip :tone="item.budget.enabled ? 'success' : 'neutral'">{{ item.budget.enabled ? 'Active' : 'Disabled' }}</UiChip>
+              <UiButton variant="ghost" size="sm" icon="pencil" icon-only :label="`Edit ${item.budget.name}`" @click="editBudget(item.budget)" />
+              <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Delete ${item.budget.name}`" @click="deleteBudget(item.budget.id)" />
             </template>
 
             <div class="flex items-center gap-2 mb-2">
-              <span class="text-sm font-medium text-ink">{{ getMetricDisplayName(budget.metric) }}</span>
-              <UiCode>{{ budget.metric }}</UiCode>
+              <span class="text-sm font-medium text-ink">{{ metricLabel(item.budget.metric) }}</span>
+              <UiCode>{{ item.budget.metric }}</UiCode>
             </div>
             <p class="text-sm text-ink-secondary">
-              <span class="font-medium">Threshold:</span> {{ budget.threshold }}{{ budget.unit }}
-              <span v-if="budget.alertThreshold" class="ml-2">
-                • <span class="font-medium">Alert:</span> {{ budget.alertThreshold }}{{ budget.unit }}
+              <span class="font-medium">Limit:</span> {{ item.budget.threshold }}{{ item.budget.unit }}
+              <span v-if="hasWarning(item.budget)" class="ml-2">
+                • <span class="font-medium">Warning:</span> {{ item.budget.alertThreshold }}{{ item.budget.unit }}
               </span>
             </p>
 
-            <div class="mt-4">
+            <div v-if="item.measured" class="mt-4">
               <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-ink">Current value</span>
+                <span class="text-sm font-medium text-ink">
+                  Measured
+                  <span v-if="item.status.subject" class="font-normal text-ink-secondary">({{ item.status.subject }})</span>
+                </span>
                 <div class="flex items-center gap-3">
-                  <span class="text-sm font-semibold" :class="statusText[budgetStatus(budget)]">{{ getCurrentValue(budget) }}{{ budget.unit }}</span>
-                  <UiChip :tone="budgetStatus(budget)">{{ getBudgetStatusText(budget) }}</UiChip>
+                  <span class="text-sm font-semibold" :class="statusText[item.state.tone]">{{ item.status.value }}{{ item.budget.unit }}</span>
+                  <UiChip :tone="item.state.tone">{{ item.state.label }}</UiChip>
                 </div>
               </div>
               <UiMeter
-                :value="getCurrentValue(budget)"
-                :max="budget.threshold"
-                :tone="budgetStatus(budget)"
-                :marker="budget.alertThreshold || null"
-                :marker-label="`Alert threshold: ${budget.alertThreshold}${budget.unit}`"
-                :label="`${budget.name}: current value against the limit`"
-                :value-text="`${getCurrentValue(budget)}${budget.unit} of ${budget.threshold}${budget.unit}`"
+                :value="Math.min(item.status.value, item.budget.threshold)"
+                :max="item.budget.threshold"
+                :tone="item.state.tone"
+                :marker="hasWarning(item.budget) ? Number(item.budget.alertThreshold) : null"
+                :marker-label="`Warning threshold: ${item.budget.alertThreshold}${item.budget.unit}`"
+                :label="`${item.budget.name}: measured value against the limit`"
+                :value-text="`${item.status.value}${item.budget.unit} of ${item.budget.threshold}${item.budget.unit}`"
               />
-              <div class="flex items-center justify-between mt-2 text-xs text-ink-muted">
-                <span>0{{ budget.unit }}</span>
-                <span class="flex items-center gap-4">
-                  <span v-if="budget.alertThreshold && budget.alertThreshold < budget.threshold" class="flex items-center gap-1">
-                    <span class="w-2 h-2 rounded-pill bg-warning-solid" aria-hidden="true"></span>
-                    Alert: {{ budget.alertThreshold }}{{ budget.unit }}
-                  </span>
-                  <span class="font-medium">{{ budget.threshold }}{{ budget.unit }} (Limit)</span>
-                </span>
-              </div>
               <div class="mt-3 pt-3 border-t border-line-faint flex items-center justify-between text-xs text-ink-secondary">
-                <span>{{ getBudgetUsagePercentage(budget) }}% of budget used</span>
-                <span v-if="getBudgetRemaining(budget) > 0">{{ getBudgetRemaining(budget) }}{{ budget.unit }} remaining</span>
-                <span v-else class="text-danger font-medium">Exceeded by {{ Math.abs(getBudgetRemaining(budget)) }}{{ budget.unit }}</span>
+                <span>{{ item.status.percent }}% of budget used</span>
+                <span v-if="item.status.remaining >= 0">{{ item.status.remaining }}{{ item.budget.unit }} remaining</span>
+                <span v-else class="text-danger font-medium">Exceeded by {{ Math.abs(item.status.remaining) }}{{ item.budget.unit }}</span>
               </div>
+            </div>
+            <div v-else class="mt-4 flex flex-wrap items-center gap-3">
+              <UiChip :tone="item.state.tone">{{ item.state.label }}</UiChip>
+              <span class="text-sm text-ink-secondary">{{ item.status.reason }}</span>
             </div>
           </UiPanel>
         </div>
@@ -178,7 +175,7 @@
           <UiInput
             v-model="budgetForm.threshold"
             type="number"
-            label="Threshold"
+            label="Limit"
             required
             min="0"
             step="0.01"
@@ -190,11 +187,11 @@
         <UiInput
           v-model="budgetForm.alertThreshold"
           type="number"
-          label="Alert threshold (optional)"
+          label="Warning threshold (optional)"
           min="0"
           step="0.01"
-          placeholder="Leave empty to disable alerts"
-          hint="Get an early warning when this value is reached (should be less than threshold)"
+          placeholder="Leave empty for no warning"
+          hint="Above this value the budget's status on this page turns to Warning. Keep it below the limit."
         />
       </form>
       <template #footer>
@@ -319,6 +316,7 @@ import UiMeter from '../components/ui/UiMeter.vue';
 import { useNotice } from '../composables/useNotice.js';
 import apiClient from '../services/api.js';
 import { componentMetadataService } from '../services/componentMetadataService.js';
+import { BUDGET_STATES, MEASURED_METRICS, compareBudget, metricLabel } from '../utils/performanceBudgets.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
 const activeTab = ref('bundle');
@@ -347,29 +345,22 @@ const emptyForm = () => ({
 });
 const budgetForm = ref(emptyForm());
 
-const metricOptions = [
-  { value: 'bundle-size', label: 'Bundle Size - Total JavaScript bundle size' },
-  { value: 'load-time', label: 'Load Time - Time to load component' },
-  { value: 'render-time', label: 'Render Time - Time to render component' },
-  { value: 'memory-usage', label: 'Memory Usage - RAM consumption' },
-  { value: 'api-response-time', label: 'API Response Time - Backend API latency' },
-];
+// Only metrics the bundle analysis measures; budgets are compared with its numbers
+const metricOptions = Object.entries(MEASURED_METRICS).map(([value, metric]) => ({ value, label: metric.label }));
 const unitOptions = [
   { value: 'B', label: 'Bytes (B)' },
   { value: 'KB', label: 'Kilobytes (KB)' },
   { value: 'MB', label: 'Megabytes (MB)' },
-  { value: 'ms', label: 'Milliseconds (ms)' },
-  { value: 's', label: 'Seconds (s)' },
 ];
 
 const budgetBenefits = [
-  { title: 'Prevent regressions', body: 'Catch performance issues before they reach production' },
-  { title: 'Set clear goals', body: 'Define acceptable performance limits for your team' },
-  { title: 'Track progress', body: 'Monitor how components perform over time' },
-  { title: 'Get alerts', body: 'Receive notifications when budgets are exceeded' },
+  { title: 'Prevent regressions', body: 'See when the components grow past the size you agreed on' },
+  { title: 'Set clear goals', body: 'Define acceptable size limits for your team' },
+  { title: 'Measured, not estimated', body: 'Each budget is compared with the latest bundle analysis' },
+  { title: 'Status on this page', body: 'Within budget, warning or exceeded, shown on each budget' },
 ];
 
-const statusText = { danger: 'text-danger', warning: 'text-warning', success: 'text-success' };
+const statusText = { danger: 'text-danger', warning: 'text-warning', success: 'text-success', neutral: 'text-ink' };
 const suggestionTone = { error: 'danger', warning: 'warning', info: 'info', success: 'success' };
 
 const budgetModalOpen = computed({
@@ -393,54 +384,9 @@ const statusTone = (status) => {
   return 'success';
 };
 
-// Map componentId to component route
-const getComponentRoute = (componentId, componentName) => {
-  // Map componentId (from API) to route paths
-  const idToRouteMap = {
-    'button': '/components/buttons',
-    'input': '/components/forms',
-    'card': '/components/cards',
-    'modal': '/components',
-    'dropdown': '/components',
-    'checkbox': '/components/forms',
-    'radio': '/components/forms',
-    'switch': '/components/forms',
-    'color-picker': '/components/color-picker',
-    'tabs': '/components/navigation',
-    'accordion': '/components',
-    'tooltip': '/components',
-    'popover': '/components',
-    'breadcrumbs': '/components/navigation',
-    'pagination': '/components/navigation',
-    'table': '/components/data-display',
-    'select': '/components/forms',
-  };
-  
-  // Try componentId first
-  if (idToRouteMap[componentId]) {
-    return idToRouteMap[componentId];
-  }
-  
-  // Fallback: try componentName mapping (for cases where componentId doesn't match)
-  const nameToRouteMap = {
-    'Button': '/components/buttons',
-    'Input': '/components/forms',
-    'Card': '/components/cards',
-    'Color Picker': '/components/color-picker',
-    'Tabs': '/components/navigation',
-    'Breadcrumbs': '/components/navigation',
-    'Pagination': '/components/navigation',
-    'Data Table': '/components/data-display',
-  };
-  
-  if (componentName && nameToRouteMap[componentName]) {
-    return nameToRouteMap[componentName];
-  }
-  
-  // Final fallback: generate route from componentId
-  const routeName = componentId.toLowerCase().replace(/\s+/g, '-');
-  return `/components/${routeName}`;
-};
+// Component pages that exist; every other component links to the component library
+const COMPONENT_ROUTES = { button: '/components/buttons', 'color-picker': '/components/color-picker' };
+const getComponentRoute = (componentId) => COMPONENT_ROUTES[componentId] ?? '/components';
 
 const loadAnalysis = async () => {
   loading.value = true;
@@ -595,85 +541,21 @@ const loadBudgets = async () => {
   }
 };
 
-const getCurrentValue = (budget) => {
-  // Mock current values - in production, this would come from actual metrics
-  const mockValues = {
-    'bundle-size': 85,
-    'load-time': 120,
-    'render-time': 45,
-    'memory-usage': 12,
-    'api-response-time': 200
-  };
-  return mockValues[budget.metric] || 0;
-};
+const hasWarning = (budget) => budget.alertThreshold !== null && budget.alertThreshold !== undefined && budget.alertThreshold !== '';
 
-const budgetStatus = (budget) => {
-  const current = getCurrentValue(budget);
-  if (current > budget.threshold) return 'danger';
-  if (budget.alertThreshold && current > budget.alertThreshold) return 'warning';
-  return 'success';
-};
+// Each budget with where it stands against the latest bundle analysis
+const budgetViews = computed(() =>
+  budgets.value.map((budget) => {
+    const status = compareBudget(budget, analysis.value);
+    return { budget, status, state: BUDGET_STATES[status.state], measured: 'value' in status };
+  }),
+);
 
-const getBudgetStatusText = (budget) => {
-  const current = getCurrentValue(budget);
-  if (current > budget.threshold) return 'Exceeded';
-  if (budget.alertThreshold && current > budget.alertThreshold) return 'Warning';
-  return 'Within Budget';
-};
+const getMetricDescription = (metric) => MEASURED_METRICS[metric]?.description ?? '';
 
-const getBudgetUsagePercentage = (budget) => {
-  const current = getCurrentValue(budget);
-  return Math.min(Math.round((current / budget.threshold) * 100), 100);
-};
+const getSuggestedThreshold = (metric) => (metric === 'component-size' ? 50 : metric === 'bundle-size' ? 500 : 100);
 
-const getBudgetRemaining = (budget) => {
-  const current = getCurrentValue(budget);
-  return budget.threshold - current;
-};
-
-const getMetricDisplayName = (metric) => {
-  const names = {
-    'bundle-size': 'Bundle Size',
-    'load-time': 'Load Time',
-    'render-time': 'Render Time',
-    'memory-usage': 'Memory Usage',
-    'api-response-time': 'API Response Time'
-  };
-  return names[metric] || metric;
-};
-
-const getMetricDescription = (metric) => {
-  const descriptions = {
-    'bundle-size': 'The total size of JavaScript code for this component. Smaller is better for faster page loads.',
-    'load-time': 'How long it takes for the component to load and become interactive. Aim for under 1 second.',
-    'render-time': 'How long it takes for the component to render on screen. Lower values mean snappier UI.',
-    'memory-usage': 'The amount of RAM the component uses. Important for mobile devices and long-running apps.',
-    'api-response-time': 'How long backend API calls take when using this component. Affects user experience.'
-  };
-  return descriptions[metric] || 'Performance metric for this component.';
-};
-
-const getSuggestedThreshold = (metric) => {
-  const suggestions = {
-    'bundle-size': 100,
-    'load-time': 1000,
-    'render-time': 100,
-    'memory-usage': 10,
-    'api-response-time': 500
-  };
-  return suggestions[metric] || 100;
-};
-
-const getSuggestedUnit = (metric) => {
-  const units = {
-    'bundle-size': 'KB',
-    'load-time': 'ms',
-    'render-time': 'ms',
-    'memory-usage': 'MB',
-    'api-response-time': 'ms'
-  };
-  return units[metric] || 'KB';
-};
+const getSuggestedUnit = () => 'KB';
 
 const saveBudget = async () => {
   try {

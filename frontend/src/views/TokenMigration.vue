@@ -1,679 +1,468 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Token Migration
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Migrate design tokens between formats, versions, and naming conventions. Automated migration with step-by-step guidance.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                    <defs>
-                      <linearGradient id="tokenMigrationGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Token boxes representing migration -->
-                    <rect x="30" y="40" width="50" height="30" rx="4" fill="url(#tokenMigrationGradient)" opacity="0.5"/>
-                    <rect x="120" y="40" width="50" height="30" rx="4" fill="url(#tokenMigrationGradient)" opacity="0.7"/>
-                    <!-- Arrow -->
-                    <path d="M 85 55 L 115 55" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
-                    <path d="M 110 50 L 115 55 L 110 60" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.8"/>
-                    <!-- Token format icons -->
-                    <circle cx="55" cy="100" r="20" fill="url(#tokenMigrationGradient)" opacity="0.4"/>
-                    <circle cx="145" cy="100" r="20" fill="url(#tokenMigrationGradient)" opacity="0.6"/>
-                    <rect x="45" y="130" width="20" height="20" rx="2" fill="url(#tokenMigrationGradient)" opacity="0.4"/>
-                    <rect x="135" y="130" width="20" height="20" rx="2" fill="url(#tokenMigrationGradient)" opacity="0.6"/>
-                  </svg>
-                </div>
-              </div>
+  <PageShell width="wide">
+    <PageHero
+      :back="{ to: '/tokens', label: 'Tokens' }"
+      title="Token migration"
+      lead="Rename design-token references in your code. Build a rename map from your token files, add the files that use them, check the diff, and download the changed files."
+      spot="foundations/token-migration"
+      size="tool"
+    />
+
+    <UiCallout title="Everything happens in this browser" class="mb-6">
+      Your files are read here and never uploaded. No server, repository or token library is changed: you get a zip of the rewritten files to review and commit yourself.
+    </UiCallout>
+
+    <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
+
+    <PageSection title="1. Rename map" description="Where the old and new token names come from. Renames are paired by value; anything left over you can name by hand.">
+      <div class="flex flex-col gap-6">
+        <UiSegmented v-model="mapSource" :options="mapSourceOptions" label="Build the map from" />
+
+        <div v-if="mapSource !== 'manual'" class="grid gap-6 lg:grid-cols-2">
+          <UiPanel title="Old tokens" description="The token file your code uses today (W3C design tokens or Tokens Studio JSON).">
+            <div class="flex flex-col gap-4">
+              <UiFileDropZone label="Token file" accept=".json,application/json" :file="oldTokens.file" hint="JSON" @select="(file) => readTokenFile(oldTokens, file)" @remove="clearTokenSet(oldTokens)" />
+              <UiTextarea v-model="oldTokens.text" label="Or paste the JSON" rows="5" mono @update:model-value="oldTokens.file = null" />
+              <p v-if="oldTokens.error" class="text-sm text-danger">{{ oldTokens.error }}</p>
             </div>
-          </div>
+          </UiPanel>
+
+          <UiPanel v-if="mapSource === 'files'" title="New tokens" description="The token file you're moving to.">
+            <div class="flex flex-col gap-4">
+              <UiFileDropZone label="Token file" accept=".json,application/json" :file="newTokens.file" hint="JSON" @select="(file) => readTokenFile(newTokens, file)" @remove="clearTokenSet(newTokens)" />
+              <UiTextarea v-model="newTokens.text" label="Or paste the JSON" rows="5" mono @update:model-value="newTokens.file = null" />
+              <p v-if="newTokens.error" class="text-sm text-danger">{{ newTokens.error }}</p>
+            </div>
+          </UiPanel>
+
+          <UiPanel v-else title="New tokens" description="The design system's current tokens.">
+            <UiSpinner v-if="designSystem.loading" label="Loading the design system's tokens…" />
+            <UiCallout v-else-if="designSystem.error" tone="danger" title="Couldn't load the design system's tokens">
+              {{ designSystem.error }}
+              <template #actions>
+                <UiButton size="sm" icon="refresh-cw" @click="loadDesignSystemTokens">Try again</UiButton>
+              </template>
+            </UiCallout>
+            <p v-else class="text-sm text-ink-secondary">{{ designSystem.tokens.length }} tokens loaded from the design system.</p>
+          </UiPanel>
         </div>
 
-        <div class="max-w-7xl mx-auto grid lg:grid-cols-3 gap-6">
-          <!-- Left Column: Token Migration Setup -->
-          <div class="lg:col-span-1 space-y-6">
-            <!-- Token Migration Setup -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <AppIcon name="palette" class="text-indigo-600" />
-                Token Migration Setup
-              </h3>
-              <div class="space-y-3">
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Migration Type
-                  </label>
-                  <Dropdown
-                    :model-value="tokenMigration.type"
-                    @update:model-value="tokenMigration.type = $event"
-                    :options="migrationTypeOptions"
-                    :is-dark-mode="isDarkMode"
-                  />
-                </div>
-                <div v-if="tokenMigration.type === 'format'">
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    From Format
-                  </label>
-                  <Dropdown
-                    :model-value="tokenMigration.fromFormat"
-                    @update:model-value="tokenMigration.fromFormat = $event"
-                    :options="formatOptions"
-                    :is-dark-mode="isDarkMode"
-                  />
-                </div>
-                <div v-if="tokenMigration.type === 'format'">
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    To Format
-                  </label>
-                  <Dropdown
-                    :model-value="tokenMigration.toFormat"
-                    @update:model-value="tokenMigration.toFormat = $event"
-                    :options="formatOptions"
-                    :is-dark-mode="isDarkMode"
-                  />
-                </div>
-                <div v-if="tokenMigration.type === 'version'">
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    From Version
-                  </label>
-                  <input
-                    v-model="tokenMigration.fromVersion"
-                    type="text"
-                    placeholder="1.0.0"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-                <div v-if="tokenMigration.type === 'version'">
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    To Version
-                  </label>
-                  <input
-                    v-model="tokenMigration.toVersion"
-                    type="text"
-                    placeholder="2.0.0"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-                <div v-if="tokenMigration.type === 'rename'">
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Old Token Name
-                  </label>
-                  <input
-                    v-model="tokenMigration.oldName"
-                    type="text"
-                    placeholder="color.primary"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-                <div v-if="tokenMigration.type === 'rename'">
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    New Token Name
-                  </label>
-                  <input
-                    v-model="tokenMigration.newName"
-                    type="text"
-                    placeholder="color.brand.primary"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Upload Token File
-                  </label>
-                  <input
-                    type="file"
-                    @change="handleTokenFileUpload"
-                    accept=".json,.css,.scss,.plist,.xml"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-                <div class="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    v-model="tokenMigration.dryRun"
-                    id="token-dry-run"
-                    class="accent-indigo-600"
-                  />
-                  <label for="token-dry-run" class="text-sm cursor-pointer" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Dry Run (Preview Only)
-                  </label>
-                </div>
-                <button
-                  @click="analyzeTokenMigration"
-                  :disabled="!canAnalyzeToken"
-                  class="w-full px-4 py-2 rounded-lg font-medium transition-colors"
-                  :class="canAnalyzeToken
-                    ? (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')
-                    : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-                >
-                  Analyze Migration
-                </button>
-              </div>
-            </div>
-
-            <!-- Rollback -->
-            <div 
-              v-if="tokenMigrationResults && !tokenMigration.dryRun"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <AppIcon name="undo-2" class="text-indigo-600" />
-                Rollback
-              </h3>
-              <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                Revert the migration if needed
-              </p>
-              <button
-                @click="rollbackTokenMigration"
-                class="w-full px-4 py-2 rounded-lg font-medium transition-colors"
-                :class="isDarkMode 
-                  ? 'bg-red-600 hover:bg-red-700 text-white' 
-                  : 'bg-red-600 hover:bg-red-700 text-white'"
-              >
-                Rollback Migration
-              </button>
-            </div>
-          </div>
-
-          <!-- Right Column: Token Migration Plan & Results -->
-          <div class="lg:col-span-2 space-y-6">
-            <!-- Migration Progress -->
-            <div 
-              v-if="tokenMigrationProgress.isRunning"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <AppIcon name="loader-circle" class="text-indigo-600" />
-                Migration Progress
-              </h3>
-              <div class="space-y-3">
-                <div class="w-full bg-gray-200 rounded-full h-2.5" :class="isDarkMode ? 'bg-gray-700' : 'bg-gray-200'">
-                  <div 
-                    class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
-                    :style="`width: ${tokenMigrationProgress.percentage}%`"
-                  ></div>
-                </div>
-                <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                  {{ tokenMigrationProgress.currentStep }} / {{ tokenMigrationProgress.totalSteps }} steps completed
-                </div>
-                <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                  {{ tokenMigrationProgress.currentFile }}
-                </div>
-              </div>
-            </div>
-
-            <!-- Migration Plan -->
-            <div 
-              v-if="tokenMigrationPlan"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  Token Migration Plan
-                </h3>
-                <div class="flex items-center gap-2">
-                  <button
-                    v-if="tokenMigrationPlan.outputFile"
-                    @click="downloadTokenOutput"
-                    class="px-4 py-2 rounded-lg font-medium transition-colors text-sm"
-                    :class="isDarkMode 
-                      ? 'bg-purple-600 hover:bg-purple-700 text-white' 
-                      : 'bg-purple-600 hover:bg-purple-700 text-white'"
-                  >
-                    Download Output
-                  </button>
-                  <button
-                    @click="executeTokenMigration"
-                    :disabled="tokenMigration.dryRun || tokenMigrationProgress.isRunning"
-                    class="px-4 py-2 rounded-lg font-medium transition-colors"
-                    :class="!tokenMigration.dryRun && !tokenMigrationProgress.isRunning
-                      ? (isDarkMode ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white')
-                      : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-                  >
-                    Execute Migration
-                  </button>
-                </div>
-              </div>
-              <div class="space-y-3">
-                <div
-                  v-for="(step, index) in tokenMigrationPlan.steps"
-                  :key="index"
-                  class="p-4 rounded-lg border"
-                  :class="step.type === 'breaking'
-                    ? (isDarkMode ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200')
-                    : (isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200')"
-                >
-                  <div class="flex items-start gap-3">
-                    <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm" :class="step.type === 'breaking' ? 'bg-red-500 text-white' : 'bg-indigo-500 text-white'">
-                      {{ index + 1 }}
-                    </div>
-                    <div class="flex-1">
-                      <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ step.title }}
-                      </div>
-                      <div class="text-xs mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        {{ step.description }}
-                      </div>
-                      <div v-if="step.code" class="rounded-lg overflow-hidden mt-2" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                        <div class="p-3">
-                          <div class="text-xs text-green-400 font-mono whitespace-pre-wrap" v-pre><code>{{ step.code }}</code></div>
-                        </div>
-                      </div>
-                      <div v-if="step.example" class="mt-2 p-3 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-100'">
-                        <div class="text-xs font-medium mb-1" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">Example:</div>
-                        <div class="text-xs font-mono" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">{{ step.example }}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Migration Results -->
-            <div 
-              v-if="tokenMigrationResults"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Token Migration Results
-              </h3>
-              <div class="space-y-3">
-                <div class="flex items-center gap-2">
-                  <AppIcon name="circle-check" class="text-green-500" />
-                  <span class="text-sm" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ tokenMigrationResults.tokensMigrated }} tokens migrated
-                  </span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <AppIcon name="info" class="text-blue-500" />
-                  <span class="text-sm" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ tokenMigrationResults.filesProcessed }} files processed
-                  </span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <AppIcon name="triangle-alert" class="text-yellow-500" />
-                  <span class="text-sm" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ tokenMigrationResults.warnings }} warnings
-                  </span>
-                </div>
-                <div v-if="tokenMigrationResults.outputPreview" class="mt-4">
-                  <div class="text-sm font-medium mb-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    Output Preview
-                  </div>
-                  <div class="rounded-lg overflow-hidden" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                    <div class="p-3">
-                      <pre class="text-xs text-green-400 font-mono whitespace-pre-wrap overflow-x-auto">{{ tokenMigrationResults.outputPreview }}</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div v-if="mapSource !== 'manual'">
+          <UiButton variant="primary" icon="git-compare" :disabled="!canInfer" @click="findRenames">Find renames</UiButton>
         </div>
-        </div>
+
+        <UiPanel v-if="inferred" title="Renames found" :description="inferredSummary" flush>
+          <UiEmptyState v-if="!inferred.renames.length && !inferred.unmatched.length" title="Nothing to rename" body="Every old token name still exists in the new set." :bordered="false" />
+          <UiTable v-else caption="Old token names and their new names">
+            <thead>
+              <tr>
+                <th scope="col">Old name</th>
+                <th scope="col">New name</th>
+                <th scope="col">Why</th>
+                <th scope="col"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, index) in inferred.renames" :key="`r-${row.from}`">
+                <td><UiCode>{{ row.from }}</UiCode></td>
+                <td><UiInput v-model="row.to" size="sm" mono hide-label :label="`New name for ${row.from}`" /></td>
+                <td class="text-sm text-ink-secondary">{{ row.reason }}</td>
+                <td><UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Don't rename ${row.from}`" @click="inferred.renames.splice(index, 1)" /></td>
+              </tr>
+              <tr v-for="row in inferred.unmatched" :key="`u-${row.name}`">
+                <td><UiCode>{{ row.name }}</UiCode></td>
+                <td>
+                  <UiInput v-model="row.to" size="sm" mono hide-label :label="`New name for ${row.name}`" placeholder="Type a new name, or leave empty" />
+                </td>
+                <td class="text-sm text-ink-secondary">
+                  <template v-if="row.candidates.length">Several tokens share its value: {{ row.candidates.join(', ') }}</template>
+                  <template v-else>Removed, and no new token has its value</template>
+                </td>
+                <td></td>
+              </tr>
+            </tbody>
+          </UiTable>
+        </UiPanel>
+
+        <UiPanel title="Renames by hand" description="Add renames, or replace the ones above. One per line as old.name -> new.name, or a JSON object.">
+          <UiTextarea v-model="manualText" label="Renames" hide-label rows="4" mono :error="manualErrors.join(' ')" />
+          <UiInput v-model="cssPrefix" label="CSS variable prefix (optional)" hint="If your CSS variables have a prefix, such as --ds-color-primary, enter ds-" mono />
+        </UiPanel>
+
+        <UiCallout v-if="mapProblems.length" tone="warning" title="Fix the rename map first">
+          <ul class="list-disc pl-5">
+            <li v-for="problem in mapProblems" :key="problem">{{ problem }}</li>
+          </ul>
+        </UiCallout>
       </div>
-    </div>
-  </div>
+    </PageSection>
+
+    <PageSection title="2. Files" description="The code that uses the tokens: CSS, SCSS, JavaScript, TypeScript, Vue and more." divided>
+      <div class="grid gap-6 lg:grid-cols-2">
+        <UiPanel title="Add files">
+          <UiFileDropZone
+            label="Source files"
+            multiple
+            :accept="sourceAccept"
+            prompt="Drop files here, or choose them."
+            button-label="Choose files"
+            :hint="`Text files: ${SOURCE_EXTENSIONS.map((e) => `.${e}`).join(', ')}`"
+            @select="addSourceFile"
+          />
+        </UiPanel>
+        <UiPanel title="Or paste a file">
+          <div class="flex flex-col gap-4">
+            <UiInput v-model="pasted.name" label="File name" placeholder="button.css" hint="The extension decides which kinds of reference are rewritten." mono />
+            <UiTextarea v-model="pasted.text" label="Contents" rows="5" mono />
+            <div>
+              <UiButton icon="plus" :disabled="!pasted.text.trim() || !isSupportedSource(pasted.name)" @click="addPasted">Add file</UiButton>
+            </div>
+          </div>
+        </UiPanel>
+      </div>
+
+      <UiPanel v-if="sourceFiles.length" :title="`${sourceFiles.length} ${sourceFiles.length === 1 ? 'file' : 'files'}`" class="mt-6" flush>
+        <template #actions>
+          <UiButton size="sm" variant="ghost" icon="trash-2" @click="clearFiles">Remove all</UiButton>
+        </template>
+        <ul class="divide-y divide-line">
+          <li v-for="(file, index) in sourceFiles" :key="file.id" class="flex items-center gap-3 px-4 py-2">
+            <AppIcon name="file-code" class="text-ink-muted" />
+            <span class="flex-1 truncate font-code text-sm text-ink">{{ file.name }}</span>
+            <span class="text-xs text-ink-muted">{{ lineCount(file.text) }} lines</span>
+            <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove ${file.name}`" @click="removeFile(index)" />
+          </li>
+        </ul>
+      </UiPanel>
+    </PageSection>
+
+    <PageSection title="3. Migrate" description="Rewrite the references, then review every changed line before downloading." divided>
+      <template #actions>
+        <UiButton variant="primary" icon="play" :disabled="!canMigrate" @click="runMigration">Rewrite references</UiButton>
+      </template>
+
+      <p v-if="!canMigrate && !result" class="text-sm text-ink-secondary">{{ migrateBlocker }}</p>
+
+      <template v-if="result">
+        <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <UiStat icon="file-code" label="Files changed" :value="`${result.totals.filesChanged} of ${result.totals.files}`" />
+          <UiStat icon="arrow-right-left" label="References rewritten" :value="result.totals.replacements" />
+          <UiStat icon="diff" label="Lines changed" :value="result.totals.linesChanged" />
+          <UiStat
+            icon="triangle-alert"
+            label="Old names still used"
+            :value="result.totals.leftovers"
+            :tone="result.totals.leftovers ? 'warning' : 'neutral'"
+            hint="Removed tokens with no new name"
+          />
+        </div>
+
+        <div class="mb-6 flex flex-wrap gap-3">
+          <UiButton variant="primary" icon="download" :disabled="!result.totals.filesChanged" :loading="zipping === 'changed'" @click="downloadZip('changed')">Download changed files</UiButton>
+          <UiButton icon="download" :loading="zipping === 'original'" @click="downloadZip('original')">Download originals</UiButton>
+          <UiButton variant="ghost" icon="undo-2" @click="discardResult">Discard result</UiButton>
+        </div>
+        <UiCallout class="mb-6" title="Rolling back">
+          Nothing outside this page has changed, so there's nothing to undo on a server. Discard the result to start again, or download the originals if you pasted files you haven't saved elsewhere.
+        </UiCallout>
+
+        <UiPanel title="References per rename" class="mb-6" flush>
+          <UiTable caption="How many references each rename rewrote">
+            <thead>
+              <tr>
+                <th scope="col">Old name</th>
+                <th scope="col">New name</th>
+                <th scope="col">References</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in result.byRename" :key="row.from">
+                <td><UiCode>{{ row.from }}</UiCode></td>
+                <td><UiCode>{{ row.to }}</UiCode></td>
+                <td>
+                  <span v-if="row.count">{{ row.count }}</span>
+                  <span v-else class="text-ink-muted">Not used in these files</span>
+                </td>
+              </tr>
+            </tbody>
+          </UiTable>
+        </UiPanel>
+
+        <div class="flex flex-col gap-4">
+          <UiPanel v-for="file in result.files" :key="file.name" :title="file.name" heading-tag="h3" flush>
+            <template #actions>
+              <UiChip :tone="file.changed ? 'accent' : 'neutral'">
+                {{ file.changed ? `${file.replacements.length} ${file.replacements.length === 1 ? 'reference' : 'references'}, ${file.changedLines.length} ${file.changedLines.length === 1 ? 'line' : 'lines'}` : 'No changes' }}
+              </UiChip>
+            </template>
+            <ol v-if="file.changedLines.length" class="diff" :aria-label="`Changes in ${file.name}`">
+              <li v-for="change in file.changedLines" :key="change.line" class="diff-hunk">
+                <span class="diff-line-number">Line {{ change.line }}</span>
+                <span class="diff-removed"><span class="sr-only">Before: </span>- {{ change.before }}</span>
+                <span class="diff-added"><span class="sr-only">After: </span>+ {{ change.after }}</span>
+              </li>
+            </ol>
+            <div v-if="file.leftovers.length" class="p-4">
+              <UiCallout tone="warning" title="Old names with no new name">
+                <ul class="list-disc pl-5">
+                  <li v-for="leftover in file.leftovers" :key="`${leftover.line}-${leftover.name}`">
+                    Line {{ leftover.line }}: <UiCode>{{ leftover.name }}</UiCode>
+                  </li>
+                </ul>
+              </UiCallout>
+            </div>
+          </UiPanel>
+        </div>
+      </template>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Dropdown from '../components/Dropdown.vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import {
+  PageHero,
+  PageSection,
+  PageShell,
+  UiButton,
+  UiCallout,
+  UiChip,
+  UiCode,
+  UiEmptyState,
+  UiFileDropZone,
+  UiInput,
+  UiPanel,
+  UiSegmented,
+  UiSpinner,
+  UiStat,
+  UiTable,
+  UiTextarea,
+} from '../components/ui';
+import { useNotice } from '../composables/useNotice.js';
+import apiClient, { apiErrorMessage } from '../services/api.js';
+import { fromDesignSystemTokens, parseTokenText } from '../utils/designTokens.js';
+import {
+  SOURCE_EXTENSIONS,
+  inferRenames,
+  isSupportedSource,
+  migrateFiles,
+  parseRenameText,
+  validateRenames,
+  zipFiles,
+} from '../utils/tokenMigration.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const { notice, showNotice, clearNotice } = useNotice();
 
-// Token Migration State
-const tokenMigration = ref({
-  type: 'format',
-  fromFormat: 'dtcg',
-  toFormat: 'css',
-  fromVersion: '',
-  toVersion: '',
-  oldName: '',
-  newName: '',
-  dryRun: true,
-  uploadedFile: null
-});
+const mapSourceOptions = [
+  { value: 'files', label: 'Two token files' },
+  { value: 'design-system', label: 'A token file and the design system' },
+  { value: 'manual', label: 'Renames by hand only' },
+];
+const mapSource = ref('files');
 
-const tokenMigrationPlan = ref(null);
-const tokenMigrationResults = ref(null);
-const tokenMigrationProgress = ref({
-  isRunning: false,
-  percentage: 0,
-  currentStep: 0,
-  totalSteps: 0,
-  currentFile: ''
-});
+const tokenSet = () => reactive({ file: null, text: '', error: '' });
+const oldTokens = tokenSet();
+const newTokens = tokenSet();
+const designSystem = reactive({ tokens: [], loading: false, error: '', loaded: false });
 
-const migrationTypeOptions = computed(() => [
-  { label: 'Format Conversion', value: 'format' },
-  { label: 'Version Migration', value: 'version' },
-  { label: 'Token Rename', value: 'rename' },
-  { label: 'Merge Tokens', value: 'merge' }
-]);
+const inferred = ref(null);
+const manualText = ref('');
+const cssPrefix = ref('');
 
-const formatOptions = computed(() => [
-  { label: 'DTCG JSON', value: 'dtcg' },
-  { label: 'CSS Variables', value: 'css' },
-  { label: 'SCSS Variables', value: 'scss' },
-  { label: 'iOS (Plist)', value: 'ios' },
-  { label: 'Android (XML)', value: 'android' },
-  { label: 'Style Dictionary', value: 'style-dictionary' }
-]);
+const sourceFiles = ref([]);
+const pasted = reactive({ name: '', text: '' });
+const sourceAccept = SOURCE_EXTENSIONS.map((ext) => `.${ext}`).join(',');
+let nextFileId = 1;
 
-const canAnalyzeToken = computed(() => {
-  if (tokenMigration.value.type === 'format') {
-    return tokenMigration.value.fromFormat && tokenMigration.value.toFormat && tokenMigration.value.uploadedFile;
-  } else if (tokenMigration.value.type === 'version') {
-    return tokenMigration.value.fromVersion && tokenMigration.value.toVersion && tokenMigration.value.uploadedFile;
-  } else if (tokenMigration.value.type === 'rename') {
-    return tokenMigration.value.oldName && tokenMigration.value.newName && tokenMigration.value.uploadedFile;
-  } else if (tokenMigration.value.type === 'merge') {
-    return tokenMigration.value.uploadedFile;
-  }
-  return false;
-});
+const result = ref(null);
+const zipping = ref('');
 
-const handleTokenFileUpload = (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    tokenMigration.value.uploadedFile = file;
-  }
-};
+const readText = (file) => (typeof file.text === 'function' ? file.text() : new Response(file).text());
 
-const analyzeTokenMigration = async () => {
-  if (!canAnalyzeToken.value) return;
-  
-  const file = tokenMigration.value.uploadedFile;
-  if (!file) return;
-
+const readTokenFile = async (set, file) => {
+  set.file = file;
+  set.error = '';
   try {
-    const fileContent = await readFileContent(file);
-    
-    if (tokenMigration.value.type === 'format') {
-      // Format conversion migration
-      tokenMigrationPlan.value = {
-        type: 'format',
-        fromFormat: tokenMigration.value.fromFormat,
-        toFormat: tokenMigration.value.toFormat,
-        steps: [
-          {
-            type: 'update',
-            title: 'Parse Source Format',
-            description: `Reading tokens from ${tokenMigration.value.fromFormat.toUpperCase()} format`,
-            code: `// Reading from ${tokenMigration.value.fromFormat}\nconst tokens = parse${tokenMigration.value.fromFormat.toUpperCase()}(fileContent);`
-          },
-          {
-            type: 'update',
-            title: 'Convert Token Structure',
-            description: `Converting to ${tokenMigration.value.toFormat.toUpperCase()} format`,
-            code: `// Converting to ${tokenMigration.value.toFormat}\nconst converted = convertTo${tokenMigration.value.toFormat.toUpperCase()}(tokens);`
-          },
-          {
-            type: 'update',
-            title: 'Generate Output',
-            description: `Generating ${tokenMigration.value.toFormat.toUpperCase()} output file`,
-            code: `// Output format: ${tokenMigration.value.toFormat}\nconst output = generate${tokenMigration.value.toFormat.toUpperCase()}(converted);`
-          }
-        ],
-        outputFile: `tokens.${getFileExtension(tokenMigration.value.toFormat)}`
-      };
-      
-      // Generate preview
-      const preview = generateTokenPreview(fileContent, tokenMigration.value.fromFormat, tokenMigration.value.toFormat);
-      tokenMigrationPlan.value.outputPreview = preview;
-    } else if (tokenMigration.value.type === 'version') {
-      // Version migration
-      tokenMigrationPlan.value = {
-        type: 'version',
-        fromVersion: tokenMigration.value.fromVersion,
-        toVersion: tokenMigration.value.toVersion,
-        steps: [
-          {
-            type: 'breaking',
-            title: 'Update Token References',
-            description: `Updating token references from v${tokenMigration.value.fromVersion} to v${tokenMigration.value.toVersion}`,
-            code: `// Old\ncolor.primary.v${tokenMigration.value.fromVersion}\n\n// New\ncolor.primary.v${tokenMigration.value.toVersion}`
-          },
-          {
-            type: 'update',
-            title: 'Update Import Paths',
-            description: 'Updating import statements to new version',
-            code: `// Old\nimport tokens from '@/tokens/v${tokenMigration.value.fromVersion}';\n\n// New\nimport tokens from '@/tokens/v${tokenMigration.value.toVersion}';`
-          }
-        ]
-      };
-    } else if (tokenMigration.value.type === 'rename') {
-      // Token rename migration
-      tokenMigrationPlan.value = {
-        type: 'rename',
-        oldName: tokenMigration.value.oldName,
-        newName: tokenMigration.value.newName,
-        steps: [
-          {
-            type: 'breaking',
-            title: 'Rename Token References',
-            description: `Renaming token from "${tokenMigration.value.oldName}" to "${tokenMigration.value.newName}"`,
-            code: `// Old\n\${tokens['${tokenMigration.value.oldName}']}\n\n// New\n\${tokens['${tokenMigration.value.newName}']}`
-          },
-          {
-            type: 'update',
-            title: 'Update CSS Variables',
-            description: 'Updating CSS variable names',
-            code: `// Old\n--${tokenMigration.value.oldName.replace(/\./g, '-')}\n\n// New\n--${tokenMigration.value.newName.replace(/\./g, '-')}`
-          }
-        ]
-      };
-    }
+    set.text = await readText(file);
+  } catch {
+    set.error = `Couldn't read ${file.name}.`;
+  }
+};
+
+const clearTokenSet = (set) => {
+  set.file = null;
+  set.text = '';
+  set.error = '';
+};
+
+const loadDesignSystemTokens = async () => {
+  designSystem.loading = true;
+  designSystem.error = '';
+  try {
+    const { data } = await apiClient.get('/api/v1/tokens');
+    designSystem.tokens = fromDesignSystemTokens(data.tokens ?? []);
+    designSystem.loaded = true;
   } catch (error) {
-    console.error('Error analyzing token migration:', error);
-    alert('Error analyzing token migration. Please check the file format.');
+    designSystem.error = apiErrorMessage(error, 'The token library did not answer.');
+  } finally {
+    designSystem.loading = false;
   }
 };
 
-const readFileContent = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target.result);
-    reader.onerror = reject;
-    reader.readAsText(file);
-  });
-};
+watch(mapSource, (source) => {
+  inferred.value = null;
+  if (source === 'design-system' && !designSystem.loaded && !designSystem.loading) loadDesignSystemTokens();
+});
 
-const generateTokenPreview = (content, fromFormat, toFormat) => {
-  // Generate a preview of the converted tokens
-  if (toFormat === 'css') {
-    return `:root {\n  --color-primary: #6366f1;\n  --color-secondary: #8b5cf6;\n  --spacing-sm: 0.5rem;\n  --spacing-md: 1rem;\n}`;
-  } else if (toFormat === 'scss') {
-    return `$color-primary: #6366f1;\n$color-secondary: #8b5cf6;\n$spacing-sm: 0.5rem;\n$spacing-md: 1rem;`;
-  } else if (toFormat === 'dtcg') {
-    return `{\n  "color": {\n    "primary": {\n      "$value": "#6366f1",\n      "$type": "color"\n    }\n  }\n}`;
+const canInfer = computed(() => {
+  if (!oldTokens.text.trim()) return false;
+  return mapSource.value === 'files' ? !!newTokens.text.trim() : designSystem.loaded;
+});
+
+const parseSet = (set) => {
+  try {
+    set.error = '';
+    return parseTokenText(set.text);
+  } catch (error) {
+    set.error = error.message;
+    return null;
   }
-  return content.substring(0, 200) + '...';
 };
 
-const getFileExtension = (format) => {
-  const extensions = {
-    'dtcg': 'json',
-    'css': 'css',
-    'scss': 'scss',
-    'ios': 'plist',
-    'android': 'xml',
-    'style-dictionary': 'json'
+const findRenames = () => {
+  const before = parseSet(oldTokens);
+  const after = mapSource.value === 'files' ? parseSet(newTokens) : designSystem.tokens;
+  if (!before || !after) return;
+  const found = inferRenames(before, after);
+  inferred.value = {
+    ...found,
+    renames: found.renames.map((r) => ({ ...r })),
+    unmatched: found.unmatched.map((u) => ({ ...u, to: '' })),
   };
-  return extensions[format] || 'json';
+  result.value = null;
 };
 
-const downloadTokenOutput = () => {
-  if (!tokenMigrationPlan.value || !tokenMigrationPlan.value.outputPreview) return;
-  
-  const blob = new Blob([tokenMigrationPlan.value.outputPreview], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = tokenMigrationPlan.value.outputFile || 'tokens-migrated.json';
-  link.click();
-  URL.revokeObjectURL(url);
-};
+const inferredSummary = computed(() => {
+  if (!inferred.value) return '';
+  const { renames, unmatched, kept } = inferred.value;
+  return `${renames.length} paired by value, ${unmatched.length} without a match, ${kept} unchanged.`;
+});
 
-const executeTokenMigration = async () => {
-  if (tokenMigration.value.dryRun) return;
-  
-  tokenMigrationProgress.value = {
-    isRunning: true,
-    percentage: 0,
-    currentStep: 0,
-    totalSteps: tokenMigrationPlan.value.steps.length,
-    currentFile: ''
-  };
-  
-  // Simulate migration with progress
-  for (let i = 0; i < tokenMigrationPlan.value.steps.length; i++) {
-    tokenMigrationProgress.value.currentStep = i + 1;
-    tokenMigrationProgress.value.percentage = Math.round(((i + 1) / tokenMigrationPlan.value.steps.length) * 100);
-    tokenMigrationProgress.value.currentFile = `Processing tokens...`;
-    await new Promise(resolve => setTimeout(resolve, 800));
+const manual = computed(() => parseRenameText(manualText.value));
+const manualErrors = computed(() => manual.value.errors);
+
+// The map the rewrite uses: renames found (as edited), then by hand (which win)
+const renameMap = computed(() => {
+  const byFrom = new Map();
+  if (mapSource.value !== 'manual' && inferred.value) {
+    for (const row of inferred.value.renames) if (row.to.trim()) byFrom.set(row.from, row.to.trim());
+    for (const row of inferred.value.unmatched) if (row.to.trim()) byFrom.set(row.name, row.to.trim());
   }
-  
-  tokenMigrationProgress.value.isRunning = false;
-  
-  tokenMigrationResults.value = {
-    tokensMigrated: 45,
-    filesProcessed: 12,
-    warnings: 2,
-    outputPreview: tokenMigrationPlan.value.outputPreview
-  };
-};
+  for (const row of manual.value.renames) byFrom.set(row.from, row.to);
+  return [...byFrom].map(([from, to]) => ({ from, to }));
+});
 
-const rollbackTokenMigration = async () => {
-  if (!confirm('Are you sure you want to rollback this migration?')) return;
-  
-  tokenMigrationProgress.value = {
-    isRunning: true,
-    percentage: 0,
-    currentStep: 0,
-    totalSteps: tokenMigrationPlan.value.steps.length,
-    currentFile: 'Rolling back...'
-  };
-  
-  // Simulate rollback
-  for (let i = 0; i < tokenMigrationPlan.value.steps.length; i++) {
-    tokenMigrationProgress.value.currentStep = i + 1;
-    tokenMigrationProgress.value.percentage = Math.round(((i + 1) / tokenMigrationPlan.value.steps.length) * 100);
-    await new Promise(resolve => setTimeout(resolve, 500));
+// Removed tokens still without a new name: reported where code still uses them
+const unmatchedNames = computed(() =>
+  mapSource.value === 'manual' || !inferred.value ? [] : inferred.value.unmatched.map((row) => row.name).filter((name) => !renameMap.value.some((r) => r.from === name)),
+);
+
+const mapProblems = computed(() => validateRenames(renameMap.value));
+
+const addSourceFile = async (file) => {
+  if (!isSupportedSource(file.name)) {
+    showNotice(`${file.name} isn't a supported source file. Add ${SOURCE_EXTENSIONS.map((e) => `.${e}`).join(', ')} files.`, 'error');
+    return;
   }
-  
-  tokenMigrationProgress.value.isRunning = false;
-  tokenMigrationResults.value = null;
-  tokenMigrationPlan.value = null;
-  alert('Token migration rolled back successfully');
+  try {
+    sourceFiles.value.push({ id: nextFileId++, name: file.name, text: await readText(file) });
+    result.value = null;
+  } catch {
+    showNotice(`Couldn't read ${file.name}.`, 'error');
+  }
 };
 
+const addPasted = () => {
+  sourceFiles.value.push({ id: nextFileId++, name: pasted.name.trim(), text: pasted.text });
+  pasted.name = '';
+  pasted.text = '';
+  result.value = null;
+};
 
+const removeFile = (index) => {
+  sourceFiles.value.splice(index, 1);
+  result.value = null;
+};
 
+const clearFiles = () => {
+  sourceFiles.value = [];
+  result.value = null;
+};
 
+const lineCount = (text) => text.split('\n').length;
 
-let darkModeObserver = null;
-let darkModeInterval = null;
+const canMigrate = computed(() => renameMap.value.length > 0 && sourceFiles.value.length > 0 && !mapProblems.value.length && !manualErrors.value.length);
+const migrateBlocker = computed(() => {
+  if (!renameMap.value.length) return 'Add at least one rename.';
+  if (!sourceFiles.value.length) return 'Add the files to migrate.';
+  if (mapProblems.value.length || manualErrors.value.length) return 'Fix the rename map first.';
+  return '';
+});
+
+const runMigration = () => {
+  result.value = migrateFiles(sourceFiles.value, renameMap.value, { unmatched: unmatchedNames.value, cssPrefix: cssPrefix.value });
+  const { replacements, filesChanged } = result.value.totals;
+  showNotice(replacements ? `Rewrote ${replacements} ${replacements === 1 ? 'reference' : 'references'} in ${filesChanged} ${filesChanged === 1 ? 'file' : 'files'}.` : 'No references to these tokens were found.', replacements ? 'success' : 'info');
+};
+
+const downloadZip = async (which) => {
+  if (!result.value) return;
+  zipping.value = which;
+  try {
+    const entries = which === 'changed'
+      ? result.value.files.filter((f) => f.changed).map((f) => ({ name: f.name, text: f.output }))
+      : result.value.files.map((f) => ({ name: f.name, text: f.original }));
+    const blob = await zipFiles(entries);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = which === 'changed' ? 'token-migration.zip' : 'token-migration-originals.zip';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch {
+    showNotice("Couldn't build the zip file.", 'error');
+  } finally {
+    zipping.value = '';
+  }
+};
+
+const discardResult = () => {
+  result.value = null;
+  showNotice('Result discarded. Your files are as you added them.', 'info');
+};
 
 onMounted(() => {
-  // Auto-open drawer if navigating from sidebar
-  if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-    drawerOpen.value = true;
-    sessionStorage.removeItem('openDrawerOnLoad');
-  }
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
+  if (mapSource.value === 'design-system') loadDesignSystemTokens();
 });
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.diff {
+  @apply divide-y divide-line-faint font-code text-sm;
+}
+.diff-hunk {
+  @apply flex flex-col;
+}
+.diff-line-number {
+  @apply px-4 pt-2 pb-1 text-xs text-ink-muted font-ui;
+}
+.diff-removed {
+  @apply whitespace-pre-wrap break-all bg-danger-bg px-4 py-1 text-danger;
+}
+.diff-added {
+  @apply whitespace-pre-wrap break-all bg-success-bg px-4 py-1 text-success;
 }
 </style>
-
