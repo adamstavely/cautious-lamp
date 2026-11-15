@@ -1,5 +1,5 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, TokenExpiredError } from '@nestjs/jwt';
 import { randomBytes } from 'crypto';
 
 /** Access tokens are valid for 8 hours and never refreshed (docs/AUTH.md) */
@@ -49,13 +49,23 @@ export class TokenService {
 
   /** The claims of a valid, unexpired token and when it expires, else null */
   async verify(token: string): Promise<(TokenClaims & { expiresAt: Date }) | null> {
+    const check = await this.check(token);
+    return check && 'claims' in check ? check.claims : null;
+  }
+
+  /**
+   * Like verify, but says when a token this server signed has expired, so the
+   * client can be told to sign in again (TOKEN_EXPIRED). The signature is
+   * checked before the expiry, so a forged token is never reported as expired.
+   */
+  async check(token: string): Promise<{ claims: TokenClaims & { expiresAt: Date } } | { problem: 'expired' } | null> {
     if (!this.jwt) return null;
     try {
       const payload = await this.jwt.verifyAsync<Partial<TokenClaims> & { exp?: number }>(token);
       if (typeof payload.sub !== 'string' || typeof payload.tv !== 'number' || typeof payload.exp !== 'number') return null;
-      return { sub: payload.sub, tv: payload.tv, expiresAt: new Date(payload.exp * 1000) };
-    } catch {
-      return null;
+      return { claims: { sub: payload.sub, tv: payload.tv, expiresAt: new Date(payload.exp * 1000) } };
+    } catch (error) {
+      return error instanceof TokenExpiredError ? { problem: 'expired' } : null;
     }
   }
 }

@@ -73,6 +73,12 @@ export interface ResolvedApiKey {
   expiresAt?: Date;
 }
 
+/** Why a managed key that exists was refused */
+export type KeyProblem = 'revoked' | 'expired';
+
+/** A key's check: who it belongs to, or why a key that exists was refused */
+export type ApiKeyCheck = { key: ResolvedApiKey } | { problem: KeyProblem };
+
 function toMetadata(doc: ApiKeyDoc): ApiKeyMetadata {
   const date = (value?: string) => (value ? new Date(value) : undefined);
   return {
@@ -133,11 +139,24 @@ export class KeyManagementService {
    * with its scopes. Null for anything else, including the admin key.
    */
   async resolveApiKey(apiKey: string | undefined): Promise<ResolvedApiKey | null> {
+    const check = await this.checkApiKey(apiKey);
+    return check && 'key' in check ? check.key : null;
+  }
+
+  /**
+   * Like resolveApiKey, but says why a managed key that exists was refused
+   * (revoked, which includes rotated, or expired), so the client can be told
+   * (TOKEN_REVOKED, TOKEN_EXPIRED). Null for anything that isn't a key.
+   */
+  async checkApiKey(apiKey: string | undefined): Promise<ApiKeyCheck | null> {
     if (!apiKey) return null;
     const configured = this.configuredKeys.get(this.hashKey(apiKey));
-    if (configured) return { ...configured };
-    const managed = await this.validateKey(apiKey);
-    return managed ? { id: managed.id, name: managed.name, scopes: managed.scopes, expiresAt: managed.expiresAt } : null;
+    if (configured) return { key: { ...configured } };
+    const managed = await this.checkManagedKey(apiKey);
+    if (!managed) return null;
+    if ('problem' in managed) return { problem: managed.problem };
+    const { metadata } = managed;
+    return { key: { id: metadata.id, name: metadata.name, scopes: metadata.scopes, expiresAt: metadata.expiresAt } };
   }
 
   /**
@@ -219,18 +238,23 @@ export class KeyManagementService {
    * The live managed key with this secret, or null (unknown, revoked or expired)
    */
   async validateKey(apiKey: string): Promise<ApiKeyMetadata | null> {
+    const check = await this.checkManagedKey(apiKey);
+    return check && 'metadata' in check ? check.metadata : null;
+  }
+
+  /** The live managed key with this secret, why it was refused, or null when there is no such key */
+  private async checkManagedKey(apiKey: string): Promise<{ metadata: ApiKeyMetadata } | { problem: KeyProblem } | null> {
     if (!MANAGED_KEY_PATTERN.test(apiKey)) return null;
     const keyHash = this.hashKey(apiKey);
     const doc = await this.lookup(keyHash);
-    if (!doc || doc.revoked || doc.keyHash !== keyHash) {
-      return null;
-    }
+    if (!doc || doc.keyHash !== keyHash) return null;
+    if (doc.revoked) return { problem: 'revoked' };
     if (doc.expiresAt && new Date(doc.expiresAt) < new Date()) {
       this.logger.warn(`API key ${doc.id} has expired`);
-      return null;
+      return { problem: 'expired' };
     }
     this.touch(doc);
-    return toMetadata(doc);
+    return { metadata: toMetadata(doc) };
   }
 
   /**

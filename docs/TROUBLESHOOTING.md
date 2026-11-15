@@ -112,11 +112,10 @@ See [TROUBLESHOOTING_API.md](./TROUBLESHOOTING_API.md) for more API-specific iss
 **Symptoms**: 429 Too Many Requests
 
 **Solutions**:
-1. Check rate limit headers
-2. Implement request throttling
-3. Wait for rate limit to reset
-4. Use multiple API keys for high-volume applications
-5. Contact support for higher limits
+1. Check `X-RateLimit-Remaining` and `X-RateLimit-Reset` (seconds until the window ends)
+2. On a `429`, wait `Retry-After` seconds
+3. Spread requests out: each route allows `RATE_LIMIT_PER_MINUTE` (default 600) requests per IP per minute
+4. More API keys don't help: requests are counted per IP address. Operators can raise `RATE_LIMIT_PER_MINUTE`
 
 See [TROUBLESHOOTING_AUTH.md](./TROUBLESHOOTING_AUTH.md) for more authentication issues.
 

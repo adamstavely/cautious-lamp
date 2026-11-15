@@ -7,7 +7,6 @@ export interface TokenRotationPolicy {
   rotationFrequency: number; // Rotation frequency in milliseconds
   requireRotation: boolean; // Whether rotation is required
   allowManualRotation: boolean; // Whether manual rotation is allowed
-  autoRotate: boolean; // Whether to automatically rotate expired tokens
   gracePeriod: number; // Grace period after expiration in milliseconds
 }
 
@@ -25,7 +24,6 @@ export const DEFAULT_TOKEN_POLICY: TokenRotationPolicy = {
   rotationFrequency: 30 * 24 * 60 * 60 * 1000, // 30 days
   requireRotation: false,
   allowManualRotation: true,
-  autoRotate: false,
   gracePeriod: 7 * 24 * 60 * 60 * 1000, // 7 days grace period
 };
 

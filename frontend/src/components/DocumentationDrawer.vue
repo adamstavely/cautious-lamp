@@ -1188,6 +1188,7 @@ const adminItems = [
   { text: 'System Health', link: '/admin/health', icon: 'layout-panel-left' },
   { text: 'Governance', link: '/admin/governance', icon: 'gavel' },
   { text: 'Role Management', link: '/admin/roles', icon: 'shield-user' },
+  { text: 'API Keys', link: '/admin/api-keys', icon: 'key' },
   { text: 'Feature Flags', link: '/admin/feature-flags', icon: 'flag' },
   { text: 'Component and Pattern Lifecycle Management', link: '/admin/content', icon: 'file-pen-line' },
   { text: 'Application Management', link: '/admin/applications', icon: 'layout-grid' },

@@ -380,6 +380,10 @@ const router = createRouter({
       path: '/admin/users',
       component: () => import('./views/UserManagement.vue'),
     },
+    {
+      path: '/admin/api-keys',
+      component: () => import('./views/ApiKeys.vue'),
+    },
       {
         path: '/admin/applications/register',
         component: () => import('./views/ApplicationRegistration.vue'),

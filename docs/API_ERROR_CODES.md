@@ -1,104 +1,101 @@
-# API Error Codes
+# API error codes
 
-Complete reference for API error codes and how to handle them.
+The errors the API returns and how to handle them.
 
-## Error Response Format
+## Error response format
+
+Every error body has a stable `code`, next to the `statusCode`, `message` and `error` that Nest has always sent:
 
 ```json
 {
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Human-readable error message",
-    "details": {
-      "field": "Additional error details"
-    }
-  }
+  "statusCode": 401,
+  "code": "TOKEN_EXPIRED",
+  "message": "This API key has expired. Create a new one or rotate it.",
+  "error": "Unauthorized"
 }
 ```
 
-## HTTP Status Codes
+- `code` is stable: match on it (or on `statusCode`). `message` is for people and may change.
+- `message` is a string, or an array of strings when a request fails validation (one per problem, such as `"name must be a string"`).
+- Some errors add fields, listed with their codes below (`retryAfterSeconds`, `lockedUntil`).
+- When a route sets its own code (such as `PASSWORD_CHANGE_REQUIRED` or `IRIS_TIMEOUT`), that is the code. Otherwise it comes from the status: `VALIDATION_ERROR` for `400`, `RATE_LIMIT_EXCEEDED` for `429`, and the status's name for the rest (`NOT_FOUND`, `CONFLICT`, `SERVICE_UNAVAILABLE`, `PAYLOAD_TOO_LARGE`, …).
+- An unexpected server error is a `500` with `code: "INTERNAL_SERVER_ERROR"` and the message "Internal server error"; the details are only in the server log.
 
-- `400 Bad Request`: Invalid request data
-- `401 Unauthorized`: Authentication required
-- `403 Forbidden`: Insufficient permissions
-- `404 Not Found`: Resource not found
-- `409 Conflict`: Resource conflict
-- `429 Too Many Requests`: Rate limit exceeded
-- `500 Internal Server Error`: Server error
-- `503 Service Unavailable`: Service temporarily unavailable
+The global filter that adds `code` is `backend/src/common/errors/api-exception.filter.ts`.
 
-## Error Codes
+## HTTP status codes
 
-### Authentication Errors
+- `400 Bad Request`: the request is invalid (`VALIDATION_ERROR`)
+- `401 Unauthorized`: no valid credential (`UNAUTHORIZED`, `TOKEN_EXPIRED`, `TOKEN_REVOKED`)
+- `403 Forbidden`: a missing permission or workspace role (`FORBIDDEN`, `PASSWORD_CHANGE_REQUIRED`)
+- `404 Not Found`: no such resource, or one you can't see (`NOT_FOUND`)
+- `409 Conflict`: the change conflicts with the current state (`CONFLICT`)
+- `423 Locked`: sign-in locked after failed attempts (`ACCOUNT_LOCKED`)
+- `429 Too Many Requests`: rate limit exceeded (`RATE_LIMIT_EXCEEDED`)
+- `500 Internal Server Error`: a server error (`INTERNAL_SERVER_ERROR`)
+- `503 Service Unavailable`: a dependency such as Elasticsearch isn't answering (`SERVICE_UNAVAILABLE`)
+
+## Error codes
+
+### Authentication
 
 #### `UNAUTHORIZED`
-Invalid or missing API key.
+`401`. No credential, or one that was never valid (a wrong or unknown API key, a token not signed by this server).
 
-**Solution**: Verify API key is correct and included in Authorization header.
+**Solution**: Send `Authorization: Bearer <token or key>` with a current access token or API key.
 
 #### `TOKEN_EXPIRED`
-API key has expired.
+`401`. The API key passed its expiry date, or the sign-in passed its 8 hours.
 
-**Solution**: Rotate or create a new API key.
+**Solution**: For a key, create a new one or rotate it on the **API keys** page (`/admin/api-keys`) or with `POST /auth/api-keys/:id/rotate`. For a sign-in, sign in again.
 
 #### `TOKEN_REVOKED`
-API key has been revoked.
+`401`. The API key was revoked (or rotated, which revokes the old key), or the sign-in was ended: the person signed out, changed their password, had it reset by an admin, or their account was disabled.
 
-**Solution**: Create a new API key.
+**Solution**: Use a new key, or sign in again.
 
 #### `PASSWORD_CHANGE_REQUIRED`
 `403`. The user signed in with a temporary password (a new account or an admin reset) and must change it before calling anything except `GET /auth/me`, `POST /auth/change-password` and `POST /auth/logout`. The WebSocket gateway sends it in an `error` event before disconnecting.
 
 **Solution**: Send the user to the change-password screen; after `POST /auth/change-password` succeeds, sign in again with the new password. See [AUTH.md](AUTH.md#principals).
 
-### Validation Errors
+#### `FORBIDDEN`
+`403`. The caller lacks a permission (the message names it, such as "Requires admin:users") or a workspace role.
+
+**Solution**: Ask an admin for the permission or role. An API key can only use its scopes; workspace routes need a person's token.
+
+#### `ACCOUNT_LOCKED`
+`423`, with `lockedUntil`. Too many failed sign-ins for this email.
+
+**Solution**: Wait until `lockedUntil`.
+
+### Requests and resources
 
 #### `VALIDATION_ERROR`
-Request data validation failed.
+`400`. The body or query is invalid: a missing or wrong field, an unknown field, or a value the route refuses. `message` says what.
 
-**Solution**: Check request body against API documentation.
-
-#### `MISSING_REQUIRED_FIELD`
-Required field is missing.
-
-**Solution**: Include all required fields in request.
-
-#### `INVALID_FIELD_VALUE`
-Field value is invalid.
-
-**Solution**: Check field value format and constraints.
-
-### Resource Errors
+**Solution**: Fix the request as the message says. Unknown fields are refused, so check the field names against the route's documentation.
 
 #### `NOT_FOUND`
-Resource not found.
+`404`. No such resource, or one in a workspace you can't read (those answer exactly like missing ones), or no such route.
 
-**Solution**: Verify resource ID is correct.
-
-#### `ALREADY_EXISTS`
-Resource already exists.
-
-**Solution**: Use existing resource or update instead of create.
+**Solution**: Check the id and path, and that you belong to the workspace.
 
 #### `CONFLICT`
-Resource conflict (e.g., duplicate name).
+`409`. The change conflicts with the current state: a name or id already taken, or something changed since you read it.
 
-**Solution**: Use a different name or update existing resource.
+**Solution**: Use a different name or id, or reload and try again.
 
-### Rate Limiting
+### Rate limiting
 
 #### `RATE_LIMIT_EXCEEDED`
-Rate limit exceeded.
+`429`, with `Retry-After` (seconds) and `X-RateLimit-Remaining: 0`. More than `RATE_LIMIT_PER_MINUTE` (default 600) requests to one route from one IP in 60 seconds. Some features have their own limits that also answer `429`, such as AI requests per person.
 
-**Solution**: 
-- Wait for rate limit to reset
-- Implement request throttling
-- Use multiple API keys
-- Contact support for higher limits
+**Solution**: Wait `Retry-After` seconds, then retry, and spread requests out. More API keys don't help: the limit is per IP address. See [API_REFERENCE.md](./API_REFERENCE.md#rate-limiting).
 
 ### Photosensitivity Analysis
 
-`POST /api/v1/photosensitivity/analyze` ([IRIS_PHOTOSENSITIVITY_SERVICE.md](./IRIS_PHOTOSENSITIVITY_SERVICE.md#limits)). These bodies are `{ "statusCode", "code", "message" }`, plus `retryAfterSeconds` on the two retryable refusals.
+`POST /api/v1/photosensitivity/analyze` ([IRIS_PHOTOSENSITIVITY_SERVICE.md](./IRIS_PHOTOSENSITIVITY_SERVICE.md#limits)). These bodies are `{ "statusCode", "code", "message", "error" }`, plus `retryAfterSeconds` on the two retryable refusals.
 
 #### `PHOTOSENSITIVITY_BUSY`
 `503`, with `Retry-After`. The server is running and queueing as many analyses as it allows. Nothing was uploaded.
@@ -130,41 +127,17 @@ Rate limit exceeded.
 
 **Solution**: Check the video plays, or re-encode it as MP4.
 
-### Integration Errors
-
-#### `INTEGRATION_ERROR`
-External service integration error.
-
-**Solution**: 
-- Check integration credentials
-- Verify external service is available
-- Check integration logs
-
-#### `CONNECTION_FAILED`
-Failed to connect to external service.
-
-**Solution**: 
-- Verify network connectivity
-- Check service URL
-- Verify credentials
-
-### Server Errors
+### Server
 
 #### `INTERNAL_SERVER_ERROR`
-Unexpected server error.
+`500`. An unexpected server error.
 
-**Solution**: 
-- Retry request
-- Check server logs
-- Contact support if persistent
+**Solution**: Retry; if it persists, check the server log.
 
 #### `SERVICE_UNAVAILABLE`
-Service temporarily unavailable.
+`503`. A dependency isn't answering, usually Elasticsearch, or a feature isn't set up on this server (the message says which).
 
-**Solution**: 
-- Retry after a few moments
-- Check service status
-- Contact support if persistent
+**Solution**: Retry after a few moments; check `GET /api/v1/health`.
 
 ## Handling Errors
 
@@ -195,16 +168,22 @@ async function requestWithRetry(url, options, maxRetries = 3) {
 
 ### Rate Limit Handling
 
-Check rate limit headers and throttle requests:
+Every response carries `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. `X-RateLimit-Reset` is a number of seconds, not a date. Slow down when few requests are left, and on a `429` wait for `Retry-After`:
 
 ```javascript
-const response = await fetch(url, options);
-const remaining = parseInt(response.headers.get('X-RateLimit-Remaining'));
-const resetTime = new Date(response.headers.get('X-RateLimit-Reset'));
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-if (remaining < 10) {
-  const waitTime = resetTime.getTime() - Date.now();
-  await sleep(waitTime);
+async function fetchWithinLimit(url, options) {
+  const response = await fetch(url, options);
+  if (response.status === 429) {
+    await sleep(Number(response.headers.get('Retry-After') ?? 1) * 1000);
+    return fetchWithinLimit(url, options);
+  }
+  const remaining = Number(response.headers.get('X-RateLimit-Remaining'));
+  if (remaining < 10) {
+    await sleep(Number(response.headers.get('X-RateLimit-Reset')) * 1000);
+  }
+  return response;
 }
 ```
 
@@ -217,7 +196,7 @@ try {
   const response = await fetch(url, options);
   if (!response.ok) {
     const error = await response.json();
-    console.error('API Error:', error);
+    console.error(`API error ${error.statusCode} ${error.code}:`, error.message);
     // Log to error tracking service
   }
 } catch (error) {

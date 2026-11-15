@@ -14,6 +14,7 @@ import { authState, ensureSession, hasPermission } from '../services/auth.js';
  */
 const ADMIN_PREFIXES = [
   ['/admin/users', 'admin:users'],
+  ['/admin/api-keys', 'admin:users'],
   ['/admin/roles', 'admin:rbac'],
   ['/admin/audit', 'admin:audit'],
   ['/admin/governance', 'admin:governance'],

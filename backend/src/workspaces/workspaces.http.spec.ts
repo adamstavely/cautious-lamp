@@ -409,6 +409,40 @@ describe('Workspaces HTTP API', () => {
     expect((await h.call('editor', 'POST', `/workspaces/${id}/resources/country-flags`, { ...base, countryCode: 'TD' })).status).toBe(201);
   });
 
+  describe('GET /workspaces/:id/resources/tokens/export/style-dictionary', () => {
+    it("exports the tokens the workspace can read, its own winning a name clash, for viewers only", async () => {
+      const a = await team('Export A');
+      const b = (await h.call('other', 'POST', '/workspaces', { name: 'Export B' })).body.id;
+      const token = (fields: Record<string, unknown>) => ({ type: 'color', category: 'colors', ...fields });
+      await h.call('editor', 'POST', `/workspaces/${a}/resources/tokens`, token({ name: 'color.primary', value: '#3355ff', description: 'Links and buttons' }));
+      await h.call('editor', 'POST', `/workspaces/${a}/resources/tokens`, token({ name: 'color.primary.hover', value: '#2244ee' }));
+      await h.call('editor', 'POST', `/workspaces/${a}/resources/tokens`, token({ name: 'spacing.small', value: '8px', type: 'spacing', category: 'spacing' }));
+      // B shares one token with A whose name A already uses, and one A doesn't have
+      const clash = (await h.call('other', 'POST', `/workspaces/${b}/resources/tokens`, token({ name: 'color.primary', value: '#000000' }))).body.id;
+      const extra = (await h.call('other', 'POST', `/workspaces/${b}/resources/tokens`, token({ name: 'color.accent', value: '#ff8800' }))).body.id;
+      for (const rid of [clash, extra]) {
+        expect((await h.call('other', 'PUT', `/workspaces/${b}/resources/tokens/${rid}/sharing`, { workspaceIds: [a] })).status).toBe(200);
+      }
+
+      const res = await h.call('viewer', 'GET', `/workspaces/${a}/resources/tokens/export/style-dictionary`);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({
+        color: {
+          accent: { value: '#ff8800', type: 'color' },
+          primary: {
+            DEFAULT: { value: '#3355ff', type: 'color', comment: 'Links and buttons' },
+            hover: { value: '#2244ee', type: 'color' },
+          },
+        },
+        spacing: { small: { value: '8px', type: 'spacing' } },
+      });
+
+      const spacing = await h.call('viewer', 'GET', `/workspaces/${a}/resources/tokens/export/style-dictionary?filter=spacing`);
+      expect(spacing.body).toEqual({ spacing: { small: { value: '8px', type: 'spacing' } } });
+      expect((await h.call('outsider', 'GET', `/workspaces/${a}/resources/tokens/export/style-dictionary`)).status).toBe(404);
+    });
+  });
+
   describe('components', () => {
     it('lists visible components and shares only the workspace\'s own', async () => {
       const a = await team('Comp A');

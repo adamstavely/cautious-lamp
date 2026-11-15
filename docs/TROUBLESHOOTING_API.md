@@ -6,26 +6,27 @@ Common API issues and solutions.
 
 ### 401 Unauthorized
 
-**Cause**: Invalid or missing API key
+**Cause**: No credential, or one the server refuses. The body's `code` says which:
+
+- `UNAUTHORIZED`: missing, mistyped, or not a key or token this server knows
+- `TOKEN_EXPIRED`: the API key's expiry date or the sign-in's 8 hours have passed
+- `TOKEN_REVOKED`: the key was revoked or rotated, or the person signed out, changed their password or was disabled
 
 **Solution**:
 ```bash
-# Verify API key format
-curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:3000/api/v1/workspaces
-
-# Check if key is valid
-curl http://localhost:3000/api/v1/auth/api-keys \
-  -H "Authorization: Bearer YOUR_API_KEY"
+# See the code and message
+curl -s http://localhost:3000/api/v1/auth/me -H "Authorization: Bearer YOUR_API_KEY" | jq '{code, message}'
 ```
+Create a new key (Admin → API keys) or sign in again. See [API_ERROR_CODES.md](./API_ERROR_CODES.md).
 
 ### 403 Forbidden
 
 **Cause**: Insufficient permissions
 
 **Solution**:
-- Check API key scopes
-- Verify resource permissions
-- Contact administrator
+- The message names the missing permission ("Requires admin:users"); an API key only has its scopes
+- Workspace routes need a person's token: API keys can't be workspace members
+- Ask an administrator for the permission or workspace role
 
 ## Request Errors
 
@@ -61,14 +62,12 @@ curl -X POST http://localhost:3000/api/v1/workspaces \
 
 **Solution**:
 ```javascript
-// Check rate limit headers
+// The limit is per route per IP (default 600 a minute). X-RateLimit-Reset is seconds, not a date.
 const response = await fetch(url, options);
-const remaining = response.headers.get('X-RateLimit-Remaining');
-const resetTime = response.headers.get('X-RateLimit-Reset');
-
-if (remaining < 10) {
-  const waitTime = new Date(resetTime) - new Date();
-  await sleep(waitTime);
+if (response.status === 429) {
+  await sleep(Number(response.headers.get('Retry-After')) * 1000);
+} else if (Number(response.headers.get('X-RateLimit-Remaining')) < 10) {
+  await sleep(Number(response.headers.get('X-RateLimit-Reset')) * 1000);
 }
 ```
 
@@ -135,17 +134,19 @@ async function requestWithRetry(url, options, maxRetries = 3) {
 
 ### Missing Data
 
-**Cause**: Pagination or filtering
+**Cause**: The item is in a workspace you can't read, or a filter left it out. Most lists aren't paged: `GET /workspaces` returns every workspace you belong to as an array, with no `?page=`.
 
 **Solution**:
 ```bash
-# Use pagination
-curl "http://localhost:3000/api/v1/workspaces?page=1&limit=20" \
-  -H "Authorization: Bearer YOUR_API_KEY"
+# Count what you can see
+curl -s http://localhost:3000/api/v1/workspaces -H "Authorization: Bearer $TOKEN" | jq length
+```
 
-# Check total count
-curl "http://localhost:3000/api/v1/workspaces" \
-  -H "Authorization: Bearer YOUR_API_KEY" | jq '.pagination.total'
+The paged lists (visual regression runs and results, applications, audit logs, session replay sessions) take `limit` with `page` or `offset` and return a total; see [API_REFERENCE.md](./API_REFERENCE.md#pagination). For example:
+
+```bash
+curl -s "http://localhost:3000/api/v1/visual-regression/projects/PROJECT_ID/runs?page=2&limit=20" \
+  -H "Authorization: Bearer $TOKEN" | jq .pagination
 ```
 
 ## Debugging Tips

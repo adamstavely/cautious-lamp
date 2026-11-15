@@ -35,6 +35,10 @@ const as = (token: keyof typeof USERS | typeof API_KEY | typeof ADMIN_KEY) => ({
 
 /** Stands in for AuthService: the two keys resolve like API_KEYS and ADMIN_API_KEY do, and USERS like signed-in users */
 const auth = {
+  /** As AuthService.authenticate: these stand-ins never report an expired or revoked credential */
+  async authenticate(credential?: string) {
+    return { principal: await this.resolve(credential) };
+  },
   async resolve(credential?: string) {
     const user = credential ? USERS[credential] : undefined;
     if (user) {

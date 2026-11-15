@@ -14,8 +14,8 @@ if (process.env.OTEL_ENABLED !== 'false') {
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
-import { APP_GUARD } from '@nestjs/core';
-import { CustomThrottlerGuard } from './common/rate-limiting/rate-limit.guard';
+import { ApiExceptionFilter } from './common/errors/api-exception.filter';
+import { RATE_LIMIT_HEADERS } from './common/rate-limiting/rate-limit.guard';
 import { globalValidationPipe } from './common/validation/global-validation';
 
 async function bootstrap() {
@@ -26,13 +26,16 @@ async function bootstrap() {
   
   // Unknown body and query properties are refused (common/validation/global-validation.ts)
   app.useGlobalPipes(globalValidationPipe());
+  // Every error body carries a stable `code` (docs/API_ERROR_CODES.md)
+  app.useGlobalFilters(new ApiExceptionFilter());
   
   // Main app on 5174, VitePress on 5175 by default
   const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:5174,http://localhost:5175')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
-  app.enableCors({ origin: corsOrigins, credentials: true });
+  // Browsers may read the rate limit headers (docs/API_REFERENCE.md#rate-limiting)
+  app.enableCors({ origin: corsOrigins, credentials: true, exposedHeaders: RATE_LIMIT_HEADERS });
 
   const port = Number(process.env.PORT) || 3000;
   await app.listen(port);

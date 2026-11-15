@@ -174,6 +174,12 @@ export class WorkspacesController {
     return this.resources.list(principal, id, kind, filter || undefined);
   }
 
+  /** The workspace's tokens as a Style Dictionary source file; `?filter=` is a category */
+  @Get('workspaces/:id/resources/tokens/export/style-dictionary')
+  exportStyleDictionary(@Principal() principal: AuthPrincipal, @Param('id') id: string, @Query('filter') filter?: string) {
+    return this.resources.exportStyleDictionary(principal, id, filter || undefined);
+  }
+
   /** Body: the kind's fields (resource-kinds.ts); validated per kind in the service */
   @Post('workspaces/:id/resources/:kind')
   createResource(@Principal() principal: AuthPrincipal, @Param('id') id: string, @Param('kind') kind: string, @Body() body: unknown) {

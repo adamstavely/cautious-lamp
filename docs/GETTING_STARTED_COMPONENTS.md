@@ -15,31 +15,29 @@ A component is a reusable UI element with:
 
 ### Via API
 
+`POST /components` needs the `component:create` permission. Give a `workspaceId` to put the component in a workspace (you need the editor role there); without one it joins the shared library. `id` is a kebab-case id, unique across the platform. A signed-in person's token works for both; an API key with `component:create` (unscoped keys have it) can add library components only, because keys can't be workspace members.
+
 ```bash
-curl -X POST http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/components \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+curl -X POST http://localhost:3000/api/v1/components \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Button",
-    "description": "Primary button component",
-    "category": "forms",
+    "id": "promo-button",
+    "name": "Promo button",
+    "description": "Button for promotional calls to action",
+    "status": "in-progress",
+    "workspaceId": "WORKSPACE_ID",
     "props": [
-      {
-        "name": "variant",
-        "type": "string",
-        "default": "primary",
-        "options": ["primary", "secondary", "outline"]
-      },
-      {
-        "name": "size",
-        "type": "string",
-        "default": "medium",
-        "options": ["small", "medium", "large"]
-      }
+      { "name": "variant", "type": "string", "default": "primary", "options": ["primary", "secondary", "outline"] },
+      { "name": "size", "type": "string", "default": "medium", "options": ["small", "medium", "large"] }
     ],
-    "code": "<button class=\"btn btn-{{variant}} btn-{{size}}\">{{children}}</button>"
+    "code": {
+      "html": "<button class=\"btn btn-primary\">Shop now</button>"
+    }
   }'
 ```
+
+`status` is `production`, `in-progress`, `planned` or `deprecated`; `code` takes `vue`, `react` and `html`.
 
 ### Via UI
 
@@ -90,30 +88,45 @@ Add implementation code:
 
 ## Managing Components
 
-### List Components
+### List a workspace's components
+
+Returns `{ components, count }`: the workspace's own components, ones other workspaces shared with it, and global ones. `?status=` filters by status. Workspace routes need a person's token.
 
 ```bash
-curl http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/components \
-  -H "Authorization: Bearer YOUR_API_KEY"
+curl "http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/components?status=production" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
-### Get Component Details
+### Share a component with other workspaces
+
+Only for the workspace's own components:
 
 ```bash
-curl http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/components/COMPONENT_ID \
-  -H "Authorization: Bearer YOUR_API_KEY"
-```
-
-### Update Component
-
-```bash
-curl -X PUT http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/components/COMPONENT_ID \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+curl -X PUT http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/components/COMPONENT_ID/sharing \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{
-    "description": "Updated description"
-  }'
+  -d '{ "workspaceIds": ["OTHER_WORKSPACE_ID"] }'
 ```
+
+### Get component details
+
+```bash
+curl http://localhost:3000/api/v1/components/COMPONENT_ID \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Change a component
+
+A component's status, deprecation, dependencies and variants each have a route (`component:edit`, and the editor role in the component's workspace):
+
+```bash
+curl -X PUT http://localhost:3000/api/v1/components/COMPONENT_ID/status \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "production" }'
+```
+
+See [AUTH.md](./AUTH.md#components-and-workspaces) and [API_REFERENCE.md](./API_REFERENCE.md#design-system-components-and-tokens).
 
 ## Component Requests
 

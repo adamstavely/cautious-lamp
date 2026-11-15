@@ -167,36 +167,6 @@ export class TokenRotationService {
   }
 
   /**
-   * Automatically rotate tokens that need rotation
-   */
-  async autoRotateTokens(userId: string = 'system'): Promise<number> {
-    const policy = this.getPolicy();
-    if (!policy.autoRotate) {
-      this.logger.debug('Auto-rotation is disabled');
-      return 0;
-    }
-
-    const tokensNeedingRotation = await this.getTokensNeedingRotation();
-    let rotated = 0;
-
-    for (const { tokenId, reason } of tokensNeedingRotation) {
-      try {
-        await this.rotateToken(tokenId, userId, 'automatic', true);
-        rotated++;
-        this.logger.log(`Auto-rotated token: ${tokenId} - ${reason}`);
-      } catch (error) {
-        this.logger.error(`Failed to auto-rotate token ${tokenId}:`, error);
-      }
-    }
-
-    if (rotated > 0) {
-      this.logger.log(`Auto-rotated ${rotated} tokens`);
-    }
-
-    return rotated;
-  }
-
-  /**
    * Get rotation history for a token
    */
   async getRotationHistory(tokenId: string): Promise<TokenRotationHistory[]> {

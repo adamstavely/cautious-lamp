@@ -144,6 +144,7 @@ const tools = [
   { title: 'Team workspaces', to: '/admin/workspaces', art: 'admin/workspace-management', body: 'Create isolated workspaces for different teams. Manage team-specific components, access control, and collaboration.' },
   { title: 'User management', to: '/admin/users', art: 'admin/user-management', body: 'Manage users and their workspace memberships. Assign users to teams and control access.' },
   { title: 'Role management', to: '/admin/roles', art: 'site/role-management', body: 'Manage user roles and their access to design system features and permissions.' },
+  { title: 'API keys', to: '/admin/api-keys', art: 'site/design-system-api', body: 'Create keys for CI, the CLI and other machine clients, choose what each may do, and revoke them.' },
   { title: 'Feature flags', to: '/admin/feature-flags', art: 'admin/feature-flags', body: 'Control feature availability across your design system. Turn features on or off, target specific users or groups, and manage gradual rollouts.' },
   { title: 'Component and pattern lifecycle management', to: '/admin/content', art: 'admin/content-management', body: 'Create new pattern and component pages, and manage statuses throughout their lifecycle.' },
   { title: 'Performance analysis', to: '/admin/performance', art: 'admin/performance-analysis', body: 'Analyze component bundle sizes and set performance budgets to monitor and prevent regressions.' },

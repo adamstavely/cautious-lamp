@@ -40,6 +40,10 @@ export const API_KEY = 'svc-key';
 
 /** Stands in for AuthService: `tok-<person>` is that person, API_KEY is a default API key */
 const auth = {
+  /** As AuthService.authenticate: these stand-ins never report an expired or revoked credential */
+  async authenticate(credential?: string) {
+    return { principal: await this.resolve(credential) };
+  },
   async resolve(credential?: string) {
     if (credential === API_KEY) {
       return {

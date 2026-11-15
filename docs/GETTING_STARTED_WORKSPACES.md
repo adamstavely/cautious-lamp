@@ -14,11 +14,19 @@ A workspace is a collection of:
 
 ## Creating a Workspace
 
+Workspace routes need a person's access token: roles are per workspace, and API keys can't be workspace members (with a key, these routes answer `404`). Get a token by signing in:
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "you@example.com", "password": "your password"}' | jq -r .accessToken)
+```
+
 ### Via API
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/workspaces \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "My Design System",
@@ -49,14 +57,15 @@ See [GETTING_STARTED_TOKENS.md](./GETTING_STARTED_TOKENS.md) for detailed token 
 
 ### Applications
 
-Register applications that use your design system:
+Register applications that use your design system. Registering needs `admin:governance`, or the admin role in the `workspaceId` you give (the application then belongs to that workspace):
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/applications \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+curl -X POST http://localhost:3000/api/v1/applications/register \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Marketing Site",
+    "workspaceId": "WORKSPACE_ID",
     "repository": "https://github.com/company/marketing-site",
     "version": "1.0.0",
     "designSystemVersion": "2.0.0"
@@ -67,23 +76,38 @@ curl -X POST http://localhost:3000/api/v1/applications \
 
 ### List Workspaces
 
+Returns an array of the workspaces you belong to (every workspace for `admin:users` holders). It isn't paged.
+
 ```bash
 curl http://localhost:3000/api/v1/workspaces \
-  -H "Authorization: Bearer YOUR_API_KEY"
+  -H "Authorization: Bearer $TOKEN"
 ```
+
+### Add a member
+
+```bash
+curl -X POST http://localhost:3000/api/v1/workspaces/WORKSPACE_ID/members \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "colleague@example.com", "role": "editor" }'
+```
+
+Roles are `admin`, `editor` and `viewer`; see [WORKSPACES.md](./WORKSPACES.md).
 
 ### Get Workspace Details
 
 ```bash
 curl http://localhost:3000/api/v1/workspaces/WORKSPACE_ID \
-  -H "Authorization: Bearer YOUR_API_KEY"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### Update Workspace
 
+`PATCH` changes only the fields you send (admin or owner):
+
 ```bash
-curl -X PUT http://localhost:3000/api/v1/workspaces/WORKSPACE_ID \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+curl -X PATCH http://localhost:3000/api/v1/workspaces/WORKSPACE_ID \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Updated Name",

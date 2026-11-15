@@ -107,11 +107,13 @@ env:
 # Handle rate limits
 - name: Check Rate Limit
   run: |
-    response=$(curl -s -H "Authorization: Bearer $API_KEY" $API_URL)
-    remaining=$(echo $response | jq -r '.headers.X-RateLimit-Remaining')
-    if [ "$remaining" -lt 10 ]; then
-      echo "Rate limit low, waiting..."
-      sleep 60
+    # The headers are on every response; X-RateLimit-Reset is seconds until the window ends
+    headers=$(curl -s -D - -o /dev/null -H "Authorization: Bearer $API_KEY" "$API_URL")
+    remaining=$(echo "$headers" | tr -d '\r' | awk -F': ' 'tolower($1)=="x-ratelimit-remaining" {print $2}')
+    reset=$(echo "$headers" | tr -d '\r' | awk -F': ' 'tolower($1)=="x-ratelimit-reset" {print $2}')
+    if [ "${remaining:-0}" -lt 10 ]; then
+      echo "Rate limit low, waiting ${reset:-60} seconds..."
+      sleep "${reset:-60}"
     fi
 ```
 

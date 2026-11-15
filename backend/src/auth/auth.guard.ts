@@ -13,6 +13,32 @@ import {
   passwordChangeRequired,
 } from './principal';
 
+/** Messages for credentials that were once good, by credential and problem */
+const REFUSED = {
+  'api-key': {
+    expired: 'This API key has expired. Create a new one or rotate it.',
+    revoked: 'This API key has been revoked. Use a new key.',
+  },
+  token: {
+    expired: 'Your sign-in has expired. Sign in again.',
+    revoked: 'Your sign-in has ended (signed out, password changed or account disabled). Sign in again.',
+  },
+} as const;
+
+/**
+ * The 401 for a refused credential: TOKEN_EXPIRED or TOKEN_REVOKED for an API
+ * key or sign-in that was once good (docs/API_ERROR_CODES.md), else UNAUTHORIZED
+ */
+export function credentialRefused(check: { problem?: 'expired' | 'revoked'; credential?: 'api-key' | 'token' }): UnauthorizedException {
+  if (!check.problem || !check.credential) return new UnauthorizedException('Sign in or send a valid API key');
+  return new UnauthorizedException({
+    statusCode: 401,
+    code: check.problem === 'expired' ? 'TOKEN_EXPIRED' : 'TOKEN_REVOKED',
+    message: REFUSED[check.credential][check.problem],
+    error: 'Unauthorized',
+  });
+}
+
 /**
  * Global guard (docs/AUTH.md): every HTTP route needs a user token or an API
  * key unless it is `@Public()`, and `@RequirePermission` routes need those
@@ -35,8 +61,9 @@ export class AuthGuard implements CanActivate {
     if (this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, targets)) return true;
 
     const req = context.switchToHttp().getRequest<AuthedRequest>();
-    const principal = await this.auth.resolve(KeyManagementService.extractKey(req.headers?.authorization));
-    if (!principal) throw new UnauthorizedException('Sign in or send a valid API key');
+    const check = await this.auth.authenticate(KeyManagementService.extractKey(req.headers?.authorization));
+    if (!check.principal) throw credentialRefused(check);
+    const principal = check.principal;
     req.principal = principal;
 
     // A temporary password is a restricted session, whatever the user's roles
