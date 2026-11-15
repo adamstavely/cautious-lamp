@@ -1,153 +1,96 @@
 <template>
-  <div 
-    class="rounded-lg shadow-md border p-4 hover:shadow-lg transition-shadow flex flex-col h-full cursor-pointer" 
-    :class="[
-      isDark ? 'bg-slate-900 border-gray-700' : 'bg-white border-gray-200',
-      selected ? (isDark ? 'border-indigo-400 bg-indigo-900/20' : 'border-indigo-500 bg-indigo-50') : ''
-    ]"
-    @click="goToDetail"
-  >
-    <!-- Font Header -->
-    <div class="flex justify-between items-start mb-3">
-      <div>
-        <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">{{ font.name }}</h3>
-        <span class="text-xs text-gray-500 dark:text-gray-400">{{ font.weights?.length || 1 }} styles</span>
+  <article class="flex h-full flex-col gap-3 rounded-card border bg-surface-raised p-4" :class="selected ? 'border-accent-highlight' : 'border-line'">
+    <header class="flex items-start justify-between gap-2">
+      <div class="min-w-0">
+        <h3 class="text-base font-semibold text-ink-strong">
+          <RouterLink :to="detailLink" class="hover:text-accent-text focus-visible:outline focus-visible:outline-2 outline-focus rounded-control" @click="$emit('addToRecentlyViewed', font.name)">{{ font.name }}</RouterLink>
+        </h3>
+        <p class="text-xs text-ink-muted">
+          {{ styleCount }} {{ styleCount === 1 ? 'style' : 'styles' }}<span v-if="font.tags?.length"> · {{ font.tags.join(', ') }}</span>
+        </p>
       </div>
-      <button @click.stop="toggleFavorite(font)" class="tooltip-wrapper p-1 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors flex items-center justify-center" :class="{ 'text-red-500 dark:text-red-400': selected }" :data-tooltip="selected ? 'Remove from favorites' : 'Add to favorites'">
-        <AppIcon name="heart" class="text-xl leading-none" :class="{ 'fill-current': selected }" />
-      </button>
-    </div>
+      <UiButton
+        icon="heart"
+        icon-only
+        size="sm"
+        :variant="selected ? 'primary' : 'ghost'"
+        :label="selected ? `Remove ${font.name} from favourites` : `Add ${font.name} to favourites`"
+        :aria-pressed="selected"
+        @click="toggleFavorite(font)"
+      />
+    </header>
 
-    <!-- Font Preview -->
-    <div 
-      class="my-3 p-4 rounded border text-lg leading-relaxed min-h-[60px] flex items-center" 
-      :class="previewDarkMode ? 'border-gray-700' : 'border-gray-200'"
-      :style="{ fontFamily: `'${font.name}', sans-serif`, fontSize: fontSize + 'px', fontWeight: fontWeight, lineHeight: lineHeight, letterSpacing: letterSpacing + 'px', color: textColor, backgroundColor: bgColor }"
-    >
-      {{ sampleText }}
-    </div>
+    <FontSample
+      :family="font.name"
+      :size="fontSize"
+      :weight="fontWeight"
+      :line-height="lineHeight"
+      :letter-spacing="letterSpacing"
+      :color="textColor"
+      :background="bgColor"
+      class="flex-1"
+    >{{ sampleText }}</FontSample>
 
-    <!-- Font Details -->
-    <div class="mb-3 flex-1">
-      <div class="flex gap-3 mb-2 text-xs">
-        <span class="text-gray-500 dark:text-gray-400">{{ font.supports?.join(', ') || 'Latin' }}</span>
-      </div>
-      
-      <!-- Pairing Suggestions -->
-      <div v-if="font.pairsWellWith?.length" class="mt-2">
-        <span class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Pairs with:</span>
-        <div class="flex gap-1 flex-wrap">
-          <button 
-            v-for="pair in font.pairsWellWith.slice(0, 2)" 
-            :key="pair" 
-            class="px-2 py-0.5 text-xs rounded border transition-colors" 
-            :class="isDark ? 'bg-indigo-900/30 text-indigo-300 border-indigo-700 hover:bg-indigo-900/50' : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'"
-            @click.stop="selectPairing(pair)"
-          >
-            {{ pair }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <p class="text-xs text-ink-muted">Scripts: {{ font.supports?.join(', ') || 'latin' }}</p>
 
-    <!-- Action Buttons -->
-    <div 
-      class="flex justify-end items-center gap-2 pt-3 border-t mt-auto" 
-      :class="isDark ? 'border-gray-700' : 'border-gray-200'"
-      @click.stop
-    >
-      <button 
-        class="tooltip-wrapper h-9 w-9 p-0 border rounded transition-colors font-medium text-sm flex items-center justify-center" 
-        :class="isDark ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'"
-        @click="togglePreview" 
-        data-tooltip="Preview font weights"
-      >
-        <span class="leading-none">Aa</span>
-      </button>
-      <button 
-        @click="copyFont(font)" 
-        class="tooltip-wrapper h-9 w-9 p-0 border rounded transition-colors flex items-center justify-center" 
-        :class="isDark ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'"
-        data-tooltip="Copy font name"
-      >
-        <AppIcon name="copy" class="text-lg leading-none" />
-      </button>
-      <a 
-        :href="font.url" 
-        :download="getCustomFilename(font)" 
-        class="tooltip-wrapper h-9 w-9 p-0 border rounded transition-colors flex items-center justify-center" 
-        :class="isDark ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'"
-        data-tooltip="Download font"
-      >
-        <AppIcon name="download" class="text-lg leading-none" />
-      </a>
-      <button 
-        @click="toggleCompare(font)" 
-        class="tooltip-wrapper h-9 w-9 p-0 border rounded transition-colors flex items-center justify-center" 
-        :class="isDark 
-          ? (isInComparison ? 'border-indigo-400 bg-indigo-900/20 text-indigo-300' : 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700')
-          : (isInComparison ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50')
-        "
-        :data-tooltip="isInComparison ? 'Remove from comparison' : 'Add to comparison'"
-      >
-        <AppIcon :name="isInComparison ? 'circle-minus' : 'git-compare'" class="text-lg leading-none" />
-      </button>
-    </div>
-  </div>
+    <p v-if="pairs.length" class="text-xs text-ink-muted">
+      Pairs with
+      <template v-for="(pair, index) in pairs" :key="pair.name">
+        <UiLink v-if="pair.inLibrary" :to="`/font/${encodeURIComponent(pair.name)}`" class="text-xs">{{ pair.name }}</UiLink>
+        <span v-else>{{ pair.name }}</span><span v-if="index < pairs.length - 1">, </span>
+      </template>
+    </p>
+
+    <footer class="mt-auto flex flex-wrap items-center justify-end gap-1 border-t border-line pt-3">
+      <UiButton icon="eye" icon-only size="sm" variant="ghost" :label="`Preview every weight of ${font.name}`" @click="$emit('togglePreview', font)" />
+      <UiButton icon="copy" icon-only size="sm" variant="ghost" :label="`Copy the ${font.name} stylesheet URL`" @click="copyFont(font)" />
+      <UiButton icon="external-link" icon-only size="sm" variant="ghost" :label="`${font.name} on Google Fonts (opens in a new tab)`" :href="specimenUrl(font)" target="_blank" rel="noopener noreferrer" />
+      <UiButton
+        :icon="isInComparison ? 'circle-minus' : 'git-compare'"
+        icon-only
+        size="sm"
+        :variant="isInComparison ? 'secondary' : 'ghost'"
+        :label="isInComparison ? `Remove ${font.name} from the comparison` : `Add ${font.name} to the comparison`"
+        :aria-pressed="isInComparison"
+        :disabled="!isInComparison && compareFull"
+        @click="toggleCompare(font)"
+      />
+    </footer>
+  </article>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
+import { UiButton, UiLink } from '../ui'
+import FontSample from './FontSample.vue'
+import { specimenUrl } from '../../utils/fontLibrary.js'
 
-const router = useRouter()
-
-const props = defineProps([
-  'font', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing',
-  'textColor', 'bgColor', 'sampleText', 'selected', 'isInComparison', 'previewDarkMode',
-  'copyFont', 'getCustomFilename', 'toggleFavorite', 'toggleCompare', 'getContrastLevel', 'showFontInfo'
-])
-
-const emit = defineEmits(['togglePreview', 'selectPairing', 'quickPair', 'addToRecentlyViewed'])
-
-// Check if dark mode is active - make it reactive
-const isDark = ref(document.documentElement.classList.contains('dark'))
-
-let darkModeObserver = null
-
-onMounted(() => {
-  // Watch for dark mode changes
-  darkModeObserver = new MutationObserver(() => {
-    isDark.value = document.documentElement.classList.contains('dark')
-  })
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  })
+const props = defineProps({
+  font: { type: Object, required: true },
+  fontSize: { type: Number, default: 24 },
+  fontWeight: { type: Number, default: 400 },
+  lineHeight: { type: Number, default: 1.4 },
+  letterSpacing: { type: Number, default: 0 },
+  textColor: { type: String, default: '' },
+  bgColor: { type: String, default: '' },
+  sampleText: { type: String, default: '' },
+  selected: { type: Boolean, default: false },
+  isInComparison: { type: Boolean, default: false },
+  /** The comparison holds at most three families */
+  compareFull: { type: Boolean, default: false },
+  /** Family names in the library, to link pairings that have a page */
+  libraryNames: { type: Array, default: () => [] },
+  copyFont: { type: Function, required: true },
+  toggleFavorite: { type: Function, required: true },
+  toggleCompare: { type: Function, required: true },
 })
 
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect()
-  }
-})
+defineEmits(['togglePreview', 'addToRecentlyViewed'])
 
-function goToDetail() {
-  emit('addToRecentlyViewed', props.font.name)
-  // Use nextTick to ensure the event handler completes before navigation
-  router.push(`/font/${encodeURIComponent(props.font.name)}`)
-}
-
-function togglePreview() {
-  emit('togglePreview', props.font)
-}
-
-function selectPairing(pairingFont) {
-  emit('selectPairing', pairingFont)
-}
-
-function quickPair() {
-  emit('quickPair', props.font)
-}
+const detailLink = computed(() => `/font/${encodeURIComponent(props.font.name)}`)
+const styleCount = computed(() => props.font.weights?.length || 1)
+const pairs = computed(() =>
+  (props.font.pairsWellWith ?? []).slice(0, 2).map((name) => ({ name, inLibrary: props.libraryNames.includes(name) })),
+)
 </script>

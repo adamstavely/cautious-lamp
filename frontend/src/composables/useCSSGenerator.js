@@ -50,11 +50,16 @@ export function generateCSS(fonts, options = {}) {
 
   if (format === 'embed') {
     // Generate Google Fonts embed code
-    const fontNames = fonts.map(f => f.name.replace(/\s+/g, '+')).join('&family=')
-    const weights = fonts.map(f => f.weights?.join(';') || '400').join('&wght=')
+    // One family= per font, each with its own weights (css2 wants them in ascending order)
+    const families = fonts
+      .map(f => {
+        const weights = [...(f.weights?.length ? f.weights : ['400'])].sort((a, b) => Number(a) - Number(b))
+        return `family=${f.name.replace(/\s+/g, '+')}:wght@${weights.join(';')}`
+      })
+      .join('&')
     output += `<link rel="preconnect" href="https://fonts.googleapis.com">\n`
     output += `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n`
-    output += `<link href="https://fonts.googleapis.com/css2?family=${fontNames}:wght@${weights}&display=swap" rel="stylesheet">\n`
+    output += `<link href="https://fonts.googleapis.com/css2?${families}&display=swap" rel="stylesheet">\n`
   }
 
   return output
