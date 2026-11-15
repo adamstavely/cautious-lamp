@@ -74,18 +74,21 @@ An application belongs to at most one workspace (`workspaceId`).
 
 ### Visual regression and session replay projects
 
-Projects and visual-regression runs are stored in Elasticsearch (`design-system-visual-regression-projects`, `design-system-visual-regression-runs`, `design-system-session-replay-projects`); Argos tokens, OpenReplay API keys and webhook secrets are encrypted at rest and never returned. Every project route (`/visual-regression/...`, `/session-replay/...`) and every WebSocket subscription (`subscribe:project`, `subscribe:run`) checks access to the project:
+Projects and visual-regression runs are stored in Elasticsearch (`design-system-visual-regression-projects`, `design-system-visual-regression-runs`, `design-system-session-replay-projects`); Argos tokens, OpenReplay API keys and webhook secrets are encrypted at rest and never returned. Every project route (`/visual-regression/...`, `/session-replay/...`) checks access to the project:
 
-| Project | Read (view, runs, results, sessions, analytics) | Run (trigger runs, approve/reject diffs, baselines) | Manage (change, delete, notifications, webhook secret) |
+| Project | Read (view, runs, results, sessions, analytics, CI setup) | Run (approve/reject diffs, baselines and rollback) | Manage (change, delete, sharing, notifications, webhook secret) |
 |---|---|---|---|
 | In a workspace | viewer | editor | editor; admin when the project backs an application |
 | No workspace | its creator | its creator | its creator |
+| Shared with a person | their share's role (viewer or editor) | editor share | never |
 
 - `admin:users` holders can do everything with every project; `admin:governance` holders with every application-linked project.
 - Callers who can't read a project get `404`; readers without the role get `403`. Lists only show readable projects.
-- WebSocket subscribers are checked again before every broadcast: someone removed from the workspace (or whose credential stopped working) receives nothing more and is removed from the room (AUTH.md describes the events).
+- A visual-regression project can be shared with one active user at a time: `POST .../projects/:id/share` (`{ email, role: "viewer" | "editor" }`), `GET .../shares`, `DELETE .../share/:userId`. Shares are stored on the project and checked like workspace roles.
 - `POST .../projects` takes an optional `workspaceId` (needs the editor role there). Without one, the project belongs to whoever created it (a user or an API key).
-- Not implemented, so they answer `501` instead of pretending: `GET /visual-regression/projects/:id/reports/pdf` (use `.../analytics`), `POST .../baselines/:baselineId/rollback`, and `POST .../share` (share a project by adding people to its workspace).
+- Argos builds are made by uploading screenshots from CI, so nothing here starts a run. `GET .../projects/:id/ci-setup` returns the Playwright config, screenshot helper and `argos upload` command generated from the project's test settings. Runs are read from Argos's API (`/v2/projects/{owner}/{project}/builds`) when they are listed, or at once when CI posts a signed build notification to `POST /visual-regression/webhooks/argos` (Argos sends no webhooks of its own).
+- Baselines are versions: recording one makes it current, `POST .../baselines/:baselineId/rollback` makes an earlier one current again (`GET .../baselines/history` lists the changes), and the CI upload compares against the current baseline's commit (`--reference-commit`).
+- PDF reports of a run are generated in the browser from its results.
 
 ### Design system versions
 

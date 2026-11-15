@@ -12,17 +12,19 @@
     </template>
 
     <template v-else-if="testRun">
-      <PageHero :back="backLink" title="Test run results" spot="admin/visual-regression" size="tool">
+      <PageHero :back="backLink" :title="runTitle" spot="admin/visual-regression" size="tool">
         <template #lead>
           <span class="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <span>Status: <UiChip :tone="runTone(testRun.status)">{{ testRun.status }}</UiChip></span>
+            <span>Status: <UiChip :tone="runTone(testRun)">{{ runStatusLabel(testRun) }}</UiChip></span>
             <span v-if="testRun.commitSha">Commit: <span class="font-code">{{ testRun.commitSha.substring(0, 7) }}</span></span>
             <span v-if="testRun.branch">Branch: {{ testRun.branch }}</span>
             <span v-if="testRun.startedAt">{{ formatDate(testRun.startedAt) }}</span>
           </span>
         </template>
         <template #actions>
-          <UiButton icon="download" @click="exportResults">Export</UiButton>
+          <UiButton v-if="testRun.argosUrl" :href="testRun.argosUrl" trailing-icon="external-link">Open in Argos</UiButton>
+          <UiButton icon="file-text" @click="downloadPdf">Download PDF</UiButton>
+          <UiButton icon="download" @click="exportResults">Export CSV</UiButton>
           <UiButton
             v-if="testRun.status === 'running' || testRun.status === 'pending'"
             :variant="autoRefresh ? 'primary' : 'secondary'"
@@ -38,7 +40,7 @@
       <div v-if="testRun.resultsSummary" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <UiStat label="Total" :value="testRun.resultsSummary.total" />
         <UiStat label="Passed" tone="success" :value="testRun.resultsSummary.passed" />
-        <UiStat label="Failed" tone="danger" :value="testRun.resultsSummary.failed" />
+        <UiStat label="Changed" tone="danger" :value="testRun.resultsSummary.failed" />
         <UiStat label="New" tone="warning" :value="testRun.resultsSummary.new" />
         <UiStat label="Removed" :value="testRun.resultsSummary.removed" />
       </div>
@@ -51,8 +53,8 @@
           <UiSegmented v-model="activeFilter" :options="filters" label="Status" />
         </div>
         <div class="grid gap-4 mt-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
-          <UiInput v-model="dateRange.from" type="date" label="From" :max="dateRange.to || undefined" />
-          <UiInput v-model="dateRange.to" type="date" label="To" :min="dateRange.from || undefined" />
+          <UiInput v-model="dateRange.from" type="date" label="Reviewed from" :max="dateRange.to || undefined" />
+          <UiInput v-model="dateRange.to" type="date" label="Reviewed to" :min="dateRange.from || undefined" />
           <UiSelect v-model="sortBy" :options="sortOptions" label="Sort by" />
           <div>
             <UiButton
@@ -107,7 +109,7 @@
               >
                 <span class="sr-only">Select {{ result.testName }}</span>
               </UiCheckbox>
-              <UiChip :tone="resultTone(result.status)">{{ result.status }}</UiChip>
+              <UiChip :tone="resultTone(result.status)">{{ RESULT_STATUS_LABELS[result.status] ?? result.status }}</UiChip>
               <h3 class="text-lg font-semibold text-ink-strong">{{ result.testName }}</h3>
               <UiChip v-if="selectedIndex === index" tone="accent">Selected</UiChip>
             </div>
@@ -144,8 +146,8 @@
             :height="500"
           />
 
-          <p v-if="result.diffPercentage !== undefined" class="mt-4 text-sm text-ink-secondary">
-            Diff percentage: <span class="font-semibold text-ink">{{ result.diffPercentage }}%</span>
+          <p v-if="result.approvedAt" class="mt-4 text-sm text-ink-secondary">
+            {{ result.approved ? 'Approved' : 'Changes requested' }} {{ formatDate(result.approvedAt) }}
           </p>
         </article>
       </div>
@@ -174,6 +176,13 @@ import {
 } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 import apiClient from '../services/api.js';
+import {
+  ARGOS_STATUS_LABELS,
+  RESULT_STATUS_LABELS,
+  buildRunReportPdf,
+  filterResults,
+  sortResults,
+} from '../utils/visualRegressionReport.js';
 
 const route = useRoute();
 const backLink = computed(() => ({ to: `/tools/visual-regression/${route.params.id}`, label: 'Project' }));
@@ -181,6 +190,7 @@ const { notice, showNotice, clearNotice } = useNotice();
 // The search field, focused by the "/" shortcut
 const searchInput = ref(null);
 const testRun = ref(null);
+const project = ref(null);
 const results = ref([]);
 const loading = ref(false);
 const error = ref(null);
@@ -199,14 +209,18 @@ let previousStatus = null;
 let unmounted = false;
 let loadSeq = 0;
 
-const filters = ['All', 'Passed', 'Failed', 'New', 'Removed'];
+const filters = ['All', 'Passed', 'Changed', 'New', 'Removed'];
+const filterStatus = { All: 'all', Passed: 'passed', Changed: 'failed', New: 'new', Removed: 'removed' };
 
 const sortOptions = [
   { value: 'name', label: 'Name' },
-  { value: 'diffPercentage', label: 'Diff %' },
   { value: 'status', label: 'Status' },
-  { value: 'date', label: 'Date' },
+  { value: 'reviewed', label: 'Review date' },
 ];
+
+const runTitle = computed(() =>
+  testRun.value?.argosBuildNumber !== undefined ? `Build #${testRun.value.argosBuildNumber}` : 'Test run results'
+);
 
 const API_PATH = '/api/v1/visual-regression';
 const PAGE_LIMIT = 100; // the API's maximum page size
@@ -255,6 +269,13 @@ const loadResults = async () => {
       apiClient.get(runPath()),
       fetchAllResults(),
     ]);
+    if (!project.value || project.value.id !== route.params.id) {
+      // Only for the report's heading; the run is enough without it
+      project.value = await apiClient
+        .get(`${API_PATH}/projects/${encodeURIComponent(route.params.id)}`)
+        .then((response) => response.data)
+        .catch(() => null);
+    }
     // Only the latest request wins (e.g. a reload after approving vs. an older
     // auto-refresh, or a run we've navigated away from).
     if (unmounted || seq !== loadSeq) return;
@@ -330,68 +351,18 @@ const rejectDiff = async (resultId) => {
   }
 };
 
-const filteredResults = computed(() => {
-  let filtered = results.value;
-  
-  // Apply status filter
-  if (activeFilter.value !== 'All') {
-    const filterMap = {
-      'Passed': 'passed',
-      'Failed': 'failed',
-      'New': 'new',
-      'Removed': 'removed',
-    };
-    filtered = filtered.filter(r => r.status === filterMap[activeFilter.value]);
-  }
-  
-  // Apply search filter
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.trim().toLowerCase();
-    filtered = filtered.filter(r => (r.testName || '').toLowerCase().includes(query));
-  }
-  
-  // Apply date range filter (if testRun has dates)
-  if (dateRange.value.from || dateRange.value.to) {
-    const fromDate = dateRange.value.from ? new Date(dateRange.value.from) : null;
-    const toDate = dateRange.value.to ? new Date(dateRange.value.to) : null;
-    
-    filtered = filtered.filter(r => {
-      // Use testRun date if available, otherwise skip date filtering
-      if (!testRun.value?.startedAt) return true;
-      const resultDate = new Date(testRun.value.startedAt);
-      if (fromDate && resultDate < fromDate) return false;
-      if (toDate && resultDate > toDate) return false;
-      return true;
-    });
-  }
-  
-  // Apply sorting
-  filtered = [...filtered].sort((a, b) => {
-    let comparison = 0;
-    
-    switch (sortBy.value) {
-      case 'name':
-        comparison = (a.testName || '').localeCompare(b.testName || '');
-        break;
-      case 'diffPercentage':
-        comparison = (a.diffPercentage || 0) - (b.diffPercentage || 0);
-        break;
-      case 'status':
-        comparison = (a.status || '').localeCompare(b.status || '');
-        break;
-      case 'date':
-        // Use testRun date if available
-        if (testRun.value?.startedAt) {
-          comparison = 0; // All results from same run have same date
-        }
-        break;
-    }
-    
-    return sortOrder.value === 'asc' ? comparison : -comparison;
-  });
-  
-  return filtered;
-});
+const filteredResults = computed(() =>
+  sortResults(
+    filterResults(results.value, {
+      status: filterStatus[activeFilter.value] ?? 'all',
+      query: searchQuery.value,
+      reviewedFrom: dateRange.value.from,
+      reviewedTo: dateRange.value.to,
+    }),
+    sortBy.value,
+    sortOrder.value
+  )
+);
 
 // Run a request per selected result, then reload once and report how many succeeded.
 const runBulk = async (eligible, request, verb) => {
@@ -430,8 +401,14 @@ const bulkReject = async () => {
   await runBulk((r) => r.status === 'failed', requestReject, 'rejected');
 };
 
-const runTone = (status) =>
-  ({ pending: 'warning', running: 'info', completed: 'success', failed: 'danger' })[status] ?? 'warning';
+const runStatusLabel = (run) => ARGOS_STATUS_LABELS[run.argosStatus] ?? run.status;
+
+const runTone = (run) => {
+  if (run.status === 'failed' || run.argosStatus === 'rejected') return 'danger';
+  if (run.argosStatus === 'changes-detected') return 'warning';
+  if (run.status === 'completed') return 'success';
+  return run.status === 'running' ? 'info' : 'warning';
+};
 
 const resultTone = (status) =>
   ({ passed: 'success', failed: 'danger', new: 'warning', removed: 'neutral' })[status] ?? 'success';
@@ -468,12 +445,12 @@ const exportResults = () => {
   if (!testRun.value) return;
   try {
     const csvRows = [
-      ['Test Name', 'Status', 'Diff %', 'Approved'].map(csvField).join(','),
+      ['Test name', 'Status', 'Approved', 'Reviewed at'].map(csvField).join(','),
       ...filteredResults.value.map(r => [
         r.testName,
-        r.status,
-        r.diffPercentage ?? 0,
+        RESULT_STATUS_LABELS[r.status] ?? r.status,
         r.approved ? 'Yes' : 'No',
+        r.approvedAt ?? '',
       ].map(csvField).join(','))
     ];
     
@@ -493,6 +470,20 @@ const exportResults = () => {
   } catch (err) {
     showNotice('Failed to export results.', 'error');
     console.error('Export failed:', err);
+  }
+};
+
+// The PDF covers the results shown (the current filters and sort)
+const downloadPdf = () => {
+  if (!testRun.value) return;
+  try {
+    const doc = buildRunReportPdf({ project: project.value, run: testRun.value, results: filteredResults.value });
+    const safeId = String(testRun.value.argosBuildNumber ?? testRun.value.id).replace(/[^a-z0-9_-]/gi, '_');
+    doc.save(`visual-regression-build-${safeId}.pdf`);
+    showNotice('PDF report downloaded.', 'success');
+  } catch (err) {
+    console.error('PDF report failed:', err);
+    showNotice('The PDF report could not be generated.', 'error');
   }
 };
 

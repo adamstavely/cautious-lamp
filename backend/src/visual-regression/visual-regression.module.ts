@@ -6,7 +6,6 @@ import { WorkspaceCoreModule } from '../workspaces/workspace-core.module';
 import { ProjectAccessService } from './project-access';
 import { VisualRegressionController, ArgosWebhookController } from './visual-regression.controller';
 import { VisualRegressionService } from './visual-regression.service';
-import { VisualRegressionGateway } from './visual-regression.gateway';
 import {
   VR_PROJECTS_INDEX,
   VR_PROJECT_PROPERTIES,
@@ -21,7 +20,6 @@ import {
   controllers: [VisualRegressionController, ArgosWebhookController],
   providers: [
     VisualRegressionService,
-    VisualRegressionGateway,
     ProjectAccessService,
     {
       provide: VR_PROJECT_STORE,
@@ -35,15 +33,7 @@ import {
       useFactory: (es: ElasticsearchService, esIndex: EsIndexService) =>
         new EsQueryableStore(es, esIndex, VR_RUNS_INDEX, VR_RUN_PROPERTIES),
     },
-    {
-      provide: 'INIT_GATEWAY',
-      useFactory: (service: VisualRegressionService, gateway: VisualRegressionGateway) => {
-        service.setGateway(gateway);
-        return true;
-      },
-      inject: [VisualRegressionService, VisualRegressionGateway],
-    },
   ],
-  exports: [VisualRegressionService, VisualRegressionGateway, ProjectAccessService],
+  exports: [VisualRegressionService, ProjectAccessService],
 })
 export class VisualRegressionModule {}

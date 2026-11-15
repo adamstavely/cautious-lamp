@@ -1,11 +1,11 @@
 import {
+  BadGatewayException,
   BadRequestException,
   ConflictException,
   Inject,
   Injectable,
   Logger,
   NotFoundException,
-  NotImplementedException,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
@@ -14,16 +14,17 @@ import { ErrorHandler } from '../common/errors/error-handler';
 import { ProjectIntegrationSummary, checkEach } from '../integrations/integration.types';
 import { PaginatedResponse, PaginationParams, createPaginatedResponse } from '../common/pagination/pagination.types';
 import { EncryptionService } from '../common/security/encryption.service';
-import { BuildPayload, CreateProjectDto, NotificationConfig, ScreenshotPayload, WebhookPayload } from '../common/types/common.types';
+import { CreateProjectDto, NotificationConfig, WebhookPayload } from '../common/types/common.types';
 import { DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
 import { QueryableStore } from '../workspaces/queryable-store';
 import { isSafeId } from '../workspaces/workspace-access.service';
-import { ArgosApiClient } from './argos-api.client';
+import { ARGOS_API_URL, ArgosApiClient, ArgosApiError, ArgosBuild, ArgosSnapshotDiff, ArgosVerificationFailed } from './argos-api.client';
+import { CiSetup, buildCiSetup } from './ci-setup';
 import { UpdateProjectDto } from './dto/update-project.dto';
-import { ProjectAccessService, ProjectAction, ProjectCreator } from './project-access';
-import type { VisualRegressionGateway } from './visual-regression.gateway';
+import { ProjectAccessService, ProjectAction, ProjectCreator, ProjectShare } from './project-access';
 import {
   Baseline,
+  BaselineEvent,
   NotificationEntry,
   NotificationType,
   Project,
@@ -40,24 +41,10 @@ export type { Project, TestRun, TestResult } from './visual-regression.types';
 
 const MAX_WRITE_ATTEMPTS = 5;
 
-interface ArgosBuild {
-  id: string;
-  status: string;
-  createdAt: string;
-  updatedAt?: string;
-  branch?: string;
-  commit?: string;
-}
-
-interface ArgosScreenshot {
-  id: string;
-  name: string;
-  status: string;
-  baselineUrl?: string;
-  compareUrl?: string;
-  diffUrl?: string;
-  diffPercentage?: number;
-}
+/** Argos statuses of builds that won't change by themselves */
+const FINISHED_STATUSES = new Set(['accepted', 'rejected', 'no-changes', 'changes-detected', 'error', 'aborted', 'expired']);
+/** Argos is asked for a project's builds at most this often when runs are listed */
+const SYNC_INTERVAL_MS = 15_000;
 
 /** Who owns a new project, and optionally a fixed id (for idempotent creation) */
 export interface CreateProjectOptions {
@@ -79,13 +66,14 @@ function newProjectId(): string {
   return `vr-project-${crypto.randomBytes(9).toString('hex')}`;
 }
 
-function newRunId(): string {
-  return `vr-run-${crypto.randomBytes(9).toString('hex')}`;
+/** The run of an Argos build in a project: the same build always gets the same run */
+function runIdFor(projectId: string, argosBuildId: string): string {
+  return `vr-run-${crypto.createHash('sha256').update(`${projectId}\n${argosBuildId}`).digest('hex').slice(0, 24)}`;
 }
 
-/** The project without its Argos token, webhook secret, baselines and notification settings */
+/** The project without its Argos token, webhook secret, baselines, shares and notification settings */
 function toProject(doc: ProjectDoc): Project {
-  const { argosToken, webhookSecret, baselines, notifications, ...project } = doc;
+  const { argosToken, webhookSecret, baselines, baselineHistory, notifications, sharedWith, ...project } = doc;
   return { ...project, hasWebhookSecret: !!webhookSecret };
 }
 
@@ -100,15 +88,16 @@ function toRun(doc: TestRunDoc): TestRun {
 /**
  * Visual regression projects (backed by Argos) and their runs, stored in
  * Elasticsearch (`design-system-visual-regression-projects` and `-runs`).
- * Access is per project (see ProjectAccessService): controllers and the
- * gateway call `authorize*` before anything else.
+ * Access is per project (see ProjectAccessService): controllers call
+ * `authorize*` before anything else.
  */
 @Injectable()
 export class VisualRegressionService {
   private readonly logger = new Logger(VisualRegressionService.name);
   /** Recent webhook deliveries, for diagnostics only (not persisted) */
   private webhookEvents: Array<{ projectId: string; event: string; payload: WebhookPayload; timestamp: Date }> = [];
-  private gateway?: VisualRegressionGateway; // Injected via setter to avoid circular dependency
+  /** When each project's builds were last read from Argos */
+  private readonly lastSync = new Map<string, number>();
 
   constructor(
     @Inject(VR_PROJECT_STORE) private readonly projects: QueryableStore<ProjectDoc>,
@@ -162,14 +151,18 @@ export class VisualRegressionService {
   // ---------- Projects ----------
 
   /**
-   * The Argos URL to call. Projects store the client's token, so the server only
+   * The Argos API URL to call. Projects store the client's token, so the server only
    * calls Argos hosts it is configured for (ARGOS_ALLOWED_BASE_URLS, comma-separated).
+   * Projects saved with Argos's app URL (before the v2 API was used) mean the hosted API.
    */
   private resolveArgosBaseUrl(...candidates: Array<string | undefined>): string {
-    const normalize = (url: string) => url.trim().replace(/\/+$/, '');
-    const defaultUrl = normalize(process.env.ARGOS_BASE_URL || 'https://app.argos-ci.com');
+    const normalize = (url: string) => {
+      const trimmed = url.trim().replace(/\/+$/, '');
+      return trimmed === 'https://app.argos-ci.com' || trimmed === 'https://api.argos-ci.com' ? ARGOS_API_URL : trimmed;
+    };
+    const defaultUrl = normalize(process.env.ARGOS_BASE_URL || ARGOS_API_URL);
     const allowed = new Set(
-      (process.env.ARGOS_ALLOWED_BASE_URLS || `${defaultUrl},https://api.argos-ci.com`)
+      (process.env.ARGOS_ALLOWED_BASE_URLS || defaultUrl)
         .split(',')
         .map(normalize)
         .filter(Boolean),
@@ -196,6 +189,19 @@ export class VisualRegressionService {
     return new ArgosApiClient(this.resolveArgosBaseUrl(project.argosBaseUrl), token);
   }
 
+  /**
+   * Checks the token can read the Argos project before anything is saved: a
+   * refused token or unknown project is the caller's mistake (400), Argos
+   * being down or failing is not (502).
+   */
+  private async assertArgosAccess(client: ArgosApiClient, argosProjectId: string): Promise<void> {
+    const result = await client.verify(argosProjectId);
+    if (result.ok) return;
+    const { reason, message } = result as ArgosVerificationFailed;
+    if (reason === 'unreachable' || reason === 'error') throw new BadGatewayException(message);
+    throw new BadRequestException(message);
+  }
+
   /** For GET /integrations/status: projects with an Argos token, and with `check`, which can't reach Argos */
   async integrationSummary(check: boolean): Promise<ProjectIntegrationSummary> {
     const projects = await this.projects.list();
@@ -203,14 +209,14 @@ export class VisualRegressionService {
     const summary: ProjectIntegrationSummary = { projects: projects.length, withCredentials: withToken.length };
     if (check) {
       const failures = await checkEach(withToken, async (project) => {
-        if (!(await this.clientFor(project).verifyConnection())) throw new Error('Argos did not answer');
+        if (!(await this.clientFor(project).verifyConnection(project.argosProjectId))) throw new Error('Argos did not answer');
       });
       summary.unreachable = failures.map(({ item, error }) => ({ projectId: item.id, name: item.name, error }));
     }
     return summary;
   }
 
-  /** Projects that accept Argos webhooks (have a webhook secret) */
+  /** Projects that accept build notifications (have a webhook secret) */
   async webhookReadyCount(): Promise<number> {
     return (await this.projects.list()).filter((p) => p.webhookSecret).length;
   }
@@ -218,19 +224,8 @@ export class VisualRegressionService {
   async createProject(teamId: string, dto: CreateProjectDto, options: CreateProjectOptions): Promise<Project> {
     if (options.id && (await this.projects.get(options.id))) throw new ProjectExistsError(options.id);
 
-    // Verify the Argos connection and project before saving anything
     const argosBaseUrl = this.resolveArgosBaseUrl(dto.argosBaseUrl);
-    const argosClient = new ArgosApiClient(argosBaseUrl, dto.argosToken);
-    try {
-      const isValid = await argosClient.verifyConnection();
-      if (!isValid) {
-        throw new BadRequestException('Unable to connect to Argos instance. Please check your base URL and token.');
-      }
-      await argosClient.getProject(dto.argosProjectId);
-    } catch (error) {
-      if (error instanceof BadRequestException) throw error;
-      throw ErrorHandler.handleError(error, 'VisualRegressionService.createProject');
-    }
+    await this.assertArgosAccess(new ArgosApiClient(argosBaseUrl, dto.argosToken), dto.argosProjectId);
 
     const now = new Date().toISOString();
     const doc: ProjectDoc = {
@@ -281,18 +276,12 @@ export class VisualRegressionService {
   async updateProject(id: string, dto: UpdateProjectDto): Promise<Project> {
     const current = await this.requireProject(id);
 
-    // If updating Argos connection details, verify them
+    // New Argos connection details are checked before they are saved
     if (dto.argosProjectId || dto.argosToken || dto.argosBaseUrl) {
       const argosBaseUrl = this.resolveArgosBaseUrl(dto.argosBaseUrl, current.argosBaseUrl);
       const argosToken = dto.argosToken || this.decryptToken(current.argosToken);
       if (argosToken) {
-        const argosClient = new ArgosApiClient(argosBaseUrl, argosToken);
-        try {
-          await argosClient.verifyConnection();
-          await argosClient.getProject(dto.argosProjectId || current.argosProjectId);
-        } catch (error) {
-          throw ErrorHandler.handleError(error, 'VisualRegressionService.updateProject');
-        }
+        await this.assertArgosAccess(new ArgosApiClient(argosBaseUrl, argosToken), dto.argosProjectId || current.argosProjectId);
       }
     }
 
@@ -319,129 +308,136 @@ export class VisualRegressionService {
     if (!isSafeId(id) || !(await this.projects.delete(id))) {
       throw new NotFoundException(`Project with ID ${id} not found`);
     }
+    this.lastSync.delete(id);
     for (const run of await this.runs.findAny([{ projectId: id }])) {
       await this.runs.delete(run.id);
     }
   }
 
-  // ---------- Runs ----------
-
-  async triggerTest(projectId: string, userId: string, dto: { branch?: string; commitSha?: string }): Promise<TestRun> {
+  /**
+   * The commands the project's CI runs to create Argos builds, from its
+   * settings and current baseline. `publicBaseUrl` is this API's origin, for
+   * the build notification command.
+   */
+  async getCiSetup(projectId: string, publicBaseUrl: string): Promise<CiSetup> {
     const project = await this.requireProject(projectId);
-    const argosClient = this.clientFor(project);
-    const branch = dto.branch || project.argosBranch;
-    const commitSha = dto.commitSha || `commit-${Date.now()}`;
+    const baseline = project.currentBaselineId ? project.baselines?.find((b) => b.id === project.currentBaselineId) : undefined;
+    return buildCiSetup({
+      argosProjectId: project.argosProjectId,
+      argosBranch: project.argosBranch,
+      config: project.config ?? {},
+      baseline: baseline ? { name: baseline.name, commitSha: baseline.commitSha } : undefined,
+      notifyUrl: project.webhookSecret ? `${publicBaseUrl}/api/v1/visual-regression/webhooks/argos` : undefined,
+    });
+  }
 
-    let run: TestRunDoc;
-    try {
-      const argosBuild = await argosClient.createBuild(project.argosProjectId, {
-        branch,
-        commit: commitSha,
-        name: `Test run triggered by ${userId}`,
-      });
+  // ---------- Runs (Argos builds) ----------
+
+  private mapArgosStatusToRunStatus(argosStatus: string): RunStatus {
+    if (argosStatus === 'pending') return 'pending';
+    if (argosStatus === 'progress') return 'running';
+    if (argosStatus === 'error' || argosStatus === 'aborted' || argosStatus === 'expired') return 'failed';
+    return FINISHED_STATUSES.has(argosStatus) ? 'completed' : 'pending';
+  }
+
+  private mapArgosDiffStatus(status: ArgosSnapshotDiff['status']): TestResult['status'] {
+    if (status === 'unchanged' || status === 'ignored') return 'passed';
+    if (status === 'added') return 'new';
+    if (status === 'removed') return 'removed';
+    // changed, failure (a failing test's screenshot), retryFailure, pending
+    return 'failed';
+  }
+
+  /**
+   * Reads the project's latest builds from Argos into runs. Throttled per
+   * project unless `force` (a build notification from CI).
+   */
+  private async syncRunsFromArgos(project: ProjectDoc, force = false): Promise<void> {
+    const last = this.lastSync.get(project.id) ?? 0;
+    if (!force && Date.now() - last < SYNC_INTERVAL_MS) return;
+    this.lastSync.set(project.id, Date.now());
+    const argosClient = this.clientFor(project);
+    const { results: builds } = await argosClient.listBuilds(project.argosProjectId, { perPage: 30 });
+    for (const build of builds) {
+      await this.upsertBuild(project, argosClient, build);
+    }
+  }
+
+  /** Creates or updates the run for an Argos build; fetches its diffs once it has finished or changed status */
+  private async upsertBuild(project: ProjectDoc, argosClient: ArgosApiClient, build: ArgosBuild): Promise<TestRunDoc | null> {
+    const [existing] = await this.runs.findAny([{ projectId: project.id, argosBuildId: build.id }]);
+    let runId = existing?.id;
+    if (!existing) {
+      // Several projects can follow one Argos project, so the id names both
+      runId = runIdFor(project.id, build.id);
+      const startTime = build.metadata?.testReport?.stats?.startTime;
       const now = new Date().toISOString();
-      run = {
-        id: newRunId(),
-        projectId,
-        argosBuildId: argosBuild.id,
-        status: this.mapArgosStatusToRunStatus(argosBuild.status),
-        branch,
-        commitSha,
-        triggeredBy: userId,
-        startedAt: new Date(argosBuild.createdAt).toISOString(),
+      const run: TestRunDoc = {
+        id: runId,
+        projectId: project.id,
+        argosBuildId: build.id,
+        argosBuildNumber: build.number,
+        argosStatus: build.status,
+        argosUrl: build.url,
+        status: this.mapArgosStatusToRunStatus(build.status),
+        branch: build.head?.branch,
+        commitSha: build.head?.sha,
+        triggeredBy: 'argos',
+        startedAt: startTime && !Number.isNaN(Date.parse(startTime)) ? new Date(startTime).toISOString() : now,
+        durationMs: build.metadata?.testReport?.stats?.duration,
         results: [],
         resultIds: [],
         createdAt: now,
       };
-      await this.runs.create(stripUndefined(run));
-    } catch (error) {
-      throw ErrorHandler.handleError(error, 'VisualRegressionService.triggerTest');
-    }
-
-    this.gateway?.emitRunStatusUpdate(run.id, run.status, toRun(run) as unknown as Record<string, unknown>);
-    this.pollBuildStatus(run.id, project, argosClient);
-    return toRun(run);
-  }
-
-  private mapArgosStatusToRunStatus(argosStatus: string): RunStatus {
-    const statusMap: Record<string, RunStatus> = {
-      pending: 'pending',
-      progress: 'running',
-      stable: 'completed',
-      error: 'failed',
-    };
-    return statusMap[argosStatus] || 'pending';
-  }
-
-  private pollBuildStatus(runId: string, project: ProjectDoc, argosClient: ArgosApiClient): void {
-    const pollInterval = 5000;
-    const maxAttempts = 120; // 10 minutes
-    let attempts = 0;
-
-    const poll = async () => {
       try {
-        const run = (await this.runs.get(runId))?.doc;
-        if (!run?.argosBuildId) return;
-        if (attempts >= maxAttempts) {
-          await this.mutateRun(runId, (doc) => {
-            doc.status = 'failed';
-            doc.completedAt = new Date().toISOString();
-          });
-          return;
-        }
-        const build = await argosClient.getBuild(project.argosProjectId, run.argosBuildId);
-        if (build.status === 'stable' || build.status === 'error') {
-          const updated = await this.applyBuild(runId, project, argosClient, build, new Date().toISOString());
-          this.gateway?.emitRunCompleted(runId, updated?.results ?? []);
-        } else {
-          attempts++;
-          const updated = await this.mutateRun(runId, (doc) => {
-            doc.status = this.mapArgosStatusToRunStatus(build.status);
-          });
-          this.gateway?.emitRunStatusUpdate(runId, updated.status, toRun(updated) as unknown as Record<string, unknown>);
-          setTimeout(poll, pollInterval);
-        }
+        await this.runs.create(stripUndefined(run));
       } catch (error) {
-        this.logger.error(`Failed to poll build status for run ${runId}: ${(error as Error).message}`);
-        attempts++;
-        if (attempts < maxAttempts) setTimeout(poll, pollInterval);
+        if (!(error instanceof DuplicateDocumentError)) throw error;
       }
-    };
-    setTimeout(poll, pollInterval);
+    }
+    const unchanged = existing && existing.argosStatus === build.status && existing.results.length > 0;
+    if (FINISHED_STATUSES.has(build.status) && !unchanged) {
+      return this.applyBuild(runId!, project, argosClient, build);
+    }
+    if (existing && existing.argosStatus !== build.status) {
+      return this.mutateRun(existing.id, (doc) => {
+        doc.argosStatus = build.status;
+        doc.status = this.mapArgosStatusToRunStatus(build.status);
+      });
+    }
+    return existing ?? null;
   }
 
-  /** Fetches a finished build's screenshots and saves them as the run's results */
-  private async applyBuild(
-    runId: string,
-    project: ProjectDoc,
-    argosClient: ArgosApiClient,
-    build: ArgosBuild,
-    completedAt: string,
-  ): Promise<TestRunDoc | null> {
+  /** Saves a finished build's status and screenshot diffs as the run's results */
+  private async applyBuild(runId: string, project: ProjectDoc, argosClient: ArgosApiClient, build: ArgosBuild): Promise<TestRunDoc | null> {
     let results: TestResult[] | null = null;
     try {
-      const screenshots = (await argosClient.getBuildScreenshots(project.argosProjectId, build.id)) as unknown as ArgosScreenshot[];
-      results = screenshots.map((screenshot) => ({
-        id: `result-${screenshot.id}-${runId}`,
+      const diffs = await argosClient.listBuildDiffs(project.argosProjectId, build.number);
+      results = diffs.map((diff) => ({
+        id: `result-${diff.id}-${runId}`,
         runId,
-        argosScreenshotId: screenshot.id,
-        testName: screenshot.name,
-        status: this.mapArgosScreenshotStatus(screenshot.status),
-        baselineImageUrl: screenshot.baselineUrl ? argosClient.getImageUrl(screenshot.baselineUrl) : undefined,
-        currentImageUrl: screenshot.compareUrl ? argosClient.getImageUrl(screenshot.compareUrl) : undefined,
-        diffImageUrl: screenshot.diffUrl ? argosClient.getImageUrl(screenshot.diffUrl) : undefined,
-        diffPercentage: screenshot.diffPercentage,
-        approved: screenshot.status === 'stable',
+        argosScreenshotId: diff.id,
+        testName: diff.name,
+        status: this.mapArgosDiffStatus(diff.status),
+        baselineImageUrl: diff.base?.url ? argosClient.getImageUrl(diff.base.url) : undefined,
+        currentImageUrl: diff.head?.url ? argosClient.getImageUrl(diff.head.url) : undefined,
+        diffImageUrl: diff.url ? argosClient.getImageUrl(diff.url) : undefined,
+        approved: diff.status === 'unchanged' || diff.status === 'ignored' || build.status === 'accepted',
       }));
     } catch (error) {
       this.logger.error(`Failed to fetch build results for run ${runId}: ${(error as Error).message}`);
     }
     try {
       return await this.mutateRun(runId, (doc) => {
+        const wasFinished = doc.argosStatus !== undefined && FINISHED_STATUSES.has(doc.argosStatus);
+        doc.argosStatus = build.status;
+        doc.argosBuildNumber = build.number;
+        doc.argosUrl = build.url;
         doc.status = this.mapArgosStatusToRunStatus(build.status);
-        doc.completedAt = completedAt;
+        if (!wasFinished || !doc.completedAt) doc.completedAt = new Date().toISOString();
+        if (build.metadata?.testReport?.stats?.duration !== undefined) doc.durationMs = build.metadata.testReport.stats.duration;
         if (results) {
-          // Keep approvals recorded here for results Argos still reports
+          // Keep reviews recorded here for results Argos still reports
           const previous = new Map(doc.results.map((r) => [r.id, r]));
           doc.results = results.map((r) => {
             const old = previous.get(r.id);
@@ -463,21 +459,16 @@ export class VisualRegressionService {
     }
   }
 
-  private mapArgosScreenshotStatus(argosStatus: string): TestResult['status'] {
-    const statusMap: Record<string, TestResult['status']> = {
-      stable: 'passed',
-      failure: 'failed',
-      new: 'new',
-      removed: 'removed',
-    };
-    return statusMap[argosStatus] || 'failed';
-  }
-
   async getTestRun(runId: string): Promise<TestRun> {
     return toRun(await this.requireRun(runId));
   }
 
-  async getTestRuns(projectId: string, pagination?: PaginationParams): Promise<PaginatedResponse<TestRun>> {
+  /** The project's runs, newest first, optionally started within [from, to] (ISO dates; `to` includes that whole day) */
+  async getTestRuns(
+    projectId: string,
+    pagination?: PaginationParams,
+    range: { from?: string; to?: string } = {},
+  ): Promise<PaginatedResponse<TestRun>> {
     const project = await this.requireProject(projectId);
 
     if (project.argosToken) {
@@ -489,54 +480,13 @@ export class VisualRegressionService {
       }
     }
 
+    const inRange = dateRangeFilter(range);
     const allRuns = (await this.runs.findAny([{ projectId }]))
+      .filter((r) => inRange(r.startedAt))
       .map(toRun)
       .sort((a, b) => (b.startedAt ?? '').localeCompare(a.startedAt ?? ''));
     const page = pagination ?? { page: 1, limit: 20, offset: 0 };
     return createPaginatedResponse(allRuns.slice(page.offset, page.offset + page.limit), allRuns.length, page);
-  }
-
-  private async syncRunsFromArgos(project: ProjectDoc): Promise<void> {
-    const argosClient = this.clientFor(project);
-    const argosBuilds = (await argosClient.getBuilds(project.argosProjectId, {
-      branch: project.argosBranch,
-      limit: 50,
-    })) as ArgosBuild[];
-
-    for (const build of argosBuilds) {
-      const done = build.status === 'stable' || build.status === 'error';
-      const [existing] = await this.runs.findAny([{ projectId: project.id, argosBuildId: build.id }]);
-      let runId = existing?.id;
-      if (!existing) {
-        runId = `vr-run-${build.id}`;
-        const run: TestRunDoc = {
-          id: runId,
-          projectId: project.id,
-          argosBuildId: build.id,
-          status: this.mapArgosStatusToRunStatus(build.status),
-          branch: build.branch,
-          commitSha: build.commit,
-          triggeredBy: 'argos-sync',
-          startedAt: new Date(build.createdAt).toISOString(),
-          results: [],
-          resultIds: [],
-          createdAt: new Date().toISOString(),
-        };
-        try {
-          await this.runs.create(stripUndefined(run));
-        } catch (error) {
-          if (!(error instanceof DuplicateDocumentError)) throw error;
-        }
-      }
-      if (done) {
-        const completedAt = new Date(build.updatedAt ?? build.createdAt).toISOString();
-        await this.applyBuild(runId!, project, argosClient, build, completedAt);
-      } else if (existing) {
-        await this.mutateRun(existing.id, (doc) => {
-          doc.status = this.mapArgosStatusToRunStatus(build.status);
-        });
-      }
-    }
   }
 
   // ---------- Results ----------
@@ -545,12 +495,12 @@ export class VisualRegressionService {
     let run = await this.requireRun(runId);
     const project = await this.requireProject(run.projectId);
 
-    // Refresh completed runs from Argos; fall back to stored results if that fails
-    if (project.argosToken && run.argosBuildId && run.status === 'completed') {
+    // Pick up a review or status change in Argos; fall back to stored results if that fails
+    if (project.argosToken && run.argosBuildNumber !== undefined) {
       try {
         const argosClient = this.clientFor(project);
-        const build = await argosClient.getBuild(project.argosProjectId, run.argosBuildId);
-        run = (await this.applyBuild(runId, project, argosClient, build, run.completedAt ?? new Date().toISOString())) ?? run;
+        const build = await argosClient.getBuild(project.argosProjectId, run.argosBuildNumber);
+        run = (await this.upsertBuild(project, argosClient, build)) ?? run;
       } catch (error) {
         this.logger.warn(`Failed to refresh results from Argos: ${(error as Error).message}`);
       }
@@ -569,25 +519,34 @@ export class VisualRegressionService {
     await this.reviewDiff(resultId, userId, false);
   }
 
+  /** Records the review in Argos (per screenshot, on the build), then here */
   private async reviewDiff(resultId: string, userId: string, approve: boolean): Promise<void> {
     const run = await this.findRunByResult(resultId);
     const result = run?.results.find((r) => r.id === resultId);
     if (!run || !result) throw new NotFoundException(`Test result with ID ${resultId} not found`);
     const project = await this.findProject(run.projectId);
     if (!project || !project.argosToken) throw new BadRequestException('Project or Argos token not found');
-    if (!run.argosBuildId) throw new BadRequestException('This run has no Argos build');
-
-    // Results made before argosScreenshotId was stored: result-{screenshotId}-{runId}
-    const screenshotId = result.argosScreenshotId ?? result.id.slice('result-'.length, result.id.length - run.id.length - 1);
-    if (!screenshotId) throw new BadRequestException('Invalid result ID format');
+    if (run.argosBuildNumber === undefined || !result.argosScreenshotId) {
+      throw new BadRequestException('This result has no Argos build to review. Refresh the run from Argos and try again.');
+    }
 
     const argosClient = this.clientFor(project);
     try {
-      if (approve) await argosClient.approveScreenshot(project.argosProjectId, run.argosBuildId, screenshotId);
-      else await argosClient.rejectScreenshot(project.argosProjectId, run.argosBuildId, screenshotId);
+      await argosClient.reviewSnapshots(
+        project.argosProjectId,
+        run.argosBuildNumber,
+        [{ id: result.argosScreenshotId, conclusion: approve ? 'APPROVE' : 'REQUEST_CHANGES' }],
+        `${approve ? 'Approved' : 'Changes requested on'} ${result.testName} from the design system workbench.`,
+      );
     } catch (error) {
-      if (approve) throw new BadRequestException(`Failed to approve in Argos: ${(error as Error).message}`);
-      throw ErrorHandler.handleError(error, 'VisualRegressionService.rejectDiff');
+      const status = error instanceof ArgosApiError ? error.status : undefined;
+      if (status === 401 || status === 403) {
+        throw new BadRequestException(
+          'Argos refused the review. Reviews need a personal access token with review access to the project; a project token can only read builds.',
+        );
+      }
+      if (status === 404) throw new BadRequestException('Argos no longer has this build or screenshot.');
+      throw new BadGatewayException(`Argos did not record the review: ${(error as Error).message}`);
     }
 
     await this.mutateRun(run.id, (doc) => {
@@ -597,117 +556,77 @@ export class VisualRegressionService {
       stored.approvedBy = userId;
       stored.approvedAt = new Date().toISOString();
     });
-    this.gateway?.emitResultUpdate(run.id, resultId, { approved: approve, approvedBy: userId });
   }
 
-  // ---------- Webhooks ----------
+  // ---------- Build notifications ----------
 
-  async handleWebhook(
-    payload: WebhookPayload,
-    signature?: string,
-    event?: string,
-    rawBody?: Buffer,
-  ): Promise<{ message: string; processed: boolean }> {
-    const argosProjectId = payload.projectId || (payload.project as { id?: string } | undefined)?.id;
+  /**
+   * Argos has no outgoing webhooks, so builds are read from its API. CI can
+   * post here after `argos upload` (body `{ projectId: "owner/project",
+   * buildNumber? }`, signed with the project's secret) to have the build read
+   * at once instead of on the next listing.
+   */
+  async handleWebhook(payload: WebhookPayload, signature?: string, rawBody?: Buffer): Promise<{ message: string; processed: boolean }> {
+    const argosProjectId = payload?.projectId;
     if (!argosProjectId || typeof argosProjectId !== 'string') {
-      this.logger.warn('Webhook received without project identifier');
-      return { message: 'Webhook received but project not identified', processed: false };
+      this.logger.warn('Build notification received without an Argos project');
+      return { message: 'Notification received but project not identified', processed: false };
     }
 
     // Every project linked to that Argos project whose secret matches the signature
-    const candidates = (await this.projects.findAny([{ argosProjectId }])).filter((p) => p.webhookSecret);
+    const linked = await this.projects.findAny([{ argosProjectId }]);
+    const candidates = linked.filter((p) => p.webhookSecret);
     if (candidates.length === 0) {
-      const any = await this.projects.findAny([{ argosProjectId }]);
-      if (any.length === 0) {
-        this.logger.warn(`Webhook received for unknown project: ${argosProjectId}`);
+      if (linked.length === 0) {
+        this.logger.warn(`Build notification for unknown Argos project: ${argosProjectId}`);
         return { message: 'Project not found', processed: false };
       }
-      // Without a secret anyone could post fake build results
-      throw new UnauthorizedException('Webhooks are not configured for this project');
+      // Without a secret anyone could make us call Argos on the project's behalf
+      throw new UnauthorizedException('Build notifications are not configured for this project');
     }
-    const project = signature
-      ? candidates.find((p) => this.verifyWebhookSignature(rawBody ?? payload, signature, this.decryptToken(p.webhookSecret)!))
-      : undefined;
-    if (!project) {
-      this.logger.warn(`Invalid or missing webhook signature for Argos project ${argosProjectId}`);
+    const projects = signature
+      ? candidates.filter((p) => this.verifyWebhookSignature(rawBody ?? payload, signature, this.decryptToken(p.webhookSecret)!))
+      : [];
+    if (projects.length === 0) {
+      this.logger.warn(`Invalid or missing signature on a build notification for ${argosProjectId}`);
       throw new UnauthorizedException('Invalid webhook signature');
     }
 
-    this.webhookEvents.push({ projectId: project.id, event: event || 'unknown', payload, timestamp: new Date() });
-    if (this.webhookEvents.length > 500) this.webhookEvents.splice(0, this.webhookEvents.length - 500);
-
-    try {
-      await this.processWebhookEvent(project, event || 'build.updated', payload);
-      return { message: 'Webhook processed successfully', processed: true };
-    } catch (error) {
-      const handledError = ErrorHandler.handleError(error);
-      this.logger.error(`Failed to process webhook for project ${project.id}: ${(error as Error).message}`);
-      return { message: `Webhook received but processing failed: ${handledError.message}`, processed: false };
+    const buildNumber = Number(payload.buildNumber);
+    let processed = true;
+    for (const project of projects) {
+      this.webhookEvents.push({ projectId: project.id, event: 'build', payload, timestamp: new Date() });
+      if (this.webhookEvents.length > 500) this.webhookEvents.splice(0, this.webhookEvents.length - 500);
+      try {
+        if (!project.argosToken) continue;
+        if (Number.isInteger(buildNumber) && buildNumber > 0) {
+          const argosClient = this.clientFor(project);
+          await this.upsertBuild(project, argosClient, await argosClient.getBuild(project.argosProjectId, buildNumber));
+        } else {
+          await this.syncRunsFromArgos(project, true);
+        }
+      } catch (error) {
+        processed = false;
+        this.logger.error(`Failed to read Argos builds for project ${project.id}: ${(error as Error).message}`);
+      }
     }
+    return processed
+      ? { message: 'Builds read from Argos', processed: true }
+      : { message: 'Notification accepted but Argos could not be read', processed: false };
   }
 
   private verifyWebhookSignature(payload: Buffer | WebhookPayload, signature: string, secret: string): boolean {
-    // HMAC SHA256 over the exact bytes Argos sent; re-serialized JSON can differ
+    // HMAC SHA256 over the exact bytes sent; re-serialized JSON can differ
     const body = Buffer.isBuffer(payload) ? payload : Buffer.from(JSON.stringify(payload));
     const expected = Buffer.from(`sha256=${crypto.createHmac('sha256', secret).update(body).digest('hex')}`);
     const actual = Buffer.from(signature);
     return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
   }
 
-  private async processWebhookEvent(project: ProjectDoc, event: string, payload: WebhookPayload): Promise<void> {
-    switch (event) {
-      case 'build.completed':
-      case 'build.updated':
-      case 'build.stable':
-      case 'build.error':
-        await this.handleBuildUpdate(project, payload);
-        break;
-      case 'screenshot.approved':
-      case 'screenshot.rejected':
-        await this.handleScreenshotUpdate(project, event, payload);
-        break;
-      default:
-        this.logger.log(`Unhandled webhook event: ${event}`);
-    }
-  }
-
-  private async handleBuildUpdate(project: ProjectDoc, payload: BuildPayload | WebhookPayload): Promise<void> {
-    if (!project.argosToken) return;
-    const buildId = payload.buildId || (payload.build as { id?: string } | undefined)?.id;
-    if (!buildId || typeof buildId !== 'string') return;
-
-    const [existing] = await this.runs.findAny([{ projectId: project.id, argosBuildId: buildId }]);
-    if (!existing) return;
-    const argosClient = this.clientFor(project);
-    const build = await argosClient.getBuild(project.argosProjectId, buildId);
-    if (build.status === 'stable' || build.status === 'error') {
-      await this.applyBuild(existing.id, project, argosClient, build, new Date().toISOString());
-    } else {
-      await this.mutateRun(existing.id, (doc) => {
-        doc.status = this.mapArgosStatusToRunStatus(build.status);
-      });
-    }
-  }
-
-  private async handleScreenshotUpdate(project: ProjectDoc, event: string, payload: ScreenshotPayload | WebhookPayload): Promise<void> {
-    const screenshotId = payload.screenshotId || (payload.screenshot as { id?: string } | undefined)?.id;
-    const buildId = payload.buildId || (payload.build as { id?: string } | undefined)?.id;
-    if (!screenshotId || !buildId || typeof buildId !== 'string') return;
-
-    const [run] = await this.runs.findAny([{ projectId: project.id, argosBuildId: buildId }]);
-    if (!run) return;
-    await this.mutateRun(run.id, (doc) => {
-      const result = doc.results.find((r) => r.argosScreenshotId === screenshotId || r.id === `result-${screenshotId}-${doc.id}`);
-      if (!result) return;
-      result.approved = event === 'screenshot.approved';
-      result.approvedAt = new Date().toISOString();
-    });
-  }
-
   /**
-   * Sets the secret Argos signs this project's webhooks with (stored
-   * encrypted). Without `secret` a random one is generated. The secret is
-   * returned only here, so it can be pasted into Argos.
+   * Sets the secret CI signs build notifications with (stored encrypted).
+   * Without `secret` a random one is generated. The secret is returned only
+   * here, so it can be put in the CI's secrets.
    */
   async setWebhookSecret(projectId: string, secret?: string): Promise<{ secret: string }> {
     if (secret !== undefined && (typeof secret !== 'string' || !WEBHOOK_SECRET_PATTERN.test(secret))) {
@@ -721,7 +640,7 @@ export class VisualRegressionService {
     return { secret: value };
   }
 
-  /** Removes the webhook secret; webhooks for the project are refused again */
+  /** Removes the webhook secret; build notifications for the project are refused again */
   async clearWebhookSecret(projectId: string): Promise<void> {
     await this.mutateProject(projectId, (doc) => {
       delete doc.webhookSecret;
@@ -736,107 +655,153 @@ export class VisualRegressionService {
       .map(({ event, payload, timestamp }) => ({ event, payload, timestamp }));
   }
 
-  // Set WebSocket gateway (called from module to avoid circular dependency)
-  setGateway(gateway: VisualRegressionGateway) {
-    this.gateway = gateway;
-  }
+  // ---------- Analytics ----------
 
-  // ---------- Analytics & reporting ----------
-
+  /**
+   * Runs started within [startDate, endDate]: passed (no changes, or changes
+   * accepted), with changes awaiting review, and failed (rejected, or the
+   * build errored). The average duration is the test suite's, when Argos has it.
+   */
   async getProjectAnalytics(projectId: string, startDate?: string, endDate?: string): Promise<{
     totalRuns: number;
     passedRuns: number;
+    changedRuns: number;
     failedRuns: number;
     averageDuration: number;
-    trends: Array<{ date: string; passed: number; failed: number }>;
+    trends: Array<{ date: string; passed: number; changed: number; failed: number }>;
   }> {
     await this.requireProject(projectId);
-    const runs = (await this.runs.findAny([{ projectId }])).filter((r) => {
-      if (!startDate && !endDate) return true;
-      if (!r.startedAt) return false;
-      const runDate = new Date(r.startedAt);
-      if (startDate && runDate < new Date(startDate)) return false;
-      if (endDate && runDate > new Date(endDate)) return false;
-      return true;
-    });
+    const inRange = dateRangeFilter({ from: startDate, to: endDate });
+    const runs = (await this.runs.findAny([{ projectId }])).filter((r) => inRange(r.startedAt));
 
-    const trendsMap: Record<string, { date: string; passed: number; failed: number }> = {};
+    const outcome = (run: TestRunDoc): 'passed' | 'changed' | 'failed' | null => {
+      if (run.status === 'failed' || run.argosStatus === 'rejected') return 'failed';
+      if (run.argosStatus === 'changes-detected') return 'changed';
+      if (run.argosStatus === 'no-changes' || run.argosStatus === 'accepted') return 'passed';
+      return null;
+    };
+
+    const trendsMap: Record<string, { date: string; passed: number; changed: number; failed: number }> = {};
     for (const run of runs) {
       if (!run.startedAt) continue;
       const date = run.startedAt.split('T')[0];
-      trendsMap[date] ??= { date, passed: 0, failed: 0 };
-      if (run.status === 'completed') trendsMap[date].passed++;
-      else if (run.status === 'failed') trendsMap[date].failed++;
+      trendsMap[date] ??= { date, passed: 0, changed: 0, failed: 0 };
+      const result = outcome(run);
+      if (result) trendsMap[date][result]++;
     }
 
-    const durations = runs
-      .filter((r) => r.startedAt && r.completedAt)
-      .map((r) => new Date(r.completedAt!).getTime() - new Date(r.startedAt!).getTime());
+    const durations = runs.map((r) => r.durationMs).filter((d): d is number => typeof d === 'number' && d >= 0);
     const avgDuration = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
 
     return {
       totalRuns: runs.length,
-      passedRuns: runs.filter((r) => r.status === 'completed').length,
-      failedRuns: runs.filter((r) => r.status === 'failed').length,
+      passedRuns: runs.filter((r) => outcome(r) === 'passed').length,
+      changedRuns: runs.filter((r) => outcome(r) === 'changed').length,
+      failedRuns: runs.filter((r) => outcome(r) === 'failed').length,
       averageDuration: Math.round(avgDuration),
       trends: Object.values(trendsMap).sort((a, b) => a.date.localeCompare(b.date)),
     };
   }
 
-  /** Not implemented: there is no PDF renderer. Use the analytics endpoint for the data. */
-  async generatePDFReport(projectId: string): Promise<never> {
-    await this.requireProject(projectId);
-    throw new NotImplementedException(
-      'PDF reports are not implemented. GET /api/v1/visual-regression/projects/:id/analytics returns the same data as JSON.',
-    );
-  }
-
   // ---------- Sharing ----------
 
-  /** Projects are shared through their workspace: who can see one follows workspace membership */
+  /** Who the project belongs to: its workspace, application and creator */
   async getProjectTeams(projectId: string): Promise<{ workspaceId: string | null; applicationId?: string; createdBy: ProjectCreator }> {
     const { workspaceId, applicationId, createdBy } = await this.requireProject(projectId);
     return { workspaceId, ...(applicationId ? { applicationId } : {}), createdBy };
   }
 
+  /** People given access to this project alone */
+  async getShares(projectId: string): Promise<ProjectShare[]> {
+    return (await this.requireProject(projectId)).sharedWith ?? [];
+  }
+
+  /** Gives a person the viewer or editor role on the project (replacing an earlier share) */
+  async shareProject(
+    projectId: string,
+    user: { userId: string; email: string; name: string },
+    role: ProjectShare['role'],
+    grantedBy: { id: string; name: string },
+  ): Promise<ProjectShare> {
+    const share: ProjectShare = { ...user, role, grantedBy, grantedAt: new Date().toISOString() };
+    await this.mutateProject(projectId, (doc) => {
+      doc.sharedWith = [...(doc.sharedWith ?? []).filter((s) => s.userId !== user.userId), share];
+    });
+    return share;
+  }
+
+  async unshareProject(projectId: string, userId: string): Promise<void> {
+    await this.mutateProject(projectId, (doc) => {
+      const before = doc.sharedWith ?? [];
+      if (!before.some((s) => s.userId === userId)) throw new NotFoundException('This project is not shared with that person');
+      doc.sharedWith = before.filter((s) => s.userId !== userId);
+    });
+  }
+
   // ---------- Baselines ----------
 
-  async createBaseline(projectId: string, dto: { name: string; description?: string; runId: string }, createdBy: string): Promise<Baseline> {
+  /** Records a run as a new baseline version and makes it current */
+  async createBaseline(projectId: string, dto: { name: string; description?: string; runId: string }, createdBy: string): Promise<Baseline & { current: boolean }> {
     if (!dto?.name || typeof dto.name !== 'string') throw new BadRequestException('name is required');
     const run = isSafeId(dto.runId) ? (await this.runs.get(dto.runId))?.doc : undefined;
     if (!run || run.projectId !== projectId) throw new NotFoundException(`Test run with ID ${dto.runId} not found`);
+    if (!run.commitSha) throw new BadRequestException('That run has no commit, so builds could not be compared against it');
 
+    const now = new Date().toISOString();
     const baseline: Baseline = stripUndefined({
       id: `baseline-${crypto.randomBytes(9).toString('hex')}`,
       projectId,
       name: dto.name,
       description: dto.description,
       runId: dto.runId,
-      createdAt: new Date().toISOString(),
+      argosBuildNumber: run.argosBuildNumber,
+      commitSha: run.commitSha,
+      branch: run.branch,
+      createdAt: now,
       createdBy,
     });
     await this.mutateProject(projectId, (doc) => {
       doc.baselines = [...(doc.baselines ?? []), baseline];
+      doc.baselineHistory = [
+        ...(doc.baselineHistory ?? []),
+        stripUndefined({ baselineId: baseline.id, action: 'created' as const, previousBaselineId: doc.currentBaselineId, at: now, by: createdBy }),
+      ];
+      doc.currentBaselineId = baseline.id;
     });
-    return baseline;
+    return { ...baseline, current: true };
   }
 
-  async getBaselines(projectId: string): Promise<Baseline[]> {
-    return (await this.requireProject(projectId)).baselines ?? [];
+  /** Every baseline version, newest first, marking the current one */
+  async getBaselines(projectId: string): Promise<Array<Baseline & { current: boolean }>> {
+    const project = await this.requireProject(projectId);
+    return [...(project.baselines ?? [])]
+      .reverse()
+      .map((b) => ({ ...b, current: b.id === project.currentBaselineId }));
+  }
+
+  /** How the current baseline changed, newest first */
+  async getBaselineHistory(projectId: string): Promise<BaselineEvent[]> {
+    return [...((await this.requireProject(projectId)).baselineHistory ?? [])].reverse();
   }
 
   /**
-   * Not implemented: restoring baseline images needs an Argos API this client
-   * doesn't have. Baselines are records of which run was accepted, nothing more.
+   * Makes an earlier baseline current again. Later versions are kept, so a
+   * rollback can itself be undone. From then on the CI upload compares against
+   * that baseline's commit (see getCiSetup).
    */
-  async rollbackBaseline(projectId: string, baselineId: string): Promise<never> {
-    const project = await this.requireProject(projectId);
-    if (!(project.baselines ?? []).some((b) => b.id === baselineId)) {
-      throw new NotFoundException(`Baseline with ID ${baselineId} not found`);
-    }
-    throw new NotImplementedException(
-      'Baseline rollback is not implemented: Argos baselines can only be changed by approving builds in Argos.',
-    );
+  async rollbackBaseline(projectId: string, baselineId: string, by: string): Promise<Baseline & { current: boolean }> {
+    let restored: Baseline | undefined;
+    await this.mutateProject(projectId, (doc) => {
+      restored = (doc.baselines ?? []).find((b) => b.id === baselineId);
+      if (!restored) throw new NotFoundException(`Baseline with ID ${baselineId} not found`);
+      if (doc.currentBaselineId === baselineId) throw new ConflictException('That baseline is already the current one');
+      doc.baselineHistory = [
+        ...(doc.baselineHistory ?? []),
+        stripUndefined({ baselineId, action: 'rolled-back' as const, previousBaselineId: doc.currentBaselineId, at: new Date().toISOString(), by }),
+      ];
+      doc.currentBaselineId = baselineId;
+    });
+    return { ...restored!, current: true };
   }
 
   // ---------- Notifications ----------
@@ -923,4 +888,18 @@ export class VisualRegressionService {
 
 function stripUndefined<T extends object>(value: T): T {
   return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as T;
+}
+
+/** Whether an ISO timestamp falls within [from, to]; `to` as a bare date includes that whole day */
+function dateRangeFilter(range: { from?: string; to?: string }): (iso?: string) => boolean {
+  const from = range.from ? Date.parse(range.from) : NaN;
+  const toDay = range.to && /^\d{4}-\d{2}-\d{2}$/.test(range.to);
+  const to = range.to ? Date.parse(toDay ? `${range.to}T23:59:59.999Z` : range.to) : NaN;
+  if (Number.isNaN(from) && Number.isNaN(to)) return () => true;
+  return (iso) => {
+    if (!iso) return false;
+    const t = Date.parse(iso);
+    if (Number.isNaN(t)) return false;
+    return (Number.isNaN(from) || t >= from) && (Number.isNaN(to) || t <= to);
+  };
 }

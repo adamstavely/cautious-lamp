@@ -18,14 +18,34 @@ export interface ProjectConfig {
   };
 }
 
+/**
+ * A run accepted as what later builds are compared against. Baselines are
+ * versions: recording one makes it current and keeps the earlier ones, and a
+ * rollback makes an earlier one current again. The current baseline's commit
+ * is the `--reference-commit` of the project's CI upload (see ci-setup.ts).
+ */
 export interface Baseline {
   id: string;
   projectId: string;
   name: string;
   description?: string;
   runId: string;
+  /** From the run's Argos build */
+  argosBuildNumber?: number;
+  commitSha?: string;
+  branch?: string;
   createdAt: string;
   createdBy: string;
+}
+
+/** Changes of the current baseline, oldest first */
+export interface BaselineEvent {
+  baselineId: string;
+  action: 'created' | 'rolled-back';
+  /** The baseline that was current before */
+  previousBaselineId?: string;
+  at: string;
+  by: string;
 }
 
 export type NotificationType = 'email' | 'slack' | 'teams' | 'webhook';
@@ -49,8 +69,10 @@ export interface Project extends ProjectOwnership {
   config: ProjectConfig;
   createdAt: string;
   updatedAt: string;
-  /** Whether Argos webhooks can be accepted (the secret itself is never returned) */
+  /** Whether build notifications can be accepted (the secret itself is never returned) */
   hasWebhookSecret?: boolean;
+  /** The baseline builds are compared against; none means the project's branch */
+  currentBaselineId?: string;
 }
 
 /** As stored in design-system-visual-regression-projects */
@@ -60,21 +82,34 @@ export interface ProjectDoc extends Project {
   /** Encrypted at rest; signs Argos webhooks */
   webhookSecret?: string;
   baselines: Baseline[];
+  baselineHistory?: BaselineEvent[];
   notifications: NotificationEntry[];
 }
 
 export type RunStatus = 'pending' | 'running' | 'completed' | 'failed';
 
+/**
+ * One Argos build. Runs aren't started here: CI uploads screenshots to Argos
+ * and the build is read back (on listing runs, or when CI posts a build notification).
+ */
 export interface TestRun {
   id: string;
   projectId: string;
   argosBuildId?: string;
+  argosBuildNumber?: number;
+  /** Argos's own status, e.g. changes-detected, accepted, rejected */
+  argosStatus?: string;
+  /** The build's page in Argos */
+  argosUrl?: string;
   status: RunStatus;
   commitSha?: string;
   branch?: string;
   triggeredBy: string;
+  /** When the test suite started (from the build's test report), else when the build was first seen here */
   startedAt?: string;
   completedAt?: string;
+  /** The test suite's duration, from the build's test report */
+  durationMs?: number;
   resultsSummary?: {
     total: number;
     passed: number;
@@ -94,7 +129,6 @@ export interface TestResult {
   diffImageUrl?: string;
   baselineImageUrl?: string;
   currentImageUrl?: string;
-  diffPercentage?: number;
   approved: boolean;
   approvedBy?: string;
   approvedAt?: string;

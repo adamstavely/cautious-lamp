@@ -20,9 +20,8 @@
         size="tool"
       >
         <template #actions>
-          <UiButton variant="primary" icon="play" :disabled="testRunning" @click="triggerTest">
-            {{ testRunning ? 'Running…' : 'Run tests' }}
-          </UiButton>
+          <UiButton icon="refresh-cw" :loading="refreshing" @click="refreshRuns">Check Argos for builds</UiButton>
+          <UiButton variant="primary" icon="terminal" @click="activeTab = 'ci'">Set up CI</UiButton>
         </template>
       </PageHero>
 
@@ -31,21 +30,59 @@
       <UiTabs v-model="activeTab" :tabs="tabs" label="Project views">
         <template #overview>
           <div class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <UiStat label="Total runs" :value="totalRunCount" />
-              <UiStat label="Last run"><span class="text-lg">{{ lastRun ? formatDate(lastRun.startedAt) : 'Never' }}</span></UiStat>
-              <UiStat label="Status"><span class="text-lg">{{ lastRun?.status || 'No runs' }}</span></UiStat>
-            </div>
+            <UiPanel title="Period" heading-tag="h3" description="Limits the analytics below and the test runs list to builds started in these days.">
+              <div class="grid gap-4 sm:grid-cols-3 items-end">
+                <UiInput v-model="range.from" type="date" label="From" :max="range.to || undefined" />
+                <UiInput v-model="range.to" type="date" label="To" :min="range.from || undefined" />
+                <div>
+                  <UiButton v-if="range.from || range.to" variant="ghost" @click="range = { from: '', to: '' }">Clear dates</UiButton>
+                </div>
+              </div>
+            </UiPanel>
+
+            <UiSpinner v-if="analyticsLoading && !analytics" label="Loading analytics…" class="py-8" />
+            <InlineNotice v-else-if="analyticsNotice" :notice="analyticsNotice" @dismiss="clearAnalyticsNotice" />
+            <template v-else-if="analytics">
+              <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <UiStat label="Builds" :value="analytics.totalRuns" />
+                <UiStat label="Passed" tone="success" :value="analytics.passedRuns" hint="No changes, or changes accepted" />
+                <UiStat label="To review" tone="warning" :value="analytics.changedRuns" hint="Changes detected" />
+                <UiStat label="Failed" tone="danger" :value="analytics.failedRuns" hint="Rejected, or the build failed" />
+                <UiStat label="Average test time" :value="analytics.averageDuration ? formatDuration(analytics.averageDuration) : '—'" />
+              </div>
+
+              <UiPanel v-if="analytics.trends.length" title="By day" heading-tag="h3" flush>
+                <UiTable caption="Builds per day by outcome">
+                  <thead>
+                    <tr>
+                      <th scope="col">Day</th>
+                      <th scope="col">Passed</th>
+                      <th scope="col">To review</th>
+                      <th scope="col">Failed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="day in analytics.trends" :key="day.date">
+                      <td class="whitespace-nowrap">{{ formatDay(day.date) }}</td>
+                      <td class="text-success">{{ day.passed }}</td>
+                      <td class="text-warning">{{ day.changed }}</td>
+                      <td class="text-danger">{{ day.failed }}</td>
+                    </tr>
+                  </tbody>
+                </UiTable>
+              </UiPanel>
+              <p v-else class="text-sm text-ink-secondary">No builds in this period.</p>
+            </template>
 
             <UiPanel title="Project configuration" heading-tag="h3">
               <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <dt class="font-medium mb-1 text-ink-secondary">Argos project ID</dt>
+                  <dt class="font-medium mb-1 text-ink-secondary">Argos project</dt>
                   <dd class="font-code text-ink">{{ project.argosProjectId }}</dd>
                 </div>
                 <div>
-                  <dt class="font-medium mb-1 text-ink-secondary">Branch</dt>
-                  <dd class="text-ink">{{ project.argosBranch }}</dd>
+                  <dt class="font-medium mb-1 text-ink-secondary">Compared against</dt>
+                  <dd class="text-ink">{{ project.currentBaselineId ? 'The current baseline' : `Latest approved build on ${project.argosBranch}` }}</dd>
                 </div>
                 <div>
                   <dt class="font-medium mb-1 text-ink-secondary">Team</dt>
@@ -53,7 +90,7 @@
                 </div>
                 <div>
                   <dt class="font-medium mb-1 text-ink-secondary">Created</dt>
-                  <dd class="text-ink">{{ formatDate(project.createdAt) }}</dd>
+                  <dd class="text-ink">{{ formatDateTime(project.createdAt) }}</dd>
                 </div>
               </dl>
             </UiPanel>
@@ -61,49 +98,63 @@
         </template>
 
         <template #runs>
+          <p v-if="range.from || range.to" class="mb-4 text-sm text-ink-secondary" role="status">
+            Showing builds started {{ rangeText }}.
+            <UiButton size="sm" variant="ghost" @click="range = { from: '', to: '' }">Show all</UiButton>
+          </p>
           <UiEmptyState
             v-if="testRuns.length === 0"
-            title="No test runs yet"
-            body="Run your first visual regression test to get started"
+            :title="range.from || range.to ? 'No builds in this period' : 'No builds yet'"
+            body="Builds appear here once your CI uploads screenshots to Argos."
             spot="admin/visual-regression"
           >
             <template #actions>
-              <UiButton variant="primary" icon="play" :disabled="testRunning" @click="triggerTest">Run tests</UiButton>
+              <UiButton variant="primary" icon="terminal" @click="activeTab = 'ci'">Set up CI</UiButton>
             </template>
           </UiEmptyState>
 
           <UiPanel v-else flush>
-            <UiTable caption="Test runs, newest first">
+            <UiTable caption="Builds, newest first">
               <thead>
                 <tr>
+                  <th scope="col">Build</th>
                   <th scope="col">Status</th>
+                  <th scope="col">Branch</th>
                   <th scope="col">Commit</th>
                   <th scope="col">Started</th>
                   <th scope="col">Total</th>
-                  <th scope="col">Passed</th>
-                  <th scope="col">Failed</th>
+                  <th scope="col">Changed</th>
                   <th scope="col">New</th>
                   <th scope="col"><span class="sr-only">Results</span></th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="run in testRuns" :key="run.id">
-                  <td><UiChip :tone="statusTone(run.status)">{{ run.status }}</UiChip></td>
-                  <td class="font-code">{{ run.commitSha ? run.commitSha.substring(0, 7) : 'N/A' }}</td>
-                  <td class="whitespace-nowrap">{{ formatDate(run.startedAt) }}</td>
+                  <td>{{ run.argosBuildNumber !== undefined ? `#${run.argosBuildNumber}` : '—' }}</td>
+                  <td><UiChip :tone="runTone(run)">{{ runStatusLabel(run) }}</UiChip></td>
+                  <td>{{ run.branch || '—' }}</td>
+                  <td class="font-code">{{ run.commitSha ? run.commitSha.substring(0, 7) : '—' }}</td>
+                  <td class="whitespace-nowrap">{{ formatDateTime(run.startedAt) }}</td>
                   <td>{{ run.resultsSummary?.total ?? '—' }}</td>
-                  <td class="text-success">{{ run.resultsSummary?.passed ?? '—' }}</td>
                   <td class="text-danger">{{ run.resultsSummary?.failed ?? '—' }}</td>
                   <td class="text-warning">{{ run.resultsSummary?.new ?? '—' }}</td>
                   <td class="text-right">
                     <UiLink :to="`/tools/visual-regression/${route.params.id}/runs/${run.id}`" arrow>
-                      View results<span class="sr-only"> for the run started {{ formatDate(run.startedAt) }}</span>
+                      View results<span class="sr-only"> for build {{ run.argosBuildNumber ?? run.id }}</span>
                     </UiLink>
                   </td>
                 </tr>
               </tbody>
             </UiTable>
           </UiPanel>
+        </template>
+
+        <template #baselines>
+          <VrBaselines :project-path="projectPath()" :runs="allRuns" @changed="onBaselineChanged" />
+        </template>
+
+        <template #ci>
+          <VrCiSetup :project-path="projectPath()" :version="setupVersion" />
         </template>
 
         <template #settings>
@@ -114,16 +165,16 @@
                 <UiTextarea v-model="projectForm.description" label="Description" :rows="3" />
                 <UiInput
                   v-model="projectForm.argosBranch"
-                  label="Argos branch"
+                  label="Base branch"
                   placeholder="develop"
-                  hint="The branch new test runs compare against (defaults to develop)"
+                  hint="Builds are compared against the latest approved build on this branch until a baseline is recorded."
                 />
                 <UiInput
                   v-model="projectForm.argosBaseUrl"
                   type="url"
-                  label="Argos URL"
-                  placeholder="https://app.argos-ci.com"
-                  hint="Self-hosted Argos URLs must be on the server's allow-list."
+                  label="Argos API URL"
+                  placeholder="https://api.argos-ci.com/v2"
+                  hint="Only for a self-hosted Argos. Must be on the server's allow-list."
                 />
                 <InlineNotice :notice="settingsNotice" @dismiss="clearSettingsNotice" />
               </form>
@@ -137,24 +188,28 @@
               </template>
             </UiPanel>
 
+            <VrTestSettings :project="project" :project-path="projectPath()" @saved="onTestSettingsSaved" />
+
+            <VrSharing :project="project" :project-path="projectPath()" />
+
             <UiPanel
-              title="Argos webhooks"
+              title="Build notifications"
               heading-tag="h3"
-              description="Argos sends build results here. Webhooks are accepted only when they are signed with this project's secret."
+              description="Argos doesn't send webhooks, so new builds are read from its API when runs are listed. With a secret, your CI can report each upload so it shows up at once (the command is under Set up CI)."
             >
               <dl class="grid gap-4 sm:grid-cols-2 mb-5 text-sm">
                 <div>
                   <dt class="font-medium mb-1 text-ink-secondary">Status</dt>
-                  <dd class="text-ink">{{ project.hasWebhookSecret ? 'Secret set: webhooks are accepted' : 'No secret: webhooks are refused' }}</dd>
+                  <dd class="text-ink">{{ project.hasWebhookSecret ? 'Secret set: notifications are accepted' : 'No secret: notifications are refused' }}</dd>
                 </div>
                 <div>
-                  <dt class="font-medium mb-1 text-ink-secondary">Webhook URL</dt>
+                  <dt class="font-medium mb-1 text-ink-secondary">Notification URL</dt>
                   <dd class="font-code break-all text-ink">{{ webhookUrl }}</dd>
                 </div>
                 <div class="sm:col-span-2">
                   <dt class="font-medium mb-1 text-ink-secondary">Signature</dt>
                   <dd class="text-ink">
-                    <UiCode>x-argos-signature: sha256=&lt;HMAC-SHA256 of the request body&gt;</UiCode>, with the event name in <UiCode>x-argos-event</UiCode>
+                    <UiCode>x-argos-signature: sha256=&lt;HMAC-SHA256 of the request body&gt;</UiCode>
                   </dd>
                 </div>
               </dl>
@@ -164,7 +219,7 @@
                   <UiInput
                     id="webhook-secret"
                     :model-value="revealedSecret"
-                    label="Copy this secret into Argos now. It won't be shown again."
+                    label="Store this as ARGOS_WEBHOOK_SECRET in your CI now. It won't be shown again."
                     readonly
                     mono
                     @focus="$event.target.select()"
@@ -195,6 +250,11 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import InlineNotice from '../components/InlineNotice.vue';
+import VrBaselines from '../components/visual-regression/VrBaselines.vue';
+import VrCiSetup from '../components/visual-regression/VrCiSetup.vue';
+import VrSharing from '../components/visual-regression/VrSharing.vue';
+import VrTestSettings from '../components/visual-regression/VrTestSettings.vue';
+import { VR_API_PATH, formatDateTime, vrErrorMessage } from '../components/visual-regression/vrApi.js';
 import {
   PageHero,
   PageShell,
@@ -213,22 +273,34 @@ import {
 } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 import apiClient from '../services/api.js';
+import { ARGOS_STATUS_LABELS } from '../utils/visualRegressionReport.js';
 
 const route = useRoute();
 const { notice, showNotice, clearNotice } = useNotice();
 const { notice: settingsNotice, showNotice: showSettingsNotice, clearNotice: clearSettingsNotice } = useNotice();
+const { notice: analyticsNotice, showNotice: showAnalyticsNotice, clearNotice: clearAnalyticsNotice } = useNotice();
 const project = ref(null);
 const loading = ref(false);
 const loadError = ref('');
 const activeTab = ref('overview');
+// Runs in the chosen period (the Test runs tab) and every run (to pick a baseline)
 const testRuns = ref([]);
+const allRuns = ref([]);
 const totalRunCount = ref(0);
-const testRunning = ref(false);
+const refreshing = ref(false);
 const saving = ref(false);
+const analytics = ref(null);
+const analyticsLoading = ref(false);
+/** Days (YYYY-MM-DD) limiting the analytics and the runs list */
+const range = ref({ from: '', to: '' });
+/** Bumped when the CI setup's inputs change */
+const setupVersion = ref(0);
 
 const tabs = computed(() => [
   { value: 'overview', label: 'Overview' },
   { value: 'runs', label: 'Test runs', count: totalRunCount.value },
+  { value: 'baselines', label: 'Baselines' },
+  { value: 'ci', label: 'CI setup' },
   { value: 'settings', label: 'Settings' },
 ]);
 
@@ -244,32 +316,31 @@ const projectForm = ref({
   argosBaseUrl: '',
 });
 
-const API_PATH = '/api/v1/visual-regression';
-const POLL_INTERVAL_MS = 3000;
-const MAX_POLLS = 40; // stop polling after ~2 minutes
+// Argos sends nothing, so the page asks for runs again: often while a build
+// is still being compared, now and then otherwise to pick up new uploads.
+const ACTIVE_POLL_MS = 10_000;
+const IDLE_POLL_MS = 60_000;
 let pollTimer = null;
-let pollCount = 0;
 let unmounted = false;
 
-// The server's message (e.g. the 400 for an Argos URL that isn't allow-listed)
-// or a readable fallback.
-const apiErrorMessage = (error, fallback) => {
-  const status = error?.response?.status;
-  if (status === 401) return 'You are not signed in, or your API key was rejected.';
-  const message = error?.response?.data?.message;
-  if (Array.isArray(message)) return message.join(' ');
-  if (typeof message === 'string' && message) return message;
-  if (!error?.response) return 'Could not reach the server. Check your connection and try again.';
-  return fallback;
-};
-
-const projectPath = () => `${API_PATH}/projects/${encodeURIComponent(route.params.id)}`;
+const projectPath = () => `${VR_API_PATH}/projects/${encodeURIComponent(route.params.id)}`;
 
 const formFromProject = (p) => ({
   name: p.name,
   description: p.description || '',
   argosBranch: p.argosBranch || 'develop',
   argosBaseUrl: p.argosBaseUrl || '',
+});
+
+const rangeParams = () => ({
+  ...(range.value.from ? { from: range.value.from } : {}),
+  ...(range.value.to ? { to: range.value.to } : {}),
+});
+
+const rangeText = computed(() => {
+  const { from, to } = range.value;
+  if (from && to) return `from ${formatDay(from)} to ${formatDay(to)}`;
+  return from ? `on or after ${formatDay(from)}` : `on or before ${formatDay(to)}`;
 });
 
 const loadProject = async () => {
@@ -279,79 +350,117 @@ const loadProject = async () => {
     const response = await apiClient.get(projectPath());
     project.value = response.data;
     projectForm.value = formFromProject(project.value);
-    await loadTestRuns();
+    await Promise.all([loadTestRuns(), loadAnalytics()]);
+    schedulePoll();
   } catch (error) {
     console.error('Failed to load project:', error);
     project.value = null;
     loadError.value = error?.response?.status === 404
       ? 'This project does not exist or was deleted.'
-      : apiErrorMessage(error, 'Failed to load project.');
+      : vrErrorMessage(error, 'Failed to load project.');
   } finally {
     loading.value = false;
   }
 };
 
+const listRuns = async (params) => {
+  const body = (await apiClient.get(`${projectPath()}/runs`, { params: { page: 1, limit: 100, ...params } })).data;
+  // The endpoint is paginated: { data, pagination }
+  const runs = Array.isArray(body) ? body : body?.data ?? [];
+  return { runs, total: body?.pagination?.total ?? runs.length };
+};
+
 const loadTestRuns = async () => {
   try {
-    const response = await apiClient.get(`${projectPath()}/runs`, { params: { page: 1, limit: 100 } });
-    // The endpoint is paginated: { data, pagination }
-    const body = response.data;
-    testRuns.value = Array.isArray(body) ? body : body?.data ?? [];
-    totalRunCount.value = body?.pagination?.total ?? testRuns.value.length;
+    const filtered = rangeParams();
+    const all = await listRuns({});
+    allRuns.value = all.runs;
+    if (Object.keys(filtered).length) {
+      const inRange = await listRuns(filtered);
+      testRuns.value = inRange.runs;
+      totalRunCount.value = inRange.total;
+    } else {
+      testRuns.value = all.runs;
+      totalRunCount.value = all.total;
+    }
   } catch (error) {
     console.error('Failed to load test runs:', error);
-    showNotice(apiErrorMessage(error, 'Failed to load test runs.'), 'error');
+    showNotice(vrErrorMessage(error, 'Failed to load test runs.'), 'error');
   }
 };
 
-const hasActiveRun = () => testRuns.value.some((run) => run.status === 'pending' || run.status === 'running');
+const loadAnalytics = async () => {
+  analyticsLoading.value = true;
+  clearAnalyticsNotice();
+  try {
+    const params = {};
+    if (range.value.from) params.startDate = range.value.from;
+    if (range.value.to) params.endDate = range.value.to;
+    analytics.value = (await apiClient.get(`${projectPath()}/analytics`, { params })).data;
+  } catch (error) {
+    analytics.value = null;
+    showAnalyticsNotice(vrErrorMessage(error, 'Analytics could not be loaded.'), 'error');
+  } finally {
+    analyticsLoading.value = false;
+  }
+};
+
+const hasActiveRun = () => allRuns.value.some((run) => run.status === 'pending' || run.status === 'running');
 
 const stopPolling = () => {
   clearTimeout(pollTimer);
   pollTimer = null;
 };
 
-// Refresh the run list until no run is pending/running (or we give up).
-const pollRuns = () => {
+const schedulePoll = () => {
   stopPolling();
+  if (unmounted) return;
   pollTimer = setTimeout(async () => {
     if (unmounted) return;
     await loadTestRuns();
-    pollCount += 1;
-    if (!unmounted && hasActiveRun() && pollCount < MAX_POLLS) {
-      pollRuns();
-    } else {
-      testRunning.value = false;
-    }
-  }, POLL_INTERVAL_MS);
+    schedulePoll();
+  }, hasActiveRun() ? ACTIVE_POLL_MS : IDLE_POLL_MS);
 };
 
-const triggerTest = async () => {
-  if (!project.value) return;
-  testRunning.value = true;
+const refreshRuns = async () => {
+  refreshing.value = true;
   try {
-    await apiClient.post(`${projectPath()}/runs`, {
-      branch: project.value.argosBranch || 'develop',
-    });
-    showNotice('Test run started.', 'success');
-    pollCount = 0;
-    pollRuns();
-  } catch (error) {
-    console.error('Failed to trigger test:', error);
-    showNotice(apiErrorMessage(error, 'Failed to trigger test.'), 'error');
-    testRunning.value = false;
+    await Promise.all([loadTestRuns(), loadAnalytics()]);
+    schedulePoll();
+  } finally {
+    refreshing.value = false;
   }
 };
 
-// Where Argos should send webhooks: the API's own origin
+watch(range, () => {
+  if (!project.value) return;
+  loadTestRuns();
+  loadAnalytics();
+}, { deep: true });
+
+const onBaselineChanged = async () => {
+  setupVersion.value += 1;
+  try {
+    project.value = (await apiClient.get(projectPath())).data;
+  } catch {
+    // The baseline list already shows the change
+  }
+};
+
+const onTestSettingsSaved = (updated) => {
+  project.value = updated;
+  setupVersion.value += 1;
+};
+
+// Where CI posts build notifications: the API's own origin
 const webhookUrl = computed(() => {
   const base = (import.meta.env.VITE_API_BASE_URL || window.location.origin).replace(/\/+$/, '');
-  return `${base}${API_PATH}/webhooks/argos`;
+  return `${base}${VR_API_PATH}/webhooks/argos`;
 });
 
 const generateWebhookSecret = async () => {
   if (!project.value) return;
-  if (project.value.hasWebhookSecret && !window.confirm('Replace the webhook secret? Argos must be updated with the new one, or its webhooks will be refused.')) return;
+  if (project.value.hasWebhookSecret && !window.confirm('Replace the secret? CI must be updated with the new one, or its notifications will be refused.')) return;
   webhookBusy.value = true;
   clearWebhookNotice();
   secretCopied.value = false;
@@ -359,35 +468,30 @@ const generateWebhookSecret = async () => {
     const { data } = await apiClient.post(`${projectPath()}/webhook-secret`, {});
     revealedSecret.value = data.secret;
     project.value = { ...project.value, hasWebhookSecret: true };
+    setupVersion.value += 1;
   } catch (error) {
-    showWebhookNotice(apiErrorMessage(error, 'The webhook secret could not be set.'), 'error');
+    showWebhookNotice(vrErrorMessage(error, 'The secret could not be set.'), 'error');
   } finally {
     webhookBusy.value = false;
   }
 };
 
 const removeWebhookSecret = async () => {
-  if (!project.value || !window.confirm('Remove the webhook secret? Argos webhooks for this project will be refused.')) return;
+  if (!project.value || !window.confirm('Remove the secret? Build notifications from CI will be refused.')) return;
   webhookBusy.value = true;
   clearWebhookNotice();
   try {
     await apiClient.delete(`${projectPath()}/webhook-secret`);
     revealedSecret.value = '';
     project.value = { ...project.value, hasWebhookSecret: false };
-    showWebhookNotice('Webhook secret removed.', 'success');
+    setupVersion.value += 1;
+    showWebhookNotice('Secret removed.', 'success');
   } catch (error) {
-    showWebhookNotice(apiErrorMessage(error, 'The webhook secret could not be removed.'), 'error');
+    showWebhookNotice(vrErrorMessage(error, 'The secret could not be removed.'), 'error');
   } finally {
     webhookBusy.value = false;
   }
 };
-
-// A shown secret belongs to one project
-watch(() => route.params.id, () => {
-  revealedSecret.value = '';
-  secretCopied.value = false;
-  clearWebhookNotice();
-});
 
 const copySecret = async () => {
   try {
@@ -419,12 +523,14 @@ const updateProject = async () => {
     if (baseUrl && baseUrl !== (project.value.argosBaseUrl || '')) {
       payload.argosBaseUrl = baseUrl;
     }
-    await apiClient.put(projectPath(), payload);
+    const { data } = await apiClient.put(projectPath(), payload);
+    project.value = data;
+    projectForm.value = formFromProject(data);
+    setupVersion.value += 1;
     showSettingsNotice('Project updated successfully.', 'success');
-    await loadProject();
   } catch (error) {
     console.error('Failed to update project:', error);
-    showSettingsNotice(apiErrorMessage(error, 'Failed to update project.'), 'error');
+    showSettingsNotice(vrErrorMessage(error, 'Failed to update project.'), 'error');
   } finally {
     saving.value = false;
   }
@@ -437,26 +543,34 @@ const resetForm = () => {
   clearSettingsNotice();
 };
 
-const statusTone = (status) =>
-  ({ pending: 'warning', running: 'info', completed: 'success', failed: 'danger' })[status] ?? 'warning';
+const runStatusLabel = (run) => ARGOS_STATUS_LABELS[run.argosStatus] ?? run.status;
 
-const formatDate = (dateString) => {
-  if (!dateString) return 'Never';
-  const date = new Date(dateString);
-  return Number.isNaN(date.getTime()) ? 'Never' : date.toLocaleString();
+const runTone = (run) => {
+  if (run.status === 'failed' || run.argosStatus === 'rejected') return 'danger';
+  if (run.argosStatus === 'changes-detected') return 'warning';
+  if (run.status === 'completed') return 'success';
+  return run.status === 'running' ? 'info' : 'warning';
 };
 
-// Runs come back newest first
-const lastRun = computed(() => {
-  return testRuns.value.length > 0 ? testRuns.value[0] : null;
-});
+const formatDay = (day) => {
+  const date = new Date(`${day}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? day : date.toLocaleDateString();
+};
+
+const formatDuration = (ms) => {
+  const seconds = Math.round(ms / 1000);
+  return seconds < 60 ? `${seconds} s` : `${Math.floor(seconds / 60)} min ${seconds % 60} s`;
+};
 
 // Navigating from one project to another reuses this component.
 watch(() => route.params.id, (id, oldId) => {
   if (id && id !== oldId) {
     stopPolling();
-    testRunning.value = false;
+    revealedSecret.value = '';
+    secretCopied.value = false;
+    clearWebhookNotice();
     activeTab.value = 'overview';
+    range.value = { from: '', to: '' };
     loadProject();
   }
 });
